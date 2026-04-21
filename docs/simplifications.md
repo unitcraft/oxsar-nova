@@ -263,14 +263,20 @@
 
 ## Messages
 
-### [Messages] Read-only inbox (нет compose/reply/delete)
-- **Где**: `internal/message/*.go`.
-- **Что**: только inbox + markRead. Нет пользовательского compose,
-  reply, delete, folders UI.
-- **Почему**: compose — M6 вместе с alliance chat.
-- **Как чинить**: POST /api/messages (compose), DELETE /api/
-  messages/{id}, UI composer.
-- **Приоритет**: M.
+### [Messages] Read-only inbox (нет compose/reply/delete) — ЗАКРЫТО
+- **Статус**: Закрыто в итерации 38. Реализованы POST /api/messages
+  (compose), DELETE /api/messages/{id}, UI composer с ComposeForm.
+
+### [Messages] Нет reply и нет soft-delete
+- **Где**: `internal/message/service.go`, `MessagesScreen.tsx`.
+- **Что**: кнопка Reply не реализована (нет pre-fill to/subject из
+  оригинального сообщения). Delete — hard DELETE из БД (нет корзины,
+  нет sent-folder).
+- **Почему**: reply = косметика MVP; soft-delete усложняет schema.
+- **Как чинить**: reply — pre-fill ComposeForm из message.from_username
+  и «Re: subject». Soft-delete — добавить `deleted_at` column + WHERE
+  deleted_at IS NULL в Inbox.
+- **Приоритет**: L.
 
 ### [Messages] Username в BattleReport/Espionage только UUID
 - **Где**: `internal/message/service.go::GetBattleReport`.
