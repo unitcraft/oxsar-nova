@@ -445,14 +445,11 @@
   `advanceAndReward` зачисляет ресурсы на первую планету игрока (ORDER BY created_at).
   Шаг 6 даёт 5000M/3000Si/1000H. Кредиты (+10) сохранены.
 
-### [ACS] Loot делится поровну, не пропорционально грузоподъёмности
-- **Где**: `internal/fleet/acs_attack.go::survivingFleets`.
-- **Что**: loot делится между выжившими ACS-флотами поровну (1/N доля каждому),
-  а не пропорционально cargo capacity флота.
-- **Почему**: упрощает код; реальная разница незначительна при малом числе участников.
-- **Как чинить**: считать суммарный cargo каждого флота через stacksToBattleUnits + spec.Cargo,
-  затем распределять loot пропорционально.
-- **Приоритет**: L.
+### [ACS] Loot пропорционально грузоподъёмности — ЗАКРЫТО
+- Закрыто: `cargoPerFleet[]` считается через range-итерацию по `s.catalog.Ships.Ships`
+  (map keyed by legacy name), матчинг по `spec.ID == st.UnitID`. Loot делится
+  пропорционально `cargoPerFleet[i] / totalCargo`. Fallback: если totalCargo==0,
+  делим поровну (чтобы избежать деления на ноль).
 
 ### [ACS] acs_participants в battle_reports — ЗАКРЫТО
 - Закрыто: migration 0025 добавляет `acs_participants jsonb` в battle_reports.
