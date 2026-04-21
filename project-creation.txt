@@ -3962,5 +3962,27 @@ docs/simplifications.md:
   - [ACS] Loot пропорционально грузоподъёмности — ЗАКРЫТО.
 
 ================================================================================
+Итерация N+8 — Achievements progress, Raid warning, Alliance relations
+================================================================================
+
+feat(achievements): прогресс-бары для числовых достижений (BATTLE_10/FLEET_50/SCORE_1000).
+  progressChecks []progressCheck вычисляет значения on-the-fly в List().
+  Entry получила Progress *int + ProgressMax *int. UI: «N / max» рядом с описанием.
+
+feat(fleet): KindRaidWarning=64 — предупреждение защитнику за 10 мин до прибытия атаки.
+  transport.Send() планирует event если warnAt > depart. RaidWarningHandler шлёт
+  системное сообщение (folder=13) владельцу целевой планеты.
+
+feat(alliance): отношения NAP/WAR/ALLY (migration 0028 — alliance_relationships).
+  SetRelation/GetRelations в service. PUT /api/alliances/{id}/relations/{target_id}.
+  GET /api/alliances/{id}/relations. RelationsPanel в AllianceScreen (только для owner).
+  api.put() добавлен в api/client.ts.
+
+docs/simplifications.md:
+  - [Achievements] прогресс-бары — ЗАКРЫТО.
+  - [Alliance] MVP: отношения NAP/WAR/ALLY — ЗАКРЫТО.
+  - [AutoMsg] event-before-raid — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================
