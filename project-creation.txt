@@ -3637,5 +3637,18 @@ backend/internal/artefact/effects_test.go:
   computeChanges покрытие: 71.4% → 100%.
 
 ================================================================================
+Итерация 59 — test(sqldump): Value helpers + AssignInt/GetStr/IndexColumns
+================================================================================
+
+backend/pkg/sqldump/sqldump_test.go:
+  - TestValue_String: NULL → "NULL", raw → raw.
+  - TestValue_AsInt: "42" → 42, NULL → 0.
+  - TestValue_AsFloat: "3.14" → 3.14, NULL → 0.
+  - TestIndexColumns: map[name]=index.
+  - TestAssignInt: успешное присвоение + missing column error.
+  - TestGetStr: успешное получение строки + missing column error.
+  Покрытие sqldump: 61.8% → 78.9%.
+
+================================================================================
 Конец дневника.
 ================================================================================
