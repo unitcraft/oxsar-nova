@@ -3756,5 +3756,18 @@ frontend/src/features/alliance/AllianceScreen.tsx:
 docs/simplifications.md: [Alliance] Join approval flow — ЗАКРЫТО.
 
 ================================================================================
+Итерация 66 — feat(acs): acs_participants jsonb в battle_reports
+================================================================================
+
+migrations/0025_battle_reports_acs.sql:
+  - ALTER TABLE battle_reports ADD COLUMN acs_participants jsonb.
+
+backend/internal/fleet/acs_attack.go:
+  - При INSERT battle_reports записываем acs_participants = [{user_id, fleet_id}]
+    всех атакующих флотов ACS-группы.
+
+docs/simplifications.md: [ACS] acs_participants — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================
