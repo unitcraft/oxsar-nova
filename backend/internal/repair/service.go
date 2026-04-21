@@ -252,23 +252,9 @@ func (s *Service) EnqueueDisassemble(ctx context.Context, userID, planetID strin
 //   struct_scale = 0.1 × (100 - shell_percent) / 100
 //   required_{m,s,h} = ceil(base × struct_scale / 10) × 10
 //   required_time   = buildTime(base×0.1, base×0.1, mode)
-//
-// В M4.4c упрощаем: берём усреднённый shell_percent из ships
-// (у нас в M4.1+ сохраняем его на уровне stack'а). Если на стэке
-// есть N damaged-юнитов с общим shell_percent — платим за них по
-// одной формуле, это корректно в рамках нашей модели (1 damaged на
-// stack — см. commitDamage в battle/engine.go).
-//
-// Defense repair не поддерживается: legacy-таблица defense не
-// хранит damaged. Если защита разрушена — её строят заново через
-// shipyard.
 func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, unitID int) (QueueItem, error) {
 	_, baseCost, isDefense, ok := s.lookupUnit(unitID)
 	if !ok {
-		return QueueItem{}, ErrUnknownUnit
-	}
-	if isDefense {
-		// Защита в M4.4c не чинится.
 		return QueueItem{}, ErrUnknownUnit
 	}
 
@@ -278,6 +264,11 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 	}
 	if p.UserID != userID {
 		return QueueItem{}, ErrPlanetOwnership
+	}
+
+	stockTable := "ships"
+	if isDefense {
+		stockTable = "defense"
 	}
 
 	var item QueueItem
@@ -299,19 +290,18 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 			return ErrNoRepairBuilding
 		}
 
-		// Берём текущий damaged_count + shell_percent из ships FOR UPDATE.
+		// Берём damaged_count + shell_percent FOR UPDATE.
 		var damaged int64
 		var shellPct float64
-		err = tx.QueryRow(ctx, `
-			SELECT damaged_count, shell_percent
-			FROM ships WHERE planet_id=$1 AND unit_id=$2
-			FOR UPDATE
-		`, planetID, unitID).Scan(&damaged, &shellPct)
+		err = tx.QueryRow(ctx,
+			`SELECT damaged_count, shell_percent FROM `+stockTable+
+				` WHERE planet_id=$1 AND unit_id=$2 FOR UPDATE`,
+			planetID, unitID).Scan(&damaged, &shellPct)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrNothingToRepair
 			}
-			return fmt.Errorf("read ships: %w", err)
+			return fmt.Errorf("read %s: %w", stockTable, err)
 		}
 		if damaged <= 0 {
 			return ErrNothingToRepair
@@ -354,7 +344,7 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 			return fmt.Errorf("res_log: %w", err)
 		}
 
-		// Время. То же, что для disassemble: buildTime(base×0.1, base×0.1).
+		// Время. buildTime(base×0.1, base×0.1).
 		perUnit := economy.BuildDuration(1,
 			economy.Cost{
 				Metal:    int64(math.Round(float64(baseCost.Metal) * 0.1)),
@@ -373,8 +363,8 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 				(id, planet_id, user_id, unit_id, is_defense, mode, count,
 				 return_metal, return_silicon, return_hydrogen,
 				 per_unit_seconds, start_at, end_at, status)
-			VALUES ($1, $2, $3, $4, false, 'repair', $5, 0, 0, 0, $6, $7, $8, 'running')
-		`, id, planetID, userID, unitID, damaged, perUnitSec, start, end); err != nil {
+			VALUES ($1, $2, $3, $4, $5, 'repair', $6, 0, 0, 0, $7, $8, $9, 'running')
+		`, id, planetID, userID, unitID, isDefense, damaged, perUnitSec, start, end); err != nil {
 			return fmt.Errorf("insert queue: %w", err)
 		}
 
@@ -391,7 +381,7 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 
 		item = QueueItem{
 			ID: id, PlanetID: planetID, UserID: userID, UnitID: unitID,
-			IsDefense: false, Mode: "repair", Count: damaged,
+			IsDefense: isDefense, Mode: "repair", Count: damaged,
 			PerUnitSeconds: perUnitSec, StartAt: start, EndAt: end, Status: "running",
 		}
 		return nil
@@ -399,23 +389,27 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 	return item, err
 }
 
-// DamagedUnit — один stack кораблей с ненулевым damaged.
+// DamagedUnit — один stack кораблей или защиты с ненулевым damaged.
 type DamagedUnit struct {
 	UnitID       int     `json:"unit_id"`
 	Count        int64   `json:"count"`
 	Damaged      int64   `json:"damaged"`
 	ShellPercent float64 `json:"shell_percent"`
+	IsDefense    bool    `json:"is_defense"`
 }
 
-// ListDamaged возвращает всех damaged-юнитов на планете (ships
-// table, damaged_count > 0). Используется UI репейр-экрана, чтобы
-// показать что можно чинить.
+// ListDamaged возвращает всех damaged-юнитов на планете (ships + defense,
+// damaged_count > 0). Используется UI репейр-экрана.
 func (s *Service) ListDamaged(ctx context.Context, planetID string) ([]DamagedUnit, error) {
 	rows, err := s.db.Pool().Query(ctx, `
-		SELECT unit_id, count, damaged_count, shell_percent
+		SELECT unit_id, count, damaged_count, shell_percent, false AS is_defense
 		FROM ships
 		WHERE planet_id = $1 AND damaged_count > 0
-		ORDER BY unit_id
+		UNION ALL
+		SELECT unit_id, count, damaged_count, shell_percent, true AS is_defense
+		FROM defense
+		WHERE planet_id = $1 AND damaged_count > 0
+		ORDER BY is_defense, unit_id
 	`, planetID)
 	if err != nil {
 		return nil, fmt.Errorf("list damaged: %w", err)
@@ -424,7 +418,7 @@ func (s *Service) ListDamaged(ctx context.Context, planetID string) ([]DamagedUn
 	var out []DamagedUnit
 	for rows.Next() {
 		var u DamagedUnit
-		if err := rows.Scan(&u.UnitID, &u.Count, &u.Damaged, &u.ShellPercent); err != nil {
+		if err := rows.Scan(&u.UnitID, &u.Count, &u.Damaged, &u.ShellPercent, &u.IsDefense); err != nil {
 			return nil, err
 		}
 		out = append(out, u)

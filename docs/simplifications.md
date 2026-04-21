@@ -185,14 +185,11 @@
 
 ## Repair
 
-### [Repair] Нельзя чинить defense
-- **Где**: `internal/repair/service.go::EnqueueRepair`.
-- **Что**: `isDefense → ErrUnknownUnit`. Только ship можно чинить.
-- **Почему**: legacy defense-table не имеет `damaged_count`.
-- **Как чинить**: добавить колонки в `defense` и применять repair
-  симметрично ships.
-- **Приоритет**: L — бой defense'е наносит 0 damaged (ракеты их
-  уничтожают целиком).
+### [Repair] Нельзя чинить defense — ЗАКРЫТО
+- Закрыто: migration 0032 добавляет `damaged_count` и `shell_percent` в таблицу defense.
+  `applyDefenderLosses` в attack.go теперь записывает damaged/shell для defense симметрично ships.
+  `EnqueueRepair` поддерживает оба типа (ships и defense, через `stockTable`).
+  `ListDamaged` объединяет ships + defense через UNION ALL. `DamagedUnit` получил поле `is_defense`.
 
 ### [Repair] Batch-only (чиним всех damaged одним action)
 - **Где**: `internal/repair/service.go::EnqueueRepair`.

@@ -4132,5 +4132,18 @@ BuildingsScreen теперь использует buildingName() в очеред
     (заголовок, папка, шаблон тела; сохранение через PUT).
 
 ================================================================================
+Итерация — 2026-04-22
+================================================================================
+
+[Repair] Ремонт defense.
+  - migration 0032: добавлены damaged_count и shell_percent в таблицу defense.
+  - fleet/attack.go: applyDefenderLosses теперь использует общую apply() для
+    обоих типов (ships и defense), записывает damaged/shell_percent для defense.
+  - repair/service.go: EnqueueRepair — убрана заглушка isDefense→ErrUnknownUnit,
+    выбор таблицы через stockTable переменную.
+  - repair/service.go: ListDamaged — UNION ALL ships+defense, IsDefense поле.
+  - repair/service.go: DamagedUnit получил поле is_defense для фронтенда.
+
+================================================================================
 Конец дневника.
 ================================================================================
