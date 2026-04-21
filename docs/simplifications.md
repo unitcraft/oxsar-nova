@@ -393,12 +393,11 @@
 
 ### [planet.tick] Нет production.yml с формулами в runtime
 - **Где**: `backend/internal/planet/service.go`.
-- **Что**: есть DSL (`productionRatesDSL` через formula-пакет), но
-  `construction.yml` не генерируется import-datasheets при старте
-  docker → в проде всегда fallback на `productionRatesApprox`.
-- **Почему**: import-datasheets запускается руками, не в dev-up.
-- **Как чинить**: добавить в `deploy/Dockerfile.migrate` или отдельный
-  init-контейнер вызов `cmd/tools/import-datasheets`.
+- **Что**: `construction.yml` не коммитится (зависит от внешнего SQL-дампа
+  oxsar2). В проде всегда fallback на `productionRatesApprox`.
+- **Почему**: import-datasheets требует `OXSAR2_DUMP` — внешний путь.
+- **Как чинить**: запустить `make import-datasheets OXSAR2_DUMP=<path>`,
+  закоммитить `configs/construction.yml`. Или добавить в CI-артефакт.
 - **Приоритет**: M.
 
 ### [economy] Storage cap hardcoded 1e18
