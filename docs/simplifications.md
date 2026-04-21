@@ -264,14 +264,10 @@
   SPY_SUCCESS, RECYCLING, ROCKET_LAUNCH, SCORE_1000). CheckAll расширен
   соответствующими SQL-checks.
 
-### [Achievements] Нет прогресс-баров (N/M)
-- **Где**: `features/achievements/AchievementsScreen.tsx`.
-- **Что**: только boolean unlocked/locked. Нет «построил 4 из 10
-  metal_mine».
-- **Почему**: boolean проще; прогресс требует `progress_json`.
-- **Как чинить**: добавить колонку progress + отдельный `Progress()`
-  method + прогресс-бар в UI.
-- **Приоритет**: L.
+### [Achievements] Нет прогресс-баров (N/M) — ЗАКРЫТО
+- Закрыто: `progressChecks []progressCheck` в service.go считает on-the-fly
+  для BATTLE_10/FLEET_50/SCORE_1000. Entry получила `Progress *int` + `ProgressMax *int`.
+  UI показывает «N / max» рядом с описанием для незакрытых числовых достижений.
 
 ---
 
