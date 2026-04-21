@@ -24,7 +24,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Defense                     | ✅     | M2 | В рамках shipyard — общая очередь.                       |
 | Galaxy                      | ✅     | M3 | Repository + GET /api/galaxy/{g}/{s} + GalaxyScreen.      |
 | Fleet / missions            | 🟡     | M3 | TRANSPORT end-to-end (send+arrive+return+recall+UI). ATTACK/SPY/COLONIZE — M4/M5. |
-| Battle engine               | 🟡     | M4.2 | +rapidfire (Input.Rapidfire) +ballistics/masking (детерминированная формула Java). 12 тестов. Нет: ablation/golden-тесты (M4.3). |
+| Battle engine               | 🟡     | M4.3 | +ablation (damaged + ShellPercent переносится между раундами). 14 тестов. Golden-тесты против Java jar — пропущены по решению пользователя. Нет интеграции с Fleet ATTACK (M4.4). |
 | Expedition                  | ⬜     | M5 | ex game/Expedition.class.php 1160 LOC.                   |
 | ExpedPlanetCreator          | ⬜     | M5 | ex ext/ExpedPlanetCreator.class.php.                     |
 | Rockets / stargate          | ⬜     | M5 | Планируется.                                             |

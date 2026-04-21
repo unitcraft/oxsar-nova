@@ -98,12 +98,18 @@ type unitState struct {
 	tmpl Unit
 	// Индекс в исходном Side.Units — чтобы summarize читал по нему.
 	idx int
-	// turnShell = totalShell, уменьшается выстрелами.
+	// turnShell = totalShell (учитывает damaged), уменьшается выстрелами.
 	turnShell float64
 	// turnShield = Shield[primaryCh] × Quantity, восстанавливается regen.
 	turnShield float64
-	// Quantity — текущее оставшееся количество юнитов.
+	// Quantity — текущее оставшееся количество юнитов (включая damaged).
 	quantity int64
+	// damaged — сколько из quantity повреждены. M4.3 упрощение: не более
+	// одного damaged в пачке (Java делает так же — последний «частично
+	// подбитый» юнит становится damaged, ShellPercent отражает остаток).
+	damaged int64
+	// shellPercent — 0..100, доля shell у damaged-юнита (у здоровых 100%).
+	shellPercent float64
 	// primaryChannel — канал с max Attack; выбираем один раз, не
 	// пересчитываем каждый выстрел.
 	primaryChannel int
@@ -134,15 +140,57 @@ func newState(input []Side, rf map[int]map[int]int) *battleState {
 				tmpl:           u,
 				idx:            ui,
 				quantity:       u.Quantity,
+				damaged:        clampDamaged(u.Damaged, u.Quantity),
+				shellPercent:   clampPercent(u.ShellPercent),
 				primaryChannel: primaryChannel(u.Attack),
 			}
-			us.turnShell = float64(u.Quantity) * u.Shell
+			// turnShell учитывает поражённых юнитов на входе (в
+			// большинстве случаев — 0, но пригодится, когда Fleet
+			// ATTACK начнёт приносить флоты с damaged после предыдущего
+			// боя).
+			us.turnShell = totalShell(u.Shell, us.quantity, us.damaged, us.shellPercent)
 			us.turnShield = float64(u.Quantity) * u.Shield[us.primaryChannel]
 			ss.units = append(ss.units, us)
 		}
 		bs.sides[si] = ss
 	}
 	return bs
+}
+
+// totalShell — суммарный shell пачки: (quantity-damaged) полных юнитов
+// + damaged × shellPercent/100.
+func totalShell(shellPerUnit float64, quantity, damaged int64, shellPct float64) float64 {
+	if shellPerUnit <= 0 || quantity <= 0 {
+		return 0
+	}
+	if damaged < 0 {
+		damaged = 0
+	}
+	if damaged > quantity {
+		damaged = quantity
+	}
+	full := quantity - damaged
+	return float64(full)*shellPerUnit + float64(damaged)*shellPerUnit*shellPct/100.0
+}
+
+func clampDamaged(d, q int64) int64 {
+	if d < 0 {
+		return 0
+	}
+	if d > q {
+		return q
+	}
+	return d
+}
+
+func clampPercent(p float64) float64 {
+	if p < 0 {
+		return 0
+	}
+	if p > 100 {
+		return 100
+	}
+	return p
 }
 
 // regen восстанавливает щиты до полного объёма на начало раунда.
@@ -178,33 +226,59 @@ func (b *battleState) snapshot() *battleState {
 	return out
 }
 
-// commitDamage пересчитывает quantity по оставшемуся turnShell.
-// Если turnShell ≤ 0 → все юниты этой пачки мертвы.
+// commitDamage пересчитывает quantity/damaged/shellPercent по
+// оставшемуся turnShell. Модель M4.3 (ablation) совпадает с Java:
+//
+//   - fullRem = floor(turnShell / shell) — сколько осталось «полных»;
+//   - если fullRem >= quantity: никто не умер, частичного damaged нет
+//     (turnShell ровно на всех);
+//   - иначе квантити = fullRem + 1 (если есть дробный остаток) или
+//     fullRem (если точная граница). Один damaged-юнит с
+//     shellPercent = (turnShell mod shell) / shell × 100.
+//   - turnShell нормализуется к новому состоянию, чтобы в следующий
+//     раунд не «таскать хвост».
 func (b *battleState) commitDamage() {
 	for _, s := range b.sides {
 		for _, u := range s.units {
 			if u.quantity <= 0 {
 				continue
 			}
-			if u.turnShell <= 0 {
-				u.quantity = 0
-				continue
-			}
 			if u.tmpl.Shell <= 0 {
 				continue
 			}
-			// Сколько целых юнитов осталось по оставшемуся shell.
-			newQty := int64(math.Floor(u.turnShell / u.tmpl.Shell))
-			if newQty > u.quantity {
-				newQty = u.quantity
+			if u.turnShell <= 0 {
+				u.quantity = 0
+				u.damaged = 0
+				u.shellPercent = 0
+				continue
 			}
-			if newQty < 0 {
-				newQty = 0
+			fullRem := int64(math.Floor(u.turnShell / u.tmpl.Shell))
+			remainder := u.turnShell - float64(fullRem)*u.tmpl.Shell
+			if remainder < 0 {
+				remainder = 0
 			}
-			u.quantity = newQty
-			// Нормализуем turnShell к целым юнитам, чтобы следующий
-			// раунд не потянул «дробный хвост» шелла.
-			u.turnShell = float64(newQty) * u.tmpl.Shell
+
+			switch {
+			case fullRem >= u.quantity:
+				// Pool не перебил даже damaged-остаток начала раунда —
+				// всё по-прежнему. damaged/shellPercent остаются как
+				// были (если раунд не нанёс урон — инварианты живут).
+				// turnShell нормализуется к текущему состоянию.
+				u.turnShell = totalShell(u.tmpl.Shell, u.quantity, u.damaged, u.shellPercent)
+			case remainder > 0:
+				// Один damaged + fullRem здоровых. damaged не может
+				// быть больше quantity.
+				u.quantity = fullRem + 1
+				u.damaged = 1
+				u.shellPercent = (remainder / u.tmpl.Shell) * 100.0
+				u.turnShell = totalShell(u.tmpl.Shell, u.quantity, u.damaged, u.shellPercent)
+			default:
+				// Точная граница — ровно fullRem полных юнитов, damaged нет.
+				u.quantity = fullRem
+				u.damaged = 0
+				u.shellPercent = 0
+				u.turnShell = float64(fullRem) * u.tmpl.Shell
+			}
 		}
 	}
 }
@@ -228,10 +302,12 @@ func (b *battleState) toSides() []Side {
 		side := Side{UserID: s.userID, Username: s.username}
 		side.Units = make([]Unit, len(s.units))
 		for i, u := range s.units {
-			// Сохраняем оригинал, перетираем только quantity/damaged/
+			// Сохраняем оригинал, перетираем quantity/damaged/
 			// ShellPercent (summarize читает именно эти три поля).
 			side.Units[i] = u.tmpl
 			side.Units[i].Quantity = u.quantity
+			side.Units[i].Damaged = u.damaged
+			side.Units[i].ShellPercent = u.shellPercent
 		}
 		out[si] = side
 	}
