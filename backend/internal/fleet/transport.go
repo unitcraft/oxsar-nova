@@ -262,6 +262,21 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			return fmt.Errorf("insert return event: %w", err)
 		}
 
+		// Уведомление защитника за 10 минут до прибытия атакующего флота.
+		if event.Kind(in.Mission) == event.KindAttackSingle ||
+			event.Kind(in.Mission) == event.KindAttackAlliance {
+			warnAt := arrive.Add(-10 * time.Minute)
+			if warnAt.After(depart) {
+				warnPayload, _ := json.Marshal(map[string]any{"fleet_id": fleetID})
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO events (id, user_id, kind, state, fire_at, payload)
+					VALUES ($1, $2, $3, 'wait', $4, $5)
+				`, ids.New(), in.UserID, event.KindRaidWarning, warnAt, warnPayload); err != nil {
+					return fmt.Errorf("insert raid warning event: %w", err)
+				}
+			}
+		}
+
 		out = Fleet{
 			ID:           fleetID,
 			OwnerUserID:  in.UserID,
