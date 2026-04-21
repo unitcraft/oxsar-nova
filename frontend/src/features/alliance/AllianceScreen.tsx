@@ -19,6 +19,7 @@ interface Member {
   user_id: string;
   username: string;
   rank: string;
+  rank_name: string;
   joined_at: string;
 }
 
@@ -257,24 +258,7 @@ function MyAlliancePanel({
         </div>
       )}
 
-      <table className="ox-table">
-        <thead>
-          <tr>
-            <th>{tf('Main', 'USERNAME', 'Игрок')}</th>
-            <th>{tf('Main', 'ALLY_RANK', 'Ранг')}</th>
-            <th>{tf('Main', 'ALLY_JOINED', 'Вступил')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {members.map((m) => (
-            <tr key={m.user_id}>
-              <td>{m.username}</td>
-              <td>{m.rank}</td>
-              <td>{new Date(m.joined_at).toLocaleDateString('ru-RU')}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <MembersTable alliance={alliance} members={members} isOwner={isOwner} />
 
       {isOwner && (
         <RelationsPanel allianceID={alliance.id} />
@@ -544,5 +528,78 @@ function RelationsPanel({ allianceID }: { allianceID: string }) {
         <p className="ox-error">{propose.error instanceof Error ? propose.error.message : 'ошибка'}</p>
       )}
     </div>
+  );
+}
+
+function MembersTable({
+  alliance, members, isOwner,
+}: {
+  alliance: Alliance;
+  members: Member[];
+  isOwner: boolean;
+}) {
+  const { tf } = useTranslation();
+  const qc = useQueryClient();
+  const [editingUID, setEditingUID] = useState<string | null>(null);
+  const [rankDraft, setRankDraft] = useState('');
+
+  const setRank = useMutation({
+    mutationFn: ({ uid, name }: { uid: string; name: string }) =>
+      api.patch<void>(`/api/alliances/${alliance.id}/members/${uid}/rank`, { rank_name: name }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['alliances'] });
+      setEditingUID(null);
+    },
+  });
+
+  return (
+    <table className="ox-table">
+      <thead>
+        <tr>
+          <th>{tf('Main', 'USERNAME', 'Игрок')}</th>
+          <th>{tf('Main', 'ALLY_RANK', 'Ранг')}</th>
+          <th>{tf('Main', 'ALLY_JOINED', 'Вступил')}</th>
+          {isOwner && <th />}
+        </tr>
+      </thead>
+      <tbody>
+        {members.map((m) => (
+          <tr key={m.user_id}>
+            <td>{m.username}</td>
+            <td>
+              {editingUID === m.user_id ? (
+                <span style={{ display: 'flex', gap: 4 }}>
+                  <input
+                    value={rankDraft}
+                    onChange={(e) => setRankDraft(e.target.value)}
+                    maxLength={32}
+                    style={{ width: 140 }}
+                    autoFocus
+                  />
+                  <button type="button" disabled={setRank.isPending}
+                    onClick={() => setRank.mutate({ uid: m.user_id, name: rankDraft })}>
+                    ✓
+                  </button>
+                  <button type="button" onClick={() => setEditingUID(null)}>✕</button>
+                </span>
+              ) : (
+                m.rank_name || m.rank
+              )}
+            </td>
+            <td>{new Date(m.joined_at).toLocaleDateString('ru-RU')}</td>
+            {isOwner && (
+              <td>
+                {m.rank !== 'owner' && (
+                  <button type="button" style={{ fontSize: '0.8em' }}
+                    onClick={() => { setEditingUID(m.user_id); setRankDraft(m.rank_name); }}>
+                    ✎
+                  </button>
+                )}
+              </td>
+            )}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

@@ -376,12 +376,11 @@
 
 ### [Alliance] MVP без рангов и WebSocket-чата
 - **Где**: `internal/alliance/service.go`, `features/alliance/AllianceScreen.tsx`.
-- **Что**: ~~отношения NAP/WAR/ALLY~~ — ЗАКРЫТО. ~~Встречный acknowledge~~ — ЗАКРЫТО
-  (migration 0031: `status` pending/active; ProposeRelation/AcceptRelation/RejectRelation;
-  WAR активно сразу, NAP/ALLY ждут подтверждения; UI показывает входящие с кнопками ✓/✕).
-  Остаток: кастомные ранги участников, ACS-атаки.
-- **Как чинить**: добавить колонку `rank_name` в alliance_members, CRUD для owner'а.
-- **Приоритет**: L — ранги декоративны, не влияют на механики.
+- **Что**: ~~отношения NAP/WAR/ALLY~~ — ЗАКРЫТО. ~~Встречный acknowledge~~ — ЗАКРЫТО.
+  ~~Кастомные ранги~~ — ЗАКРЫТО (migration 0034: `rank_name` в alliance_members;
+  `SetMemberRank` + `PATCH /alliances/{id}/members/{uid}/rank`; MembersTable с inline-редактором).
+  Остаток: ACS-атаки (требует координации нескольких флотов в реальном времени).
+- **Приоритет**: L → ACS — крупная фича M6+.
 
 ### [Alliance] Join approval flow — ЗАКРЫТО
 - Закрыто: migration 0024 добавляет `is_open` в alliances + таблицу

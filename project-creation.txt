@@ -4157,5 +4157,18 @@ BuildingsScreen теперь использует buildingName() в очеред
   - Тест TestAllowedField по-прежнему PASS.
 
 ================================================================================
+Итерация — 2026-04-22
+================================================================================
+
+[Alliance] Кастомные ранги участников.
+  - migration 0034: колонка rank_name (text, default '') в alliance_members.
+  - alliance/service.go: Member получил RankName; Get() читает rank_name.
+    SetMemberRank() — PATCH owner'ом: валидация (≤32 символа), UPDATE, ErrMemberNotFound.
+  - alliance/handler.go: SetMemberRank — PATCH /alliances/{id}/members/{userID}/rank.
+  - main.go: маршрут добавлен.
+  - AllianceScreen.tsx: MembersTable — inline-редактор ранга (кнопка ✎ для owner'а,
+    input + ✓/✕). Отображает rank_name если задан, иначе rank.
+
+================================================================================
 Конец дневника.
 ================================================================================

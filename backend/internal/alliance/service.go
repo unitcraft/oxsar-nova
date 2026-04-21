@@ -70,8 +70,11 @@ type Member struct {
 	UserID   string    `json:"user_id"`
 	Username string    `json:"username"`
 	Rank     string    `json:"rank"`
+	RankName string    `json:"rank_name"` // произвольный ранг от owner'а
 	JoinedAt time.Time `json:"joined_at"`
 }
+
+var ErrMemberNotFound = errors.New("alliance: member not found")
 
 // List возвращает первые N альянсов, сортировка по числу участников.
 func (s *Service) List(ctx context.Context, limit int) ([]Alliance, error) {
@@ -127,7 +130,7 @@ func (s *Service) Get(ctx context.Context, id string) (Alliance, []Member, error
 	}
 
 	rows, err := s.db.Pool().Query(ctx, `
-		SELECT m.user_id, COALESCE(u.username,''), m.rank, m.joined_at
+		SELECT m.user_id, COALESCE(u.username,''), m.rank, m.rank_name, m.joined_at
 		FROM alliance_members m
 		JOIN users u ON u.id = m.user_id
 		WHERE m.alliance_id = $1
@@ -142,7 +145,7 @@ func (s *Service) Get(ctx context.Context, id string) (Alliance, []Member, error
 	var members []Member
 	for rows.Next() {
 		var m Member
-		if err := rows.Scan(&m.UserID, &m.Username, &m.Rank, &m.JoinedAt); err != nil {
+		if err := rows.Scan(&m.UserID, &m.Username, &m.Rank, &m.RankName, &m.JoinedAt); err != nil {
 			return Alliance{}, nil, err
 		}
 		members = append(members, m)
@@ -473,6 +476,37 @@ func (s *Service) MyAlliance(ctx context.Context, userID string) (*Alliance, []M
 		return nil, nil, err
 	}
 	return &al, members, nil
+}
+
+// SetMemberRank устанавливает отображаемый ранг участника. Только owner.
+// rankName — произвольный текст (до 32 символов). Пустая строка сбрасывает ранг.
+func (s *Service) SetMemberRank(ctx context.Context, ownerID, allianceID, memberUserID, rankName string) error {
+	if utf8.RuneCountInString(rankName) > 32 {
+		rankName = string([]rune(rankName)[:32])
+	}
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var allianceOwner string
+		if err := tx.QueryRow(ctx,
+			`SELECT owner_id FROM alliances WHERE id=$1`, allianceID).Scan(&allianceOwner); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrNotFound
+			}
+			return fmt.Errorf("set rank: %w", err)
+		}
+		if allianceOwner != ownerID {
+			return ErrNotOwner
+		}
+		tag, err := tx.Exec(ctx,
+			`UPDATE alliance_members SET rank_name=$1 WHERE alliance_id=$2 AND user_id=$3`,
+			rankName, allianceID, memberUserID)
+		if err != nil {
+			return fmt.Errorf("set rank: update: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrMemberNotFound
+		}
+		return nil
+	})
 }
 
 func validateTag(tag string) error {
