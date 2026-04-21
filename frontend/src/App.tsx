@@ -76,6 +76,12 @@ const TutorialScreen = lazy(() =>
   })),
 );
 
+const ChatScreen = lazy(() =>
+  import('./features/chat/ChatScreen').then((m) => ({
+    default: m.ChatScreen,
+  })),
+);
+
 type Tab =
   | 'overview'
   | 'buildings'
@@ -94,6 +100,7 @@ type Tab =
   | 'score'
   | 'messages'
   | 'alliance'
+  | 'chat'
   | 'sim';
 
 export function App() {
@@ -275,6 +282,12 @@ function AuthenticatedApp() {
         />
         <TabButton
           current={tab}
+          value="chat"
+          onClick={setTab}
+          label="Чат"
+        />
+        <TabButton
+          current={tab}
           value="sim"
           onClick={setTab}
           label={t('global', 'MENU_SIMULATOR')}
@@ -300,6 +313,7 @@ function AuthenticatedApp() {
         {tab === 'achievements' && <AchievementsScreen />}
         {tab === 'score' && <ScoreScreen />}
         {tab === 'alliance' && <AllianceScreen />}
+        {tab === 'chat' && <ChatScreen />}
         {tab === 'sim' && <BattleSimScreen />}
       </Suspense>
     </div>

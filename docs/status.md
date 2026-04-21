@@ -33,7 +33,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Alien AI                    | 🟡     | M5.2 | MVP: spawn раз в 6ч (30% per player), 3 тира флота, KindAlienAttack=35, лут 30%, потери защитника ✅, artefact drop 20% ✅. Нет: HALT/GRAB_CREDIT/custom, координаты полёта. |
 | Repair Factory              | ✅     | M4.4c | DISASSEMBLE + REPAIR end-to-end (API + worker + UI). damaged-юниты из боя чинятся целой пачкой. |
 | AutoMsg                     | ✅     | M4.2 | WELCOME/STARTER_GUIDE при регистрации + INACTIVITY_REMINDER (ежедневный воркер, last_seen_at). |
-| Alliance / chat / message   | 🟡     | M6 | messages: inbox + mark-read + compose + delete ✅. Alliance MVP ✅ (create/join/leave/disband). Chat (WebSocket) — M6+. |
+| Alliance / chat / message   | ✅     | M6 | messages: inbox + mark-read + compose + delete ✅. Alliance MVP ✅ (create/join/leave/disband). Chat WebSocket ✅ (global + alliance, history REST, WS broadcast, REST fallback). |
 | Market (exchange)           | 🟡     | M6 | MVP: M↔Si↔H по фиксированным курсам (1:2:4) × users.exchange_rate. Order-book / офферы — позже. |
 | Officers                    | ✅     | M7 | 4 officer (ADMIRAL/GEOLOGIST/ENGINEER/MERCHANT), Activate→Expire через event kind=62, factor-поля. |
 | Achievements                | ✅     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), laны                | ✅     | M7 | 6 шагов (mine→solar→lab→computer_tech→ship→expedition), +10 кредитов за шаг, lazy-check. |
@@ -43,7 +43,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Event-loop worker           | ✅     | M3 | +Transport (kind=7 arrive) +Return (kind=20).            |
 | Frontend каркас             | ✅     | M0 | Vite + TS strict + TanStack Query + Zustand.             |
 | Score / Highscore           | ✅     | M5+ | RecalcUser/RecalcAll (формулы PointRenewer), GET /api/highscore, ScoreScreen. |
-| Frontend экраны             | ✅     | M3 | 18 вкладок: overview, buildings, research, shipyard, repair, galaxy, fleet, market, rockets, artefacts, art-market, officers, tutorial, achievements, score, messages, alliance, sim. |
+| Frontend экраны             | ✅     | M3 | 19 вкладок: overview, buildings, research, shipyard, repair, galaxy, fleet, market, rockets, artefacts, art-market, officers, tutorial, achievements, score, messages, alliance, chat, sim. |
 | Порт дизайна oxsar2         | 🟡     | —  | CSS-темы перенесены как placeholder, ассеты копируются.  |
 | Порт .tpl-шаблонов          | ⬜     | —  | 134 .tpl (~12600 строк) — эталон разметки UI, §8 ТЗ.     |
 | import-datasheets CLI       | ✅     | M0.1 | construction/ships/requirements/artefacts → YAML.        |

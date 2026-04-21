@@ -16,15 +16,22 @@ const userIDKey ctxKey = 1
 
 // Middleware проверяет Authorization: Bearer <access> и кладёт userID
 // в контекст. При отсутствии токена возвращает 401.
+// Для WebSocket-соединений (которые не могут слать custom headers) принимает
+// токен через query-param ?token=<access>.
 func Middleware(j *JWTIssuer) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			h := r.Header.Get("Authorization")
-			if !strings.HasPrefix(h, "Bearer ") {
+			token := ""
+			if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
+				token = strings.TrimPrefix(h, "Bearer ")
+			} else if q := r.URL.Query().Get("token"); q != "" {
+				token = q
+			}
+			if token == "" {
 				httpx.WriteError(w, r, httpx.ErrUnauthorized)
 				return
 			}
-			uid, err := j.Parse(strings.TrimPrefix(h, "Bearer "), "access")
+			uid, err := j.Parse(token, "access")
 			if err != nil {
 				httpx.WriteError(w, r, httpx.ErrUnauthorized)
 				return
