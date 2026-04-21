@@ -34,7 +34,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Repair Factory              | ✅     | M4.4c | DISASSEMBLE + REPAIR end-to-end (API + worker + UI). damaged-юниты из боя чинятся целой пачкой. |
 | AutoMsg                     | ✅     | M4.2 | WELCOME/STARTER_GUIDE при регистрации + INACTIVITY_REMINDER (ежедневный воркер, last_seen_at). |
 | Alliance / chat / message   | ✅     | M6 | messages: inbox + mark-read + compose + delete ✅. Alliance MVP ✅ (create/join/leave/disband). Chat WebSocket ✅ (global + alliance, history REST, WS broadcast, REST fallback). |
-| Market (exchange)           | 🟡     | M6 | MVP: M↔Si↔H по фиксированным курсам (1:2:4) × users.exchange_rate. Order-book / офферы — позже. |
+| Market (exchange)           | ✅     | M6 | Быстрый обменник (M↔Si↔H по курсам) ✅ + ордерная книга (CreateLot/ListLots/CancelLot/AcceptLot, migration 0022) ✅. |
 | Officers                    | ✅     | M7 | 4 officer (ADMIRAL/GEOLOGIST/ENGINEER/MERCHANT), Activate→Expire через event kind=62, factor-поля. |
 | Achievements                | ✅     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), laны                | ✅     | M7 | 6 шагов (mine→solar→lab→computer_tech→ship→expedition), +10 кредитов за шаг, lazy-check. |
 | Simulator UI                | ✅     | M7.1 | BattleSimScreen с реальными боевыми характеристиками из каталога + таблица потерь + multi-run (num_sim 2–20). |
