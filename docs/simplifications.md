@@ -256,16 +256,13 @@
 
 ## Officers
 
-### [Officers] Стеккаются с артефактами без suppression
-- **Где**: `internal/officer/service.go::applyFactor`.
-- **Что**: если активен артефакт +0.1 к produce_factor и officer
-  GEOLOGIST +0.1, итоговая сумма = baseline + 0.2. Legacy может
-  иметь «mutually exclusive» группы, у нас — нет.
-- **Почему**: простая модель; пересечения редкие (артефакт как
-  правило short-lived).
-- **Как чинить**: добавить колонку `group` в officer_defs/
-  artefact_defs и проверять «уже есть active в этой group'е».
-- **Приоритет**: L.
+### [Officers] Стеккаются с артефактами без suppression — ЧАСТИЧНО ЗАКРЫТО
+- Закрыто для officer-vs-officer: migration 0033 добавляет `group_key` в officer_defs.
+  ADMIRAL и ENGINEER в группе 'build' — взаимоисключают друг друга при активации.
+  `ErrGroupActive` → HTTP 400. Activate читает `group_key` и проверяет активных в группе.
+- Остаток: officer+artefact suppression не реализовано — арtefakt short-lived,
+  суммирование +0.2 не критично. Потребует `group_key` в artefact_defs.
+- **Приоритет**: L → отложено до появления проблем в геймплее.
 
 ### [Officers] Нет auto-renew — ЗАКРЫТО
 - Закрыто: migration 0029 добавляет `auto_renew bool` в officer_active.

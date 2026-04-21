@@ -38,6 +38,7 @@ func NewService(db repo.Exec) *Service { return &Service{db: db} }
 var (
 	ErrOfficerNotFound  = errors.New("officer: not found")
 	ErrAlreadyActive    = errors.New("officer: already active")
+	ErrGroupActive      = errors.New("officer: another officer in the same group is already active")
 	ErrNotEnoughCredit  = errors.New("officer: not enough credit")
 )
 
@@ -49,6 +50,7 @@ type Def struct {
 	DurationDays int             `json:"duration_days"`
 	CostCredit   int64           `json:"cost_credit"`
 	Effect       json.RawMessage `json:"effect"`
+	GroupKey     *string         `json:"group_key,omitempty"`
 }
 
 // Active — активная подписка.
@@ -123,10 +125,10 @@ func (s *Service) Activate(ctx context.Context, userID, key string, autoRenew bo
 		// Def.
 		var def Def
 		err := tx.QueryRow(ctx, `
-			SELECT key, title, description, duration_days, cost_credit, effect
+			SELECT key, title, description, duration_days, cost_credit, effect, group_key
 			FROM officer_defs WHERE key = $1
 		`, key).Scan(&def.Key, &def.Title, &def.Description,
-			&def.DurationDays, &def.CostCredit, &def.Effect)
+			&def.DurationDays, &def.CostCredit, &def.Effect, &def.GroupKey)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrOfficerNotFound
@@ -153,6 +155,23 @@ func (s *Service) Activate(ctx context.Context, userID, key string, autoRenew bo
 		}
 		if exists {
 			return ErrAlreadyActive
+		}
+		// Group exclusivity: если у офицера group_key, проверяем нет ли другого
+		// активного офицера из той же группы.
+		if def.GroupKey != nil && *def.GroupKey != "" {
+			var groupActive bool
+			if err := tx.QueryRow(ctx, `
+				SELECT EXISTS (
+					SELECT 1 FROM officer_active a
+					JOIN officer_defs d ON d.key = a.officer_key
+					WHERE a.user_id = $1 AND d.group_key = $2
+				)
+			`, userID, *def.GroupKey).Scan(&groupActive); err != nil {
+				return fmt.Errorf("check group: %w", err)
+			}
+			if groupActive {
+				return ErrGroupActive
+			}
 		}
 		// Списываем credit.
 		var credit int64

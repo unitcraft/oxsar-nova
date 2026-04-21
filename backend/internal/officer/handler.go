@@ -56,6 +56,7 @@ func (h *Handler) Activate(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrOfficerNotFound):
 		httpx.WriteError(w, r, httpx.ErrNotFound)
 	case errors.Is(err, ErrAlreadyActive),
+		errors.Is(err, ErrGroupActive),
 		errors.Is(err, ErrNotEnoughCredit):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	default:
