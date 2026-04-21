@@ -40,8 +40,8 @@ func Calculate(in Input) (Report, error) {
 
 	r := rng.New(in.Seed)
 
-	atk := newState(in.Attackers)
-	def := newState(in.Defenders)
+	atk := newState(in.Attackers, in.Rapidfire)
+	def := newState(in.Defenders, in.Rapidfire)
 
 	report := Report{Seed: in.Seed}
 
@@ -112,17 +112,23 @@ type unitState struct {
 type sideState struct {
 	userID   string
 	username string
-	units    []*unitState
+	// tech — для ballistics/masking. Значение Participant-уровня:
+	// ballistics + masking одинаковы для всех unit-ов одной стороны.
+	tech  Tech
+	units []*unitState
 }
 
 type battleState struct {
 	sides []*sideState
+	// rapidfire[shooterUnitID][targetUnitID] = multiplier (>=1).
+	// nil-safe: если таблицы нет — rf считается = 1 для всех пар.
+	rapidfire map[int]map[int]int
 }
 
-func newState(input []Side) *battleState {
-	bs := &battleState{sides: make([]*sideState, len(input))}
+func newState(input []Side, rf map[int]map[int]int) *battleState {
+	bs := &battleState{sides: make([]*sideState, len(input)), rapidfire: rf}
 	for si, s := range input {
-		ss := &sideState{userID: s.UserID, username: s.Username}
+		ss := &sideState{userID: s.UserID, username: s.Username, tech: s.Tech}
 		for ui, u := range s.Units {
 			us := &unitState{
 				tmpl:           u,
@@ -157,9 +163,12 @@ func (b *battleState) regen() {
 // snapshot возвращает копию состояния — используется как стрелок,
 // чтобы мутация целей в shootAtSides не влияла на количество выстрелов.
 func (b *battleState) snapshot() *battleState {
-	out := &battleState{sides: make([]*sideState, len(b.sides))}
+	out := &battleState{
+		sides:     make([]*sideState, len(b.sides)),
+		rapidfire: b.rapidfire,
+	}
 	for si, s := range b.sides {
-		ss := &sideState{userID: s.userID, username: s.username}
+		ss := &sideState{userID: s.userID, username: s.username, tech: s.tech}
 		for _, u := range s.units {
 			cp := *u
 			ss.units = append(ss.units, &cp)
@@ -232,11 +241,24 @@ func (b *battleState) toSides() []Side {
 // shootAtSides — shooters бьёт по targets (один полу-раунд).
 // Распределение выстрелов по целям — пропорционально их weight
 // (2^Front × Quantity, как Java Units.getStartTurnWeight).
+//
+// M4.2 добавляет:
+//   - rapidfire: shots = quantity × rapidfire[shooter_id][target_id];
+//   - masking vs ballistics: часть выстрелов промахивается.
+//     Detmerministic-формула Java (НЕ RNG-roll):
+//        maskingEffect = max(0, target.Masking - shooter.Ballistics)
+//        factor = 1 - 1/(1 + maskingEffect * 0.2)
+//        missed = floor(shots * factor)
+//     где masking берётся со стороны ЦЕЛИ, ballistics — со СТОРОНЫ-
+//     стрелка. Семантика: «я прячу свой флот, враг ищет сквозь помехи».
 func shootAtSides(r *rng.R, shooters, targets *battleState) {
-	_ = r // M4.2: ballistics/masking roll
+	_ = r
 
 	// Собираем активные цели.
 	var actives []*unitState
+	// sideTechOf — по unitState'у находим Tech стороны-владельца,
+	// чтобы взять masking при расчёте ballistics/masking-эффекта.
+	sideTechOf := make(map[*unitState]Tech)
 	var totalWeight float64
 	for _, s := range targets.sides {
 		for _, u := range s.units {
@@ -248,6 +270,7 @@ func shootAtSides(r *rng.R, shooters, targets *battleState) {
 				continue
 			}
 			actives = append(actives, u)
+			sideTechOf[u] = s.tech
 			totalWeight += w
 		}
 	}
@@ -256,6 +279,7 @@ func shootAtSides(r *rng.R, shooters, targets *battleState) {
 	}
 
 	for _, s := range shooters.sides {
+		shooterBallistics := s.tech.Ballistics
 		for _, shooter := range s.units {
 			if shooter.quantity <= 0 {
 				continue
@@ -264,21 +288,76 @@ func shootAtSides(r *rng.R, shooters, targets *battleState) {
 			if attack <= 0 {
 				continue
 			}
-			shots := shooter.quantity // rapidfire=1 в M4.1
 			for _, tgt := range actives {
 				if tgt.quantity <= 0 {
 					continue
 				}
 				w := unitWeight(*tgt)
 				portion := w / totalWeight
-				targetShots := int64(math.Round(float64(shots) * portion))
-				if targetShots <= 0 {
-					targetShots = 1
+				// shots (до rapidfire/masking) — доля от quantity стрелка,
+				// распределяемая по данной цели.
+				rawShots := int64(math.Round(float64(shooter.quantity) * portion))
+				if rawShots <= 0 {
+					rawShots = 1
 				}
-				applyShots(shooter, tgt, attack, targetShots)
+				// rapidfire: shooter×target — legacy таблица. Если
+				// пары нет, считаем rf=1. Значение <1 не легально
+				// (Java: Math.max(1, rf)) — принудительно 1.
+				rf := rapidfireMult(shooters.rapidfire, shooter.tmpl.UnitID, tgt.tmpl.UnitID)
+				shots := rawShots * int64(rf)
+
+				// ballistics vs masking.
+				tgtMasking := sideTechOf[tgt].Masking
+				shots = applyMasking(shots, shooterBallistics, tgtMasking)
+				if shots <= 0 {
+					continue
+				}
+				applyShots(shooter, tgt, attack, shots)
 			}
 		}
 	}
+}
+
+// rapidfireMult — вернуть множитель, min = 1.
+func rapidfireMult(table map[int]map[int]int, shooterID, targetID int) int {
+	if table == nil {
+		return 1
+	}
+	row, ok := table[shooterID]
+	if !ok {
+		return 1
+	}
+	v := row[targetID]
+	if v < 1 {
+		return 1
+	}
+	return v
+}
+
+// applyMasking — детерминированная формула Java processAttack:
+//
+//	maskingEffect = max(0, masking - ballistics)
+//	factor = 1 - 1 / (1 + maskingEffect * 2/10)
+//	missed = floor(shots * factor)
+//
+// Если ballistics >= masking — эффекта нет, возвращаем исходные shots.
+func applyMasking(shots int64, ballistics, masking int) int64 {
+	if shots <= 0 {
+		return 0
+	}
+	effect := masking - ballistics
+	if effect <= 0 {
+		return shots
+	}
+	factor := 1.0 - 1.0/(1.0+float64(effect)*2.0/10.0)
+	missed := int64(math.Floor(float64(shots) * factor))
+	if missed < 0 {
+		missed = 0
+	}
+	if missed > shots {
+		missed = shots
+	}
+	return shots - missed
 }
 
 // applyShots — применяет shots выстрелов мощности attack к target.

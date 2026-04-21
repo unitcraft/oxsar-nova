@@ -255,3 +255,105 @@ func TestCalculate_ShieldRegensBetweenRounds(t *testing.T) {
 		t.Fatalf("expected draw, got %q", rep.Winner)
 	}
 }
+
+// --- M4.2 rapidfire / masking tests ---
+
+// TestRapidfire_TriplesDamage: атакующие с rf=3 наносят в 3 раза
+// больше урона, чем без rf (при прочих равных).
+func TestRapidfire_TriplesDamage(t *testing.T) {
+	t.Parallel()
+	noRF := Input{
+		Seed:      1,
+		Rounds:    1,
+		Attackers: []Side{simpleAttacker(10, 100, 1000000)},
+		Defenders: []Side{simpleDefender(10, 0, 1000)},
+	}
+	withRF := noRF
+	withRF.Rapidfire = map[int]map[int]int{
+		33: {31: 3}, // shooter 33 has rf=3 on target 31
+	}
+
+	rep1, err := Calculate(noRF)
+	if err != nil {
+		t.Fatalf("noRF: %v", err)
+	}
+	rep2, err := Calculate(withRF)
+	if err != nil {
+		t.Fatalf("withRF: %v", err)
+	}
+	killsNoRF := int64(10) - rep1.Defenders[0].Units[0].QuantityEnd
+	killsRF := int64(10) - rep2.Defenders[0].Units[0].QuantityEnd
+	if killsRF != 3*killsNoRF {
+		t.Fatalf("rapidfire: kills no-rf=%d, with-rf=%d (expected 3x)", killsNoRF, killsRF)
+	}
+}
+
+// TestMasking_ReducesDamage: если masking цели > ballistics стрелка,
+// часть выстрелов промахивается → урон падает.
+//
+// Масштабы подобраны так, чтобы разница в shots давала разное число
+// kills (иначе floor() поглощает эффект): attack=500, 10 shooters,
+// base pool=5000 → 5 kills. С masking=10: factor=0.667, shots=10-6=4,
+// pool=2000, kills=floor((10000-2000)/1000) → но без ablation даже
+// частичный урон убивает целого юнита: kills = 10 - floor(8000/1000) = 2.
+func TestMasking_ReducesDamage(t *testing.T) {
+	t.Parallel()
+	base := Input{
+		Seed:      1,
+		Rounds:    1,
+		Attackers: []Side{simpleAttacker(10, 500, 1000000)},
+		Defenders: []Side{simpleDefender(10, 0, 1000)},
+	}
+	rep1, err := Calculate(base)
+	if err != nil {
+		t.Fatalf("base: %v", err)
+	}
+
+	masked := base
+	masked.Defenders = []Side{{
+		UserID: "def",
+		Tech:   Tech{Masking: 10},
+		Units:  base.Defenders[0].Units,
+	}}
+	rep2, err := Calculate(masked)
+	if err != nil {
+		t.Fatalf("masked: %v", err)
+	}
+	kills1 := int64(10) - rep1.Defenders[0].Units[0].QuantityEnd
+	kills2 := int64(10) - rep2.Defenders[0].Units[0].QuantityEnd
+	if kills2 >= kills1 {
+		t.Fatalf("masking should reduce damage: kills base=%d, masked=%d", kills1, kills2)
+	}
+}
+
+// TestBallistics_OffsetsMasking: если ballistics == masking, эффекта
+// нет — результат совпадает с отсутствием masking.
+func TestBallistics_OffsetsMasking(t *testing.T) {
+	t.Parallel()
+	base := Input{
+		Seed:      1,
+		Rounds:    1,
+		Attackers: []Side{simpleAttacker(10, 100, 1000000)},
+		Defenders: []Side{simpleDefender(10, 0, 1000)},
+	}
+	rep1, _ := Calculate(base)
+
+	balanced := base
+	balanced.Attackers = []Side{{
+		UserID: "att",
+		Tech:   Tech{Ballistics: 10},
+		Units:  base.Attackers[0].Units,
+	}}
+	balanced.Defenders = []Side{{
+		UserID: "def",
+		Tech:   Tech{Masking: 10},
+		Units:  base.Defenders[0].Units,
+	}}
+	rep2, _ := Calculate(balanced)
+
+	k1 := int64(10) - rep1.Defenders[0].Units[0].QuantityEnd
+	k2 := int64(10) - rep2.Defenders[0].Units[0].QuantityEnd
+	if k1 != k2 {
+		t.Fatalf("ballistics should offset masking: k1=%d, k2=%d", k1, k2)
+	}
+}
