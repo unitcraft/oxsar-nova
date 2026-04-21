@@ -26,6 +26,7 @@ var (
 	ErrNotFound     = &Error{Status: http.StatusNotFound, Code: "not_found", Message: "not found"}
 	ErrConflict     = &Error{Status: http.StatusConflict, Code: "conflict", Message: "conflict"}
 	ErrInternal     = &Error{Status: http.StatusInternalServerError, Code: "internal", Message: "internal error"}
+	ErrRateLimit    = &Error{Status: http.StatusTooManyRequests, Code: "rate_limit", Message: "rate limit exceeded"}
 )
 
 // WriteJSON сериализует value как JSON. Ошибки маршалинга не возвращаются
