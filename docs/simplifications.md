@@ -129,15 +129,10 @@
 - **Как чинить**: добавить колонку `is_moon` в PK.
 - **Приоритет**: L.
 
-### [SPY] Без counter-espionage и research-уровней (ratio>=8)
-- **Где**: `fleet/spy.go::buildEspionageReport`.
-- **Что**: нет сбития probes defense'ом, нет видимости
-  research-уровней при ratio>=8 (legacy).
-- **Почему**: сократили scope.
-- **Как чинить**: counter-espionage = случайный roll
-  `min(defense_count * 0.1, probes)`, research читается из research
-  по списку unit_id.
-- **Приоритет**: M.
+### [SPY] Counter-espionage + research>=8 — ЗАКРЫТО
+- Закрыто: `buildEspionageReport` добавляет Research при ratio>=8 через
+  `readOwnerResearch`. Counter-espionage: `min(defTotal/10, probes)` roll,
+  при перехвате всех probes флот уничтожается (commit 306bbaa).
 
 ### [COLONIZE] Нет выбора имени / размера планеты по позиции
 - **Где**: `fleet/colonize.go`.

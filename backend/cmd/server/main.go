@@ -246,10 +246,14 @@ func run() error {
 		pr.Get("/alliances", allianceH.List)
 		pr.Get("/alliances/me", allianceH.My)
 		pr.Get("/alliances/{id}", allianceH.Get)
+		pr.Get("/alliances/{id}/applications", allianceH.Applications)
 		pr.Post("/alliances", allianceH.Create)
 		pr.Post("/alliances/{id}/join", allianceH.Join)
+		pr.Patch("/alliances/{id}/open", allianceH.SetOpen)
 		pr.Post("/alliances/leave", allianceH.Leave)
 		pr.Delete("/alliances/{id}", allianceH.Disband)
+		pr.Post("/alliances/applications/{appID}/approve", allianceH.Approve)
+		pr.Delete("/alliances/applications/{appID}", allianceH.Reject)
 
 		pr.Get("/tutorial", tutorialH.Status)
 

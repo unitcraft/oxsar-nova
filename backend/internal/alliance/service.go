@@ -1,9 +1,13 @@
-// Package alliance — создание и управление альянсами (MVP M6).
+// Package alliance — создание и управление альянсами (M6).
+//
+// Потоки вступления:
+//   - is_open=true  → Join() сразу добавляет участника.
+//   - is_open=false → Join() создаёт заявку; owner вызывает Approve/Reject.
 //
 // Ограничения:
 //   - Один игрок — один альянс (PK alliance_members.user_id).
 //   - Только owner может распустить альянс (DELETE).
-//   - Kick-механика, ранги, заявки, отношения (NAP/WAR/ALLY) — M6+.
+//   - Kick-механика, ранги, отношения (NAP/WAR/ALLY) — M6+.
 package alliance
 
 import (
@@ -26,14 +30,16 @@ type Service struct {
 func NewService(db repo.Exec) *Service { return &Service{db: db} }
 
 var (
-	ErrNotFound       = errors.New("alliance: not found")
-	ErrAlreadyMember  = errors.New("alliance: already in an alliance")
-	ErrNotMember      = errors.New("alliance: not a member")
-	ErrNotOwner       = errors.New("alliance: not the owner")
-	ErrTagTaken       = errors.New("alliance: tag already taken")
-	ErrNameTaken      = errors.New("alliance: name already taken")
-	ErrInvalidTag     = errors.New("alliance: tag must be 3–5 latin letters/digits")
-	ErrCannotLeaveOwn = errors.New("alliance: owner must transfer or disband before leaving")
+	ErrNotFound          = errors.New("alliance: not found")
+	ErrAlreadyMember     = errors.New("alliance: already in an alliance")
+	ErrNotMember         = errors.New("alliance: not a member")
+	ErrNotOwner          = errors.New("alliance: not the owner")
+	ErrTagTaken          = errors.New("alliance: tag already taken")
+	ErrNameTaken         = errors.New("alliance: name already taken")
+	ErrInvalidTag        = errors.New("alliance: tag must be 3–5 latin letters/digits")
+	ErrCannotLeaveOwn    = errors.New("alliance: owner must transfer or disband before leaving")
+	ErrApplicationExists = errors.New("alliance: application already pending")
+	ErrApplicationNotFound = errors.New("alliance: application not found")
 )
 
 // Alliance — полная запись для UI.
@@ -42,9 +48,20 @@ type Alliance struct {
 	Tag         string    `json:"tag"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
+	IsOpen      bool      `json:"is_open"`
 	OwnerID     string    `json:"owner_id"`
 	OwnerName   string    `json:"owner_name"`
 	MemberCount int       `json:"member_count"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// Application — заявка на вступление в альянс.
+type Application struct {
+	ID          string    `json:"id"`
+	AllianceID  string    `json:"alliance_id"`
+	UserID      string    `json:"user_id"`
+	Username    string    `json:"username"`
+	Message     string    `json:"message"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -62,7 +79,7 @@ func (s *Service) List(ctx context.Context, limit int) ([]Alliance, error) {
 		limit = 50
 	}
 	rows, err := s.db.Pool().Query(ctx, `
-		SELECT a.id, a.tag, a.name, a.description, a.owner_id,
+		SELECT a.id, a.tag, a.name, a.description, a.is_open, a.owner_id,
 		       COALESCE(u.username,'') AS owner_name,
 		       COUNT(m.user_id)        AS member_count,
 		       a.created_at
@@ -80,7 +97,7 @@ func (s *Service) List(ctx context.Context, limit int) ([]Alliance, error) {
 	var out []Alliance
 	for rows.Next() {
 		var al Alliance
-		if err := rows.Scan(&al.ID, &al.Tag, &al.Name, &al.Description,
+		if err := rows.Scan(&al.ID, &al.Tag, &al.Name, &al.Description, &al.IsOpen,
 			&al.OwnerID, &al.OwnerName, &al.MemberCount, &al.CreatedAt); err != nil {
 			return nil, err
 		}
@@ -93,14 +110,14 @@ func (s *Service) List(ctx context.Context, limit int) ([]Alliance, error) {
 func (s *Service) Get(ctx context.Context, id string) (Alliance, []Member, error) {
 	var al Alliance
 	err := s.db.Pool().QueryRow(ctx, `
-		SELECT a.id, a.tag, a.name, a.description, a.owner_id,
+		SELECT a.id, a.tag, a.name, a.description, a.is_open, a.owner_id,
 		       COALESCE(u.username,'') AS owner_name,
 		       (SELECT COUNT(*) FROM alliance_members WHERE alliance_id=a.id),
 		       a.created_at
 		FROM alliances a
 		LEFT JOIN users u ON u.id = a.owner_id
 		WHERE a.id = $1
-	`, id).Scan(&al.ID, &al.Tag, &al.Name, &al.Description,
+	`, id).Scan(&al.ID, &al.Tag, &al.Name, &al.Description, &al.IsOpen,
 		&al.OwnerID, &al.OwnerName, &al.MemberCount, &al.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -200,9 +217,11 @@ func (s *Service) Create(ctx context.Context, ownerID, tag, name, description st
 	return out, err
 }
 
-// Join добавляет пользователя в альянс.
-func (s *Service) Join(ctx context.Context, userID, allianceID string) error {
-	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+// Join добавляет пользователя в альянс. Если альянс закрыт (is_open=false),
+// создаётся заявка; owner должен вызвать Approve/Reject.
+// Возвращает (true, nil) при прямом вступлении, (false, nil) при заявке.
+func (s *Service) Join(ctx context.Context, userID, allianceID, message string) (joined bool, err error) {
+	err = s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var existing *string
 		if err := tx.QueryRow(ctx,
 			`SELECT alliance_id FROM users WHERE id=$1`, userID).Scan(&existing); err != nil {
@@ -211,14 +230,30 @@ func (s *Service) Join(ctx context.Context, userID, allianceID string) error {
 		if existing != nil {
 			return ErrAlreadyMember
 		}
-		// Проверяем что альянс существует.
-		var ownerID string
-		err := tx.QueryRow(ctx, `SELECT owner_id FROM alliances WHERE id=$1`, allianceID).Scan(&ownerID)
+		var isOpen bool
+		err := tx.QueryRow(ctx,
+			`SELECT is_open FROM alliances WHERE id=$1`, allianceID).Scan(&isOpen)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrNotFound
 			}
 			return fmt.Errorf("check alliance: %w", err)
+		}
+
+		if !isOpen {
+			// Создаём заявку.
+			_, err := tx.Exec(ctx, `
+				INSERT INTO alliance_applications (alliance_id, user_id, message)
+				VALUES ($1, $2, $3)
+			`, allianceID, userID, message)
+			if err != nil {
+				if isDupKey(err) {
+					return ErrApplicationExists
+				}
+				return fmt.Errorf("insert application: %w", err)
+			}
+			joined = false
+			return nil
 		}
 
 		if _, err := tx.Exec(ctx, `
@@ -231,7 +266,139 @@ func (s *Service) Join(ctx context.Context, userID, allianceID string) error {
 			`UPDATE users SET alliance_id=$1 WHERE id=$2`, allianceID, userID); err != nil {
 			return fmt.Errorf("update user: %w", err)
 		}
+		joined = true
 		return nil
+	})
+	return joined, err
+}
+
+// SetOpen меняет флаг is_open. Только owner.
+func (s *Service) SetOpen(ctx context.Context, userID, allianceID string, isOpen bool) error {
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var ownerID string
+		err := tx.QueryRow(ctx, `SELECT owner_id FROM alliances WHERE id=$1`, allianceID).Scan(&ownerID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrNotFound
+			}
+			return fmt.Errorf("check alliance: %w", err)
+		}
+		if ownerID != userID {
+			return ErrNotOwner
+		}
+		_, err = tx.Exec(ctx, `UPDATE alliances SET is_open=$1 WHERE id=$2`, isOpen, allianceID)
+		return err
+	})
+}
+
+// Applications возвращает список заявок альянса. Только owner.
+func (s *Service) Applications(ctx context.Context, userID, allianceID string) ([]Application, error) {
+	var ownerID string
+	if err := s.db.Pool().QueryRow(ctx,
+		`SELECT owner_id FROM alliances WHERE id=$1`, allianceID).Scan(&ownerID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("check alliance: %w", err)
+	}
+	if ownerID != userID {
+		return nil, ErrNotOwner
+	}
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT a.id, a.alliance_id, a.user_id, COALESCE(u.username,''), a.message, a.created_at
+		FROM alliance_applications a
+		JOIN users u ON u.id = a.user_id
+		WHERE a.alliance_id = $1
+		ORDER BY a.created_at ASC
+	`, allianceID)
+	if err != nil {
+		return nil, fmt.Errorf("list applications: %w", err)
+	}
+	defer rows.Close()
+	var out []Application
+	for rows.Next() {
+		var ap Application
+		if err := rows.Scan(&ap.ID, &ap.AllianceID, &ap.UserID, &ap.Username,
+			&ap.Message, &ap.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, ap)
+	}
+	return out, rows.Err()
+}
+
+// Approve принимает заявку, добавляет участника. Только owner.
+func (s *Service) Approve(ctx context.Context, ownerID, applicationID string) error {
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var (
+			allianceID string
+			applicantID string
+		)
+		err := tx.QueryRow(ctx,
+			`SELECT alliance_id, user_id FROM alliance_applications WHERE id=$1`,
+			applicationID).Scan(&allianceID, &applicantID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrApplicationNotFound
+			}
+			return fmt.Errorf("read application: %w", err)
+		}
+		var allianceOwner string
+		if err := tx.QueryRow(ctx, `SELECT owner_id FROM alliances WHERE id=$1`,
+			allianceID).Scan(&allianceOwner); err != nil {
+			return fmt.Errorf("check alliance: %w", err)
+		}
+		if allianceOwner != ownerID {
+			return ErrNotOwner
+		}
+		// Check applicant still free.
+		var existing *string
+		if err := tx.QueryRow(ctx,
+			`SELECT alliance_id FROM users WHERE id=$1`, applicantID).Scan(&existing); err != nil {
+			return fmt.Errorf("check applicant: %w", err)
+		}
+		if existing != nil {
+			// Applicant joined elsewhere — clean up and return error.
+			_, _ = tx.Exec(ctx, `DELETE FROM alliance_applications WHERE id=$1`, applicationID)
+			return ErrAlreadyMember
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO alliance_members (alliance_id, user_id, rank)
+			VALUES ($1, $2, 'member')
+		`, allianceID, applicantID); err != nil {
+			return fmt.Errorf("insert member: %w", err)
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE users SET alliance_id=$1 WHERE id=$2`, allianceID, applicantID); err != nil {
+			return fmt.Errorf("update user: %w", err)
+		}
+		_, err = tx.Exec(ctx, `DELETE FROM alliance_applications WHERE id=$1`, applicationID)
+		return err
+	})
+}
+
+// Reject удаляет заявку. Только owner.
+func (s *Service) Reject(ctx context.Context, ownerID, applicationID string) error {
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var allianceID string
+		err := tx.QueryRow(ctx,
+			`SELECT alliance_id FROM alliance_applications WHERE id=$1`, applicationID).Scan(&allianceID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrApplicationNotFound
+			}
+			return fmt.Errorf("read application: %w", err)
+		}
+		var allianceOwner string
+		if err := tx.QueryRow(ctx, `SELECT owner_id FROM alliances WHERE id=$1`,
+			allianceID).Scan(&allianceOwner); err != nil {
+			return fmt.Errorf("check alliance: %w", err)
+		}
+		if allianceOwner != ownerID {
+			return ErrNotOwner
+		}
+		_, err = tx.Exec(ctx, `DELETE FROM alliance_applications WHERE id=$1`, applicationID)
+		return err
 	})
 }
 

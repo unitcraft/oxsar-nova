@@ -8,6 +8,7 @@ interface Alliance {
   tag: string;
   name: string;
   description: string;
+  is_open: boolean;
   owner_id: string;
   owner_name: string;
   member_count: number;
@@ -19,6 +20,15 @@ interface Member {
   username: string;
   rank: string;
   joined_at: string;
+}
+
+interface Application {
+  id: string;
+  alliance_id: string;
+  user_id: string;
+  username: string;
+  message: string;
+  created_at: string;
 }
 
 export function AllianceScreen() {
@@ -48,7 +58,8 @@ export function AllianceScreen() {
   });
 
   const join = useMutation({
-    mutationFn: (id: string) => api.post<void>(`/api/alliances/${id}/join`),
+    mutationFn: ({ id, message }: { id: string; message: string }) =>
+      api.post<{ status?: string }>(`/api/alliances/${id}/join`, { message }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['alliances'] });
       setView('mine');
@@ -73,9 +84,10 @@ export function AllianceScreen() {
 
   const myAlliance = mine.data?.alliance ?? null;
   const myMembers = mine.data?.members ?? [];
-  const amOwner = !!myAlliance && !!mine.data?.members?.find(
-    (m) => m.rank === 'owner' && m.user_id === myAlliance.owner_id,
-  );
+  const myMember = myAlliance
+    ? myMembers.find((m: Member) => m.user_id === myAlliance.owner_id && m.rank === 'owner')
+    : undefined;
+  const amOwner = !!myMember;
 
   return (
     <section>
@@ -122,6 +134,7 @@ export function AllianceScreen() {
                   <th>[{tf('Main', 'ALLY_TAG', 'Тег')}]</th>
                   <th>{tf('Main', 'ALLY_NAME', 'Название')}</th>
                   <th>{tf('Main', 'ALLY_MEMBERS', 'Игроков')}</th>
+                  <th>{tf('Main', 'ALLY_OPEN', 'Тип')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -132,6 +145,7 @@ export function AllianceScreen() {
                     <td>[{al.tag}]</td>
                     <td>{al.name}</td>
                     <td className="num">{al.member_count}</td>
+                    <td>{al.is_open ? '🔓' : '🔒'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -146,7 +160,7 @@ export function AllianceScreen() {
                 canJoin={!myAlliance}
                 joining={join.isPending}
                 joinError={join.error instanceof Error ? join.error.message : ''}
-                onJoin={() => join.mutate(selectedID)}
+                onJoin={(msg) => join.mutate({ id: selectedID, message: msg })}
               />
             )}
           </div>
@@ -182,6 +196,33 @@ function MyAlliancePanel({
   disbandError: string;
 }) {
   const { tf } = useTranslation();
+  const qc = useQueryClient();
+
+  const setOpen = useMutation({
+    mutationFn: ({ id, isOpen }: { id: string; isOpen: boolean }) =>
+      api.patch<void>(`/api/alliances/${id}/open`, { is_open: isOpen }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['alliances'] }),
+  });
+
+  const approve = useMutation({
+    mutationFn: (appID: string) =>
+      api.post<void>(`/api/alliances/applications/${appID}/approve`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['alliances'] }),
+  });
+
+  const reject = useMutation({
+    mutationFn: (appID: string) =>
+      api.delete<void>(`/api/alliances/applications/${appID}`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['alliances'] }),
+  });
+
+  const apps = useQuery({
+    queryKey: ['alliances', alliance?.id, 'applications'],
+    queryFn: () =>
+      api.get<{ applications: Application[] | null }>(`/api/alliances/${alliance!.id}/applications`),
+    enabled: isOwner && !!alliance && !alliance.is_open,
+    refetchInterval: 15000,
+  });
 
   if (loading) return <p>…</p>;
   if (!alliance) return <p>{tf('Main', 'ALLY_NONE', 'Вы не состоите в альянсе.')}</p>;
@@ -192,8 +233,20 @@ function MyAlliancePanel({
       {alliance.description && <p>{alliance.description}</p>}
       <p>
         <b>{tf('Main', 'ALLY_OWNER', 'Основатель')}:</b> {alliance.owner_name}{' · '}
-        <b>{tf('Main', 'ALLY_MEMBERS', 'Игроков')}:</b> {alliance.member_count}
+        <b>{tf('Main', 'ALLY_MEMBERS', 'Игроков')}:</b> {alliance.member_count}{' · '}
+        <b>Тип:</b> {alliance.is_open ? 'Открытый' : 'Закрытый (заявки)'}
       </p>
+
+      {isOwner && (
+        <div style={{ marginBottom: 8 }}>
+          <button type="button"
+            disabled={setOpen.isPending}
+            onClick={() => setOpen.mutate({ id: alliance.id, isOpen: !alliance.is_open })}>
+            {alliance.is_open ? 'Закрыть (включить заявки)' : 'Открыть (прямой вход)'}
+          </button>
+        </div>
+      )}
+
       <table className="ox-table">
         <thead>
           <tr>
@@ -212,6 +265,27 @@ function MyAlliancePanel({
           ))}
         </tbody>
       </table>
+
+      {isOwner && !alliance.is_open && (
+        <div style={{ marginTop: 16 }}>
+          <h4>Заявки на вступление</h4>
+          {apps.isLoading && <p>…</p>}
+          {(apps.data?.applications ?? []).length === 0 && !apps.isLoading && (
+            <p>Нет заявок.</p>
+          )}
+          {(apps.data?.applications ?? []).map((ap) => (
+            <div key={ap.id} style={{ marginBottom: 8, padding: '6px 10px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4 }}>
+              <b>{ap.username}</b>
+              {ap.message && <span> — {ap.message}</span>}
+              <span style={{ float: 'right', display: 'flex', gap: 6 }}>
+                <button type="button" onClick={() => approve.mutate(ap.id)}>Принять</button>
+                <button type="button" onClick={() => reject.mutate(ap.id)}>Отклонить</button>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
         {!isOwner && (
           <button type="button" onClick={onLeave}>
@@ -239,16 +313,18 @@ function AllianceDetail({
   canJoin: boolean;
   joining: boolean;
   joinError: string;
-  onJoin: () => void;
+  onJoin: (message: string) => void;
 }) {
   const { tf } = useTranslation();
+  const [message, setMessage] = useState('');
   return (
     <div>
       <h3>[{alliance.tag}] {alliance.name}</h3>
       {alliance.description && <p>{alliance.description}</p>}
       <p>
         <b>{tf('Main', 'ALLY_OWNER', 'Основатель')}:</b> {alliance.owner_name}{' · '}
-        <b>{tf('Main', 'ALLY_MEMBERS', 'Игроков')}:</b> {alliance.member_count}
+        <b>{tf('Main', 'ALLY_MEMBERS', 'Игроков')}:</b> {alliance.member_count}{' · '}
+        <b>Тип:</b> {alliance.is_open ? 'Открытый' : 'Закрытый'}
       </p>
       <table className="ox-table">
         <thead>
@@ -268,8 +344,21 @@ function AllianceDetail({
       </table>
       {canJoin && (
         <div style={{ marginTop: 8 }}>
-          <button type="button" disabled={joining} onClick={onJoin}>
-            {tf('Main', 'ALLY_JOIN', 'Вступить')}
+          {!alliance.is_open && (
+            <div style={{ marginBottom: 6 }}>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={2}
+                style={{ width: '100%', boxSizing: 'border-box' }}
+                placeholder="Сопроводительное сообщение (необязательно)"
+              />
+            </div>
+          )}
+          <button type="button" disabled={joining} onClick={() => onJoin(message)}>
+            {alliance.is_open
+              ? tf('Main', 'ALLY_JOIN', 'Вступить')
+              : 'Подать заявку'}
           </button>
           {joinError && <p className="ox-error">{joinError}</p>}
         </div>
