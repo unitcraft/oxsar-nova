@@ -3022,5 +3022,66 @@ Frontend:
 
 
 ================================================================================
+39. ALLIANCE MVP (M6) — СОЗДАНИЕ, ВСТУПЛЕНИЕ, ВЫХОД, РОСПУСК
+================================================================================
+
+Дата: 2026-04-21
+
+Реализован минимальный альянс: create / join / leave / disband.
+
+Миграция 0017_alliances.sql:
+  - alliances (id, tag UNIQUE 3–5 символов, name UNIQUE, description, owner_id,
+    created_at)
+  - alliance_members (alliance_id, user_id PK, rank[owner|member], joined_at)
+  - users.alliance_id (денормализованный FK для быстрого поиска)
+  - CASCADE: удаление альянса → удаление members, SET NULL → users.alliance_id
+
+Backend internal/alliance:
+  service.go:
+    - List(limit) — топ-50 по member_count, LEFT JOIN для owner_name.
+    - Get(id) — альянс + список участников.
+    - MyAlliance(userID) — через users.alliance_id → Get.
+    - Create(ownerID, tag, name, desc) — валидация tag (3–5 ASCII),
+      name (3–64), INSERT alliances + INSERT member owner + UPDATE users.
+    - Join(userID, allianceID) — проверка что не в альянсе, INSERT member.
+    - Leave(userID) — owner не может, DELETE member + UPDATE users.
+    - Disband(userID, allianceID) — только owner, DELETE alliance (CASCADE).
+    - isDupKey() helper для tag/name unique violation.
+
+  handler.go:
+    - GET  /api/alliances          → List
+    - GET  /api/alliances/me       → My
+    - GET  /api/alliances/{id}     → Get
+    - POST /api/alliances          → Create (201)
+    - POST /api/alliances/{id}/join → Join (204)
+    - POST /api/alliances/leave    → Leave (204)
+    - DELETE /api/alliances/{id}   → Disband (204)
+
+Frontend features/alliance/AllianceScreen.tsx:
+  - 3 вкладки: «Мой альянс» / «Список» / «Создать» (только если не в альянсе).
+  - MyAlliancePanel: таблица участников + кнопки Leave / Disband (с confirm).
+  - List: таблица альянсов + AllianceDetail (join button если не в альянсе).
+  - CreateForm: поля tag/name/description, inline ошибка.
+  - App.tsx: Tab 'alliance', TabButton 'Альянс', lazy AllianceScreen.
+
+Упрощения в docs/simplifications.md:
+  [Alliance] MVP без заявок/рангов/отношений/WebSocket-чата — M.
+  [Alliance] Join без заявки (открытый альянс) — M.
+
+Статистика итерации 39:
+   migrations/0017_alliances.sql: новый (~20 строк).
+   internal/alliance/service.go: новый (~270 строк).
+   internal/alliance/handler.go: новый (~130 строк).
+   server/main.go: +3 строки (import + init + маршруты).
+   features/alliance/AllianceScreen.tsx: новый (~290 строк).
+   App.tsx: +7 строк (import, Tab type, TabButton, render).
+
+Что дальше:
+   - Следующие 🟡 в docs/status.md:
+     AutoMsg (scheduled messages, M6), Market order-book (M6),
+     Simulator UI (M7.1).
+
+
+================================================================================
 Конец дневника.
 ================================================================================

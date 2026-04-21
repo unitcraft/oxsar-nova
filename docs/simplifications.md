@@ -485,6 +485,29 @@
 
 ---
 
+## Alliance (M6)
+
+### [Alliance] MVP без заявок, рангов, отношений и WebSocket-чата
+- **Где**: `internal/alliance/service.go`, `features/alliance/AllianceScreen.tsx`.
+- **Что**: только create / join / leave / disband. Нет: alliance applications
+  (заявки на вступление с текстом), кастомных рангов, отношений NAP/WAR/ALLY,
+  WebSocket chat (global/alliance/PM), ACS-атак.
+- **Почему**: полный scope M6 — ~1200 LOC PHP (alliance/ + chat/). MVP достаточен
+  для игрового процесса M6-запуска.
+- **Как чинить**: добавить `alliance_applications` + `alliance_relationships` таблицы,
+  WebSocket Hub с fan-out в `chat_messages`, эндпоинты ACS-флота.
+- **Приоритет**: M.
+
+### [Alliance] Join без заявки — открытый альянс
+- **Где**: `alliance/service.go::Join`.
+- **Что**: любой игрок может войти в любой альянс напрямую без одобрения owner'а.
+- **Почему**: заявки требуют отдельной таблицы + notification flow.
+- **Как чинить**: добавить `is_open bool` в alliances + таблицу applications +
+  approve/reject эндпоинты.
+- **Приоритет**: M — для серьёзного PvP это важно.
+
+---
+
 ## Закрытые
 
 - **M4.4a.rapidfire** → исправлено в iteration 20 (commit c7ae59a).
