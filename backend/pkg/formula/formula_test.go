@@ -120,6 +120,36 @@ func TestEvalErrors(t *testing.T) {
 	}
 }
 
+func TestNilExprEval(t *testing.T) {
+	t.Parallel()
+	var e *Expr
+	v, err := e.Eval(Context{})
+	if err != nil {
+		t.Fatalf("nil Expr.Eval returned error: %v", err)
+	}
+	if v != 0 {
+		t.Fatalf("nil Expr.Eval = %v, want 0", v)
+	}
+}
+
+func TestParseErrors_WrongArity(t *testing.T) {
+	t.Parallel()
+	bad := []string{
+		"floor(1, 2)",  // floor expects 1 arg
+		"ceil(1, 2)",   // ceil expects 1 arg
+		"round(1, 2)",  // round expects 1 arg
+		"sqrt(1, 2)",   // sqrt expects 1 arg
+		"abs(1, 2)",    // abs expects 1 arg
+		"min(1)",       // min expects 2 args
+		"max(1)",       // max expects 2 args
+	}
+	for _, src := range bad {
+		if _, err := Parse(src); err == nil {
+			t.Errorf("expected parse error for %q (wrong arity)", src)
+		}
+	}
+}
+
 func TestDeterminism(t *testing.T) {
 	t.Parallel()
 	src := "floor({basic} * pow(1.5, ({level} - 1)))"
