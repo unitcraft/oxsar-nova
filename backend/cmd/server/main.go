@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/oxsar/nova/backend/internal/artefact"
+	"github.com/oxsar/nova/backend/internal/artmarket"
 	"github.com/oxsar/nova/backend/internal/auth"
 	"github.com/oxsar/nova/backend/internal/battle"
 	"github.com/oxsar/nova/backend/internal/building"
@@ -122,6 +123,9 @@ func run() error {
 	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed)
 	rocketH := rocket.NewHandler(rocketSvc)
 
+	artMarketSvc := artmarket.NewService(db)
+	artMarketH := artmarket.NewHandler(artMarketSvc)
+
 	// i18n: папка необязательна — если её нет или пустая, i18n просто
 	// пропускается, HTTP-эндпоинты не регистрируются. Это ожидаемо
 	// до первого прогона cmd/tools/import-phrases (§10.3 ТЗ).
@@ -174,6 +178,12 @@ func run() error {
 		pr.Get("/artefacts", artefactH.List)
 		pr.Post("/artefacts/{id}/activate", artefactH.Activate)
 		pr.Post("/artefacts/{id}/deactivate", artefactH.Deactivate)
+		pr.Post("/artefacts/{id}/sell", artMarketH.ListForSale)
+
+		pr.Get("/artefact-market/offers", artMarketH.Offers)
+		pr.Get("/artefact-market/credit", artMarketH.Credit)
+		pr.Post("/artefact-market/offers/{id}/buy", artMarketH.Buy)
+		pr.Delete("/artefact-market/offers/{id}", artMarketH.Cancel)
 
 		pr.Get("/galaxy/{g}/{s}", galaxyH.System)
 

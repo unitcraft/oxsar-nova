@@ -27,6 +27,14 @@ export function ArtefactsScreen() {
       void qc.invalidateQueries({ queryKey: ['planets'] });
     },
   });
+  const sell = useMutation({
+    mutationFn: (p: { id: string; price: number }) =>
+      api.post<void>(`/api/artefacts/${p.id}/sell`, { price: p.price }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['artefacts'] });
+      void qc.invalidateQueries({ queryKey: ['artefact-market'] });
+    },
+  });
 
   if (list.isLoading) return <p>{tf('Main', 'ARTEFACTS_LOADING', 'Загрузка артефактов…')}</p>;
   if (list.error)
@@ -79,13 +87,31 @@ export function ArtefactsScreen() {
               <td>{a.expire_at ? new Date(a.expire_at).toLocaleString('ru-RU') : '—'}</td>
               <td>
                 {a.state === 'held' && (
-                  <button
-                    type="button"
-                    disabled={activate.isPending}
-                    onClick={() => activate.mutate(a.id)}
-                  >
-                    {actionLabel(a)}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      disabled={activate.isPending}
+                      onClick={() => activate.mutate(a.id)}
+                    >
+                      {actionLabel(a)}
+                    </button>{' '}
+                    <button
+                      type="button"
+                      disabled={sell.isPending}
+                      onClick={() => {
+                        const raw = window.prompt(
+                          tf('Main', 'ART_SELL_PROMPT', 'Цена в credit:'),
+                          '100',
+                        );
+                        const price = Number(raw);
+                        if (price > 0) {
+                          sell.mutate({ id: a.id, price });
+                        }
+                      }}
+                    >
+                      {tf('Main', 'ART_SELL', 'Продать')}
+                    </button>
+                  </>
                 )}
                 {a.state === 'active' && (
                   <button
@@ -96,7 +122,10 @@ export function ArtefactsScreen() {
                     {actionLabel(a)}
                   </button>
                 )}
-                {a.state !== 'held' && a.state !== 'active' && <span>—</span>}
+                {a.state === 'listed' && (
+                  <span>{tf('Main', 'ART_LISTED', 'На продаже')}</span>
+                )}
+                {a.state !== 'held' && a.state !== 'active' && a.state !== 'listed' && <span>—</span>}
               </td>
             </tr>
           ))}

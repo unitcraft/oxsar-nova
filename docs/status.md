@@ -29,7 +29,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | ExpedPlanetCreator          | ⬜     | M5 | ex ext/ExpedPlanetCreator.class.php.                     |
 | Rockets / stargate          | 🟡     | M5 | Interplanetary rockets (kind=16): Launch → Impact. Stargate — позже. |
 | Artefact                    | 🟡     | M5.0 | Apply/Revert/Resync для factor-эффектов (6 артефактов). |
-| Artefact Market (credit)    | ⬜     | M5.1 | ex ext/page/ExtArtefactMarket 322 LOC.                 |
+| Artefact Market (credit)    | 🟡     | M5.1 | List/Sell/Buy/Cancel + UI. users.credit как валюта. |
 | Alien AI                    | ⬜     | M5.2 | ex game/AlienAI.class.php 1127 LOC.                    |
 | Repair Factory              | ✅     | M4.4c | DISASSEMBLE + REPAIR end-to-end (API + worker + UI). damaged-юниты из боя чинятся целой пачкой. |
 | AutoMsg                     | ⬜     | M4.2 | ex game/AutoMsg.class.php 1228 LOC.                    |
