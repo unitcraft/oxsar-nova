@@ -3683,5 +3683,16 @@ frontend/src/features/artmarket/ArtefactMarketScreen.tsx:
 docs/simplifications.md: [ArtefactMarket] Фильтр «мои» — ЗАКРЫТО.
 
 ================================================================================
+Итерация 62 — fix(officers): ADMIRAL description «attack» → «постройка кораблей»
+================================================================================
+
+migrations/0015_officers.sql: description ADMIRAL исправлен для новых установок.
+migrations/0023_officer_admiral_desc.sql (новый):
+  - UPDATE officer_defs SET description='Ускоряет постройку кораблей...' WHERE key='ADMIRAL'.
+  - Down: откат к старому тексту.
+
+docs/simplifications.md: [Officers] ADMIRAL — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================

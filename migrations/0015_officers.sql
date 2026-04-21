@@ -33,7 +33,7 @@ CREATE INDEX ix_officer_active_expire ON officer_active(expires_at);
 -- меньше, тем выгоднее (default 1.2 → -0.2 = 1.0 = честный паритет).
 INSERT INTO officer_defs (key, title, description, duration_days, cost_credit, effect) VALUES
     ('ADMIRAL',   'Адмирал',
-     'Увеличивает атаку всех ship-stack''ов флота на 10%.',
+     'Ускоряет постройку кораблей в верфи на 10%.',
      7, 500,
      '{"scope":"user","field":"build_factor","op":"add","delta":0.1}'::jsonb),
     ('GEOLOGIST', 'Геолог',

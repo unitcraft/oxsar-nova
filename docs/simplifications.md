@@ -341,17 +341,9 @@
   события «попытка продлить».
 - **Приоритет**: L.
 
-### [Officers] ADMIRAL — build_factor, не attack
-- **Где**: seed в `migrations/0015_officers.sql`.
-- **Что**: описание говорит «+10% attack», а эффект — на
-  `build_factor` (нет поля attack_factor в модели).
-- **Почему**: в БД у нас только 6 фактор-полей, attack_factor не
-  заведён. Legacy применяет attack-бонус прямо в бою (Participant
-  getAttack()).
-- **Как чинить**: добавить `users.attack_factor` + учёт в
-  `fleet/attack.go::stacksToBattleUnits` (умножать attack).
-  Или переписать описание на «+10% build».
-- **Приоритет**: M — сейчас название вводит в заблуждение.
+### [Officers] ADMIRAL — описание исправлено — ЗАКРЫТО
+- Описание изменено на «Ускоряет постройку кораблей в верфи на 10%».
+  Миграция 0023 исправляет БД, 0015 исправлена для новых установок.
 
 ### [Officers] Credit не восстанавливается при expire
 - **Где**: `officer/service.go::ExpireHandler`.
