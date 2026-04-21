@@ -32,16 +32,17 @@ const interceptorRocketUnitID = 51
 func (s *Service) ImpactHandler() event.Handler {
 	return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
 		var pl struct {
-			ImpactID   string `json:"impact_id"`
-			AttackerID string `json:"attacker_id"`
-			SrcPlanet  string `json:"src_planet"`
-			Dst        struct {
+			ImpactID     string `json:"impact_id"`
+			AttackerID   string `json:"attacker_id"`
+			SrcPlanet    string `json:"src_planet"`
+			Dst          struct {
 				Galaxy   int  `json:"galaxy"`
 				System   int  `json:"system"`
 				Position int  `json:"position"`
 				IsMoon   bool `json:"is_moon"`
 			} `json:"dst"`
-			Count int64 `json:"count"`
+			Count        int64 `json:"count"`
+			TargetUnitID int   `json:"target_unit_id"` // 0 = не указана (равномерно)
 		}
 		if err := json.Unmarshal(e.Payload, &pl); err != nil {
 			return fmt.Errorf("rocket impact: payload: %w", err)
@@ -147,37 +148,64 @@ func (s *Service) ImpactHandler() event.Handler {
 			return notifyBoth(ctx, tx, pl.AttackerID, targetOwner, subj, body)
 		}
 
-		// Σ(count × shell) для нормировки.
-		var totalPool int64
-		for _, d := range stacks {
-			totalPool += d.Count * int64(d.Shell)
-		}
-		if totalPool <= 0 {
-			return nil // не должно, но защитимся
-		}
-
+		// Если задана приоритетная цель — бьём её первой, остаток урона
+		// распределяем по оставшимся стекам.
+		remainingDamage := totalDamage
 		type loss struct {
 			UnitID int
 			Lost   int64
 		}
 		var losses []loss
-		for _, d := range stacks {
-			share := float64(d.Count*int64(d.Shell)) / float64(totalPool)
-			dmg := int64(float64(totalDamage) * share)
-			killed := dmg / int64(d.Shell)
-			if killed > d.Count {
-				killed = d.Count
+		var otherStacks []defStack
+		if pl.TargetUnitID > 0 {
+			for _, d := range stacks {
+				if d.UnitID != pl.TargetUnitID {
+					otherStacks = append(otherStacks, d)
+					continue
+				}
+				killed := remainingDamage / int64(d.Shell)
+				if killed > d.Count {
+					killed = d.Count
+				}
+				if killed > 0 {
+					remainingDamage -= killed * int64(d.Shell)
+					newCount := d.Count - killed
+					if _, err := tx.Exec(ctx,
+						`UPDATE defense SET count=$1 WHERE planet_id=$2 AND unit_id=$3`,
+						newCount, planetID, d.UnitID); err != nil {
+						return fmt.Errorf("rocket impact: update priority target: %w", err)
+					}
+					losses = append(losses, loss{UnitID: d.UnitID, Lost: killed})
+				}
 			}
-			if killed <= 0 {
-				continue
+		} else {
+			otherStacks = stacks
+		}
+
+		// Σ(count × shell) для нормировки остатка урона.
+		var totalPool int64
+		for _, d := range otherStacks {
+			totalPool += d.Count * int64(d.Shell)
+		}
+		if totalPool > 0 && remainingDamage > 0 {
+			for _, d := range otherStacks {
+				share := float64(d.Count*int64(d.Shell)) / float64(totalPool)
+				dmg := int64(float64(remainingDamage) * share)
+				killed := dmg / int64(d.Shell)
+				if killed > d.Count {
+					killed = d.Count
+				}
+				if killed <= 0 {
+					continue
+				}
+				newCount := d.Count - killed
+				if _, err := tx.Exec(ctx,
+					`UPDATE defense SET count=$1 WHERE planet_id=$2 AND unit_id=$3`,
+					newCount, planetID, d.UnitID); err != nil {
+					return fmt.Errorf("rocket impact: update defense: %w", err)
+				}
+				losses = append(losses, loss{UnitID: d.UnitID, Lost: killed})
 			}
-			newCount := d.Count - killed
-			if _, err := tx.Exec(ctx,
-				`UPDATE defense SET count=$1 WHERE planet_id=$2 AND unit_id=$3`,
-				newCount, planetID, d.UnitID); err != nil {
-				return fmt.Errorf("rocket impact: update defense: %w", err)
-			}
-			losses = append(losses, loss{UnitID: d.UnitID, Lost: killed})
 		}
 
 		// Сообщение обеим сторонам.

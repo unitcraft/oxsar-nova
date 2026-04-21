@@ -19,8 +19,9 @@ type Handler struct {
 func NewHandler(s *Service) *Handler { return &Handler{svc: s} }
 
 type launchRequest struct {
-	Dst   galaxy.Coords `json:"dst"`
-	Count int64         `json:"count"`
+	Dst          galaxy.Coords `json:"dst"`
+	Count        int64         `json:"count"`
+	TargetUnitID int           `json:"target_unit_id"` // 0 = без приоритета
 }
 
 // Launch POST /api/planets/{id}/rockets/launch
@@ -40,7 +41,7 @@ func (h *Handler) Launch(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
 		return
 	}
-	res, err := h.svc.Launch(r.Context(), uid, planetID, req.Dst, req.Count)
+	res, err := h.svc.Launch(r.Context(), uid, planetID, req.Dst, req.Count, req.TargetUnitID)
 	switch {
 	case err == nil:
 		httpx.WriteJSON(w, r, http.StatusCreated, res)

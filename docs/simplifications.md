@@ -166,14 +166,10 @@
 - Реализовано: `interceptorRocketUnitID=51`, вычитается из rocket_count
   до расчёта урона. ABM-юниты расходуются. Уведомление включает ABM-статистику.
 
-### [Rockets] Урон размазан по всей defense без приоритета
-- **Где**: `internal/rocket/events.go::ImpactHandler`.
-- **Что**: нет `target_unit_id` (конкретная цель), урон распределяется
-  по всем defense пропорционально `count × shell`.
-- **Почему**: простая модель.
-- **Как чинить**: опциональный `target` в launch-payload + приоритет
-  этому stack'у.
-- **Приоритет**: L.
+### [Rockets] Урон размазан по всей defense без приоритета — ЗАКРЫТО
+- Закрыто: `launchRequest.TargetUnitID int` (0 = без приоритета). `Launch` передаёт
+  в payload как `target_unit_id`. `ImpactHandler`: если != 0, весь урон идёт сначала
+  в этот стек, overflow → остальным пропорционально.
 
 ### [Rockets] Нет silo-limit
 - **Где**: `internal/rocket/service.go::Launch`.

@@ -67,8 +67,10 @@ type LaunchResult struct {
 	ImpactAt time.Time `json:"impact_at"`
 }
 
+// Launch пускает count ракет с srcPlanetID на dst. targetUnitID>0 — приоритетная
+// цель (все выжившие ракеты бьют этот defense-стек первым; overflow → остальным).
 func (s *Service) Launch(ctx context.Context, userID, srcPlanetID string,
-	dst galaxy.Coords, count int64) (LaunchResult, error) {
+	dst galaxy.Coords, count int64, targetUnitID int) (LaunchResult, error) {
 	if count <= 0 {
 		return LaunchResult{}, ErrInvalidInput
 	}
@@ -153,16 +155,17 @@ func (s *Service) Launch(ctx context.Context, userID, srcPlanetID string,
 		// повторно планеты/флот.
 		impactID := ids.New()
 		payload, _ := json.Marshal(map[string]any{
-			"impact_id":   impactID,
-			"attacker_id": userID,
-			"src_planet":  srcPlanetID,
+			"impact_id":      impactID,
+			"attacker_id":    userID,
+			"src_planet":     srcPlanetID,
 			"dst": map[string]any{
 				"galaxy":   dst.Galaxy,
 				"system":   dst.System,
 				"position": dst.Position,
 				"is_moon":  dst.IsMoon,
 			},
-			"count": count,
+			"count":          count,
+			"target_unit_id": targetUnitID,
 		})
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
