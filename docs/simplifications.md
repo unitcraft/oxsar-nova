@@ -470,13 +470,10 @@
   WebSocket Hub с fan-out в `chat_messages`, эндпоинты ACS-флота.
 - **Приоритет**: M.
 
-### [Alliance] Join без заявки — открытый альянс
-- **Где**: `alliance/service.go::Join`.
-- **Что**: любой игрок может войти в любой альянс напрямую без одобрения owner'а.
-- **Почему**: заявки требуют отдельной таблицы + notification flow.
-- **Как чинить**: добавить `is_open bool` в alliances + таблицу applications +
-  approve/reject эндпоинты.
-- **Приоритет**: M — для серьёзного PvP это важно.
+### [Alliance] Join approval flow — ЗАКРЫТО
+- Закрыто: migration 0024 добавляет `is_open` в alliances + таблицу
+  `alliance_applications`. Join с is_open=false создаёт заявку;
+  owner видит список и вызывает Approve/Reject. UI обновлён (commit 1013f05).
 
 ### [Alien AI] Без HALT/GRAB_CREDIT/custom events (частично закрыт)
 - **Где**: `internal/alien/alien.go`.

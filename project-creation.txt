@@ -3707,5 +3707,54 @@ backend/internal/rocket/events.go:
 docs/simplifications.md: [Rockets] ABM — ЗАКРЫТО.
 
 ================================================================================
+Итерация 64 — feat(spy): counter-espionage + research visibility at ratio>=8
+================================================================================
+
+backend/internal/fleet/spy.go:
+  - Counter-espionage: суммируем defense цели, roll min(defTotal/10, probes).
+    Если все зонды перехвачены → флот DELETE, шпиону сообщение «Зонды перехвачены».
+  - espionageReport.Research map[int]int — заполняется при ratio>=8 через
+    readOwnerResearch (JOIN planets → research по owner).
+  - buildEspionageReport: добавлен блок ratio>=8 → rep.Research.
+
+docs/simplifications.md: [SPY] Counter-espionage + research>=8 — ЗАКРЫТО.
+
+================================================================================
+Итерация 65 — feat(alliance): join approval flow
+================================================================================
+
+migrations/0024_alliance_applications.sql:
+  - alliances.is_open bool DEFAULT true.
+  - Таблица alliance_applications (id, alliance_id, user_id, message, created_at).
+
+backend/internal/alliance/service.go:
+  - Alliance.IsOpen bool добавлен.
+  - Application struct (id, alliance_id, user_id, username, message, created_at).
+  - Join() → (joined bool, err): is_open=true → прямой вход; false → заявка.
+  - SetOpen(ownerID, allianceID, isOpen) — только owner.
+  - Applications(ownerID, allianceID) → []Application — только owner.
+  - Approve(ownerID, appID) — добавляет участника, удаляет заявку.
+  - Reject(ownerID, appID) — удаляет заявку.
+
+backend/internal/alliance/handler.go:
+  - Join: принимает {"message":""}, возвращает 204 при прямом входе или
+    202 {"status":"application_pending"} при заявке.
+  - SetOpen PATCH /api/alliances/{id}/open.
+  - Applications GET /api/alliances/{id}/applications.
+  - Approve POST /api/alliances/applications/{appID}/approve.
+  - Reject DELETE /api/alliances/applications/{appID}.
+
+frontend/src/api/client.ts:
+  - Добавлен api.patch<T>.
+
+frontend/src/features/alliance/AllianceScreen.tsx:
+  - Список альянсов показывает 🔓/🔒.
+  - Для закрытого альянса — поле ввода message перед «Подать заявку».
+  - MyAlliancePanel: кнопка «Закрыть/Открыть» для owner.
+  - Панель заявок (только owner закрытого альянса): Принять/Отклонить.
+
+docs/simplifications.md: [Alliance] Join approval flow — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================
