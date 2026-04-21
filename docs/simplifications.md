@@ -86,15 +86,11 @@
 - **Статус**: Закрыто в итерации 20. Debris отделено от loot,
   попадает в `debris_fields` на координаты, собирается RECYCLING.
 
-### [M4.4a] moon-chance не считается
-- **Где**: `fleet/attack.go::finalizeAttack`.
-- **Что**: в legacy после ATTACK на planet есть шанс создать moon
-  по формуле `min(30, debris / 100000)`.
-- **Почему**: без механики moon-destruction (kind=14) moons не
-  играют роли, добавлять их одних — вакуум.
-- **Как чинить**: вместе с **Moon Destruction** (kind=14) и
-  **Stargate** (kind=28).
-- **Приоритет**: M.
+### [M4.4a] moon-chance — ЗАКРЫТО
+- **Статус**: Закрыто в итерации 42. tryCreateMoon реализован в
+  finalizeAttack: chance=min(20,debris/100000)%, луна создаётся при
+  успешном броске если is_moon=false и луны ещё нет.
+  Moon Destruction (kind=14) и Stargate (kind=28) — M5+.
 
 ### [M4.4a] Нет RES_LOG entries от боя (loot)
 - **Где**: `fleet/attack.go::finalizeAttack`.
