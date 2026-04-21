@@ -3868,5 +3868,23 @@ docs/simplifications.md:
   - [Alien AI] HALT multi-step — понижен до L-приоритета.
 
 ================================================================================
+Итерация N+3 — construction.yml, Reply в messages, score.batch/market cleanup
+================================================================================
+
+feat(catalog): construction.yml сгенерирован из na_construction.sql.
+  DSL-путь (legacy-формулы) теперь активен в проде. Также закоммичены
+  ships_generated.yml, requirements_generated.yml, artefacts_meta_generated.yml.
+
+feat(messages): кнопка «↩ Ответить» в MessageDetail (только если from_user_id).
+  ComposeForm принимает init?: ReplyInit | undefined.
+  Pre-fill: to=from_username, subject=«Re: …».
+
+docs(simplifications):
+  - [planet.tick] construction.yml — ЗАКРЫТО.
+  - [Messages] Reply — ЗАКРЫТО.
+  - [score.batch] — ЗАКРЫТО (withScore уже был).
+  - [Market] Фиксированные курсы — ЗАКРЫТО (не упрощение, order-book есть).
+
+================================================================================
 Конец дневника.
 ================================================================================
