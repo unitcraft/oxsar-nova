@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { SHIPS, DEFENSE, nameOf } from '@/api/catalog';
+import { SHIPS, DEFENSE, nameOf, imageOf } from '@/api/catalog';
 import { useTranslation } from '@/i18n/i18n';
 import type { Inventory, Planet, ShipyardQueueItem } from '@/api/types';
 
@@ -83,7 +83,7 @@ function UnitList({
   pending,
 }: {
   title: string;
-  units: { id: number; name: string }[];
+  units: { id: number; key: string; name: string }[];
   stock: Record<string, number> | undefined;
   onBuild: (unitId: number, count: number) => void;
   pending: boolean;
@@ -105,7 +105,10 @@ function UnitList({
         <tbody>
           {units.map((u) => (
             <tr key={u.id}>
-              <td>{u.name}</td>
+              <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <img src={imageOf(u.key)} alt="" width={40} height={40} style={{ imageRendering: 'pixelated' }} />
+                {u.name}
+              </td>
               <td className="num">{stock?.[u.id.toString()] ?? 0}</td>
               <td>
                 <input

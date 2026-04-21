@@ -142,12 +142,19 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
-	// Горутина: пишем входящие broadcast-сообщения клиенту.
+	// Горутина: пишем входящие broadcast-сообщения клиенту + ping каждые 30s.
 	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				return
+			case <-ticker.C:
+				if err := conn.Ping(ctx); err != nil {
+					cancel()
+					return
+				}
 			case msg, open := <-c.send:
 				if !open {
 					return

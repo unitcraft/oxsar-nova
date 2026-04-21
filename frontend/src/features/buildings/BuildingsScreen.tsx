@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { BUILDINGS, buildingName } from '@/api/catalog';
+import { BUILDINGS, buildingName, imageOf } from '@/api/catalog';
 import { useTranslation } from '@/i18n/i18n';
 import type { Planet, QueueItem } from '@/api/types';
 
@@ -44,13 +44,16 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
         <tbody>
           {BUILDINGS.map((b) => (
             <tr key={b.id}>
-              <td>
-                {b.name}
-                {(levels[b.id] ?? 0) > 0 && (
-                  <span style={{ color: 'var(--ox-muted, #888)', marginLeft: 6 }}>
-                    {tf('Main', 'LEVEL_SHORT', 'ур.')} {levels[b.id]}
-                  </span>
-                )}
+              <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <img src={imageOf(b.key)} alt="" width={40} height={40} style={{ imageRendering: 'pixelated' }} />
+                <span>
+                  {b.name}
+                  {(levels[b.id] ?? 0) > 0 && (
+                    <span style={{ color: 'var(--ox-muted, #888)', marginLeft: 6 }}>
+                      {tf('Main', 'LEVEL_SHORT', 'ур.')} {levels[b.id]}
+                    </span>
+                  )}
+                </span>
               </td>
               <td>
                 <button

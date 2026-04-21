@@ -190,149 +190,69 @@ function AuthenticatedApp() {
   return (
     <div>
       <PlanetSwitcher list={list} currentId={planet.id} onChange={setCurrentPlanetId} />
+      <div className="ox-app">
+        <nav className="ox-sidebar">
+          <NavBtn current={tab} value="overview" onClick={setTab} label={t('global', 'MENU_MAIN')} />
+          <NavBtn current={tab} value="buildings" onClick={setTab} label={t('global', 'MENU_CONSTRUCTIONS')} />
+          <NavBtn current={tab} value="research" onClick={setTab} label={t('global', 'MENU_RESEARCH')} />
+          <NavBtn current={tab} value="shipyard" onClick={setTab} label={t('global', 'MENU_SHIPYARD')} />
+          <NavBtn current={tab} value="repair" onClick={setTab} label={t('global', 'MENU_REPAIR')} />
+          <div className="ox-sidebar-section" />
+          <NavBtn current={tab} value="galaxy" onClick={setTab} label={t('global', 'MENU_GALAXY')} />
+          <NavBtn current={tab} value="fleet" onClick={setTab} label={t('global', 'MENU_FLEET')} />
+          <NavBtn current={tab} value="rockets" onClick={setTab} label={t('global', 'MENU_ROCKETS')} />
+          <div className="ox-sidebar-section" />
+          <NavBtn
+            current={tab}
+            value="messages"
+            onClick={setTab}
+            label={unreadCount > 0 ? `${t('global', 'MENU_MESSAGES')} (${unreadCount})` : t('global', 'MENU_MESSAGES')}
+          />
+          <NavBtn current={tab} value="chat" onClick={setTab} label="Чат" />
+          <NavBtn current={tab} value="alliance" onClick={setTab} label={t('global', 'MENU_ALLIANCE') || 'Альянс'} />
+          <div className="ox-sidebar-section" />
+          <NavBtn current={tab} value="market" onClick={setTab} label={t('global', 'MENU_MARKET')} />
+          <NavBtn current={tab} value="artefacts" onClick={setTab} label={t('global', 'MENU_ARTEFACTS')} />
+          <NavBtn current={tab} value="art-market" onClick={setTab} label={t('global', 'MENU_ART_MARKET')} />
+          <NavBtn current={tab} value="officers" onClick={setTab} label={t('global', 'MENU_OFFICERS')} />
+          <div className="ox-sidebar-section" />
+          <NavBtn current={tab} value="score" onClick={setTab} label={t('global', 'MENU_HIGHSCORE') || 'Рейтинг'} />
+          <NavBtn current={tab} value="achievements" onClick={setTab} label={t('global', 'MENU_ACHIEVEMENTS') || 'Достижения'} />
+          <NavBtn current={tab} value="tutorial" onClick={setTab} label={t('global', 'MENU_TUTORIAL') || 'Туториал'} />
+          <NavBtn current={tab} value="sim" onClick={setTab} label={t('global', 'MENU_SIMULATOR')} />
+          {isAdmin && (
+            <>
+              <div className="ox-sidebar-section" />
+              <NavBtn current={tab} value="admin" onClick={setTab} label="Админ" />
+            </>
+          )}
+        </nav>
 
-      <div className="ox-tabs">
-        <TabButton current={tab} value="overview" onClick={setTab} label={t('global', 'MENU_MAIN')} />
-        <TabButton
-          current={tab}
-          value="buildings"
-          onClick={setTab}
-          label={t('global', 'MENU_CONSTRUCTIONS')}
-        />
-        <TabButton
-          current={tab}
-          value="research"
-          onClick={setTab}
-          label={t('global', 'MENU_RESEARCH')}
-        />
-        <TabButton
-          current={tab}
-          value="shipyard"
-          onClick={setTab}
-          label={t('global', 'MENU_SHIPYARD')}
-        />
-        <TabButton
-          current={tab}
-          value="repair"
-          onClick={setTab}
-          label={t('global', 'MENU_REPAIR')}
-        />
-        <TabButton
-          current={tab}
-          value="galaxy"
-          onClick={setTab}
-          label={t('global', 'MENU_GALAXY')}
-        />
-        <TabButton
-          current={tab}
-          value="fleet"
-          onClick={setTab}
-          label={t('global', 'MENU_FLEET')}
-        />
-        <TabButton
-          current={tab}
-          value="messages"
-          onClick={setTab}
-          label={
-            unreadCount > 0
-              ? `${t('global', 'MENU_MESSAGES')} (${unreadCount})`
-              : t('global', 'MENU_MESSAGES')
-          }
-        />
-        <TabButton
-          current={tab}
-          value="market"
-          onClick={setTab}
-          label={t('global', 'MENU_MARKET')}
-        />
-        <TabButton
-          current={tab}
-          value="rockets"
-          onClick={setTab}
-          label={t('global', 'MENU_ROCKETS')}
-        />
-        <TabButton
-          current={tab}
-          value="artefacts"
-          onClick={setTab}
-          label={t('global', 'MENU_ARTEFACTS')}
-        />
-        <TabButton
-          current={tab}
-          value="art-market"
-          onClick={setTab}
-          label={t('global', 'MENU_ART_MARKET')}
-        />
-        <TabButton
-          current={tab}
-          value="officers"
-          onClick={setTab}
-          label={t('global', 'MENU_OFFICERS')}
-        />
-        <TabButton
-          current={tab}
-          value="tutorial"
-          onClick={setTab}
-          label={t('global', 'MENU_TUTORIAL') || 'Туториал'}
-        />
-        <TabButton
-          current={tab}
-          value="achievements"
-          onClick={setTab}
-          label={t('global', 'MENU_ACHIEVEMENTS') || 'Достижения'}
-        />
-        <TabButton
-          current={tab}
-          value="score"
-          onClick={setTab}
-          label={t('global', 'MENU_HIGHSCORE') || 'Рейтинг'}
-        />
-        <TabButton
-          current={tab}
-          value="alliance"
-          onClick={setTab}
-          label={t('global', 'MENU_ALLIANCE') || 'Альянс'}
-        />
-        <TabButton
-          current={tab}
-          value="chat"
-          onClick={setTab}
-          label="Чат"
-        />
-        <TabButton
-          current={tab}
-          value="sim"
-          onClick={setTab}
-          label={t('global', 'MENU_SIMULATOR')}
-        />
-        {isAdmin && (
-          <TabButton current={tab} value="admin" onClick={setTab} label="Админ" />
-        )}
+        <div className="ox-content">
+          <Suspense fallback={<p>…</p>}>
+            {tab === 'overview' && <OverviewScreen />}
+            {tab === 'buildings' && <BuildingsScreen planet={planet} />}
+            {tab === 'research' && <ResearchScreen planet={planet} />}
+            {tab === 'shipyard' && <ShipyardScreen planet={planet} />}
+            {tab === 'repair' && <RepairScreen planet={planet} />}
+            {tab === 'galaxy' && <GalaxyScreen homePlanet={planet} />}
+            {tab === 'fleet' && <FleetScreen planet={planet} />}
+            {tab === 'market' && <MarketScreen planet={planet} />}
+            {tab === 'rockets' && <RocketsScreen planet={planet} />}
+            {tab === 'messages' && <MessagesScreen />}
+            {tab === 'artefacts' && <ArtefactsScreen />}
+            {tab === 'art-market' && <ArtefactMarketScreen />}
+            {tab === 'officers' && <OfficersScreen />}
+            {tab === 'tutorial' && <TutorialScreen />}
+            {tab === 'achievements' && <AchievementsScreen />}
+            {tab === 'score' && <ScoreScreen />}
+            {tab === 'alliance' && <AllianceScreen />}
+            {tab === 'chat' && <ChatScreen />}
+            {tab === 'sim' && <BattleSimScreen />}
+            {tab === 'admin' && isAdmin && <AdminScreen />}
+          </Suspense>
+        </div>
       </div>
-
-      <Suspense fallback={<p>…</p>}>
-        {tab === 'overview' && <OverviewScreen />}
-        {tab === 'buildings' && <BuildingsScreen planet={planet} />}
-        {tab === 'research' && <ResearchScreen planet={planet} />}
-        {tab === 'shipyard' && <ShipyardScreen planet={planet} />}
-        {tab === 'repair' && <RepairScreen planet={planet} />}
-        {tab === 'galaxy' && <GalaxyScreen homePlanet={planet} />}
-        {tab === 'fleet' && <FleetScreen planet={planet} />}
-        {tab === 'market' && <MarketScreen planet={planet} />}
-        {tab === 'rockets' && <RocketsScreen planet={planet} />}
-        {tab === 'messages' && <MessagesScreen />}
-        {tab === 'artefacts' && <ArtefactsScreen />}
-        {tab === 'art-market' && <ArtefactMarketScreen />}
-
-        {tab === 'officers' && <OfficersScreen />}
-        {tab === 'tutorial' && <TutorialScreen />}
-        {tab === 'achievements' && <AchievementsScreen />}
-        {tab === 'score' && <ScoreScreen />}
-        {tab === 'alliance' && <AllianceScreen />}
-        {tab === 'chat' && <ChatScreen />}
-        {tab === 'sim' && <BattleSimScreen />}
-        {tab === 'admin' && isAdmin && <AdminScreen />}
-      </Suspense>
     </div>
   );
 }
@@ -368,7 +288,7 @@ function PlanetSwitcher({
   );
 }
 
-function TabButton({
+function NavBtn({
   current,
   value,
   onClick,

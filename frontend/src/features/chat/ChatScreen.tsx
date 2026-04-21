@@ -37,24 +37,42 @@ export function ChatScreen() {
     if (!token) return;
     setWsError('');
 
-    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const ws = new WebSocket(`${proto}//${host}/api/chat/${kind}/ws?token=${encodeURIComponent(token)}`);
-    wsRef.current = ws;
+    let stopped = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    ws.onmessage = (ev: MessageEvent) => {
-      try {
-        const msg = JSON.parse(ev.data as string) as ChatMessage;
-        setMessages((prev) => [...prev, msg]);
-      } catch {
-        // ignore malformed frames
-      }
-    };
-    ws.onerror = () => setWsError('Соединение прервано');
-    ws.onclose = () => setWsError('Соединение закрыто');
+    function connect() {
+      if (stopped) return;
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const ws = new WebSocket(`${proto}//${host}/api/chat/${kind}/ws?token=${encodeURIComponent(token!)}`);
+      wsRef.current = ws;
+
+      ws.onmessage = (ev: MessageEvent) => {
+        try {
+          const msg = JSON.parse(ev.data as string) as ChatMessage;
+          setMessages((prev) => [...prev, msg]);
+        } catch {
+          // ignore malformed frames
+        }
+      };
+      ws.onerror = () => setWsError('Соединение прервано');
+      ws.onclose = () => {
+        if (!stopped) {
+          setWsError('Переподключение…');
+          retryTimer = setTimeout(() => {
+            setWsError('');
+            connect();
+          }, 3000);
+        }
+      };
+    }
+
+    connect();
 
     return () => {
-      ws.close();
+      stopped = true;
+      if (retryTimer !== null) clearTimeout(retryTimer);
+      wsRef.current?.close();
       wsRef.current = null;
     };
   }, [kind, token]);
