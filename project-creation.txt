@@ -3463,5 +3463,65 @@ docs/simplifications.md: 2 новые записи [ACS].
 
 
 ================================================================================
+Итерация 51 — feat(chat): WebSocket-чат global+alliance (M6)
+================================================================================
+
+backend/internal/chat/hub.go (~60 строк):
+  - Hub: in-memory broadcast по каналам (map[*client]struct{}, sync.RWMutex).
+  - client: channel string + send chan Message.
+  - Broadcast(ctx, msg): рассылает всем клиентам того же channel.
+
+backend/internal/chat/handler.go (~180 строк):
+  - Handler{hub, db}.
+  - channelFor(): "global" → "global", "alliance" → "ally:<alliance_id>".
+  - History GET /api/chat/{kind}/history: последние 50 сообщений из chat_messages.
+  - Connect GET /api/chat/{kind}/ws: WebSocket upgrade (nhooyr.io/websocket).
+    Регистрирует client, горутина пишет broadcast, читает body → persist → Broadcast.
+  - Send POST /api/chat/{kind}/send: REST fallback без WS.
+
+backend/internal/auth/middleware.go:
+  - +поддержка ?token= query param для WS-соединений (header Alternative).
+
+backend/go.mod: +nhooyr.io/websocket v1.8.17.
+
+frontend/src/features/chat/ChatScreen.tsx (~120 строк):
+  - Переключатель global/alliance.
+  - useEffect: WebSocket к /api/chat/{kind}/ws?token=..., onmessage → append.
+  - REST fallback если WS не открыт.
+  - Enter → send, auto-scroll к последнему сообщению.
+
+frontend/src/App.tsx: +lazy ChatScreen, +tab 'chat', +TabButton "Чат". 19 вкладок.
+docs/status.md: Alliance/chat ✅.
+
+================================================================================
+Итерация 52 — feat(market): ордерная книга (M6)
+================================================================================
+
+migrations/0022_market_lots.sql:
+  - market_lots: id/seller_id/planet_id/sell_resource/sell_amount/
+    buy_resource/buy_amount/state/buyer_id/created_at.
+  - state IN ('open','accepted','cancelled'). Индекс по state='open'.
+  - CHECK: sell_resource <> buy_resource.
+
+backend/internal/market/service.go:
+  - +Lot struct, validResource().
+  - +ErrLotNotFound, ErrLotNotOpen, ErrOwnLot.
+  - ListLots(): открытые лоты, фильтр по sell_resource.
+  - CreateLot(): списывает ресурс с планеты (escrow) → INSERT market_lots.
+  - CancelLot(): возвращает escrow на планету → state='cancelled'.
+  - AcceptLot(): списывает buy_resource у покупателя, зачисляет sell_resource,
+    зачисляет buy_resource продавцу → state='accepted'. FOR UPDATE на лот + планету.
+
+backend/internal/market/handler.go:
+  - +ListLots, CreateLot, CancelLot, AcceptLot endpoints.
+
+backend/cmd/server/main.go: +4 market/lots роута.
+
+frontend/src/features/market/MarketScreen.tsx:
+  - +LotsPanel компонент: создать лот, список лотов, кнопки Купить/Отмена.
+
+docs/status.md: Market 🟡 → ✅.
+
+================================================================================
 Конец дневника.
 ================================================================================
