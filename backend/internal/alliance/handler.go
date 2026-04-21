@@ -98,21 +98,126 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 // Join POST /api/alliances/{id}/join
+// Body (optional): {"message":"..."}
 func (h *Handler) Join(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
 	if !ok {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
+	var req struct {
+		Message string `json:"message"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
 	id := chi.URLParam(r, "id")
-	err := h.svc.Join(r.Context(), uid, id)
+	joined, err := h.svc.Join(r.Context(), uid, id, req.Message)
+	switch {
+	case err == nil:
+		if joined {
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			httpx.WriteJSON(w, r, http.StatusAccepted, map[string]string{"status": "application_pending"})
+		}
+	case errors.Is(err, ErrAlreadyMember):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "already in an alliance"))
+	case errors.Is(err, ErrApplicationExists):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "application already pending"))
+	case errors.Is(err, ErrNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// SetOpen PATCH /api/alliances/{id}/open
+// Body: {"is_open":true|false}
+func (h *Handler) SetOpen(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	var req struct {
+		IsOpen bool `json:"is_open"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	id := chi.URLParam(r, "id")
+	err := h.svc.SetOpen(r.Context(), uid, id, req.IsOpen)
 	switch {
 	case err == nil:
 		w.WriteHeader(http.StatusNoContent)
-	case errors.Is(err, ErrAlreadyMember):
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "already in an alliance"))
 	case errors.Is(err, ErrNotFound):
 		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotOwner):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// Applications GET /api/alliances/{id}/applications
+func (h *Handler) Applications(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	apps, err := h.svc.Applications(r.Context(), uid, id)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"applications": apps})
+	case errors.Is(err, ErrNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotOwner):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// Approve POST /api/alliances/applications/{appID}/approve
+func (h *Handler) Approve(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	appID := chi.URLParam(r, "appID")
+	err := h.svc.Approve(r.Context(), uid, appID)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrApplicationNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotOwner):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrAlreadyMember):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "applicant already joined another alliance"))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// Reject DELETE /api/alliances/applications/{appID}
+func (h *Handler) Reject(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	appID := chi.URLParam(r, "appID")
+	err := h.svc.Reject(r.Context(), uid, appID)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrApplicationNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotOwner):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}
