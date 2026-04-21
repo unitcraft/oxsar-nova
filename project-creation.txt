@@ -3334,5 +3334,37 @@ docs/status.md: Tutorial ⬜ → ✅.
 
 
 ================================================================================
+Итерация 47 — Admin panel (M8)
+================================================================================
+
+backend/internal/admin/handler.go (~160 строк):
+  - AdminOnly middleware: проверяет role IN ('admin','superadmin') по JWT uid.
+  - ListUsers: SELECT с limit/offset, возвращает []AdminUserRow.
+  - Ban / Unban: UPDATE users SET banned_at.
+  - Credit: UPDATE users SET credit = credit + delta RETURNING credit.
+  - SetRole: валидирует роль по enum, UPDATE users SET role.
+  - Stats: COUNT users, активных за 24ч, планет.
+
+backend/cmd/server/main.go:
+  - +admin import; adminH := admin.NewHandler(db).
+  - pr.Route("/admin", ...) с AdminOnly middleware + 6 маршрутов.
+
+api/openapi.yaml:
+  - +6 admin эндпоинтов, +AdminUserRow schema, +tag: admin.
+
+docs/status.md: Admin panel ⬜ → ✅. Frontend экраны: 14 → 18.
+
+Упрощения:
+  - Нет admin-UI на фронте (только API). Управление через curl/Postman.
+    Приоритет L — для запуска достаточно.
+  - Нет audit log (кто и когда изменил роль/бан). Приоритет M.
+
+Статистика итерации 47:
+   admin/handler.go: новый (~160 строк).
+   server/main.go: +12 строк.
+   api/openapi.yaml: +130 строк.
+
+
+================================================================================
 Конец дневника.
 ================================================================================

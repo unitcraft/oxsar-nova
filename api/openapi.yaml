@@ -30,6 +30,7 @@ tags:
   - name: score
   - name: alliances
   - name: tutorial
+  - name: admin
   - name: i18n
   - name: system
 
@@ -1118,6 +1119,137 @@ paths:
                 properties:
                   languages: { type: array, items: { type: string } }
 
+  /api/admin/stats:
+    get:
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      summary: Базовая статистика сервера (только admin/superadmin).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_users:    { type: integer }
+                  active_last24h: { type: integer }
+                  total_planets:  { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/admin/users:
+    get:
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      summary: Список игроков (limit/offset).
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50, maximum: 200 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items: { $ref: "#/components/schemas/AdminUserRow" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/admin/users/{id}/ban:
+    post:
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      summary: Заблокировать игрока.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: banned }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/admin/users/{id}/unban:
+    post:
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      summary: Снять блокировку.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: unbanned }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/admin/users/{id}/credit:
+    post:
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      summary: Изменить баланс кредитов игрока (delta может быть отрицательным).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [delta]
+              properties:
+                delta: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  credit: { type: integer, format: int64 }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/admin/users/{id}/role:
+    post:
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      summary: Изменить роль игрока.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [player, support, admin, superadmin]
+      responses:
+        "204": { description: updated }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/tutorial:
     get:
       tags: [tutorial]
@@ -1520,6 +1652,18 @@ components:
         members:
           type: array
           items: { $ref: "#/components/schemas/AllianceMember" }
+
+    AdminUserRow:
+      type: object
+      properties:
+        id:           { type: string, format: uuid }
+        username:     { type: string }
+        email:        { type: string, format: email }
+        role:         { type: string, enum: [player, support, admin, superadmin] }
+        credit:       { type: integer, format: int64 }
+        banned_at:    { type: string, format: date-time, nullable: true }
+        created_at:   { type: string, format: date-time }
+        last_seen_at: { type: string, format: date-time }
 
     TutorialStep:
       type: object

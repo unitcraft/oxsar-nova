@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/oxsar/nova/backend/internal/achievement"
+	"github.com/oxsar/nova/backend/internal/admin"
 	"github.com/oxsar/nova/backend/internal/alliance"
 	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/artmarket"
@@ -151,6 +152,8 @@ func run() error {
 	tutorialSvc := tutorial.NewService(db)
 	tutorialH := tutorial.NewHandler(tutorialSvc)
 
+	adminH := admin.NewHandler(db)
+
 	// i18n: папка необязательна — если её нет или пустая, i18n просто
 	// пропускается, HTTP-эндпоинты не регистрируются. Это ожидаемо
 	// до первого прогона cmd/tools/import-phrases (§10.3 ТЗ).
@@ -249,6 +252,16 @@ func run() error {
 		pr.Get("/battle-reports/{id}", messageH.GetReport)
 		pr.Get("/espionage-reports/{id}", messageH.GetEspionageReport)
 		pr.Get("/expedition-reports/{id}", messageH.GetExpeditionReport)
+
+		pr.Route("/admin", func(ar chi.Router) {
+			ar.Use(admin.AdminOnly(db))
+			ar.Get("/stats", adminH.Stats)
+			ar.Get("/users", adminH.ListUsers)
+			ar.Post("/users/{id}/ban", adminH.Ban)
+			ar.Post("/users/{id}/unban", adminH.Unban)
+			ar.Post("/users/{id}/credit", adminH.Credit)
+			ar.Post("/users/{id}/role", adminH.SetRole)
+		})
 	})
 
 	srv := &http.Server{

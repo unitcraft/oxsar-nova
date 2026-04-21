@@ -39,12 +39,12 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Achievements                | ✅     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), lazy-check при GET. Идемпотентно. |
 | Tutorial                    | ✅     | M7 | 6 шагов (mine→solar→lab→computer_tech→ship→expedition), +10 кредитов за шаг, lazy-check. |
 | Simulator UI                | ✅     | M7.1 | BattleSimScreen с реальными боевыми характеристиками из каталога + таблица потерь + multi-run (num_sim 2–20). |
-| Admin panel                 | ⬜     | M8 | Планируется.                                             |
+| Admin panel                 | ✅     | M8 | GET /admin/stats + users list/ban/unban/credit/role. AdminOnly middleware (role=admin/superadmin). |
 | Payment integrations        | ⬜     | M9 | v2: WebMoney/Robokassa/A1/2Pay/VK/OK/MailRu.             |
 | Event-loop worker           | ✅     | M3 | +Transport (kind=7 arrive) +Return (kind=20).            |
 | Frontend каркас             | ✅     | M0 | Vite + TS strict + TanStack Query + Zustand.             |
 | Score / Highscore           | ✅     | M5+ | RecalcUser/RecalcAll (формулы PointRenewer), GET /api/highscore, ScoreScreen. |
-| Frontend экраны             | ✅     | M3 | +Score — теперь 14 экранов.                              |
+| Frontend экраны             | ✅     | M3 | 18 вкладок: overview, buildings, research, shipyard, repair, galaxy, fleet, market, rockets, artefacts, art-market, officers, tutorial, achievements, score, messages, alliance, sim. |
 | Порт дизайна oxsar2         | 🟡     | —  | CSS-темы перенесены как placeholder, ассеты копируются.  |
 | Порт .tpl-шаблонов          | ⬜     | —  | 134 .tpl (~12600 строк) — эталон разметки UI, §8 ТЗ.     |
 | import-datasheets CLI       | ✅     | M0.1 | construction/ships/requirements/artefacts → YAML.        |
