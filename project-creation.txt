@@ -2973,5 +2973,54 @@ Spec §5.10.3 + config.ArtefactSpec.DelaySeconds > 0 → артефакт дол
 
 
 ================================================================================
+38. MESSAGE COMPOSE (M6) — USER-TO-USER СООБЩЕНИЯ
+================================================================================
+
+Дата: 2026-04-21
+
+Реализован полный цикл «написать / удалить» для личных сообщений.
+
+Backend:
+  backend/internal/message/service.go:
+    - Compose(ctx, fromUserID, toUsername, subject, body) — поиск получателя
+      по username, проверка «не себе», INSERT messages (FolderInbox=1).
+      Лимит: subject 200 символов, body 10 000 символов (truncate helper).
+    - Delete(ctx, userID, messageID) — DELETE WHERE id AND to_user_id (hard).
+    - Sentinel-ошибки: ErrRecipientNotFound, ErrSelfMessage.
+
+  backend/internal/message/handler.go:
+    - Compose (POST /api/messages): decode {to, subject, body} JSON,
+      ErrRecipientNotFound → 404, ErrSelfMessage → 400.
+    - Delete (DELETE /api/messages/{id}): ErrMessageNotFound → 404.
+
+  backend/cmd/server/main.go:
+    - +pr.Post("/messages", messageH.Compose)
+    - +pr.Delete("/messages/{id}", messageH.Delete)
+
+Frontend:
+  frontend/src/features/messages/MessagesScreen.tsx:
+    - Кнопка «Написать» открывает ComposeForm (inline).
+    - ComposeForm: поля to / subject / body, кнопки «Отправить» /
+      «Отмена», onError показывает сообщение об ошибке.
+    - useMutation del: DELETE /api/messages/{id} + кнопка ✕ на каждой
+      строке списка (e.stopPropagation() чтобы не открывать detail).
+    - После удаления: сброс selectedID, инвалидация ['messages'].
+
+Упрощения зафиксированы в docs/simplifications.md:
+  [Messages] Нет reply и нет soft-delete — L-приоритет.
+
+Статистика итерации 38:
+   message/service.go: +65 строк (Compose, Delete, truncate, errors).
+   message/handler.go: +50 строк (Compose, Delete handlers).
+   server/main.go: +2 строки (маршруты).
+   MessagesScreen.tsx: +80 строк (ComposeForm, del mutation, delete button).
+   docs/simplifications.md: обновлено.
+
+Что дальше:
+   - Следующие 🟡 в docs/status.md: Alliance / chat (M6), Officers
+     improvements (M7), Tutorial (M7).
+
+
+================================================================================
 Конец дневника.
 ================================================================================

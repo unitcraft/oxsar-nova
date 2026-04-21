@@ -1,9 +1,7 @@
 // Package message — личные сообщения (inbox).
 //
 // Использует таблицы messages (legacy-совместимая, миграция 0005) и
-// битовое расширение battle_report_id (миграция 0009). В M4.4b
-// реализованы только чтение и пометка прочитанным — compose/reply
-// появятся вместе с alliance/chat (M6).
+// битовое расширение battle_report_id (миграция 0009).
 package message
 
 import (
@@ -124,6 +122,70 @@ func (s *Service) MarkRead(ctx context.Context, userID, messageID string) error 
 	}
 	// Уже прочитано — не ошибка.
 	return nil
+}
+
+// Ошибки compose/delete.
+var (
+	ErrRecipientNotFound = errors.New("message: recipient not found")
+	ErrSelfMessage       = errors.New("message: cannot send to yourself")
+)
+
+// FolderInbox — папка личных сообщений (MSG_FOLDER_INBOX из legacy consts.php).
+const FolderInbox = 1
+
+// Compose отправляет личное сообщение от fromUserID к получателю по username.
+// Сообщение кладётся в папку FolderInbox получателя. Лимит subject 200 символов,
+// body 10 000 символов.
+func (s *Service) Compose(ctx context.Context, fromUserID, toUsername, subject, body string) error {
+	if fromUserID == "" || toUsername == "" {
+		return ErrRecipientNotFound
+	}
+	subject = truncate(subject, 200)
+	body = truncate(body, 10000)
+
+	var toUserID string
+	err := s.db.Pool().QueryRow(ctx,
+		`SELECT id FROM users WHERE username = $1`, toUsername).Scan(&toUserID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrRecipientNotFound
+		}
+		return fmt.Errorf("compose lookup: %w", err)
+	}
+	if toUserID == fromUserID {
+		return ErrSelfMessage
+	}
+
+	_, err = s.db.Pool().Exec(ctx, `
+		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
+		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
+	`, toUserID, fromUserID, FolderInbox, subject, body)
+	if err != nil {
+		return fmt.Errorf("compose insert: %w", err)
+	}
+	return nil
+}
+
+// Delete удаляет сообщение. Только владелец (to_user_id) может удалить своё.
+func (s *Service) Delete(ctx context.Context, userID, messageID string) error {
+	tag, err := s.db.Pool().Exec(ctx,
+		`DELETE FROM messages WHERE id = $1 AND to_user_id = $2`,
+		messageID, userID)
+	if err != nil {
+		return fmt.Errorf("delete message: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrMessageNotFound
+	}
+	return nil
+}
+
+func truncate(s string, max int) string {
+	runes := []rune(s)
+	if len(runes) > max {
+		return string(runes[:max])
+	}
+	return s
 }
 
 // ExpeditionReport — полный отчёт экспедиции из expedition_reports.

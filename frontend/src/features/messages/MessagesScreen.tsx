@@ -106,6 +106,7 @@ export function MessagesScreen() {
   const { t, tf } = useTranslation();
   const qc = useQueryClient();
   const [selectedID, setSelectedID] = useState<string | null>(null);
+  const [composing, setComposing] = useState(false);
 
   const list = useQuery({
     queryKey: ['messages'],
@@ -115,8 +116,15 @@ export function MessagesScreen() {
 
   const markRead = useMutation({
     mutationFn: (id: string) => api.post<void>(`/api/messages/${id}/read`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['messages'] }),
+  });
+
+  const del = useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/api/messages/${id}`),
     onSuccess: () => {
+      setSelectedID(null);
       void qc.invalidateQueries({ queryKey: ['messages'] });
+      void qc.invalidateQueries({ queryKey: ['messages', 'unread-count'] });
     },
   });
 
@@ -125,14 +133,19 @@ export function MessagesScreen() {
 
   function onSelect(m: Message) {
     setSelectedID(m.id);
-    if (!m.read_at) {
-      markRead.mutate(m.id);
-    }
+    setComposing(false);
+    if (!m.read_at) markRead.mutate(m.id);
   }
 
   return (
     <section>
       <h2>{tf('global', 'MENU_MESSAGES', 'Сообщения')}</h2>
+
+      <div style={{ marginBottom: 12 }}>
+        <button type="button" onClick={() => { setComposing(true); setSelectedID(null); }}>
+          {tf('Main', 'MSG_COMPOSE', '✉ Написать')}
+        </button>
+      </div>
 
       {list.isLoading && <p>…</p>}
       {list.error && (
@@ -142,9 +155,21 @@ export function MessagesScreen() {
         </p>
       )}
 
-      {msgs.length === 0 ? (
+      {composing && (
+        <ComposeForm
+          onSent={() => {
+            setComposing(false);
+            void qc.invalidateQueries({ queryKey: ['messages'] });
+          }}
+          onCancel={() => setComposing(false)}
+        />
+      )}
+
+      {!composing && msgs.length === 0 && (
         <p>{tf('Main', 'INBOX_EMPTY', 'Нет сообщений.')}</p>
-      ) : (
+      )}
+
+      {!composing && msgs.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
           <table className="ox-table">
             <thead>
@@ -152,6 +177,7 @@ export function MessagesScreen() {
                 <th>{tf('Main', 'MSG_FROM', 'От')}</th>
                 <th>{tf('Main', 'MSG_SUBJECT', 'Тема')}</th>
                 <th>{tf('Main', 'MSG_WHEN', 'Когда')}</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -170,6 +196,17 @@ export function MessagesScreen() {
                     <td>{m.from_username || '—'}</td>
                     <td>{m.subject}</td>
                     <td>{new Date(m.created_at).toLocaleString('ru-RU')}</td>
+                    <td>
+                      <button
+                        type="button"
+                        disabled={del.isPending}
+                        onClick={(e) => { e.stopPropagation(); del.mutate(m.id); }}
+                        title={tf('Main', 'MSG_DELETE', 'Удалить')}
+                        style={{ opacity: 0.6 }}
+                      >
+                        ✕
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -179,6 +216,64 @@ export function MessagesScreen() {
         </div>
       )}
     </section>
+  );
+}
+
+function ComposeForm({ onSent, onCancel }: { onSent: () => void; onCancel: () => void }) {
+  const { tf } = useTranslation();
+  const [to, setTo] = useState('');
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [error, setError] = useState('');
+
+  const send = useMutation({
+    mutationFn: () => api.post<void>('/api/messages', { to, subject, body }),
+    onSuccess: onSent,
+    onError: (e) => setError(e instanceof Error ? e.message : 'Ошибка'),
+  });
+
+  return (
+    <div style={{ marginBottom: 16, padding: 12, border: '1px solid rgba(255,255,255,0.15)', borderRadius: 4 }}>
+      <h3 style={{ marginTop: 0 }}>{tf('Main', 'MSG_COMPOSE', 'Написать сообщение')}</h3>
+      <div style={{ marginBottom: 8 }}>
+        <label>
+          {tf('Main', 'MSG_TO', 'Кому')}:{' '}
+          <input
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            placeholder={tf('Main', 'MSG_TO_PLACEHOLDER', 'имя игрока')}
+            style={{ width: 200 }}
+          />
+        </label>
+      </div>
+      <div style={{ marginBottom: 8 }}>
+        <label>
+          {tf('Main', 'MSG_SUBJECT', 'Тема')}:{' '}
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder={tf('Main', 'MSG_SUBJECT_PLACEHOLDER', 'тема')}
+            style={{ width: 300 }}
+          />
+        </label>
+      </div>
+      <div style={{ marginBottom: 8 }}>
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={5}
+          style={{ width: '100%', boxSizing: 'border-box' }}
+          placeholder={tf('Main', 'MSG_BODY_PLACEHOLDER', 'текст сообщения…')}
+        />
+      </div>
+      {error && <p className="ox-error">{error}</p>}
+      <button type="button" disabled={send.isPending || !to || !subject} onClick={() => send.mutate()}>
+        {tf('Main', 'MSG_SEND', 'Отправить')}
+      </button>{' '}
+      <button type="button" onClick={onCancel}>
+        {tf('Main', 'CANCEL', 'Отмена')}
+      </button>
+    </div>
   );
 }
 

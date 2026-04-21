@@ -1,6 +1,7 @@
 package message
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -66,6 +67,63 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrNotFound)
 	case errors.Is(err, ErrNotOwned):
 		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// Compose POST /api/messages
+// Body: {"to": "username", "subject": "...", "body": "..."}
+func (h *Handler) Compose(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	var req struct {
+		To      string `json:"to"`
+		Subject string `json:"subject"`
+		Body    string `json:"body"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	if req.To == "" || req.Subject == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "to and subject required"))
+		return
+	}
+	err := h.svc.Compose(r.Context(), uid, req.To, req.Subject, req.Body)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrRecipientNotFound):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrNotFound, "recipient not found"))
+	case errors.Is(err, ErrSelfMessage):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "cannot send to yourself"))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// Delete DELETE /api/messages/{id}
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing id"))
+		return
+	}
+	err := h.svc.Delete(r.Context(), uid, id)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrMessageNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}
