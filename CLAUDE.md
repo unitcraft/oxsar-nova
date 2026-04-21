@@ -89,5 +89,8 @@ make lint          # все линтеры
 
 - [oxsar-spec.txt](oxsar-spec.txt) — полное ТЗ.
 - [docs/status.md](docs/status.md) — матрица готовности модулей.
+- [docs/simplifications.md](docs/simplifications.md) — tracker всех
+  принятых упрощений с планом возврата. **Любой новый trade-off
+  записывается сюда в момент принятия, не "потом".**
 - [docs/adr/](docs/adr/) — архитектурные решения.
 - [api/openapi.yaml](api/openapi.yaml) — контракт REST API.

@@ -1,0 +1,382 @@
+# Упрощения и отложенные доработки
+
+Живой список всех осознанных упрощений, сделанных в ходе итераций.
+Каждое упрощение попадает сюда в момент, когда принимается — чтобы
+позже не потерять контекст.
+
+Формат:
+- **Где** — файл/модуль/миграция.
+- **Что упрощено** — конкретика, что НЕ делается.
+- **Почему** — trade-off решения на момент принятия.
+- **Как чинить** — краткий план на возврат.
+- **Приоритет** — L / M / H.
+
+Сортировка внутри доменов — примерно по фактическому порядку
+появления. Закрытые (сделанные) упрощения переносим в секцию
+"Закрытые" с датой-итерацией.
+
+---
+
+## Battle engine (M4)
+
+### [M4.1] Щиты — линейная абсорбция вместо Java-алгоритма
+- **Где**: `backend/internal/battle/engine.go::applyShots`.
+- **Что**: `pool = attack × shots`, тратится сначала на `turnShield`,
+  остаток в `turnShell`. Java-алгоритм сложнее: каждый выстрел меньше
+  `unit.shield / 100` полностью поглощается без просадки щита
+  (`ignoreAttack`), есть `shieldDestroyFactor` с плавным падением.
+- **Почему**: линейная модель проще тестировать, достаточно для
+  сбалансированных сценариев. Порт полного Java-алгоритма — M4.3+.
+- **Как чинить**: порт `Units.processAttack` shield-блока (строки
+  362–427 в oxsar2-java).
+- **Приоритет**: M.
+
+### [M4.1] Регенерация щитов — 100% каждый раунд
+- **Где**: `battle/engine.go::regen`.
+- **Что**: `turnShield = quantity × Shield` в начале каждого раунда,
+  не учитываем partial regen (shieldDamageFactor в Java).
+- **Почему**: упрощение для стабильной базы под ablation-тесты.
+- **Как чинить**: добавить поле `turnShieldMax` и считать `regen = delta
+  (max - current)` с затуханием после массового пробития.
+- **Приоритет**: L.
+
+### [M4.1] Multi-channel attack — один канал на unit-stack
+- **Где**: `battle/engine.go::primaryChannel`.
+- **Что**: весь stack стреляет каналом с max `Attack[c]`, щит цели
+  оценивается только по этому каналу.
+- **Почему**: в большинстве ship'ов всё равно один канал ненулевой.
+- **Как чинить**: расщепление выстрелов по каналам c учётом всех
+  Shield[3] компонентов (Java Units.processAttack делает это
+  per-shot).
+- **Приоритет**: L (пока нет юнитов с multi-channel атакой).
+
+### [M4.2] Ballistics/masking — детерминированная формула без RNG
+- **Где**: `battle/engine.go::applyMasking`.
+- **Что**: `missed = floor(shots × factor)` — ровно та же Java-формула,
+  но без RNG-roll per shot.
+- **Почему**: в Java тоже deterministic (factor применяется к пулу),
+  это не упрощение, а соответствие.
+- **Как чинить**: не нужно — формула совпадает с legacy.
+- **Приоритет**: —
+
+### [M4.3] Ablation — максимум 1 damaged-юнит на stack
+- **Где**: `battle/engine.go::commitDamage`.
+- **Что**: остаток shell создаёт **один** damaged с `shell_percent`;
+  массив разных `shell_percent` на нескольких юнитах одного stack не
+  поддерживается.
+- **Почему**: Java делает так же — упрощение bookkeeping.
+- **Как чинить**: не нужно.
+- **Приоритет**: —
+
+### [M4.3] Пропущены golden-тесты против Java-jar
+- **Где**: `testdata/battle/*.json` (пустое).
+- **Что**: нет cross-verification c `oxsar2-java/assault/dist/
+  oxsar2-java.jar`.
+- **Почему**: требует JVM в окружении, JavaRandom-адаптер, harness.
+- **Как чинить**: добавить `pkg/rng/javarand.go`, прогнать 5–10
+  сценариев в обоих движках, diff JSON.
+- **Приоритет**: M — при балансировании боя.
+
+### [M4.4a] rapidfireToMap возвращает nil (исправлено)
+- **Где**: `fleet/attack.go`.
+- **Статус**: Закрыто в итерации 20 (commit c7ae59a). rapidfireToMap
+  теперь проксирует cat.Rapidfire.Rapidfire напрямую.
+
+### [M4.4a] Debris=часть loot (исправлено)
+- **Статус**: Закрыто в итерации 20. Debris отделено от loot,
+  попадает в `debris_fields` на координаты, собирается RECYCLING.
+
+### [M4.4a] moon-chance не считается
+- **Где**: `fleet/attack.go::finalizeAttack`.
+- **Что**: в legacy после ATTACK на planet есть шанс создать moon
+  по формуле `min(30, debris / 100000)`.
+- **Почему**: без механики moon-destruction (kind=14) moons не
+  играют роли, добавлять их одних — вакуум.
+- **Как чинить**: вместе с **Moon Destruction** (kind=14) и
+  **Stargate** (kind=28).
+- **Приоритет**: M.
+
+### [M4.4a] Нет RES_LOG entries от боя (loot)
+- **Где**: `fleet/attack.go::finalizeAttack`.
+- **Что**: loot пишется напрямую в `fleets.carried_*`, без записи
+  в `res_log` с reason='attack_loot'.
+- **Почему**: `res_log.reason` enum не содержал 'attack_loot',
+  ради одной строки не хотелось расширять.
+- **Как чинить**: добавить reason + INSERT res_log.
+- **Приоритет**: L — только для аудита.
+
+### [M4.4a] Нет unit-тестов AttackHandler
+- **Где**: `fleet/attack.go`.
+- **Что**: 500 строк handler'а, только e2e smoke через docker.
+- **Почему**: mock `pgx.Tx` + `battle.Calculate` — большая работа.
+- **Как чинить**: testcontainers или interface-инъекция с моками.
+- **Приоритет**: M — когда начнём рефакторить attack под ACS.
+
+---
+
+## Fleet missions
+
+### [TRANSPORT] recall только для state='outbound'
+- **Где**: `fleet/transport.go::Recall`.
+- **Что**: после прибытия (arrive) recall невозможен — флот уже
+  выполняет миссию или возвращается.
+- **Почему**: семантически правильно (нет смысла «отзывать» уже
+  разгрузившийся транспорт).
+- **Как чинить**: не нужно.
+- **Приоритет**: —
+
+### [RECYCLING] Debris один на координаты, без is_moon
+- **Где**: `migrations/0010_debris_fields.sql`.
+- **Что**: PK (galaxy, system, position), is_moon не учитывается —
+  debris над планетой и над луной считаются одним полем.
+- **Почему**: упрощение схемы. OGame позволяет обе орбиты.
+- **Как чинить**: добавить колонку `is_moon` в PK.
+- **Приоритет**: L.
+
+### [SPY] Без counter-espionage и research-уровней (ratio>=8)
+- **Где**: `fleet/spy.go::buildEspionageReport`.
+- **Что**: нет сбития probes defense'ом, нет видимости
+  research-уровней при ratio>=8 (legacy).
+- **Почему**: сократили scope.
+- **Как чинить**: counter-espionage = случайный roll
+  `min(defense_count * 0.1, probes)`, research читается из research
+  по списку unit_id.
+- **Приоритет**: M.
+
+### [COLONIZE] Нет выбора имени / размера планеты по позиции
+- **Где**: `fleet/colonize.go`.
+- **Что**: имя hardcoded «Colony», diameter 12800..14800 без учёта
+  position (в OGame ближе к звезде меньше).
+- **Почему**: MVP-подход.
+- **Как чинить**: добавить field `name` в TransportInput + табличку
+  «position → diameter-range».
+- **Приоритет**: L.
+
+### [EXPEDITION] Детерминирована по seed от fleetID
+- **Где**: `fleet/expedition.go`.
+- **Что**: одинаковый fleet_id всегда даёт одинаковый outcome. Это
+  не минус (каждый новый flight имеет новый uuid), но тесты с
+  фиксированным uuid дадут одинаковые результаты.
+- **Почему**: проще тестировать.
+- **Как чинить**: не нужно.
+- **Приоритет**: —
+
+---
+
+## Market
+
+### [Market] Фиксированные курсы 1:2:4
+- **Где**: `internal/market/service.go::resourceCost`.
+- **Что**: metal=1, silicon=2, hydrogen=4 — константы.
+- **Почему**: legacy OGame так устроен.
+- **Как чинить**: заменить на order-book (полноценный Exchange из
+  legacy 1205 LOC).
+- **Приоритет**: M — это M6 full-exchange.
+
+### [Market] Только в рамках одной планеты
+- **Где**: `internal/market/service.go::Exchange`.
+- **Что**: обмен происходит на конкретной планете, нет межпланетного
+  swap (ресурсы надо везти).
+- **Почему**: так проще, OGame тоже так делает.
+- **Как чинить**: не нужно.
+- **Приоритет**: —
+
+### [ArtefactMarket] Фильтр «мои» — по username, не по user_id
+- **Где**: `features/artmarket/ArtefactMarketScreen.tsx::shown`.
+- **Что**: `filter === 'mine'` сравнивает `seller_name` с
+  `credit?.toString()` — это мусор.
+- **Почему**: на клиенте не знаем свой user_id без отдельного запроса
+  `/api/me`.
+- **Как чинить**: добавить `/api/me` → `{user_id, username}` или
+  парсить JWT-claims на клиенте.
+- **Приоритет**: M — сейчас «мои» работает неправильно.
+
+### [ArtefactMarket] Цена через window.prompt
+- **Где**: `features/artefacts/ArtefactsScreen.tsx`.
+- **Что**: ввод цены через `window.prompt`, без inline-form.
+- **Почему**: минимальный UX для MVP.
+- **Как чинить**: inline-form в отдельной строке при клике «Продать».
+- **Приоритет**: L.
+
+---
+
+## Rockets
+
+### [Rockets] Нет anti-ballistic missile (перехвата)
+- **Где**: `internal/rocket/events.go::ImpactHandler`.
+- **Что**: все ракеты долетают до цели, счёт без anti-ballistic.
+- **Почему**: легко добавить позже, нужен второй unit_id.
+- **Как чинить**: в ImpactHandler до применения урона вычитать
+  `min(abm_count, interceptors)` из `pl.Count`.
+- **Приоритет**: M.
+
+### [Rockets] Урон размазан по всей defense без приоритета
+- **Где**: `internal/rocket/events.go::ImpactHandler`.
+- **Что**: нет `target_unit_id` (конкретная цель), урон распределяется
+  по всем defense пропорционально `count × shell`.
+- **Почему**: простая модель.
+- **Как чинить**: опциональный `target` в launch-payload + приоритет
+  этому stack'у.
+- **Приоритет**: L.
+
+### [Rockets] Нет silo-limit
+- **Где**: `internal/rocket/service.go::Launch`.
+- **Что**: в legacy `max_rockets = silo.level × 10`; у нас этого
+  ограничения нет (limit только при производстве в shipyard).
+- **Почему**: нет здания `missile_silo` в каталоге.
+- **Как чинить**: добавить silo в buildings.yml + проверку.
+- **Приоритет**: L.
+
+---
+
+## Repair
+
+### [Repair] Нельзя чинить defense
+- **Где**: `internal/repair/service.go::EnqueueRepair`.
+- **Что**: `isDefense → ErrUnknownUnit`. Только ship можно чинить.
+- **Почему**: legacy defense-table не имеет `damaged_count`.
+- **Как чинить**: добавить колонки в `defense` и применять repair
+  симметрично ships.
+- **Приоритет**: L — бой defense'е наносит 0 damaged (ракеты их
+  уничтожают целиком).
+
+### [Repair] Batch-only (чиним всех damaged одним action)
+- **Где**: `internal/repair/service.go::EnqueueRepair`.
+- **Что**: кнопка «Починить» чинит N=damaged_count. Нет «починить k
+  из N».
+- **Почему**: shell_percent на stack один, «частичный ремонт» требует
+  усложнения модели.
+- **Как чинить**: не нужно пока modelчасть stack'а может иметь разный
+  shell_percent.
+- **Приоритет**: —
+
+### [Repair] Стоимость считается в момент enqueue
+- **Где**: `internal/repair/service.go::EnqueueRepair`.
+- **Что**: если между enqueue и finish юнит дополнительно повредился
+  от второго боя, стоимость не пересчитывается.
+- **Почему**: per-unit-seconds очень короткий (1–2 сек), вероятность
+  edge-case минимальна.
+- **Как чинить**: FOR UPDATE на ships в handler'е + перерасчёт.
+- **Приоритет**: L.
+
+---
+
+## Messages
+
+### [Messages] Read-only inbox (нет compose/reply/delete)
+- **Где**: `internal/message/*.go`.
+- **Что**: только inbox + markRead. Нет пользовательского compose,
+  reply, delete, folders UI.
+- **Почему**: compose — M6 вместе с alliance chat.
+- **Как чинить**: POST /api/messages (compose), DELETE /api/
+  messages/{id}, UI composer.
+- **Приоритет**: M.
+
+### [Messages] Username в BattleReport/Espionage только UUID
+- **Где**: `internal/message/service.go::GetBattleReport`.
+- **Что**: `attacker_user_id` в ответе — UUID, без join с users
+  для username.
+- **Почему**: simple query.
+- **Как чинить**: LEFT JOIN users в Get*Report.
+- **Приоритет**: L.
+
+### [Messages] Folders не используются в UI
+- **Где**: `features/messages/MessagesScreen.tsx`.
+- **Что**: все messages в одном inbox, без фильтров по folder (2=battle,
+  4=spy, etc).
+- **Почему**: для MVP fields достаточно одного списка.
+- **Как чинить**: tab'ы по folder.
+- **Приоритет**: L.
+
+---
+
+## Achievements
+
+### [Achievements] Lazy-check при GET, не real-time
+- **Где**: `internal/achievement/handler.go`.
+- **Что**: CheckAll прогоняется при GET /api/achievements.
+  Уведомление о разблокировке приходит при следующем заходе на
+  экран.
+- **Почему**: не инвазивно для handler'ов (не нужно править build/
+  fleet/artefact handler'ы).
+- **Как чинить**: inject achievement.Service в каждый domain handler
+  и вызывать UnlockIfNew после успешного действия в той же транзакции.
+- **Приоритет**: M — если захотим real-time toast «Достижение!».
+
+### [Achievements] Только 5 штук
+- **Где**: `migrations/0014_achievements.sql`.
+- **Что**: seed 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY).
+  Legacy na_phrases содержит 20+ ключей ACHIEVEMENT_*.
+- **Почему**: MVP-покрытие.
+- **Как чинить**: расширить seed + добавить SQL-checks в CheckAll.
+- **Приоритет**: L.
+
+### [Achievements] Нет прогресс-баров (N/M)
+- **Где**: `features/achievements/AchievementsScreen.tsx`.
+- **Что**: только boolean unlocked/locked. Нет «построил 4 из 10
+  metal_mine».
+- **Почему**: boolean проще; прогресс требует `progress_json`.
+- **Как чинить**: добавить колонку progress + отдельный `Progress()`
+  method + прогресс-бар в UI.
+- **Приоритет**: L.
+
+---
+
+## Economy / Catalog
+
+### [planet.tick] Нет production.yml с формулами в runtime
+- **Где**: `backend/internal/planet/service.go`.
+- **Что**: есть DSL (`productionRatesDSL` через formula-пакет), но
+  `construction.yml` не генерируется import-datasheets при старте
+  docker → в проде всегда fallback на `productionRatesApprox`.
+- **Почему**: import-datasheets запускается руками, не в dev-up.
+- **Как чинить**: добавить в `deploy/Dockerfile.migrate` или отдельный
+  init-контейнер вызов `cmd/tools/import-datasheets`.
+- **Приоритет**: M.
+
+### [economy] Storage cap hardcoded 1e18
+- **Где**: `backend/internal/economy/formulas.go`.
+- **Что**: `StorageCapacity` игнорирует `metal_storage/silicon_storage/
+  hydrogen_storage` уровни → фактического капа нет.
+- **Почему**: ресурсы float64, overflow не страшен.
+- **Как чинить**: читать capacity из buildings + apply cap.
+- **Приоритет**: L.
+
+---
+
+## Infrastructure
+
+### [docker] Frontend dev-mode через bind-mount
+- **Где**: `deploy/docker-compose.yml::frontend`.
+- **Что**: frontend/src монтируется в контейнер, prod-сборки нет.
+- **Почему**: dev-first для итераций. Для публикации нужен nginx +
+  собранный bundle.
+- **Как чинить**: `deploy/Dockerfile.frontend-prod` с `npm run build`
+  и `nginx:alpine`.
+- **Приоритет**: M — когда выйдем на внешнее demo.
+
+### [docker] Никакого auth-rate-limiting
+- **Где**: `backend/cmd/server/main.go`.
+- **Что**: `/api/auth/login` без rate-limit или fail2ban.
+- **Почему**: MVP не публикуется.
+- **Как чинить**: middleware на redis-counter.
+- **Приоритет**: H перед публикацией.
+
+### [i18n] Только ru/en, en.yml stub
+- **Где**: `configs/i18n/en.yml`.
+- **Что**: en.yml — заготовка с пустыми значениями. Реально тексты
+  только ru.
+- **Почему**: сначала legacy-порт, переводы — потом.
+- **Как чинить**: ручной перевод или translation workflow.
+- **Приоритет**: M — для международного запуска.
+
+---
+
+## Закрытые
+
+- **M4.4a.rapidfire** → исправлено в iteration 20 (commit c7ae59a).
+- **M4.4a.debris-in-loot** → исправлено в iteration 20 (commit 618cd26).
+- **M4.4a.ui-missions** → исправлено в iteration 20.5 (commit 5336f06).
+- **M4.4c** REPAIR-режим → iteration 19 (commit 42e4c89).
+- **Starter-planet без buildings** → iteration 12 (commit 15be227).
+- **planet evalProd не обрабатывал resource='energy'** → iteration 13.
