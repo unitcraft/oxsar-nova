@@ -82,6 +82,7 @@ func run() error {
 	w.Register(event.KindAttackSingle, transportSvc.AttackHandler())
 	w.Register(event.KindRecycling, transportSvc.RecyclingHandler())
 	w.Register(event.KindSpy, transportSvc.SpyHandler())
+	w.Register(event.KindColonize, transportSvc.ColonizeHandler())
 	w.Register(event.KindDisassemble, repairSvc.DisassembleHandler())
 	w.Register(event.KindRepair, repairSvc.RepairHandler())
 

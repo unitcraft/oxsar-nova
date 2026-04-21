@@ -85,3 +85,16 @@ ships:
     cargo: 5
     speed: 100000000
     fuel: 1
+
+  # Colony Ship (id=36 в legacy UNIT_COLONY_SHIP). Для COLONIZE
+  # (mission=8): 1 корабль = 1 новая планета. Cargo 7500 переносит
+  # стартовые ресурсы. Медленный и дорогой — одноразовая миссия.
+  colony_ship:
+    id: 36
+    cost: { metal: 10000, silicon: 20000, hydrogen: 10000 }
+    attack: 50
+    shield: 100
+    shell: 30000
+    cargo: 7500
+    speed: 2500
+    fuel: 1000

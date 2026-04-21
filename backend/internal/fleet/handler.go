@@ -49,9 +49,9 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
 		return
 	}
-	if req.Mission != 0 && req.Mission != 7 && req.Mission != 9 && req.Mission != 10 && req.Mission != 11 {
+	if req.Mission != 0 && req.Mission != 7 && req.Mission != 8 && req.Mission != 9 && req.Mission != 10 && req.Mission != 11 {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest,
-			"supported missions: 7=TRANSPORT, 9=RECYCLING, 10=ATTACK_SINGLE, 11=SPY"))
+			"supported missions: 7=TRANSPORT, 8=COLONIZE, 9=RECYCLING, 10=ATTACK_SINGLE, 11=SPY"))
 		return
 	}
 	in := TransportInput{

@@ -1,0 +1,222 @@
+// COLONIZE (mission=8) — основание новой колонии.
+//
+// Поток прибытия:
+//  1. Читаем fleet + fleet_ships (ищем colony_ship id=36).
+//  2. Проверяем, что координата пустая (нет planets там).
+//  3. Проверяем лимит планет: count(user) <= computer_tech + 1.
+//  4. Создаём planets row с ресурсами = carry, diameter/temp по
+//     seed от координат (детерминированно).
+//  5. Снимаем 1 colony_ship из fleet_ships (DECREMENT или DELETE).
+//  6. Обнуляем carry флота, state='returning' — остальные ships
+//     вернутся на src_planet, новая планета уже заселена.
+//  7. Message игроку: «Колония основана в G:S:P».
+//
+// Ограничения M5.COLONIZE:
+//  * позиция 1 и 15 тоже доступны (упрощение; legacy их запрещает
+//    для старта).
+//  * размер planet — стандарт (12800..14800), без учёта позиции
+//    (в legacy ближе к звезде = меньше).
+//  * нет выбора имени — дефолт «Colony».
+package fleet
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/oxsar/nova/backend/internal/event"
+	"github.com/oxsar/nova/backend/pkg/ids"
+	"github.com/oxsar/nova/backend/pkg/rng"
+)
+
+// unitColonyShip — id колониального корабля (legacy UNIT_COLONY_SHIP).
+const unitColonyShip = 36
+
+// unitComputerTech — id computer-технологии в research (legacy UNIT_COMPUTER_TECH).
+const unitComputerTech = 14
+
+// ColonizeHandler — event.Handler для KindColonize=8.
+func (s *TransportService) ColonizeHandler() event.Handler {
+	return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
+		var pl transportPayload
+		if err := json.Unmarshal(e.Payload, &pl); err != nil {
+			return fmt.Errorf("colonize: parse payload: %w", err)
+		}
+		var (
+			state                    string
+			ownerUserID              string
+			g, sys, pos              int
+			isMoon                   bool
+			cm, csil, ch             int64
+		)
+		err := tx.QueryRow(ctx, `
+			SELECT state, owner_user_id,
+			       dst_galaxy, dst_system, dst_position, dst_is_moon,
+			       carried_metal, carried_silicon, carried_hydrogen
+			FROM fleets WHERE id = $1 FOR UPDATE
+		`, pl.FleetID).Scan(&state, &ownerUserID, &g, &sys, &pos, &isMoon, &cm, &csil, &ch)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil
+			}
+			return fmt.Errorf("colonize: read fleet: %w", err)
+		}
+		if state != "outbound" {
+			return nil
+		}
+		if isMoon {
+			// На луну колонизировать нельзя — это не планета.
+			return abortReturning(ctx, tx, pl.FleetID,
+				ownerUserID, "Колонизация луны невозможна", g, sys, pos)
+		}
+
+		// colony_ship есть?
+		var colonyCount int64
+		if err := tx.QueryRow(ctx,
+			`SELECT COALESCE(count, 0) FROM fleet_ships WHERE fleet_id=$1 AND unit_id=$2`,
+			pl.FleetID, unitColonyShip).Scan(&colonyCount); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("colonize: read colony ship: %w", err)
+		}
+		if colonyCount <= 0 {
+			return abortReturning(ctx, tx, pl.FleetID,
+				ownerUserID, "Нет колониального корабля во флоте", g, sys, pos)
+		}
+
+		// Координата пуста?
+		var existingID string
+		err = tx.QueryRow(ctx, `
+			SELECT id FROM planets
+			WHERE galaxy=$1 AND system=$2 AND position=$3 AND is_moon=false
+			  AND destroyed_at IS NULL
+		`, g, sys, pos).Scan(&existingID)
+		if err == nil {
+			return abortReturning(ctx, tx, pl.FleetID,
+				ownerUserID, "Координата занята", g, sys, pos)
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("colonize: check empty: %w", err)
+		}
+
+		// Лимит планет.
+		computerLvl := readComputerLevel(ctx, tx, ownerUserID)
+		maxPlanets := computerLvl + 1
+		var curPlanets int
+		if err := tx.QueryRow(ctx,
+			`SELECT COUNT(*) FROM planets WHERE user_id=$1 AND destroyed_at IS NULL AND is_moon=false`,
+			ownerUserID).Scan(&curPlanets); err != nil {
+			return fmt.Errorf("colonize: count planets: %w", err)
+		}
+		if curPlanets >= maxPlanets {
+			return abortReturning(ctx, tx, pl.FleetID, ownerUserID,
+				fmt.Sprintf("Достигнут лимит планет (%d/%d). Улучшите computer_tech.",
+					curPlanets, maxPlanets),
+				g, sys, pos)
+		}
+
+		// Создаём планету. diameter/temp по детерминированному seed от
+		// (galaxy, system, position) — одинаковая координата всегда
+		// даёт одинаковые параметры.
+		r := rng.New(coordsSeed(g, sys, pos))
+		diameter := 12800 + r.IntN(2000)
+		tempMax := -40 + r.IntN(80)
+		tempMin := tempMax - 40
+
+		newPlanetID := ids.New()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO planets (id, user_id, is_moon, name, galaxy, system, position,
+			                     diameter, used_fields, temperature_min, temperature_max,
+			                     metal, silicon, hydrogen)
+			VALUES ($1, $2, false, $3, $4, $5, $6, $7, 0, $8, $9, $10, $11, $12)
+		`, newPlanetID, ownerUserID, "Colony", g, sys, pos, diameter, tempMin, tempMax,
+			cm, csil, ch); err != nil {
+			return fmt.Errorf("colonize: insert planet: %w", err)
+		}
+
+		// Снимаем 1 colony_ship из флота (для возврата он больше
+		// не нужен — корабль «разобран» для основания базы).
+		if colonyCount == 1 {
+			if _, err := tx.Exec(ctx,
+				`DELETE FROM fleet_ships WHERE fleet_id=$1 AND unit_id=$2`,
+				pl.FleetID, unitColonyShip); err != nil {
+				return fmt.Errorf("colonize: delete colony ship: %w", err)
+			}
+		} else {
+			if _, err := tx.Exec(ctx, `
+				UPDATE fleet_ships SET count = count - 1
+				WHERE fleet_id=$1 AND unit_id=$2
+			`, pl.FleetID, unitColonyShip); err != nil {
+				return fmt.Errorf("colonize: decrement colony ship: %w", err)
+			}
+		}
+
+		// Carry обнуляется (уже на новой планете).
+		if _, err := tx.Exec(ctx, `
+			UPDATE fleets SET state='returning',
+			                  carried_metal=0, carried_silicon=0, carried_hydrogen=0
+			WHERE id=$1
+		`, pl.FleetID); err != nil {
+			return fmt.Errorf("colonize: update fleet: %w", err)
+		}
+
+		// Сообщение игроку.
+		subj := fmt.Sprintf("Основана колония %d:%d:%d", g, sys, pos)
+		body := fmt.Sprintf("Новая планета «Colony» на координатах [%d:%d:%d]. "+
+			"Стартовые ресурсы: %d M / %d Si / %d H.", g, sys, pos, cm, csil, ch)
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
+			VALUES ($1, $2, NULL, 2, $3, $4)
+		`, ids.New(), ownerUserID, subj, body); err != nil {
+			return fmt.Errorf("colonize: insert message: %w", err)
+		}
+		return nil
+	}
+}
+
+// abortReturning — причина неудачи → message + state='returning' с
+// сохранением carry (флот возвращает груз).
+func abortReturning(ctx context.Context, tx pgx.Tx, fleetID, userID, reason string,
+	g, sys, pos int) error {
+	if _, err := tx.Exec(ctx,
+		`UPDATE fleets SET state='returning' WHERE id=$1`, fleetID); err != nil {
+		return fmt.Errorf("abort: update fleet: %w", err)
+	}
+	subj := fmt.Sprintf("Колонизация %d:%d:%d провалена", g, sys, pos)
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
+		VALUES ($1, $2, NULL, 2, $3, $4)
+	`, ids.New(), userID, subj, reason); err != nil {
+		return fmt.Errorf("abort: insert message: %w", err)
+	}
+	return nil
+}
+
+func readComputerLevel(ctx context.Context, tx pgx.Tx, userID string) int {
+	if userID == "" {
+		return 0
+	}
+	var lvl int
+	err := tx.QueryRow(ctx,
+		`SELECT level FROM research WHERE user_id=$1 AND unit_id=$2`,
+		userID, unitComputerTech).Scan(&lvl)
+	if err != nil {
+		return 0
+	}
+	return lvl
+}
+
+// coordsSeed — детерминированный seed от (g, sys, pos). FNV-1a от
+// составного ключа, чтобы одинаковая координата у любого игрока
+// давала одинаковые diameter/temp.
+func coordsSeed(g, sys, pos int) uint64 {
+	var h uint64 = 14695981039346656037
+	for _, v := range []int{g, sys, pos} {
+		for i := 0; i < 4; i++ {
+			h ^= uint64(byte(v >> (i * 8)))
+			h *= 1099511628211
+		}
+	}
+	return h
+}

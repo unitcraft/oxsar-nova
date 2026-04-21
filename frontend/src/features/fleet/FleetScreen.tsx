@@ -54,9 +54,12 @@ export function FleetScreen({ planet }: { planet: Planet }) {
       // Carry имеет смысл только для TRANSPORT (mission=7).
       // Для ATTACK/RECYCLING насильно обнуляем, чтобы не возить
       // «туда» ресурсы случайно (легко забыть сбросить поля).
-      const carryM = mission === 7 ? metal : 0;
-      const carryS = mission === 7 ? silicon : 0;
-      const carryH = mission === 7 ? hydrogen : 0;
+      // Carry имеет смысл для TRANSPORT (mission=7) и COLONIZE
+      // (mission=8 — стартовые ресурсы новой планеты).
+      const carryAllowed = mission === 7 || mission === 8;
+      const carryM = carryAllowed ? metal : 0;
+      const carryS = carryAllowed ? silicon : 0;
+      const carryH = carryAllowed ? hydrogen : 0;
       return api.post<unknown>('/api/fleet', {
         src_planet_id: planet.id,
         dst: { galaxy: g, system: s, position: pos, is_moon: isMoon },
@@ -100,6 +103,7 @@ export function FleetScreen({ planet }: { planet: Planet }) {
           <option value={10}>{tf('Main', 'MISSION_ATTACK', '10 — Атака')}</option>
           <option value={9}>{tf('Main', 'MISSION_RECYCLING', '9 — Переработка')}</option>
           <option value={11}>{tf('Main', 'MISSION_SPY', '11 — Шпионаж')}</option>
+          <option value={8}>{tf('Main', 'MISSION_COLONIZE', '8 — Колонизация')}</option>
         </select>
       </div>
 
@@ -142,7 +146,7 @@ export function FleetScreen({ planet }: { planet: Planet }) {
         </tbody>
       </table>
 
-      {mission === 7 && (
+      {(mission === 7 || mission === 8) && (
         <>
           <h3>
             {t('global', 'METAL')} / {t('global', 'SILICON')} / {t('global', 'HYDROGEN')}
