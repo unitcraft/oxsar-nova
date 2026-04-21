@@ -9,6 +9,10 @@ MIGRATIONS := $(ROOT)/migrations
 GOOSE_DRIVER := postgres
 GOOSE_DBSTRING ?= postgres://oxsar:oxsar@localhost:5432/oxsar?sslmode=disable
 
+# Путь к дампу legacy-таблиц oxsar2 (для import-datasheets → construction.yml).
+# Переопределите если дамп лежит в другом месте.
+OXSAR2_DUMP ?= d:/Sources/oxsar2/sql/table_dump
+
 .PHONY: help
 help:
 	@echo "Available targets:"
@@ -22,6 +26,7 @@ help:
 	@echo "  test            - run all tests"
 	@echo "  lint            - run all linters"
 	@echo "  gen             - regenerate sqlc + openapi clients"
+	@echo "  import-datasheets - generate configs/construction.yml from legacy dump (OXSAR2_DUMP)"
 
 .PHONY: dev-up
 dev-up:
@@ -77,3 +82,12 @@ lint: backend-lint frontend-lint
 gen:
 	cd $(BACKEND) && go generate ./...
 	cd $(FRONTEND) && npm run gen:api
+
+# import-datasheets генерирует configs/construction.yml из legacy SQL-дампа.
+# Запускать вручную после получения дампа или при обновлении баланса.
+# Требует: OXSAR2_DUMP указывает на каталог с na_construction.sql и др.
+.PHONY: import-datasheets
+import-datasheets:
+	cd $(BACKEND) && go run ./cmd/tools/import-datasheets \
+		--input="$(OXSAR2_DUMP)" \
+		--output="$(ROOT)/configs"

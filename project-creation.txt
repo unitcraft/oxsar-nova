@@ -3769,5 +3769,17 @@ backend/internal/fleet/acs_attack.go:
 docs/simplifications.md: [ACS] acs_participants — ЗАКРЫТО.
 
 ================================================================================
+Итерация 67 — chore(makefile): import-datasheets target + OXSAR2_DUMP var
+================================================================================
+
+Makefile:
+  - Добавлена переменная OXSAR2_DUMP (путь к legacy SQL-дампу oxsar2).
+  - Новый target import-datasheets: запускает cmd/tools/import-datasheets
+    для генерации configs/construction.yml.
+  - help обновлён.
+
+docs/simplifications.md: [planet.tick] уточнён — как запускать вручную.
+
+================================================================================
 Конец дневника.
 ================================================================================
