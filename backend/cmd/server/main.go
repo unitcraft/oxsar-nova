@@ -84,9 +84,13 @@ func run() error {
 	}
 	defer pool.Close()
 
-	if _, err := storage.OpenRedis(ctx, cfg.Redis.URL); err != nil {
+	rdb, err := storage.OpenRedis(ctx, cfg.Redis.URL)
+	if err != nil {
 		log.WarnContext(ctx, "redis unavailable, continuing without cache", slog.String("err", err.Error()))
 	}
+
+	// Rate-limit для /api/auth/login и /api/auth/register: 20 req/min per IP.
+	authRL := auth.NewIPRateLimiter(rdb, 20, time.Minute)
 
 	db := repo.New(pool)
 
@@ -175,9 +179,9 @@ func run() error {
 
 	r := httpx.NewRouter(httpx.RouterDeps{Log: log})
 
-	r.Post("/api/auth/register", authH.Register)
-	r.Post("/api/auth/login", authH.Login)
-	r.Post("/api/auth/refresh", authH.Refresh)
+	r.With(authRL.Middleware).Post("/api/auth/register", authH.Register)
+	r.With(authRL.Middleware).Post("/api/auth/login", authH.Login)
+	r.With(authRL.Middleware).Post("/api/auth/refresh", authH.Refresh)
 	r.With(auth.Middleware(jwt)).Get("/api/me", authH.Me)
 	r.Post("/api/battle-sim", battleSimHandler)
 

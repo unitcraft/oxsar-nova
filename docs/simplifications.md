@@ -389,13 +389,10 @@
   закоммитить `configs/construction.yml`. Или добавить в CI-артефакт.
 - **Приоритет**: M.
 
-### [economy] Storage cap hardcoded 1e18
-- **Где**: `backend/internal/economy/formulas.go`.
-- **Что**: `StorageCapacity` игнорирует `metal_storage/silicon_storage/
-  hydrogen_storage` уровни → фактического капа нет.
-- **Почему**: ресурсы float64, overflow не страшен.
-- **Как чинить**: читать capacity из buildings + apply cap.
-- **Приоритет**: L.
+### [economy] Storage cap — ЗАКРЫТО (было ошибочно открыто)
+- `storageCap()` в planet/service.go корректно читает уровни metal_storage/
+  silicon_storage/hydrogen_storage и применяет `StorageCapacity()`.
+  `clampAdd()` ограничивает прирост. Уже работает.
 
 ---
 
