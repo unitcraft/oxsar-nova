@@ -30,9 +30,7 @@ func (c Coords) Validate() error {
 	return nil
 }
 
-// Distance возвращает полётную «цену» между двумя координатами в
-// OGame-значениях. TODO (M3): формула OGame (межгалактика/интерсистема/
-// интерпланета).
+// Distance возвращает полётную «цену» между двумя координатами (OGame classic).
 func Distance(a, b Coords) int {
 	switch {
 	case a.Galaxy != b.Galaxy:

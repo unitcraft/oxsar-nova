@@ -8,22 +8,8 @@
 package fleet
 
 import (
-	"context"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 )
-
-// Mission — поведение конкретной миссии флота (транспорт, атака, шпион…).
-// Реализации живут в fleet/missions_*.go.
-type Mission interface {
-	Kind() int // соответствует event.Kind / EVENT_* из consts.php
-	Validate(ctx context.Context, in Dispatch) error
-	Cost(in Dispatch) (metal, silicon, hydrogen int64)
-	Duration(in Dispatch) time.Duration
-	OnArrive(ctx context.Context, tx pgx.Tx, f Fleet) error
-	OnReturn(ctx context.Context, tx pgx.Tx, f Fleet) error
-}
 
 // Dispatch — запрос на отправку флота от UI.
 type Dispatch struct {
