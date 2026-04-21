@@ -119,16 +119,12 @@ func (s *TransportService) RecyclingHandler() event.Handler {
 		if state != "outbound" {
 			return nil
 		}
-		// Debris не привязан к is_moon (обломки над планетой и
-		// луной считаются одним полем). Но для консистентности с
-		// ATTACK-handler'ом, который пишет по (g,sys,pos) без
-		// is_moon, читаем так же.
 		var dMetal, dSilicon int64
 		err = tx.QueryRow(ctx, `
 			SELECT metal, silicon FROM debris_fields
-			WHERE galaxy=$1 AND system=$2 AND position=$3
+			WHERE galaxy=$1 AND system=$2 AND position=$3 AND is_moon=$4
 			FOR UPDATE
-		`, g, sys, pos).Scan(&dMetal, &dSilicon)
+		`, g, sys, pos, isMoon).Scan(&dMetal, &dSilicon)
 		if err != nil && err != pgx.ErrNoRows {
 			return fmt.Errorf("recycling: read debris: %w", err)
 		}
@@ -170,8 +166,8 @@ func (s *TransportService) RecyclingHandler() event.Handler {
 			if _, err := tx.Exec(ctx, `
 				UPDATE debris_fields
 				SET metal=metal-$1, silicon=silicon-$2, last_update=now()
-				WHERE galaxy=$3 AND system=$4 AND position=$5
-			`, takeM, takeS, g, sys, pos); err != nil {
+				WHERE galaxy=$3 AND system=$4 AND position=$5 AND is_moon=$6
+			`, takeM, takeS, g, sys, pos, isMoon); err != nil {
 				return fmt.Errorf("recycling: subtract debris: %w", err)
 			}
 			if _, err := tx.Exec(ctx, `
