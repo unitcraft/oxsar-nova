@@ -4071,5 +4071,15 @@ BuildingsScreen теперь использует buildingName() в очеред
     PriorityTarget, PriorityOverflow, CannotKillMoreThanCount.
 
 ================================================================================
+Итерация — 2026-04-22
+================================================================================
+
+[Tests] Unit-тесты для officer и repair.
+  - officer/service_test.go: TestAllowedField — 12 проверок (6 valid, 6 invalid полей).
+  - repair/service_test.go: TestCeil10 (8 кейсов), TestScalePerUnit_Disassemble,
+    TestScalePerUnit_ZeroBase. Значения сверены с legacy-формулой ceil(base*k/10)*10.
+  - Все 21 пакета: go test ./... — PASS.
+
+================================================================================
 Конец дневника.
 ================================================================================
