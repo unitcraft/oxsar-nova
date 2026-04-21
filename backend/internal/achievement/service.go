@@ -164,7 +164,20 @@ func (s *Service) CheckAll(ctx context.Context, userID string) error {
 	return nil
 }
 
-// List возвращает все defs + флаг unlocked + timestamp (если есть).
+// progressCheck описывает числовое достижение с прогресс-баром.
+type progressCheck struct {
+	key string
+	sql string // возвращает единственный int
+	max int
+}
+
+var progressChecks = []progressCheck{
+	{"BATTLE_10", `SELECT COUNT(*) FROM battle_reports WHERE attacker_user_id=$1 AND winner='attackers'`, 10},
+	{"FLEET_50", `SELECT COALESCE(SUM(s.count),0) FROM ships s JOIN planets p ON p.id=s.planet_id WHERE p.user_id=$1`, 50},
+	{"SCORE_1000", `SELECT COALESCE(score,0) FROM users WHERE id=$1`, 1000},
+}
+
+// List возвращает все defs + флаг unlocked + timestamp (если есть) + прогресс для числовых.
 func (s *Service) List(ctx context.Context, userID string) ([]Entry, error) {
 	rows, err := s.db.Pool().Query(ctx, `
 		SELECT d.key, d.title, d.description, d.points, a.unlocked_at
@@ -185,7 +198,31 @@ func (s *Service) List(ctx context.Context, userID string) ([]Entry, error) {
 		}
 		out = append(out, e)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Подтягиваем прогресс для числовых достижений.
+	progress := make(map[string]int, len(progressChecks))
+	for _, pc := range progressChecks {
+		var val int
+		if err := s.db.Pool().QueryRow(ctx, pc.sql, userID).Scan(&val); err != nil {
+			continue // не прерываем; просто нет прогресса
+		}
+		progress[pc.key] = val
+	}
+	for i, e := range out {
+		for _, pc := range progressChecks {
+			if e.Key == pc.key {
+				val := progress[pc.key]
+				max := pc.max
+				out[i].Progress = &val
+				out[i].ProgressMax = &max
+				break
+			}
+		}
+	}
+	return out, nil
 }
 
 // Entry — одна строчка достижения для UI.
@@ -195,6 +232,10 @@ type Entry struct {
 	Description string     `json:"description"`
 	Points      int        `json:"points"`
 	UnlockedAt  *time.Time `json:"unlocked_at,omitempty"`
+	// Progress/ProgressMax — для числовых достижений (BATTLE_10, FLEET_50, SCORE_1000).
+	// Nil — для булевых (FIRST_* и т.п.).
+	Progress    *int       `json:"progress,omitempty"`
+	ProgressMax *int       `json:"progress_max,omitempty"`
 }
 
 // execer — либо *pgx.Tx, либо pool. Позволяет вызвать UnlockIfNew

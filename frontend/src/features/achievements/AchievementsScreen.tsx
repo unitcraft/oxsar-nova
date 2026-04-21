@@ -11,6 +11,8 @@ interface Entry {
   description: string;
   points: number;
   unlocked_at?: string | null;
+  progress?: number | undefined;
+  progress_max?: number | undefined;
 }
 
 export function AchievementsScreen() {
@@ -66,7 +68,14 @@ export function AchievementsScreen() {
                   {e.unlocked_at ? '✓ ' : '○ '}
                   {e.title}
                 </td>
-                <td>{e.description}</td>
+                <td>
+                  {e.description}
+                  {e.progress_max != null && !e.unlocked_at && (
+                    <span style={{ marginLeft: 8, color: '#888', fontSize: '0.85em' }}>
+                      {e.progress ?? 0} / {e.progress_max}
+                    </span>
+                  )}
+                </td>
                 <td className="num">{e.points}</td>
                 <td>{e.unlocked_at ? new Date(e.unlocked_at).toLocaleString('ru-RU') : '—'}</td>
               </tr>
