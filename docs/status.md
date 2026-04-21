@@ -38,7 +38,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Officers                    | ✅     | M7 | 4 officer (ADMIRAL/GEOLOGIST/ENGINEER/MERCHANT), Activate→Expire через event kind=62, factor-поля. |
 | Achievements                | 🟡     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), lazy-check при GET. Идемпотентно. |
 | Tutorial                    | ⬜     | M7 | ex ext/page/ExtTutorial + game-классы.                   |
-| Simulator UI                | ⬜     | M7.1 | ex ext/page/ExtSimulator 749 LOC.                      |
+| Simulator UI                | ✅     | M7.1 | BattleSimScreen с реальными боевыми характеристиками из каталога + таблица потерь. |
 | Admin panel                 | ⬜     | M8 | Планируется.                                             |
 | Payment integrations        | ⬜     | M9 | v2: WebMoney/Robokassa/A1/2Pay/VK/OK/MailRu.             |
 | Event-loop worker           | ✅     | M3 | +Transport (kind=7 arrive) +Return (kind=20).            |
