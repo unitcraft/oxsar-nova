@@ -23,6 +23,11 @@ export function ArtefactMarketScreen() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState<'all' | 'mine'>('all');
 
+  const me = useQuery({
+    queryKey: ['me'],
+    queryFn: () => api.get<{ user_id: string; username: string }>('/api/me'),
+    staleTime: Infinity,
+  });
   const offers = useQuery({
     queryKey: ['artefact-market', 'offers'],
     queryFn: () => api.get<{ offers: Offer[] | null }>('/api/artefact-market/offers'),
@@ -52,10 +57,8 @@ export function ArtefactMarketScreen() {
   });
 
   const all = offers.data?.offers ?? [];
-  const my = credit.data;
-  // «mine» определяется по seller_name — но проще по JWT sub; для
-  // MVP оставим «показывать всех» и помечать свои кнопкой «Отменить».
-  const shown = filter === 'all' ? all : all.filter((o) => o.seller_name === my?.toString());
+  const myUserID = me.data?.user_id;
+  const shown = filter === 'all' ? all : all.filter((o) => o.seller_user_id === myUserID);
 
   return (
     <section>
@@ -79,7 +82,7 @@ export function ArtefactMarketScreen() {
             checked={filter === 'mine'}
             onChange={() => setFilter('mine')}
           />{' '}
-          {tf('Main', 'ART_MY_OFFERS', 'Мои (сверка по имени)')}
+          {tf('Main', 'ART_MY_OFFERS', 'Мои')}
         </label>
       </div>
 
@@ -99,23 +102,26 @@ export function ArtefactMarketScreen() {
             {shown.map((o) => (
               <tr key={o.id}>
                 <td>{nameOf(o.unit_id)}</td>
-                <td>{o.seller_name || '—'}</td>
+                <td>{o.seller_name ?? '—'}</td>
                 <td className="num">{o.price_credit}</td>
                 <td>
-                  <button
-                    type="button"
-                    disabled={buy.isPending || (credit.data?.credit ?? 0) < o.price_credit}
-                    onClick={() => buy.mutate(o.id)}
-                  >
-                    {tf('Main', 'BUY', 'Купить')}
-                  </button>{' '}
-                  <button
-                    type="button"
-                    disabled={cancel.isPending}
-                    onClick={() => cancel.mutate(o.id)}
-                  >
-                    {tf('Main', 'CANCEL', 'Отменить')}
-                  </button>
+                  {o.seller_user_id === myUserID ? (
+                    <button
+                      type="button"
+                      disabled={cancel.isPending}
+                      onClick={() => cancel.mutate(o.id)}
+                    >
+                      {tf('Main', 'CANCEL', 'Отменить')}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={buy.isPending || (credit.data?.credit ?? 0) < o.price_credit}
+                      onClick={() => buy.mutate(o.id)}
+                    >
+                      {tf('Main', 'BUY', 'Купить')}
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

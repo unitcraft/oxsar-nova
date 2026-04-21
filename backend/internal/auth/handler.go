@@ -1,9 +1,12 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/oxsar/nova/backend/internal/httpx"
 )
@@ -11,9 +14,10 @@ import (
 // Handler — HTTP-адаптер к auth.Service.
 type Handler struct {
 	svc *Service
+	db  *pgxpool.Pool
 }
 
-func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
+func NewHandler(svc *Service, db *pgxpool.Pool) *Handler { return &Handler{svc: svc, db: db} }
 
 type registerRequest struct {
 	Username string `json:"username"`
@@ -68,6 +72,26 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 type refreshRequest struct {
 	Refresh string `json:"refresh"`
+}
+
+// Me GET /api/me — возвращает user_id и username текущего пользователя.
+// Требует Middleware (Bearer / ?token=).
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+	uid, ok := UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	var username string
+	if err := h.db.QueryRow(context.Background(),
+		`SELECT username FROM users WHERE id=$1`, uid).Scan(&username); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]string{
+		"user_id":  uid,
+		"username": username,
+	})
 }
 
 // Refresh POST /api/auth/refresh

@@ -3662,5 +3662,26 @@ backend/internal/battle/engine_test.go:
   - TestClampPercent: < 0 → 0, mid-range pass, > 100 → 100.
 
 ================================================================================
+Итерация 61 — fix(artmarket,auth): /api/me + правильный «мои» фильтр
+================================================================================
+
+backend/internal/auth/handler.go:
+  - Handler теперь принимает *pgxpool.Pool.
+  - +Me GET /api/me: читает username по userID из контекста, возвращает
+    {user_id, username}.
+
+backend/cmd/server/main.go:
+  - auth.NewHandler(authSvc, pool).
+  - +route: GET /api/me с auth.Middleware(jwt).
+
+frontend/src/features/artmarket/ArtefactMarketScreen.tsx:
+  - +useQuery(['me']) → /api/me → {user_id, username}.
+  - shown: фильтрует по seller_user_id === myUserID (UUID), не по name.
+  - Колонка «Действие»: Cancel — для своих офферов, Buy — для чужих.
+  - Убрана кнопка «Отменить (сверка по имени)» (нерабочий комментарий).
+
+docs/simplifications.md: [ArtefactMarket] Фильтр «мои» — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================
