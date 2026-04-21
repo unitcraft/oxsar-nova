@@ -102,6 +102,9 @@ type unitState struct {
 	turnShell float64
 	// turnShield = Shield[primaryCh] × Quantity, восстанавливается regen.
 	turnShield float64
+	// startTurnShield — значение turnShield в начале раунда (до атак).
+	// Используется в shieldDestroyFactor (Java startTurnQuantity × shield).
+	startTurnShield float64
 	// Quantity — текущее оставшееся количество юнитов (включая damaged).
 	quantity int64
 	// damaged — сколько из quantity повреждены. M4.3 упрощение: не более
@@ -150,6 +153,7 @@ func newState(input []Side, rf map[int]map[int]int) *battleState {
 			// боя).
 			us.turnShell = totalShell(u.Shell, us.quantity, us.damaged, us.shellPercent)
 			us.turnShield = float64(u.Quantity) * u.Shield[us.primaryChannel]
+			us.startTurnShield = us.turnShield
 			ss.units = append(ss.units, us)
 		}
 		bs.sides[si] = ss
@@ -204,6 +208,7 @@ func (b *battleState) regen() {
 				continue
 			}
 			u.turnShield = float64(u.quantity) * u.tmpl.Shield[u.primaryChannel]
+			u.startTurnShield = u.turnShield
 		}
 	}
 }
@@ -438,30 +443,33 @@ func applyMasking(shots int64, ballistics, masking int) int64 {
 
 // applyShots — применяет shots выстрелов мощности attack к target.
 //
-// Модель щитов (M4.1, упрощённая vs Java):
-//   - pool = attack × shots (общая мощность пачки выстрелов);
-//   - shieldAbsorb = min(pool, turnShield) — сколько щит поглотит;
-//   - turnShield -= shieldAbsorb;
-//   - остаток pool идёт в turnShell;
-//   - turnShell -= pool_remainder.
+// Портировано из Java Units.processAttack (строки 315–427):
 //
-// Важное отличие от Java: мы НЕ моделируем «одинокий щит защищает от
-// многих слабых выстрелов». В Java каждый выстрел меньше unit.shield
-// полностью поглощается без урона в shell (ignoreAttack = shield/100).
-// В M4.1 мы суммируем мощность, что даёт более «линейное» поведение.
-// Для OGame-паритета это придёт в M4.2.
+//  1. ignoreAttack = shield / 100. Если attack ≤ ignoreAttack —
+//     выстрелы поглощаются щитом без урона в shell.
+//
+//  2. shieldDestroyFactor = clamp(1 - turnShield/fullTurnShield, 0.01, 1.0)
+//     Чем больше щит разрушен, тем больше shots «проходят сквозь».
+//
+//  3. shieldDestroyUnits = floor(turnShield × shieldDestroyFactor / shield),
+//     capped at shots. Эти shots проходят к shell.
+//
+//  4. Оставшиеся shots бьют щит: cap power per shot ≤ shield,
+//     cap total ≤ turnShield. Вычитаем из turnShield.
+//
+//  5. Shots дошедшие до shell: cap power per shot ≤ shell,
+//     cap total ≤ turnShell. Вычитаем из turnShell.
 func applyShots(shooter, target *unitState, attack float64, shots int64) {
 	if shots <= 0 || target.quantity <= 0 {
 		return
 	}
-	// M4.1 упрощение «ignoreAttack»: если урон одного выстрела меньше,
-	// чем shield[primary] / 100 (Java threshold), выстрелы
-	// суммарно НЕ пробивают щит. Это поведение важно для мелких
-	// пулемётов против больших линкоров.
+	_ = shooter
+
 	unitShield := target.tmpl.Shield[target.primaryChannel]
-	ignoreThreshold := unitShield / 100.0
-	if attack > 0 && attack < ignoreThreshold {
-		// Весь пул сбивает щит до 0, но ничего не идёт в shell.
+	ignoreAttack := unitShield / 100.0
+
+	// Shots weaker than ignoreAttack don't penetrate to shell.
+	if attack > 0 && attack <= ignoreAttack {
 		pool := attack * float64(shots)
 		if pool > target.turnShield {
 			pool = target.turnShield
@@ -470,22 +478,73 @@ func applyShots(shooter, target *unitState, attack float64, shots int64) {
 		return
 	}
 
-	pool := attack * float64(shots)
-	if target.turnShield > 0 {
-		absorb := pool
-		if absorb > target.turnShield {
-			absorb = target.turnShield
+	shotsF := float64(shots)
+
+	if unitShield <= 0 {
+		// No shield — all shots go directly to shell.
+		shellPower := attack * shotsF
+		maxShellPower := target.tmpl.Shell * shotsF
+		if shellPower > maxShellPower {
+			shellPower = maxShellPower
 		}
-		target.turnShield -= absorb
-		pool -= absorb
+		if shellPower > target.turnShell {
+			shellPower = target.turnShell
+		}
+		target.turnShell -= shellPower
+		if target.turnShell < 0 {
+			target.turnShell = 0
+		}
+		return
 	}
-	if pool > 0 && target.turnShell > 0 {
-		target.turnShell -= pool
+
+	fullTurnShield := target.startTurnShield
+	var shieldDamageFactor float64
+	if fullTurnShield > 0 {
+		shieldDamageFactor = target.turnShield / fullTurnShield
+	}
+	shieldDestroyFactor := 1.0 - shieldDamageFactor
+	if shieldDestroyFactor < 0.01 {
+		shieldDestroyFactor = 0.01
+	} else if shieldDestroyFactor > 1.0 {
+		shieldDestroyFactor = 1.0
+	}
+
+	// Shots that pass through destroyed-shield units, going straight to shell.
+	shieldDestroyUnits := math.Floor(target.turnShield * shieldDestroyFactor / unitShield)
+	if shieldDestroyUnits > shotsF {
+		shieldDestroyUnits = shotsF
+	}
+	shotsToShell := shieldDestroyUnits
+	shotsToShield := shotsF - shotsToShell
+
+	// Apply remaining shots to shield.
+	if shotsToShield > 0 && target.turnShield > 0 {
+		shieldPower := attack * shotsToShield
+		maxShieldPower := unitShield * shotsToShield
+		if shieldPower > maxShieldPower {
+			shieldPower = maxShieldPower
+		}
+		if shieldPower > target.turnShield {
+			shieldPower = target.turnShield
+		}
+		target.turnShield -= shieldPower
+	}
+
+	// Apply shell shots.
+	if shotsToShell > 0 && target.turnShell > 0 {
+		shellPower := attack * shotsToShell
+		maxShellPower := target.tmpl.Shell * shotsToShell
+		if shellPower > maxShellPower {
+			shellPower = maxShellPower
+		}
+		if shellPower > target.turnShell {
+			shellPower = target.turnShell
+		}
+		target.turnShell -= shellPower
 		if target.turnShell < 0 {
 			target.turnShell = 0
 		}
 	}
-	_ = shooter // shooter-специфичный tracking придёт в M4.3 (stats)
 }
 
 // primaryChannel — возвращает индекс канала (0/1/2) с максимальным
