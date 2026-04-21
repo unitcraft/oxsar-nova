@@ -117,6 +117,38 @@ func (s *Service) CheckAll(ctx context.Context, userID string) error {
 			SELECT (COUNT(*) >= 2) FROM planets
 			WHERE user_id = $1 AND destroyed_at IS NULL AND is_moon = false
 		`},
+		{"FIRST_FLEET", `SELECT EXISTS (SELECT 1 FROM fleets WHERE owner_user_id = $1)`},
+		{"FIRST_EXPEDITION", `SELECT EXISTS (
+				SELECT 1 FROM fleets WHERE owner_user_id = $1 AND mission = 15
+			)`},
+		{"FIRST_RESEARCH", `SELECT EXISTS (SELECT 1 FROM research WHERE user_id = $1 AND level >= 1)`},
+		{"BATTLE_10", `
+			SELECT (COUNT(*) >= 10) FROM battle_reports
+			WHERE attacker_user_id = $1 AND winner = 'attackers'
+		`},
+		{"FLEET_50", `
+			SELECT (COALESCE(SUM(s.count), 0) >= 50)
+			FROM ships s JOIN planets p ON p.id = s.planet_id
+			WHERE p.user_id = $1
+		`},
+		{"ARTEFACT_MARKET", `SELECT EXISTS (
+				SELECT 1 FROM artefacts_user
+				WHERE user_id = $1 AND acquired_at IS NOT NULL
+					AND state IN ('held','active','delayed','listed')
+			)`},
+		{"SPY_SUCCESS", `SELECT EXISTS (
+				SELECT 1 FROM fleets WHERE owner_user_id = $1 AND mission = 11
+					AND state IN ('returning','done')
+			)`},
+		{"RECYCLING", `SELECT EXISTS (
+				SELECT 1 FROM fleets WHERE owner_user_id = $1 AND mission = 9
+					AND state IN ('returning','done')
+			)`},
+		{"ROCKET_LAUNCH", `SELECT EXISTS (
+				SELECT 1 FROM events
+				WHERE user_id = $1 AND kind = 16
+			)`},
+		{"SCORE_1000", `SELECT (score >= 1000) FROM users WHERE id = $1`},
 	}
 	for _, c := range checks {
 		var ok bool

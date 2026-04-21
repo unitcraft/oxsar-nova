@@ -264,13 +264,11 @@
   KindAttackSingle, KindAttackAlliance, KindColonize. Ошибка не
   прерывает основной handler — только логируется (commit далее).
 
-### [Achievements] Только 5 штук
-- **Где**: `migrations/0014_achievements.sql`.
-- **Что**: seed 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY).
-  Legacy na_phrases содержит 20+ ключей ACHIEVEMENT_*.
-- **Почему**: MVP-покрытие.
-- **Как чинить**: расширить seed + добавить SQL-checks в CheckAll.
-- **Приоритет**: L.
+### [Achievements] Только 5 штук — ЗАКРЫТО
+- Закрыто: migration 0026 добавляет 10 новых достижений (FIRST_FLEET,
+  FIRST_EXPEDITION, FIRST_RESEARCH, BATTLE_10, FLEET_50, ARTEFACT_MARKET,
+  SPY_SUCCESS, RECYCLING, ROCKET_LAUNCH, SCORE_1000). CheckAll расширен
+  соответствующими SQL-checks.
 
 ### [Achievements] Нет прогресс-баров (N/M)
 - **Где**: `features/achievements/AchievementsScreen.tsx`.
