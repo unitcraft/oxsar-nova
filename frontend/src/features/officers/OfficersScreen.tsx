@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { useTranslation } from '@/i18n/i18n';
@@ -30,8 +31,11 @@ export function OfficersScreen() {
     refetchInterval: 15000,
   });
 
+  const [autoRenewKeys, setAutoRenewKeys] = useState<Set<string>>(new Set());
+
   const activate = useMutation({
-    mutationFn: (key: string) => api.post<Entry>(`/api/officers/${key}/activate`),
+    mutationFn: ({ key, autoRenew }: { key: string; autoRenew: boolean }) =>
+      api.post<Entry>(`/api/officers/${key}/activate`, { auto_renew: autoRenew }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['officers'] });
       void qc.invalidateQueries({ queryKey: ['artefact-market'] });
@@ -78,13 +82,27 @@ export function OfficersScreen() {
                         {new Date(e.expires_at!).toLocaleString('ru-RU')}
                       </span>
                     ) : (
-                      <button
-                        type="button"
-                        disabled={activate.isPending || creditVal < e.cost_credit}
-                        onClick={() => activate.mutate(e.key)}
-                      >
-                        {tf('Main', 'OFF_ACTIVATE', 'Активировать')}
-                      </button>
+                      <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.85em', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={autoRenewKeys.has(e.key)}
+                            onChange={(ev) => {
+                              const next = new Set(autoRenewKeys);
+                              if (ev.target.checked) next.add(e.key); else next.delete(e.key);
+                              setAutoRenewKeys(next);
+                            }}
+                          />{' '}
+                          авто
+                        </label>
+                        <button
+                          type="button"
+                          disabled={activate.isPending || creditVal < e.cost_credit}
+                          onClick={() => activate.mutate({ key: e.key, autoRenew: autoRenewKeys.has(e.key) })}
+                        >
+                          {tf('Main', 'OFF_ACTIVATE', 'Активировать')}
+                        </button>
+                      </span>
                     )}
                   </td>
                 </tr>

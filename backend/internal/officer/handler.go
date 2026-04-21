@@ -1,6 +1,7 @@
 package officer
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -43,7 +44,12 @@ func (h *Handler) Activate(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing key"))
 		return
 	}
-	e, err := h.svc.Activate(r.Context(), uid, key)
+	var body struct {
+		AutoRenew bool `json:"auto_renew"`
+	}
+	// body опционален — игнорируем ошибки декодирования (пустое тело → auto_renew=false)
+	_ = json.NewDecoder(r.Body).Decode(&body)
+	e, err := h.svc.Activate(r.Context(), uid, key, body.AutoRenew)
 	switch {
 	case err == nil:
 		httpx.WriteJSON(w, r, http.StatusCreated, e)

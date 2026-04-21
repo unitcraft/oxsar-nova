@@ -276,14 +276,12 @@
   artefact_defs и проверять «уже есть active в этой group'е».
 - **Приоритет**: L.
 
-### [Officers] Нет auto-renew
-- **Где**: `officer/service.go::Activate`.
-- **Что**: после expire игрок должен вручную активировать снова.
-  В legacy была подписка с auto-renew за credit.
-- **Почему**: UX проще; избегаем «случайно списало credit».
-- **Как чинить**: флаг `auto_renew` в officer_active + новый kind
-  события «попытка продлить».
-- **Приоритет**: L.
+### [Officers] Нет auto-renew — ЗАКРЫТО
+- Закрыто: migration 0029 добавляет `auto_renew bool` в officer_active.
+  `Activate(ctx, uid, key, autoRenew bool)` сохраняет флаг + передаёт в payload события.
+  `ExpireHandler`: если auto_renew=true и credit >= cost → re-INSERT active, новый event,
+  factor остаётся без изменений. Если credit не хватает — обычный expire с пояснением.
+  UI: чекбокс «авто» рядом с кнопкой активации.
 
 ### [Officers] ADMIRAL — описание исправлено — ЗАКРЫТО
 - Описание изменено на «Ускоряет постройку кораблей в верфи на 10%».
