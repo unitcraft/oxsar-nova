@@ -393,14 +393,11 @@
 
 ## Infrastructure
 
-### [docker] Frontend dev-mode через bind-mount
-- **Где**: `deploy/docker-compose.yml::frontend`.
-- **Что**: frontend/src монтируется в контейнер, prod-сборки нет.
-- **Почему**: dev-first для итераций. Для публикации нужен nginx +
-  собранный bundle.
-- **Как чинить**: `deploy/Dockerfile.frontend-prod` с `npm run build`
-  и `nginx:alpine`.
-- **Приоритет**: M — когда выйдем на внешнее demo.
+### [docker] Frontend dev-mode через bind-mount — ЗАКРЫТО
+- Закрыто: `deploy/Dockerfile.frontend-prod` (multi-stage: node builder +
+  nginx:1.27-alpine). `deploy/nginx.frontend.conf` — SPA fallback, /api
+  proxy на backend:8080, gzip, long-cache для ассетов. `deploy/docker-compose.prod.yml` —
+  prod overlay поверх dev-compose (overrides frontend service).
 
 ### [docker] Auth rate-limiting — ЗАКРЫТО
 - Реализован `auth.RateLimiter` (Redis sliding-window): 20 req/min per IP.
