@@ -532,27 +532,7 @@ func applyDefenderLosses(ctx context.Context, tx pgx.Tx, planetID string,
 	if err := apply("ships", startShips); err != nil {
 		return err
 	}
-	// defense-table не имеет damaged_count/shell_percent — пишем только count.
-	for _, s := range startDefense {
-		r, ok := endByID[s.UnitID]
-		if !ok {
-			continue
-		}
-		if r.QuantityEnd == 0 {
-			if _, err := tx.Exec(ctx,
-				`UPDATE defense SET count=0 WHERE planet_id=$1 AND unit_id=$2`,
-				planetID, s.UnitID); err != nil {
-				return err
-			}
-			continue
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE defense SET count=$1 WHERE planet_id=$2 AND unit_id=$3`,
-			r.QuantityEnd, planetID, s.UnitID); err != nil {
-			return err
-		}
-	}
-	return nil
+	return apply("defense", startDefense)
 }
 
 // finalizeAttack — запись battle_reports + 2 messages + списание
