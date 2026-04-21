@@ -1,0 +1,566 @@
+// ATTACK_SINGLE (mission=10) — живой бой с планетой-целью.
+//
+// Поток прибытия:
+//  1. Читаем fleet + fleet_ships (атакующие юниты).
+//  2. Находим планету-цель. Нет цели (разрушена/свободна) →
+//     state='returning', без боя.
+//  3. Собираем defenders: ships + defense (если не moon) + tech хозяина.
+//  4. Собираем attackers: fleet_ships + tech владельца флота.
+//  5. battle.Calculate(...) — результат боя.
+//  6. Применяем потери:
+//     * атакующему → fleet_ships row-wise (count - lost).
+//     * защитнику → ships/defense (count - lost).
+//  7. При победе атакующего — loot: 50% доступных ресурсов цели,
+//     ограниченный свободным cargo флота.
+//  8. Пишем battle_reports + 2 messages (attacker & defender).
+//  9. fleet.state='returning', carry += loot.
+//
+// KindReturn=20 остаётся как был — возвращает корабли и carry на
+// src_planet. Если attacker проиграл, выживших в fleet_ships не
+// остаётся, handler KindReturn завершит с нулями.
+//
+// Осознанные упрощения M4.4a:
+//   * только single attacker (ACS — в M5).
+//   * debris целиком в loot (упрощение). Отдельная миссия
+//     RECYCLING (kind=9) придёт позже.
+//   * moon-chance не считаем.
+//   * report-тексты простые.
+package fleet
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/oxsar/nova/backend/internal/battle"
+	"github.com/oxsar/nova/backend/internal/config"
+	"github.com/oxsar/nova/backend/internal/event"
+	"github.com/oxsar/nova/backend/pkg/ids"
+)
+
+// unitStack — «плоская» запись в ships/defense/fleet_ships.
+type unitStack struct {
+	UnitID       int
+	Count        int64
+	Damaged      int64
+	ShellPercent float64
+}
+
+// AttackHandler — event.Handler для KindAttackSingle=10.
+func (s *TransportService) AttackHandler() event.Handler {
+	return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
+		var pl transportPayload
+		if err := json.Unmarshal(e.Payload, &pl); err != nil {
+			return fmt.Errorf("attack: parse payload: %w", err)
+		}
+
+		var (
+			state                     string
+			attackerUserID, srcPlanet string
+			g, sys, pos               int
+			isMoon                    bool
+			cm, csil, ch              int64
+		)
+		err := tx.QueryRow(ctx, `
+			SELECT state, owner_user_id, src_planet_id,
+			       dst_galaxy, dst_system, dst_position, dst_is_moon,
+			       carried_metal, carried_silicon, carried_hydrogen
+			FROM fleets WHERE id = $1 FOR UPDATE
+		`, pl.FleetID).Scan(&state, &attackerUserID, &srcPlanet,
+			&g, &sys, &pos, &isMoon, &cm, &csil, &ch)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil
+			}
+			return fmt.Errorf("attack: read fleet: %w", err)
+		}
+		if state != "outbound" {
+			return nil
+		}
+		_ = srcPlanet
+
+		attackerShips, err := readFleetShips(ctx, tx, pl.FleetID)
+		if err != nil {
+			return fmt.Errorf("attack: read fleet_ships: %w", err)
+		}
+		attackerTech, err := readUserTech(ctx, tx, attackerUserID)
+		if err != nil {
+			return fmt.Errorf("attack: read attacker tech: %w", err)
+		}
+
+		var (
+			planetID                   string
+			defenderUserID             string
+			defMetal, defSil, defHydro float64
+		)
+		err = tx.QueryRow(ctx, `
+			SELECT id, user_id, metal, silicon, hydrogen
+			FROM planets
+			WHERE galaxy=$1 AND system=$2 AND position=$3 AND is_moon=$4
+			  AND destroyed_at IS NULL
+			FOR UPDATE
+		`, g, sys, pos, isMoon).Scan(&planetID, &defenderUserID,
+			&defMetal, &defSil, &defHydro)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				_, uerr := tx.Exec(ctx,
+					`UPDATE fleets SET state='returning' WHERE id=$1`, pl.FleetID)
+				return uerr
+			}
+			return fmt.Errorf("attack: find target: %w", err)
+		}
+
+		defenderShips, err := readPlanetShips(ctx, tx, planetID)
+		if err != nil {
+			return fmt.Errorf("attack: defender ships: %w", err)
+		}
+		var defenderDefense []unitStack
+		if !isMoon {
+			defenderDefense, err = readPlanetDefense(ctx, tx, planetID)
+			if err != nil {
+				return fmt.Errorf("attack: defender defense: %w", err)
+			}
+		}
+		defenderTech, err := readUserTech(ctx, tx, defenderUserID)
+		if err != nil {
+			return fmt.Errorf("attack: defender tech: %w", err)
+		}
+
+		atkSide := battle.Side{
+			UserID: attackerUserID,
+			Tech:   attackerTech,
+			Units:  stacksToBattleUnits(attackerShips, s.catalog, false),
+		}
+		defUnits := stacksToBattleUnits(defenderShips, s.catalog, false)
+		defUnits = append(defUnits, stacksToBattleUnits(defenderDefense, s.catalog, true)...)
+		defSide := battle.Side{
+			UserID: defenderUserID,
+			Tech:   defenderTech,
+			Units:  defUnits,
+		}
+		if len(atkSide.Units) == 0 {
+			_, uerr := tx.Exec(ctx,
+				`UPDATE fleets SET state='returning' WHERE id=$1`, pl.FleetID)
+			return uerr
+		}
+
+		// Пустая планета (нет ships и нет defense) — без боя, сразу loot.
+		if len(defSide.Units) == 0 {
+			loot := grabLoot(defMetal, defSil, defHydro, attackerShips, s.catalog, cm, csil, ch)
+			rep := battle.Report{Winner: "attackers", Rounds: 0, Seed: deriveSeed(pl.FleetID)}
+			return finalizeAttack(ctx, tx, pl.FleetID, attackerUserID, defenderUserID, planetID,
+				rep, loot, cm, csil, ch, nil, nil)
+		}
+
+		input := battle.Input{
+			Seed:      deriveSeed(pl.FleetID),
+			Rounds:    6,
+			Attackers: []battle.Side{atkSide},
+			Defenders: []battle.Side{defSide},
+			Rapidfire: rapidfireToMap(s.catalog),
+			IsMoon:    isMoon,
+		}
+		report, err := battle.Calculate(input)
+		if err != nil {
+			return fmt.Errorf("attack: battle: %w", err)
+		}
+
+		atkSurvivors, err := applyAttackerLosses(ctx, tx, pl.FleetID, attackerShips, report.Attackers[0].Units)
+		if err != nil {
+			return fmt.Errorf("attack: apply attacker losses: %w", err)
+		}
+		if err := applyDefenderLosses(ctx, tx, planetID, defenderShips, defenderDefense,
+			report.Defenders[0].Units); err != nil {
+			return fmt.Errorf("attack: apply defender losses: %w", err)
+		}
+
+		var loot lootAmount
+		if report.Winner == "attackers" && len(atkSurvivors) > 0 {
+			loot = grabLoot(defMetal, defSil, defHydro, atkSurvivors, s.catalog, cm, csil, ch)
+		}
+		return finalizeAttack(ctx, tx, pl.FleetID, attackerUserID, defenderUserID, planetID,
+			report, loot, cm, csil, ch, atkSurvivors, nil)
+	}
+}
+
+// -----------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------
+
+func readFleetShips(ctx context.Context, tx pgx.Tx, fleetID string) ([]unitStack, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT unit_id, count, damaged_count FROM fleet_ships WHERE fleet_id=$1`, fleetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []unitStack
+	for rows.Next() {
+		var s unitStack
+		if err := rows.Scan(&s.UnitID, &s.Count, &s.Damaged); err != nil {
+			return nil, err
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
+func readPlanetShips(ctx context.Context, tx pgx.Tx, planetID string) ([]unitStack, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT unit_id, count, damaged_count, shell_percent
+		FROM ships WHERE planet_id=$1 AND count > 0
+		FOR UPDATE
+	`, planetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []unitStack
+	for rows.Next() {
+		var s unitStack
+		if err := rows.Scan(&s.UnitID, &s.Count, &s.Damaged, &s.ShellPercent); err != nil {
+			return nil, err
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
+func readPlanetDefense(ctx context.Context, tx pgx.Tx, planetID string) ([]unitStack, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT unit_id, count FROM defense WHERE planet_id=$1 AND count > 0 FOR UPDATE`,
+		planetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []unitStack
+	for rows.Next() {
+		var s unitStack
+		if err := rows.Scan(&s.UnitID, &s.Count); err != nil {
+			return nil, err
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
+func readUserTech(ctx context.Context, tx pgx.Tx, userID string) (battle.Tech, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT unit_id, level FROM research WHERE user_id=$1`, userID)
+	if err != nil {
+		return battle.Tech{}, err
+	}
+	defer rows.Close()
+	levels := map[int]int{}
+	for rows.Next() {
+		var id, lvl int
+		if err := rows.Scan(&id, &lvl); err != nil {
+			return battle.Tech{}, err
+		}
+		levels[id] = lvl
+	}
+	return battle.Tech{
+		Gun:        levels[15],
+		Shield:     levels[16],
+		Shell:      levels[17],
+		Laser:      levels[23],
+		Ion:        levels[24],
+		Plasma:     levels[25],
+		Ballistics: levels[103],
+		Masking:    levels[104],
+	}, rows.Err()
+}
+
+// stacksToBattleUnits — unitStack[] → battle.Unit[] через каталог.
+// Юниты без каталожной записи пропускаются (устаревший unit_id).
+// isDefense → ищем в Defense-каталоге, иначе в Ships.
+func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense bool) []battle.Unit {
+	out := make([]battle.Unit, 0, len(stacks))
+	for _, s := range stacks {
+		if s.Count <= 0 {
+			continue
+		}
+		var (
+			attack, shell    int
+			cost             config.ResCost
+			cargo            int64
+			speed, fuel      int
+			shieldVal        int
+			found            bool
+		)
+		if isDefense {
+			for _, spec := range cat.Defense.Defense {
+				if spec.ID == s.UnitID {
+					attack, shell, cost, shieldVal, found = spec.Attack, spec.Shell, spec.Cost, spec.Shield, true
+					break
+				}
+			}
+		} else {
+			for _, spec := range cat.Ships.Ships {
+				if spec.ID == s.UnitID {
+					attack, shell, cost = spec.Attack, spec.Shell, spec.Cost
+					cargo, speed, fuel = spec.Cargo, spec.Speed, spec.Fuel
+					shieldVal = spec.Shield
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			continue
+		}
+		_ = cargo
+		_ = speed
+		_ = fuel
+		out = append(out, battle.Unit{
+			UnitID:       s.UnitID,
+			Quantity:     s.Count,
+			Damaged:      s.Damaged,
+			ShellPercent: s.ShellPercent,
+			Front:        0,
+			Attack:       [3]float64{float64(attack), 0, 0},
+			Shield:       [3]float64{float64(shieldVal), 0, 0},
+			Shell:        float64(shell),
+			Cost:         battle.UnitCost{Metal: cost.Metal, Silicon: cost.Silicon, Hydrogen: cost.Hydrogen},
+		})
+	}
+	return out
+}
+
+// deriveSeed — детерминированный seed из fleetID (FNV-1a на первых
+// байтах UUID). Не полагаемся на math/rand.
+func deriveSeed(fleetID string) uint64 {
+	var h uint64 = 14695981039346656037
+	for i := 0; i < len(fleetID); i++ {
+		h ^= uint64(fleetID[i])
+		h *= 1099511628211
+	}
+	return h
+}
+
+// rapidfireToMap — плейсхолдер. Реальная rapidfire-таблица лежит в
+// cat.Rapidfire (map[string]map[string]int по ключам-именам). Чтобы
+// привести к map[int]map[int]int нужно знать unit_id. Отложим до
+// M4.4b, пока возвращаем nil → rf=1 по всем парам (как в M4.2
+// engine при отсутствии таблицы).
+func rapidfireToMap(cat *config.Catalog) map[int]map[int]int {
+	_ = cat
+	return nil
+}
+
+// grabLoot — 50% metal/silicon/hydrogen цели, зажатое свободным
+// cargo флота (после карго уже существующего carry).
+func grabLoot(m, si, h float64, survivors []unitStack, cat *config.Catalog,
+	cm, cs, ch int64) lootAmount {
+	var totalCap int64
+	for _, s := range survivors {
+		for _, spec := range cat.Ships.Ships {
+			if spec.ID == s.UnitID {
+				totalCap += spec.Cargo * s.Count
+				break
+			}
+		}
+	}
+	free := totalCap - (cm + cs + ch)
+	if free <= 0 {
+		return lootAmount{}
+	}
+	want := lootAmount{
+		Metal:    int64(m * 0.5),
+		Silicon:  int64(si * 0.5),
+		Hydrogen: int64(h * 0.5),
+	}
+	total := want.Metal + want.Silicon + want.Hydrogen
+	if total > free && total > 0 {
+		k := float64(free) / float64(total)
+		want.Metal = int64(float64(want.Metal) * k)
+		want.Silicon = int64(float64(want.Silicon) * k)
+		want.Hydrogen = int64(float64(want.Hydrogen) * k)
+	}
+	return want
+}
+
+type lootAmount struct {
+	Metal    int64
+	Silicon  int64
+	Hydrogen int64
+}
+
+// applyAttackerLosses — апдейт fleet_ships по результатам боя.
+// Возвращает выживших (для loot-пересчёта).
+func applyAttackerLosses(ctx context.Context, tx pgx.Tx, fleetID string,
+	start []unitStack, end []battle.UnitResult) ([]unitStack, error) {
+	endByID := map[int]battle.UnitResult{}
+	for _, r := range end {
+		endByID[r.UnitID] = r
+	}
+	var survivors []unitStack
+	for _, s := range start {
+		r, ok := endByID[s.UnitID]
+		if !ok {
+			// в report нет записи → ничего не меняем (не должно случаться)
+			survivors = append(survivors, s)
+			continue
+		}
+		if r.QuantityEnd == 0 {
+			if _, err := tx.Exec(ctx,
+				`DELETE FROM fleet_ships WHERE fleet_id=$1 AND unit_id=$2`,
+				fleetID, s.UnitID); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE fleet_ships
+			SET count = $1, damaged_count = $2
+			WHERE fleet_id=$3 AND unit_id=$4
+		`, r.QuantityEnd, r.DamagedEnd, fleetID, s.UnitID); err != nil {
+			return nil, err
+		}
+		survivors = append(survivors, unitStack{
+			UnitID: s.UnitID, Count: r.QuantityEnd, Damaged: r.DamagedEnd,
+			ShellPercent: r.ShellPercentEnd,
+		})
+	}
+	return survivors, nil
+}
+
+// applyDefenderLosses — ships + defense на планете. end — один
+// сплошной массив UnitResult (сначала ships-позиции, потом defense),
+// в том же порядке, в котором их скормили в battle.Side.
+func applyDefenderLosses(ctx context.Context, tx pgx.Tx, planetID string,
+	startShips, startDefense []unitStack, end []battle.UnitResult) error {
+	// Сопоставление by UnitID. Одинаковых ID в ships и defense быть
+	// не должно (ships > 200, defense > 300 в legacy).
+	endByID := map[int]battle.UnitResult{}
+	for _, r := range end {
+		endByID[r.UnitID] = r
+	}
+	apply := func(table string, stacks []unitStack) error {
+		for _, s := range stacks {
+			r, ok := endByID[s.UnitID]
+			if !ok {
+				continue
+			}
+			if r.QuantityEnd == 0 {
+				if _, err := tx.Exec(ctx,
+					`UPDATE `+table+` SET count=0, damaged_count=0, shell_percent=0
+					 WHERE planet_id=$1 AND unit_id=$2`,
+					planetID, s.UnitID); err != nil {
+					return err
+				}
+				continue
+			}
+			if _, err := tx.Exec(ctx, `
+				UPDATE `+table+`
+				SET count=$1, damaged_count=$2, shell_percent=$3
+				WHERE planet_id=$4 AND unit_id=$5
+			`, r.QuantityEnd, r.DamagedEnd, r.ShellPercentEnd,
+				planetID, s.UnitID); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := apply("ships", startShips); err != nil {
+		return err
+	}
+	// defense-table не имеет damaged_count/shell_percent — пишем только count.
+	for _, s := range startDefense {
+		r, ok := endByID[s.UnitID]
+		if !ok {
+			continue
+		}
+		if r.QuantityEnd == 0 {
+			if _, err := tx.Exec(ctx,
+				`UPDATE defense SET count=0 WHERE planet_id=$1 AND unit_id=$2`,
+				planetID, s.UnitID); err != nil {
+				return err
+			}
+			continue
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE defense SET count=$1 WHERE planet_id=$2 AND unit_id=$3`,
+			r.QuantityEnd, planetID, s.UnitID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// finalizeAttack — запись battle_reports + 2 messages + списание
+// ресурсов с планеты (loot) + обновление fleet.state + carry.
+//
+// _unusedSurvivors оставлен для API-симметрии; при победе loot уже
+// посчитан в grabLoot.
+func finalizeAttack(ctx context.Context, tx pgx.Tx,
+	fleetID, attUID, defUID, planetID string,
+	rep battle.Report, loot lootAmount,
+	prevM, prevS, prevH int64,
+	_unusedSurvivors []unitStack, _unusedDef any) error {
+	// battle_reports
+	reportJSON, err := json.Marshal(rep)
+	if err != nil {
+		return fmt.Errorf("finalize: marshal report: %w", err)
+	}
+	reportID := ids.New()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO battle_reports (id, attacker_user_id, defender_user_id, planet_id,
+		                            seed, winner, rounds,
+		                            loot_metal, loot_silicon, loot_hydrogen,
+		                            report)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`, reportID, attUID, defUID, planetID,
+		int64(rep.Seed), rep.Winner, rep.Rounds,
+		loot.Metal, loot.Silicon, loot.Hydrogen,
+		reportJSON,
+	); err != nil {
+		return fmt.Errorf("finalize: insert report: %w", err)
+	}
+
+	// Списываем loot с цели, добавляем к carry флота.
+	if loot.Metal > 0 || loot.Silicon > 0 || loot.Hydrogen > 0 {
+		if _, err := tx.Exec(ctx, `
+			UPDATE planets SET metal=metal-$1, silicon=silicon-$2, hydrogen=hydrogen-$3
+			WHERE id=$4
+		`, loot.Metal, loot.Silicon, loot.Hydrogen, planetID); err != nil {
+			return fmt.Errorf("finalize: subtract loot: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE fleets SET carried_metal=$1, carried_silicon=$2, carried_hydrogen=$3
+			WHERE id=$4
+		`, prevM+loot.Metal, prevS+loot.Silicon, prevH+loot.Hydrogen, fleetID); err != nil {
+			return fmt.Errorf("finalize: add carry: %w", err)
+		}
+	}
+
+	// Messages для обеих сторон. Folder 2 = inbox/battle в legacy.
+	subject := fmt.Sprintf("Боевой отчёт: %s", rep.Winner)
+	body := fmt.Sprintf("Раундов: %d. Добыча: %d M / %d Si / %d H.",
+		rep.Rounds, loot.Metal, loot.Silicon, loot.Hydrogen)
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body, battle_report_id)
+		VALUES ($1, $2, $3, 2, $4, $5, $6)
+	`, ids.New(), attUID, defUID, subject, body, reportID); err != nil {
+		return fmt.Errorf("finalize: attacker message: %w", err)
+	}
+	if defUID != "" && defUID != attUID {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body, battle_report_id)
+			VALUES ($1, $2, $3, 2, $4, $5, $6)
+		`, ids.New(), defUID, attUID, subject, body, reportID); err != nil {
+			return fmt.Errorf("finalize: defender message: %w", err)
+		}
+	}
+
+	// Флот → возврат.
+	if _, err := tx.Exec(ctx,
+		`UPDATE fleets SET state='returning' WHERE id=$1`, fleetID); err != nil {
+		return fmt.Errorf("finalize: fleet state: %w", err)
+	}
+	return nil
+}

@@ -47,11 +47,19 @@ func NewTransportService(db repo.Exec, cat *config.Catalog, gameSpeed float64) *
 	return &TransportService{db: db, catalog: cat, speed: gameSpeed}
 }
 
-// TransportInput — запрос от UI на отправку транспорта.
+// TransportInput — запрос от UI на отправку флота.
+// Несмотря на имя «TransportInput», поддерживается и ATTACK (mission=10).
+// Разница только в кинде события прибытия и правилах обработки цели:
+//   - mission=7  → KindTransport=7  (ArriveHandler: передаёт carry на цель)
+//   - mission=10 → KindAttackSingle=10 (AttackHandler: вызывает battle.Calculate)
+//
+// Если mission=0 в payload — считаем 7 (обратная совместимость с клиентами,
+// которые не знали про mission).
 type TransportInput struct {
 	UserID       string
 	SrcPlanetID  string
 	Dst          galaxy.Coords
+	Mission      int // 7 = TRANSPORT (default), 10 = ATTACK_SINGLE
 	Ships        map[int]int64 // unit_id -> count (должно быть > 0 хотя бы у одного)
 	CarryMetal   int64
 	CarrySilicon int64
@@ -72,9 +80,17 @@ var (
 	ErrFleetNotRecallable = errors.New("fleet: cannot recall in current state")
 )
 
-// Send — запуск TRANSPORT. Возвращает созданный Fleet (без ID кораблей,
+// Send — запуск TRANSPORT или ATTACK_SINGLE в зависимости от
+// in.Mission. Возвращает созданный Fleet (без ID кораблей,
 // только базовые поля — UI достаточно).
 func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, error) {
+	if in.Mission == 0 {
+		in.Mission = 7 // обратная совместимость
+	}
+	if in.Mission != 7 && in.Mission != 10 {
+		return Fleet{}, fmt.Errorf("%w: mission %d not supported (7=TRANSPORT, 10=ATTACK)",
+			ErrInvalidDispatch, in.Mission)
+	}
 	if err := in.Dst.Validate(); err != nil {
 		return Fleet{}, fmt.Errorf("%w: %v", ErrInvalidDispatch, err)
 	}
@@ -166,9 +182,10 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			                    mission, state, depart_at, arrive_at, return_at,
 			                    carried_metal, carried_silicon, carried_hydrogen,
 			                    speed_percent)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, 7, 'outbound', $8, $9, $10, $11, $12, $13, $14)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'outbound', $9, $10, $11, $12, $13, $14, $15)
 		`, fleetID, in.UserID, in.SrcPlanetID,
 			in.Dst.Galaxy, in.Dst.System, in.Dst.Position, in.Dst.IsMoon,
+			in.Mission,
 			depart, arrive, returnAt,
 			in.CarryMetal, in.CarrySilicon, in.CarryHydro,
 			in.SpeedPercent,
@@ -184,16 +201,18 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			}
 		}
 
-		// События: прибытие (разгрузка) и возврат.
+		// События: прибытие и возврат. kind прибытия = mission:
+		//   7  → KindTransport (разгрузка carry у цели).
+		//   10 → KindAttackSingle (вызов battle.Calculate).
+		// Возврат в обоих случаях — KindReturn=20 (единый handler).
 		payload, _ := json.Marshal(map[string]any{
-			"fleet_id":     fleetID,
-			"dst_planet":   nil, // резерв для будущего
-			"carried":      map[string]int64{"metal": in.CarryMetal, "silicon": in.CarrySilicon, "hydrogen": in.CarryHydro},
+			"fleet_id": fleetID,
+			"carried":  map[string]int64{"metal": in.CarryMetal, "silicon": in.CarrySilicon, "hydrogen": in.CarryHydro},
 		})
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
-			VALUES ($1, $2, 7, 'wait', $3, $4)
-		`, ids.New(), in.UserID, arrive, payload); err != nil {
+			VALUES ($1, $2, $3, 'wait', $4, $5)
+		`, ids.New(), in.UserID, in.Mission, arrive, payload); err != nil {
 			return fmt.Errorf("insert arrive event: %w", err)
 		}
 		// Событие возврата — сюда прилетит KindReturn=20. Payload
@@ -213,7 +232,7 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			DstSystem:    in.Dst.System,
 			DstPosition:  in.Dst.Position,
 			DstIsMoon:    in.Dst.IsMoon,
-			Mission:      7,
+			Mission:      in.Mission,
 			State:        "outbound",
 			DepartAt:     depart,
 			ArriveAt:     arrive,

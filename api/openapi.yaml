@@ -697,7 +697,7 @@ components:
         carry_silicon:  { type: integer, format: int64, minimum: 0 }
         carry_hydrogen: { type: integer, format: int64, minimum: 0 }
         speed_percent:  { type: integer, minimum: 10, maximum: 100 }
-        mission:        { type: integer, description: "7 = TRANSPORT (единственная в v1)" }
+        mission:        { type: integer, description: "7 = TRANSPORT, 10 = ATTACK_SINGLE" }
 
     Coords:
       type: object

@@ -49,14 +49,16 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
 		return
 	}
-	if req.Mission != 0 && req.Mission != 7 {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "only TRANSPORT (mission=7) is implemented"))
+	if req.Mission != 0 && req.Mission != 7 && req.Mission != 10 {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest,
+			"supported missions: 7=TRANSPORT, 10=ATTACK_SINGLE"))
 		return
 	}
 	in := TransportInput{
 		UserID:       uid,
 		SrcPlanetID:  req.SrcPlanetID,
 		Dst:          req.Dst,
+		Mission:      req.Mission,
 		Ships:        req.Ships,
 		CarryMetal:   req.CarryMetal,
 		CarrySilicon: req.CarrySilicon,

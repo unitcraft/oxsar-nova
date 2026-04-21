@@ -79,6 +79,7 @@ func run() error {
 	w.Register(event.KindArtefactExpire, artefactSvc.ExpireEvent())
 	w.Register(event.KindTransport, transportSvc.ArriveHandler())
 	w.Register(event.KindReturn, transportSvc.ReturnHandler())
+	w.Register(event.KindAttackSingle, transportSvc.AttackHandler())
 	w.Register(event.KindDisassemble, repairSvc.DisassembleHandler())
 
 	log.InfoContext(ctx, "worker started")
