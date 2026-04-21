@@ -137,6 +137,7 @@ func run() error {
 	w.Register(event.KindReturn, transportSvc.ReturnHandler())
 	w.Register(event.KindAttackSingle, withAchievement(transportSvc.AttackHandler()))
 	w.Register(event.KindAttackAlliance, withAchievement(transportSvc.ACSAttackHandler()))
+	w.Register(event.KindRaidWarning, transportSvc.RaidWarningHandler())
 	w.Register(event.KindRecycling, withAchievement(transportSvc.RecyclingHandler()))
 	w.Register(event.KindSpy, withAchievement(transportSvc.SpyHandler()))
 	w.Register(event.KindColonize, withAchievement(transportSvc.ColonizeHandler()))

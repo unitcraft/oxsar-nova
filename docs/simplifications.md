@@ -325,8 +325,9 @@
   users.last_seen_at обновляется через LastSeenMiddleware (async).
   Воркер ежедневно шлёт INACTIVITY_REMINDER тем, кто не заходил 3+ дней.
   Нет: weekly-digest, event-before-raid (за N минут до прибытия флота).
-- **Как чинить** (остаток): event-before-raid — добавить INSERT events
-  (kind=NEW) при создании флота с fire_at = arrive_at - 10min.
+- **Как чинить** (остаток): ~~event-before-raid~~ — ЗАКРЫТО: `KindRaidWarning=64`
+  планируется при Send для mission=10/12 с `fire_at = arrive_at - 10min` (если warnAt > depart).
+  RaidWarningHandler читает флот и шлёт сообщение (folder=13/Система) защитнику.
 - **Приоритет**: L — inactivity уже есть.
 
 ### [AutoMsg] Нет CMS / редактирования через UI

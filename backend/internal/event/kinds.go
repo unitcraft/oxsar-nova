@@ -41,6 +41,7 @@ const (
 	KindArtefactDisappear          Kind = 61
 	KindOfficerExpire              Kind = 62
 	KindArtefactDelay              Kind = 63
+	KindRaidWarning                Kind = 64 // уведомление защитнику за 10 мин до атаки
 	KindBatchProcessIntervalSecond      = 10
 )
 
