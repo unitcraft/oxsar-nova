@@ -231,6 +231,10 @@ func run() error {
 
 		pr.Get("/market/rates", marketH.Rates)
 		pr.Post("/planets/{id}/market/exchange", marketH.Exchange)
+		pr.Get("/market/lots", marketH.ListLots)
+		pr.Post("/market/lots", marketH.CreateLot)
+		pr.Delete("/market/lots/{id}", marketH.CancelLot)
+		pr.Post("/market/lots/{id}/accept", marketH.AcceptLot)
 
 		pr.Post("/planets/{id}/rockets/launch", rocketH.Launch)
 		pr.Get("/planets/{id}/rockets", rocketH.Stock)

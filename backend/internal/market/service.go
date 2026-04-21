@@ -39,6 +39,9 @@ var (
 	ErrNotEnough        = errors.New("market: not enough resource on planet")
 	ErrPlanetOwnership  = errors.New("market: planet not owned by user")
 	ErrPlanetNotFound   = errors.New("market: planet not found")
+	ErrLotNotFound      = errors.New("market: lot not found")
+	ErrLotNotOpen       = errors.New("market: lot is not open")
+	ErrOwnLot           = errors.New("market: cannot accept own lot")
 )
 
 // resourceCost — «стоимость» 1 единицы ресурса в условных единицах.
@@ -200,4 +203,238 @@ func (s *Service) Rates(ctx context.Context, userID string) (Rates, error) {
 		return r, fmt.Errorf("market: read user rate: %w", err)
 	}
 	return r, nil
+}
+
+// -----------------------------------------------------------------
+// Ордерная книга (market_lots)
+// -----------------------------------------------------------------
+
+// Lot — запись в market_lots.
+type Lot struct {
+	ID           string  `json:"id"`
+	SellerID     string  `json:"seller_id"`
+	SellerName   string  `json:"seller_name"`
+	PlanetID     string  `json:"planet_id"`
+	SellResource string  `json:"sell_resource"`
+	SellAmount   int64   `json:"sell_amount"`
+	BuyResource  string  `json:"buy_resource"`
+	BuyAmount    int64   `json:"buy_amount"`
+	State        string  `json:"state"`
+	CreatedAt    string  `json:"created_at"`
+}
+
+func validResource(r string) bool {
+	return r == "metal" || r == "silicon" || r == "hydrogen"
+}
+
+// ListLots возвращает открытые лоты, опционально фильтруя по sell_resource.
+func (s *Service) ListLots(ctx context.Context, sellResource string, limit int) ([]Lot, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	query := `
+		SELECT ml.id, ml.seller_id, COALESCE(u.username,''),
+		       ml.planet_id, ml.sell_resource, ml.sell_amount,
+		       ml.buy_resource, ml.buy_amount, ml.state,
+		       ml.created_at
+		FROM market_lots ml
+		LEFT JOIN users u ON u.id = ml.seller_id
+		WHERE ml.state = 'open'`
+	args := []any{limit}
+	if sellResource != "" && validResource(sellResource) {
+		query += ` AND ml.sell_resource = $2`
+		args = append([]any{sellResource, limit}, args[1:]...)
+		query += ` ORDER BY ml.created_at DESC LIMIT $2`
+	} else {
+		query += ` ORDER BY ml.created_at DESC LIMIT $1`
+	}
+
+	rows, err := s.db.Pool().Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("market lots list: %w", err)
+	}
+	defer rows.Close()
+	var out []Lot
+	for rows.Next() {
+		var l Lot
+		var createdAt interface{}
+		if err := rows.Scan(&l.ID, &l.SellerID, &l.SellerName,
+			&l.PlanetID, &l.SellResource, &l.SellAmount,
+			&l.BuyResource, &l.BuyAmount, &l.State, &createdAt); err != nil {
+			return nil, err
+		}
+		l.CreatedAt = fmt.Sprintf("%v", createdAt)
+		out = append(out, l)
+	}
+	return out, rows.Err()
+}
+
+// CreateLot создаёт новый лот. Ресурс списывается с планеты продавца сразу (escrow).
+func (s *Service) CreateLot(ctx context.Context, userID, planetID,
+	sellResource string, sellAmount int64, buyResource string, buyAmount int64) (Lot, error) {
+	if !validResource(sellResource) || !validResource(buyResource) {
+		return Lot{}, ErrInvalidResource
+	}
+	if sellResource == buyResource {
+		return Lot{}, ErrSameResource
+	}
+	if sellAmount <= 0 || buyAmount <= 0 {
+		return Lot{}, ErrInvalidAmount
+	}
+
+	var out Lot
+	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var ownerID string
+		var balance float64
+		err := tx.QueryRow(ctx,
+			`SELECT user_id, `+sellResource+` FROM planets WHERE id=$1 FOR UPDATE`,
+			planetID).Scan(&ownerID, &balance)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrPlanetNotFound
+			}
+			return fmt.Errorf("market lot: read planet: %w", err)
+		}
+		if ownerID != userID {
+			return ErrPlanetOwnership
+		}
+		if int64(balance) < sellAmount {
+			return ErrNotEnough
+		}
+		// Списываем ресурс с планеты (escrow).
+		if _, err := tx.Exec(ctx,
+			`UPDATE planets SET `+sellResource+` = `+sellResource+` - $1 WHERE id = $2`,
+			sellAmount, planetID); err != nil {
+			return fmt.Errorf("market lot: debit: %w", err)
+		}
+
+		var lotID string
+		err = tx.QueryRow(ctx, `
+			INSERT INTO market_lots (seller_id, planet_id, sell_resource, sell_amount,
+			                         buy_resource, buy_amount)
+			VALUES ($1, $2, $3, $4, $5, $6)
+			RETURNING id
+		`, userID, planetID, sellResource, sellAmount, buyResource, buyAmount).Scan(&lotID)
+		if err != nil {
+			return fmt.Errorf("market lot: insert: %w", err)
+		}
+
+		var sellerName string
+		_ = tx.QueryRow(ctx, `SELECT username FROM users WHERE id=$1`, userID).Scan(&sellerName)
+		out = Lot{
+			ID: lotID, SellerID: userID, SellerName: sellerName,
+			PlanetID: planetID, SellResource: sellResource, SellAmount: sellAmount,
+			BuyResource: buyResource, BuyAmount: buyAmount, State: "open",
+		}
+		return nil
+	})
+	return out, err
+}
+
+// CancelLot отменяет лот (только продавец). Возвращает ресурс на планету.
+func (s *Service) CancelLot(ctx context.Context, userID, lotID string) error {
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var sellerID, planetID, sellResource string
+		var sellAmount int64
+		var state string
+		err := tx.QueryRow(ctx, `
+			SELECT seller_id, planet_id, sell_resource, sell_amount, state
+			FROM market_lots WHERE id=$1 FOR UPDATE
+		`, lotID).Scan(&sellerID, &planetID, &sellResource, &sellAmount, &state)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrLotNotFound
+			}
+			return fmt.Errorf("market cancel: read lot: %w", err)
+		}
+		if sellerID != userID {
+			return ErrPlanetOwnership
+		}
+		if state != "open" {
+			return ErrLotNotOpen
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE market_lots SET state='cancelled', updated_at=now() WHERE id=$1`, lotID); err != nil {
+			return fmt.Errorf("market cancel: update: %w", err)
+		}
+		// Возвращаем escrow на планету.
+		if _, err := tx.Exec(ctx,
+			`UPDATE planets SET `+sellResource+` = `+sellResource+` + $1 WHERE id = $2`,
+			sellAmount, planetID); err != nil {
+			return fmt.Errorf("market cancel: refund: %w", err)
+		}
+		return nil
+	})
+}
+
+// AcceptLot — покупатель принимает лот. Деньги списываются с его планеты,
+// ресурс переходит от продавца к покупателю.
+func (s *Service) AcceptLot(ctx context.Context, buyerID, buyerPlanetID, lotID string) error {
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var sellerID, sellerPlanetID, sellResource, buyResource string
+		var sellAmount, buyAmount int64
+		var state string
+		err := tx.QueryRow(ctx, `
+			SELECT seller_id, planet_id, sell_resource, sell_amount,
+			       buy_resource, buy_amount, state
+			FROM market_lots WHERE id=$1 FOR UPDATE
+		`, lotID).Scan(&sellerID, &sellerPlanetID, &sellResource, &sellAmount,
+			&buyResource, &buyAmount, &state)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrLotNotFound
+			}
+			return fmt.Errorf("market accept: read lot: %w", err)
+		}
+		if sellerID == buyerID {
+			return ErrOwnLot
+		}
+		if state != "open" {
+			return ErrLotNotOpen
+		}
+
+		// Проверяем баланс покупателя.
+		var buyerOwner string
+		var buyerBalance float64
+		err = tx.QueryRow(ctx,
+			`SELECT user_id, `+buyResource+` FROM planets WHERE id=$1 FOR UPDATE`,
+			buyerPlanetID).Scan(&buyerOwner, &buyerBalance)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrPlanetNotFound
+			}
+			return fmt.Errorf("market accept: read buyer planet: %w", err)
+		}
+		if buyerOwner != buyerID {
+			return ErrPlanetOwnership
+		}
+		if int64(buyerBalance) < buyAmount {
+			return ErrNotEnough
+		}
+
+		// Списываем buyResource с покупателя → на планету продавца.
+		if _, err := tx.Exec(ctx,
+			`UPDATE planets SET `+buyResource+` = `+buyResource+` - $1 WHERE id=$2`,
+			buyAmount, buyerPlanetID); err != nil {
+			return fmt.Errorf("market accept: debit buyer: %w", err)
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE planets SET `+buyResource+` = `+buyResource+` + $1 WHERE id=$2`,
+			buyAmount, sellerPlanetID); err != nil {
+			return fmt.Errorf("market accept: credit seller buy_resource: %w", err)
+		}
+		// sellResource уже в escrow (списан при создании) → зачисляем покупателю.
+		if _, err := tx.Exec(ctx,
+			`UPDATE planets SET `+sellResource+` = `+sellResource+` + $1 WHERE id=$2`,
+			sellAmount, buyerPlanetID); err != nil {
+			return fmt.Errorf("market accept: credit buyer sell_resource: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE market_lots SET state='accepted', buyer_id=$1, updated_at=now()
+			WHERE id=$2
+		`, buyerID, lotID); err != nil {
+			return fmt.Errorf("market accept: update lot: %w", err)
+		}
+		return nil
+	})
 }
