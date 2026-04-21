@@ -177,6 +177,7 @@ func run() error {
 
 	r.Route("/api", func(pr chi.Router) {
 		pr.Use(auth.Middleware(jwt))
+		pr.Use(auth.LastSeenMiddleware(pool))
 		pr.Get("/planets", planetH.List)
 		pr.Get("/planets/{id}", planetH.Get)
 

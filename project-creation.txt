@@ -3175,5 +3175,51 @@ docs/status.md: Battle engine добавлено moon creation ✅.
 
 
 ================================================================================
+43. AUTOMSG SCHEDULED + LAST_SEEN (M4.2)
+================================================================================
+
+Дата: 2026-04-21
+
+Реализованы scheduled inactivity-reminders и трекинг активности.
+
+migrations/0018_last_seen.sql:
+  - users.last_seen_at timestamptz NOT NULL DEFAULT now().
+  - CREATE INDEX ix_users_last_seen ON users(last_seen_at).
+
+migrations/0019_automsg_inactivity.sql:
+  - ALTER TABLE automsg_sent DROP CONSTRAINT automsg_sent_key_fkey
+    — позволяет week-суффиксные ключи (INACTIVITY_REMINDER_2026W17).
+  - INSERT automsg_defs INACTIVITY_REMINDER шаблон.
+
+backend/internal/auth/middleware.go:
+  - LastSeenMiddleware(pool): после каждого аутентифицированного запроса
+    fire-and-forget горутина: UPDATE users SET last_seen_at = now().
+
+backend/internal/automsg/service.go:
+  - SendInactivityReminders(ctx, inactiveDays, weekSuffix) — выбирает
+    игроков с last_seen_at < now() - N дней, шлёт им INACTIVITY_REMINDER
+    с week-суффиксным ключом (идемпотентно раз в неделю).
+  - sendWithKey(ctx, userID, sentKey, defKey, vars) — внутренний метод
+    с явным ключом idempotency.
+
+backend/cmd/worker/main.go:
+  - automsg.NewService(db) + горутина time.Ticker(24h):
+    каждый день вычисляет ISO-week suffix, вызывает SendInactivityReminders.
+
+backend/cmd/server/main.go:
+  - +pr.Use(auth.LastSeenMiddleware(pool)) в authenticated route group.
+
+docs/status.md: AutoMsg 🟡 → ✅.
+
+Статистика итерации 43:
+   migrations/0018_last_seen.sql: новый (~7 строк).
+   migrations/0019_automsg_inactivity.sql: новый (~20 строк).
+   auth/middleware.go: +20 строк (LastSeenMiddleware).
+   automsg/service.go: +75 строк (SendInactivityReminders, sendWithKey).
+   worker/main.go: +20 строк (automsg init + ticker goroutine).
+   server/main.go: +1 строка.
+
+
+================================================================================
 Конец дневника.
 ================================================================================
