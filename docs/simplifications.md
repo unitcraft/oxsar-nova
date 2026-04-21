@@ -450,16 +450,18 @@
   `alliance_applications`. Join с is_open=false создаёт заявку;
   owner видит список и вызывает Approve/Reject. UI обновлён (commit 1013f05).
 
-### [Alien AI] Без HALT/GRAB_CREDIT/custom events (частично закрыт)
+### [Alien AI] GRAB_CREDIT/GIFT_CREDIT — ЗАКРЫТО
+- Закрыто: при победе инопланетян берётся 0.08–0.1% кредитов (если >100000);
+  при отражении — дарится 5–10% (max 500). Логика в `applyGrabCredit` /
+  `applyGiftCredit` внутри AttackHandler. Сообщение дополнено суммой.
+
+### [Alien AI] Без HALT/multi-step state machine (остаток)
 - **Где**: `internal/alien/alien.go`.
-- **Что**: ✅ координаты полёта добавлены (home galaxy=99/sys=500/pos=8, `alienDistance`+`alienFlightDuration`).
-  ✅ artefact drop 20% — реализован. Остаётся: нет HALT/GRAB_CREDIT/custom events (33,34,36,37,38),
-  нет alien_fleets таблицы с детальным маршрутом (атака материализуется через fire_at).
-- **Почему**: полный AlienAI.class.php = 1127 строк PHP. HALT/GRAB_CREDIT требуют новых event kind'ов
-  и сложного конечного автомата.
-- **Как чинить**: добавить alien_fleets таблицу с координатами, event ALIEN_FLY=33
-  → HOLDING=34 → ATTACK=35 → RETURN cycle.
-- **Приоритет**: M.
+- **Что**: нет multi-step cycle: ALIEN_FLY=33 → HOLDING=34 → ATTACK=35 → HALT=36 → RETURN.
+  Атака материализуется через один event fire_at без промежуточных состояний.
+- **Почему**: alien_fleets state machine = сложный конечный автомат (~300 LOC PHP).
+- **Как чинить**: добавить `alien_fleets` таблицу с координатами и конечным автоматом.
+- **Приоритет**: L — текущая механика атаки уже работает и передаёт суть.
 
 ### [Tutorial] Тексты шагов хардкод на русском
 - **Где**: `internal/tutorial/service.go::steps`.
