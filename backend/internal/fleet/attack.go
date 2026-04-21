@@ -602,6 +602,16 @@ func finalizeAttack(ctx context.Context, tx pgx.Tx,
 		`, prevM+loot.Metal, prevS+loot.Silicon, prevH+loot.Hydrogen, fleetID); err != nil {
 			return fmt.Errorf("finalize: add carry: %w", err)
 		}
+		// Аудит: attacker получает ресурсы, defender теряет.
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO res_log (user_id, planet_id, reason, delta_metal, delta_silicon, delta_hydrogen)
+			VALUES ($1, $2, 'loot', $3, $4, $5),
+			       ($6, $7, 'loot', $8, $9, $10)
+		`, attUID, planetID, loot.Metal, loot.Silicon, loot.Hydrogen,
+			defUID, planetID, -loot.Metal, -loot.Silicon, -loot.Hydrogen,
+		); err != nil {
+			return fmt.Errorf("finalize: res_log: %w", err)
+		}
 	}
 
 	// Messages для обеих сторон. Folder 2 = inbox/battle в legacy.

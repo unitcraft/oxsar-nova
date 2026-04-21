@@ -85,14 +85,10 @@
   успешном броске если is_moon=false и луны ещё нет.
   Moon Destruction (kind=14) и Stargate (kind=28) — M5+.
 
-### [M4.4a] Нет RES_LOG entries от боя (loot)
-- **Где**: `fleet/attack.go::finalizeAttack`.
-- **Что**: loot пишется напрямую в `fleets.carried_*`, без записи
-  в `res_log` с reason='attack_loot'.
-- **Почему**: `res_log.reason` enum не содержал 'attack_loot',
-  ради одной строки не хотелось расширять.
-- **Как чинить**: добавить reason + INSERT res_log.
-- **Приоритет**: L — только для аудита.
+### [M4.4a] Нет RES_LOG entries от боя (loot) — ЗАКРЫТО
+- Закрыто: `finalizeAttack` (attack.go) и ACS-handler (acs_attack.go) вставляют
+  два `res_log` entry при ненулевом лоуте: attacker +loot, defender -loot.
+  reason='loot' — уже был в schema comment.
 
 ### [M4.4a] Нет unit-тестов AttackHandler
 - **Где**: `fleet/attack.go`.
