@@ -31,6 +31,21 @@ func (h *Handler) Inbox(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"messages": list})
 }
 
+// UnreadCount GET /api/messages/unread-count
+func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	n, err := h.svc.UnreadCount(r.Context(), uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]int{"unread": n})
+}
+
 // MarkRead POST /api/messages/{id}/read
 func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())

@@ -100,6 +100,12 @@ function AuthenticatedApp() {
     queryFn: () => api.get<{ planets: Planet[] }>('/api/planets'),
     refetchInterval: 5000,
   });
+  const unread = useQuery({
+    queryKey: ['messages', 'unread-count'],
+    queryFn: () => api.get<{ unread: number }>('/api/messages/unread-count'),
+    refetchInterval: 15000,
+  });
+  const unreadCount = unread.data?.unread ?? 0;
   const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
 
   if (planets.isLoading) return <p>…</p>;
@@ -163,7 +169,11 @@ function AuthenticatedApp() {
           current={tab}
           value="messages"
           onClick={setTab}
-          label={t('global', 'MENU_MESSAGES')}
+          label={
+            unreadCount > 0
+              ? `${t('global', 'MENU_MESSAGES')} (${unreadCount})`
+              : t('global', 'MENU_MESSAGES')
+          }
         />
         <TabButton
           current={tab}

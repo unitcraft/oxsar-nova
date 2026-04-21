@@ -75,6 +75,19 @@ func (s *Service) Inbox(ctx context.Context, userID string, limit int) ([]Messag
 	return out, rows.Err()
 }
 
+// UnreadCount — сколько у пользователя непрочитанных сообщений.
+// Используется для бейджа в header'е UI.
+func (s *Service) UnreadCount(ctx context.Context, userID string) (int, error) {
+	var n int
+	err := s.db.Pool().QueryRow(ctx,
+		`SELECT COUNT(*) FROM messages WHERE to_user_id = $1 AND read_at IS NULL`,
+		userID).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("unread count: %w", err)
+	}
+	return n, nil
+}
+
 // MarkRead ставит read_at=now() если ещё не прочитано. Идемпотентно.
 // Ошибка «чужое сообщение» возвращается как ErrNotOwned.
 var (

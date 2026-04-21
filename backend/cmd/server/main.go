@@ -174,6 +174,7 @@ func run() error {
 		pr.Post("/fleet/{id}/recall", fleetH.Recall)
 
 		pr.Get("/messages", messageH.Inbox)
+		pr.Get("/messages/unread-count", messageH.UnreadCount)
 		pr.Post("/messages/{id}/read", messageH.MarkRead)
 		pr.Get("/battle-reports/{id}", messageH.GetReport)
 		pr.Get("/espionage-reports/{id}", messageH.GetEspionageReport)
