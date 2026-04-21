@@ -91,6 +91,7 @@ func run() error {
 	w.Register(event.KindTransport, transportSvc.ArriveHandler())
 	w.Register(event.KindReturn, transportSvc.ReturnHandler())
 	w.Register(event.KindAttackSingle, transportSvc.AttackHandler())
+	w.Register(event.KindAttackAlliance, transportSvc.ACSAttackHandler())
 	w.Register(event.KindRecycling, transportSvc.RecyclingHandler())
 	w.Register(event.KindSpy, transportSvc.SpyHandler())
 	w.Register(event.KindColonize, transportSvc.ColonizeHandler())

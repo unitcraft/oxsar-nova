@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/oxsar/nova/backend/internal/config"
+	"github.com/oxsar/nova/backend/internal/event"
 	"github.com/oxsar/nova/backend/internal/galaxy"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/pkg/ids"
@@ -48,23 +49,24 @@ func NewTransportService(db repo.Exec, cat *config.Catalog, gameSpeed float64) *
 }
 
 // TransportInput — запрос от UI на отправку флота.
-// Несмотря на имя «TransportInput», поддерживается и ATTACK (mission=10).
-// Разница только в кинде события прибытия и правилах обработки цели:
-//   - mission=7  → KindTransport=7  (ArriveHandler: передаёт carry на цель)
-//   - mission=10 → KindAttackSingle=10 (AttackHandler: вызывает battle.Calculate)
+// Разница между миссиями — кинд события прибытия:
+//   - mission=7  → KindTransport=7
+//   - mission=10 → KindAttackSingle=10
+//   - mission=12 → KindAttackAlliance=12 (ACS); ACSGroupID присоединяет к группе,
+//                  пустой ACSGroupID создаёт новую группу
 //
-// Если mission=0 в payload — считаем 7 (обратная совместимость с клиентами,
-// которые не знали про mission).
+// Если mission=0 в payload — считаем 7 (обратная совместимость).
 type TransportInput struct {
 	UserID       string
 	SrcPlanetID  string
 	Dst          galaxy.Coords
-	Mission      int // 7 = TRANSPORT (default), 10 = ATTACK_SINGLE
-	Ships        map[int]int64 // unit_id -> count (должно быть > 0 хотя бы у одного)
+	Mission      int   // 7=TRANSPORT, 8=COLONIZE, 9=RECYCLING, 10=ATTACK, 11=SPY, 12=ACS, 15=EXPEDITION
+	ACSGroupID   string // только для mission=12; пусто → создать новую группу
+	Ships        map[int]int64 // unit_id -> count
 	CarryMetal   int64
 	CarrySilicon int64
 	CarryHydro   int64
-	SpeedPercent int // 10/20/30/.../100; UI ограничит 10..100
+	SpeedPercent int // 10..100
 }
 
 // Ошибки доменного слоя.
@@ -87,8 +89,9 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 	if in.Mission == 0 {
 		in.Mission = 7 // обратная совместимость
 	}
-	if in.Mission != 7 && in.Mission != 8 && in.Mission != 9 && in.Mission != 10 && in.Mission != 11 && in.Mission != 15 {
-		return Fleet{}, fmt.Errorf("%w: mission %d not supported (7=TRANSPORT, 8=COLONIZE, 9=RECYCLING, 10=ATTACK, 11=SPY, 15=EXPEDITION)",
+	if in.Mission != 7 && in.Mission != 8 && in.Mission != 9 && in.Mission != 10 &&
+		in.Mission != 11 && in.Mission != 12 && in.Mission != 15 {
+		return Fleet{}, fmt.Errorf("%w: mission %d not supported",
 			ErrInvalidDispatch, in.Mission)
 	}
 	if err := in.Dst.Validate(); err != nil {
@@ -177,23 +180,51 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			return err
 		}
 
+		// Для ACS (mission=12): определяем acs_group_id и arrive_at группы.
+		acsGroupID := ""
+		if event.Kind(in.Mission) == event.KindAttackAlliance {
+			acsGroupID, arrive, returnAt, err = s.resolveACSGroup(ctx, tx, in, arrive, returnAt)
+			if err != nil {
+				return err
+			}
+		}
+
 		// Записываем флот.
 		fleetID := ids.New()
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO fleets (id, owner_user_id, src_planet_id,
-			                    dst_galaxy, dst_system, dst_position, dst_is_moon,
-			                    mission, state, depart_at, arrive_at, return_at,
-			                    carried_metal, carried_silicon, carried_hydrogen,
-			                    speed_percent)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'outbound', $9, $10, $11, $12, $13, $14, $15)
-		`, fleetID, in.UserID, in.SrcPlanetID,
-			in.Dst.Galaxy, in.Dst.System, in.Dst.Position, in.Dst.IsMoon,
-			in.Mission,
-			depart, arrive, returnAt,
-			in.CarryMetal, in.CarrySilicon, in.CarryHydro,
-			in.SpeedPercent,
-		); err != nil {
-			return fmt.Errorf("insert fleet: %w", err)
+		if acsGroupID != "" {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO fleets (id, owner_user_id, src_planet_id,
+				                    dst_galaxy, dst_system, dst_position, dst_is_moon,
+				                    mission, state, depart_at, arrive_at, return_at,
+				                    carried_metal, carried_silicon, carried_hydrogen,
+				                    speed_percent, acs_group_id)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'outbound', $9, $10, $11, $12, $13, $14, $15, $16)
+			`, fleetID, in.UserID, in.SrcPlanetID,
+				in.Dst.Galaxy, in.Dst.System, in.Dst.Position, in.Dst.IsMoon,
+				in.Mission,
+				depart, arrive, returnAt,
+				in.CarryMetal, in.CarrySilicon, in.CarryHydro,
+				in.SpeedPercent, acsGroupID,
+			); err != nil {
+				return fmt.Errorf("insert fleet: %w", err)
+			}
+		} else {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO fleets (id, owner_user_id, src_planet_id,
+				                    dst_galaxy, dst_system, dst_position, dst_is_moon,
+				                    mission, state, depart_at, arrive_at, return_at,
+				                    carried_metal, carried_silicon, carried_hydrogen,
+				                    speed_percent)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'outbound', $9, $10, $11, $12, $13, $14, $15)
+			`, fleetID, in.UserID, in.SrcPlanetID,
+				in.Dst.Galaxy, in.Dst.System, in.Dst.Position, in.Dst.IsMoon,
+				in.Mission,
+				depart, arrive, returnAt,
+				in.CarryMetal, in.CarrySilicon, in.CarryHydro,
+				in.SpeedPercent,
+			); err != nil {
+				return fmt.Errorf("insert fleet: %w", err)
+			}
 		}
 		for unitID, count := range in.Ships {
 			if _, err := tx.Exec(ctx, `
@@ -204,13 +235,13 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			}
 		}
 
-		// События: прибытие и возврат. kind прибытия = mission:
-		//   7  → KindTransport (разгрузка carry у цели).
-		//   10 → KindAttackSingle (вызов battle.Calculate).
-		// Возврат в обоих случаях — KindReturn=20 (единый handler).
+		// Events: прибытие и возврат.
+		// Для ACS (mission=12): одно событие KindAttackAlliance c acs_group_id в payload.
+		// Все флоты группы используют одинаковый arrive_at; handler читает всю группу.
 		payload, _ := json.Marshal(map[string]any{
-			"fleet_id": fleetID,
-			"carried":  map[string]int64{"metal": in.CarryMetal, "silicon": in.CarrySilicon, "hydrogen": in.CarryHydro},
+			"fleet_id":     fleetID,
+			"carried":      map[string]int64{"metal": in.CarryMetal, "silicon": in.CarrySilicon, "hydrogen": in.CarryHydro},
+			"acs_group_id": acsGroupID,
 		})
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
@@ -218,8 +249,6 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		`, ids.New(), in.UserID, in.Mission, arrive, payload); err != nil {
 			return fmt.Errorf("insert arrive event: %w", err)
 		}
-		// Событие возврата — сюда прилетит KindReturn=20. Payload
-		// такой же (handler перенесёт остатки груза + корабли обратно).
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
 			VALUES ($1, $2, 20, 'wait', $3, $4)
@@ -491,4 +520,52 @@ func transportDuration(distance float64, minSpeed, speedPercent int, gameSpeed f
 		raw = 1
 	}
 	return time.Duration(raw * float64(time.Second))
+}
+
+// resolveACSGroup возвращает acs_group_id, скорректированные arrive и returnAt для ACS-флота.
+// Если in.ACSGroupID задан — присоединяемся к группе (используем её arrive_at).
+// Иначе создаём новую группу с arrive_at текущего флота.
+func (s *TransportService) resolveACSGroup(ctx context.Context, tx pgx.Tx, in TransportInput,
+	arrive, returnAt time.Time) (string, time.Time, time.Time, error) {
+	if in.ACSGroupID != "" {
+		// Join: проверяем что группа существует и цель совпадает.
+		var gArriveAt time.Time
+		err := tx.QueryRow(ctx, `
+			SELECT arrive_at FROM acs_groups
+			WHERE id=$1 AND target_galaxy=$2 AND target_system=$3
+			  AND target_position=$4 AND target_is_moon=$5
+			FOR UPDATE
+		`, in.ACSGroupID, in.Dst.Galaxy, in.Dst.System, in.Dst.Position, in.Dst.IsMoon).
+			Scan(&gArriveAt)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return "", time.Time{}, time.Time{},
+					fmt.Errorf("%w: acs group not found or target mismatch", ErrInvalidDispatch)
+			}
+			return "", time.Time{}, time.Time{}, fmt.Errorf("acs join: %w", err)
+		}
+		// Флот прибывает вместе с группой (arrive_at группы ≥ arrive_at флота).
+		if gArriveAt.After(arrive) {
+			arrive = gArriveAt
+		} else {
+			// Флот медленнее группы — обновляем arrive_at группы.
+			if _, err := tx.Exec(ctx,
+				`UPDATE acs_groups SET arrive_at=$1 WHERE id=$2`, arrive, in.ACSGroupID); err != nil {
+				return "", time.Time{}, time.Time{}, fmt.Errorf("acs update arrive: %w", err)
+			}
+		}
+		dur := arrive.Sub(time.Now().UTC())
+		returnAt = arrive.Add(dur)
+		return in.ACSGroupID, arrive, returnAt, nil
+	}
+
+	// Создаём новую группу.
+	groupID := ids.New()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO acs_groups (id, target_galaxy, target_system, target_position, target_is_moon, arrive_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, groupID, in.Dst.Galaxy, in.Dst.System, in.Dst.Position, in.Dst.IsMoon, arrive); err != nil {
+		return "", time.Time{}, time.Time{}, fmt.Errorf("acs create group: %w", err)
+	}
+	return groupID, arrive, returnAt, nil
 }
