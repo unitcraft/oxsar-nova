@@ -30,6 +30,9 @@ import (
 // unitInterplanetary — id ракеты в ships (legacy UNIT_INTERPLANETARY_ROCKET).
 const unitInterplanetary = 52
 
+// buildingMissileSilo — id здания «Ракетная шахта» (legacy UNIT_MISSILE_SILO=13).
+const buildingMissileSilo = 13
+
 // kindRocketAttack — event.KindRocketAttack=16 (значение задаётся в
 // event/kinds.go). Держим копию, чтобы не импортировать event
 // из пакета rocket и избежать циклов, если они появятся.
@@ -52,10 +55,11 @@ func NewService(db repo.Exec, cat *config.Catalog, gameSpeed float64) *Service {
 }
 
 var (
-	ErrInvalidInput      = errors.New("rocket: invalid input")
-	ErrPlanetOwnership   = errors.New("rocket: source planet not owned by user")
-	ErrNoRockets         = errors.New("rocket: not enough rockets on source planet")
-	ErrTargetNotFound    = errors.New("rocket: target coords are empty")
+	ErrInvalidInput    = errors.New("rocket: invalid input")
+	ErrPlanetOwnership = errors.New("rocket: source planet not owned by user")
+	ErrNoRockets       = errors.New("rocket: not enough rockets on source planet")
+	ErrTargetNotFound  = errors.New("rocket: target coords are empty")
+	ErrSiloLimit       = errors.New("rocket: count exceeds missile silo capacity")
 )
 
 // Launch — пуск `count` ракет с srcPlanetID на dst. Создаёт событие
@@ -113,6 +117,23 @@ func (s *Service) Launch(ctx context.Context, userID, srcPlanetID string,
 		}
 		if stock < count {
 			return ErrNoRockets
+		}
+
+		// Silo-limit: max_rockets = silo.level × capacity_per_level.
+		var siloCapPerLevel int64 = 10 // legacy default
+		for _, spec := range s.catalog.Buildings.Buildings {
+			if spec.ID == buildingMissileSilo && spec.RocketCapacityPerLevel != nil {
+				siloCapPerLevel = *spec.RocketCapacityPerLevel
+				break
+			}
+		}
+		var siloLevel int64
+		_ = tx.QueryRow(ctx,
+			`SELECT COALESCE(level, 0) FROM buildings WHERE planet_id=$1 AND unit_id=$2`,
+			srcPlanetID, buildingMissileSilo).Scan(&siloLevel)
+		maxRockets := siloLevel * siloCapPerLevel
+		if maxRockets > 0 && count > maxRockets {
+			return ErrSiloLimit
 		}
 
 		// Проверка цели (должна быть планета/луна).

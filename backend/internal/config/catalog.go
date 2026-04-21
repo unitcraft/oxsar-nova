@@ -87,14 +87,15 @@ type BuildingCatalog struct {
 }
 
 type BuildingSpec struct {
-	ID                   int      `yaml:"id"`
-	CostBase             ResCost  `yaml:"cost_base"`
-	CostFactor           float64  `yaml:"cost_factor"`
-	TimeBaseSeconds      int      `yaml:"time_base_seconds"`
-	BaseRatePerHour      *float64 `yaml:"base_rate_per_hour,omitempty"`
-	EnergyPerLevel       *float64 `yaml:"energy_per_level,omitempty"`
-	EnergyOutputPerLevel *float64 `yaml:"energy_output_per_level,omitempty"`
-	CapacityBase         *int64   `yaml:"capacity_base,omitempty"`
+	ID                      int      `yaml:"id"`
+	CostBase                ResCost  `yaml:"cost_base"`
+	CostFactor              float64  `yaml:"cost_factor"`
+	TimeBaseSeconds         int      `yaml:"time_base_seconds"`
+	BaseRatePerHour         *float64 `yaml:"base_rate_per_hour,omitempty"`
+	EnergyPerLevel          *float64 `yaml:"energy_per_level,omitempty"`
+	EnergyOutputPerLevel    *float64 `yaml:"energy_output_per_level,omitempty"`
+	CapacityBase            *int64   `yaml:"capacity_base,omitempty"`
+	RocketCapacityPerLevel  *int64   `yaml:"rocket_capacity_per_level,omitempty"`
 }
 
 type ResCost struct {

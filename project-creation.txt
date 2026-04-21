@@ -4021,5 +4021,21 @@ docs/simplifications.md:
   - [Tutorial] Тексты шагов хардкод на русском — ЗАКРЫТО.
 
 ================================================================================
+Итерация — 2026-04-22
+================================================================================
+
+[Rockets] Silo-limit реализован.
+  - configs/buildings.yml: добавлен missile_silo (id=13), cost 20000M/20000Si/1000H,
+    cost_factor=2.0, time_base=360s, rocket_capacity_per_level=10.
+  - backend/internal/config/catalog.go: BuildingSpec получил поле RocketCapacityPerLevel *int64.
+  - backend/internal/rocket/service.go: константа buildingMissileSilo=13; ErrSiloLimit;
+    в Launch — чтение siloLevel из buildings, проверка count <= siloLevel × capPerLevel.
+    Если шахта не построена (siloLevel=0) — лимит не применяется.
+  - backend/internal/rocket/handler.go: ErrSiloLimit → HTTP 400.
+
+docs/simplifications.md:
+  - [Rockets] Нет silo-limit — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================
