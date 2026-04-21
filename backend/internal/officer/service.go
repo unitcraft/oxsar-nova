@@ -115,7 +115,9 @@ func allowedField(f string) bool {
 
 // Activate покупает officer'а за credit и применяет эффект.
 // При успехе создаёт event KindOfficerExpire=62 на expires_at.
-func (s *Service) Activate(ctx context.Context, userID, key string) (Entry, error) {
+// autoRenew=true — при истечении срока автоматически продлевает подписку,
+// если у игрока хватает credit.
+func (s *Service) Activate(ctx context.Context, userID, key string, autoRenew bool) (Entry, error) {
 	var out Entry
 	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		// Def.
@@ -174,16 +176,19 @@ func (s *Service) Activate(ctx context.Context, userID, key string) (Entry, erro
 		now := time.Now().UTC()
 		exp := now.Add(time.Duration(def.DurationDays) * 24 * time.Hour)
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO officer_active (user_id, officer_key, activated_at, expires_at)
-			VALUES ($1, $2, $3, $4)
-		`, userID, key, now, exp); err != nil {
+			INSERT INTO officer_active (user_id, officer_key, activated_at, expires_at, auto_renew)
+			VALUES ($1, $2, $3, $4, $5)
+		`, userID, key, now, exp, autoRenew); err != nil {
 			return fmt.Errorf("insert active: %w", err)
 		}
 		// Event на expire.
 		payload, _ := json.Marshal(map[string]any{
-			"user_id":     userID,
-			"officer_key": key,
-			"effect":      def.Effect,
+			"user_id":      userID,
+			"officer_key":  key,
+			"effect":       def.Effect,
+			"cost_credit":  def.CostCredit,
+			"duration_days": def.DurationDays,
+			"auto_renew":   autoRenew,
 		})
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
@@ -227,12 +232,16 @@ func applyFactor(ctx context.Context, tx pgx.Tx, userID string, eff factorChange
 // ExpireHandler — event.Handler для KindOfficerExpire=62.
 // Revert factor + DELETE active-row. Идемпотентно через DELETE
 // по (user, key): если row уже удалена, revert не повторится.
+// Если auto_renew=true и у игрока хватает credit — продлевает автоматически.
 func (s *Service) ExpireHandler() event.Handler {
 	return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
 		var pl struct {
-			UserID     string          `json:"user_id"`
-			OfficerKey string          `json:"officer_key"`
-			Effect     json.RawMessage `json:"effect"`
+			UserID       string          `json:"user_id"`
+			OfficerKey   string          `json:"officer_key"`
+			Effect       json.RawMessage `json:"effect"`
+			CostCredit   int64           `json:"cost_credit"`
+			DurationDays int             `json:"duration_days"`
+			AutoRenew    bool            `json:"auto_renew"`
 		}
 		if err := json.Unmarshal(e.Payload, &pl); err != nil {
 			return fmt.Errorf("officer expire: payload: %w", err)
@@ -251,17 +260,68 @@ func (s *Service) ExpireHandler() event.Handler {
 		if err := json.Unmarshal(pl.Effect, &eff); err != nil {
 			return fmt.Errorf("parse effect: %w", err)
 		}
+
+		// Auto-renew: если флаг установлен и у игрока хватает credit — продлеваем.
+		if pl.AutoRenew && pl.CostCredit > 0 && pl.DurationDays > 0 {
+			var credit int64
+			if err := tx.QueryRow(ctx,
+				`SELECT credit FROM users WHERE id=$1 FOR UPDATE`, pl.UserID).Scan(&credit); err == nil &&
+				credit >= pl.CostCredit {
+				if _, err := tx.Exec(ctx,
+					`UPDATE users SET credit = credit - $1 WHERE id = $2`,
+					pl.CostCredit, pl.UserID); err != nil {
+					return fmt.Errorf("auto_renew debit: %w", err)
+				}
+				now := time.Now().UTC()
+				exp := now.Add(time.Duration(pl.DurationDays) * 24 * time.Hour)
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO officer_active (user_id, officer_key, activated_at, expires_at, auto_renew)
+					VALUES ($1, $2, $3, $4, true)
+				`, pl.UserID, pl.OfficerKey, now, exp); err != nil {
+					return fmt.Errorf("auto_renew insert: %w", err)
+				}
+				newPayload, _ := json.Marshal(map[string]any{
+					"user_id":       pl.UserID,
+					"officer_key":   pl.OfficerKey,
+					"effect":        pl.Effect,
+					"cost_credit":   pl.CostCredit,
+					"duration_days": pl.DurationDays,
+					"auto_renew":    true,
+				})
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO events (id, user_id, kind, state, fire_at, payload)
+					VALUES ($1, $2, $3, 'wait', $4, $5)
+				`, ids.New(), pl.UserID, event.KindOfficerExpire, exp, newPayload); err != nil {
+					return fmt.Errorf("auto_renew event: %w", err)
+				}
+				// factor не меняется (был активен → остаётся активен).
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
+					VALUES ($1, $2, NULL, 13, $3, $4)
+				`, ids.New(), pl.UserID,
+					fmt.Sprintf("Officer %s продлён автоматически", pl.OfficerKey),
+					fmt.Sprintf("Подписка продлена. Списано %d кредитов.", pl.CostCredit),
+				); err != nil {
+					return fmt.Errorf("auto_renew notify: %w", err)
+				}
+				return nil
+			}
+			// Недостаточно credit — сбрасываем factor и уведомляем.
+		}
+
 		if err := applyFactor(ctx, tx, pl.UserID, eff, -eff.Delta); err != nil {
 			return fmt.Errorf("revert factor: %w", err)
 		}
 		// Уведомление.
+		subject := fmt.Sprintf("Officer %s истёк", pl.OfficerKey)
+		body := "Срок подписки закончился. Активируйте снова, если нужно."
+		if pl.AutoRenew {
+			body = "Срок подписки закончился. Недостаточно кредитов для авто-продления."
+		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
-			VALUES ($1, $2, NULL, 2, $3, $4)
-		`, ids.New(), pl.UserID,
-			fmt.Sprintf("Officer %s истёк", pl.OfficerKey),
-			"Срок подписки закончился. Активируйте снова, если нужно.",
-		); err != nil {
+			VALUES ($1, $2, NULL, 13, $3, $4)
+		`, ids.New(), pl.UserID, subject, body); err != nil {
 			return fmt.Errorf("notify: %w", err)
 		}
 		return nil
