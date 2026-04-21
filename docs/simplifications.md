@@ -461,6 +461,24 @@
 
 ---
 
+## Score / Ranking (M5+)
+
+### [score.batch] Пересчёт очков раз в 5 минут, не real-time
+- **Где**: `backend/cmd/worker/main.go`, `backend/internal/score/service.go::RecalcAll`.
+- **Что**: `RecalcAll` запускается горутиной с `time.Ticker(5 * time.Minute)`.
+  Между завершением постройки/исследования и обновлением очков — задержка
+  до 5 минут. Лидерборд не real-time.
+- **Почему**: встраивать `RecalcUser` в каждый domain-handler (building,
+  research, shipyard) усложняет handler'ы и добавляет N-запросов в и без
+  того тяжёлые транзакции. Для лидерборда 5-минутная задержка приемлема.
+- **Как чинить**: вызывать `scoreSvc.RecalcUser(ctx, userID)` в конце
+  `HandleBuildConstruction`, `HandleResearch`, `HandleBuildFleet` — после
+  основного UPDATE/INSERT. Нужно пробросить `*score.Service` в `event`-пакет
+  или сделать callback-хук на `Worker`.
+- **Приоритет**: L — для конкурентного PvP нужна точность; сейчас достаточно.
+
+---
+
 ## Закрытые
 
 - **M4.4a.rapidfire** → исправлено в iteration 20 (commit c7ae59a).
