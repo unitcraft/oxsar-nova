@@ -36,6 +36,8 @@ interface Relationship {
   target_tag: string;
   target_name: string;
   relation: string;
+  status: string;   // "pending" | "active"
+  initiator: boolean;
   set_at: string;
 }
 
@@ -445,7 +447,7 @@ function RelationsPanel({ allianceID }: { allianceID: string }) {
     refetchInterval: 30000,
   });
 
-  const setRel = useMutation({
+  const propose = useMutation({
     mutationFn: ({ tid, rel }: { tid: string; rel: string }) =>
       api.put<void>(`/api/alliances/${allianceID}/relations/${tid}`, { relation: rel }),
     onSuccess: () => {
@@ -454,15 +456,30 @@ function RelationsPanel({ allianceID }: { allianceID: string }) {
     },
   });
 
-  const removeRel = useMutation({
+  const remove = useMutation({
     mutationFn: (tid: string) =>
       api.put<void>(`/api/alliances/${allianceID}/relations/${tid}`, { relation: 'none' }),
     onSuccess: () =>
       void qc.invalidateQueries({ queryKey: ['alliances', allianceID, 'relations'] }),
   });
 
+  const accept = useMutation({
+    mutationFn: (initiatorID: string) =>
+      api.post<void>(`/api/alliances/${allianceID}/relations/${initiatorID}/accept`),
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ['alliances', allianceID, 'relations'] }),
+  });
+
+  const reject = useMutation({
+    mutationFn: (initiatorID: string) =>
+      api.delete<void>(`/api/alliances/${allianceID}/relations/${initiatorID}`),
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ['alliances', allianceID, 'relations'] }),
+  });
+
   const list = rels.data?.relations ?? [];
   const relLabel: Record<string, string> = { nap: 'НЕН', war: 'ВОЙНА', ally: 'СОЮЗ' };
+  const statusLabel: Record<string, string> = { active: '', pending: ' (ожидает)' };
 
   return (
     <div style={{ marginTop: 16 }}>
@@ -472,18 +489,34 @@ function RelationsPanel({ allianceID }: { allianceID: string }) {
       ) : (
         <table className="ox-table">
           <thead>
-            <tr><th>Альянс</th><th>Отношение</th><th /></tr>
+            <tr><th>Альянс</th><th>Отношение</th><th>Статус</th><th /></tr>
           </thead>
           <tbody>
             {list.map((r) => (
-              <tr key={r.target_alliance_id}>
+              <tr key={`${r.initiator ? 'out' : 'in'}-${r.target_alliance_id}`}>
                 <td>[{r.target_tag}] {r.target_name}</td>
                 <td>{relLabel[r.relation] ?? r.relation}</td>
-                <td>
-                  <button type="button" disabled={removeRel.isPending}
-                    onClick={() => removeRel.mutate(r.target_alliance_id)}>
-                    ✕
-                  </button>
+                <td style={{ color: r.status === 'pending' ? '#f90' : 'inherit' }}>
+                  {r.initiator ? 'Предложено' : 'Входящее'}{statusLabel[r.status] ?? ''}
+                </td>
+                <td style={{ display: 'flex', gap: 4 }}>
+                  {!r.initiator && r.status === 'pending' ? (
+                    <>
+                      <button type="button" disabled={accept.isPending}
+                        onClick={() => accept.mutate(r.target_alliance_id)}>
+                        ✓
+                      </button>
+                      <button type="button" disabled={reject.isPending}
+                        onClick={() => reject.mutate(r.target_alliance_id)}>
+                        ✕
+                      </button>
+                    </>
+                  ) : (
+                    <button type="button" disabled={remove.isPending}
+                      onClick={() => remove.mutate(r.target_alliance_id)}>
+                      ✕
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -502,13 +535,13 @@ function RelationsPanel({ allianceID }: { allianceID: string }) {
           <option value="ally">СОЮЗ</option>
           <option value="war">ВОЙНА</option>
         </select>
-        <button type="button" disabled={!targetID || setRel.isPending}
-          onClick={() => setRel.mutate({ tid: targetID, rel: relation })}>
-          Установить
+        <button type="button" disabled={!targetID || propose.isPending}
+          onClick={() => propose.mutate({ tid: targetID, rel: relation })}>
+          Предложить
         </button>
       </div>
-      {setRel.isError && (
-        <p className="ox-error">{setRel.error instanceof Error ? setRel.error.message : 'ошибка'}</p>
+      {propose.isError && (
+        <p className="ox-error">{propose.error instanceof Error ? propose.error.message : 'ошибка'}</p>
       )}
     </div>
   );

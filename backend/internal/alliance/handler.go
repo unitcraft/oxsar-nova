@@ -275,8 +275,10 @@ func (h *Handler) GetRelations(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"relations": rels})
 }
 
-// SetRelation PUT /api/alliances/{id}/relations/{target_id}
-func (h *Handler) SetRelation(w http.ResponseWriter, r *http.Request) {
+// ProposeRelation PUT /api/alliances/{id}/relations/{target_id}
+// Body: {"relation":"nap"|"war"|"ally"|"none"}
+// WAR активно сразу; NAP/ALLY — pending до подтверждения target.
+func (h *Handler) ProposeRelation(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
 	if !ok {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
@@ -293,7 +295,7 @@ func (h *Handler) SetRelation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.svc.SetRelation(r.Context(), uid, id, targetID, body.Relation)
+	err := h.svc.ProposeRelation(r.Context(), uid, id, targetID, body.Relation)
 	switch {
 	case err == nil:
 		w.WriteHeader(http.StatusNoContent)
@@ -305,6 +307,54 @@ func (h *Handler) SetRelation(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrForbidden)
 	case errors.Is(err, ErrInvalidRelation), errors.Is(err, ErrRelationSelf):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// AcceptRelation POST /api/alliances/{id}/relations/{initiator_id}/accept
+// Подтверждает входящее NAP/ALLY предложение. {id} — наш альянс, {initiator_id} — кто предложил.
+func (h *Handler) AcceptRelation(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	myID := chi.URLParam(r, "id")
+	initiatorID := chi.URLParam(r, "initiator_id")
+
+	err := h.svc.AcceptRelation(r.Context(), uid, myID, initiatorID)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrNotFound), errors.Is(err, ErrTargetNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotOwner):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// RejectRelation DELETE /api/alliances/{id}/relations/{initiator_id}
+// Отклоняет входящее pending предложение.
+func (h *Handler) RejectRelation(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	myID := chi.URLParam(r, "id")
+	initiatorID := chi.URLParam(r, "initiator_id")
+
+	err := h.svc.RejectRelation(r.Context(), uid, myID, initiatorID)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotOwner):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}

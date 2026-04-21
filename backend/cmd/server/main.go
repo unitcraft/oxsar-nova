@@ -260,7 +260,9 @@ func run() error {
 		pr.Post("/alliances/applications/{appID}/approve", allianceH.Approve)
 		pr.Delete("/alliances/applications/{appID}", allianceH.Reject)
 		pr.Get("/alliances/{id}/relations", allianceH.GetRelations)
-		pr.Put("/alliances/{id}/relations/{target_id}", allianceH.SetRelation)
+		pr.Put("/alliances/{id}/relations/{target_id}", allianceH.ProposeRelation)
+		pr.Post("/alliances/{id}/relations/{initiator_id}/accept", allianceH.AcceptRelation)
+		pr.Delete("/alliances/{id}/relations/{initiator_id}", allianceH.RejectRelation)
 
 		pr.Get("/tutorial", tutorialH.Status)
 

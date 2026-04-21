@@ -4092,5 +4092,31 @@ BuildingsScreen теперь использует buildingName() в очеред
     таб "Admin" виден только admin/superadmin.
 
 ================================================================================
+Итерация — 2026-04-22
+================================================================================
+
+[Planet json tags] Исправлен баг: Planet struct не имел json-тегов.
+  - planet/model.go: добавлены json:"..." ко всем полям (id, user_id, is_moon,
+    galaxy, system, position, diameter, used_fields, temp_min, temp_max,
+    metal, silicon, hydrogen, last_res_update, solar_satellite_prod,
+    build_factor, research_factor, produce_factor, energy_factor, storage_factor).
+  - API ранее возвращало PascalCase (ID, UserID, IsMoon...) — фронтенд не получал
+    данные планеты корректно. Теперь snake_case как ожидает TS-клиент.
+
+================================================================================
+Итерация — 2026-04-22
+================================================================================
+
+[Alliance] Встречное подтверждение отношений NAP/ALLY.
+  - migration 0031: добавлена колонка status ('pending'|'active') в alliance_relationships.
+  - SetRelation переименован в ProposeRelation; WAR активно сразу, NAP/ALLY = pending.
+  - AcceptRelation: owner target-альянса подтверждает, создаётся зеркальная запись active.
+  - RejectRelation: удаляет pending запись.
+  - GetRelations: возвращает исходящие (initiator=true) + входящие pending (initiator=false).
+  - 3 новых endpoint: PUT /relations/{target_id} (propose), POST /relations/{id}/accept,
+    DELETE /relations/{id} (reject).
+  - AllianceScreen.tsx: RelationsPanel показывает статус, входящие pending — кнопки ✓/✕.
+
+================================================================================
 Конец дневника.
 ================================================================================

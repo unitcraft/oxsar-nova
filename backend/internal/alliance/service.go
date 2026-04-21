@@ -498,22 +498,26 @@ func isDupKey(err error) bool {
 
 // Relationship — запись об отношениях между альянсами.
 type Relationship struct {
-	TargetAllianceID  string    `json:"target_alliance_id"`
-	TargetTag         string    `json:"target_tag"`
-	TargetName        string    `json:"target_name"`
-	Relation          string    `json:"relation"` // "nap" | "war" | "ally"
-	SetAt             time.Time `json:"set_at"`
+	TargetAllianceID string    `json:"target_alliance_id"`
+	TargetTag        string    `json:"target_tag"`
+	TargetName       string    `json:"target_name"`
+	Relation         string    `json:"relation"` // "nap" | "war" | "ally"
+	Status           string    `json:"status"`   // "pending" | "active"
+	Initiator        bool      `json:"initiator"` // true если мы инициатор
+	SetAt            time.Time `json:"set_at"`
 }
 
 var (
 	ErrInvalidRelation  = errors.New("alliance: relation must be 'nap', 'war', or 'ally'")
 	ErrTargetNotFound   = errors.New("alliance: target alliance not found")
 	ErrRelationSelf     = errors.New("alliance: cannot set relation with own alliance")
+	ErrRelationPending  = errors.New("alliance: relation proposal already pending")
 )
 
-// SetRelation устанавливает отношение alliance_id → target_alliance_id.
-// Только owner альянса может это делать. Relation="none" — удаляет запись.
-func (s *Service) SetRelation(ctx context.Context, userID, allianceID, targetID, relation string) error {
+// ProposeRelation предлагает отношение от allianceID к targetID.
+// WAR — активно сразу (односторонне). NAP/ALLY — ждёт подтверждения от target.
+// Relation="none" — удаляет любые записи в обе стороны.
+func (s *Service) ProposeRelation(ctx context.Context, userID, allianceID, targetID, relation string) error {
 	if allianceID == targetID {
 		return ErrRelationSelf
 	}
@@ -521,7 +525,6 @@ func (s *Service) SetRelation(ctx context.Context, userID, allianceID, targetID,
 		return ErrInvalidRelation
 	}
 
-	// Проверяем что userID — owner альянса.
 	var ownerID string
 	err := s.db.Pool().QueryRow(ctx,
 		`SELECT owner_id FROM alliances WHERE id=$1`, allianceID).Scan(&ownerID)
@@ -529,50 +532,145 @@ func (s *Service) SetRelation(ctx context.Context, userID, allianceID, targetID,
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNotFound
 		}
-		return fmt.Errorf("set relation: read alliance: %w", err)
+		return fmt.Errorf("propose relation: read alliance: %w", err)
 	}
 	if ownerID != userID {
 		return ErrNotOwner
 	}
 
-	// Проверяем что target существует.
 	var targetExists bool
 	if err := s.db.Pool().QueryRow(ctx,
 		`SELECT EXISTS (SELECT 1 FROM alliances WHERE id=$1)`, targetID).Scan(&targetExists); err != nil {
-		return fmt.Errorf("set relation: check target: %w", err)
+		return fmt.Errorf("propose relation: check target: %w", err)
 	}
 	if !targetExists {
 		return ErrTargetNotFound
 	}
 
 	if relation == "none" {
-		if _, err := s.db.Pool().Exec(ctx,
-			`DELETE FROM alliance_relationships WHERE alliance_id=$1 AND target_alliance_id=$2`,
-			allianceID, targetID); err != nil {
-			return fmt.Errorf("set relation: delete: %w", err)
+		// Удаляем записи в обе стороны.
+		if _, err := s.db.Pool().Exec(ctx, `
+			DELETE FROM alliance_relationships
+			WHERE (alliance_id=$1 AND target_alliance_id=$2)
+			   OR (alliance_id=$2 AND target_alliance_id=$1)
+		`, allianceID, targetID); err != nil {
+			return fmt.Errorf("propose relation: delete: %w", err)
 		}
 		return nil
 	}
 
+	// WAR немедленно активен; NAP/ALLY — pending.
+	status := "pending"
+	if relation == "war" {
+		status = "active"
+	}
+
 	if _, err := s.db.Pool().Exec(ctx, `
-		INSERT INTO alliance_relationships (alliance_id, target_alliance_id, relation)
-		VALUES ($1, $2, $3)
+		INSERT INTO alliance_relationships (alliance_id, target_alliance_id, relation, status)
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (alliance_id, target_alliance_id)
-		DO UPDATE SET relation=$3, set_at=now()
-	`, allianceID, targetID, relation); err != nil {
-		return fmt.Errorf("set relation: upsert: %w", err)
+		DO UPDATE SET relation=$3, status=$4, set_at=now()
+	`, allianceID, targetID, relation, status); err != nil {
+		return fmt.Errorf("propose relation: upsert: %w", err)
 	}
 	return nil
 }
 
-// GetRelations возвращает все отношения, установленные альянсом allianceID.
+// AcceptRelation подтверждает входящее предложение NAP/ALLY.
+// Вызывается owner'ом targetID. После accept — обе записи становятся active.
+func (s *Service) AcceptRelation(ctx context.Context, userID, myAllianceID, initiatorAllianceID string) error {
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// Проверяем что userID — owner myAllianceID.
+		var ownerID string
+		if err := tx.QueryRow(ctx,
+			`SELECT owner_id FROM alliances WHERE id=$1`, myAllianceID).Scan(&ownerID); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrNotFound
+			}
+			return fmt.Errorf("accept relation: %w", err)
+		}
+		if ownerID != userID {
+			return ErrNotOwner
+		}
+
+		// Читаем pending предложение от initiatorAllianceID → myAllianceID.
+		var relation string
+		var status string
+		err := tx.QueryRow(ctx, `
+			SELECT relation::text, status
+			FROM alliance_relationships
+			WHERE alliance_id=$1 AND target_alliance_id=$2
+		`, initiatorAllianceID, myAllianceID).Scan(&relation, &status)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrTargetNotFound
+			}
+			return fmt.Errorf("accept relation: read proposal: %w", err)
+		}
+		if status != "pending" {
+			return fmt.Errorf("accept relation: proposal is not pending")
+		}
+
+		// Активируем инициаторскую запись.
+		if _, err := tx.Exec(ctx, `
+			UPDATE alliance_relationships SET status='active'
+			WHERE alliance_id=$1 AND target_alliance_id=$2
+		`, initiatorAllianceID, myAllianceID); err != nil {
+			return fmt.Errorf("accept relation: update initiator: %w", err)
+		}
+
+		// Создаём зеркальную активную запись для нашего альянса.
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO alliance_relationships (alliance_id, target_alliance_id, relation, status)
+			VALUES ($1, $2, $3, 'active')
+			ON CONFLICT (alliance_id, target_alliance_id)
+			DO UPDATE SET relation=$3, status='active', set_at=now()
+		`, myAllianceID, initiatorAllianceID, relation); err != nil {
+			return fmt.Errorf("accept relation: insert mirror: %w", err)
+		}
+		return nil
+	})
+}
+
+// RejectRelation отклоняет входящее предложение NAP/ALLY — удаляет pending запись.
+func (s *Service) RejectRelation(ctx context.Context, userID, myAllianceID, initiatorAllianceID string) error {
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var ownerID string
+		if err := tx.QueryRow(ctx,
+			`SELECT owner_id FROM alliances WHERE id=$1`, myAllianceID).Scan(&ownerID); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrNotFound
+			}
+			return fmt.Errorf("reject relation: %w", err)
+		}
+		if ownerID != userID {
+			return ErrNotOwner
+		}
+
+		if _, err := tx.Exec(ctx, `
+			DELETE FROM alliance_relationships
+			WHERE alliance_id=$1 AND target_alliance_id=$2 AND status='pending'
+		`, initiatorAllianceID, myAllianceID); err != nil {
+			return fmt.Errorf("reject relation: delete: %w", err)
+		}
+		return nil
+	})
+}
+
+// GetRelations возвращает все отношения альянса allianceID:
+// исходящие (initiator=true) и входящие pending (initiator=false).
 func (s *Service) GetRelations(ctx context.Context, allianceID string) ([]Relationship, error) {
 	rows, err := s.db.Pool().Query(ctx, `
-		SELECT r.target_alliance_id, a.tag, a.name, r.relation::text, r.set_at
+		SELECT r.target_alliance_id, a.tag, a.name, r.relation::text, r.status, true AS initiator, r.set_at
 		FROM alliance_relationships r
 		JOIN alliances a ON a.id = r.target_alliance_id
 		WHERE r.alliance_id = $1
-		ORDER BY r.set_at DESC
+		UNION ALL
+		SELECT r.alliance_id, a.tag, a.name, r.relation::text, r.status, false AS initiator, r.set_at
+		FROM alliance_relationships r
+		JOIN alliances a ON a.id = r.alliance_id
+		WHERE r.target_alliance_id = $1 AND r.status = 'pending'
+		ORDER BY set_at DESC
 	`, allianceID)
 	if err != nil {
 		return nil, fmt.Errorf("get relations: %w", err)
@@ -582,7 +680,7 @@ func (s *Service) GetRelations(ctx context.Context, allianceID string) ([]Relati
 	for rows.Next() {
 		var rel Relationship
 		if err := rows.Scan(&rel.TargetAllianceID, &rel.TargetTag, &rel.TargetName,
-			&rel.Relation, &rel.SetAt); err != nil {
+			&rel.Relation, &rel.Status, &rel.Initiator, &rel.SetAt); err != nil {
 			return nil, err
 		}
 		out = append(out, rel)
