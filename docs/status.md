@@ -24,12 +24,12 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Defense                     | ✅     | M2 | В рамках shipyard — общая очередь.                       |
 | Galaxy                      | ✅     | M3 | Repository + GET /api/galaxy/{g}/{s} + GalaxyScreen.      |
 | Fleet / missions            | ✅     | M5 | TRANSPORT + ATTACK + RECYCLING + SPY + COLONIZE (kind=7,8,9,10,11). |
-| Battle engine               | 🟡     | M4.4b | +UI отчёта боя (MessagesScreen → BattleReportView). Нет: compose/delete messages, rapidfire из каталога, RECYCLING. |
-| Expedition                  | 🟡     | M5 | 5 исходов (resources / artefact / pirates / loss / nothing) по seed от fleet_id. PvE-бой с 5 light_fighter. |
+| Battle engine               | 🟡     | M4.4b | rapidfire из каталога ✅, RECYCLING ✅, debris ✅. Нет: compose/delete messages, moon creation. |
+| Expedition                  | ✅     | M5 | 5 исходов (resources/artefact/pirates/loss/nothing), PvE-бой, отчёт + сообщение. |
 | ExpedPlanetCreator          | ⬜     | M5 | ex ext/ExpedPlanetCreator.class.php.                     |
-| Rockets / stargate          | 🟡     | M5 | Interplanetary rockets (kind=16): Launch → Impact. Stargate — позже. |
+| Rockets / stargate          | ✅     | M5 | Interplanetary rockets (kind=16): Launch → Impact. Stargate — позже. |
 | Artefact                    | 🟡     | M5.0 | Apply/Revert/Resync для factor-эффектов (6 артефактов). |
-| Artefact Market (credit)    | 🟡     | M5.1 | List/Sell/Buy/Cancel + UI. users.credit как валюта. |
+| Artefact Market (credit)    | ✅     | M5.1 | List/Sell/Buy/Cancel + UI. users.credit как валюта. |
 | Alien AI                    | ⬜     | M5.2 | ex game/AlienAI.class.php 1127 LOC.                    |
 | Repair Factory              | ✅     | M4.4c | DISASSEMBLE + REPAIR end-to-end (API + worker + UI). damaged-юниты из боя чинятся целой пачкой. |
 | AutoMsg                     | 🟡     | M4.2 | WELCOME/STARTER_GUIDE при регистрации, идемпотентно, {{var}}-шаблоны. Scheduled сообщения — позже. |
@@ -43,7 +43,8 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Payment integrations        | ⬜     | M9 | v2: WebMoney/Robokassa/A1/2Pay/VK/OK/MailRu.             |
 | Event-loop worker           | ✅     | M3 | +Transport (kind=7 arrive) +Return (kind=20).            |
 | Frontend каркас             | ✅     | M0 | Vite + TS strict + TanStack Query + Zustand.             |
-| Frontend экраны             | ✅     | M3 | +Rockets — теперь 13 экранов.                            |
+| Score / Highscore           | ✅     | M5+ | RecalcUser/RecalcAll (формулы PointRenewer), GET /api/highscore, ScoreScreen. |
+| Frontend экраны             | ✅     | M3 | +Score — теперь 14 экранов.                              |
 | Порт дизайна oxsar2         | 🟡     | —  | CSS-темы перенесены как placeholder, ассеты копируются.  |
 | Порт .tpl-шаблонов          | ⬜     | —  | 134 .tpl (~12600 строк) — эталон разметки UI, §8 ТЗ.     |
 | import-datasheets CLI       | ✅     | M0.1 | construction/ships/requirements/artefacts → YAML.        |
