@@ -2800,5 +2800,83 @@ B. RECYCLING + debris_fields.
 
 
 ================================================================================
+35. SCORE / RANKING (M5+)
+================================================================================
+
+Дата: 2026-04-21
+
+Задача: backend/internal/score/ был пустым — ни одного файла. API
+/api/highscore описан в ТЗ §4.9, таблицы points/b_points/r_points/
+u_points/a_points/e_points присутствовали в users с init.sql, но
+никогда не обновлялись.
+
+Перед реализацией — разведка реального состояния «🟡»-модулей:
+  - Expedition (fleet/expedition.go): полностью готов — 5 исходов,
+    PvE-бой, artefact drop, база данных, сообщения.
+  - Rapidfire: уже передавался в battle.Calculate() через rapidfireToMap().
+  - Debris: calcDebris() + UPSERT в debris_fields уже реализованы.
+  - Recycling: RecyclingHandler в events.go — полный.
+  Вывод: status.md местами отстаёт от реального кода.
+
+Реализация (два файла + изменения в воркере и сервере):
+
+  backend/internal/score/service.go (~340 строк):
+    - RecalcUser(ctx, userID): пересчитывает b/r/u/a/total points
+      по формулам из legacy PointRenewer.class.php:
+        b_points = 0.0005 × Σ cost(level 1..N) по зданиям всех планет
+        r_points = 0.001  × Σ cost(level 1..N) по исследованиям
+        u_points = 0.002  × Σ count × cost по ships+defense всех планет
+        a_points = Σ achievement.points (из таблицы achievements)
+        total    = b + r + u (a не входит в total — как в legacy)
+      Индексы по ID строятся в памяти из map[string]Spec, итерация
+      по строкам БД — один запрос на тип данных.
+    - RecalcAll(ctx, log): обходит всех активных (umode=false) и
+      вызывает RecalcUser. Ошибки одного игрока не роняют цикл.
+    - Top(ctx, type, limit): лидерборд, ORDER BY col DESC, limit ≤ 200.
+      type = "total"|"b"|"r"|"u"|"a", неизвестный → "total".
+    - PlayerRank(ctx, userID, type): позиция в рейтинге через
+      COUNT(*)+1 WHERE col > playerPts.
+
+  backend/internal/score/handler.go (~50 строк):
+    - GET /api/highscore?type=...   → Top()
+    - GET /api/highscore/me?type=...  → PlayerRank()
+
+  backend/cmd/server/main.go:
+    - scoreSvc = score.NewService(db, cat)
+    - scoreH = score.NewHandler(scoreSvc)
+    - маршруты pr.Get("/highscore", ...) и pr.Get("/highscore/me", ...)
+
+  backend/cmd/worker/main.go:
+    - горутин с time.Ticker(5 * time.Minute) → scoreSvc.RecalcAll()
+    - запускается параллельно event-loop, завершается по ctx.Done()
+
+Ключевые технические решения:
+  1. repo.Exec не имеет Query/QueryRow/Exec напрямую (только InTx +
+     Pool()). Все прямые запросы идут через s.db.Pool().Query() —
+     паттерн остальных сервисов (achievement, message, artefact).
+  2. Пересчёт — materialized, не on-the-fly: очки читаются из users,
+     не вычисляются при каждом GET /highscore. Это O(1) запрос.
+  3. Каталоги (map[string]Spec) перекладываются в map[int]Spec один
+     раз на вызов RecalcUser — не на каждую строку БД.
+  4. RecalcAll — периодический batch, НЕ в каждом domain-handler'е.
+     Это упрощение: между завершением постройки и обновлением очков
+     есть задержка до 5 минут. Приемлемо для лидерборда (не real-time
+     балансировка). Если нужна точность — добавить вызов RecalcUser
+     в building/research/shipyard completion handler'ах.
+
+Статистика итерации 35.
+   backend/internal/score: +service.go (~340), +handler.go (~50).
+   backend/cmd/server/main.go: +scoreSvc, +scoreH, +2 маршрута.
+   backend/cmd/worker/main.go: +goroutine RecalcAll каждые 5 мин.
+   Сборка: go build ./... прошёл без ошибок.
+
+Что дальше:
+   - Frontend ScoreScreen (лидерборд).
+   - Обновить docs/status.md: Score ✅.
+   - Рассмотреть вызов RecalcUser из building/research completion —
+     для более точных очков в реальном времени.
+
+
+================================================================================
 Конец дневника.
 ================================================================================
