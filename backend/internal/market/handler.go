@@ -11,6 +11,116 @@ import (
 	"github.com/oxsar/nova/backend/internal/httpx"
 )
 
+// ListLots GET /api/market/lots?sell=metal&limit=50
+func (h *Handler) ListLots(w http.ResponseWriter, r *http.Request) {
+	_, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	sell := r.URL.Query().Get("sell")
+	lots, err := h.svc.ListLots(r.Context(), sell, 50)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	if lots == nil {
+		lots = []Lot{}
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, lots)
+}
+
+// CreateLot POST /api/market/lots
+func (h *Handler) CreateLot(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	var req struct {
+		PlanetID     string `json:"planet_id"`
+		SellResource string `json:"sell_resource"`
+		SellAmount   int64  `json:"sell_amount"`
+		BuyResource  string `json:"buy_resource"`
+		BuyAmount    int64  `json:"buy_amount"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	lot, err := h.svc.CreateLot(r.Context(), uid, req.PlanetID,
+		req.SellResource, req.SellAmount, req.BuyResource, req.BuyAmount)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusCreated, lot)
+	case errors.Is(err, ErrInvalidResource), errors.Is(err, ErrSameResource),
+		errors.Is(err, ErrInvalidAmount), errors.Is(err, ErrNotEnough):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrPlanetNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// CancelLot DELETE /api/market/lots/{id}
+func (h *Handler) CancelLot(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	lotID := chi.URLParam(r, "id")
+	err := h.svc.CancelLot(r.Context(), uid, lotID)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrLotNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrLotNotOpen):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// AcceptLot POST /api/market/lots/{id}/accept
+func (h *Handler) AcceptLot(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	lotID := chi.URLParam(r, "id")
+	var req struct {
+		PlanetID string `json:"planet_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	err := h.svc.AcceptLot(r.Context(), uid, req.PlanetID, lotID)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrLotNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrLotNotOpen), errors.Is(err, ErrOwnLot),
+		errors.Is(err, ErrNotEnough):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrPlanetNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 type Handler struct {
 	svc *Service
 }
