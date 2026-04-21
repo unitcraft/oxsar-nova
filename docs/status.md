@@ -34,7 +34,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Repair Factory              | ✅     | M4.4c | DISASSEMBLE + REPAIR end-to-end (API + worker + UI). damaged-юниты из боя чинятся целой пачкой. |
 | AutoMsg                     | ⬜     | M4.2 | ex game/AutoMsg.class.php 1228 LOC.                    |
 | Alliance / chat / message   | 🟡     | M6 | messages: inbox + mark-read + battle-report view (M4.4b). Compose/folders/alliance — M6. |
-| Market (exchange)           | ⬜     | M6 | ex game/Exchange.class.php 1205 LOC.                     |
+| Market (exchange)           | 🟡     | M6 | MVP: M↔Si↔H по фиксированным курсам (1:2:4) × users.exchange_rate. Order-book / офферы — позже. |
 | Officers                    | ⬜     | M7 | Планируется.                                             |
 | Achievements                | ⬜     | M7 | ex game/Achievements.class.php 1044 LOC.                 |
 | Tutorial                    | ⬜     | M7 | ex ext/page/ExtTutorial + game-классы.                   |
@@ -43,7 +43,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Payment integrations        | ⬜     | M9 | v2: WebMoney/Robokassa/A1/2Pay/VK/OK/MailRu.             |
 | Event-loop worker           | ✅     | M3 | +Transport (kind=7 arrive) +Return (kind=20).            |
 | Frontend каркас             | ✅     | M0 | Vite + TS strict + TanStack Query + Zustand.             |
-| Frontend экраны             | ✅     | M3 | +Messages (inbox + battle report) — теперь 11 экранов.   |
+| Frontend экраны             | ✅     | M3 | +Market — теперь 12 экранов. Unread-badge на Messages.   |
 | Порт дизайна oxsar2         | 🟡     | —  | CSS-темы перенесены как placeholder, ассеты копируются.  |
 | Порт .tpl-шаблонов          | ⬜     | —  | 134 .tpl (~12600 строк) — эталон разметки UI, §8 ТЗ.     |
 | import-datasheets CLI       | ✅     | M0.1 | construction/ships/requirements/artefacts → YAML.        |
