@@ -21,6 +21,7 @@ tags:
   - name: galaxy
   - name: fleet
   - name: battle
+  - name: messages
   - name: system
 
 paths:
@@ -514,6 +515,59 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /api/messages:
+    get:
+      tags: [messages]
+      security: [{ bearerAuth: [] }]
+      summary: Inbox — последние 100 сообщений, новые сверху.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items: { $ref: "#/components/schemas/Message" }
+
+  /api/messages/{id}/read:
+    post:
+      tags: [messages]
+      security: [{ bearerAuth: [] }]
+      summary: Пометить сообщение прочитанным (идемпотентно).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: marked (or already was) }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/battle-reports/{id}:
+    get:
+      tags: [messages]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Полный battle report (JSON). Доступен attacker'у и defender'у
+        владельцам отчёта.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BattleReportFull" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/battle-sim:
     post:
       tags: [battle]
@@ -783,6 +837,37 @@ components:
               attack:   { type: array, items: { type: number } }
               shield:   { type: array, items: { type: number } }
               shell:    { type: number }
+
+    Message:
+      type: object
+      properties:
+        id:               { type: string, format: uuid }
+        from_user_id:     { type: string, format: uuid, nullable: true }
+        from_username:    { type: string }
+        subject:          { type: string }
+        body:             { type: string }
+        folder:           { type: integer }
+        created_at:       { type: string, format: date-time }
+        read_at:          { type: string, format: date-time, nullable: true }
+        battle_report_id: { type: string, format: uuid, nullable: true }
+
+    BattleReportFull:
+      type: object
+      properties:
+        id:                { type: string, format: uuid }
+        attacker_user_id:  { type: string, format: uuid, nullable: true }
+        defender_user_id:  { type: string, format: uuid, nullable: true }
+        planet_id:         { type: string, format: uuid, nullable: true }
+        seed:              { type: integer, format: int64 }
+        winner:            { type: string, enum: [attackers, defenders, draw] }
+        rounds:            { type: integer }
+        debris_metal:      { type: integer, format: int64 }
+        debris_silicon:    { type: integer, format: int64 }
+        loot_metal:        { type: integer, format: int64 }
+        loot_silicon:      { type: integer, format: int64 }
+        loot_hydrogen:     { type: integer, format: int64 }
+        at:                { type: string, format: date-time }
+        report:            { type: object, description: "полный battle.Report как JSON" }
 
     BattleReport:
       type: object

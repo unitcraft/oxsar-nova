@@ -36,6 +36,9 @@ const FleetScreen = lazy(() =>
 const RepairScreen = lazy(() =>
   import('./features/repair/RepairScreen').then((m) => ({ default: m.RepairScreen })),
 );
+const MessagesScreen = lazy(() =>
+  import('./features/messages/MessagesScreen').then((m) => ({ default: m.MessagesScreen })),
+);
 
 type Tab =
   | 'overview'
@@ -46,6 +49,7 @@ type Tab =
   | 'artefacts'
   | 'galaxy'
   | 'fleet'
+  | 'messages'
   | 'sim';
 
 export function App() {
@@ -157,6 +161,12 @@ function AuthenticatedApp() {
         />
         <TabButton
           current={tab}
+          value="messages"
+          onClick={setTab}
+          label={t('global', 'MENU_MESSAGES')}
+        />
+        <TabButton
+          current={tab}
           value="artefacts"
           onClick={setTab}
           label={t('global', 'MENU_ARTEFACTS')}
@@ -177,6 +187,7 @@ function AuthenticatedApp() {
         {tab === 'repair' && <RepairScreen planet={planet} />}
         {tab === 'galaxy' && <GalaxyScreen homePlanet={planet} />}
         {tab === 'fleet' && <FleetScreen planet={planet} />}
+        {tab === 'messages' && <MessagesScreen />}
         {tab === 'artefacts' && <ArtefactsScreen />}
         {tab === 'sim' && <BattleSimScreen />}
       </Suspense>

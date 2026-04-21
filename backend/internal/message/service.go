@@ -1,0 +1,162 @@
+// Package message — личные сообщения (inbox).
+//
+// Использует таблицы messages (legacy-совместимая, миграция 0005) и
+// битовое расширение battle_report_id (миграция 0009). В M4.4b
+// реализованы только чтение и пометка прочитанным — compose/reply
+// появятся вместе с alliance/chat (M6).
+package message
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/oxsar/nova/backend/internal/repo"
+)
+
+type Service struct {
+	db repo.Exec
+}
+
+func NewService(db repo.Exec) *Service { return &Service{db: db} }
+
+// Message — строка из messages для UI. body — уже готовая строка,
+// battle_report_id nullable (nil — системное/обычное сообщение).
+type Message struct {
+	ID             string     `json:"id"`
+	FromUserID     *string    `json:"from_user_id,omitempty"`
+	FromUsername   string     `json:"from_username,omitempty"`
+	Subject        string     `json:"subject"`
+	Body           string     `json:"body"`
+	Folder         int        `json:"folder"`
+	CreatedAt      time.Time  `json:"created_at"`
+	ReadAt         *time.Time `json:"read_at,omitempty"`
+	BattleReportID *string    `json:"battle_report_id,omitempty"`
+}
+
+// Inbox возвращает последние N сообщений, новые сверху. Без пагинации
+// — для M4.4b достаточно (обычно у игрока максимум несколько десятков
+// отчётов в первую неделю; реальная пагинация придёт с alliance-chat).
+func (s *Service) Inbox(ctx context.Context, userID string, limit int) ([]Message, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT m.id, m.from_user_id, COALESCE(u.username, ''),
+		       m.subject, m.body, m.folder, m.created_at, m.read_at,
+		       m.battle_report_id
+		FROM messages m
+		LEFT JOIN users u ON u.id = m.from_user_id
+		WHERE m.to_user_id = $1
+		ORDER BY m.created_at DESC
+		LIMIT $2
+	`, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("inbox query: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Message
+	for rows.Next() {
+		var m Message
+		if err := rows.Scan(&m.ID, &m.FromUserID, &m.FromUsername,
+			&m.Subject, &m.Body, &m.Folder, &m.CreatedAt, &m.ReadAt,
+			&m.BattleReportID); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+// MarkRead ставит read_at=now() если ещё не прочитано. Идемпотентно.
+// Ошибка «чужое сообщение» возвращается как ErrNotOwned.
+var (
+	ErrMessageNotFound = errors.New("message: not found")
+	ErrNotOwned        = errors.New("message: not owned by user")
+)
+
+func (s *Service) MarkRead(ctx context.Context, userID, messageID string) error {
+	tag, err := s.db.Pool().Exec(ctx, `
+		UPDATE messages SET read_at = now()
+		WHERE id = $1 AND to_user_id = $2 AND read_at IS NULL
+	`, messageID, userID)
+	if err != nil {
+		return fmt.Errorf("mark read: %w", err)
+	}
+	if tag.RowsAffected() > 0 {
+		return nil
+	}
+	// 0 rows: либо сообщение не наше, либо уже прочитано, либо не
+	// существует. Для UI разницы нет, но чтобы 404/403 отдавать
+	// честно — пере-проверим.
+	var ownerID string
+	err = s.db.Pool().QueryRow(ctx,
+		`SELECT to_user_id FROM messages WHERE id = $1`, messageID).Scan(&ownerID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrMessageNotFound
+		}
+		return err
+	}
+	if ownerID != userID {
+		return ErrNotOwned
+	}
+	// Уже прочитано — не ошибка.
+	return nil
+}
+
+// BattleReport — полный отчёт боя + метаданные из battle_reports.
+type BattleReport struct {
+	ID             string          `json:"id"`
+	AttackerUserID *string         `json:"attacker_user_id,omitempty"`
+	DefenderUserID *string         `json:"defender_user_id,omitempty"`
+	PlanetID       *string         `json:"planet_id,omitempty"`
+	Seed           int64           `json:"seed"`
+	Winner         string          `json:"winner"`
+	Rounds         int             `json:"rounds"`
+	DebrisMetal    int64           `json:"debris_metal"`
+	DebrisSilicon  int64           `json:"debris_silicon"`
+	LootMetal      int64           `json:"loot_metal"`
+	LootSilicon    int64           `json:"loot_silicon"`
+	LootHydrogen   int64           `json:"loot_hydrogen"`
+	At             time.Time       `json:"at"`
+	Report         json.RawMessage `json:"report"`
+}
+
+// GetBattleReport читает report по id, доступ открыт только
+// attacker/defender (в ТЗ §12.1 предусмотрен «шейринг», но это
+// M5-фича; пока — двухсторонний read).
+func (s *Service) GetBattleReport(ctx context.Context, userID, reportID string) (BattleReport, error) {
+	var r BattleReport
+	err := s.db.Pool().QueryRow(ctx, `
+		SELECT id, attacker_user_id, defender_user_id, planet_id,
+		       seed, winner, rounds,
+		       debris_metal, debris_silicon,
+		       loot_metal, loot_silicon, loot_hydrogen,
+		       at, report
+		FROM battle_reports
+		WHERE id = $1
+	`, reportID).Scan(&r.ID, &r.AttackerUserID, &r.DefenderUserID, &r.PlanetID,
+		&r.Seed, &r.Winner, &r.Rounds,
+		&r.DebrisMetal, &r.DebrisSilicon,
+		&r.LootMetal, &r.LootSilicon, &r.LootHydrogen,
+		&r.At, &r.Report)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return BattleReport{}, ErrMessageNotFound
+		}
+		return BattleReport{}, fmt.Errorf("get report: %w", err)
+	}
+	// Проверка доступа.
+	isOwn := (r.AttackerUserID != nil && *r.AttackerUserID == userID) ||
+		(r.DefenderUserID != nil && *r.DefenderUserID == userID)
+	if !isOwn {
+		return BattleReport{}, ErrNotOwned
+	}
+	return r, nil
+}

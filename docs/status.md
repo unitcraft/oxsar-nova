@@ -24,7 +24,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Defense                     | ✅     | M2 | В рамках shipyard — общая очередь.                       |
 | Galaxy                      | ✅     | M3 | Repository + GET /api/galaxy/{g}/{s} + GalaxyScreen.      |
 | Fleet / missions            | 🟡     | M4 | TRANSPORT (UI) + ATTACK_SINGLE (backend-only, живой бой + loot + message). SPY/COLONIZE — M5. |
-| Battle engine               | 🟡     | M4.4a | Интегрирован с Fleet ATTACK (kind=10): бой, loot, battle_reports, messages. UI-отчёт — M4.4b. |
+| Battle engine               | 🟡     | M4.4b | +UI отчёта боя (MessagesScreen → BattleReportView). Нет: compose/delete messages, rapidfire из каталога, RECYCLING. |
 | Expedition                  | ⬜     | M5 | ex game/Expedition.class.php 1160 LOC.                   |
 | ExpedPlanetCreator          | ⬜     | M5 | ex ext/ExpedPlanetCreator.class.php.                     |
 | Rockets / stargate          | ⬜     | M5 | Планируется.                                             |
@@ -33,7 +33,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Alien AI                    | ⬜     | M5.2 | ex game/AlienAI.class.php 1127 LOC.                    |
 | Repair Factory              | 🟡     | M4.1 | DISASSEMBLE end-to-end (API + worker + UI). REPAIR — после M4 (damaged_count). |
 | AutoMsg                     | ⬜     | M4.2 | ex game/AutoMsg.class.php 1228 LOC.                    |
-| Alliance / chat / message   | ⬜     | M6 | Планируется.                                             |
+| Alliance / chat / message   | 🟡     | M6 | messages: inbox + mark-read + battle-report view (M4.4b). Compose/folders/alliance — M6. |
 | Market (exchange)           | ⬜     | M6 | ex game/Exchange.class.php 1205 LOC.                     |
 | Officers                    | ⬜     | M7 | Планируется.                                             |
 | Achievements                | ⬜     | M7 | ex game/Achievements.class.php 1044 LOC.                 |
@@ -43,7 +43,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Payment integrations        | ⬜     | M9 | v2: WebMoney/Robokassa/A1/2Pay/VK/OK/MailRu.             |
 | Event-loop worker           | ✅     | M3 | +Transport (kind=7 arrive) +Return (kind=20).            |
 | Frontend каркас             | ✅     | M0 | Vite + TS strict + TanStack Query + Zustand.             |
-| Frontend экраны             | ✅     | M3 | +Repair (disassemble) — теперь 10 экранов.               |
+| Frontend экраны             | ✅     | M3 | +Messages (inbox + battle report) — теперь 11 экранов.   |
 | Порт дизайна oxsar2         | 🟡     | —  | CSS-темы перенесены как placeholder, ассеты копируются.  |
 | Порт .tpl-шаблонов          | ⬜     | —  | 134 .tpl (~12600 строк) — эталон разметки UI, §8 ТЗ.     |
 | import-datasheets CLI       | ✅     | M0.1 | construction/ships/requirements/artefacts → YAML.        |

@@ -25,6 +25,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/galaxy"
 	"github.com/oxsar/nova/backend/internal/httpx"
 	"github.com/oxsar/nova/backend/internal/i18n"
+	"github.com/oxsar/nova/backend/internal/message"
 	"github.com/oxsar/nova/backend/internal/planet"
 	"github.com/oxsar/nova/backend/internal/repair"
 	"github.com/oxsar/nova/backend/internal/repo"
@@ -110,6 +111,9 @@ func run() error {
 	transportSvc := fleet.NewTransportService(db, cat, cfg.Game.Speed)
 	fleetH := fleet.NewHandler(transportSvc)
 
+	messageSvc := message.NewService(db)
+	messageH := message.NewHandler(messageSvc)
+
 	// i18n: папка необязательна — если её нет или пустая, i18n просто
 	// пропускается, HTTP-эндпоинты не регистрируются. Это ожидаемо
 	// до первого прогона cmd/tools/import-phrases (§10.3 ТЗ).
@@ -166,6 +170,10 @@ func run() error {
 		pr.Post("/fleet", fleetH.Send)
 		pr.Get("/fleet", fleetH.List)
 		pr.Post("/fleet/{id}/recall", fleetH.Recall)
+
+		pr.Get("/messages", messageH.Inbox)
+		pr.Post("/messages/{id}/read", messageH.MarkRead)
+		pr.Get("/battle-reports/{id}", messageH.GetReport)
 	})
 
 	srv := &http.Server{
