@@ -87,8 +87,8 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 	if in.Mission == 0 {
 		in.Mission = 7 // обратная совместимость
 	}
-	if in.Mission != 7 && in.Mission != 9 && in.Mission != 10 {
-		return Fleet{}, fmt.Errorf("%w: mission %d not supported (7=TRANSPORT, 9=RECYCLING, 10=ATTACK)",
+	if in.Mission != 7 && in.Mission != 9 && in.Mission != 10 && in.Mission != 11 {
+		return Fleet{}, fmt.Errorf("%w: mission %d not supported (7=TRANSPORT, 9=RECYCLING, 10=ATTACK, 11=SPY)",
 			ErrInvalidDispatch, in.Mission)
 	}
 	if err := in.Dst.Validate(); err != nil {

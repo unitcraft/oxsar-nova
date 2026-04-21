@@ -72,3 +72,16 @@ ships:
     cargo: 1000000
     speed: 100
     fuel: 1
+
+  # Espionage Sensor (id=38 в legacy UNIT_ESPIONAGE_SENSOR). Быстрый
+  # и хрупкий probe для SPY-миссий (mission=11). В бою почти бесполезен
+  # (attack=0, shell=1000); rapidfire battleship→probe=5 сносит пачкой.
+  espionage_sensor:
+    id: 38
+    cost: { metal: 0, silicon: 1000, hydrogen: 0 }
+    attack: 0
+    shield: 0
+    shell: 1000
+    cargo: 5
+    speed: 100000000
+    fuel: 1

@@ -23,7 +23,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Shipyard queue              | ✅     | M2 | Корабли и оборона, per-unit time × count.                |
 | Defense                     | ✅     | M2 | В рамках shipyard — общая очередь.                       |
 | Galaxy                      | ✅     | M3 | Repository + GET /api/galaxy/{g}/{s} + GalaxyScreen.      |
-| Fleet / missions            | 🟡     | M4/M5 | TRANSPORT + ATTACK + RECYCLING backend+UI (kind=7,9,10). SPY/COLONIZE — M5. |
+| Fleet / missions            | 🟡     | M5 | TRANSPORT + ATTACK + RECYCLING + SPY (kind=7,9,10,11). COLONIZE — M5. |
 | Battle engine               | 🟡     | M4.4b | +UI отчёта боя (MessagesScreen → BattleReportView). Нет: compose/delete messages, rapidfire из каталога, RECYCLING. |
 | Expedition                  | ⬜     | M5 | ex game/Expedition.class.php 1160 LOC.                   |
 | ExpedPlanetCreator          | ⬜     | M5 | ex ext/ExpedPlanetCreator.class.php.                     |

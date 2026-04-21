@@ -25,17 +25,19 @@ type Service struct {
 func NewService(db repo.Exec) *Service { return &Service{db: db} }
 
 // Message — строка из messages для UI. body — уже готовая строка,
-// battle_report_id nullable (nil — системное/обычное сообщение).
+// battle_report_id/espionage_report_id nullable (nil — обычное
+// сообщение).
 type Message struct {
-	ID             string     `json:"id"`
-	FromUserID     *string    `json:"from_user_id,omitempty"`
-	FromUsername   string     `json:"from_username,omitempty"`
-	Subject        string     `json:"subject"`
-	Body           string     `json:"body"`
-	Folder         int        `json:"folder"`
-	CreatedAt      time.Time  `json:"created_at"`
-	ReadAt         *time.Time `json:"read_at,omitempty"`
-	BattleReportID *string    `json:"battle_report_id,omitempty"`
+	ID                string     `json:"id"`
+	FromUserID        *string    `json:"from_user_id,omitempty"`
+	FromUsername      string     `json:"from_username,omitempty"`
+	Subject           string     `json:"subject"`
+	Body              string     `json:"body"`
+	Folder            int        `json:"folder"`
+	CreatedAt         time.Time  `json:"created_at"`
+	ReadAt            *time.Time `json:"read_at,omitempty"`
+	BattleReportID    *string    `json:"battle_report_id,omitempty"`
+	EspionageReportID *string    `json:"espionage_report_id,omitempty"`
 }
 
 // Inbox возвращает последние N сообщений, новые сверху. Без пагинации
@@ -48,7 +50,7 @@ func (s *Service) Inbox(ctx context.Context, userID string, limit int) ([]Messag
 	rows, err := s.db.Pool().Query(ctx, `
 		SELECT m.id, m.from_user_id, COALESCE(u.username, ''),
 		       m.subject, m.body, m.folder, m.created_at, m.read_at,
-		       m.battle_report_id
+		       m.battle_report_id, m.espionage_report_id
 		FROM messages m
 		LEFT JOIN users u ON u.id = m.from_user_id
 		WHERE m.to_user_id = $1
@@ -65,7 +67,7 @@ func (s *Service) Inbox(ctx context.Context, userID string, limit int) ([]Messag
 		var m Message
 		if err := rows.Scan(&m.ID, &m.FromUserID, &m.FromUsername,
 			&m.Subject, &m.Body, &m.Folder, &m.CreatedAt, &m.ReadAt,
-			&m.BattleReportID); err != nil {
+			&m.BattleReportID, &m.EspionageReportID); err != nil {
 			return nil, err
 		}
 		out = append(out, m)
@@ -108,6 +110,42 @@ func (s *Service) MarkRead(ctx context.Context, userID, messageID string) error 
 	}
 	// Уже прочитано — не ошибка.
 	return nil
+}
+
+// EspionageReport — полный шпионский отчёт из espionage_reports.
+type EspionageReport struct {
+	ID           string          `json:"id"`
+	SpyUserID    *string         `json:"spy_user_id,omitempty"`
+	TargetUserID *string         `json:"target_user_id,omitempty"`
+	PlanetID     *string         `json:"planet_id,omitempty"`
+	Ratio        int             `json:"ratio"`
+	Probes       int             `json:"probes"`
+	At           time.Time       `json:"at"`
+	Report       json.RawMessage `json:"report"`
+}
+
+// GetEspionageReport — доступ открыт шпиону и цели.
+func (s *Service) GetEspionageReport(ctx context.Context, userID, reportID string) (EspionageReport, error) {
+	var r EspionageReport
+	err := s.db.Pool().QueryRow(ctx, `
+		SELECT id, spy_user_id, target_user_id, planet_id,
+		       ratio, probes, at, report
+		FROM espionage_reports
+		WHERE id = $1
+	`, reportID).Scan(&r.ID, &r.SpyUserID, &r.TargetUserID, &r.PlanetID,
+		&r.Ratio, &r.Probes, &r.At, &r.Report)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return EspionageReport{}, ErrMessageNotFound
+		}
+		return EspionageReport{}, fmt.Errorf("get espionage report: %w", err)
+	}
+	isOwn := (r.SpyUserID != nil && *r.SpyUserID == userID) ||
+		(r.TargetUserID != nil && *r.TargetUserID == userID)
+	if !isOwn {
+		return EspionageReport{}, ErrNotOwned
+	}
+	return r, nil
 }
 
 // BattleReport — полный отчёт боя + метаданные из battle_reports.

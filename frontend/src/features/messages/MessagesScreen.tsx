@@ -23,6 +23,29 @@ interface Message {
   created_at: string;
   read_at?: string | null;
   battle_report_id?: string | null;
+  espionage_report_id?: string | null;
+}
+
+interface EspionagePayload {
+  ratio: number;
+  probes: number;
+  metal: number;
+  silicon: number;
+  hydrogen: number;
+  ships?: Record<string, number>;
+  defense?: Record<string, number>;
+  buildings?: Record<string, number>;
+}
+
+interface EspionageReportFull {
+  id: string;
+  spy_user_id?: string | null;
+  target_user_id?: string | null;
+  planet_id?: string | null;
+  ratio: number;
+  probes: number;
+  at: string;
+  report: EspionagePayload;
 }
 
 interface UnitResult {
@@ -157,6 +180,12 @@ function MessageDetail({ message }: { message: Message }) {
       api.get<BattleReportFull>(`/api/battle-reports/${message.battle_report_id}`),
     enabled: !!message.battle_report_id,
   });
+  const espionage = useQuery({
+    queryKey: ['espionage-report', message.espionage_report_id],
+    queryFn: () =>
+      api.get<EspionageReportFull>(`/api/espionage-reports/${message.espionage_report_id}`),
+    enabled: !!message.espionage_report_id,
+  });
 
   return (
     <div>
@@ -182,7 +211,71 @@ function MessageDetail({ message }: { message: Message }) {
           {report.data && <BattleReportView data={report.data} />}
         </>
       )}
+
+      {message.espionage_report_id && (
+        <>
+          <hr />
+          {espionage.isLoading && <p>…</p>}
+          {espionage.error && (
+            <p className="ox-error">
+              {tf('global', 'ERROR', 'Ошибка')}:{' '}
+              {espionage.error instanceof Error ? espionage.error.message : ''}
+            </p>
+          )}
+          {espionage.data && <EspionageReportView data={espionage.data} />}
+        </>
+      )}
     </div>
+  );
+}
+
+function EspionageReportView({ data }: { data: EspionageReportFull }) {
+  const { tf } = useTranslation();
+  const r = data.report;
+  return (
+    <div>
+      <h4>{tf('Main', 'SPY_REPORT', 'Шпионский отчёт')}</h4>
+      <p>
+        <b>{tf('Main', 'SPY_RATIO', 'Соотношение')}:</b> {r.ratio}{' · '}
+        <b>{tf('Main', 'SPY_PROBES', 'Зонды')}:</b> {r.probes}
+      </p>
+      <p>
+        <b>{tf('Main', 'RESOURCES', 'Ресурсы')}:</b>{' '}
+        {r.metal} M / {r.silicon} Si / {r.hydrogen} H
+      </p>
+      {r.ships && (
+        <UnitMapTable title={tf('Main', 'UNITS_SHIPS', 'Корабли')} data={r.ships} />
+      )}
+      {r.defense && (
+        <UnitMapTable title={tf('Main', 'UNITS_DEFENSE', 'Оборона')} data={r.defense} />
+      )}
+      {r.buildings && (
+        <UnitMapTable
+          title={tf('global', 'MENU_CONSTRUCTIONS', 'Здания')}
+          data={r.buildings}
+        />
+      )}
+    </div>
+  );
+}
+
+function UnitMapTable({ title, data }: { title: string; data: Record<string, number> }) {
+  const entries = Object.entries(data);
+  if (entries.length === 0) return null;
+  return (
+    <>
+      <h5>{title}</h5>
+      <table className="ox-table">
+        <tbody>
+          {entries.map(([id, n]) => (
+            <tr key={id}>
+              <td>#{id}</td>
+              <td className="num">{n}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
   );
 }
 

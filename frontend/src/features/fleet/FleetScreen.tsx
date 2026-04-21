@@ -99,6 +99,7 @@ export function FleetScreen({ planet }: { planet: Planet }) {
           <option value={7}>{tf('Main', 'MISSION_TRANSPORT', '7 — Транспорт')}</option>
           <option value={10}>{tf('Main', 'MISSION_ATTACK', '10 — Атака')}</option>
           <option value={9}>{tf('Main', 'MISSION_RECYCLING', '9 — Переработка')}</option>
+          <option value={11}>{tf('Main', 'MISSION_SPY', '11 — Шпионаж')}</option>
         </select>
       </div>
 

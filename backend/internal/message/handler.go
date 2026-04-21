@@ -56,6 +56,31 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetEspionageReport GET /api/espionage-reports/{id}
+func (h *Handler) GetEspionageReport(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing id"))
+		return
+	}
+	rep, err := h.svc.GetEspionageReport(r.Context(), uid, id)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, rep)
+	case errors.Is(err, ErrMessageNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotOwned):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 // GetReport GET /api/battle-reports/{id}
 func (h *Handler) GetReport(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
