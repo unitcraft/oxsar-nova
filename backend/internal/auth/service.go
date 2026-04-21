@@ -57,9 +57,9 @@ type RegisterInput struct {
 // User — минимальная проекция для auth-слоя; полноценная модель живёт в
 // пакете user.
 type User struct {
-	ID       string
-	Username string
-	Email    string
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
 }
 
 // Register создаёт пользователя и стартовую планету (планета — ответственность

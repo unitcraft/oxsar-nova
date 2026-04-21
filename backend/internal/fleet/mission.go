@@ -30,26 +30,26 @@ type Dispatch struct {
 
 // Fleet — флот в полёте (проекция строки БД).
 type Fleet struct {
-	ID           string
-	OwnerUserID  string
-	SrcPlanetID  string
-	DstGalaxy    int
-	DstSystem    int
-	DstPosition  int
-	DstIsMoon    bool
-	Mission      int
-	State        string
-	DepartAt     time.Time
-	ArriveAt     time.Time
-	ReturnAt     *time.Time
-	HoldSeconds  int
-	Carry        Resources
-	SpeedPercent int
-	Ships        map[int]int64
+	ID           string     `json:"id"`
+	OwnerUserID  string     `json:"owner_user_id"`
+	SrcPlanetID  string     `json:"src_planet_id"`
+	DstGalaxy    int        `json:"dst_galaxy"`
+	DstSystem    int        `json:"dst_system"`
+	DstPosition  int        `json:"dst_position"`
+	DstIsMoon    bool       `json:"dst_is_moon"`
+	Mission      int        `json:"mission"`
+	State        string     `json:"state"`
+	DepartAt     time.Time  `json:"depart_at"`
+	ArriveAt     time.Time  `json:"arrive_at"`
+	ReturnAt     *time.Time `json:"return_at"`
+	HoldSeconds  int        `json:"hold_seconds"`
+	Carry        Resources  `json:"carry"`
+	SpeedPercent int        `json:"speed_percent"`
+	Ships        map[int]int64 `json:"ships"`
 }
 
 type Resources struct {
-	Metal    int64
-	Silicon  int64
-	Hydrogen int64
+	Metal    int64 `json:"metal"`
+	Silicon  int64 `json:"silicon"`
+	Hydrogen int64 `json:"hydrogen"`
 }
