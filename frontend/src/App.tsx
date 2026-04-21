@@ -60,6 +60,11 @@ const OfficersScreen = lazy(() =>
     default: m.OfficersScreen,
   })),
 );
+const ScoreScreen = lazy(() =>
+  import('./features/score/ScoreScreen').then((m) => ({
+    default: m.ScoreScreen,
+  })),
+);
 
 type Tab =
   | 'overview'
@@ -75,6 +80,7 @@ type Tab =
   | 'art-market'
   | 'achievements'
   | 'officers'
+  | 'score'
   | 'messages'
   | 'sim';
 
@@ -239,6 +245,12 @@ function AuthenticatedApp() {
         />
         <TabButton
           current={tab}
+          value="score"
+          onClick={setTab}
+          label={t('global', 'MENU_HIGHSCORE') || 'Рейтинг'}
+        />
+        <TabButton
+          current={tab}
           value="sim"
           onClick={setTab}
           label={t('global', 'MENU_SIMULATOR')}
@@ -260,6 +272,7 @@ function AuthenticatedApp() {
         {tab === 'art-market' && <ArtefactMarketScreen />}
         {tab === 'achievements' && <AchievementsScreen />}
         {tab === 'officers' && <OfficersScreen />}
+        {tab === 'score' && <ScoreScreen />}
         {tab === 'sim' && <BattleSimScreen />}
       </Suspense>
     </div>

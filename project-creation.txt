@@ -2878,5 +2878,49 @@ u_points/a_points/e_points присутствовали в users с init.sql, н
 
 
 ================================================================================
+36. SCORE FRONTEND + STATUS.MD SYNC
+================================================================================
+
+Дата: 2026-04-21
+
+Задача: добавить ScoreScreen в UI и привести status.md в соответствие
+с реальным состоянием кода (ряд 🟡 были фактически ✅).
+
+frontend/src/features/score/ScoreScreen.tsx (~110 строк):
+  - Переключатель типа рейтинга: total/b/r/u/a (кнопки).
+  - useQuery к GET /api/highscore?type=... (refetchInterval 60s).
+  - useQuery к GET /api/highscore/me?type=... — показывает
+    «Ваше место: #N» над таблицей.
+  - Таблица топ-100: rank, username, очки. При type=total — дополни-
+    тельные колонки b/r/u.
+  - Пустой список → «Рейтинг пока пуст — начните строить!».
+
+frontend/src/App.tsx:
+  - Добавлен 'score' в тип Tab.
+  - Lazy import ScoreScreen.
+  - TabButton «Рейтинг» (fallback для i18n MENU_HIGHSCORE).
+  - Рендер {tab === 'score' && <ScoreScreen />}.
+
+docs/status.md — синхронизация с реальным кодом:
+  - Battle engine: rapidfire ✅, RECYCLING ✅, debris ✅ (были готовы).
+  - Expedition: 🟡 → ✅ (5 исходов, PvE, отчёты — всё есть).
+  - Rockets: 🟡 → ✅ (Launch + Impact handler — полный).
+  - Artefact Market: 🟡 → ✅ (List/Sell/Buy/Cancel + UI — MVP done).
+  - Score/Highscore: новая строка ✅.
+  - Frontend экраны: 13 → 14.
+
+Статистика итерации 36.
+   frontend/src/features/score/ScoreScreen.tsx: новый файл (~110).
+   frontend/src/App.tsx: +lazy import, +Tab, +TabButton, +render (8 строк).
+   docs/status.md: 5 строк обновлено, 1 добавлена.
+
+Что дальше:
+   - Message compose (M6) — user-to-user сообщения.
+   - Alien AI (M5.2) — наиболее объёмная незапущенная фича.
+   - Рассмотреть вызов RecalcUser из building/research/shipyard
+     completion handlers для real-time обновления очков.
+
+
+================================================================================
 Конец дневника.
 ================================================================================
