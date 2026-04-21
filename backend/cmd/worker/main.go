@@ -19,6 +19,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/repair"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/internal/requirements"
+	"github.com/oxsar/nova/backend/internal/rocket"
 	"github.com/oxsar/nova/backend/internal/storage"
 )
 
@@ -67,6 +68,7 @@ func run() error {
 	planetSvc := planet.NewService(db, planetRepo, cat)
 	reqs := requirements.New(cat)
 	repairSvc := repair.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
+	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed)
 
 	// Регистрация handler-ов.
 	// Один handler на Kind. Domain-пакеты сами не регистрируются —
@@ -85,6 +87,7 @@ func run() error {
 	w.Register(event.KindColonize, transportSvc.ColonizeHandler())
 	w.Register(event.KindDisassemble, repairSvc.DisassembleHandler())
 	w.Register(event.KindRepair, repairSvc.RepairHandler())
+	w.Register(event.KindRocketAttack, rocketSvc.ImpactHandler())
 
 	log.InfoContext(ctx, "worker started")
 	if err := w.Run(ctx); err != nil && err != context.Canceled {

@@ -42,6 +42,9 @@ const MessagesScreen = lazy(() =>
 const MarketScreen = lazy(() =>
   import('./features/market/MarketScreen').then((m) => ({ default: m.MarketScreen })),
 );
+const RocketsScreen = lazy(() =>
+  import('./features/rockets/RocketsScreen').then((m) => ({ default: m.RocketsScreen })),
+);
 
 type Tab =
   | 'overview'
@@ -53,6 +56,7 @@ type Tab =
   | 'galaxy'
   | 'fleet'
   | 'market'
+  | 'rockets'
   | 'messages'
   | 'sim';
 
@@ -187,6 +191,12 @@ function AuthenticatedApp() {
         />
         <TabButton
           current={tab}
+          value="rockets"
+          onClick={setTab}
+          label={t('global', 'MENU_ROCKETS')}
+        />
+        <TabButton
+          current={tab}
           value="artefacts"
           onClick={setTab}
           label={t('global', 'MENU_ARTEFACTS')}
@@ -208,6 +218,7 @@ function AuthenticatedApp() {
         {tab === 'galaxy' && <GalaxyScreen homePlanet={planet} />}
         {tab === 'fleet' && <FleetScreen planet={planet} />}
         {tab === 'market' && <MarketScreen planet={planet} />}
+        {tab === 'rockets' && <RocketsScreen planet={planet} />}
         {tab === 'messages' && <MessagesScreen />}
         {tab === 'artefacts' && <ArtefactsScreen />}
         {tab === 'sim' && <BattleSimScreen />}

@@ -32,6 +32,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/internal/requirements"
 	"github.com/oxsar/nova/backend/internal/research"
+	"github.com/oxsar/nova/backend/internal/rocket"
 	"github.com/oxsar/nova/backend/internal/shipyard"
 	"github.com/oxsar/nova/backend/internal/storage"
 )
@@ -118,6 +119,9 @@ func run() error {
 	marketSvc := market.NewService(db)
 	marketH := market.NewHandler(marketSvc)
 
+	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed)
+	rocketH := rocket.NewHandler(rocketSvc)
+
 	// i18n: папка необязательна — если её нет или пустая, i18n просто
 	// пропускается, HTTP-эндпоинты не регистрируются. Это ожидаемо
 	// до первого прогона cmd/tools/import-phrases (§10.3 ТЗ).
@@ -179,6 +183,9 @@ func run() error {
 
 		pr.Get("/market/rates", marketH.Rates)
 		pr.Post("/planets/{id}/market/exchange", marketH.Exchange)
+
+		pr.Post("/planets/{id}/rockets/launch", rocketH.Launch)
+		pr.Get("/planets/{id}/rockets", rocketH.Stock)
 
 		pr.Get("/messages", messageH.Inbox)
 		pr.Get("/messages/unread-count", messageH.UnreadCount)

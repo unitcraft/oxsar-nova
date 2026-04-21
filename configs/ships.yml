@@ -98,3 +98,17 @@ ships:
     cargo: 7500
     speed: 2500
     fuel: 1000
+
+  # Interplanetary Missile (id=52 в legacy UNIT_INTERPLANETARY_ROCKET).
+  # Не корабль и не участвует в обычном бою (attack=0) — используется
+  # только для kind=16 (rocket attack). Летит прямо, без возврата,
+  # наносит урон defense на цели.
+  interplanetary_missile:
+    id: 52
+    cost: { metal: 12500, silicon: 2500, hydrogen: 10000 }
+    attack: 0
+    shield: 0
+    shell: 1500
+    cargo: 0
+    speed: 12000
+    fuel: 1

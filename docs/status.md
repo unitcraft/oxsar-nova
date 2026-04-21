@@ -27,7 +27,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Battle engine               | 🟡     | M4.4b | +UI отчёта боя (MessagesScreen → BattleReportView). Нет: compose/delete messages, rapidfire из каталога, RECYCLING. |
 | Expedition                  | ⬜     | M5 | ex game/Expedition.class.php 1160 LOC.                   |
 | ExpedPlanetCreator          | ⬜     | M5 | ex ext/ExpedPlanetCreator.class.php.                     |
-| Rockets / stargate          | ⬜     | M5 | Планируется.                                             |
+| Rockets / stargate          | 🟡     | M5 | Interplanetary rockets (kind=16): Launch → Impact. Stargate — позже. |
 | Artefact                    | 🟡     | M5.0 | Apply/Revert/Resync для factor-эффектов (6 артефактов). |
 | Artefact Market (credit)    | ⬜     | M5.1 | ex ext/page/ExtArtefactMarket 322 LOC.                 |
 | Alien AI                    | ⬜     | M5.2 | ex game/AlienAI.class.php 1127 LOC.                    |
@@ -43,7 +43,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Payment integrations        | ⬜     | M9 | v2: WebMoney/Robokassa/A1/2Pay/VK/OK/MailRu.             |
 | Event-loop worker           | ✅     | M3 | +Transport (kind=7 arrive) +Return (kind=20).            |
 | Frontend каркас             | ✅     | M0 | Vite + TS strict + TanStack Query + Zustand.             |
-| Frontend экраны             | ✅     | M3 | +Market — теперь 12 экранов. Unread-badge на Messages.   |
+| Frontend экраны             | ✅     | M3 | +Rockets — теперь 13 экранов.                            |
 | Порт дизайна oxsar2         | 🟡     | —  | CSS-темы перенесены как placeholder, ассеты копируются.  |
 | Порт .tpl-шаблонов          | ⬜     | —  | 134 .tpl (~12600 строк) — эталон разметки UI, §8 ТЗ.     |
 | import-datasheets CLI       | ✅     | M0.1 | construction/ships/requirements/artefacts → YAML.        |
