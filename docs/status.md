@@ -30,7 +30,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Rockets / stargate          | ✅     | M5 | Interplanetary rockets (kind=16): Launch → Impact. Stargate — позже. |
 | Artefact                    | ✅     | M5.0 | Apply/Revert/Resync + delay activation (kind=63). Deactivate bugfix. |
 | Artefact Market (credit)    | ✅     | M5.1 | List/Sell/Buy/Cancel + UI. users.credit как валюта. |
-| Alien AI                    | ⬜     | M5.2 | ex game/AlienAI.class.php 1127 LOC.                    |
+| Alien AI                    | 🟡     | M5.2 | MVP: spawn раз в 6ч (30% per player), 3 тира флота, KindAlienAttack=35, лут 30%. Нет: HALT/GRAB_CREDIT/custom, артефакт-дроп, координаты полёта. |
 | Repair Factory              | ✅     | M4.4c | DISASSEMBLE + REPAIR end-to-end (API + worker + UI). damaged-юниты из боя чинятся целой пачкой. |
 | AutoMsg                     | ✅     | M4.2 | WELCOME/STARTER_GUIDE при регистрации + INACTIVITY_REMINDER (ежедневный воркер, last_seen_at). |
 | Alliance / chat / message   | 🟡     | M6 | messages: inbox + mark-read + compose + delete ✅. Alliance MVP ✅ (create/join/leave/disband). Chat (WebSocket) — M6+. |

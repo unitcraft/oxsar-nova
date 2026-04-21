@@ -14,6 +14,7 @@ import (
 
 	"fmt"
 
+	"github.com/oxsar/nova/backend/internal/alien"
 	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/automsg"
 	"github.com/oxsar/nova/backend/internal/config"
@@ -99,8 +100,27 @@ func run() error {
 	w.Register(event.KindExpedition, transportSvc.ExpeditionHandler())
 	w.Register(event.KindOfficerExpire, officerSvc.ExpireHandler())
 
+	alienSvc := alien.NewService(db, cat)
+	w.Register(event.KindAlienAttack, alienSvc.AttackHandler())
+
 	scoreSvc := score.NewService(db, cat)
 	automsgSvc := automsg.NewService(db)
+
+	// Alien AI: спавн атак раз в 6 часов.
+	go func() {
+		t := time.NewTicker(6 * time.Hour)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				if err := alienSvc.Spawn(ctx); err != nil {
+					log.ErrorContext(ctx, "alien_spawn_failed", slog.String("err", err.Error()))
+				}
+			}
+		}
+	}()
 
 	// Периодический пересчёт очков всех игроков (раз в 5 минут).
 	go func() {
