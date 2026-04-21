@@ -3945,5 +3945,22 @@ docs/simplifications.md:
   - [docker] Auth rate-limiting — ЗАКРЫТО.
 
 ================================================================================
+Итерация N+7 — Achievement wiring fix + Messages soft-delete
+================================================================================
+
+fix(achievements): withAchievement подключён к KindRecycling, KindSpy, KindRocketAttack,
+  KindExpedition, KindResearch, KindBuildFleet — так что RECYCLING/SPY_SUCCESS/
+  ROCKET_LAUNCH/FIRST_EXPEDITION/FIRST_RESEARCH/FIRST_FLEET теперь проверяются
+  в реальном времени после каждого соответствующего события.
+
+feat(messages): soft-delete через deleted_at TIMESTAMPTZ (migration 0027).
+  DELETE → UPDATE SET deleted_at=now(). Inbox + UnreadCount фильтруют IS NULL.
+  Частичный индекс WHERE deleted_at IS NULL для производительности.
+
+docs/simplifications.md:
+  - [Messages] Нет soft-delete — ЗАКРЫТО.
+  - [ACS] Loot пропорционально грузоподъёмности — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================
