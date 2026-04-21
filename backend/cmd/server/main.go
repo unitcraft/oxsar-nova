@@ -159,6 +159,8 @@ func run() error {
 		pr.Get("/planets/{id}/shipyard/inventory", shipyardH.Inventory)
 
 		pr.Post("/planets/{id}/repair/disassemble", repairH.EnqueueDisassemble)
+		pr.Post("/planets/{id}/repair/repair", repairH.EnqueueRepair)
+		pr.Get("/planets/{id}/repair/damaged", repairH.ListDamaged)
 		pr.Get("/planets/{id}/repair/queue", repairH.List)
 
 		pr.Get("/artefacts", artefactH.List)

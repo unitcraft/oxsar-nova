@@ -358,6 +358,66 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/planets/{id}/repair/repair:
+    post:
+      tags: [repair]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Enqueue repair of all damaged ships of one unit_id. Cost scales
+        with remaining shell_percent (more damaged = cheaper to repair,
+        less damaged = more expensive in legacy formula).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unit_id]
+              properties:
+                unit_id: { type: integer }
+      responses:
+        "201":
+          description: queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RepairQueueItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/planets/{id}/repair/damaged:
+    get:
+      tags: [repair]
+      security: [{ bearerAuth: [] }]
+      summary: Damaged ships on a planet (ships.damaged_count > 0)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  damaged:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        unit_id:       { type: integer }
+                        count:         { type: integer, format: int64 }
+                        damaged:       { type: integer, format: int64 }
+                        shell_percent: { type: number }
+
   /api/planets/{id}/repair/queue:
     get:
       tags: [repair]

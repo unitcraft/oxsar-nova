@@ -81,6 +81,7 @@ func run() error {
 	w.Register(event.KindReturn, transportSvc.ReturnHandler())
 	w.Register(event.KindAttackSingle, transportSvc.AttackHandler())
 	w.Register(event.KindDisassemble, repairSvc.DisassembleHandler())
+	w.Register(event.KindRepair, repairSvc.RepairHandler())
 
 	log.InfoContext(ctx, "worker started")
 	if err := w.Run(ctx); err != nil && err != context.Canceled {

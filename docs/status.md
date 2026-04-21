@@ -31,7 +31,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Artefact                    | 🟡     | M5.0 | Apply/Revert/Resync для factor-эффектов (6 артефактов). |
 | Artefact Market (credit)    | ⬜     | M5.1 | ex ext/page/ExtArtefactMarket 322 LOC.                 |
 | Alien AI                    | ⬜     | M5.2 | ex game/AlienAI.class.php 1127 LOC.                    |
-| Repair Factory              | 🟡     | M4.1 | DISASSEMBLE end-to-end (API + worker + UI). REPAIR — после M4 (damaged_count). |
+| Repair Factory              | ✅     | M4.4c | DISASSEMBLE + REPAIR end-to-end (API + worker + UI). damaged-юниты из боя чинятся целой пачкой. |
 | AutoMsg                     | ⬜     | M4.2 | ex game/AutoMsg.class.php 1228 LOC.                    |
 | Alliance / chat / message   | 🟡     | M6 | messages: inbox + mark-read + battle-report view (M4.4b). Compose/folders/alliance — M6. |
 | Market (exchange)           | ⬜     | M6 | ex game/Exchange.class.php 1205 LOC.                     |

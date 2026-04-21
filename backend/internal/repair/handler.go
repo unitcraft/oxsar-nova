@@ -57,6 +57,64 @@ func (h *Handler) EnqueueDisassemble(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type repairRequest struct {
+	UnitID int `json:"unit_id"`
+}
+
+// EnqueueRepair POST /api/planets/{id}/repair/repair — починить
+// damaged-юнитов заданного типа (всех разом). Стоимость считается
+// по legacy-формуле.
+func (h *Handler) EnqueueRepair(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	if planetID == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing planet id"))
+		return
+	}
+	var req repairRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	q, err := h.svc.EnqueueRepair(r.Context(), uid, planetID, req.UnitID)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusCreated, q)
+	case errors.Is(err, ErrUnknownUnit),
+		errors.Is(err, ErrNotEnoughRes),
+		errors.Is(err, ErrNoRepairBuilding),
+		errors.Is(err, ErrNothingToRepair):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// ListDamaged GET /api/planets/{id}/repair/damaged
+func (h *Handler) ListDamaged(w http.ResponseWriter, r *http.Request) {
+	if _, ok := auth.UserID(r.Context()); !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	if planetID == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing planet id"))
+		return
+	}
+	list, err := h.svc.ListDamaged(r.Context(), planetID)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"damaged": list})
+}
+
 // List GET /api/planets/{id}/repair/queue
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if _, ok := auth.UserID(r.Context()); !ok {

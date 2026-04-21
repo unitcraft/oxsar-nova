@@ -5,11 +5,13 @@ import { SHIPS, DEFENSE, nameOf } from '@/api/catalog';
 import { useTranslation } from '@/i18n/i18n';
 import type { Inventory, Planet } from '@/api/types';
 
-// RepairScreen — MVP: только DISASSEMBLE. REPAIR (восстановление
-// повреждённых) придёт после M4, когда появится ships.damaged_count.
+// RepairScreen: две панели — «Ремонт повреждённых» (damaged>0)
+// и «Разбор здоровых юнитов» (disassemble). Очередь одна общая
+// (repair_queue), показывается снизу.
 //
-// Layout — одна таблица, как в shipyard: Юнит / В наличии / К разбору
-// / Кнопка. Для очереди — отдельный список ниже.
+// REPAIR: кнопка «Починить» чинит всех damaged одного unit_id сразу
+// (batch). Стоимость считается на сервере по legacy-формуле,
+// клиенту показываем только доступность (есть ли damaged).
 
 interface RepairQueueItem {
   id: string;
@@ -28,6 +30,13 @@ interface RepairQueueItem {
   status: string;
 }
 
+interface DamagedUnit {
+  unit_id: number;
+  count: number;
+  damaged: number;
+  shell_percent: number;
+}
+
 export function RepairScreen({ planet }: { planet: Planet }) {
   const { t, tf } = useTranslation();
   const qc = useQueryClient();
@@ -41,6 +50,26 @@ export function RepairScreen({ planet }: { planet: Planet }) {
     queryFn: () =>
       api.get<{ queue: RepairQueueItem[] | null }>(`/api/planets/${planet.id}/repair/queue`),
     refetchInterval: 2000,
+  });
+
+  const damaged = useQuery({
+    queryKey: ['repair-damaged', planet.id],
+    queryFn: () =>
+      api.get<{ damaged: DamagedUnit[] | null }>(`/api/planets/${planet.id}/repair/damaged`),
+    refetchInterval: 5000,
+  });
+
+  const repair = useMutation({
+    mutationFn: (unitId: number) =>
+      api.post<RepairQueueItem>(`/api/planets/${planet.id}/repair/repair`, {
+        unit_id: unitId,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['repair-queue', planet.id] });
+      void qc.invalidateQueries({ queryKey: ['repair-damaged', planet.id] });
+      void qc.invalidateQueries({ queryKey: ['shipyard-inventory', planet.id] });
+      void qc.invalidateQueries({ queryKey: ['planets'] });
+    },
   });
 
   const disassemble = useMutation({
@@ -57,12 +86,56 @@ export function RepairScreen({ planet }: { planet: Planet }) {
   });
 
   const list = queue.data?.queue ?? [];
+  const damagedList = damaged.data?.damaged ?? [];
 
   return (
     <section>
       <h2>
         {t('global', 'MENU_REPAIR')} — {planet.name}
       </h2>
+
+      <h3>{tf('Main', 'REPAIR_DAMAGED_HEADER', 'Повреждённые корабли')}</h3>
+      {damagedList.length === 0 ? (
+        <p>{tf('Main', 'REPAIR_NO_DAMAGED', 'Нет повреждённых кораблей.')}</p>
+      ) : (
+        <table className="ox-table">
+          <thead>
+            <tr>
+              <th>{tf('Main', 'UNIT', 'Юнит')}</th>
+              <th>{tf('Main', 'IN_STOCK', 'В наличии')}</th>
+              <th>{tf('Main', 'DAMAGED', 'Повреждено')}</th>
+              <th>{tf('Main', 'SHELL_PERCENT', 'Броня (%)')}</th>
+              <th>{tf('Main', 'ACTION', 'Действие')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {damagedList.map((d) => (
+              <tr key={d.unit_id}>
+                <td>{nameOf(d.unit_id)}</td>
+                <td className="num">{d.count}</td>
+                <td className="num">{d.damaged}</td>
+                <td className="num">{Math.round(d.shell_percent)}</td>
+                <td>
+                  <button
+                    type="button"
+                    disabled={repair.isPending}
+                    onClick={() => repair.mutate(d.unit_id)}
+                  >
+                    {tf('Main', 'REPAIR_FIX', 'Починить')}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {repair.isError && (
+        <div className="ox-error">
+          {repair.error instanceof Error ? repair.error.message : t('global', 'ERROR')}
+        </div>
+      )}
+
+      <h3>{tf('Main', 'REPAIR_DISASSEMBLE_HEADER', 'Разбор здоровых юнитов')}</h3>
       <p>
         {tf(
           'Main',

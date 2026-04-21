@@ -43,6 +43,7 @@ var (
 	ErrNoRepairBuilding  = errors.New("repair: repair_factory required")
 	ErrInvalidCount      = errors.New("repair: invalid count")
 	ErrQueueItemNotFound = errors.New("repair: queue item not found")
+	ErrNothingToRepair   = errors.New("repair: no damaged units")
 )
 
 type Service struct {
@@ -233,6 +234,194 @@ func (s *Service) EnqueueDisassemble(ctx context.Context, userID, planetID strin
 		return nil
 	})
 	return item, err
+}
+
+// EnqueueRepair чинит ВСЕХ damaged-юнитов одного типа (unit_id) на
+// планете. Batch-семантика: списываем required-ресурсы сразу, при
+// finish сбрасываем damaged_count/shell_percent к 0.
+//
+// Формула (legacy ExtRepair::setRepairUnitRequirements):
+//   struct_scale = 0.1 × (100 - shell_percent) / 100
+//   required_{m,s,h} = ceil(base × struct_scale / 10) × 10
+//   required_time   = buildTime(base×0.1, base×0.1, mode)
+//
+// В M4.4c упрощаем: берём усреднённый shell_percent из ships
+// (у нас в M4.1+ сохраняем его на уровне stack'а). Если на стэке
+// есть N damaged-юнитов с общим shell_percent — платим за них по
+// одной формуле, это корректно в рамках нашей модели (1 damaged на
+// stack — см. commitDamage в battle/engine.go).
+//
+// Defense repair не поддерживается: legacy-таблица defense не
+// хранит damaged. Если защита разрушена — её строят заново через
+// shipyard.
+func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, unitID int) (QueueItem, error) {
+	_, baseCost, isDefense, ok := s.lookupUnit(unitID)
+	if !ok {
+		return QueueItem{}, ErrUnknownUnit
+	}
+	if isDefense {
+		// Защита в M4.4c не чинится.
+		return QueueItem{}, ErrUnknownUnit
+	}
+
+	p, err := s.planets.Get(ctx, planetID)
+	if err != nil {
+		return QueueItem{}, err
+	}
+	if p.UserID != userID {
+		return QueueItem{}, ErrPlanetOwnership
+	}
+
+	var item QueueItem
+	err = s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// repair_factory >= 1.
+		repairSpec, hasRepair := s.catalog.Buildings.Buildings["repair_factory"]
+		if !hasRepair {
+			return ErrNoRepairBuilding
+		}
+		var repairLvl int
+		err := tx.QueryRow(ctx,
+			`SELECT level FROM buildings WHERE planet_id=$1 AND unit_id=$2`,
+			planetID, repairSpec.ID,
+		).Scan(&repairLvl)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("repair_factory level: %w", err)
+		}
+		if repairLvl < 1 {
+			return ErrNoRepairBuilding
+		}
+
+		// Берём текущий damaged_count + shell_percent из ships FOR UPDATE.
+		var damaged int64
+		var shellPct float64
+		err = tx.QueryRow(ctx, `
+			SELECT damaged_count, shell_percent
+			FROM ships WHERE planet_id=$1 AND unit_id=$2
+			FOR UPDATE
+		`, planetID, unitID).Scan(&damaged, &shellPct)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrNothingToRepair
+			}
+			return fmt.Errorf("read ships: %w", err)
+		}
+		if damaged <= 0 {
+			return ErrNothingToRepair
+		}
+		if shellPct < 0 {
+			shellPct = 0
+		}
+		if shellPct > 100 {
+			shellPct = 100
+		}
+
+		// Формула стоимости ремонта.
+		structScale := 0.1 * (100.0 - shellPct) / 100.0
+		reqPerUnit := config.ResCost{
+			Metal:    ceil10(float64(baseCost.Metal) * structScale),
+			Silicon:  ceil10(float64(baseCost.Silicon) * structScale),
+			Hydrogen: ceil10(float64(baseCost.Hydrogen) * structScale),
+		}
+		totalReq := multiplyCost(reqPerUnit, damaged)
+
+		if int64(p.Metal) < totalReq.Metal ||
+			int64(p.Silicon) < totalReq.Silicon ||
+			int64(p.Hydrogen) < totalReq.Hydrogen {
+			return ErrNotEnoughRes
+		}
+
+		// Списываем ресурсы (юнитов НЕ снимаем — они остаются в стоке,
+		// просто с damaged_count).
+		if _, err := tx.Exec(ctx, `
+			UPDATE planets
+			SET metal=metal-$1, silicon=silicon-$2, hydrogen=hydrogen-$3
+			WHERE id=$4
+		`, totalReq.Metal, totalReq.Silicon, totalReq.Hydrogen, planetID); err != nil {
+			return fmt.Errorf("charge res: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO res_log (user_id, planet_id, reason, delta_metal, delta_silicon, delta_hydrogen)
+			VALUES ($1, $2, 'repair_cost', $3, $4, $5)
+		`, userID, planetID, -totalReq.Metal, -totalReq.Silicon, -totalReq.Hydrogen); err != nil {
+			return fmt.Errorf("res_log: %w", err)
+		}
+
+		// Время. То же, что для disassemble: buildTime(base×0.1, base×0.1).
+		perUnit := economy.BuildDuration(1,
+			economy.Cost{
+				Metal:    int64(math.Round(float64(baseCost.Metal) * 0.1)),
+				Silicon:  int64(math.Round(float64(baseCost.Silicon) * 0.1)),
+				Hydrogen: 0,
+			},
+			repairLvl, 0, s.gameSpd)
+		perUnitSec := int(math.Max(1, math.Round(perUnit.Seconds())))
+		totalDur := time.Duration(perUnitSec) * time.Duration(damaged) * time.Second
+		start := time.Now().UTC()
+		end := start.Add(totalDur)
+
+		id := ids.New()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO repair_queue
+				(id, planet_id, user_id, unit_id, is_defense, mode, count,
+				 return_metal, return_silicon, return_hydrogen,
+				 per_unit_seconds, start_at, end_at, status)
+			VALUES ($1, $2, $3, $4, false, 'repair', $5, 0, 0, 0, $6, $7, $8, 'running')
+		`, id, planetID, userID, unitID, damaged, perUnitSec, start, end); err != nil {
+			return fmt.Errorf("insert queue: %w", err)
+		}
+
+		payload, _ := json.Marshal(map[string]any{
+			"queue_id": id,
+			"mode":     "repair",
+		})
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
+			VALUES ($1, $2, $3, $4, 'wait', $5, $6)
+		`, ids.New(), userID, planetID, event.KindRepair, end, payload); err != nil {
+			return fmt.Errorf("insert event: %w", err)
+		}
+
+		item = QueueItem{
+			ID: id, PlanetID: planetID, UserID: userID, UnitID: unitID,
+			IsDefense: false, Mode: "repair", Count: damaged,
+			PerUnitSeconds: perUnitSec, StartAt: start, EndAt: end, Status: "running",
+		}
+		return nil
+	})
+	return item, err
+}
+
+// DamagedUnit — один stack кораблей с ненулевым damaged.
+type DamagedUnit struct {
+	UnitID       int     `json:"unit_id"`
+	Count        int64   `json:"count"`
+	Damaged      int64   `json:"damaged"`
+	ShellPercent float64 `json:"shell_percent"`
+}
+
+// ListDamaged возвращает всех damaged-юнитов на планете (ships
+// table, damaged_count > 0). Используется UI репейр-экрана, чтобы
+// показать что можно чинить.
+func (s *Service) ListDamaged(ctx context.Context, planetID string) ([]DamagedUnit, error) {
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT unit_id, count, damaged_count, shell_percent
+		FROM ships
+		WHERE planet_id = $1 AND damaged_count > 0
+		ORDER BY unit_id
+	`, planetID)
+	if err != nil {
+		return nil, fmt.Errorf("list damaged: %w", err)
+	}
+	defer rows.Close()
+	var out []DamagedUnit
+	for rows.Next() {
+		var u DamagedUnit
+		if err := rows.Scan(&u.UnitID, &u.Count, &u.Damaged, &u.ShellPercent); err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
 }
 
 // List возвращает активные задания на планете.
