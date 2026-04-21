@@ -36,6 +36,7 @@ type sendRequest struct {
 	SpeedPercent int           `json:"speed_percent"`
 	Mission      int           `json:"mission"`      // 7=TRANSPORT, 10=ATTACK, 12=ACS, …
 	ACSGroupID   string        `json:"acs_group_id"` // только для mission=12; пусто → создать группу
+	ColonyName   string        `json:"colony_name"`  // только для mission=8; пусто → «Colony»
 }
 
 // Send POST /api/fleet
@@ -62,6 +63,7 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		Dst:          req.Dst,
 		Mission:      req.Mission,
 		ACSGroupID:   req.ACSGroupID,
+		ColonyName:   req.ColonyName,
 		Ships:        req.Ships,
 		CarryMetal:   req.CarryMetal,
 		CarrySilicon: req.CarrySilicon,

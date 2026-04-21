@@ -127,14 +127,10 @@
   `readOwnerResearch`. Counter-espionage: `min(defTotal/10, probes)` roll,
   при перехвате всех probes флот уничтожается (commit 306bbaa).
 
-### [COLONIZE] Нет выбора имени / размера планеты по позиции
-- **Где**: `fleet/colonize.go`.
-- **Что**: имя hardcoded «Colony», diameter 12800..14800 без учёта
-  position (в OGame ближе к звезде меньше).
-- **Почему**: MVP-подход.
-- **Как чинить**: добавить field `name` в TransportInput + табличку
-  «position → diameter-range».
-- **Приоритет**: L.
+### [COLONIZE] Имя и размер планеты по позиции — ЗАКРЫТО
+- Закрыто: `colony_name` в TransportInput/sendRequest/transportPayload.
+  UI: поле ввода при mission=8. `positionDiameter(pos, r)`: pos 1-3 → 6000-10000,
+  pos 4-12 → 10000-15000, pos 13-15 → 12000-17000. Дефолт имени «Colony».
 
 ### [EXPEDITION] Детерминирована по seed от fleetID
 - **Где**: `fleet/expedition.go`.

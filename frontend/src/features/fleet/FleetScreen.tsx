@@ -48,6 +48,7 @@ export function FleetScreen({ planet }: { planet: Planet }) {
   // смысл только для TRANSPORT, для остальных миссий клиентский
   // форм-стейт игнорируется (send.mutate обнуляет их ниже).
   const [mission, setMission] = useState(7);
+  const [colonyName, setColonyName] = useState('');
 
   const send = useMutation({
     mutationFn: () => {
@@ -71,6 +72,7 @@ export function FleetScreen({ planet }: { planet: Planet }) {
         carry_hydrogen: carryH,
         speed_percent: speed,
         mission,
+        colony_name: mission === 8 ? colonyName : undefined,
       });
     },
     onSuccess: () => {
@@ -146,6 +148,22 @@ export function FleetScreen({ planet }: { planet: Planet }) {
           ))}
         </tbody>
       </table>
+
+      {mission === 8 && (
+        <div style={{ marginBottom: 12 }}>
+          <label>
+            {tf('Main', 'COLONY_NAME', 'Название колонии')}:{' '}
+            <input
+              type="text"
+              value={colonyName}
+              onChange={(e) => setColonyName(e.target.value)}
+              placeholder={tf('Main', 'COLONY_NAME_PLACEHOLDER', 'Colony')}
+              maxLength={40}
+              style={{ width: 200 }}
+            />
+          </label>
+        </div>
+      )}
 
       {(mission === 7 || mission === 8) && (
         <>
