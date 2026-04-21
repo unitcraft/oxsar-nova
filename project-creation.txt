@@ -3848,5 +3848,25 @@ docs/simplifications.md:
   - [Achievements] Lazy-check — ЗАКРЫТО.
 
 ================================================================================
+Итерация N+2 — Alien GRAB_CREDIT/GIFT_CREDIT + prod frontend Dockerfile
+================================================================================
+
+feat(deploy): Dockerfile.frontend-prod (multi-stage: node builder + nginx:1.27-alpine).
+  nginx.frontend.conf — SPA fallback, /api proxy, /api/chat/ WS proxy, gzip,
+  long-cache для ассетов с хешами. docker-compose.prod.yml — prod overlay поверх dev.
+
+feat(alien): applyGrabCredit/applyGiftCredit в AttackHandler:
+  - При победе инопланетян: берётся 0.08–0.1% кредитов (если >100000).
+    Константы из AlienAI.class.php: MIN_PERCENT=0.08, MAX_PERCENT=0.10, MIN_CREDIT=100000.
+  - При победе защитника: дарится 5–10% кредитов (max 500).
+    Константы: GIFT_MIN_PERCENT=5%, GIFT_MAX_PERCENT=10%, MAX_GIFT=500.
+  - Сообщение защитнику дополнено суммой grab/gift.
+
+docs/simplifications.md:
+  - [docker] prod frontend Dockerfile — ЗАКРЫТО.
+  - [Alien AI] GRAB_CREDIT/GIFT_CREDIT — ЗАКРЫТО.
+  - [Alien AI] HALT multi-step — понижен до L-приоритета.
+
+================================================================================
 Конец дневника.
 ================================================================================
