@@ -500,14 +500,15 @@
   approve/reject эндпоинты.
 - **Приоритет**: M — для серьёзного PvP это важно.
 
-### [Alien AI] MVP без координат полёта и артефакт-дропа
+### [Alien AI] Без HALT/GRAB_CREDIT/custom events (частично закрыт)
 - **Где**: `internal/alien/alien.go`.
-- **Что**: нет реального полёта (атака телепортируется), нет HALT/GRAB_CREDIT/custom
-  events (33,34,36,37,38), нет дропа артефакта после боя.
-- **Почему**: полный AlienAI.class.php = 1127 строк PHP с комплексной конечным
-  автоматом. MVP достаточен для PvE-угрозы.
+- **Что**: ✅ координаты полёта добавлены (home galaxy=99/sys=500/pos=8, `alienDistance`+`alienFlightDuration`).
+  ✅ artefact drop 20% — реализован. Остаётся: нет HALT/GRAB_CREDIT/custom events (33,34,36,37,38),
+  нет alien_fleets таблицы с детальным маршрутом (атака материализуется через fire_at).
+- **Почему**: полный AlienAI.class.php = 1127 строк PHP. HALT/GRAB_CREDIT требуют новых event kind'ов
+  и сложного конечного автомата.
 - **Как чинить**: добавить alien_fleets таблицу с координатами, event ALIEN_FLY=33
-  → HOLDING=34 → ATTACK=35 → RETURN cycle. Дроп артефакта — через artefact.UnlockRandom.
+  → HOLDING=34 → ATTACK=35 → RETURN cycle.
 - **Приоритет**: M.
 
 ### [Tutorial] Тексты шагов хардкод на русском
