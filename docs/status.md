@@ -33,9 +33,9 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Alien AI                    | ⬜     | M5.2 | ex game/AlienAI.class.php 1127 LOC.                    |
 | Repair Factory              | ✅     | M4.4c | DISASSEMBLE + REPAIR end-to-end (API + worker + UI). damaged-юниты из боя чинятся целой пачкой. |
 | AutoMsg                     | 🟡     | M4.2 | WELCOME/STARTER_GUIDE при регистрации, идемпотентно, {{var}}-шаблоны. Scheduled сообщения — позже. |
-| Alliance / chat / message   | 🟡     | M6 | messages: inbox + mark-read + battle-report view (M4.4b). Compose/folders/alliance — M6. |
+| Alliance / chat / message   | 🟡     | M6 | messages: inbox + mark-read + compose + delete ✅. Alliance MVP ✅ (create/join/leave/disband). Chat (WebSocket) — M6+. |
 | Market (exchange)           | 🟡     | M6 | MVP: M↔Si↔H по фиксированным курсам (1:2:4) × users.exchange_rate. Order-book / офферы — позже. |
-| Officers                    | 🟡     | M7 | 4 officer (ADMIRAL/GEOLOGIST/ENGINEER/MERCHANT), Activate→Expire через event kind=62, factor-поля. |
+| Officers                    | ✅     | M7 | 4 officer (ADMIRAL/GEOLOGIST/ENGINEER/MERCHANT), Activate→Expire через event kind=62, factor-поля. |
 | Achievements                | 🟡     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), lazy-check при GET. Идемпотентно. |
 | Tutorial                    | ⬜     | M7 | ex ext/page/ExtTutorial + game-классы.                   |
 | Simulator UI                | ⬜     | M7.1 | ex ext/page/ExtSimulator 749 LOC.                      |

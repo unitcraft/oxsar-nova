@@ -60,6 +60,11 @@ const ScoreScreen = lazy(() =>
     default: m.ScoreScreen,
   })),
 );
+const AllianceScreen = lazy(() =>
+  import('./features/alliance/AllianceScreen').then((m) => ({
+    default: m.AllianceScreen,
+  })),
+);
 
 type Tab =
   | 'overview'
@@ -76,6 +81,7 @@ type Tab =
   | 'officers'
   | 'score'
   | 'messages'
+  | 'alliance'
   | 'sim';
 
 export function App() {
@@ -239,6 +245,12 @@ function AuthenticatedApp() {
         />
         <TabButton
           current={tab}
+          value="alliance"
+          onClick={setTab}
+          label={t('global', 'MENU_ALLIANCE') || 'Альянс'}
+        />
+        <TabButton
+          current={tab}
           value="sim"
           onClick={setTab}
           label={t('global', 'MENU_SIMULATOR')}
@@ -261,6 +273,7 @@ function AuthenticatedApp() {
 
         {tab === 'officers' && <OfficersScreen />}
         {tab === 'score' && <ScoreScreen />}
+        {tab === 'alliance' && <AllianceScreen />}
         {tab === 'sim' && <BattleSimScreen />}
       </Suspense>
     </div>

@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/oxsar/nova/backend/internal/achievement"
+	"github.com/oxsar/nova/backend/internal/alliance"
 	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/artmarket"
 	"github.com/oxsar/nova/backend/internal/auth"
@@ -143,6 +144,9 @@ func run() error {
 	scoreSvc := score.NewService(db, cat)
 	scoreH := score.NewHandler(scoreSvc)
 
+	allianceSvc := alliance.NewService(db)
+	allianceH := alliance.NewHandler(allianceSvc)
+
 	// i18n: папка необязательна — если её нет или пустая, i18n просто
 	// пропускается, HTTP-эндпоинты не регистрируются. Это ожидаемо
 	// до первого прогона cmd/tools/import-phrases (§10.3 ТЗ).
@@ -221,6 +225,14 @@ func run() error {
 
 		pr.Get("/highscore", scoreH.Highscore)
 		pr.Get("/highscore/me", scoreH.MyRank)
+
+		pr.Get("/alliances", allianceH.List)
+		pr.Get("/alliances/me", allianceH.My)
+		pr.Get("/alliances/{id}", allianceH.Get)
+		pr.Post("/alliances", allianceH.Create)
+		pr.Post("/alliances/{id}/join", allianceH.Join)
+		pr.Post("/alliances/leave", allianceH.Leave)
+		pr.Delete("/alliances/{id}", allianceH.Disband)
 
 		pr.Get("/messages", messageH.Inbox)
 		pr.Post("/messages", messageH.Compose)
