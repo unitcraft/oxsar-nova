@@ -94,6 +94,16 @@ buildings:
     cost_factor: 2.0
     time_base_seconds: 180
 
+  # Ракетная шахта (legacy UNIT_MISSILE_SILO=13).
+  # max_rockets = level × rocket_capacity_per_level (legacy: level × 10).
+  # Используется rocket/service.go для проверки запаса.
+  missile_silo:
+    id: 13
+    cost_base:   { metal: 20000, silicon: 20000, hydrogen: 1000 }
+    cost_factor: 2.0
+    time_base_seconds: 360
+    rocket_capacity_per_level: 10
+
   # Ремонтная фабрика (legacy UNIT_REPAIR_FACTORY=100, na_construction id=100).
   # Стоимость 800/400/200 с удвоением уровня, время ~30 * 1.6^level.
   # Используется disassemble/repair-очередью (backend/internal/repair).

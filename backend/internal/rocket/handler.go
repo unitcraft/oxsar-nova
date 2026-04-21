@@ -47,7 +47,8 @@ func (h *Handler) Launch(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, r, http.StatusCreated, res)
 	case errors.Is(err, ErrInvalidInput),
 		errors.Is(err, ErrNoRockets),
-		errors.Is(err, ErrTargetNotFound):
+		errors.Is(err, ErrTargetNotFound),
+		errors.Is(err, ErrSiloLimit):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	case errors.Is(err, ErrPlanetOwnership):
 		httpx.WriteError(w, r, httpx.ErrForbidden)

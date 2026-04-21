@@ -171,13 +171,13 @@
   в payload как `target_unit_id`. `ImpactHandler`: если != 0, весь урон идёт сначала
   в этот стек, overflow → остальным пропорционально.
 
-### [Rockets] Нет silo-limit
-- **Где**: `internal/rocket/service.go::Launch`.
-- **Что**: в legacy `max_rockets = silo.level × 10`; у нас этого
-  ограничения нет (limit только при производстве в shipyard).
-- **Почему**: нет здания `missile_silo` в каталоге.
-- **Как чинить**: добавить silo в buildings.yml + проверку.
-- **Приоритет**: L.
+### [Rockets] Нет silo-limit — ЗАКРЫТО
+- Закрыто: `missile_silo` (id=13) добавлен в `configs/buildings.yml`
+  (`rocket_capacity_per_level: 10`). `BuildingSpec` получил поле
+  `RocketCapacityPerLevel`. `Launch` проверяет `count <= siloLevel × cap`;
+  при нарушении — `ErrSiloLimit` → HTTP 400. Если шахта не построена
+  (`siloLevel=0`) — лимит не применяется (обратная совместимость для
+  стартовых планет без шахты).
 
 ---
 
