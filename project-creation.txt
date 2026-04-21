@@ -3579,5 +3579,25 @@ docs/simplifications.md: обновлён [Alien AI] — координаты п
 docs/status.md: Alien AI — добавлена координаты полёта ✅.
 
 ================================================================================
+Итерация 55 — test(score,httpx): unit-тесты чистых функций
+================================================================================
+
+backend/internal/score/service_test.go (новый):
+  - TestColumnFor: все варианты (b/r/u/a/total/empty/unknown).
+  - TestRoundPts: граничные значения округления до 2 знаков.
+  - TestScoreConstants: проверка коэффициентов kBuild/kResearch/kUnit
+    из legacy oxsar2 (ADR-гард).
+
+backend/internal/httpx/response_test.go (новый):
+  - TestErrorError: Error.Error() формат "code: message".
+  - TestWrap: поля Status/Code/Message у обёрнутой ошибки.
+  - TestWriteJSON_SetsContentType: Content-Type + status code.
+  - TestWriteJSON_NilBodyNoContent: nil value → пустое тело.
+  - TestWriteError_KnownError: 400 + JSON body с code.
+  - TestWriteError_UnknownError: 500 для ErrInternal.
+  - TestSentinelErrors_UniqueStatus: все sentinel ошибки не нулевые.
+  Покрытие httpx: 0% → 27%.
+
+================================================================================
 Конец дневника.
 ================================================================================
