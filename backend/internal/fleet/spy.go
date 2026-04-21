@@ -13,10 +13,10 @@
 //     Цели — уведомление «вас шпионили ratio=N» (без деталей).
 //  6. fleet.state='returning'.
 //
-// Упрощения M5.SPY:
-//   * research-уровни (ratio>=8) не разглашаются.
-//   * нет counter-espionage (target defense не сбивает probes).
-//   * один report на одну миссию.
+// Counter-espionage: если цель имеет defense, часть зондов может быть
+// уничтожена. Если все зонды сбиты — шпион получает уведомление
+// «перехвачен» и флот уничтожается (без возврата).
+// Research (ratio>=8) показывает уровни исследований цели.
 package fleet
 
 import (
@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 
 	"github.com/jackc/pgx/v5"
 
@@ -102,6 +103,33 @@ func (s *TransportService) SpyHandler() event.Handler {
 			return fmt.Errorf("spy: find target: %w", err)
 		}
 
+		// Counter-espionage: defense on target planet may intercept probes.
+		// maxInterceptable = min(total_defense_count / 10, probes), rounded down.
+		var defTotal int64
+		_ = tx.QueryRow(ctx,
+			`SELECT COALESCE(SUM(count), 0) FROM defense WHERE planet_id=$1`, planetID,
+		).Scan(&defTotal)
+		maxInterceptable := int(defTotal) / 10
+		if maxInterceptable > probes {
+			maxInterceptable = probes
+		}
+		if maxInterceptable > 0 {
+			intercepted := rand.IntN(maxInterceptable + 1)
+			probes -= intercepted
+			if probes <= 0 {
+				// All probes destroyed — fleet annihilated.
+				notifSubj := fmt.Sprintf("Зонды перехвачены %d:%d:%d", g, sys, pos)
+				notifBody := fmt.Sprintf("Все %d зонд(ов) уничтожены обороной цели. Флот потерян.", intercepted)
+				_, _ = tx.Exec(ctx, `
+					INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
+					VALUES ($1, $2, $3, 4, $4, $5)
+				`, ids.New(), spyUserID, targetUserID, notifSubj, notifBody)
+				_, uerr := tx.Exec(ctx,
+					`DELETE FROM fleets WHERE id=$1`, pl.FleetID)
+				return uerr
+			}
+		}
+
 		// Spy-tech обеих сторон.
 		spySelf := readSpyLevel(ctx, tx, spyUserID)
 		spyTarget := readSpyLevel(ctx, tx, targetUserID)
@@ -167,18 +195,19 @@ func readSpyLevel(ctx context.Context, tx pgx.Tx, userID string) int {
 }
 
 type espionageReport struct {
-	Ratio     int              `json:"ratio"`
-	Probes    int              `json:"probes"`
-	Metal     int64            `json:"metal"`
-	Silicon   int64            `json:"silicon"`
-	Hydrogen  int64            `json:"hydrogen"`
-	Ships     map[int]int64    `json:"ships,omitempty"`
-	Defense   map[int]int64    `json:"defense,omitempty"`
-	Buildings map[int]int      `json:"buildings,omitempty"`
+	Ratio     int           `json:"ratio"`
+	Probes    int           `json:"probes"`
+	Metal     int64         `json:"metal"`
+	Silicon   int64         `json:"silicon"`
+	Hydrogen  int64         `json:"hydrogen"`
+	Ships     map[int]int64 `json:"ships,omitempty"`
+	Defense   map[int]int64 `json:"defense,omitempty"`
+	Buildings map[int]int   `json:"buildings,omitempty"`
+	Research  map[int]int   `json:"research,omitempty"`
 }
 
 // buildEspionageReport собирает report по ratio: ресурсы всегда,
-// ships от 2, defense от 4, buildings от 6.
+// ships от 2, defense от 4, buildings от 6, research от 8.
 func buildEspionageReport(ctx context.Context, tx pgx.Tx, planetID string,
 	ratio int, m, s, h int64, _cat any) espionageReport {
 	rep := espionageReport{
@@ -195,6 +224,9 @@ func buildEspionageReport(ctx context.Context, tx pgx.Tx, planetID string,
 	}
 	if ratio >= 6 {
 		rep.Buildings = readPlanetLevels(ctx, tx, planetID)
+	}
+	if ratio >= 8 {
+		rep.Research = readOwnerResearch(ctx, tx, planetID)
 	}
 	return rep
 }
@@ -222,6 +254,28 @@ func readPlanetLevels(ctx context.Context, tx pgx.Tx, planetID string) map[int]i
 	out := map[int]int{}
 	rows, err := tx.Query(ctx,
 		`SELECT unit_id, level FROM buildings WHERE planet_id=$1 AND level > 0`, planetID)
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, lvl int
+		if err := rows.Scan(&id, &lvl); err == nil {
+			out[id] = lvl
+		}
+	}
+	return out
+}
+
+// readOwnerResearch — research levels for the owner of planetID.
+func readOwnerResearch(ctx context.Context, tx pgx.Tx, planetID string) map[int]int {
+	out := map[int]int{}
+	rows, err := tx.Query(ctx, `
+		SELECT r.unit_id, r.level
+		FROM research r
+		JOIN planets p ON p.user_id = r.user_id
+		WHERE p.id = $1 AND r.level > 0
+	`, planetID)
 	if err != nil {
 		return out
 	}
