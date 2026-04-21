@@ -1008,6 +1008,18 @@ global:
   MENU_SUPPORT: Регламент тех поддержки
   MENU_TECHTREE: Технологии
   MENU_TUTORIAL: Туториал
+  TUTORIAL_STEP_1_TITLE: Шахта металла
+  TUTORIAL_STEP_1_DESC: Постройте шахту металла до уровня 1.
+  TUTORIAL_STEP_2_TITLE: Солнечная электростанция
+  TUTORIAL_STEP_2_DESC: Постройте солнечную электростанцию до уровня 1.
+  TUTORIAL_STEP_3_TITLE: Лаборатория исследований
+  TUTORIAL_STEP_3_DESC: Постройте лабораторию исследований до уровня 1.
+  TUTORIAL_STEP_4_TITLE: Компьютерные технологии
+  TUTORIAL_STEP_4_DESC: Исследуйте компьютерные технологии до уровня 1.
+  TUTORIAL_STEP_5_TITLE: Первый корабль
+  TUTORIAL_STEP_5_DESC: Постройте любой корабль.
+  TUTORIAL_STEP_6_TITLE: Экспедиция
+  TUTORIAL_STEP_6_DESC: Отправьте экспедиционный флот (позиция 16 в системе).
   MENU_USER_AGREEMENT: Соглашение
   METAL: Металл
   MOON: Луна

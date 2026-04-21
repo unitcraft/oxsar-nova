@@ -57,10 +57,12 @@ export function TutorialScreen() {
           >
             <span style={{ fontWeight: step.done ? 400 : 600 }}>
               {step.done ? '✓ ' : '○ '}
-              {step.title}
+              {tf('Main', `TUTORIAL_STEP_${step.index}_TITLE`, step.title)}
             </span>
             <br />
-            <small style={{ color: 'var(--ox-muted, #888)' }}>{step.description}</small>
+            <small style={{ color: 'var(--ox-muted, #888)' }}>
+              {tf('Main', `TUTORIAL_STEP_${step.index}_DESC`, step.description)}
+            </small>
           </li>
         ))}
       </ol>

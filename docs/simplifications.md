@@ -408,12 +408,9 @@
 - **Как чинить**: добавить `alien_fleets` таблицу с координатами и конечным автоматом.
 - **Приоритет**: L — текущая механика атаки уже работает и передаёт суть.
 
-### [Tutorial] Тексты шагов хардкод на русском
-- **Где**: `internal/tutorial/service.go::steps`.
-- **Что**: title/description шагов — инлайн на русском, не через i18n-ключи.
-- **Почему**: 6 строк текста, i18n-интеграция добавит ~30 строк boilerplate.
-- **Как чинить**: вынести в `configs/i18n/ru.yml` группу tutorial.steps.*.
-- **Приоритет**: L.
+### [Tutorial] Тексты шагов хардкод на русском — ЗАКРЫТО
+- Закрыто: ключи `TUTORIAL_STEP_N_TITLE` / `TUTORIAL_STEP_N_DESC` добавлены
+  в `configs/i18n/ru.yml`; `TutorialScreen.tsx` использует `tf('Main', key, fallback)`.
 
 ### [Tutorial] Нет наград кроме кредитов — ЗАКРЫТО
 - Закрыто: `stepResources[6][3]` — metal/silicon/hydrogen за каждый шаг.
