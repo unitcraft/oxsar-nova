@@ -3599,5 +3599,22 @@ backend/internal/httpx/response_test.go (новый):
   Покрытие httpx: 0% → 27%.
 
 ================================================================================
+Итерация 56 — test(i18n,planet): Languages/Locale/clampAdd/int64OrDefault
+================================================================================
+
+backend/internal/i18n/i18n_test.go:
+  - +TestLanguages: 2 загруженных языка → len=2.
+  - +TestLocale_KnownLang: Locale(LangRu) → словарь с данными.
+  - +TestLocale_UnknownLangFallsBack: неизвестный язык → fallback к ru.
+  Покрытие i18n: 65.3% → 79.6%.
+
+backend/internal/planet/utils_test.go (новый):
+  - TestInt64OrDefault: nil→default, non-nil→value.
+  - TestFloatOr: nil→default, non-nil→value.
+  - TestClampAdd: 5 случаев (нормальное сложение, clamp к max, clamp к 0,
+    нулевая дельта, без изменений).
+  Покрытие planet: 31.4% → 34.9%.
+
+================================================================================
 Конец дневника.
 ================================================================================

@@ -89,3 +89,44 @@ func TestHas(t *testing.T) {
 		t.Fatalf("Has returned true for missing key")
 	}
 }
+
+func TestLanguages(t *testing.T) {
+	t.Parallel()
+	b := loadTestBundle(t, map[string]string{
+		"ru.yml": "a:\n  X: \"x\"\n",
+		"en.yml": "a:\n  X: \"x\"\n",
+	})
+	langs := b.Languages()
+	if len(langs) != 2 {
+		t.Fatalf("expected 2 languages, got %d: %v", len(langs), langs)
+	}
+}
+
+func TestLocale_KnownLang(t *testing.T) {
+	t.Parallel()
+	b := loadTestBundle(t, map[string]string{
+		"ru.yml": "grp:\n  KEY: \"значение\"\n",
+	})
+	d := b.Locale(LangRu)
+	if d == nil {
+		t.Fatal("Locale(LangRu) returned nil")
+	}
+	if d["grp"]["KEY"] != "значение" {
+		t.Errorf("Locale value = %q, want значение", d["grp"]["KEY"])
+	}
+}
+
+func TestLocale_UnknownLangFallsBack(t *testing.T) {
+	t.Parallel()
+	b := loadTestBundle(t, map[string]string{
+		"ru.yml": "grp:\n  KEY: \"значение\"\n",
+	})
+	// LangEn not loaded → fallback to LangRu.
+	d := b.Locale(LangEn)
+	if d == nil {
+		t.Fatal("Locale fallback returned nil")
+	}
+	if d["grp"]["KEY"] != "значение" {
+		t.Errorf("Locale fallback value = %q, want значение", d["grp"]["KEY"])
+	}
+}
