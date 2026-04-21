@@ -50,6 +50,11 @@ const ArtefactMarketScreen = lazy(() =>
     default: m.ArtefactMarketScreen,
   })),
 );
+const AchievementsScreen = lazy(() =>
+  import('./features/achievements/AchievementsScreen').then((m) => ({
+    default: m.AchievementsScreen,
+  })),
+);
 
 type Tab =
   | 'overview'
@@ -63,6 +68,7 @@ type Tab =
   | 'market'
   | 'rockets'
   | 'art-market'
+  | 'achievements'
   | 'messages'
   | 'sim';
 
@@ -215,6 +221,12 @@ function AuthenticatedApp() {
         />
         <TabButton
           current={tab}
+          value="achievements"
+          onClick={setTab}
+          label={t('global', 'MENU_ACHIEVEMENTS')}
+        />
+        <TabButton
+          current={tab}
           value="sim"
           onClick={setTab}
           label={t('global', 'MENU_SIMULATOR')}
@@ -234,6 +246,7 @@ function AuthenticatedApp() {
         {tab === 'messages' && <MessagesScreen />}
         {tab === 'artefacts' && <ArtefactsScreen />}
         {tab === 'art-market' && <ArtefactMarketScreen />}
+        {tab === 'achievements' && <AchievementsScreen />}
         {tab === 'sim' && <BattleSimScreen />}
       </Suspense>
     </div>
