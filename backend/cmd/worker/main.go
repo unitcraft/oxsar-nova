@@ -128,8 +128,8 @@ func run() error {
 	// чтобы воркер видел весь список в одном месте и было проще
 	// отслеживать, что именно обрабатывается.
 	w.Register(event.KindBuildConstruction, withAchievement(withScore(event.HandleBuildConstruction)))
-	w.Register(event.KindResearch, withScore(event.HandleResearch))
-	w.Register(event.KindBuildFleet, withScore(event.HandleBuildFleet))
+	w.Register(event.KindResearch, withAchievement(withScore(event.HandleResearch)))
+	w.Register(event.KindBuildFleet, withAchievement(withScore(event.HandleBuildFleet)))
 	w.Register(event.KindBuildDefense, withScore(event.HandleBuildFleet))
 	w.Register(event.KindArtefactExpire, withAchievement(artefactSvc.ExpireEvent()))
 	w.Register(event.KindArtefactDelay, artefactSvc.DelayEvent())
@@ -137,13 +137,13 @@ func run() error {
 	w.Register(event.KindReturn, transportSvc.ReturnHandler())
 	w.Register(event.KindAttackSingle, withAchievement(transportSvc.AttackHandler()))
 	w.Register(event.KindAttackAlliance, withAchievement(transportSvc.ACSAttackHandler()))
-	w.Register(event.KindRecycling, transportSvc.RecyclingHandler())
-	w.Register(event.KindSpy, transportSvc.SpyHandler())
+	w.Register(event.KindRecycling, withAchievement(transportSvc.RecyclingHandler()))
+	w.Register(event.KindSpy, withAchievement(transportSvc.SpyHandler()))
 	w.Register(event.KindColonize, withAchievement(transportSvc.ColonizeHandler()))
 	w.Register(event.KindDisassemble, repairSvc.DisassembleHandler())
 	w.Register(event.KindRepair, repairSvc.RepairHandler())
-	w.Register(event.KindRocketAttack, rocketSvc.ImpactHandler())
-	w.Register(event.KindExpedition, transportSvc.ExpeditionHandler())
+	w.Register(event.KindRocketAttack, withAchievement(rocketSvc.ImpactHandler()))
+	w.Register(event.KindExpedition, withAchievement(transportSvc.ExpeditionHandler()))
 	w.Register(event.KindOfficerExpire, officerSvc.ExpireHandler())
 
 	alienSvc := alien.NewService(db, cat)
