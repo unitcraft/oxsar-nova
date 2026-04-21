@@ -978,6 +978,7 @@ global:
   MAXIMUM: Макс.
   MENU_ACHIEVEMENTS: Достижения
   MENU_ALLIANCE: Альянс
+  MENU_ART_MARKET: Рынок артефактов
   MENU_ARTEFACTS: Артефакты
   MENU_BATTLESTATS: Сражения
   MENU_CONSTRUCTIONS: Постройки
@@ -989,8 +990,10 @@ global:
   MENU_FORUMS: Форум
   MENU_FRIENDS: Друзья
   MENU_GALAXY: Галактика
+  MENU_HIGHSCORE: Рейтинг
   MENU_LOGOUT: Выход
   MENU_MAIN: Обзор
+  MENU_MARKET: Рынок
   MENU_MESSAGES: Сообщения
   MENU_NOTEPAD: Блокнот
   MENU_PLANET_OPTIONS: Планета
@@ -998,8 +1001,10 @@ global:
   MENU_RANKING: Статистика
   MENU_RECORDS: Рекорды
   MENU_REFERAL: Рефералы
+  MENU_OFFICERS: Офицеры
   MENU_REPAIR: Ремонт
   MENU_RESEARCH: Исследования
+  MENU_ROCKETS: Ракеты
   MENU_RESOURCE: Сырьё
   MENU_RESTRANSFERS: Переданные ресурсы
   MENU_SEARCH: Поиск
