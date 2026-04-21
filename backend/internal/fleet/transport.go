@@ -87,8 +87,8 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 	if in.Mission == 0 {
 		in.Mission = 7 // обратная совместимость
 	}
-	if in.Mission != 7 && in.Mission != 8 && in.Mission != 9 && in.Mission != 10 && in.Mission != 11 {
-		return Fleet{}, fmt.Errorf("%w: mission %d not supported (7=TRANSPORT, 8=COLONIZE, 9=RECYCLING, 10=ATTACK, 11=SPY)",
+	if in.Mission != 7 && in.Mission != 8 && in.Mission != 9 && in.Mission != 10 && in.Mission != 11 && in.Mission != 15 {
+		return Fleet{}, fmt.Errorf("%w: mission %d not supported (7=TRANSPORT, 8=COLONIZE, 9=RECYCLING, 10=ATTACK, 11=SPY, 15=EXPEDITION)",
 			ErrInvalidDispatch, in.Mission)
 	}
 	if err := in.Dst.Validate(); err != nil {
@@ -145,11 +145,10 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		}
 
 		// Для TRANSPORT/ATTACK/RECYCLING/SPY требуется существующая
-		// цель. Для COLONIZE (mission=8) — НАОБОРОТ, цель должна быть
-		// пустой; handler сам это проверит при прибытии. SPY/RECYCLING
-		// без цели тоже бессмысленны, но здесь их не блокируем: handler
-		// вернёт state='returning' при пустой орбите.
-		if in.Mission != 8 {
+		// цель. Для COLONIZE (mission=8) и EXPEDITION (mission=15)
+		// цель может быть любой: COLONIZE создаёт планету, EXPEDITION
+		// летит в неисследованную зону.
+		if in.Mission != 8 && in.Mission != 15 {
 			if err := s.checkTargetExists(ctx, tx, in.Dst); err != nil {
 				return err
 			}

@@ -192,6 +192,7 @@ func run() error {
 		pr.Post("/messages/{id}/read", messageH.MarkRead)
 		pr.Get("/battle-reports/{id}", messageH.GetReport)
 		pr.Get("/espionage-reports/{id}", messageH.GetEspionageReport)
+		pr.Get("/expedition-reports/{id}", messageH.GetExpeditionReport)
 	})
 
 	srv := &http.Server{

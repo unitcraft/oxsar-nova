@@ -24,6 +24,16 @@ interface Message {
   read_at?: string | null;
   battle_report_id?: string | null;
   espionage_report_id?: string | null;
+  expedition_report_id?: string | null;
+}
+
+interface ExpeditionReportFull {
+  id: string;
+  user_id?: string | null;
+  fleet_id?: string | null;
+  outcome: 'resources' | 'artefact' | 'pirates' | 'loss' | 'nothing';
+  at: string;
+  report: Record<string, unknown>;
 }
 
 interface EspionagePayload {
@@ -186,6 +196,12 @@ function MessageDetail({ message }: { message: Message }) {
       api.get<EspionageReportFull>(`/api/espionage-reports/${message.espionage_report_id}`),
     enabled: !!message.espionage_report_id,
   });
+  const expedition = useQuery({
+    queryKey: ['expedition-report', message.expedition_report_id],
+    queryFn: () =>
+      api.get<ExpeditionReportFull>(`/api/expedition-reports/${message.expedition_report_id}`),
+    enabled: !!message.expedition_report_id,
+  });
 
   return (
     <div>
@@ -225,6 +241,49 @@ function MessageDetail({ message }: { message: Message }) {
           {espionage.data && <EspionageReportView data={espionage.data} />}
         </>
       )}
+
+      {message.expedition_report_id && (
+        <>
+          <hr />
+          {expedition.isLoading && <p>…</p>}
+          {expedition.error && (
+            <p className="ox-error">
+              {tf('global', 'ERROR', 'Ошибка')}:{' '}
+              {expedition.error instanceof Error ? expedition.error.message : ''}
+            </p>
+          )}
+          {expedition.data && <ExpeditionReportView data={expedition.data} />}
+        </>
+      )}
+    </div>
+  );
+}
+
+function ExpeditionReportView({ data }: { data: ExpeditionReportFull }) {
+  const { tf } = useTranslation();
+  const outcomeText: Record<string, string> = {
+    resources: tf('Main', 'EXP_RESOURCES', 'Найдены ресурсы'),
+    artefact: tf('Main', 'EXP_ARTEFACT', 'Найден артефакт'),
+    pirates: tf('Main', 'EXP_PIRATES', 'Столкновение с пиратами'),
+    loss: tf('Main', 'EXP_LOSS', 'Потери'),
+    nothing: tf('Main', 'EXP_NOTHING', 'Ничего не найдено'),
+  };
+  return (
+    <div>
+      <h4>{tf('Main', 'EXPEDITION_REPORT', 'Отчёт экспедиции')}</h4>
+      <p>
+        <b>{tf('Main', 'EXP_OUTCOME', 'Результат')}:</b> {outcomeText[data.outcome] ?? data.outcome}
+      </p>
+      <pre
+        style={{
+          background: 'rgba(255,255,255,0.05)',
+          padding: 8,
+          borderRadius: 4,
+          fontSize: 12,
+        }}
+      >
+        {JSON.stringify(data.report, null, 2)}
+      </pre>
     </div>
   );
 }

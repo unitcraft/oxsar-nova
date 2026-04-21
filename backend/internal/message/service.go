@@ -36,8 +36,9 @@ type Message struct {
 	Folder            int        `json:"folder"`
 	CreatedAt         time.Time  `json:"created_at"`
 	ReadAt            *time.Time `json:"read_at,omitempty"`
-	BattleReportID    *string    `json:"battle_report_id,omitempty"`
-	EspionageReportID *string    `json:"espionage_report_id,omitempty"`
+	BattleReportID     *string    `json:"battle_report_id,omitempty"`
+	EspionageReportID  *string    `json:"espionage_report_id,omitempty"`
+	ExpeditionReportID *string    `json:"expedition_report_id,omitempty"`
 }
 
 // Inbox возвращает последние N сообщений, новые сверху. Без пагинации
@@ -50,7 +51,7 @@ func (s *Service) Inbox(ctx context.Context, userID string, limit int) ([]Messag
 	rows, err := s.db.Pool().Query(ctx, `
 		SELECT m.id, m.from_user_id, COALESCE(u.username, ''),
 		       m.subject, m.body, m.folder, m.created_at, m.read_at,
-		       m.battle_report_id, m.espionage_report_id
+		       m.battle_report_id, m.espionage_report_id, m.expedition_report_id
 		FROM messages m
 		LEFT JOIN users u ON u.id = m.from_user_id
 		WHERE m.to_user_id = $1
@@ -67,7 +68,7 @@ func (s *Service) Inbox(ctx context.Context, userID string, limit int) ([]Messag
 		var m Message
 		if err := rows.Scan(&m.ID, &m.FromUserID, &m.FromUsername,
 			&m.Subject, &m.Body, &m.Folder, &m.CreatedAt, &m.ReadAt,
-			&m.BattleReportID, &m.EspionageReportID); err != nil {
+			&m.BattleReportID, &m.EspionageReportID, &m.ExpeditionReportID); err != nil {
 			return nil, err
 		}
 		out = append(out, m)
@@ -123,6 +124,34 @@ func (s *Service) MarkRead(ctx context.Context, userID, messageID string) error 
 	}
 	// Уже прочитано — не ошибка.
 	return nil
+}
+
+// ExpeditionReport — полный отчёт экспедиции из expedition_reports.
+type ExpeditionReport struct {
+	ID      string          `json:"id"`
+	UserID  *string         `json:"user_id,omitempty"`
+	FleetID *string         `json:"fleet_id,omitempty"`
+	Outcome string          `json:"outcome"`
+	At      time.Time       `json:"at"`
+	Report  json.RawMessage `json:"report"`
+}
+
+func (s *Service) GetExpeditionReport(ctx context.Context, userID, reportID string) (ExpeditionReport, error) {
+	var r ExpeditionReport
+	err := s.db.Pool().QueryRow(ctx, `
+		SELECT id, user_id, fleet_id, outcome, at, report
+		FROM expedition_reports WHERE id = $1
+	`, reportID).Scan(&r.ID, &r.UserID, &r.FleetID, &r.Outcome, &r.At, &r.Report)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ExpeditionReport{}, ErrMessageNotFound
+		}
+		return ExpeditionReport{}, fmt.Errorf("get expedition report: %w", err)
+	}
+	if r.UserID == nil || *r.UserID != userID {
+		return ExpeditionReport{}, ErrNotOwned
+	}
+	return r, nil
 }
 
 // EspionageReport — полный шпионский отчёт из espionage_reports.

@@ -25,7 +25,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Galaxy                      | ✅     | M3 | Repository + GET /api/galaxy/{g}/{s} + GalaxyScreen.      |
 | Fleet / missions            | ✅     | M5 | TRANSPORT + ATTACK + RECYCLING + SPY + COLONIZE (kind=7,8,9,10,11). |
 | Battle engine               | 🟡     | M4.4b | +UI отчёта боя (MessagesScreen → BattleReportView). Нет: compose/delete messages, rapidfire из каталога, RECYCLING. |
-| Expedition                  | ⬜     | M5 | ex game/Expedition.class.php 1160 LOC.                   |
+| Expedition                  | 🟡     | M5 | 5 исходов (resources / artefact / pirates / loss / nothing) по seed от fleet_id. PvE-бой с 5 light_fighter. |
 | ExpedPlanetCreator          | ⬜     | M5 | ex ext/ExpedPlanetCreator.class.php.                     |
 | Rockets / stargate          | 🟡     | M5 | Interplanetary rockets (kind=16): Launch → Impact. Stargate — позже. |
 | Artefact                    | 🟡     | M5.0 | Apply/Revert/Resync для factor-эффектов (6 артефактов). |
