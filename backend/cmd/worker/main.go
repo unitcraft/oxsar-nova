@@ -14,6 +14,8 @@ import (
 
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/oxsar/nova/backend/internal/alien"
 	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/automsg"
@@ -78,14 +80,36 @@ func run() error {
 	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed)
 	officerSvc := officer.NewService(db)
 
+	scoreSvc := score.NewService(db, cat)
+
+	// withScore оборачивает handler: после успеха пересчитывает очки
+	// пользователя события (если UserID задан). Ошибка пересчёта не
+	// прерывает основной handler — только логируется.
+	withScore := func(h event.Handler) event.Handler {
+		return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
+			if err := h(ctx, tx, e); err != nil {
+				return err
+			}
+			if e.UserID == nil {
+				return nil
+			}
+			if err := scoreSvc.RecalcUser(ctx, *e.UserID); err != nil {
+				log.WarnContext(ctx, "score_recalc_failed",
+					slog.String("user_id", *e.UserID),
+					slog.String("err", err.Error()))
+			}
+			return nil
+		}
+	}
+
 	// Регистрация handler-ов.
 	// Один handler на Kind. Domain-пакеты сами не регистрируются —
 	// чтобы воркер видел весь список в одном месте и было проще
 	// отслеживать, что именно обрабатывается.
-	w.Register(event.KindBuildConstruction, event.HandleBuildConstruction)
-	w.Register(event.KindResearch, event.HandleResearch)
-	w.Register(event.KindBuildFleet, event.HandleBuildFleet)
-	w.Register(event.KindBuildDefense, event.HandleBuildFleet)
+	w.Register(event.KindBuildConstruction, withScore(event.HandleBuildConstruction))
+	w.Register(event.KindResearch, withScore(event.HandleResearch))
+	w.Register(event.KindBuildFleet, withScore(event.HandleBuildFleet))
+	w.Register(event.KindBuildDefense, withScore(event.HandleBuildFleet))
 	w.Register(event.KindArtefactExpire, artefactSvc.ExpireEvent())
 	w.Register(event.KindArtefactDelay, artefactSvc.DelayEvent())
 	w.Register(event.KindTransport, transportSvc.ArriveHandler())
@@ -104,7 +128,6 @@ func run() error {
 	alienSvc := alien.NewService(db, cat)
 	w.Register(event.KindAlienAttack, alienSvc.AttackHandler())
 
-	scoreSvc := score.NewService(db, cat)
 	automsgSvc := automsg.NewService(db)
 
 	// Alien AI: спавн атак раз в 6 часов.
