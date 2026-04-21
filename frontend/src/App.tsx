@@ -82,6 +82,12 @@ const ChatScreen = lazy(() =>
   })),
 );
 
+const AdminScreen = lazy(() =>
+  import('./features/admin/AdminScreen').then((m) => ({
+    default: m.AdminScreen,
+  })),
+);
+
 type Tab =
   | 'overview'
   | 'buildings'
@@ -101,7 +107,8 @@ type Tab =
   | 'messages'
   | 'alliance'
   | 'chat'
-  | 'sim';
+  | 'sim'
+  | 'admin';
 
 export function App() {
   const token = useAuthStore((s) => s.accessToken);
@@ -156,7 +163,13 @@ function AuthenticatedApp() {
     queryFn: () => api.get<{ unread: number }>('/api/messages/unread-count'),
     refetchInterval: 15000,
   });
+  const me = useQuery({
+    queryKey: ['me'],
+    queryFn: () => api.get<{ user_id: string; username: string; role: string }>('/api/me'),
+    staleTime: 60000,
+  });
   const unreadCount = unread.data?.unread ?? 0;
+  const isAdmin = me.data?.role === 'admin' || me.data?.role === 'superadmin';
   const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
 
   if (planets.isLoading) return <p>…</p>;
@@ -292,6 +305,9 @@ function AuthenticatedApp() {
           onClick={setTab}
           label={t('global', 'MENU_SIMULATOR')}
         />
+        {isAdmin && (
+          <TabButton current={tab} value="admin" onClick={setTab} label="Admin" />
+        )}
       </div>
 
       <Suspense fallback={<p>…</p>}>
@@ -315,6 +331,7 @@ function AuthenticatedApp() {
         {tab === 'alliance' && <AllianceScreen />}
         {tab === 'chat' && <ChatScreen />}
         {tab === 'sim' && <BattleSimScreen />}
+        {tab === 'admin' && isAdmin && <AdminScreen />}
       </Suspense>
     </div>
   );
