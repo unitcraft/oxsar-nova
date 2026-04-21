@@ -3886,5 +3886,30 @@ docs(simplifications):
   - [Market] Фиксированные курсы — ЗАКРЫТО (не упрощение, order-book есть).
 
 ================================================================================
+Итерация N+4 — Messages folders, Artefact inline sell, Tutorial rewards, Achievements x10
+================================================================================
+
+feat(messages): tab-фильтры папок в inbox (Все/Личные/Бой/Шпионаж/Экспедиции/Система).
+  Фильтрация на клиенте по m.folder. FOLDERS constant + activeFolder state.
+
+feat(artefacts): inline price input вместо window.prompt.
+  sellingID state — открывает форму в строке таблицы. Enter=OK, Escape=Cancel.
+
+feat(tutorial): stepResources[6][3] — metal/silicon/hydrogen за каждый шаг.
+  advanceAndReward зачисляет ресурсы на первую планету (ORDER BY created_at ASC LIMIT 1).
+  Шаг 6: 5000M/3000Si/1000H. Кредиты (+10) сохранены.
+
+feat(achievements): migration 0026 — 10 новых достижений.
+  FIRST_FLEET, FIRST_EXPEDITION, FIRST_RESEARCH, BATTLE_10, FLEET_50,
+  ARTEFACT_MARKET, SPY_SUCCESS, RECYCLING, ROCKET_LAUNCH, SCORE_1000.
+  CheckAll расширен SQL-checks для каждого.
+
+docs/simplifications.md:
+  - [Messages] Folders — ЗАКРЫТО.
+  - [ArtefactMarket] window.prompt — ЗАКРЫТО.
+  - [Tutorial] Нет наград кроме кредитов — ЗАКРЫТО.
+  - [Achievements] Только 5 штук — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================
