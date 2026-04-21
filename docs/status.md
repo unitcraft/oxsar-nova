@@ -32,7 +32,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Artefact Market (credit)    | 🟡     | M5.1 | List/Sell/Buy/Cancel + UI. users.credit как валюта. |
 | Alien AI                    | ⬜     | M5.2 | ex game/AlienAI.class.php 1127 LOC.                    |
 | Repair Factory              | ✅     | M4.4c | DISASSEMBLE + REPAIR end-to-end (API + worker + UI). damaged-юниты из боя чинятся целой пачкой. |
-| AutoMsg                     | ⬜     | M4.2 | ex game/AutoMsg.class.php 1228 LOC.                    |
+| AutoMsg                     | 🟡     | M4.2 | WELCOME/STARTER_GUIDE при регистрации, идемпотентно, {{var}}-шаблоны. Scheduled сообщения — позже. |
 | Alliance / chat / message   | 🟡     | M6 | messages: inbox + mark-read + battle-report view (M4.4b). Compose/folders/alliance — M6. |
 | Market (exchange)           | 🟡     | M6 | MVP: M↔Si↔H по фиксированным курсам (1:2:4) × users.exchange_rate. Order-book / офферы — позже. |
 | Officers                    | 🟡     | M7 | 4 officer (ADMIRAL/GEOLOGIST/ENGINEER/MERCHANT), Activate→Expire через event kind=62, factor-поля. |

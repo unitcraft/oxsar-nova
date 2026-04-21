@@ -20,6 +20,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/artmarket"
 	"github.com/oxsar/nova/backend/internal/auth"
+	"github.com/oxsar/nova/backend/internal/automsg"
 	"github.com/oxsar/nova/backend/internal/battle"
 	"github.com/oxsar/nova/backend/internal/building"
 	"github.com/oxsar/nova/backend/internal/config"
@@ -91,7 +92,11 @@ func run() error {
 	planetH := planet.NewHandler(planetSvc)
 	starter := planet.NewStarter(db)
 
-	authSvc := auth.NewService(db, jwt, starter)
+	// automsg нужен auth (WELCOME/STARTER_GUIDE при регистрации),
+	// поэтому инициализируем до auth.NewService.
+	automsgSvc := automsg.NewService(db)
+
+	authSvc := auth.NewService(db, jwt, starter, automsgSvc)
 	authH := auth.NewHandler(authSvc)
 
 	reqs := requirements.New(cat)

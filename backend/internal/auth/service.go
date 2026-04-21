@@ -29,15 +29,22 @@ type StarterPlanetAssigner interface {
 
 // Service — регистрация и логин.
 type Service struct {
-	db      repo.Exec
-	jwt     *JWTIssuer
-	starter StarterPlanetAssigner
+	db       repo.Exec
+	jwt      *JWTIssuer
+	starter  StarterPlanetAssigner
+	automsg  AutoMsgSender
 }
 
-// NewService. starter может быть nil — тогда стартовую планету не
-// выдаём (полезно для миграционного режима и unit-тестов auth).
-func NewService(db repo.Exec, jwt *JWTIssuer, starter StarterPlanetAssigner) *Service {
-	return &Service{db: db, jwt: jwt, starter: starter}
+// AutoMsgSender — опциональная зависимость для приветственных
+// сообщений. Если nil — Register не отправляет WELCOME/STARTER_GUIDE.
+type AutoMsgSender interface {
+	Send(ctx context.Context, tx pgx.Tx, userID, key string, vars map[string]string) error
+}
+
+// NewService. starter/automsg могут быть nil — тогда соответствующая
+// подфункциональность не выполняется (полезно для unit-тестов auth).
+func NewService(db repo.Exec, jwt *JWTIssuer, starter StarterPlanetAssigner, automsg AutoMsgSender) *Service {
+	return &Service{db: db, jwt: jwt, starter: starter, automsg: automsg}
 }
 
 // RegisterInput — вход регистрации.
@@ -100,10 +107,30 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (User, Tokens,
 	// отдельно. Игрок без планеты — валидное состояние (см. §5.15
 	// vacation-режим и scenarios экспедиций с потерей последней
 	// планеты).
+	var planetName, planetCoords string
 	if s.starter != nil {
-		if _, err := s.starter.Assign(ctx, userID); err != nil {
+		planetID, err := s.starter.Assign(ctx, userID)
+		if err != nil {
 			return User{}, Tokens{}, fmt.Errorf("assign starter planet: %w", err)
 		}
+		// Читаем имя и координаты для WELCOME-сообщения. Не critical —
+		// если запрос упадёт, WELCOME просто не отправится.
+		_ = s.db.Pool().QueryRow(ctx, `
+			SELECT name, galaxy || ':' || system || ':' || position
+			FROM planets WHERE id = $1
+		`, planetID).Scan(&planetName, &planetCoords)
+	}
+
+	// Автомесседжи (WELCOME + STARTER_GUIDE). Отправка вне транзакции
+	// (tx=nil): сбой в message не должен откатывать регистрацию.
+	if s.automsg != nil {
+		vars := map[string]string{
+			"username":    username,
+			"planet_name": planetName,
+			"coords":      planetCoords,
+		}
+		_ = s.automsg.Send(ctx, nil, userID, "WELCOME", vars)
+		_ = s.automsg.Send(ctx, nil, userID, "STARTER_GUIDE", nil)
 	}
 
 	toks, err := s.jwt.Issue(userID)
