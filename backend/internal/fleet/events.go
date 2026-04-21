@@ -13,8 +13,9 @@ import (
 // TransportArrivePayload — payload KindTransport=7. Совпадает с тем,
 // что пишет transport.Send.
 type transportPayload struct {
-	FleetID string           `json:"fleet_id"`
-	Carried map[string]int64 `json:"carried"`
+	FleetID    string           `json:"fleet_id"`
+	Carried    map[string]int64 `json:"carried"`
+	ColonyName string           `json:"colony_name,omitempty"` // только для COLONIZE
 }
 
 // ArriveHandler — event.Handler для KindTransport. В точке прибытия:

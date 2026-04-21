@@ -118,11 +118,18 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 
 		// Создаём планету. diameter/temp по детерминированному seed от
 		// (galaxy, system, position) — одинаковая координата всегда
-		// даёт одинаковые параметры.
+		// даёт одинаковые параметры. Размер зависит от позиции: позиции
+		// 1-3 и 13-15 — меньше; 4-12 — стандарт (как в legacy OGame).
 		r := rng.New(coordsSeed(g, sys, pos))
-		diameter := 12800 + r.IntN(2000)
+		diameter := positionDiameter(pos, r)
 		tempMax := -40 + r.IntN(80)
 		tempMin := tempMax - 40
+
+		// Имя планеты: из payload или «Colony» по умолчанию.
+		colonyName := pl.ColonyName
+		if colonyName == "" {
+			colonyName = "Colony"
+		}
 
 		newPlanetID := ids.New()
 		if _, err := tx.Exec(ctx, `
@@ -130,7 +137,7 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 			                     diameter, used_fields, temperature_min, temperature_max,
 			                     metal, silicon, hydrogen)
 			VALUES ($1, $2, false, $3, $4, $5, $6, $7, 0, $8, $9, $10, $11, $12)
-		`, newPlanetID, ownerUserID, "Colony", g, sys, pos, diameter, tempMin, tempMax,
+		`, newPlanetID, ownerUserID, colonyName, g, sys, pos, diameter, tempMin, tempMax,
 			cm, csil, ch); err != nil {
 			return fmt.Errorf("colonize: insert planet: %w", err)
 		}
@@ -163,8 +170,8 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 
 		// Сообщение игроку.
 		subj := fmt.Sprintf("Основана колония %d:%d:%d", g, sys, pos)
-		body := fmt.Sprintf("Новая планета «Colony» на координатах [%d:%d:%d]. "+
-			"Стартовые ресурсы: %d M / %d Si / %d H.", g, sys, pos, cm, csil, ch)
+		body := fmt.Sprintf("Новая планета «%s» на координатах [%d:%d:%d]. "+
+			"Стартовые ресурсы: %d M / %d Si / %d H.", colonyName, g, sys, pos, cm, csil, ch)
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 			VALUES ($1, $2, NULL, 2, $3, $4)
@@ -205,6 +212,19 @@ func readComputerLevel(ctx context.Context, tx pgx.Tx, userID string) int {
 		return 0
 	}
 	return lvl
+}
+
+// positionDiameter — диаметр планеты по позиции (как в legacy OGame).
+// Позиции 1-3: малые (6000-10000), 4-12: стандарт (10000-15000), 13-15: большие (12000-17000).
+func positionDiameter(pos int, r *rng.R) int {
+	switch {
+	case pos <= 3:
+		return 6000 + r.IntN(4000)
+	case pos >= 13:
+		return 12000 + r.IntN(5000)
+	default:
+		return 10000 + r.IntN(5000)
+	}
 }
 
 // coordsSeed — детерминированный seed от (g, sys, pos). FNV-1a от

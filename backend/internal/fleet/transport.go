@@ -62,6 +62,7 @@ type TransportInput struct {
 	Dst          galaxy.Coords
 	Mission      int   // 7=TRANSPORT, 8=COLONIZE, 9=RECYCLING, 10=ATTACK, 11=SPY, 12=ACS, 15=EXPEDITION
 	ACSGroupID   string // только для mission=12; пусто → создать новую группу
+	ColonyName   string // для mission=8 (COLONIZE); пусто → «Colony»
 	Ships        map[int]int64 // unit_id -> count
 	CarryMetal   int64
 	CarrySilicon int64
@@ -238,10 +239,15 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		// Events: прибытие и возврат.
 		// Для ACS (mission=12): одно событие KindAttackAlliance c acs_group_id в payload.
 		// Все флоты группы используют одинаковый arrive_at; handler читает всю группу.
+		colonyName := in.ColonyName
+		if colonyName == "" {
+			colonyName = "Colony"
+		}
 		payload, _ := json.Marshal(map[string]any{
 			"fleet_id":     fleetID,
 			"carried":      map[string]int64{"metal": in.CarryMetal, "silicon": in.CarrySilicon, "hydrogen": in.CarryHydro},
 			"acs_group_id": acsGroupID,
+			"colony_name":  colonyName,
 		})
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
