@@ -31,14 +31,14 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Artefact                    | ✅     | M5.0 | Apply/Revert/Resync + delay activation (kind=63). Deactivate bugfix. |
 | Artefact Market (credit)    | ✅     | M5.1 | List/Sell/Buy/Cancel + UI. users.credit как валюта. |
 | Alien AI                    | ✅     | M5.2 | spawn раз в 6ч, 3 тира, KindAlienAttack=35, лут 30%, GRAB_CREDIT (0.08-0.1%), GIFT_CREDIT (5-10%, max 500), artefact drop 20%, координаты полёта ✅. Нет: HALT state machine (L). |
-| Repair Factory              | ✅     | M4.4c | DISASSEMBLE + REPAIR end-to-end (API + worker + UI). damaged-юниты из боя чинятся целой пачкой. |
+| Repair Factory              | ✅     | M4.4c | DISASSEMBLE + REPAIR end-to-end (API + worker + UI). damaged-юниты из боя чинятся целой пачкой. Defense repair ✅ (migration 0032, damaged_count+shell_percent в defense). |
 | AutoMsg                     | ✅     | M4.2 | WELCOME/STARTER_GUIDE при регистрации + INACTIVITY_REMINDER (ежедневный воркер, last_seen_at). |
-| Alliance / chat / message   | ✅     | M6 | messages: inbox + mark-read + compose + delete ✅. Alliance MVP ✅ (create/join/leave/disband). Chat WebSocket ✅ (global + alliance, history REST, WS broadcast, REST fallback). |
+| Alliance / chat / message   | ✅     | M6 | messages: inbox + mark-read + compose + delete ✅. Alliance MVP ✅ (create/join/leave/disband, relations NAP/WAR/ALLY с mutual acknowledge, кастомные ранги). Chat WebSocket ✅. |
 | Market (exchange)           | ✅     | M6 | Быстрый обменник (M↔Si↔H по курсам) ✅ + ордерная книга (CreateLot/ListLots/CancelLot/AcceptLot, migration 0022) ✅. |
-| Officers                    | ✅     | M7 | 4 officer (ADMIRAL/GEOLOGIST/ENGINEER/MERCHANT), Activate→Expire через event kind=62, factor-поля. |
+| Officers                    | ✅     | M7 | 4 officer (ADMIRAL/GEOLOGIST/ENGINEER/MERCHANT), Activate→Expire через event kind=62, factor-поля. Group exclusivity: ADMIRAL+ENGINEER взаимоисключают (group_key 'build', migration 0033). |
 | Achievements                | ✅     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), laны                | ✅     | M7 | 6 шагов (mine→solar→lab→computer_tech→ship→expedition), +10 кредитов за шаг, lazy-check. |
 | Simulator UI                | ✅     | M7.1 | BattleSimScreen с реальными боевыми характеристиками из каталога + таблица потерь + multi-run (num_sim 2–20). |
-| Admin panel                 | ✅     | M8 | GET /admin/stats + users list/ban/unban/credit/role. AdminOnly middleware (role=admin/superadmin). |
+| Admin panel                 | ✅     | M8 | GET /admin/stats + users list/ban/unban/credit/role. AutoMsg CMS (GET/PUT /admin/automsgs). AdminOnly middleware. |
 | Payment integrations        | ⬜     | M9 | v2: WebMoney/Robokassa/A1/2Pay/VK/OK/MailRu.             |
 | Event-loop worker           | ✅     | M3 | +Transport (kind=7 arrive) +Return (kind=20).            |
 | Frontend каркас             | ✅     | M0 | Vite + TS strict + TanStack Query + Zustand.             |
