@@ -3626,5 +3626,16 @@ backend/pkg/formula/formula_test.go:
   Покрытие formula: 90.8% → 94.1%.
 
 ================================================================================
+Итерация 58 — test(artefact): battle_bonus/unknown-type/unknown-op/planet-scope
+================================================================================
+
+backend/internal/artefact/effects_test.go:
+  - TestComputeChanges_BattleBonus: → ErrUnsupported.
+  - TestComputeChanges_UnknownType: "totally_unknown" → ошибка.
+  - TestFactorChange_UnknownOp: "multiply" → ошибка.
+  - TestComputeChanges_PlanetScope: factor_planet → scope="planet".
+  computeChanges покрытие: 71.4% → 100%.
+
+================================================================================
 Конец дневника.
 ================================================================================

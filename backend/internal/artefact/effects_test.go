@@ -77,3 +77,56 @@ func TestComputeChanges_UnsupportedType(t *testing.T) {
 		t.Fatalf("expected ErrUnsupported, got %v", err)
 	}
 }
+
+func TestComputeChanges_BattleBonus(t *testing.T) {
+	t.Parallel()
+	spec := config.ArtefactSpec{
+		Effect: config.ArtefactEffect{Type: "battle_bonus"},
+	}
+	if _, err := computeChanges(spec, dirApply); err != ErrUnsupported {
+		t.Fatalf("expected ErrUnsupported for battle_bonus, got %v", err)
+	}
+}
+
+func TestComputeChanges_UnknownType(t *testing.T) {
+	t.Parallel()
+	spec := config.ArtefactSpec{
+		Effect: config.ArtefactEffect{Type: "totally_unknown"},
+	}
+	if _, err := computeChanges(spec, dirApply); err == nil {
+		t.Fatalf("expected error for unknown effect type")
+	}
+}
+
+func TestFactorChange_UnknownOp(t *testing.T) {
+	t.Parallel()
+	spec := config.ArtefactSpec{
+		Effect: config.ArtefactEffect{
+			Type:  "factor_user",
+			Field: "exchange_rate",
+			Op:    "multiply", // unsupported op
+		},
+	}
+	if _, err := computeChanges(spec, dirApply); err == nil {
+		t.Fatalf("expected error for unsupported op")
+	}
+}
+
+func TestComputeChanges_PlanetScope(t *testing.T) {
+	t.Parallel()
+	spec := config.ArtefactSpec{
+		Effect: config.ArtefactEffect{
+			Type:  "factor_planet",
+			Field: "build_factor",
+			Op:    "add",
+			Value: 0.25,
+		},
+	}
+	ch, err := computeChanges(spec, dirApply)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if ch.Scope != "planet" || ch.Field != "build_factor" {
+		t.Errorf("unexpected change: %+v", ch)
+	}
+}
