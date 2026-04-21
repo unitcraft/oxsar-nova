@@ -11,7 +11,6 @@
 //
 // Упрощения (M5 ACS):
 //   - Loot делится поровну по числу выживших флотов (не по грузоподъёмности).
-//   - Один battle_reports-record с первым atacker_user_id (legacy-совместимость).
 package fleet
 
 import (
@@ -292,7 +291,20 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 			}
 		}
 
-		// battle_reports — один record от имени лидера.
+		// battle_reports — один record от имени лидера + acs_participants.
+		type acsParticipant struct {
+			UserID  string `json:"user_id"`
+			FleetID string `json:"fleet_id"`
+		}
+		participants := make([]acsParticipant, 0, len(atkFleets))
+		for _, af := range atkFleets {
+			participants = append(participants, acsParticipant{
+				UserID:  af.info.ownerUserID,
+				FleetID: af.info.id,
+			})
+		}
+		participantsJSON, _ := json.Marshal(participants)
+
 		reportJSON, _ := json.Marshal(report)
 		reportID := ids.New()
 		if _, err := tx.Exec(ctx, `
@@ -300,12 +312,12 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 			                            seed, winner, rounds,
 			                            debris_metal, debris_silicon,
 			                            loot_metal, loot_silicon, loot_hydrogen,
-			                            report)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+			                            report, acs_participants)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		`, reportID, lead.ownerUserID, defenderUserID, planetID,
 			int64(report.Seed), report.Winner, report.Rounds,
 			debrisM, debrisS, int64(0), int64(0), int64(0),
-			reportJSON); err != nil {
+			reportJSON, participantsJSON); err != nil {
 			return fmt.Errorf("acs attack: insert report: %w", err)
 		}
 

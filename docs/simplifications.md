@@ -510,15 +510,9 @@
   затем распределять loot пропорционально.
 - **Приоритет**: L.
 
-### [ACS] Один battle_reports-record от лидера
-- **Где**: `internal/fleet/acs_attack.go`.
-- **Что**: в battle_reports вписывается только первый (лидирующий) флот как attacker_user_id.
-  Участники ACS не имеют отдельных записей.
-- **Почему**: схема battle_reports рассчитана на single attacker; добавить ACS-участников
-  потребует новый столбец или отдельную таблицу.
-- **Как чинить**: добавить `acs_participants jsonb` в battle_reports или отдельную
-  таблицу `battle_report_participants`.
-- **Приоритет**: M.
+### [ACS] acs_participants в battle_reports — ЗАКРЫТО
+- Закрыто: migration 0025 добавляет `acs_participants jsonb` в battle_reports.
+  ACS handler записывает [{user_id, fleet_id}] всех атакующих флотов (commit 0025).
 
 ---
 
