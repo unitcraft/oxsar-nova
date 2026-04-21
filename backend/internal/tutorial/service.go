@@ -28,6 +28,16 @@ type Step struct {
 const totalSteps = 6
 const rewardPerStep = 10 // кредиты
 
+// stepResources — ресурсы на стартовую планету за каждый шаг (metal, silicon, hydrogen).
+var stepResources = [totalSteps][3]float64{
+	{500, 200, 0},    // шаг 1: металл за шахту
+	{300, 300, 100},  // шаг 2: ресурсы за электростанцию
+	{500, 500, 200},  // шаг 3: ресурсы за лабораторию
+	{1000, 500, 300}, // шаг 4: ресурсы за исследование
+	{2000, 1000, 500},// шаг 5: ресурсы за первый корабль
+	{5000, 3000, 1000},// шаг 6: финальная награда за экспедицию
+}
+
 // steps — статичный каталог шагов (текст на русском, i18n-ключи можно
 // добавить позже). Условия проверяются в checkStep.
 var steps = []Step{
@@ -87,7 +97,8 @@ func (s *Service) Status(ctx context.Context, userID string) ([]Step, int, error
 	return out, state, nil
 }
 
-// advanceAndReward атомарно продвигает tutorial_state и выдаёт кредиты.
+// advanceAndReward атомарно продвигает tutorial_state, выдаёт кредиты
+// и начисляет ресурсы на первую (стартовую) планету игрока.
 func (s *Service) advanceAndReward(ctx context.Context, userID string, step int) error {
 	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
@@ -105,6 +116,23 @@ func (s *Service) advanceAndReward(ctx context.Context, userID string, step int)
 			WHERE id = $3 AND tutorial_state < $1
 		`, step, rewardPerStep, userID); err != nil {
 			return fmt.Errorf("tutorial: advance state: %w", err)
+		}
+		// Ресурсы на стартовую планету (первая созданная, не луна).
+		res := stepResources[step-1]
+		if res[0] > 0 || res[1] > 0 || res[2] > 0 {
+			if _, err := tx.Exec(ctx, `
+				UPDATE planets
+				SET metal    = metal    + $1,
+				    silicon  = silicon  + $2,
+				    hydrogen = hydrogen + $3
+				WHERE id = (
+					SELECT id FROM planets
+					WHERE user_id = $4 AND destroyed_at IS NULL AND is_moon = false
+					ORDER BY created_at ASC LIMIT 1
+				)
+			`, res[0], res[1], res[2], userID); err != nil {
+				return fmt.Errorf("tutorial: resource reward step %d: %w", step, err)
+			}
 		}
 		return nil
 	})
