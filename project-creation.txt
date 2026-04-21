@@ -3923,5 +3923,27 @@ docs/simplifications.md:
   - [COLONIZE] Имя и размер по позиции — ЗАКРЫТО.
 
 ================================================================================
+Итерация N+6 — ACS loot пропорционально cargo, alien credit, prod build
+================================================================================
+
+fix(acs): loot теперь делится пропорционально cargo capacity выживших флотов.
+  cargoPerFleet[] считается range-итерацией по s.catalog.Ships.Ships (map[string]ShipSpec),
+  матчинг по spec.ID == st.UnitID. Fallback: totalCargo==0 → равные доли.
+
+feat(alien): applyGrabCredit (0.08–0.1% при credit>100000),
+  applyGiftCredit (5–10%, max 500) — вызываются из AttackHandler.
+
+feat(build): deploy/Dockerfile.frontend-prod (node+nginx multi-stage),
+  deploy/nginx.frontend.conf (SPA fallback, /api proxy, gzip), docker-compose.prod.yml.
+
+feat(auth): RateLimiter Redis sliding-window (20 req/min per IP) на /api/auth/*.
+
+docs/simplifications.md:
+  - [ACS] Loot пропорционально грузоподъёмности — ЗАКРЫТО.
+  - [Alien AI] GRAB_CREDIT/GIFT_CREDIT — ЗАКРЫТО.
+  - [docker] Frontend prod — ЗАКРЫТО.
+  - [docker] Auth rate-limiting — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================

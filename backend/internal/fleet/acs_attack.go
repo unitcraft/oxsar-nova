@@ -257,16 +257,42 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 			}
 		}
 
-		// Loot при победе атакующих — делим поровну между выжившими флотами.
+		// Loot при победе атакующих — делим пропорционально cargo capacity
+		// выживших кораблей (суммарный Cargo по стекам).
 		if report.Winner == "attackers" && len(survivingFleets) > 0 {
-			share := int64(len(survivingFleets))
-			perFleetM := int64(defMetal*0.5) / share
-			perFleetS := int64(defSil*0.5) / share
-			perFleetH := int64(defHydro*0.5) / share
+			totalAvailM := float64(defMetal * 0.5)
+			totalAvailS := float64(defSil * 0.5)
+			totalAvailH := float64(defHydro * 0.5)
+
+			// Считаем суммарный cargo каждого флота и total.
+			cargoPerFleet := make([]int64, len(survivingFleets))
+			var totalCargo int64
+			for i, sf := range survivingFleets {
+				for _, st := range sf.survivors {
+					for _, spec := range s.catalog.Ships.Ships {
+						if spec.ID == st.UnitID {
+							cargoPerFleet[i] += spec.Cargo * st.Count
+							break
+						}
+					}
+				}
+				totalCargo += cargoPerFleet[i]
+			}
+			// Если cargo у всех нулевой — делим поровну (fallback).
+			if totalCargo == 0 {
+				for i := range cargoPerFleet {
+					cargoPerFleet[i] = 1
+				}
+				totalCargo = int64(len(survivingFleets))
+			}
+
 			totalLootM, totalLootS, totalLootH := int64(0), int64(0), int64(0)
-			for _, sf := range survivingFleets {
-				loot := grabLoot(
-					float64(perFleetM), float64(perFleetS), float64(perFleetH),
+			for i, sf := range survivingFleets {
+				ratio := float64(cargoPerFleet[i]) / float64(totalCargo)
+				perFleetM := totalAvailM * ratio
+				perFleetS := totalAvailS * ratio
+				perFleetH := totalAvailH * ratio
+				loot := grabLoot(perFleetM, perFleetS, perFleetH,
 					sf.survivors, s.catalog, sf.info.cm, sf.info.cs, sf.info.ch)
 				if loot.Metal > 0 || loot.Silicon > 0 || loot.Hydrogen > 0 {
 					if _, err := tx.Exec(ctx, `
