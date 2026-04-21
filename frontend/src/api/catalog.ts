@@ -15,16 +15,19 @@ export interface CombatEntry extends UnitEntry {
 }
 
 export const BUILDINGS: UnitEntry[] = [
-  { id: 1, key: 'metal_mine', name: 'Metal Mine' },
-  { id: 2, key: 'silicon_lab', name: 'Silicon Lab' },
-  { id: 3, key: 'hydrogen_lab', name: 'Hydrogen Lab' },
-  { id: 4, key: 'solar_plant', name: 'Solar Plant' },
-  { id: 6, key: 'robotic_factory', name: 'Robotic Factory' },
-  { id: 8, key: 'shipyard', name: 'Shipyard' },
-  { id: 9, key: 'metal_storage', name: 'Metal Storage' },
-  { id: 10, key: 'silicon_storage', name: 'Silicon Storage' },
-  { id: 11, key: 'hydrogen_storage', name: 'Hydrogen Storage' },
-  { id: 12, key: 'research_lab', name: 'Research Lab' },
+  { id: 1,   key: 'metal_mine',      name: 'Metal Mine' },
+  { id: 2,   key: 'silicon_lab',     name: 'Silicon Lab' },
+  { id: 3,   key: 'hydrogen_lab',    name: 'Hydrogen Lab' },
+  { id: 4,   key: 'solar_plant',     name: 'Solar Plant' },
+  { id: 5,   key: 'hydrogen_plant',  name: 'Hydrogen Plant' },
+  { id: 6,   key: 'robotic_factory', name: 'Robotic Factory' },
+  { id: 8,   key: 'shipyard',        name: 'Shipyard' },
+  { id: 9,   key: 'metal_storage',   name: 'Metal Storage' },
+  { id: 10,  key: 'silicon_storage', name: 'Silicon Storage' },
+  { id: 11,  key: 'hydrogen_storage',name: 'Hydrogen Storage' },
+  { id: 12,  key: 'research_lab',    name: 'Research Lab' },
+  { id: 13,  key: 'missile_silo',    name: 'Missile Silo' },
+  { id: 100, key: 'repair_factory',  name: 'Repair Factory' },
 ];
 
 export const RESEARCH: UnitEntry[] = [
@@ -83,9 +86,13 @@ export const ARTEFACTS: UnitEntry[] = [
 ];
 
 export function nameOf(id: number): string {
-  for (const c of [BUILDINGS, RESEARCH, SHIPS, DEFENSE, ARTEFACTS]) {
+  for (const c of [SHIPS, DEFENSE, RESEARCH, ARTEFACTS, BUILDINGS]) {
     const u = c.find((x) => x.id === id);
     if (u) return u.name;
   }
   return `#${id}`;
+}
+
+export function buildingName(id: number): string {
+  return BUILDINGS.find((b) => b.id === id)?.name ?? `#${id}`;
 }
