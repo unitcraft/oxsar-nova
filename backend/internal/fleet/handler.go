@@ -34,7 +34,8 @@ type sendRequest struct {
 	CarrySilicon int64         `json:"carry_silicon"`
 	CarryHydro   int64         `json:"carry_hydrogen"`
 	SpeedPercent int           `json:"speed_percent"`
-	Mission      int           `json:"mission"` // 7 = TRANSPORT
+	Mission      int           `json:"mission"`      // 7=TRANSPORT, 10=ATTACK, 12=ACS, …
+	ACSGroupID   string        `json:"acs_group_id"` // только для mission=12; пусто → создать группу
 }
 
 // Send POST /api/fleet
@@ -50,9 +51,9 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Mission != 0 && req.Mission != 7 && req.Mission != 8 && req.Mission != 9 &&
-		req.Mission != 10 && req.Mission != 11 && req.Mission != 15 {
+		req.Mission != 10 && req.Mission != 11 && req.Mission != 12 && req.Mission != 15 {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest,
-			"supported missions: 7=TRANSPORT, 8=COLONIZE, 9=RECYCLING, 10=ATTACK_SINGLE, 11=SPY, 15=EXPEDITION"))
+			"supported missions: 7=TRANSPORT, 8=COLONIZE, 9=RECYCLING, 10=ATTACK_SINGLE, 11=SPY, 12=ACS, 15=EXPEDITION"))
 		return
 	}
 	in := TransportInput{
@@ -60,6 +61,7 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		SrcPlanetID:  req.SrcPlanetID,
 		Dst:          req.Dst,
 		Mission:      req.Mission,
+		ACSGroupID:   req.ACSGroupID,
 		Ships:        req.Ships,
 		CarryMetal:   req.CarryMetal,
 		CarrySilicon: req.CarrySilicon,
