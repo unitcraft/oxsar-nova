@@ -77,7 +77,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 
 	rows, err := h.db.Pool().Query(r.Context(), `
-		SELECT u.id, u.username, u.email, COALESCE(u.role,''), u.credit,
+		SELECT u.id, u.username, u.email, COALESCE(u.role::text,''), u.credit,
 		       COALESCE(s.score, 0), u.banned_at, u.created_at, u.last_seen_at
 		FROM users u
 		LEFT JOIN scores s ON s.user_id = u.id

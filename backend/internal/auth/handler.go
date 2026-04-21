@@ -84,7 +84,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 	var username, role string
 	if err := h.db.QueryRow(context.Background(),
-		`SELECT username, COALESCE(role, '') FROM users WHERE id=$1`, uid).Scan(&username, &role); err != nil {
+		`SELECT username, COALESCE(role::text, '') FROM users WHERE id=$1`, uid).Scan(&username, &role); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
