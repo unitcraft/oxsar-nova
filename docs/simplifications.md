@@ -90,14 +90,13 @@
   два `res_log` entry при ненулевом лоуте: attacker +loot, defender -loot.
   reason='loot' — уже был в schema comment.
 
-### [M4.4a] Нет unit-тестов AttackHandler
-- **Где**: `fleet/attack.go`.
-- **Что**: 500 строк handler'а, только e2e smoke через docker.
-  Ракетный урон частично покрыт: `rocket/damage.go::applyRocketDamage`
-  (pure func) + 6 unit-тестов в `rocket/damage_test.go`.
-- **Почему**: mock `pgx.Tx` + `battle.Calculate` — большая работа.
-- **Как чинить**: testcontainers или interface-инъекция с моками.
-- **Приоритет**: M — когда начнём рефакторить attack под ACS.
+### [M4.4a] Нет unit-тестов AttackHandler — ЧАСТИЧНО ЗАКРЫТО
+- Закрыто: `fleet/attack_test.go` — 8 unit-тестов для pure-функций:
+  `grabLoot` (4 теста: unlimited cargo, constraint, no survivors, carry reduces free),
+  `calcDebris` (2 теста: basic 30%, defense excluded),
+  `deriveSeed` (2 теста: deterministic, different inputs → different seeds).
+- Остаток: e2e-тест полного цикла AttackHandler + transaction (требует testcontainers).
+- **Приоритет**: L — hot-path покрыт, transaction-level тест отложен.
 
 ---
 

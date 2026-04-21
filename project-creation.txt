@@ -4170,5 +4170,16 @@ BuildingsScreen теперь использует buildingName() в очеред
     input + ✓/✕). Отображает rank_name если задан, иначе rank.
 
 ================================================================================
+Итерация — 2026-04-22
+================================================================================
+
+[Tests] Unit-тесты для fleet/attack pure-функций.
+  - fleet/attack_test.go: 8 тестов.
+    grabLoot: UnlimitedCargo, CargoConstraint, NoSurvivors, CarryReducesFree.
+    calcDebris: Basic (30% metal+silicon от lost), DefenseExcluded.
+    deriveSeed: Deterministic, Different.
+  - Все go test ./... — PASS.
+
+================================================================================
 Конец дневника.
 ================================================================================
