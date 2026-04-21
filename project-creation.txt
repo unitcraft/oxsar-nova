@@ -3221,5 +3221,33 @@ docs/status.md: AutoMsg 🟡 → ✅.
 
 
 ================================================================================
+Итерация 44 — Multi-run симулятор боя (num_sim)
+================================================================================
+
+Задача: поддержка статистического прогона N боёв подряд (spec §5.21).
+
+backend/internal/battle/types.go:
+  - Input.NumSim int: 0/1 = один бой; 2..20 = multi-run статистика.
+  - SimStats struct: {num_sim, win_rate, draw_rate, avg_rounds}.
+
+backend/cmd/server/main.go (battleSimHandler):
+  - Если NumSim < 2 — возвращает одиночный Report (прежнее поведение).
+  - Если NumSim в [2..20] — прогоняет Calculate() N раз с seed+i,
+    агрегирует: wins, draws, totalRounds → SimStats.
+
+frontend/src/features/battle-sim/BattleSimScreen.tsx:
+  - Добавлен input «Прогонов (1–20)» рядом с Seed.
+  - При numSim >= 2 — отображает SimStats: win_rate%, draw_rate%, avg_rounds.
+  - При numSim = 1 — прежний Report с таблицей потерь.
+
+docs/status.md: Simulator UI — комментарий дополнен "+ multi-run (num_sim 2–20)".
+
+Статистика итерации 44:
+   battle/types.go: +8 строк (NumSim, SimStats).
+   server/main.go: +35 строк (multi-run логика в battleSimHandler).
+   BattleSimScreen.tsx: +40 строк (numSim input, SimStats display).
+
+
+================================================================================
 Конец дневника.
 ================================================================================

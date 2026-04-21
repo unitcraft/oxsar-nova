@@ -31,6 +31,13 @@ interface SimReport {
   defenders: SideResult[];
 }
 
+interface SimStats {
+  num_sim: number;
+  win_rate: number;
+  draw_rate: number;
+  avg_rounds: number;
+}
+
 // COMBAT_UNITS — корабли + оборона с боевыми характеристиками.
 const COMBAT_SHIPS = SHIPS.filter((u) => u.attack > 0 || u.shell > 0);
 const COMBAT_DEFENSE = DEFENSE;
@@ -51,9 +58,13 @@ export function BattleSimScreen() {
   const [attackers, setAttackers] = useState<UnitMap>({});
   const [defenders, setDefenders] = useState<UnitMap>({});
   const [seed, setSeed] = useState<number>(42);
+  const [numSim, setNumSim] = useState<number>(1);
 
   const sim = useMutation({
-    mutationFn: (body: unknown) => api.post<SimReport>('/api/battle-sim', body),
+    mutationFn: (body: unknown) =>
+      numSim >= 2
+        ? api.post<SimStats>('/api/battle-sim', body)
+        : api.post<SimReport>('/api/battle-sim', body),
   });
 
   function runSim() {
@@ -69,12 +80,14 @@ export function BattleSimScreen() {
 
     sim.mutate({
       seed,
+      num_sim: numSim >= 2 ? numSim : undefined,
       attackers: toSide(attackers, COMBAT_SHIPS),
       defenders: toSide(defenders, [...COMBAT_SHIPS, ...COMBAT_DEFENSE]),
     });
   }
 
-  const r = sim.data;
+  const r = sim.data as SimReport | SimStats | undefined;
+  const isStats = r != null && 'num_sim' in r;
 
   return (
     <section>
@@ -95,15 +108,28 @@ export function BattleSimScreen() {
         />
       </div>
 
-      <label style={{ display: 'block', marginBottom: 12 }}>
-        {tf('Main', 'BATTLE_SIM_SEED', 'Seed:')}&nbsp;
-        <input
-          type="number"
-          value={seed}
-          onChange={(e) => setSeed(Number(e.target.value))}
-          style={{ width: 120 }}
-        />
-      </label>
+      <div style={{ display: 'flex', gap: 24, marginBottom: 12 }}>
+        <label>
+          {tf('Main', 'BATTLE_SIM_SEED', 'Seed:')}&nbsp;
+          <input
+            type="number"
+            value={seed}
+            onChange={(e) => setSeed(Number(e.target.value))}
+            style={{ width: 120 }}
+          />
+        </label>
+        <label>
+          {tf('Main', 'BATTLE_SIM_NUMSIM', 'Прогонов (1–20):')}&nbsp;
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={numSim}
+            onChange={(e) => setNumSim(Math.min(20, Math.max(1, Number(e.target.value))))}
+            style={{ width: 60 }}
+          />
+        </label>
+      </div>
 
       <button type="button" disabled={sim.isPending} onClick={runSim}>
         {sim.isPending
@@ -117,40 +143,58 @@ export function BattleSimScreen() {
         </div>
       )}
 
-      {r && (
+      {isStats && (
+        <div style={{ marginTop: 16 }}>
+          <h3>{tf('Main', 'BATTLE_SIM_RESULT', 'Результат')}</h3>
+          <p>
+            <b>{tf('Main', 'BATTLE_SIM_RUNS', 'Прогонов')}:</b> {(r as SimStats).num_sim}
+            {' · '}
+            <b>{tf('Main', 'BATTLE_WIN_RATE', 'Победы атак.')}:</b>{' '}
+            {((r as SimStats).win_rate * 100).toFixed(1)}%
+            {' · '}
+            <b>{tf('Main', 'BATTLE_DRAW_RATE', 'Ничьи')}:</b>{' '}
+            {((r as SimStats).draw_rate * 100).toFixed(1)}%
+            {' · '}
+            <b>{tf('Main', 'BATTLE_AVG_ROUNDS', 'Ср. раундов')}:</b>{' '}
+            {(r as SimStats).avg_rounds.toFixed(1)}
+          </p>
+        </div>
+      )}
+
+      {!isStats && r && (
         <div style={{ marginTop: 16 }}>
           <h3>{tf('Main', 'BATTLE_SIM_RESULT', 'Результат')}</h3>
           <p>
             <b>{tf('Main', 'BATTLE_WINNER', 'Победитель')}:</b>{' '}
-            {r.winner === 'attackers'
+            {(r as SimReport).winner === 'attackers'
               ? tf('Main', 'BATTLE_WIN_ATT', 'Атакующие')
-              : r.winner === 'defenders'
+              : (r as SimReport).winner === 'defenders'
                 ? tf('Main', 'BATTLE_WIN_DEF', 'Защитники')
                 : tf('Main', 'BATTLE_DRAW', 'Ничья')}
             {' · '}
-            <b>{tf('Main', 'BATTLE_ROUNDS', 'Раундов')}:</b> {r.rounds}
+            <b>{tf('Main', 'BATTLE_ROUNDS', 'Раундов')}:</b> {(r as SimReport).rounds}
             {' · '}
-            <b>Seed:</b> {r.seed}
+            <b>Seed:</b> {(r as SimReport).seed}
           </p>
-          {(r.debris_metal > 0 || r.debris_silicon > 0) && (
+          {((r as SimReport).debris_metal > 0 || (r as SimReport).debris_silicon > 0) && (
             <p>
               <b>{tf('Main', 'DEBRIS', 'Обломки')}:</b>{' '}
-              {r.debris_metal} M / {r.debris_silicon} Si
+              {(r as SimReport).debris_metal} M / {(r as SimReport).debris_silicon} Si
             </p>
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 8 }}>
-            {r.attackers[0] && (
+            {(r as SimReport).attackers[0] && (
               <LossesTable
                 title={tf('Main', 'ATTACKERS', 'Атакующие')}
-                side={r.attackers[0]}
+                side={(r as SimReport).attackers[0]!}
                 original={attackers}
               />
             )}
-            {r.defenders[0] && (
+            {(r as SimReport).defenders[0] && (
               <LossesTable
                 title={tf('Main', 'DEFENDERS', 'Защитники')}
-                side={r.defenders[0]}
+                side={(r as SimReport).defenders[0]!}
                 original={defenders}
               />
             )}

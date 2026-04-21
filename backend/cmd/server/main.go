@@ -287,18 +287,51 @@ func newLogger(level string) *slog.Logger {
 
 // battleSimHandler — офлайновый симулятор (§5.7 ТЗ). Чистая функция:
 // вход/выход полностью через JSON, БД не затрагивается.
+// Если NumSim >= 2, возвращает SimStats вместо Report.
 func battleSimHandler(w http.ResponseWriter, r *http.Request) {
 	var in battle.Input
 	if err := decodeJSON(r, &in); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 		return
 	}
-	report, err := battle.Calculate(in)
-	if err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	n := in.NumSim
+	if n < 2 {
+		report, err := battle.Calculate(in)
+		if err != nil {
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+			return
+		}
+		httpx.WriteJSON(w, r, http.StatusOK, report)
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, report)
+	if n > 20 {
+		n = 20
+	}
+	var wins, draws int
+	var totalRounds int
+	seed0 := in.Seed
+	for i := range n {
+		in.Seed = seed0 + uint64(i)
+		rep, err := battle.Calculate(in)
+		if err != nil {
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+			return
+		}
+		totalRounds += rep.Rounds
+		switch rep.Winner {
+		case "attackers":
+			wins++
+		case "draw":
+			draws++
+		}
+	}
+	stats := battle.SimStats{
+		NumSim:    n,
+		WinRate:   float64(wins) / float64(n),
+		DrawRate:  float64(draws) / float64(n),
+		AvgRounds: float64(totalRounds) / float64(n),
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, stats)
 }
 
 func decodeJSON(r *http.Request, into any) error {
