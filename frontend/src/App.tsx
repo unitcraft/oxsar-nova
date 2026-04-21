@@ -70,6 +70,11 @@ const AchievementsScreen = lazy(() =>
     default: m.AchievementsScreen,
   })),
 );
+const TutorialScreen = lazy(() =>
+  import('./features/tutorial/TutorialScreen').then((m) => ({
+    default: m.TutorialScreen,
+  })),
+);
 
 type Tab =
   | 'overview'
@@ -85,6 +90,7 @@ type Tab =
   | 'art-market'
   | 'officers'
   | 'achievements'
+  | 'tutorial'
   | 'score'
   | 'messages'
   | 'alliance'
@@ -245,6 +251,12 @@ function AuthenticatedApp() {
         />
         <TabButton
           current={tab}
+          value="tutorial"
+          onClick={setTab}
+          label={t('global', 'MENU_TUTORIAL') || 'Туториал'}
+        />
+        <TabButton
+          current={tab}
           value="achievements"
           onClick={setTab}
           label={t('global', 'MENU_ACHIEVEMENTS') || 'Достижения'}
@@ -284,6 +296,7 @@ function AuthenticatedApp() {
         {tab === 'art-market' && <ArtefactMarketScreen />}
 
         {tab === 'officers' && <OfficersScreen />}
+        {tab === 'tutorial' && <TutorialScreen />}
         {tab === 'achievements' && <AchievementsScreen />}
         {tab === 'score' && <ScoreScreen />}
         {tab === 'alliance' && <AllianceScreen />}

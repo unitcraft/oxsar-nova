@@ -41,6 +41,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/score"
 	"github.com/oxsar/nova/backend/internal/shipyard"
 	"github.com/oxsar/nova/backend/internal/storage"
+	"github.com/oxsar/nova/backend/internal/tutorial"
 )
 
 func main() {
@@ -147,6 +148,9 @@ func run() error {
 	allianceSvc := alliance.NewService(db)
 	allianceH := alliance.NewHandler(allianceSvc)
 
+	tutorialSvc := tutorial.NewService(db)
+	tutorialH := tutorial.NewHandler(tutorialSvc)
+
 	// i18n: папка необязательна — если её нет или пустая, i18n просто
 	// пропускается, HTTP-эндпоинты не регистрируются. Это ожидаемо
 	// до первого прогона cmd/tools/import-phrases (§10.3 ТЗ).
@@ -234,6 +238,8 @@ func run() error {
 		pr.Post("/alliances/{id}/join", allianceH.Join)
 		pr.Post("/alliances/leave", allianceH.Leave)
 		pr.Delete("/alliances/{id}", allianceH.Disband)
+
+		pr.Get("/tutorial", tutorialH.Status)
 
 		pr.Get("/messages", messageH.Inbox)
 		pr.Post("/messages", messageH.Compose)

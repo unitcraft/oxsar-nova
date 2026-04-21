@@ -3287,5 +3287,52 @@ api/openapi.yaml — синхронизирован с реальным серв
 
 
 ================================================================================
+Итерация 46 — Tutorial (M7) + вкладка Достижения в App.tsx
+================================================================================
+
+migrations/0020_tutorial.sql:
+  - CREATE TABLE tutorial_rewards (user_id, step, rewarded_at).
+  - tutorial_state уже был в users (0001_init.sql).
+
+backend/internal/tutorial/service.go:
+  - 6 шагов: metal_mine lv1 → solar_plant lv1 → research_lab lv1 →
+    computer_tech lv1 → first ship → expedition (mission=15).
+  - Status() lazy-check: проверяет следующий невыполненный шаг,
+    продвигает tutorial_state, выдаёт +10 кредитов (идемпотентно
+    через tutorial_rewards ON CONFLICT DO NOTHING).
+
+backend/internal/tutorial/handler.go:
+  - GET /api/tutorial → {steps, state, complete}.
+
+backend/cmd/server/main.go:
+  - +tutorial import, tutorialSvc/H, pr.Get("/tutorial", tutorialH.Status).
+
+frontend/src/features/tutorial/TutorialScreen.tsx:
+  - Показывает список шагов (○ / ✓), прогресс, подсказку о наградах.
+  - refetchInterval: 10s для автообновления.
+
+frontend/src/App.tsx:
+  - Добавлена вкладка "Туториал" (lazy import TutorialScreen).
+  - Добавлена вкладка "Достижения" (AchievementsScreen, уже готова).
+
+api/openapi.yaml:
+  - GET /api/tutorial + TutorialStep schema + tag: tutorial.
+
+docs/status.md: Tutorial ⬜ → ✅.
+
+Упрощения (tracked):
+  - Tutorial не даёт наград кроме кредитов (нет ресурсов/кораблей).
+  - Тексты шагов хардкод на русском (i18n-ключи позже).
+
+Статистика итерации 46:
+   migrations/0020_tutorial.sql: новый (~12 строк).
+   tutorial/service.go: новый (~130 строк).
+   tutorial/handler.go: новый (~25 строк).
+   server/main.go: +5 строк.
+   TutorialScreen.tsx: новый (~60 строк).
+   App.tsx: +15 строк (2 вкладки).
+
+
+================================================================================
 Конец дневника.
 ================================================================================
