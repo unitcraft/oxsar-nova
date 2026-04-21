@@ -23,7 +23,7 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
   });
 
   const levels = state.data?.levels ?? {};
-  const activeResearch = state.data?.queue[0];
+  const activeResearch = (state.data?.queue ?? [])[0];
 
   return (
     <section>

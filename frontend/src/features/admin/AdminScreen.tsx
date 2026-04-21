@@ -159,7 +159,7 @@ export function AdminScreen() {
             </tr>
           </thead>
           <tbody>
-            {users.data.users.map((u) => (
+            {(users.data.users ?? []).map((u) => (
               <tr key={u.id} style={{ opacity: u.banned_at ? 0.5 : 1 }}>
                 <td>
                   {u.username}

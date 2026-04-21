@@ -83,7 +83,7 @@ export function GalaxyScreen({ homePlanet }: { homePlanet: Planet }) {
             </tr>
           </thead>
           <tbody>
-            {sys.data.cells.map((c) => (
+            {(sys.data.cells ?? []).map((c) => (
               <tr key={c.position}>
                 <td className="num">{c.position}</td>
                 <td>
