@@ -385,12 +385,12 @@
 
 ### [Alliance] MVP без рангов и WebSocket-чата
 - **Где**: `internal/alliance/service.go`, `features/alliance/AllianceScreen.tsx`.
-- **Что**: ~~отношения NAP/WAR/ALLY~~ — ЗАКРЫТО (migration 0028, SetRelation/GetRelations,
-  RelationsPanel в UI). Остаток: кастомные ранги, отношения NAP/WAR/ALLY (встречный
-  acknowledge), WebSocket chat (global/alliance/PM), ACS-атаки.
-- **Как чинить**: добавить WebSocket Hub с fan-out в `chat_messages`, встречное
-  подтверждение отношений, ранги участников.
-- **Приоритет**: M.
+- **Что**: ~~отношения NAP/WAR/ALLY~~ — ЗАКРЫТО. ~~Встречный acknowledge~~ — ЗАКРЫТО
+  (migration 0031: `status` pending/active; ProposeRelation/AcceptRelation/RejectRelation;
+  WAR активно сразу, NAP/ALLY ждут подтверждения; UI показывает входящие с кнопками ✓/✕).
+  Остаток: кастомные ранги участников, ACS-атаки.
+- **Как чинить**: добавить колонку `rank_name` в alliance_members, CRUD для owner'а.
+- **Приоритет**: L — ранги декоративны, не влияют на механики.
 
 ### [Alliance] Join approval flow — ЗАКРЫТО
 - Закрыто: migration 0024 добавляет `is_open` в alliances + таблицу
