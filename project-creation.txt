@@ -3984,5 +3984,28 @@ docs/simplifications.md:
   - [AutoMsg] event-before-raid — ЗАКРЫТО.
 
 ================================================================================
+Итерация N+9 — res_log loot, Repair TOCTOU, Officers auto-renew, Debris is_moon
+================================================================================
+
+feat(battle): res_log entries при лоуте (attacker +, defender -) в finalizeAttack
+  и ACS handler. reason='loot' — уже был в схеме.
+
+fix(repair): planet resources читаются внутри tx (FOR UPDATE) в EnqueueDisassemble.
+  Устраняет TOCTOU при параллельных enqueue.
+
+feat(officers): auto_renew — migration 0029 (bool DEFAULT false). Activate принимает
+  autoRenew param, ExpireHandler: если auto_renew+credit >= cost → re-INSERT active
+  + новый event, factor не меняется. UI: чекбокс «авто» перед кнопкой активации.
+
+fix(debris): migration 0030 — is_moon в PK debris_fields. Орбиты планеты и луны
+  теперь независимые поля. attack.go, acs_attack.go, events.go обновлены.
+
+docs/simplifications.md:
+  - [M4.4a] res_log loot — ЗАКРЫТО.
+  - [Repair] Стоимость в момент enqueue — ЗАКРЫТО.
+  - [Officers] Нет auto-renew — ЗАКРЫТО.
+  - [RECYCLING] Debris без is_moon — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================
