@@ -149,13 +149,9 @@
 
 ## Market
 
-### [Market] Фиксированные курсы 1:2:4
-- **Где**: `internal/market/service.go::resourceCost`.
-- **Что**: metal=1, silicon=2, hydrogen=4 — константы.
-- **Почему**: legacy OGame так устроен.
-- **Как чинить**: заменить на order-book (полноценный Exchange из
-  legacy 1205 LOC).
-- **Приоритет**: M — это M6 full-exchange.
+### [Market] Фиксированные курсы 1:2:4 — ЗАКРЫТО (не упрощение)
+- Курсы metal=1, silicon=2, hydrogen=4 — соответствие legacy OGame (не упрощение).
+  Ордерная книга (CreateLot/ListLots/CancelLot/AcceptLot, migration 0022) реализована.
 
 ### [Market] Только в рамках одной планеты
 - **Где**: `internal/market/service.go::Exchange`.
@@ -416,19 +412,10 @@
 
 ## Score / Ranking (M5+)
 
-### [score.batch] Пересчёт очков раз в 5 минут, не real-time
-- **Где**: `backend/cmd/worker/main.go`, `backend/internal/score/service.go::RecalcAll`.
-- **Что**: `RecalcAll` запускается горутиной с `time.Ticker(5 * time.Minute)`.
-  Между завершением постройки/исследования и обновлением очков — задержка
-  до 5 минут. Лидерборд не real-time.
-- **Почему**: встраивать `RecalcUser` в каждый domain-handler (building,
-  research, shipyard) усложняет handler'ы и добавляет N-запросов в и без
-  того тяжёлые транзакции. Для лидерборда 5-минутная задержка приемлема.
-- **Как чинить**: вызывать `scoreSvc.RecalcUser(ctx, userID)` в конце
-  `HandleBuildConstruction`, `HandleResearch`, `HandleBuildFleet` — после
-  основного UPDATE/INSERT. Нужно пробросить `*score.Service` в `event`-пакет
-  или сделать callback-хук на `Worker`.
-- **Приоритет**: L — для конкурентного PvP нужна точность; сейчас достаточно.
+### [score.batch] RecalcUser real-time — ЗАКРЫТО
+- Закрыто: `withScore` decorator в worker/main.go вызывает `RecalcUser` после
+  KindBuildConstruction/KindResearch/KindBuildFleet/KindBuildDefense.
+  RecalcAll (5 мин) остаётся как fallback для прочих событий.
 
 ---
 
