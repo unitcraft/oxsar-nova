@@ -20,6 +20,13 @@ interface AdminUser {
   created_at: string;
 }
 
+interface AutomsgDef {
+  key: string;
+  title: string;
+  body_template: string;
+  folder: number;
+}
+
 export function AdminScreen() {
   const qc = useQueryClient();
   const [creditUserID, setCreditUserID] = useState('');
@@ -135,6 +142,8 @@ export function AdminScreen() {
         </div>
       </div>
 
+      <AutomsgsPanel />
+
       <h3>Пользователи</h3>
       {users.isLoading && <p>…</p>}
       {users.data && (
@@ -185,6 +194,112 @@ export function AdminScreen() {
         </table>
       )}
     </section>
+  );
+}
+
+function AutomsgsPanel() {
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState<AutomsgDef | null>(null);
+
+  const defs = useQuery({
+    queryKey: ['admin-automsgs'],
+    queryFn: () => api.get<{ defs: AutomsgDef[] | null }>('/api/admin/automsgs'),
+  });
+
+  const save = useMutation({
+    mutationFn: (d: AutomsgDef) =>
+      api.put<void>(`/api/admin/automsgs/${d.key}`, {
+        title: d.title,
+        body_template: d.body_template,
+        folder: d.folder,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin-automsgs'] });
+      setEditing(null);
+    },
+  });
+
+  const list = defs.data?.defs ?? [];
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <h3>Шаблоны сообщений</h3>
+      {defs.isLoading && <p>…</p>}
+      {list.length > 0 && (
+        <table className="ox-table" style={{ marginBottom: 8 }}>
+          <thead>
+            <tr>
+              <th>Ключ</th>
+              <th>Заголовок</th>
+              <th>Папка</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((d) => (
+              <tr key={d.key}>
+                <td style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>{d.key}</td>
+                <td>{d.title}</td>
+                <td>{d.folder}</td>
+                <td>
+                  <button type="button" onClick={() => setEditing({ ...d })}>
+                    Правка
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {editing && (
+        <div style={{ border: '1px solid #444', padding: 12, borderRadius: 4, maxWidth: 600 }}>
+          <b style={{ fontFamily: 'monospace' }}>{editing.key}</b>
+          <div style={{ marginTop: 8 }}>
+            <label>
+              Заголовок:{' '}
+              <input
+                value={editing.title}
+                onChange={(e) => setEditing({ ...editing, title: e.target.value })}
+                style={{ width: 340 }}
+              />
+            </label>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <label>
+              Папка:{' '}
+              <input
+                type="number"
+                value={editing.folder}
+                onChange={(e) => setEditing({ ...editing, folder: Number(e.target.value) })}
+                style={{ width: 60 }}
+              />
+            </label>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <div style={{ marginBottom: 4 }}>Шаблон тела (поддерживает {'{{variable}}'})</div>
+            <textarea
+              value={editing.body_template}
+              onChange={(e) => setEditing({ ...editing, body_template: e.target.value })}
+              rows={6}
+              style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: '0.85em' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <button type="button" disabled={save.isPending} onClick={() => save.mutate(editing)}>
+              Сохранить
+            </button>
+            <button type="button" onClick={() => setEditing(null)}>
+              Отмена
+            </button>
+          </div>
+          {save.isError && (
+            <p className="ox-error">
+              {save.error instanceof Error ? save.error.message : 'ошибка'}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
