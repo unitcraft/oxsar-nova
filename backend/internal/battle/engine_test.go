@@ -429,3 +429,65 @@ func TestAblation_DamagedCarriesOverAndDies(t *testing.T) {
 		t.Fatalf("expected 2 rounds, got %d", rep.Rounds)
 	}
 }
+
+// --- Unit tests for pure engine helpers ---
+
+func TestTotalShell_Normal(t *testing.T) {
+	t.Parallel()
+	// 10 units, 2 damaged at 50% shell each. Full = 8×100 + 2×50 = 900.
+	got := totalShell(100, 10, 2, 50)
+	if math.Abs(got-900) > 1e-9 {
+		t.Errorf("totalShell = %v, want 900", got)
+	}
+}
+
+func TestTotalShell_NoDamaged(t *testing.T) {
+	t.Parallel()
+	got := totalShell(100, 10, 0, 100)
+	if math.Abs(got-1000) > 1e-9 {
+		t.Errorf("totalShell = %v, want 1000", got)
+	}
+}
+
+func TestTotalShell_ZeroShell(t *testing.T) {
+	t.Parallel()
+	if totalShell(0, 10, 0, 100) != 0 {
+		t.Error("zero shellPerUnit must return 0")
+	}
+}
+
+func TestTotalShell_DamagedClampsToQuantity(t *testing.T) {
+	t.Parallel()
+	// damaged > quantity → clamped to quantity → all damaged.
+	got := totalShell(100, 5, 10, 50)
+	want := 5.0 * 100.0 * 50.0 / 100.0
+	if math.Abs(got-want) > 1e-9 {
+		t.Errorf("totalShell = %v, want %v", got, want)
+	}
+}
+
+func TestClampDamaged(t *testing.T) {
+	t.Parallel()
+	if clampDamaged(-1, 10) != 0 {
+		t.Error("negative should clamp to 0")
+	}
+	if clampDamaged(5, 10) != 5 {
+		t.Error("within range should pass through")
+	}
+	if clampDamaged(15, 10) != 10 {
+		t.Error("exceeds max should clamp to max")
+	}
+}
+
+func TestClampPercent(t *testing.T) {
+	t.Parallel()
+	if clampPercent(-5) != 0 {
+		t.Error("negative should clamp to 0")
+	}
+	if clampPercent(50) != 50 {
+		t.Error("mid-range should pass through")
+	}
+	if clampPercent(150) != 100 {
+		t.Error("over 100 should clamp to 100")
+	}
+}

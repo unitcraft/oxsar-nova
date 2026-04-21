@@ -3650,5 +3650,17 @@ backend/pkg/sqldump/sqldump_test.go:
   Покрытие sqldump: 61.8% → 78.9%.
 
 ================================================================================
+Итерация 60 — test(battle): totalShell/clampDamaged/clampPercent helpers
+================================================================================
+
+backend/internal/battle/engine_test.go:
+  - TestTotalShell_Normal: 8 full + 2 damaged@50% = 900.
+  - TestTotalShell_NoDamaged: все целые = quantity × shell.
+  - TestTotalShell_ZeroShell: → 0.
+  - TestTotalShell_DamagedClampsToQuantity: damaged > quantity → clamped.
+  - TestClampDamaged: < 0 → 0, in-range pass, > max → max.
+  - TestClampPercent: < 0 → 0, mid-range pass, > 100 → 100.
+
+================================================================================
 Конец дневника.
 ================================================================================
