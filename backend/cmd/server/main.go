@@ -19,6 +19,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/achievement"
 	"github.com/oxsar/nova/backend/internal/admin"
 	"github.com/oxsar/nova/backend/internal/alliance"
+	"github.com/oxsar/nova/backend/internal/chat"
 	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/artmarket"
 	"github.com/oxsar/nova/backend/internal/auth"
@@ -154,6 +155,9 @@ func run() error {
 
 	adminH := admin.NewHandler(db)
 
+	chatHub := chat.NewHub()
+	chatH := chat.NewHandler(chatHub, db)
+
 	// i18n: папка необязательна — если её нет или пустая, i18n просто
 	// пропускается, HTTP-эндпоинты не регистрируются. Это ожидаемо
 	// до первого прогона cmd/tools/import-phrases (§10.3 ТЗ).
@@ -243,6 +247,10 @@ func run() error {
 		pr.Delete("/alliances/{id}", allianceH.Disband)
 
 		pr.Get("/tutorial", tutorialH.Status)
+
+		pr.Get("/chat/{kind}/history", chatH.History)
+		pr.Post("/chat/{kind}/send", chatH.Send)
+		pr.Get("/chat/{kind}/ws", chatH.Connect)
 
 		pr.Get("/messages", messageH.Inbox)
 		pr.Post("/messages", messageH.Compose)

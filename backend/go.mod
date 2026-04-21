@@ -24,4 +24,5 @@ require (
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
+	nhooyr.io/websocket v1.8.17 // indirect
 )
