@@ -3803,5 +3803,25 @@ docs/simplifications.md: [M4.1] Щиты — ЗАКРЫТО.
 docs/simplifications.md: [Messages] username в BattleReport — ЗАКРЫТО.
 
 ================================================================================
+Итерация 69 — feat(auth): IP rate-limit + storage cap review
+================================================================================
+
+backend/internal/auth/ratelimit.go:
+  - RateLimiter: Redis-based sliding-window (INCR + EXPIRE в pipeline).
+  - NewIPRateLimiter(rdb, limit, window) — by X-Forwarded-For / RemoteAddr.
+  - Fail-open при rdb=nil или Redis-ошибке.
+
+backend/internal/httpx/response.go:
+  - Добавлен ErrRateLimit (HTTP 429, code=rate_limit).
+
+backend/cmd/server/main.go:
+  - authRL = NewIPRateLimiter(rdb, 20, time.Minute).
+  - r.With(authRL.Middleware).Post для register/login/refresh.
+
+docs/simplifications.md:
+  - [docker] auth-rate-limiting — ЗАКРЫТО.
+  - [economy] storage cap — ЗАКРЫТО (было ошибочно открыто, уже реализован).
+
+================================================================================
 Конец дневника.
 ================================================================================
