@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/config"
@@ -21,6 +22,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/internal/requirements"
 	"github.com/oxsar/nova/backend/internal/rocket"
+	"github.com/oxsar/nova/backend/internal/score"
 	"github.com/oxsar/nova/backend/internal/storage"
 )
 
@@ -92,6 +94,24 @@ func run() error {
 	w.Register(event.KindRocketAttack, rocketSvc.ImpactHandler())
 	w.Register(event.KindExpedition, transportSvc.ExpeditionHandler())
 	w.Register(event.KindOfficerExpire, officerSvc.ExpireHandler())
+
+	scoreSvc := score.NewService(db, cat)
+
+	// Периодический пересчёт очков всех игроков (раз в 5 минут).
+	go func() {
+		t := time.NewTicker(5 * time.Minute)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				if err := scoreSvc.RecalcAll(ctx, log); err != nil {
+					log.ErrorContext(ctx, "score_recalc_all_failed", slog.String("err", err.Error()))
+				}
+			}
+		}
+	}()
 
 	log.InfoContext(ctx, "worker started")
 	if err := w.Run(ctx); err != nil && err != context.Canceled {
