@@ -3911,5 +3911,17 @@ docs/simplifications.md:
   - [Achievements] Только 5 штук — ЗАКРЫТО.
 
 ================================================================================
+Итерация N+5 — COLONIZE improvements + achievement checks build fix
+================================================================================
+
+feat(colonize): colony_name в TransportInput/sendRequest/transportPayload.
+  positionDiameter(pos, r): pos 1-3 → 6k-10k, pos 4-12 → 10k-15k, pos 13-15 → 12k-17k.
+  UI: поле ввода названия колонии при mission=8 в FleetScreen.
+  Сообщение игроку включает колonyName.
+
+docs/simplifications.md:
+  - [COLONIZE] Имя и размер по позиции — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================
