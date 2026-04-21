@@ -82,15 +82,16 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
-	var username string
+	var username, role string
 	if err := h.db.QueryRow(context.Background(),
-		`SELECT username FROM users WHERE id=$1`, uid).Scan(&username); err != nil {
+		`SELECT username, COALESCE(role, '') FROM users WHERE id=$1`, uid).Scan(&username, &role); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]string{
 		"user_id":  uid,
 		"username": username,
+		"role":     role,
 	})
 }
 
