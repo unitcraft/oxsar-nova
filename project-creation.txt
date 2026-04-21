@@ -3553,5 +3553,31 @@ backend/pkg/ids/ids_test.go (новый файл):
   Покрытие ids: 0% → 75%.
 
 ================================================================================
+Итерация 54 — feat(alien): координаты полёта + тесты чистых функций
+================================================================================
+
+backend/internal/alien/alien.go:
+  - Добавлены константы alienHome (galaxy=99, system=500, position=8)
+    и alienFleetSpeed=20000.
+  - alienPayload получил поля Galaxy/System/Position.
+  - Spawn: расширен запрос (SELECT p.galaxy, p.system, p.position),
+    fire_at вычисляется через alienDistance + alienFlightDuration
+    (вместо rand ±3600s).
+  - Новые функции: alienDistance (те же формулы, что galaxy.Distance),
+    alienFlightDuration (та же формула, что fleet.transportDuration, мин. 1 мин).
+  - Убрана строка «Нет учёта координат и времени полёта» из package-doc.
+
+backend/internal/alien/alien_test.go (новый файл):
+  - TestAlienDistance_* (5 тестов: разные галактики, та же галактика,
+    та же система, тот же слот, симметричность).
+  - TestAlienFlightDuration_* (минимум 1 мин, растёт с расстоянием).
+  - TestScoreTier (6 граничных значений).
+  - TestAlienFleet_AllTiers (все тиры не пусты, Quantity > 0).
+  - TestAlienFleet_HigherTierStronger (суммарный Shell: tier1<tier2<tier3).
+
+docs/simplifications.md: обновлён [Alien AI] — координаты полёта ✅.
+docs/status.md: Alien AI — добавлена координаты полёта ✅.
+
+================================================================================
 Конец дневника.
 ================================================================================
