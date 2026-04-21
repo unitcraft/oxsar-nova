@@ -13,6 +13,7 @@ package battle
 type Input struct {
 	Seed      uint64                `json:"seed"`
 	Rounds    int                   `json:"rounds,omitempty"`
+	NumSim    int                   `json:"num_sim,omitempty"` // 0/1 = один бой; 2..20 = multi-run статистика
 	Attackers []Side                `json:"attackers"`
 	Defenders []Side                `json:"defenders"`
 	Rapidfire map[int]map[int]int   `json:"rapidfire,omitempty"`
@@ -60,6 +61,14 @@ type UnitCost struct {
 	Metal    int64 `json:"metal,omitempty"`
 	Silicon  int64 `json:"silicon,omitempty"`
 	Hydrogen int64 `json:"hydrogen,omitempty"`
+}
+
+// SimStats — агрегат по num_sim прогонам (возвращается вместо Report если NumSim ≥ 2).
+type SimStats struct {
+	NumSim    int     `json:"num_sim"`
+	WinRate   float64 `json:"win_rate"`   // доля побед атакующих
+	DrawRate  float64 `json:"draw_rate"`  // ничьи (оба выжили или оба уничтожены)
+	AvgRounds float64 `json:"avg_rounds"` // среднее число раундов
 }
 
 // Report — результат боя.
