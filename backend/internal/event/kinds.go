@@ -34,6 +34,7 @@ const (
 	KindDeliveryUnits              Kind = 21
 	KindDeliveryResources          Kind = 22
 	KindStargateTransport          Kind = 28
+	KindAlienAttack                Kind = 35 // инопланетяне атакуют планету игрока
 	KindRepair                     Kind = 50
 	KindDisassemble                Kind = 51
 	KindArtefactExpire             Kind = 60

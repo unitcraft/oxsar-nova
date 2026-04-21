@@ -3366,5 +3366,43 @@ docs/status.md: Admin panel ⬜ → ✅. Frontend экраны: 14 → 18.
 
 
 ================================================================================
+Итерация 48 — Alien AI MVP (M5.2)
+================================================================================
+
+backend/internal/event/kinds.go:
+  - +KindAlienAttack Kind = 35.
+
+backend/internal/alien/alien.go (~170 строк):
+  - Service{db, cat}.
+  - Spawn(ctx): выбирает до 5 случайных активных игроков (last_seen_at < 7 дней),
+    с 30% шансом создаёт event KindAlienAttack через 5-3600 секунд.
+    Тир флота зависит от score: <1000→1, 1k-50k→2, >50k→3.
+  - AttackHandler(): читает защиту планеты, проводит battle.Calculate(),
+    при победе инопланетян списывает 30% ресурсов, пишет сообщение игроку.
+  - alienFleet(tier): 3 пресета юнитов (200=Scout, 201=Destroyer, 202=Cruiser,
+    203=Battleship) с хардкод характеристиками (unit_id 200-204 не в каталоге).
+
+backend/internal/alien/helpers.go (~130 строк):
+  - readPlanetShips/readPlanetDefense/readUserTech/stacksToBattleUnits/
+    rapidfireToMap — копии из fleet/attack.go (дублирование осознанное:
+    нет общего пакета для этих хелперов).
+  - fnvHash(s) — детерминированный seed из event.ID.
+
+backend/cmd/worker/main.go:
+  - alienSvc := alien.NewService(db, cat).
+  - w.Register(event.KindAlienAttack, alienSvc.AttackHandler()).
+  - Goroutine time.Ticker(6h) → alienSvc.Spawn(ctx).
+
+docs/status.md: Alien AI ⬜ → 🟡.
+docs/simplifications.md: новая запись [Alien AI] MVP без координат.
+
+Статистика итерации 48:
+   alien/alien.go: новый (~170 строк).
+   alien/helpers.go: новый (~130 строк).
+   event/kinds.go: +1 константа.
+   worker/main.go: +15 строк.
+
+
+================================================================================
 Конец дневника.
 ================================================================================
