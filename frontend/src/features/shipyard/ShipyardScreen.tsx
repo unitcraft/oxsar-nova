@@ -59,9 +59,9 @@ export function ShipyardScreen({ planet }: { planet: Planet }) {
       )}
 
       <h3>{tf('Main', 'SHIPYARD_QUEUE', 'Очередь верфи')}</h3>
-      {queue.data && queue.data.queue.length > 0 ? (
+      {queue.data && (queue.data.queue ?? []).length > 0 ? (
         <ul>
-          {queue.data.queue.map((q) => (
+          {(queue.data.queue ?? []).map((q) => (
             <li key={q.id}>
               {nameOf(q.unit_id)} × {q.count}, {tf('Main', 'UNTIL', 'до')}{' '}
               {new Date(q.end_at).toLocaleTimeString('ru-RU')}

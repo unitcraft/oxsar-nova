@@ -73,9 +73,9 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
       )}
 
       <h3>{tf('Main', 'QUEUE_HEADER', 'Очередь')}</h3>
-      {queue.data && queue.data.queue.length > 0 ? (
+      {queue.data && (queue.data.queue ?? []).length > 0 ? (
         <ul>
-          {queue.data.queue.map((q) => (
+          {(queue.data.queue ?? []).map((q) => (
             <li key={q.id}>
               {buildingName(q.unit_id)} → {tf('Main', 'LEVEL_SHORT', 'ур.')} {q.target_level},{' '}
               {tf('Main', 'UNTIL', 'до')} {new Date(q.end_at).toLocaleTimeString('ru-RU')}
