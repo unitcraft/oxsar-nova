@@ -31,6 +31,14 @@ interface Application {
   created_at: string;
 }
 
+interface Relationship {
+  target_alliance_id: string;
+  target_tag: string;
+  target_name: string;
+  relation: string;
+  set_at: string;
+}
+
 export function AllianceScreen() {
   const { tf } = useTranslation();
   const qc = useQueryClient();
@@ -266,6 +274,10 @@ function MyAlliancePanel({
         </tbody>
       </table>
 
+      {isOwner && (
+        <RelationsPanel allianceID={alliance.id} />
+      )}
+
       {isOwner && !alliance.is_open && (
         <div style={{ marginTop: 16 }}>
           <h4>Заявки на вступление</h4>
@@ -417,6 +429,87 @@ function CreateForm({ error, onCreated, onError, onCancel }: {
       <button type="button" onClick={onCancel}>
         {tf('Main', 'CANCEL', 'Отмена')}
       </button>
+    </div>
+  );
+}
+
+function RelationsPanel({ allianceID }: { allianceID: string }) {
+  const qc = useQueryClient();
+  const [targetID, setTargetID] = useState('');
+  const [relation, setRelation] = useState<'nap' | 'war' | 'ally'>('nap');
+
+  const rels = useQuery({
+    queryKey: ['alliances', allianceID, 'relations'],
+    queryFn: () =>
+      api.get<{ relations: Relationship[] | null }>(`/api/alliances/${allianceID}/relations`),
+    refetchInterval: 30000,
+  });
+
+  const setRel = useMutation({
+    mutationFn: ({ tid, rel }: { tid: string; rel: string }) =>
+      api.put<void>(`/api/alliances/${allianceID}/relations/${tid}`, { relation: rel }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['alliances', allianceID, 'relations'] });
+      setTargetID('');
+    },
+  });
+
+  const removeRel = useMutation({
+    mutationFn: (tid: string) =>
+      api.put<void>(`/api/alliances/${allianceID}/relations/${tid}`, { relation: 'none' }),
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ['alliances', allianceID, 'relations'] }),
+  });
+
+  const list = rels.data?.relations ?? [];
+  const relLabel: Record<string, string> = { nap: 'НЕН', war: 'ВОЙНА', ally: 'СОЮЗ' };
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <h4>Отношения с альянсами</h4>
+      {list.length === 0 ? (
+        <p style={{ color: '#888' }}>Нет установленных отношений.</p>
+      ) : (
+        <table className="ox-table">
+          <thead>
+            <tr><th>Альянс</th><th>Отношение</th><th /></tr>
+          </thead>
+          <tbody>
+            {list.map((r) => (
+              <tr key={r.target_alliance_id}>
+                <td>[{r.target_tag}] {r.target_name}</td>
+                <td>{relLabel[r.relation] ?? r.relation}</td>
+                <td>
+                  <button type="button" disabled={removeRel.isPending}
+                    onClick={() => removeRel.mutate(r.target_alliance_id)}>
+                    ✕
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <div style={{ marginTop: 8, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+        <input
+          placeholder="ID альянса"
+          value={targetID}
+          onChange={(e) => setTargetID(e.target.value)}
+          style={{ width: 280, fontFamily: 'monospace', fontSize: '0.85em' }}
+        />
+        <select value={relation} onChange={(e) => setRelation(e.target.value as typeof relation)}>
+          <option value="nap">НЕН (ненападение)</option>
+          <option value="ally">СОЮЗ</option>
+          <option value="war">ВОЙНА</option>
+        </select>
+        <button type="button" disabled={!targetID || setRel.isPending}
+          onClick={() => setRel.mutate({ tid: targetID, rel: relation })}>
+          Установить
+        </button>
+      </div>
+      {setRel.isError && (
+        <p className="ox-error">{setRel.error instanceof Error ? setRel.error.message : 'ошибка'}</p>
+      )}
     </div>
   );
 }
