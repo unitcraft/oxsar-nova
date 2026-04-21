@@ -1,0 +1,20 @@
+# Production overlay — использует prod-образ frontend (nginx + собранный bundle).
+#
+# Запуск:
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml up --build
+#
+# Переменные (передавать через .env или environment):
+#   JWT_SECRET   — обязателен, не default!
+#   DB_URL       — если используем внешний Postgres.
+#   REDIS_URL    — если используем внешний Redis.
+
+services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.frontend-prod
+    # Убираем dev bind-mount и node_modules volume.
+    volumes: []
+    # Prod-порт: 80 снаружи → 80 в контейнере (nginx).
+    ports: ["80:80"]
+    environment: {}
