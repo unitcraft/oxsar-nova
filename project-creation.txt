@@ -4047,5 +4047,17 @@ docs/simplifications.md:
 BuildingsScreen теперь использует buildingName() в очереди вместо nameOf().
 
 ================================================================================
+Итерация — 2026-04-22
+================================================================================
+
+[Buildings] Endpoint GET /api/planets/{id}/buildings добавлен.
+  - building/service.go: Levels() → map[unit_id]level из таблицы buildings.
+  - building/handler.go: Levels() handler → {"levels": {id: level}}.
+  - server/main.go: pr.Get("/planets/{id}/buildings", buildingH.Levels).
+  - BuildingsScreen.tsx: показывает текущий уровень каждого здания (ур. N).
+  - RocketsScreen.tsx: запрашивает уровень шахты (id=13), показывает
+    siloLevel + siloMax, ограничивает ввод maxLaunch = min(have, siloMax).
+
+================================================================================
 Конец дневника.
 ================================================================================
