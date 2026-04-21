@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { BUILDINGS, nameOf } from '@/api/catalog';
+import { BUILDINGS, buildingName } from '@/api/catalog';
 import { useTranslation } from '@/i18n/i18n';
 import type { Planet, QueueItem } from '@/api/types';
 
@@ -63,7 +63,7 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
         <ul>
           {queue.data.queue.map((q) => (
             <li key={q.id}>
-              {nameOf(q.unit_id)} → {tf('Main', 'LEVEL_SHORT', 'ур.')} {q.target_level},{' '}
+              {buildingName(q.unit_id)} → {tf('Main', 'LEVEL_SHORT', 'ур.')} {q.target_level},{' '}
               {tf('Main', 'UNTIL', 'до')} {new Date(q.end_at).toLocaleTimeString('ru-RU')}
             </li>
           ))}
