@@ -269,16 +269,11 @@
 
 ## Achievements
 
-### [Achievements] Lazy-check при GET, не real-time
-- **Где**: `internal/achievement/handler.go`.
-- **Что**: CheckAll прогоняется при GET /api/achievements.
-  Уведомление о разблокировке приходит при следующем заходе на
-  экран.
-- **Почему**: не инвазивно для handler'ов (не нужно править build/
-  fleet/artefact handler'ы).
-- **Как чинить**: inject achievement.Service в каждый domain handler
-  и вызывать UnlockIfNew после успешного действия в той же транзакции.
-- **Приоритет**: M — если захотим real-time toast «Достижение!».
+### [Achievements] Lazy-check при GET, не real-time — ЗАКРЫТО
+- Закрыто: `withAchievement` decorator в worker/main.go вызывает
+  `achSvc.CheckAll` после KindBuildConstruction, KindArtefactExpire,
+  KindAttackSingle, KindAttackAlliance, KindColonize. Ошибка не
+  прерывает основной handler — только логируется (commit далее).
 
 ### [Achievements] Только 5 штук
 - **Где**: `migrations/0014_achievements.sql`.

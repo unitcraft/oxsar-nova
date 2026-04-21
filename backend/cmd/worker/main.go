@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/oxsar/nova/backend/internal/achievement"
 	"github.com/oxsar/nova/backend/internal/alien"
 	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/automsg"
@@ -81,6 +82,7 @@ func run() error {
 	officerSvc := officer.NewService(db)
 
 	scoreSvc := score.NewService(db, cat)
+	achSvc := achievement.NewService(db)
 
 	// withScore оборачивает handler: после успеха пересчитывает очки
 	// пользователя события (если UserID задан). Ошибка пересчёта не
@@ -102,23 +104,42 @@ func run() error {
 		}
 	}
 
+	// withAchievement оборачивает handler: после успеха проверяет и
+	// открывает достижения. Ошибка не прерывает основной handler.
+	withAchievement := func(h event.Handler) event.Handler {
+		return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
+			if err := h(ctx, tx, e); err != nil {
+				return err
+			}
+			if e.UserID == nil {
+				return nil
+			}
+			if err := achSvc.CheckAll(ctx, *e.UserID); err != nil {
+				log.WarnContext(ctx, "achievement_check_failed",
+					slog.String("user_id", *e.UserID),
+					slog.String("err", err.Error()))
+			}
+			return nil
+		}
+	}
+
 	// Регистрация handler-ов.
 	// Один handler на Kind. Domain-пакеты сами не регистрируются —
 	// чтобы воркер видел весь список в одном месте и было проще
 	// отслеживать, что именно обрабатывается.
-	w.Register(event.KindBuildConstruction, withScore(event.HandleBuildConstruction))
+	w.Register(event.KindBuildConstruction, withAchievement(withScore(event.HandleBuildConstruction)))
 	w.Register(event.KindResearch, withScore(event.HandleResearch))
 	w.Register(event.KindBuildFleet, withScore(event.HandleBuildFleet))
 	w.Register(event.KindBuildDefense, withScore(event.HandleBuildFleet))
-	w.Register(event.KindArtefactExpire, artefactSvc.ExpireEvent())
+	w.Register(event.KindArtefactExpire, withAchievement(artefactSvc.ExpireEvent()))
 	w.Register(event.KindArtefactDelay, artefactSvc.DelayEvent())
 	w.Register(event.KindTransport, transportSvc.ArriveHandler())
 	w.Register(event.KindReturn, transportSvc.ReturnHandler())
-	w.Register(event.KindAttackSingle, transportSvc.AttackHandler())
-	w.Register(event.KindAttackAlliance, transportSvc.ACSAttackHandler())
+	w.Register(event.KindAttackSingle, withAchievement(transportSvc.AttackHandler()))
+	w.Register(event.KindAttackAlliance, withAchievement(transportSvc.ACSAttackHandler()))
 	w.Register(event.KindRecycling, transportSvc.RecyclingHandler())
 	w.Register(event.KindSpy, transportSvc.SpyHandler())
-	w.Register(event.KindColonize, transportSvc.ColonizeHandler())
+	w.Register(event.KindColonize, withAchievement(transportSvc.ColonizeHandler()))
 	w.Register(event.KindDisassemble, repairSvc.DisassembleHandler())
 	w.Register(event.KindRepair, repairSvc.RepairHandler())
 	w.Register(event.KindRocketAttack, rocketSvc.ImpactHandler())
