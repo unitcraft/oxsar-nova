@@ -263,6 +263,7 @@ func run() error {
 		pr.Put("/alliances/{id}/relations/{target_id}", allianceH.ProposeRelation)
 		pr.Post("/alliances/{id}/relations/{initiator_id}/accept", allianceH.AcceptRelation)
 		pr.Delete("/alliances/{id}/relations/{initiator_id}", allianceH.RejectRelation)
+		pr.Patch("/alliances/{id}/members/{userID}/rank", allianceH.SetMemberRank)
 
 		pr.Get("/tutorial", tutorialH.Status)
 

@@ -264,6 +264,36 @@ func (h *Handler) Disband(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// SetMemberRank PATCH /api/alliances/{id}/members/{userID}/rank
+// Body: {"rank_name":"..."}
+func (h *Handler) SetMemberRank(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	allianceID := chi.URLParam(r, "id")
+	memberUID := chi.URLParam(r, "userID")
+	var body struct {
+		RankName string `json:"rank_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	err := h.svc.SetMemberRank(r.Context(), uid, allianceID, memberUID, body.RankName)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrNotFound), errors.Is(err, ErrMemberNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotOwner):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 // GetRelations GET /api/alliances/{id}/relations
 func (h *Handler) GetRelations(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
