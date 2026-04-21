@@ -156,10 +156,18 @@ func (s *Service) EnqueueDisassemble(ctx context.Context, userID, planetID strin
 			return ErrNotEnoughShips
 		}
 
-		// 4. Хватает ли ресурсов на required.
-		if int64(p.Metal) < totalReq.Metal ||
-			int64(p.Silicon) < totalReq.Silicon ||
-			int64(p.Hydrogen) < totalReq.Hydrogen {
+		// 4. Хватает ли ресурсов на required. Читаем внутри tx (FOR UPDATE),
+		//    чтобы избежать TOCTOU при параллельных enqueue.
+		var curMetal, curSilicon, curHydrogen float64
+		if err := tx.QueryRow(ctx,
+			`SELECT metal, silicon, hydrogen FROM planets WHERE id=$1 FOR UPDATE`,
+			planetID,
+		).Scan(&curMetal, &curSilicon, &curHydrogen); err != nil {
+			return fmt.Errorf("read planet res: %w", err)
+		}
+		if int64(curMetal) < totalReq.Metal ||
+			int64(curSilicon) < totalReq.Silicon ||
+			int64(curHydrogen) < totalReq.Hydrogen {
 			return ErrNotEnoughRes
 		}
 
