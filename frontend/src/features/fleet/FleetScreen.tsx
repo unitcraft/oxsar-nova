@@ -44,21 +44,32 @@ export function FleetScreen({ planet }: { planet: Planet }) {
   const [silicon, setSilicon] = useState(0);
   const [hydrogen, setHydrogen] = useState(0);
   const [ships, setShips] = useState<Record<number, number>>({});
+  // mission: 7=TRANSPORT, 9=RECYCLING, 10=ATTACK. Carry-поля имеют
+  // смысл только для TRANSPORT, для остальных миссий клиентский
+  // форм-стейт игнорируется (send.mutate обнуляет их ниже).
+  const [mission, setMission] = useState(7);
 
   const send = useMutation({
-    mutationFn: () =>
-      api.post<unknown>('/api/fleet', {
+    mutationFn: () => {
+      // Carry имеет смысл только для TRANSPORT (mission=7).
+      // Для ATTACK/RECYCLING насильно обнуляем, чтобы не возить
+      // «туда» ресурсы случайно (легко забыть сбросить поля).
+      const carryM = mission === 7 ? metal : 0;
+      const carryS = mission === 7 ? silicon : 0;
+      const carryH = mission === 7 ? hydrogen : 0;
+      return api.post<unknown>('/api/fleet', {
         src_planet_id: planet.id,
         dst: { galaxy: g, system: s, position: pos, is_moon: isMoon },
         ships: Object.fromEntries(
           Object.entries(ships).filter(([, n]) => Number(n) > 0),
         ),
-        carry_metal: metal,
-        carry_silicon: silicon,
-        carry_hydrogen: hydrogen,
+        carry_metal: carryM,
+        carry_silicon: carryS,
+        carry_hydrogen: carryH,
         speed_percent: speed,
-        mission: 7,
-      }),
+        mission,
+      });
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['fleets'] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
@@ -81,6 +92,15 @@ export function FleetScreen({ planet }: { planet: Planet }) {
   return (
     <section>
       <h2>{t('global', 'MENU_FLEET')}</h2>
+
+      <h3>{tf('Main', 'MISSION', 'Миссия')}</h3>
+      <div style={{ marginBottom: 12 }}>
+        <select value={mission} onChange={(e) => setMission(Number(e.target.value))}>
+          <option value={7}>{tf('Main', 'MISSION_TRANSPORT', '7 — Транспорт')}</option>
+          <option value={10}>{tf('Main', 'MISSION_ATTACK', '10 — Атака')}</option>
+          <option value={9}>{tf('Main', 'MISSION_RECYCLING', '9 — Переработка')}</option>
+        </select>
+      </div>
 
       <h3>{t('Main', 'POSITION')}</h3>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
@@ -121,14 +141,18 @@ export function FleetScreen({ planet }: { planet: Planet }) {
         </tbody>
       </table>
 
-      <h3>
-        {t('global', 'METAL')} / {t('global', 'SILICON')} / {t('global', 'HYDROGEN')}
-      </h3>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <input type="number" min={0} value={metal} onChange={(e) => setMetal(Number(e.target.value))} placeholder="metal" />
-        <input type="number" min={0} value={silicon} onChange={(e) => setSilicon(Number(e.target.value))} placeholder="silicon" />
-        <input type="number" min={0} value={hydrogen} onChange={(e) => setHydrogen(Number(e.target.value))} placeholder="hydrogen" />
-      </div>
+      {mission === 7 && (
+        <>
+          <h3>
+            {t('global', 'METAL')} / {t('global', 'SILICON')} / {t('global', 'HYDROGEN')}
+          </h3>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <input type="number" min={0} value={metal} onChange={(e) => setMetal(Number(e.target.value))} placeholder="metal" />
+            <input type="number" min={0} value={silicon} onChange={(e) => setSilicon(Number(e.target.value))} placeholder="silicon" />
+            <input type="number" min={0} value={hydrogen} onChange={(e) => setHydrogen(Number(e.target.value))} placeholder="hydrogen" />
+          </div>
+        </>
+      )}
 
       <div style={{ marginBottom: 12 }}>
         speed %&nbsp;
