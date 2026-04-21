@@ -3823,5 +3823,30 @@ docs/simplifications.md:
   - [economy] storage cap — ЗАКРЫТО (было ошибочно открыто, уже реализован).
 
 ================================================================================
+Итерация N+1 — Achievements real-time + Score real-time (withAchievement / withScore)
+================================================================================
+
+Закрытые упрощения:
+  [score.batch] — RecalcUser вызывается в withScore после KindBuildConstruction,
+    KindResearch, KindBuildFleet, KindBuildDefense (commit 39fa234).
+  [Achievements] Lazy-check — CheckAll вызывается в withAchievement после
+    KindBuildConstruction, KindArtefactExpire, KindAttackSingle,
+    KindAttackAlliance, KindColonize (commit dc88402).
+
+backend/cmd/worker/main.go:
+  - withScore decorator: обёртка над event.Handler, вызывает scoreSvc.RecalcUser
+    после успеха; ошибка логируется WarnContext, не прерывает handler.
+  - withAchievement decorator: аналогично, вызывает achSvc.CheckAll.
+  - KindBuildConstruction: withAchievement(withScore(...)).
+  - KindAttackSingle, KindAttackAlliance, KindColonize: withAchievement(...).
+  - KindArtefactExpire: withAchievement(...).
+  - Добавлен import "github.com/jackc/pgx/v5" для pgx.Tx в withScore.
+  - Добавлен import achievement package.
+
+docs/simplifications.md:
+  - [score.batch] — ЗАКРЫТО.
+  - [Achievements] Lazy-check — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================
