@@ -18,10 +18,18 @@ tags:
   - name: shipyard
   - name: repair
   - name: artefacts
+  - name: artmarket
   - name: galaxy
   - name: fleet
   - name: battle
   - name: messages
+  - name: achievements
+  - name: officers
+  - name: market
+  - name: rockets
+  - name: score
+  - name: alliances
+  - name: i18n
   - name: system
 
 paths:
@@ -591,6 +599,54 @@ paths:
                   messages:
                     type: array
                     items: { $ref: "#/components/schemas/Message" }
+    post:
+      tags: [messages]
+      security: [{ bearerAuth: [] }]
+      summary: Отправить сообщение игроку.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to_username, subject, body]
+              properties:
+                to_username: { type: string }
+                subject: { type: string }
+                body: { type: string }
+      responses:
+        "201": { description: sent }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/messages/unread-count:
+    get:
+      tags: [messages]
+      security: [{ bearerAuth: [] }]
+      summary: Число непрочитанных сообщений.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer }
+
+  /api/messages/{id}:
+    delete:
+      tags: [messages]
+      security: [{ bearerAuth: [] }]
+      summary: Удалить сообщение.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/messages/{id}/read:
     post:
@@ -611,9 +667,7 @@ paths:
     get:
       tags: [messages]
       security: [{ bearerAuth: [] }]
-      summary: |
-        Полный battle report (JSON). Доступен attacker'у и defender'у
-        владельцам отчёта.
+      summary: Полный battle report. Доступен attacker'у и defender'у.
       parameters:
         - in: path
           name: id
@@ -628,6 +682,44 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/espionage-reports/{id}:
+    get:
+      tags: [messages]
+      security: [{ bearerAuth: [] }]
+      summary: Полный espionage report.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { type: object }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/expedition-reports/{id}:
+    get:
+      tags: [messages]
+      security: [{ bearerAuth: [] }]
+      summary: Полный expedition report.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { type: object }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/battle-sim:
     post:
       tags: [battle]
@@ -639,10 +731,407 @@ paths:
             schema: { $ref: "#/components/schemas/BattleInput" }
       responses:
         "200":
+          description: ok (BattleReport if num_sim<2, SimStats if num_sim>=2)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/BattleReport"
+                  - $ref: "#/components/schemas/SimStats"
+
+  /api/achievements:
+    get:
+      tags: [achievements]
+      security: [{ bearerAuth: [] }]
+      summary: Список всех достижений + статус unlock.
+      responses:
+        "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/BattleReport" }
+              schema:
+                type: object
+                properties:
+                  achievements:
+                    type: array
+                    items: { $ref: "#/components/schemas/AchievementEntry" }
+
+  /api/officers:
+    get:
+      tags: [officers]
+      security: [{ bearerAuth: [] }]
+      summary: Список офицеров и их статусов.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  officers:
+                    type: array
+                    items: { $ref: "#/components/schemas/Officer" }
+
+  /api/officers/{key}/activate:
+    post:
+      tags: [officers]
+      security: [{ bearerAuth: [] }]
+      summary: Нанять / продлить офицера (списывает кредиты).
+      parameters:
+        - in: path
+          name: key
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planet_id]
+              properties:
+                planet_id: { type: string, format: uuid }
+      responses:
+        "200": { description: activated }
+        "402": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/market/rates:
+    get:
+      tags: [market]
+      security: [{ bearerAuth: [] }]
+      summary: Текущие курсы обмена ресурсов.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MarketRates" }
+
+  /api/planets/{id}/market/exchange:
+    post:
+      tags: [market]
+      security: [{ bearerAuth: [] }]
+      summary: Обменять ресурсы на планете.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from, to, amount]
+              properties:
+                from:   { type: string, enum: [metal, silicon, hydrogen] }
+                to:     { type: string, enum: [metal, silicon, hydrogen] }
+                amount: { type: integer, format: int64, minimum: 1 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExchangeResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/planets/{id}/rockets:
+    get:
+      tags: [rockets]
+      security: [{ bearerAuth: [] }]
+      summary: Склад ракет на планете.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  interplanetary: { type: integer, format: int64 }
+
+  /api/planets/{id}/rockets/launch:
+    post:
+      tags: [rockets]
+      security: [{ bearerAuth: [] }]
+      summary: Запустить межпланетную ракету.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dst, count]
+              properties:
+                dst:   { $ref: "#/components/schemas/Coords" }
+                count: { type: integer, minimum: 1 }
+      responses:
+        "201": { description: launched }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/highscore:
+    get:
+      tags: [score]
+      security: [{ bearerAuth: [] }]
+      summary: Таблица лидеров (топ-50).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items: { $ref: "#/components/schemas/HighscoreEntry" }
+
+  /api/highscore/me:
+    get:
+      tags: [score]
+      security: [{ bearerAuth: [] }]
+      summary: Ранг и очки текущего игрока.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HighscoreEntry" }
+
+  /api/alliances:
+    get:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Список альянсов (топ-50 по числу участников).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alliances:
+                    type: array
+                    items: { $ref: "#/components/schemas/Alliance" }
+    post:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Создать альянс.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tag, name]
+              properties:
+                tag:         { type: string, minLength: 3, maxLength: 5 }
+                name:        { type: string, minLength: 3, maxLength: 64 }
+                description: { type: string }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Alliance" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/alliances/me:
+    get:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Мой альянс + список участников. 404 если не в альянсе.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AllianceDetail" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/alliances/leave:
+    post:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Покинуть альянс (владелец не может).
+      responses:
+        "204": { description: left }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/alliances/{id}:
+    get:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Информация об альянсе + участники.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AllianceDetail" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Распустить альянс (только владелец).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: disbanded }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/alliances/{id}/join:
+    post:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Вступить в альянс.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: joined }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/artefacts/{id}/sell:
+    post:
+      tags: [artefacts]
+      security: [{ bearerAuth: [] }]
+      summary: Выставить артефакт на рынок (создаёт offer).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [price]
+              properties:
+                price: { type: integer, format: int64, minimum: 1 }
+      responses:
+        "201": { description: offer created }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/artefact-market/offers:
+    get:
+      tags: [artmarket]
+      security: [{ bearerAuth: [] }]
+      summary: Активные предложения на рынке артефактов.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  offers:
+                    type: array
+                    items: { $ref: "#/components/schemas/ArtMarketOffer" }
+
+  /api/artefact-market/credit:
+    get:
+      tags: [artmarket]
+      security: [{ bearerAuth: [] }]
+      summary: Баланс кредитов текущего игрока.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  credit: { type: integer, format: int64 }
+
+  /api/artefact-market/offers/{id}/buy:
+    post:
+      tags: [artmarket]
+      security: [{ bearerAuth: [] }]
+      summary: Купить артефакт с рынка.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: bought }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/artefact-market/offers/{id}:
+    delete:
+      tags: [artmarket]
+      security: [{ bearerAuth: [] }]
+      summary: Снять артефакт с продажи.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: cancelled }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/i18n:
+    get:
+      tags: [i18n]
+      summary: Список доступных языков.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  languages: { type: array, items: { type: string } }
+
+  /api/i18n/{lang}:
+    get:
+      tags: [i18n]
+      summary: Все переводы для заданного языка.
+      parameters:
+        - in: path
+          name: lang
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { type: object }
 
 components:
   securitySchemes:
@@ -935,3 +1424,88 @@ components:
         seed:   { type: integer, format: int64 }
         winner: { type: string, enum: [attackers, defenders, draw] }
         rounds: { type: integer }
+
+    SimStats:
+      type: object
+      properties:
+        num_sim:    { type: integer }
+        win_rate:   { type: number, description: "доля побед атакующих 0..1" }
+        draw_rate:  { type: number }
+        avg_rounds: { type: number }
+
+    AchievementEntry:
+      type: object
+      properties:
+        key:         { type: string }
+        title:       { type: string }
+        description: { type: string }
+        points:      { type: integer }
+        unlocked_at: { type: string, format: date-time, nullable: true }
+
+    Officer:
+      type: object
+      properties:
+        key:        { type: string }
+        active:     { type: boolean }
+        expires_at: { type: string, format: date-time, nullable: true }
+
+    MarketRates:
+      type: object
+      properties:
+        metal:     { type: number }
+        silicon:   { type: number }
+        hydrogen:  { type: number }
+        user_rate: { type: number }
+
+    ExchangeResult:
+      type: object
+      properties:
+        from:        { type: string }
+        to:          { type: string }
+        from_amount: { type: integer, format: int64 }
+        to_amount:   { type: integer, format: int64 }
+        rate:        { type: number }
+
+    HighscoreEntry:
+      type: object
+      properties:
+        user_id:  { type: string, format: uuid }
+        username: { type: string }
+        score:    { type: integer, format: int64 }
+        rank:     { type: integer }
+
+    Alliance:
+      type: object
+      properties:
+        id:           { type: string, format: uuid }
+        tag:          { type: string }
+        name:         { type: string }
+        description:  { type: string }
+        owner_id:     { type: string, format: uuid }
+        member_count: { type: integer }
+        created_at:   { type: string, format: date-time }
+
+    AllianceMember:
+      type: object
+      properties:
+        user_id:   { type: string, format: uuid }
+        username:  { type: string }
+        rank:      { type: string }
+        joined_at: { type: string, format: date-time }
+
+    AllianceDetail:
+      type: object
+      properties:
+        alliance: { $ref: "#/components/schemas/Alliance" }
+        members:
+          type: array
+          items: { $ref: "#/components/schemas/AllianceMember" }
+
+    ArtMarketOffer:
+      type: object
+      properties:
+        id:         { type: string, format: uuid }
+        seller_id:  { type: string, format: uuid }
+        unit_id:    { type: integer }
+        price:      { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
