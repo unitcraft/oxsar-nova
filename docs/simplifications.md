@@ -19,17 +19,10 @@
 
 ## Battle engine (M4)
 
-### [M4.1] Щиты — линейная абсорбция вместо Java-алгоритма
-- **Где**: `backend/internal/battle/engine.go::applyShots`.
-- **Что**: `pool = attack × shots`, тратится сначала на `turnShield`,
-  остаток в `turnShell`. Java-алгоритм сложнее: каждый выстрел меньше
-  `unit.shield / 100` полностью поглощается без просадки щита
-  (`ignoreAttack`), есть `shieldDestroyFactor` с плавным падением.
-- **Почему**: линейная модель проще тестировать, достаточно для
-  сбалансированных сценариев. Порт полного Java-алгоритма — M4.3+.
-- **Как чинить**: порт `Units.processAttack` shield-блока (строки
-  362–427 в oxsar2-java).
-- **Приоритет**: M.
+### [M4.1] Щиты — Java-алгоритм портирован — ЗАКРЫТО
+- Портирован `Units.processAttack` shield-блок (строки 315–427 oxsar2-java):
+  `ignoreAttack = shield/100`, `shieldDestroyFactor = clamp(1-turnShield/fullTurnShield, 0.01, 1.0)`,
+  `startTurnShield` хранится в `unitState`. Тесты обновлены под Java-поведение (commit 665cdd7).
 
 ### [M4.1] Регенерация щитов — 100% каждый раунд
 - **Где**: `battle/engine.go::regen`.
@@ -260,13 +253,9 @@
   deleted_at IS NULL в Inbox.
 - **Приоритет**: L.
 
-### [Messages] Username в BattleReport/Espionage только UUID
-- **Где**: `internal/message/service.go::GetBattleReport`.
-- **Что**: `attacker_user_id` в ответе — UUID, без join с users
-  для username.
-- **Почему**: simple query.
-- **Как чинить**: LEFT JOIN users в Get*Report.
-- **Приоритет**: L.
+### [Messages] Username в BattleReport — ЗАКРЫТО
+- LEFT JOIN users ua/ud добавлен в GetBattleReport. Поля
+  attacker_username/defender_username теперь в ответе (commit 10555a6).
 
 ### [Messages] Folders не используются в UI
 - **Где**: `features/messages/MessagesScreen.tsx`.

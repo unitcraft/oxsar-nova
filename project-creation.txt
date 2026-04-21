@@ -3781,5 +3781,27 @@ Makefile:
 docs/simplifications.md: [planet.tick] уточнён — как запускать вручную.
 
 ================================================================================
+Итерация 68 — feat(battle): Java shield algorithm port + battle report usernames
+================================================================================
+
+backend/internal/battle/engine.go:
+  - unitState.startTurnShield — хранит значение turnShield на начало раунда.
+  - applyShots: портирован Java Units.processAttack shield-блок:
+    * ignoreAttack = shield/100 (слабые выстрелы не пробивают shell).
+    * shieldDestroyFactor = clamp(1-turnShield/fullTurnShield, 0.01, 1.0).
+    * shieldDestroyUnits = floor(turnShield×factor/shield) ≤ shots → shell.
+    * Остальные shots → shield (с cap per shot и cap total).
+  - Инициализация startTurnShield в init и regen.
+
+backend/internal/battle/engine_test.go:
+  - TestCalculate_ShieldPierced переписан под Java-модель (multi-stack).
+
+backend/internal/message/service.go:
+  - GetBattleReport: LEFT JOIN users ua/ud → attacker_username/defender_username.
+
+docs/simplifications.md: [M4.1] Щиты — ЗАКРЫТО.
+docs/simplifications.md: [Messages] username в BattleReport — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================
