@@ -233,6 +233,7 @@ func (s *Service) AttackHandler() event.Handler {
 		}
 
 		// Лут: при победе инопланетян — 30% ресурсов планеты.
+		var grabCredit int64
 		if report.Winner == "attackers" {
 			lootM := int64(defMetal * 0.3)
 			lootS := int64(defSil * 0.3)
@@ -246,15 +247,26 @@ func (s *Service) AttackHandler() event.Handler {
 					return fmt.Errorf("alien attack: loot: %w", err)
 				}
 			}
+			// GRAB_CREDIT: 0.08–0.1% от кредитов при победе (если >100000).
+			grabCredit, err = applyGrabCredit(ctx, tx, defUserID, rng.New(fnvHash(e.ID)^0xcafebabe))
+			if err != nil {
+				return fmt.Errorf("alien attack: grab credit: %w", err)
+			}
 		}
 
 		// Artefact drop: 20% шанс при победе защитника.
+		var giftCredit int64
 		if report.Winner == "defenders" {
 			artSeed := rng.New(fnvHash(e.ID) ^ 0xdeadbeef)
 			if artSeed.IntN(100) < 20 {
 				if err := grantRandomArtefact(ctx, tx, defUserID, s.cat); err != nil {
 					return fmt.Errorf("alien attack: artefact drop: %w", err)
 				}
+			}
+			// GIFT_CREDIT: 5–10% кредитов (max 500) при отражении атаки.
+			giftCredit, err = applyGiftCredit(ctx, tx, defUserID, rng.New(fnvHash(e.ID)^0xbeefdead))
+			if err != nil {
+				return fmt.Errorf("alien attack: gift credit: %w", err)
 			}
 		}
 
@@ -266,6 +278,12 @@ func (s *Service) AttackHandler() event.Handler {
 			result = "атаковали — ничья"
 		}
 		body := fmt.Sprintf("Инопланетяне (тир %d) %s вашу планету.", pl.Tier, result)
+		if grabCredit > 0 {
+			body += fmt.Sprintf(" Похищено %d кредитов.", grabCredit)
+		}
+		if giftCredit > 0 {
+			body += fmt.Sprintf(" Инопланетяне оставили %d кредитов в знак уважения.", giftCredit)
+		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 			VALUES ($1, $2, NULL, 1, 'Атака инопланетян', $3)
@@ -275,6 +293,49 @@ func (s *Service) AttackHandler() event.Handler {
 
 		return nil
 	}
+}
+
+// applyGrabCredit снимает 0.08–0.1% кредитов (если >100000).
+// Возвращает реально снятую сумму (0 если условие не выполнено).
+func applyGrabCredit(ctx context.Context, tx pgx.Tx, userID string, r *rng.R) (int64, error) {
+	var credit int64
+	if err := tx.QueryRow(ctx, `SELECT credit FROM users WHERE id=$1 FOR UPDATE`, userID).Scan(&credit); err != nil {
+		return 0, err
+	}
+	const minCredit = 100_000
+	if credit <= minCredit {
+		return 0, nil
+	}
+	pct := 0.0008 + r.Float64()*0.0002 // 0.08%–0.10%
+	grab := int64(math.Round(float64(credit) * pct))
+	if grab <= 0 {
+		return 0, nil
+	}
+	if _, err := tx.Exec(ctx, `UPDATE users SET credit = credit - $1 WHERE id = $2`, grab, userID); err != nil {
+		return 0, err
+	}
+	return grab, nil
+}
+
+// applyGiftCredit добавляет 5–10% кредитов (max 500) при отражении атаки.
+func applyGiftCredit(ctx context.Context, tx pgx.Tx, userID string, r *rng.R) (int64, error) {
+	var credit int64
+	if err := tx.QueryRow(ctx, `SELECT credit FROM users WHERE id=$1`, userID).Scan(&credit); err != nil {
+		return 0, err
+	}
+	pct := 0.05 + r.Float64()*0.05 // 5%–10%
+	gift := int64(math.Round(float64(credit) * pct))
+	const maxGift = 500
+	if gift > maxGift {
+		gift = maxGift
+	}
+	if gift <= 0 {
+		return 0, nil
+	}
+	if _, err := tx.Exec(ctx, `UPDATE users SET credit = credit + $1 WHERE id = $2`, gift, userID); err != nil {
+		return 0, err
+	}
+	return gift, nil
 }
 
 // grantRandomArtefact вставляет случайный артефакт из каталога игроку.
