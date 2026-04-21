@@ -65,6 +65,11 @@ const AllianceScreen = lazy(() =>
     default: m.AllianceScreen,
   })),
 );
+const AchievementsScreen = lazy(() =>
+  import('./features/achievements/AchievementsScreen').then((m) => ({
+    default: m.AchievementsScreen,
+  })),
+);
 
 type Tab =
   | 'overview'
@@ -79,6 +84,7 @@ type Tab =
   | 'rockets'
   | 'art-market'
   | 'officers'
+  | 'achievements'
   | 'score'
   | 'messages'
   | 'alliance'
@@ -239,6 +245,12 @@ function AuthenticatedApp() {
         />
         <TabButton
           current={tab}
+          value="achievements"
+          onClick={setTab}
+          label={t('global', 'MENU_ACHIEVEMENTS') || 'Достижения'}
+        />
+        <TabButton
+          current={tab}
           value="score"
           onClick={setTab}
           label={t('global', 'MENU_HIGHSCORE') || 'Рейтинг'}
@@ -272,6 +284,7 @@ function AuthenticatedApp() {
         {tab === 'art-market' && <ArtefactMarketScreen />}
 
         {tab === 'officers' && <OfficersScreen />}
+        {tab === 'achievements' && <AchievementsScreen />}
         {tab === 'score' && <ScoreScreen />}
         {tab === 'alliance' && <AllianceScreen />}
         {tab === 'sim' && <BattleSimScreen />}
