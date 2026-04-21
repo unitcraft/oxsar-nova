@@ -1,0 +1,37 @@
+# Rapidfire — ускоренная стрельба по определённым целям.
+# TODO (M4): перенести один-в-один из oxsar2-java/assault/Units.java.
+# Пока — минимальный набор для самотестов боевого движка.
+#
+# format:
+#   <shooter_unit_id>: { <target_unit_id>: <multiplier>, ... }
+
+rapidfire:
+  # Cruiser (33) быстро стреляет по Light Fighter (31) и Rocket Launcher (43)
+  33:
+    31: 6
+    43: 10
+
+  # Battleship (34) по Espionage Probe (38) и Solar Satellite (39)
+  34:
+    38: 5
+    39: 5
+
+  # Deathstar (42) — раскидывает всех подряд
+  42:
+    29: 250
+    30: 250
+    31: 200
+    32: 100
+    33: 33
+    34: 30
+    37: 250
+    38: 1250
+    39: 1250
+    40: 25
+    41: 5
+    43: 200
+    44: 200
+    45: 100
+    46: 100
+    47: 50
+    48: 50

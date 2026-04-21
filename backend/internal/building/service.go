@@ -1,0 +1,259 @@
+// Package building управляет очередью строительства зданий.
+//
+// По ТЗ (§5.3): один слот очереди на планете + один на луне.
+// Стоимость/время — из configs/buildings.yml. Отмена очереди:
+// в первые 15 сек возврат 100%, далее — до 95% (EV_ABORT_MAX_BUILD_PERCENT).
+package building
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/oxsar/nova/backend/internal/config"
+	"github.com/oxsar/nova/backend/internal/economy"
+	"github.com/oxsar/nova/backend/internal/planet"
+	"github.com/oxsar/nova/backend/internal/repo"
+	"github.com/oxsar/nova/backend/internal/requirements"
+	"github.com/oxsar/nova/backend/pkg/ids"
+)
+
+var (
+	ErrQueueBusy        = errors.New("building: queue busy")
+	ErrNotEnoughRes     = errors.New("building: not enough resources")
+	ErrUnknownUnit      = errors.New("building: unknown unit")
+	ErrPlanetOwnership  = errors.New("building: planet does not belong to user")
+	ErrQueueItemNotFound = errors.New("building: queue item not found")
+)
+
+type Service struct {
+	db      repo.Exec
+	planets *planet.Service
+	catalog *config.Catalog
+	reqs    *requirements.Checker
+	gameSpd float64
+}
+
+func NewService(db repo.Exec, planets *planet.Service, cat *config.Catalog, reqs *requirements.Checker, gameSpeed float64) *Service {
+	if gameSpeed <= 0 {
+		gameSpeed = 1
+	}
+	return &Service{db: db, planets: planets, catalog: cat, reqs: reqs, gameSpd: gameSpeed}
+}
+
+// QueueItem — задача в очереди строительства.
+type QueueItem struct {
+	ID          string    `json:"id"`
+	PlanetID    string    `json:"planet_id"`
+	UnitID      int       `json:"unit_id"`
+	TargetLevel int       `json:"target_level"`
+	StartAt     time.Time `json:"start_at"`
+	EndAt       time.Time `json:"end_at"`
+	Status      string    `json:"status"`
+}
+
+// Enqueue ставит здание в очередь. Возвращает созданный QueueItem.
+// Вся операция атомарна: списание ресурсов + создание задачи + событие
+// завершения происходят в одной транзакции.
+func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID int) (QueueItem, error) {
+	key, spec, ok := s.lookupBuilding(unitID)
+	if !ok {
+		return QueueItem{}, ErrUnknownUnit
+	}
+
+	// Сначала догоняем тик, чтобы списание шло от актуального баланса.
+	p, err := s.planets.Get(ctx, planetID)
+	if err != nil {
+		return QueueItem{}, err
+	}
+	if p.UserID != userID {
+		return QueueItem{}, ErrPlanetOwnership
+	}
+
+	var item QueueItem
+	err = s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// Проверка: нет активной очереди.
+		var busy int
+		if err := tx.QueryRow(ctx, `
+			SELECT COUNT(*) FROM construction_queue
+			WHERE planet_id = $1 AND status IN ('queued','running')
+		`, p.ID).Scan(&busy); err != nil {
+			return fmt.Errorf("check queue: %w", err)
+		}
+		if busy > 0 {
+			return ErrQueueBusy
+		}
+
+		// Проверка зависимостей (если в requirements.yml есть запись
+		// для этого здания — проверяем). Пустые зависимости пропускаются.
+		if err := s.reqs.Check(ctx, tx, key, userID, p.ID); err != nil {
+			return err
+		}
+
+		// Текущий уровень + стоимость следующего.
+		curLevel, err := currentLevel(ctx, tx, p.ID, unitID)
+		if err != nil {
+			return err
+		}
+		targetLevel := curLevel + 1
+		cost := economy.CostForLevel(economy.Cost{
+			Metal:    spec.CostBase.Metal,
+			Silicon:  spec.CostBase.Silicon,
+			Hydrogen: spec.CostBase.Hydrogen,
+		}, spec.CostFactor, targetLevel)
+
+		if int64(p.Metal) < cost.Metal || int64(p.Silicon) < cost.Silicon || int64(p.Hydrogen) < cost.Hydrogen {
+			return ErrNotEnoughRes
+		}
+
+		// Снимаем ресурсы.
+		if _, err := tx.Exec(ctx, `
+			UPDATE planets
+			SET metal = metal - $1, silicon = silicon - $2, hydrogen = hydrogen - $3
+			WHERE id = $4
+		`, cost.Metal, cost.Silicon, cost.Hydrogen, p.ID); err != nil {
+			return fmt.Errorf("charge resources: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO res_log (user_id, planet_id, reason, delta_metal, delta_silicon, delta_hydrogen)
+			VALUES ($1, $2, 'build', $3, $4, $5)
+		`, userID, p.ID, -cost.Metal, -cost.Silicon, -cost.Hydrogen); err != nil {
+			return fmt.Errorf("res_log: %w", err)
+		}
+
+		robo, err := currentLevel(ctx, tx, p.ID, s.catalog.Buildings.Buildings["robotic_factory"].ID)
+		if err != nil {
+			return err
+		}
+
+		start := time.Now().UTC()
+		dur := economy.BuildDuration(spec.TimeBaseSeconds, cost, robo, 0, s.gameSpd)
+		end := start.Add(dur)
+
+		id := ids.New()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO construction_queue (id, planet_id, unit_id, unit_type, target_level,
+			                                start_at, end_at, cost_metal, cost_silicon, cost_hydrogen, status)
+			VALUES ($1, $2, $3, 'building', $4, $5, $6, $7, $8, $9, 'running')
+		`, id, p.ID, unitID, targetLevel, start, end, cost.Metal, cost.Silicon, cost.Hydrogen); err != nil {
+			return fmt.Errorf("insert queue: %w", err)
+		}
+
+		// Событие завершения — воркер подхватит и применит эффект.
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
+			VALUES ($1, $2, $3, 1, 'wait', $4, $5)
+		`, ids.New(), userID, p.ID, end,
+			fmt.Sprintf(`{"queue_id":"%s","unit_id":%d,"target_level":%d}`, id, unitID, targetLevel)); err != nil {
+			return fmt.Errorf("insert event: %w", err)
+		}
+
+		item = QueueItem{
+			ID: id, PlanetID: p.ID, UnitID: unitID, TargetLevel: targetLevel,
+			StartAt: start, EndAt: end, Status: "running",
+		}
+		return nil
+	})
+	return item, err
+}
+
+// List возвращает текущую очередь планеты (включая running).
+func (s *Service) List(ctx context.Context, planetID string) ([]QueueItem, error) {
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT id, planet_id, unit_id, target_level, start_at, end_at, status
+		FROM construction_queue
+		WHERE planet_id = $1 AND status IN ('queued','running')
+		ORDER BY start_at
+	`, planetID)
+	if err != nil {
+		return nil, fmt.Errorf("list queue: %w", err)
+	}
+	defer rows.Close()
+	var out []QueueItem
+	for rows.Next() {
+		var q QueueItem
+		if err := rows.Scan(&q.ID, &q.PlanetID, &q.UnitID, &q.TargetLevel, &q.StartAt, &q.EndAt, &q.Status); err != nil {
+			return nil, err
+		}
+		out = append(out, q)
+	}
+	return out, rows.Err()
+}
+
+// Cancel отменяет задачу, возвращает процент ресурсов согласно §5.3.
+func (s *Service) Cancel(ctx context.Context, userID, queueID string) error {
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var (
+			planetID string
+			startAt  time.Time
+			cm, cs, ch int64
+		)
+		err := tx.QueryRow(ctx, `
+			SELECT planet_id, start_at, cost_metal, cost_silicon, cost_hydrogen
+			FROM construction_queue
+			WHERE id = $1 AND status IN ('queued','running')
+			FOR UPDATE
+		`, queueID).Scan(&planetID, &startAt, &cm, &cs, &ch)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrQueueItemNotFound
+			}
+			return fmt.Errorf("select queue: %w", err)
+		}
+
+		refundFactor := 0.95
+		if time.Since(startAt) < 15*time.Second {
+			refundFactor = 1.0
+		}
+
+		rm := int64(float64(cm) * refundFactor)
+		rs := int64(float64(cs) * refundFactor)
+		rh := int64(float64(ch) * refundFactor)
+
+		if _, err := tx.Exec(ctx, `
+			UPDATE planets SET metal = metal + $1, silicon = silicon + $2, hydrogen = hydrogen + $3
+			WHERE id = $4
+		`, rm, rs, rh, planetID); err != nil {
+			return fmt.Errorf("refund: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO res_log (user_id, planet_id, reason, delta_metal, delta_silicon, delta_hydrogen)
+			VALUES ($1, $2, 'refund', $3, $4, $5)
+		`, userID, planetID, rm, rs, rh); err != nil {
+			return fmt.Errorf("res_log: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE construction_queue SET status='cancelled' WHERE id=$1
+		`, queueID); err != nil {
+			return fmt.Errorf("update queue: %w", err)
+		}
+		return nil
+	})
+}
+
+func (s *Service) lookupBuilding(unitID int) (string, config.BuildingSpec, bool) {
+	for key, spec := range s.catalog.Buildings.Buildings {
+		if spec.ID == unitID {
+			return key, spec, true
+		}
+	}
+	return "", config.BuildingSpec{}, false
+}
+
+func currentLevel(ctx context.Context, tx pgx.Tx, planetID string, unitID int) (int, error) {
+	var lvl int
+	err := tx.QueryRow(ctx,
+		`SELECT level FROM buildings WHERE planet_id=$1 AND unit_id=$2`,
+		planetID, unitID,
+	).Scan(&lvl)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("level: %w", err)
+	}
+	return lvl, nil
+}

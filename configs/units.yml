@@ -1,0 +1,86 @@
+# Единый реестр юнитов — источник истины для Go-констант и TS-типов
+# (см. §18.11 oxsar-spec.txt). ID совпадают с UNIT_* из oxsar2/consts.php,
+# чтобы сохранить совместимость с балансом и java-боем oxsar2-java.
+#
+# type: construction | moon_construction | research | fleet | defense
+#       | artefact | achievement
+
+buildings:
+  - { id: 1,   key: metal_mine,          name: "Metal Mine" }
+  - { id: 2,   key: silicon_lab,         name: "Silicon Lab" }
+  - { id: 3,   key: hydrogen_lab,        name: "Hydrogen Lab" }
+  - { id: 4,   key: solar_plant,         name: "Solar Plant" }
+  - { id: 5,   key: hydrogen_plant,      name: "Hydrogen Plant" }
+  - { id: 6,   key: robotic_factory,     name: "Robotic Factory" }
+  - { id: 7,   key: nano_factory,        name: "Nano Factory" }
+  - { id: 8,   key: shipyard,            name: "Shipyard" }
+  - { id: 9,   key: metal_storage,       name: "Metal Storage" }
+  - { id: 10,  key: silicon_storage,     name: "Silicon Storage" }
+  - { id: 11,  key: hydrogen_storage,    name: "Hydrogen Storage" }
+  - { id: 12,  key: research_lab,        name: "Research Lab" }
+  - { id: 53,  key: rocket_station,      name: "Rocket Station" }
+  - { id: 58,  key: terra_former,        name: "Terra Former" }
+  - { id: 100, key: repair_factory,      name: "Repair Factory" }
+  - { id: 101, key: defense_factory,     name: "Defense Factory" }
+  - { id: 107, key: exchange,            name: "Exchange" }
+  - { id: 108, key: exch_office,         name: "Exchange Office" }
+
+moon_buildings:
+  - { id: 54,  key: moon_base,           name: "Moon Base" }
+  - { id: 55,  key: star_surveillance,   name: "Star Surveillance" }
+  - { id: 56,  key: star_gate,           name: "Star Gate" }
+  - { id: 57,  key: moon_robotic_factory, name: "Moon Robotic Factory" }
+  - { id: 326, key: moon_hydrogen_lab,   name: "Moon Hydrogen Lab" }
+  - { id: 350, key: moon_lab,            name: "Moon Lab" }
+  - { id: 351, key: moon_repair_factory, name: "Moon Repair Factory" }
+
+research:
+  - { id: 13,  key: spyware,             name: "Espionage" }
+  - { id: 14,  key: computer_tech,       name: "Computer Tech" }
+  - { id: 15,  key: gun_tech,            name: "Weapons Tech" }
+  - { id: 16,  key: shield_tech,         name: "Shielding Tech" }
+  - { id: 17,  key: shell_tech,          name: "Armor Tech" }
+  - { id: 18,  key: energy_tech,         name: "Energy Tech" }
+  - { id: 19,  key: hyperspace_tech,     name: "Hyperspace Tech" }
+  - { id: 20,  key: combustion_engine,   name: "Combustion Drive" }
+  - { id: 21,  key: impulse_engine,      name: "Impulse Drive" }
+  - { id: 22,  key: hyperspace_engine,   name: "Hyperspace Drive" }
+  - { id: 23,  key: laser_tech,          name: "Laser Tech" }
+  - { id: 24,  key: ion_tech,            name: "Ion Tech" }
+  - { id: 25,  key: plasma_tech,         name: "Plasma Tech" }
+  - { id: 26,  key: ign,                 name: "Alliance Network" }
+  - { id: 27,  key: expo_tech,           name: "Expedition Tech" }
+  - { id: 28,  key: gravi,               name: "Graviton Tech" }
+  - { id: 103, key: ballistics_tech,     name: "Ballistics" }
+  - { id: 104, key: masking_tech,        name: "Masking" }
+
+fleet:
+  - { id: 29,  key: small_transporter,   name: "Small Transporter" }
+  - { id: 30,  key: large_transporter,   name: "Large Transporter" }
+  - { id: 31,  key: light_fighter,       name: "Light Fighter" }
+  - { id: 32,  key: strong_fighter,      name: "Heavy Fighter" }
+  - { id: 33,  key: cruiser,             name: "Cruiser" }
+  - { id: 34,  key: battle_ship,         name: "Battleship" }
+  - { id: 35,  key: frigate,             name: "Frigate" }
+  - { id: 36,  key: colony_ship,         name: "Colony Ship" }
+  - { id: 37,  key: recycler,            name: "Recycler" }
+  - { id: 38,  key: espionage_sensor,    name: "Espionage Probe" }
+  - { id: 39,  key: solar_satellite,     name: "Solar Satellite" }
+  - { id: 40,  key: bomber,              name: "Bomber" }
+  - { id: 41,  key: star_destroyer,      name: "Star Destroyer" }
+  - { id: 42,  key: death_star,          name: "Deathstar" }
+  - { id: 102, key: lancer_ship,         name: "Lancer" }
+
+defense:
+  - { id: 43,  key: rocket_launcher,     name: "Rocket Launcher" }
+  - { id: 44,  key: light_laser,         name: "Light Laser" }
+  - { id: 45,  key: strong_laser,        name: "Heavy Laser" }
+  - { id: 46,  key: ion_gun,             name: "Ion Cannon" }
+  - { id: 47,  key: gauss_gun,           name: "Gauss Cannon" }
+  - { id: 48,  key: plasma_gun,          name: "Plasma Turret" }
+  - { id: 49,  key: small_shield,        name: "Small Shield Dome" }
+  - { id: 50,  key: large_shield,        name: "Large Shield Dome" }
+  - { id: 51,  key: interceptor_rocket,  name: "Interceptor Missile" }
+  - { id: 52,  key: interplanetary_rocket, name: "Interplanetary Missile" }
+  - { id: 354, key: small_planet_shield, name: "Small Planet Shield" }
+  - { id: 355, key: large_planet_shield, name: "Large Planet Shield" }

@@ -1,0 +1,87 @@
+# Баланс исследований. Формула идентична зданиям:
+#   cost_N = cost_base * cost_factor^(N-1)
+#   time   = (m+s)/ (1000 * (1 + research_lab_level)) / GAMESPEED
+#
+# Значения — placeholder на основе OGame classic. Сверяем с oxsar2
+# на этапе M2.
+
+research:
+  spyware:
+    id: 13
+    cost_base:  { metal: 200,  silicon: 1000, hydrogen: 200 }
+    cost_factor: 2.0
+
+  computer_tech:
+    id: 14
+    cost_base:  { metal: 0,    silicon: 400,  hydrogen: 600 }
+    cost_factor: 2.0
+
+  gun_tech:
+    id: 15
+    cost_base:  { metal: 800,  silicon: 200,  hydrogen: 0 }
+    cost_factor: 2.0
+
+  shield_tech:
+    id: 16
+    cost_base:  { metal: 200,  silicon: 600,  hydrogen: 0 }
+    cost_factor: 2.0
+
+  shell_tech:
+    id: 17
+    cost_base:  { metal: 1000, silicon: 0,    hydrogen: 0 }
+    cost_factor: 2.0
+
+  energy_tech:
+    id: 18
+    cost_base:  { metal: 0,    silicon: 800,  hydrogen: 400 }
+    cost_factor: 2.0
+
+  hyperspace_tech:
+    id: 19
+    cost_base:  { metal: 0,    silicon: 4000, hydrogen: 2000 }
+    cost_factor: 2.0
+
+  combustion_engine:
+    id: 20
+    cost_base:  { metal: 400,  silicon: 0,    hydrogen: 600 }
+    cost_factor: 2.0
+
+  impulse_engine:
+    id: 21
+    cost_base:  { metal: 2000, silicon: 4000, hydrogen: 600 }
+    cost_factor: 2.0
+
+  hyperspace_engine:
+    id: 22
+    cost_base:  { metal: 10000, silicon: 20000, hydrogen: 6000 }
+    cost_factor: 3.0
+
+  laser_tech:
+    id: 23
+    cost_base:  { metal: 200,  silicon: 100,  hydrogen: 0 }
+    cost_factor: 2.0
+
+  ion_tech:
+    id: 24
+    cost_base:  { metal: 1000, silicon: 300,  hydrogen: 100 }
+    cost_factor: 2.0
+
+  plasma_tech:
+    id: 25
+    cost_base:  { metal: 2000, silicon: 4000, hydrogen: 1000 }
+    cost_factor: 2.0
+
+  expo_tech:
+    id: 27
+    cost_base:  { metal: 4000, silicon: 8000, hydrogen: 4000 }
+    cost_factor: 1.75
+
+  ballistics_tech:
+    id: 103
+    cost_base:  { metal: 4000, silicon: 8000, hydrogen: 4000 }
+    cost_factor: 2.0
+
+  masking_tech:
+    id: 104
+    cost_base:  { metal: 4000, silicon: 8000, hydrogen: 4000 }
+    cost_factor: 2.0

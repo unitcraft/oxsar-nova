@@ -1,0 +1,114 @@
+# Полный dev-стек: postgres, redis, migrator (one-shot), backend,
+# worker, frontend. Запускается одной командой:
+#
+#   docker compose -f deploy/docker-compose.yml up --build
+#
+# Порты на хосте выбраны «нестандартные», чтобы не конфликтовать с
+# другими проектами, часто использующими 5432/6379/8080. Внутри
+# docker-сети сервисы находят друг друга по именам (postgres:5432,
+# redis:6379, backend:8080), поэтому смена внешних портов не требует
+# правок в коде.
+#
+# Доступ:
+#   - UI:      http://localhost:5173
+#   - API:     http://localhost:8081  (обычно через UI-прокси)
+#   - pg:      localhost:5433 (oxsar/oxsar/oxsar)
+#   - redis:   localhost:6380
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: oxsar
+      POSTGRES_PASSWORD: oxsar
+      POSTGRES_DB: oxsar
+    ports: ["5433:5432"]
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oxsar"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6380:6379"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
+    restart: "no"
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      SERVER_ADDR: ":8080"
+      SERVER_ENV: dev
+      LOG_LEVEL: info
+      DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: dev-secret-change-me
+      CATALOG_DIR: /app/configs
+      I18N_DIR: /app/configs/i18n
+    ports: ["8081:8080"]
+
+  worker:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    # Переопределяем ENTRYPOINT из backend/Dockerfile (там по умолчанию
+    # /app/server). Если бы использовали command — Docker склеил бы его
+    # как аргументы к server, а не заменил бинарь.
+    entrypoint: ["/app/worker"]
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: dev-secret-change-me
+      CATALOG_DIR: /app/configs
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      - backend
+    environment:
+      VITE_PROXY_TARGET: http://backend:8080
+    ports: ["5173:5173"]
+    # Bind-mount исходников фронта, чтобы HMR работал без ребилда
+    # образа. node_modules — отдельный volume, чтобы npm install в
+    # контейнере не затирался локальной (возможно пустой) папкой.
+    volumes:
+      - ../frontend:/app
+      - frontend-node-modules:/app/node_modules
+
+volumes:
+  pg-data:
+  redis-data:
+  frontend-node-modules:

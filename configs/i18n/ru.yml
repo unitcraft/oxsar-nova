@@ -1,0 +1,1486 @@
+Achievements:
+  ACHIEVEMENT_BONUS: Награда
+  AVAIL_ACHIEVEMENTS: Невыполненные достижения
+  DONE_ACHIEVEMENTS: Полученные достижения
+  FIRST_COMPUTER_TECH: Открыть второй фронт.
+  FIRST_COMPUTER_TECH_DESC: Зачастую для победы над противником его надо атаковать в нескольких местах одновременно. Для координации атакующих флотов требуются огромные вычислительные мощности. Исследуйте компьютерную технологию, чтобы управлять большим количеством флотов.
+  FIRST_DEFFENCE: Крепим стены.
+  FIRST_DEFFENCE_DESC: Галактика - опасное и суровое место. Пока ваш флот бороздит просторы космоса, на вашу планету могут напасть другие игроки. Заставьте их заплатить за самоуверенность - начните строить оборону.
+  FIRST_ENERGY: Солнце - наш друг.
+  FIRST_ENERGY_DESC: Исследуя солнечную радиацию можно попытаться добыть из неё энергию. Исследуйте энергетическую технологию для увеличения выработки электричества.
+  FIRST_ENGINE: Предполетная подготовка.
+  FIRST_ENGINE_DESC: Для перемещения в пространстве вашим кораблям нужны надежные и мощьные двигатели. Исследовав свой первый двигатель вы станете еще на шаг ближе к покорению космоса.
+  FIRST_HYDROGEN: Синяя кровь.
+  FIRST_HYDROGEN_DESC: В далеком будущем цивилизации отказались от нефти, как от основного источника топлива, теперь повсеместно используется водород. На нем летают корабли и его потребляет научное оборудование. Постройте свой первый синтезатор водорода и обеспечьте свою планету топливом.
+  FIRST_METAL: Метал - основа всего.
+  FIRST_METAL_DESC: Для строительства зданий, кораблей и обороны, а так же для исследования некоторых технологий нужен метал. Он добывается на руднике. Постройте свой первый рудник по добыче метала.
+  FIRST_RESS_EXCHANGE: Рыночная экономика.
+  FIRST_RESS_EXCHANGE_DESC: Для великих свершений не всегда хватает ресурсов. Как хорошо, что в Вашей империи открылся Обменник. Поищите его в меню. Обменяйте некоторое количество одних ресурсов на другие и продолжайте свое восхождение к власти над Миром.
+  FIRST_ROBOT: Роботы, на работу!
+  FIRST_ROBOT_DESC: Ученые установили, что использование роботов ускоряет строительсво зданий и кораблей. Постройте фабрику роботов, что бы узнать так ли это.
+  FIRST_SILICON: Кремниевое вещество.
+  FIRST_SILICON_DESC: Кремний используется для производства микросхем, которые необходимы ученым для работы и используются практически в каждом приборе и строении. Постройте свой первый рудник по добыче кремния и начните свой путь развития высоких технологий.
+  FIRST_SOLAR: Берегите природу.
+  FIRST_SOLAR_DESC: Солнце - гигантская электростанция, надо просто научится добывать из него энергию. Постройте Солнечную электростанцию и обеспечьте теплом и энергией свою планету.
+  FIVE_ATTACKER: Железные мускулы.
+  FIVE_ATTACKER_DESC: Не все планеты сразу признают в Вас своего повелителя. Постройте несколько кораблей атакующего плана для начала Вашего победоносного шествия по галактике.
+  FIVE_ROCKET: Мы не одни, но мы защищены.
+  FIVE_ROCKET_DESC: Надежно защитите свои тылы - постройте ракетную оборону!
+  LOGIN: Добро пожаловать.
+  LOGIN_DESC: Чтобы получить Ваши первые бонусные ресурсы, нажмите кнопку Получить бонус. Система Достижений поможет Вам пройти курс молодого бойца и стать грозой Мира OXSAR. Чтобы выполнить Достижения, нужно выполнить все его требования. Достижения, которые Вы скрыли, всегда можно найти выбрав в меню пункт Достижения.
+  MOON_BONUS_ONLY: Награду за это достижение можно получить только на луне.
+  NEW_ACHIEVEMENTS_PREFIX: Новых
+  PLANET_BONUS_ONLY: Награду за это достижение нельзя получить на луне.
+  RECALC_ACHIEVEMENTS: Пересчитать
+  SIMULATE_BATTLE: Тактический гений.
+  SIMULATE_BATTLE_DESC: Победа в любом сражении на 80 процентов состоит из грамотного планирования. Ваши ученые помогут вам в этом, они разработали систему для предсказания, которая позволит проверить все Ваши тактические схемы. Найдите в меню Симулятор боя и попробуйте провести один бой в лабораторных условиях.
+  STARTER: Крепкий фундамент
+  STARTER_DESC: Перед тем как выйти в космос, обустройте свою планету.
+  STATE_ASSAULT_SIMULATION: Провести симуляцию боя.
+  STATE_RES_UPDATE_EXCHANGE: Обменять ресурсы в обменнике
+  TEN_TRANSPORT: Космический дальнобойщик.
+  TEN_TRANSPORT_DESC: Для перевозок грузов между планетами, а так же для сбора ресурсов с других планет лучше всего подходят Транспорты. Еще транспорты могут везти дополнительные запасы топлива, тем самым увеличивая дальность полета флота.
+  TUTORIAL_END: Конец курса молодого бойца.
+  TUTORIAL_END_DESC: Перед тем как закончить курс молодого бойца, закончите обустраивать свою империю.
+Administrator:
+  ADD_REQUIREMENT: Добавить требования
+  BASIC_ENERGY: Энергия
+  BASIC_ENGINE: Базовый двигатель
+  BASIC_HYDROGEN: Водород
+  BASIC_METAL: Металл
+  BASIC_SILICON: Кремний
+  CHARGE_ENERGY: Формула энергии
+  CHARGE_HYDROGEN: Формула водорода
+  CHARGE_METAL: Формула металла
+  CHARGE_SILICON: Формула кремния
+  CONSTRUCTION_NAME: Название
+  CONSUMPTION: Потребляет
+  DELETE: Удалить
+  DESCRIPTION: Краткое описание
+  EDIT_CONSTRUCTION: Взаимосвязи
+  EDIT_UNIT: Редактирование юнита
+  EXTENTED_ENGINE: Оснащение двигателем
+  FROM_LEVEL: Оборудовать на уровне
+  FULL_DESCRIPTION: Полное описание
+  PRODUCTION: Производство
+  REQUIREMENT: Требуется
+  REQUIREMENTS: Требования
+  SPECIAL: Дополнительно
+Alliance:
+  ABANDON_ALLIANCE: Распустить альянс
+  ACCEPT: Принять
+  ALLIANCES: Альянс
+  ALLIANCE_ALREADY_EXISTS: Альянс с таким названием или аббревиатурой уже есть.
+  ALLIANCE_DIPLOMACY_APPLICATIONS: Текущие предложения от альнсов
+  ALLIANCE_DIPLOMACY_RELATIONSHIPS: Дипломатические отношения с другими альянсами
+  ALLIANCE_FOUND_BLOCKED_BY_USER_POINTS: Вы не можете сейчас создать альянс, т.к. у Вас слишком мало очков. Необходимо иметь как минимум {@min_points} очков, у Вас сейчас {@user_points} очков.
+  ALLIANCE_MANAGEMENT: Управление альянсом
+  ALLIANCE_NAME: Название альянса ({config}MIN_CHARS_ALLY_NAME{/config}-{config}MAX_CHARS_ALLY_NAME{/config} символов)
+  ALLIANCE_NAME_INVALID: Неверное название альянса.
+  ALLIANCE_SEARCH: Поиск альянса
+  ALLIANCE_TAG: Аббревиатура ({config}MIN_CHARS_ALLY_TAG{/config}-{config}MAX_CHARS_ALLY_TAG{/config} символов)
+  ALLIANCE_TAG_INVALID: Неверная аббревиатура.
+  APPLICATION: "Заявка:"
+  APPLICATIONS: Заявки
+  APPLICATION_CONTENT: Заявка
+  APPLICATION_FOR_RELATIONSHIP: Дипломатический шаг с альянсом
+  APPLICATION_IN_PROGRESS: Заявка обрабатывается
+  APPLICATION_TEXT: Текст заявки
+  APPLICATION_TIME: Время
+  BY_NAME: Имени
+  BY_POINTS: Очкам
+  CANCEL: Отозвать заявку
+  CANDIDATE: Претендент
+  CANDIDATES: "Претенденты: %s"
+  CAN_BAN_MEMBER: Удаление игроков
+  CAN_MANAGE: Управление альянсом
+  CAN_SEE_APPLICATIONS: Просмотр заявок
+  CAN_SEE_MEMBERLIST: Просмотр списка участников
+  CAN_SEE_ONLINE_STATE: Просмотр on-line статуса участников
+  CAN_WRITE_GLOBAL_MAILS: Сообщение всему альянсу
+  CEASEFIRE: Перемирие
+  CONFEDERATION: Союзник
+  CONFIRM_ABANDON_ALLIANCE: Вы уверены, что хотите РАСПУСТИТЬ АЛЬЯНС?
+  CREATE_NEW_RANK: Создание нового статуса
+  DETERMINE: Расторгнуть
+  DIPLOMACY: Дипломатия
+  ENABLE_APPLICATIONS: Разрешить вступление
+  ESTABLISHED: Дата создания
+  EXTERN_ALLIANCE_TEXT: Внешний текст альянса
+  FOUNDER: Основатель
+  FOUNDER_NAME: Имя основателя
+  FOUND_ALLIANCE: Создать альянс
+  HOMEPAGE: Домашняя страница
+  INTERN: Внутренний текст альянса
+  INTERN_ALLIANCE_TEXT: Внутренний текст альянса
+  JOIN: Вступить
+  JOIN_ALLIANCE: Вступить в альянс
+  JOIN_DATE: Дата вступления
+  LEAVE: Выход из альянса
+  LOGO: Логотип
+  MANAGEMENT: Управление альянсом
+  MARKED: "Действие:"
+  MEMBER: Члены
+  MEMBERLIST_SORT: "Сортировать участников по:"
+  MEMBERS: Игроки
+  MEMBER_KICKED: "Игрок %s исключен из альянса."
+  MEMBER_KICKED_SUBJECT: Участник исключен
+  MEMBER_LEFT: "Участник %s решил, что покинет альянс."
+  MEMBER_LEFT_SUBJECT: Игрок покидает альянс
+  MEMBER_LIST: Список альянса
+  MESSAGE: Сообщение
+  MESSAGE_BY_ALLIANCE: "Сообщение альянса: {@senderAlliance}"
+  NAME: Название
+  NEWBIE: Новичок
+  NEW_MEMBER_JOINED: "В альянсе новый участник. Добро пожаловать %s"
+  NEW_MEMBER_JOINED_SUBJECT: Новый участник
+  NOTHING: ничего
+  OPERATIONS: Действие
+  POINTS: Очки
+  POSITION: Координаты
+  PROTECTION: Взять под защиту
+  RANK: место
+  RANK_NAME: Название статуса
+  RECEIPT: Принять
+  REFER_FOUNDER_STATUS: Передать статус основателя
+  REFUSE: Отклонить
+  REMOVE: Удалить
+  RIGHT_MANAGEMENT: Настройка прав доступа
+  RUNNING_APPLICATIONS: Текущие заявки
+  SEARCH_RESULTS: Результаты поиска
+  SEND_MESSAGE: Отправить сообщение
+  SET_RANK_RIGHTS: Настройка прав доступа
+  SHOW_RELATION_APPLICATIONS: Текущие предложения
+  STATUS: Статус
+  TAG: Аббревиатура
+  TOTAL_MEMBERS: Всего
+  TRADE_AGREEMENT: Торговый договор
+  VISIBLE_TO_ALL: Видно для всех
+  WAR: Война
+  WELCOME: Добро пожаловать в альянс!
+  WRITE_GLOBAL_MAIL: Написать всему альянсу
+ArtefactInfo:
+  ACTION: Действие
+  ACTIVATE: Активировать
+  ACTIVATE_ALL: Активировать все
+  ALIENS: инопланетян
+  ARTEFACT_MARKET: Магазин артефактов
+  ARTEFACT_OFF: Выключить
+  ARTEFACT_ON: Включить
+  ARTEFACT_PACKED_BUILDING_DESC: Позволяет мгновенно построить находящееся внутри строение.
+  ARTEFACT_PACKED_BUILDING_FULL_DESC: Позволяет мгновенно построить находящееся внутри строение.
+  ARTEFACT_PACKED_RESEARCH_DESC: Позволяет мгновенно исследовать находящееся внутри исследование.
+  ARTEFACT_PACKED_RESEARCH_FULL_DESC: Позволяет мгновенно исследовать находящееся внутри исследование.
+  ARTEFACT_PACKING_BUILDING_DESC: Позволяет запаковывать строения.
+  ARTEFACT_PACKING_BUILDING_FULL_DESC: Этот артефакт позволяет запаковывать строения.
+  ARTEFACT_PACKING_RESEARCH_DESC: Позволяет запаковывать исследования.
+  ARTEFACT_PACKING_RESEARCH_FULL_DESC: Этот артефакт позволяет запаковывать исследования.
+  ARTEFACT_TECH_FREE: Свободно
+  ARTEFACT_TECH_STORAGE: Емкость
+  ARTEFACT_TECH_USED: Использовано
+  BUY_FOR_CREDITS: Купить за кредиты
+  BUY_FOR_RESOURCES: Купить за ресурсы
+  DEACTIVATE: Деактивировать
+  DEACTIVATE_ALL: Деактивировать все
+  FLAG_AUTO: Активируемый автоматически
+  FLAG_BATTLE: Эффект в сражении
+  FLAG_EMPIRE: Эффект на всю империю
+  FLAG_FLEET: Эффект в полете
+  FLAG_LIFETIME: Временный
+  FLAG_MOVABLE: Перевозимый
+  FLAG_PLANET: Планетарный эффект
+  FLAG_STATIC: Неперевозимый
+  FLAG_TROPHY: Захватываемый в бою
+  FLAG_UNIQUE: Уникальный
+  FLAG_USABLE: Используемый
+  LONG_AGO: Давным-давно
+  OUTSTANDING_ARTEFACT_REQUIREMENTS: ""
+  OWNER: Владелец
+  UNIQUE_ARTEFACTS: Уникальные артефакты
+  USE: Использовать
+  WRONG_ARTEFACT_PLANET: Расположен на другой планете
+AssaultReport:
+  ADV_GUN_POWER: Специализация оружия
+  ADV_SHIELD_POWER: Специализация щитов
+  AND: и
+  ARMOR: Броня
+  ARMORING: Броня
+  ASSAULT: Отчет о сражении
+  ASSAULT_TIME: "Флоты соперников встрелись в %s часов:"
+  ATTACKER: Атакующий
+  ATTACKER_EXPERIENCE: "Атакующий получил очков опыта: %s"
+  ATTACKER_FLLETS_EXPLODE: Генераторы Звезд Смерти атакующего накапливают энергию для гравитационной атаки и делают выстрел по Луне. Усиливающиеся толчки сотрясают спутник, но не могут разорвать его. Гравитация Луны выбрасывает люшнюю энергию. Мощнейшая энергетическая волна направляется к флоту атакующего, затем хлопок. Флот атакующего распадается на субматерию и исчезает во мраке вселенной.
+  ATTACKER_HAUL: "Он получает:"
+  ATTACKER_LOST_RES: "Потери атакующего: %s (%s металла, %s кремния)."
+  ATTACKER_LOST_RES_4: "Потери атакующего: %s (%s металла, %s кремния, %s водорода)."
+  ATTACKER_LOST_UNITS: "Потери атакующего %s."
+  ATTACKER_POWER: "общей мощностью %s."
+  ATTACKER_SHIELD: "Щиты атакующего поглощают %s."
+  ATTACKER_SHOTS: "Атакующий делает %s выстрелов."
+  ATTACKER_WON: Атакующий выиграл бой.
+  BALLISTICS_POWER: Баллистика
+  BATTLE_DRAW: Сражение закончилось в ничью.
+  BATTLE_REPORT_SUBJECT: Командование флота получило ссылку на боевой отчет от игрока {@username}
+  BATTLE_REPORT_TEXT: "Командование флота получило сообщение от игрока {@username}, он прислал ссылку на <a href='{@friendlink}' target='_blank'>боевой отчет</a>."
+  BATTLE_WEIGHT: Фронт
+  BMAT_ATTER_ALL_DAMAGE: Общий урон (повреждение щитов и брони) обороняющемуся
+  BMAT_ATTER_ALL_SHOTS: Сумма выстрелов атакующего
+  BMAT_ATTER_DAMAGE: "Юнит атакующего (%s) нанес урон юниту обороняющегося (%s)"
+  BMAT_ATTER_HIT: "Попаданий юнита атакующего (%s) по юниту обороняющегося (%s)"
+  BMAT_ATTER_PERCENT: "Процент попаданий для юнита атакующего (%s) по юниту обороняющегося (%s)"
+  BMAT_ATTER_UNIT_DAMAGE: Юнит атакующего нанес урон обороняющемуся
+  BMAT_ATTER_UNIT_DAMAGE_PERCENT: Вклад юнита в урон обороняющегося
+  BMAT_ATTER_UNIT_SHOTS: Количество выстрелов юнита по обороняющемуся
+  BMAT_DEFENDER_ALL_DAMAGE: Общий урон (повреждение щитов и брони) атакующему
+  BMAT_DEFENDER_ALL_SHOTS: Сумма выстрелов обороняющегося
+  BMAT_DEFENDER_DAMAGE: "Юнит обороняющегося (%s) нанес урон юниту атакующего (%s)"
+  BMAT_DEFENDER_HIT: "Попаданий юнита обороняющегося (%s) по юниту атакующего (%s)"
+  BMAT_DEFENDER_PERCENT: "Процент попаданий для юнита обороняющегося (%s) по юниту атакующего (%s)"
+  BMAT_DEFENDER_UNIT_DAMAGE: Юнит обороняющегося нанес урон атакующему
+  BMAT_DEFENDER_UNIT_DAMAGE_PERCENT: Вклад юнита в урон  атакующего
+  BMAT_DEFENDER_UNIT_SHOTS: Количество выстрелов юнита по атакующему
+  DEBRIS: "На орбите находится:"
+  DEBRIS_METAL_AND_SILICON: "На орбите находится: %s металла и %s кремния."
+  DEFENDER: Обороняющийся
+  DEFENDER_EXPERIENCE: "Обороняющийся получил очков опыта: %s"
+  DEFENDER_LOST_RES: "Потери обороняющегося: %s (%s металла, %s кремния)."
+  DEFENDER_LOST_RES_4: "Потери обороняющегося: %s (%s металла, %s кремния, %s водорода)."
+  DEFENDER_LOST_UNITS: "Потери обороняющегося %s."
+  DEFENDER_POWER: "общей мощностью %s."
+  DEFENDER_SHIELD: "Щиты обороняющегося поглощают %s."
+  DEFENDER_SHOTS: "Обороняющийся делает %s выстрелов."
+  DEFENDER_WON: Обороняющийся выиграл бой.
+  DELIVERY_ACCEPTED: Письмо принято к отправке
+  DESTROYED: Уничтожен
+  DESTROYED_BUILDING_PLANET_METAL_AND_SILICON: "Высвобождено ресурсов на планете: %s металла и %s кремния."
+  DESTROY_MISSION_DEATH_STARS_DESTROYED: Генераторы Звезды Сметри не выдержали перегрузок, она взорвалась.
+  DESTROY_MISSION_DEATH_STAR_DESTROYED: Генераторы Звезды Сметри не выдержали, она взорвалась.
+  DESTROY_MISSION_TITLE: Специальное задание
+  FIGHT: Бой
+  FIGHT_ATTACKER: Атакующий
+  FIGHT_DEFENDER: Обороняющийся
+  FIGHT_SHELL_DESTROYED: Разрушено брони противника
+  FIGHT_SHIELD_ABSORB: Щиты противника поглотили
+  FIGHT_SHOTS_MISS: Промахи, попадания в уже уничтоженные юниты и избыточность огня.
+  FIGHT_SHOTS_NUMBER: Делает выстрелов
+  FIGHT_SHOTS_POWER: Мощность огня
+  FIGHT_UNITS_DESTROYED: Уничтожено юнитов противника
+  FRIEND_LINK: Покажи это сражение друзьям
+  FRONT: Фронт
+  GRASPED_UNITS: Захваченные юниты
+  GUNS: Оружие
+  GUN_POWER: Оружие
+  HIDE_BATTLE_MATRIX: Скрыть матрицу боя.
+  HIDE_BATTLE_TEXT: Информация не доступна для просмотра.
+  INVALID_MAIL: Неверный e-mail
+  MASKING_POWER: Маскировка
+  MAX_MAILS_EXCEED: Вы не можете отправлять более {@maxmails} писем в день.
+  MOON: Огромные скопления обломков вступают в гравитационное взаимодействие и на орбите планеты образуется новая Луна.
+  MOON_ARTEFACT_APPEARED: Появился лунный артефакт!
+  MOON_ARTEFACT_CHANCE: "В результате сражения напряженность пространственно временного поля составила %s%%. Возможно появление артефакта из параллельного мира."
+  MOON_ARTEFACT_CHANCE_LOW: "Потенциал пространственно-временного поля частично израсходован, в результате сражения он составил %s%%. Возможно появление артефакта из параллельного мира."
+  MOON_ARTEFACT_CHANCE_NONE: Потенциал пространственно-временного поля израсходован, идет зарядка. Появление артефакта сейчас невозможно.
+  MOON_ARTEFACT_NOT_APPEARED: В этот раз артефакт не появился.
+  MOON_CHANCE: "Шанс появления луны составляет %s&#037;."
+  QUANTITY: Число
+  REPAIRED_UNITS: После боя восстановилось
+  REPORT_EMAIL: E-mail получателя или ник игрока. Несколько получателей можно перечислять через запятые.
+  REPORT_SEND_TEXT: Добавить к отчёту текст
+  REPORT_SEND_TO_FRIEND: Отправить отчёт другу
+  REPORT_TEXT_QUOTE: "<br/><br/>Сообщение от {@username}: <blockquote>{@text}</blockquote>"
+  ROCKET_ATTACK_TIME: "Ракетная атака в %s часов:"
+  SHELL_POWER: Броня
+  SHIELDS: Щиты
+  SHIELD_POWER: Щиты
+  SHOW_BATTLE_MATRIX: Показать матрицу боя.
+  START_REPORT_TARGET_BUILDING: "Атакующий собирается разрушить:"
+  START_REPORT_TARGET_MOON: Атакующий собирается уничтожить Луну.
+  SUMMARY: Итоговый результат
+  TARGET_BUILDING_DESTROYED: "Атакующий разрушил:"
+  TARGET_BUILDING_NOT_DESTROYED: "Не удалось разрушить:"
+  TARGET_MOON_DESTROYED: Генераторы Звезд Смерти атакующего накапливают энергию для гравитационной атаки и делают выстрел по Луне. Всё более усиливающиеся толчки сотрясают спутник. Луна начинает деформироваться, по ее экватору несколько раз проходят гравитационные волны, затем взрыв ослепляет приборы атакующего. Мгновенье и приборы фиксируют пустоту, Луна уничтожена, ее больше нет.
+  TARGET_MOON_NOT_DESTROYED: Генераторы Звезд Смерти атакующего накапливают энергию для гравитационной атаки и делают выстрел по Луне. Толчки, один за одним, сотрясают спутник, но Луна остается на месте. Спутник стабилизируется высвобождая люшнюю энергию гравитационными импульсами. Мощности генераторов Звезд Смерти не хватило, чтобы уничтожить Луну.
+  TURN: Раунд
+  TYPE: по
+  UNIT_NOTHING: Обломки
+  UNIT_NOTHING_INFO: Попадания в уничтоженные юниты, промахи и т.п.
+  UNIT_SUMMARY: Всего
+AutoMessages:
+  ALLIANCE_ABANDONED: "Ваш альянс [%s] распался. Вы можете найти новый альянс, либо продолжать играть в одиночку."
+  ALLIANCE_ABANDONED_SUBJECT: Альянс распущен
+  ALLIANCE_APPLICATION: Заявка на вступление
+  ARTEFACTS_GRASPED_MSG: "В сражение на планете {@coords_from} были захвачены артефакты: {@artefacts}. Ваш флот вместе с артефактами прибудет на планету {@planet} {@coords}."
+  ARTEFACTS_GRASPED_SUBJECT: Захват артефактов противника
+  ASTEROID_IMPACT: "Гигантский астероид замечен на орбите Вашей планеты %s %s. Командование флота успело выдать приказы и уничтожить астероид. Образовавшиеся обломки можно переработать.\r\nНа орбите находится %s металла и %s кремния."
+  ASTEROID_IMPACT_SUBJECT: Взаимодействие с астероидом
+  BUILDING_DESTROYED_MSG: В сражении на планете {@coords_planet} была разрушена Ваша постройка {@building_name}.
+  BUILDING_DESTROYED_SUBJECT: Ваша постройка была разрушена
+  COLONY_ATTEMPT_SUBJECT: Основание колонии
+  DELIVERY_UNITS_REPORT: "Купленный флот (%s) достиг планеты %s %s. <br /> Флот оставил груз: %s металла, %s кремния и %s водорода."
+  DELIVERY_UNITS_REPORT_SUBJECT: Доставлен купленный флот
+  ESPIOANGE_COMMITTED: "Чужой флот %s с %s %s был замечен около %s %s.<br />Защита от шпионажа: %d&#37;<br />[b][color=#0f0]%s[/color][/b]"
+  ESPIOANGE_COMMITTED_SUBJECT: Шпионаж
+  ESP_PROBES_DESTROYED_1: Шпионские зонды были сбиты.
+  EXPEDITION_ARTEFACT: "Ваша экспедиция нашла загадочный артефакт: {@art_name}"
+  EXPEDITION_ASTEROID_DISCOVERY_1: "Ваши исследователи нашли астероидное поле обломков: {@debrismetal} металла и {@debrissilicon} кремния. Переработчики добыли: {@metal} металла и {@silicon} кремния."
+  EXPEDITION_ASTEROID_DISCOVERY_2: "Ваши исследователи нашли давно отгремевшее поле битвы. От разрушенных кораблей остались обломки, которые можно собрать: {@debrismetal} металла и {@debrissilicon} кремния. Переработчики добыли: {@metal} металла и {@silicon} кремния."
+  EXPEDITION_ASTEROID_DISCOVERY_NO_CARGO: "Ваши исследователи нашли астероидное поле обломков: {@debrismetal} металла и {@debrissilicon} кремния. К сожалению в экспедиции не было переработчиков, чтобы собрать ресурсы из открытого космоса."
+  EXPEDITION_BATTLEFIELD_DISCOVERY: "Ваши исследователи обнаружили следы давно отгремевшей битвы. Среди тон покореженного металла удалось найти корабли, пригодные для дальнейшего использования: {@new_ships}"
+  EXPEDITION_CREDITS_DISCOVERY_1: Ваши исследователи обнаружили поле сражения. К сожалению все корабли не исправны и без ресурсов, но в одном из уцелевших сейфов исследователи нашли {@credits} кредитов. Поздравляем, кредиты уже переведены на Ваш счет. Флот возвращается на базу.
+  EXPEDITION_CREDITS_DISCOVERY_2: Экспедиционное оборудование запеленговало странный объект. Это оказалась капитанская рубка неизвестного корабля с работающим позывным устройством. Рубка оказалась отрезанной от основного корабля супер оружием, исследователи поражены, ничего подобного они не видели. В абсолютно целом сейфе исследователи нашли {@credits} кредитов. Поздравляем, кредиты уже переведены на Ваш счет. Флот возвращается на базу.
+  EXPEDITION_CREDITS_DISCOVERY_3: Экспедиционное оборудование запеленговало странный объект. Это оказался одноместный поврежденный космический корабль с мертвым существом неизвестной расы. Под сиденьем инопланетянина исследователи нашли {@credits} кредитов. Поздравляем, кредиты уже переведены на Ваш счет. Флот возвращается на базу.
+  EXPEDITION_CREDITS_DISCOVERY_4: Экспедиционное оборудование запеленговало странный объект. Это оказался мертвый инопланетянин-пилот, о чем свидетельствует его экипировка. Исследование показало, что инопланетянин умер, находясь в открытом космосе в состоянии анабиоза {@anabios_years} лет, когда системы поддержания жизнеобеспечения израсходовали свои ресурсы (видимо его выкинуло в открытый космос в каком-то сражении). В одежде пилота обнаружен позывной маячок и {@credits} кредитов. Кредиты уже переведены на Ваш счет. Флот возвращается на базу.
+  EXPEDITION_CREDITS_DISCOVERY_5: "Экспедиционное оборудование запеленговало странный объект. Это оказался небольшой поврежденный корабль инопланетян. Исследователи внимательно осмотрели его и кое что нашли: хитрые инопланетяне запрятали в тайнике {@credits} кредитов. Поздравляем, кредиты уже переведены на Ваш счет. Флот возвращается на базу."
+  EXPEDITION_CREDITS_DISCOVERY_6: Ваши исследователи обнаружили поле сражения. К сожалению все корабли не исправны и без ресурсов, но в тайнике одного из кораблей внимательные исследователи нашли {@credits} кредитов. Поздравляем, кредиты уже переведены на Ваш счет. Флот возвращается на базу.
+  EXPEDITION_DELAY_RETURN: "Ваши исследователи ничего не нашли, к тому же они заблудились. На поиск пути домой понадобиться на {@percent}% больше времени."
+  EXPEDITION_FAST_RETURN_1: "Ваши исследователи ничего не нашли. К счастью, они обнаружили по пути стабильную черную дыру, проход через которую позволит им сократить обратный путь на {@percent}%"
+  EXPEDITION_FAST_RETURN_2: "Ваши исследователи ничего не нашли. К счастью, из короны ближайшей звезды исходит поток солнечного ветра, который позволит им сократить время обратного пути на {@percent}%"
+  EXPEDITION_FAST_RETURN_3: "Флот Вашей экспедиции попал в поле действия огромного магнитного поля неизвестного происхождения. К счастью, это позволит им сократить время обратного пути на {@percent}%"
+  EXPEDITION_LOST_1: К сожалению связь с экспедицией была утеряна.
+  EXPEDITION_LOST_2: Связь с Вашими исследователями потеряна. Скорее всего, они больше не вернутся...
+  EXPEDITION_NEUTRAL_PLANET: "Исследователям удалось установить координаты планеты, на которой произошел бой: {@planet}.<br/>Обломки, оставшиеся после битвы, находятся на её орбите: {@m_scraps} металла и {@s_scraps} кремния. Поспешите, чтобы забрать их, т.к. планета не стабильна и скоро разрушится."
+  EXPEDITION_NEUTRAL_PLANET_SUBJ: Открытие неизвестной планеты
+  EXPEDITION_NOTHING_1: Ваш флот долго бороздил просторы вселенной, однако сенсоры учённых так и не смогли зафиксировать ничего интересного.
+  EXPEDITION_NOTHING_2: Ваши исследователи прошли мимо Сверхновой звезды и сделали великолепные фотографии. Больше ничего интересного в выбранном секторе они не нашли.
+  EXPEDITION_NOTHING_3: Ваши исследователи провели все время, предоставленное на изучение выбранного сектора. Но они не нашли ничего интересного.
+  EXPEDITION_NOTHING_4: Ваш флот обнаружил одну планету, привлекшую внимание! Исследователи нашли на ней забавных маленьких зверьков. Больше ничего обнаружено не было.
+  EXPEDITION_NOTHING_5: Ваши исследователи запеленговали на пути следования флот огромных размеров инопланетного происхождения. Командование приняло решение не рисковать и вернуться на базу.
+  EXPEDITION_NOTHING_6: Ваши исследователи обнаружили на пути следования нестабильную черную дыру. Командование приняло решение не рисковать и вернуться на базу.
+  EXPEDITION_NOTHING_7: Ваши исследователи прошли мимо огромной туманности антиматерии. Больше ничего обнаружено не было.
+  EXPEDITION_RESOURCE_DISCOVERY_1: "Ваши исследователи обнаружили старые и не рабочие корабли, дрейфующие в космосе. Командование распорядилось забрать имеющиеся в трюмах ресурсы: {@metal} металла, {@silicon} кремния и {@hydrogen} водорода."
+  EXPEDITION_RESOURCE_DISCOVERY_2: "Отличная новость: Ваши исследователи обнаружили необитаемую планету с ресурсами: {@debrismetal} металла, {@debrissilicon} кремния и {@debrishydrogen} водорода. Флот забрал: {@metal} металла, {@silicon} кремния и {@hydrogen} водорода."
+  EXPEDITION_SENSOR_CLEAR_REPORT: "Шпионские зонды просканировали шлейф эха темной материи и обнаружили, что сектор {@exp_sector} никто не посещал в ближайшие дни - это очень хорошо! Исследователи советуют Вам слетать в этот сектор еще несколько раз для более тщательного его изучения. Поисковая мощность экспедиции составила {@exp_power}. Исследователи изучали выбранный сектор {@exp_hours} часов. Текущий результат экспедиции произошел с вероятностью {@exp_percent}%"
+  EXPEDITION_SENSOR_POOR_REPORT: "Шпионские зонды просканировали шлейф эха темной материи и обнаружили следы {@visits} экспедиций в секторе {@exp_sector}. Исследователи, посовещавшись, решили предложить Вам не летать в этот сектор несколько дней. Попробуйте найти менее посещенные экспедициями сектора. Поисковая мощность составила {@exp_power}. Исследователи изучали выбранный сектор {@exp_hours} часов. Текущий результат экспедиции произошел с вероятностью {@exp_percent}%"
+  EXPEDITION_SENSOR_REPORT: "Шпионские зонды просканировали шлейф эха темной материи и обнаружили следы {@visits} экспедиций в секторе {@exp_sector}. Поисковая мощность экспедиции составила {@exp_power}. Исследователи изучали выбранный сектор {@exp_hours} часов. Текущий результат экспедиции произошел с вероятностью {@exp_percent}%"
+  EXPEDITION_SENSOR_SUBJECT: Данные с разведзонда
+  EXPEDITION_SHIPS_DISCOVERY: "Ваши исследователи обнаружили дрейфующий в открытом космосе флот, который оказался в состоянии консервации. Командование распорядилось привести найденные корабли на базу: {@new_ships}"
+  EXPEDITION_SUBJECT: Отчёт экспедиции
+  EXPEDITION_XSKIRMISH: "Во время экспедиции Ваши корабли наткнулись на инопланетный флот, появившийся из ниоткуда. Неизвестная цивилизация оказалась враждебна, завязалась битва. Смотрите отчет о сражении в разделе 'Боевые отчёты'."
+  FLEET_GRASPED: В сражение на планете {@coords_from} удалось захватить флот противника ({@fleet}). Командование уже отдало приказ восстановить поврежденные системы жизнеобеспечения и вооружения, захваченный флот прибудет совместно с Вашим флотом на планету {@planet} {@coords}.
+  FLEET_GRASPED_SUBJECT: Захват флота противника
+  FLEET_RETURNED: "Ваш флот (%s) вернулся с %s на %s %s. <br /> Флот привез груз: %s металла, %s кремния и %s водорода."
+  FLEET_RETURNED_SUBJECT: Возвращение флота
+  LOST_ARTEFACTS_MSG: "В сражении на планете {@coords_planet} атакующий захватил Ваши артефакты: {@artefacts}."
+  LOST_ARTEFACTS_SUBJECT: Потеря артефактов
+  MEMBER_RECEIPTED: "Ваша заявка рассмотрена и принята. Добро пожаловать в альянс %s"
+  MEMBER_REFUSED: "К сожалению, Ваша заявка на участие в альянсе [%s] отклонена. Вы можете пробовать снова или играть в одиночестве."
+  MOON_DESTROYED_MSG: Ваша Луна по координатам {@coords_planet} была уничтожена.
+  MOON_DESTROYED_SUBJECT: Уничтожение Вашей Луны
+  MSG_ACTIVATE_ARTEFACT: Включился артефакт {@name} на {@coords}
+  MSG_ARTEFACT: Сообщение от системы артефактов.
+  MSG_CAPTURE_ARTEFACT: Артефакт {@name} ({@coords}) был захвачен врагом.
+  MSG_CREDIT: Сообщение от системы кредитов
+  MSG_CREDIT_ARTEFAC_BUY_LOT: Вы купили артефакт ({@lot}) за {@credits} кредитов.
+  MSG_CREDIT_BUY: Вы приобрели {@credits} кредитов.
+  MSG_CREDIT_EXCHANGE_BUY: Вы купили лот на бирже за {@credits} кредитов.
+  MSG_CREDIT_EXCHANGE_BUY_LOT: Вы купили лот ({@lot}) за {@credits} кредитов.
+  MSG_CREDIT_EXCHANGE_DEFFEND: За защиту биржи Вам была начислена комиссия {@credits} кредитов.
+  MSG_CREDIT_EXCHANGE_FROM_RESERVE: На Вашей бирже был выставлен лот, заработанная комиссия составила {@credits} кредитов.
+  MSG_CREDIT_EXCHANGE_PROFIT: На Вашей бирже произошла покупка, заработанная комиссия составила {@credits} кредитов.
+  MSG_CREDIT_EXCHANGE_RESERVE: Вы добавили лот на биржу за {@credits} кредитов.
+  MSG_CREDIT_EXCHANGE_SELL: У Вас купили лот на бирже за {@credits} кредитов.
+  MSG_CREDIT_EXCHANGE_SELL_LOT: У Вас купили лот ({@lot}) за {@credits} кредитов.
+  MSG_CREDIT_FOR_MINER: За повышение шахтерского уровня Вам был начислен бонус {@credits} кредитов.
+  MSG_CREDIT_FOR_VIP: Вы запустили задание вне очереди за {@credits} кредитов.
+  MSG_CREDIT_MARKET: Вы купили на рынке ресурсы за {@credits} кредитов.
+  MSG_DEACTIVATE_ARTEFACT: Выключился артефакт {@name} на {@coords}
+  MSG_DELAY_ARTEFACT: Перезарядился артефакт {@name} на {@coords}
+  MSG_DISAPEAR_ARTEFACT: Истек срок годности артефакта {@name} на {@coords}
+  MSG_DISAPEAR_ARTEFACT_USED: Полностью израсходован артефакт {@name} на {@coords}
+  MSG_EXPIRE_ARTEFACT: Выключился артефакт {@name} на {@coords}
+  NEUTRAL_PLANET_DIE: Оказывается не зря инопланетный флот так бился за эту планету. В её коре стали проявляться невиданные по силе гравитационные аномалии и, прежде чем ученые успели исследовать их, планета {@planet} развалилась на субматерию.
+  NEUTRAL_PLANET_FOUND: "После длительных блужданий по просторам вселенной, сенсоры экспедиции засекли странную активность в районе {@planet}.<br/>Подлетев поближе, ученые обнаружили, что это неизвестная ранее планета инопланетян с обломками от сражения. Видимо кто-то недавно разбил тут большой флот. На орбите планеты обнаружены обломки: {@metal} металла и {@silicon} кремния. Поспешите, чтобы забрать их, т.к. планета не стабильна и скоро разрушится, кроме этого о планете известно кому-то еще!"
+  PLANET_COLONIZED: "Колонисты обнаружили планету на координатах %s с условиями, пригодными для жизни и начинают осваивать колонию."
+  PLANET_OCCUPIED: "Ваш флот достиг координат %s, но эта планета уже занята. Колонисты возвращаются на базу."
+  POSITION_REPORT: "Ваш флот (%s) достиг планеты %s %s. <br /> Флот оставил груз: %s металла, %s кремния и %s водорода."
+  POSITION_REPORT_SUBJECT: Быстрое размещение
+  RECYLCING_REPORT: "Ваши %s переработчиков добыли %s ресурсов. На координатах было %s металла и %s кремния. Вы добыли %s металла и %s кремния."
+  RECYLCING_REPORT_SUBJECT: "Поле обломков: %s"
+  RETREAT_OTHER: '{@username} отменил Удержание на {@planet_from} {@coords_from}. Ваш флот ({@fleet}) возвращается на {@planet} {@coords}.'
+  RETREAT_OTHER_SUBJECT: Отмена удержания
+  ROCKET_ATTACK_MSG_ATTACKER: Ракетная атака на планету {@planet} {@coords} завершилось успешно. Игрок {@defender} лишился {@lostunits} очков после атаки {@rockets} межпланетыми ракетами.
+  ROCKET_ATTACK_MSG_DEFENDER: Ваша планета {@planet} {@coords} была подвержена ракетной атаке. Игрок {@attacker} атаковал {@rockets} ракетами. Потери составляют {@lostunits} очков.
+  ROCKET_ATTACK_REPORT_HEADLINE: Ракетная атака на {@planet} {@coords}
+  ROCKET_ATTACK_SUBJECT: Ракетная атака
+  TOO_MANY_PLANETS: "Ваш флот достиг координат %s, но при попытке колонизировать планету в соседних империях возникли недовольства по поводу количества Ваших колоний. Флот возвращается назад."
+  TRANPORT_SUBJECT: Поставка ресурсов
+  TRANSPORT_ACCOMPLISHED: "Ваш флот достиг %s %s. <br /> Флот доставил груз: %s металла, %s кремния и %s водорода."
+  TRANSPORT_ACCOMPLISHED_ARTEFACT: "Флот с биржи доставил артефакт:<br /> %s."
+  TRANSPORT_ACCOMPLISHED_OTHER: "Чужой флот с %s %s от %s достиг %s %s. <br /> Флот доставил груз: %s металла, %s кремния и %s водорода."
+  TRANSPORT_ACCOMPLISHED_TO_OTHER: "Ваш флот с %s %s достиг %s %s. <br /> Флот доставил груз: %s металла, %s кремния и %s водорода."
+Buddylist:
+  ACCEPT: Принять
+  BUDDYLIST: Список друзей
+  REMOVE: Удалить
+  SELF_REQUEST: Вы не можете отправить запрос себе.
+  STATUS: Статус
+  WAITING: Ожидание
+EspionageReport:
+  ESP_DEFENDING_CHANCE: "Защита от шпионажа: %d&#37;"
+  ESP_PROBES_DESTROYED: Флот был замечен и уничтожен врагом.
+  ESP_REPORT_BUILDINGS: Постройки
+  ESP_REPORT_DEFENSE: Оборона
+  ESP_REPORT_ENERGY: Энергия
+  ESP_REPORT_FLEET: Флот
+  ESP_REPORT_HYDROGEN: Водород
+  ESP_REPORT_METAL: Металл
+  ESP_REPORT_RESEARCH: Исследования
+  ESP_REPORT_RESSOURCE_HEADLINE: "Сырьё на %s %s (Игрок: %s)"
+  ESP_REPORT_SILICON: Кремний
+  ESP_REPORT_SUBJECT: Шпионский доклад
+Galaxy:
+  ACTIONS: Действие
+  ALL: Все
+  ALLIANCE_PAGE: Страница альянса
+  BANNED: Забанен
+  CONFEDERATION: Союзник
+  DEBRIS: Поле обломков
+  DEFICIENT_CAPACITY: Недостаточно грузоподъемности
+  DEFICIENT_CONSUMPTION: Недостаточно водорода
+  DEFICIENT_ESPS: Нет шпионских зондов
+  DESTROYED_PLANET: Разрушенная планета
+  ENEMY: Враг
+  ESPS_SENT: "%s шпионских зондов отправлено на %s:%s:%s"
+  FEATURES: Характеристики
+  FLEET_ACTIVITIES: "Флот движется к планете {@target} {@targetcoords} ({@targetuser}):"
+  FRIEND: Друг
+  GALAXY: Галактика
+  GALAXY_ALLY_HEADLINE: "Альянс %s место %s"
+  HOMEPAGE: Домашняя страница
+  LOWER_INACTIVE: Неактивен 7 дней
+  MAX: max.
+  MONITOR_FLEET_ACTIVITY: Сканировать фалангой
+  MOON_DESC: "Луна %s"
+  NAME: Название
+  NEWBIE: Новичок
+  ONESELF: Своя позиция
+  PRIMARY_TARGET: Основная задача
+  PROTECTION_ALLIANCE: Под защитой
+  QUANTITY: Число
+  RESOURCES: Ресурсы
+  SEND_ESPIONAGE_PROBE: Шпионаж
+  SHOW_MEMBERLIST: Список членов
+  SIZE: Диаметр
+  STRONG_PLAYER: Сильный игрок
+  SUNSYSTEM: Звездная система
+  SUNSYSTEM_OUTSIDE: Бесконечные дали
+  SYSTEM: Система
+  TARGET_BANNED: Цель забанена
+  TARGET_IN_UMODE: Цель находится в режиме отпуска.
+  TARGET_TOO_STRONG: Игрок слишком силен.
+  TARGET_TOO_WEAK: Игрок слишком слаб.
+  TEMPERATURE: Температура
+  TRADE_UNION: Торговый договор
+  UPPER_INACTIVE: Неактивен 21 день
+  VACATION_MODE: Отпуск
+Main:
+  ABANDON_PLANET: Покинуть планету
+  ANIGILATION_TIMER: Планета {@target_mission} самоуничтожится гравитационной аномалией.
+  APPROX: c
+  AVAILABLE_VERSION: "Доступные версии:"
+  BATTLE_ACTIVE_EXPERIENCE: Накопленный опыт
+  BATTLE_EXPERIENCE: Военный опыт
+  CHANGES: Изменения
+  CUR_HOME_PLANET: Главная планета
+  DEBRIS: Поле обломков
+  EVENTS: События
+  FLEET_MESSAGE_COLONIZE_NEW_USER_PLANET: "Ваш флот ({@fleet}) отправлен на задание: {@mission}.<br />Груз: {@metal} металла, {@silicon} кремния и {@hydrogen} водорода."
+  FLEET_MESSAGE_DELIVERY_ARTEFACTS: "Ваш флот ({@fleet}) с {@planet} {@coords} отправлен на {@target} {@targetcoords}. Задание: {@mission}.<br />Груз: {@artefact}"
+  FLEET_MESSAGE_DELIVERY_ARTEFACTS_SELLER: "Чужой флот ({@fleet}) {@username} {@message} с {@planet} {@coords} достигает Ваших координат {@target} {@targetcoords}. Задание: {@mission}.<br />Груз: {@artefact}"
+  FLEET_MESSAGE_DELIVERY_UNITS: "Флот ({@fleet}) с {@planet} {@coords} достигает координат {@target} {@targetcoords}. Задание: {@mission}. <br />Груз: {@metal} металла, {@silicon} кремния и {@hydrogen} водорода."
+  FLEET_MESSAGE_DELIVERY_UNITS_SELLER: "Флот ({@fleet}) с {@planet} {@coords} достигает координат {@target} {@targetcoords}. Задание: {@mission}. <br />Груз: {@metal} металла, {@silicon} кремния и {@hydrogen} водорода."
+  FLEET_MESSAGE_FORMATION: "<p>Совместно с %s с %s %s: %s</p>"
+  FLEET_MESSAGE_HOLDING_1: "Ваш флот ({@fleet}) с {@planet} {@coords} находится на орбите {@target} {@targetcoords}.<br />Груз: {@metal} металла, {@silicon} кремния и {@hydrogen} водорода."
+  FLEET_MESSAGE_HOLDING_2: Чужой флот ({@fleet}), принадлежащий {@username} {@message} с {@planet} {@coords}, находится на орбите {@target} {@targetcoords}.
+  FLEET_MESSAGE_OTHER: "Чужой флот ({@fleet}) {@username} {@message} с {@planet} {@coords} достигает Ваших координат {@target} {@targetcoords}. Задание: {@mission}.<br />Груз: {@metal} металла, {@silicon} кремния и {@hydrogen} водорода."
+  FLEET_MESSAGE_OTHER_RES: "Чужой флот ({@fleet}) {@username} {@message} с {@planet} {@coords} достигает Ваших координат {@target} {@targetcoords}. Задание: {@mission}.<br />Груз: {@metal} металла, {@silicon} кремния и {@hydrogen} водорода."
+  FLEET_MESSAGE_OWN: "Ваш флот ({@fleet}) с {@planet} {@coords} отправлен на {@target} {@targetcoords}. Задание: {@mission}.<br />Груз: {@metal} металла, {@silicon} кремния и {@hydrogen} водорода."
+  FLEET_MESSAGE_RETURN: "Ваш флот ({@fleet}) с {@planet} {@coords} возвращается на {@target} {@targetcoords}. Задание: {@mission}. <br />Груз: {@metal} металла, {@silicon} кремния и {@hydrogen} водорода."
+  FLEET_MESSAGE_ROCKET_ATTACK: Ваши ракеты ({@rockets}) с {@planet} {@coords} достигают {@target} {@targetcoords}.
+  FLEET_MESSAGE_ROCKET_ATTACK_FOREIGN: Вражеские ракеты ({@rockets}) игрока {@username} {@message} с {@planet} {@coords} достигают {@target} {@targetcoords}.
+  INVALID_PLANET_NAME: Название планеты содержит недопустимые символы.
+  NEW_PLANET_NAME: Новое название планеты
+  PLANETDIAMETER: Диаметр
+  PLANETDIAMETER_KM: км
+  PLANET_ANIGILATION: Планета {@planet} самоуничтожится гравитационной аномалией.
+  PLANET_IS_NOT_FORMED_YET: Планета еще не сформировалась
+  PLANET_OCCUPIED_FIELDS: "застроенная территория: {@occupiedFields} из {@freeFields} полей"
+  PLANET_OPTIONS: Опции планеты
+  POINTS: Очки
+  POSITION: Координаты
+  RANK_OF_USERS: '{@rank} из {@totalUsers}'
+  RELEASE: Релиз
+  SERVER_TIME: Серверное время
+  SET_NEW_HOME_PLANET: Установить главную планету
+  STAR_SUR_MSG: "Чужой флот ({@fleet}) игрока {@username} с {@planet} {@coords} движется на {@target} {@targetcoords}. Задание: {@mission}"
+  STAR_SUR_MSG_RETURN: "Чужой флот ({@fleet}) возвращается с {@planet} {@coords} на {@target} {@targetcoords}. Задание: {@mission}"
+  TEMPERATURE: Температура
+Message:
+  ACTION: Действие
+  ALLIANCE_GLOBAL_MAIL: Сообщения альянса
+  ALLIANCE_MESSAGES: Управление альянсом
+  ALL_MEMBERS: Все участники
+  ARTEFACT_MESSAGES: Система артефактов
+  ASSAULT_REPORT: Отчет о сражении
+  ASSAULT_REPORT_TURNS: Раундов
+  BATTLE_REPORTS: Боевые отчёты
+  CONFIRM_DELETE_ALL: Вы действительно хотите удалить все сообщения?
+  CREATE_NEW_MESSAGE: '[Новое сообщение]'
+  CREDIT_MESSAGES: Кредиты
+  DATE: Дата
+  DELETE_ALL: '[Удалить все сообщения]'
+  DELETE_ALL_MARKED: Удалить выделенные сообщения
+  DELETE_ALL_NON_MARKED: Удалить все невыделенные сообщения
+  DELETE_ALL_SHOWN: Удалить все показанные сообщения
+  EMPTY_FOLDER: Удалить все сообщения
+  ESPIONAGE_REPORTS: Шпионские доклады
+  FLEET_COMMAND: Командование флота
+  FLEET_REPORTS: Сообщения флота
+  FOLDER: Категории
+  FROM: От
+  GLOBAL_MAIL: Общее сообщение
+  MESSAGE: Сообщение
+  MESSAGES_REPORTED: Ваше сообщение доставлено модератору.
+  MODERATOR_REPORT_MESSAGE: "Жалоба от {@reportSender} по поводу полученного им сообщения от {@reportUser} в {@reportSendTime}:<p>{@reportMessage}</p>"
+  MODERATOR_REPORT_SUBJECT: Сообщения модератора
+  NEW_MESSAGE: Новое сообщение
+  NO_SUBJECT: Нет темы
+  NUMBER: Новости
+  OUTBOX: Исходящие
+  PLAYER_MESSAGES: Сообщения от игроков
+  RANK: "место:"
+  READED: Нет непрочитанных сообщений
+  RECEIVER: Адресат
+  REPLY: Ответить
+  REPORT_TO_MODERATOR: Сообщить модератору
+  ROCKET_ATTACK_REPORT: Отчет о ракетной атаке
+  STORAGE: Хранилище
+  SUBJECT: Тема
+  UNREADED: Есть непрочитанные сообщения
+Payment:
+  SN_OK_CREDITS: '{@credit} Кредитов'
+  SN_OK_CREDITS_STRING: "<span class='confederation'>{@total}</span> кредитов<br/>( {@raw} <span class='true'>+ {@bonus} в подарок</span> )"
+  SN_OK_DESC: Описание приема платежей одноклассников
+  SN_OK_TITLE: Прием платежей одноклассники
+Prefs:
+  ACTIVATED: Активен
+  ADVANCED_PREFERENCES: Дополнительно
+  ALPHABETICAL: По алфавиту
+  ANNUL: Аннулировать
+  ANNULED: Аннулировано
+  BAN: Забанить
+  BAN_FOR: Забанить на
+  BAN_USER: Блокировка игрока
+  CANNOT_ACTIVATE_UMODE: Режим отпуска активируется только в том случае, когда ничего не строится, не исследуется и нет флотов в полете.
+  COORDINATES: Координатам
+  CUSTOM_LOOK: Настройки интерфейса
+  DAYS: День
+  DELETE_ACCOUNT: Удалить учётную запись
+  DELETE_DATE: "Аккаунт удалится %s"
+  DISABLE_UMODE: Отключить режим отпуска
+  EMAIL_ACTIVATION: Активация почтового ящика
+  EMAIL_CHANGED: Адрес электронной почты был изменен. Аккаунт должен быть вновь активирован. Следуйте инструкциям в письме, отправленном Вам на E-mail.
+  EMAIL_EMAIL_MESSAGE: "Здравствуйте, {@req_username}, Вы изменили свой E-mail на {config}pagetitle{/config}. Измененный E-Mail нуждается в активации, прежде, чем аккаунт снова станет доступен. Для активации используйте ссылку ниже.<br /><br />{@mail_activation_link}<br /><br />С уважением,<br />Ваша команда {config}pagetitle{/config}"
+  EMAIL_PASSWORD_MESSAGE: "Здравствуйте, {@req_username}, Вы изменили свой пароль на {config}pagetitle{/config}.<br /><br />Ваш новый пароль: {@password}<br /><br />С уважением,<br />Ваша команда {config}pagetitle{/config}"
+  ESPIONAGE_PROBES: Количество шпионских зондов
+  EVOLUTION: По врем. созд.
+  EXISTING_BANS: Забаненные
+  HOURS: Час
+  IMAGE_PACKAGE: Набор картинок юнитов
+  IP_CHECK_ACTIVATED: Провека по IP
+  LANGUAGE: Язык
+  LAST_ACTIVITY: Последняя активность
+  MINUTES: Минута
+  MODERATE_USER: Редактировать игрока
+  MONTHS: Месяц
+  NEW_PASSWORD: Новый пароль
+  PASSWORD_ACTIVATION: Пароль активации
+  PASSWORD_CHANGED: Пароль был успешно изменен.
+  PLANET_ORDER: Сортировка планет
+  REASON: Причина
+  REGISTRATION_DATE: Дата регистрации
+  SKIN_TYPE: Скин игры
+  SKIN_TYPE_FB: Средний
+  SKIN_TYPE_GENERIC: Широкий
+  SKIN_TYPE_MOBI: Мобильный
+  TEMPLATE_PACKAGE: Скин
+  TEMP_EMAIL: Постоянный E-mail
+  THEME: Тема
+  THEME_HINT: Удалите введенный путь, чтобы задействовать тему по умолчанию.
+  UMODE_DATE: "Режим отпуска до %s"
+  UMODE_DISABLED: Режим отпуска деактивирован. Все производства снова работают.
+  UMODE_PREFERENCES: Режим отпуска
+  USERNAME_CHANGED: Имя пользователя успешно изменено.
+  USER_DATA: Пользователь
+  USER_GROUP: Группа
+  VACATION_MODE: Отпуск
+  VACATION_WARNING: "Внимание: После задействования данной опции, выйти из режима отпуска можно будет не ранее, чем через 2 дня! В режиме отпуска выработка ресурсов выключается, нападать на Вас никто не сможет. Если Вы будете отсутствовать в игре месяц, режим отпуска выключится и аккаунт перейдет в обычное состояние (например, на Вас смогут нападать другие игроки по общим правилам). Чтобы аккаунт находился в режиме отпуска больше месяца, Вы должны периодически заходить в игру под своим логином и паролем. Чтобы выйти из режима отпуска, нужно будет зайти в настройки и снять галочку с соответствующей опции."
+  WEEKS: Неделя
+  YEARS: Год
+Registration:
+  ACCEPT_AGB: Входя, Вы автоматически соглашаетесь с правилами.
+  AGB: Политика/Правила
+  BOARD: Форум
+  BOARD_DESC: Здесь можно получить ответы на все возникшие вопросы.
+  CHANGE_PASSWORD: Сменить пароль
+  DISCLAIMER: Исходные
+  EMAIL_CHECK: Пожалуйста, введите адрес электронной почты.
+  EMAIL_DOMAIN_FAILED: На домен {@email_domain_failed} письма не доходят. Используйте пожалуйста другой почтовый ящик для регистрации, например, @ya.ru, @mail.ru, @gmail.com и т.п.
+  EMAIL_EXISTS: Такой E-Mail уже зарегистрирован.
+  EMAIL_INVALID: Адрес электронной почты является недействительным.
+  EMAIL_NOT_FOUND: Введенный e-mail не существует.
+  ERROR_PASSWORD_CHANGED: Введены неверные данные. Пароль не может быть изменен.
+  FORGOTTEN: забыли?
+  GAME_DESCRIPTION: "<p /> Довольно тратить время на земные игры! <p /> В <b>БЕСПЛАТНОЙ</b> космической онлайн стратегии <b>МИР OXSAR</b> ты можешь реализовать весь свой игровой потенциал. <p /> Регистрируйся и играй через любой браузер или телефон и тебе откроется таинственный <b>МИР OXSAR</b>. <p /> Создай военную и экономическую инфраструктуру на своей планете и отправляйся колонизировать другие, покоряй новые звездные системы и галактики. <p /> <b>МИР OXSAR</b> - это многопользовательская онлайн игра, куда можно приглашать друзей и объединять свои усилия в нападении на врагов и обороне, использовать уникальную систему боя и собственный симулятор сражений.  Биржа позволит вести торговлю ресурсами, кораблями и артефактами с другими игроками, научные исследования откроют новые технологии и более совершенные системы вооружения.  Используя множество стратегий и тактик развития, ты будешь расширять свою империю и усиливать влияние на другие галактики во имя главной цели – стать хозяином вселенной в <b>МИРЕ OXSAR!</b>."
+  INFOS_HELP: Помощь
+  LOGIN: Войти
+  LOST_PW_HINT_1: Указания
+  LOST_PW_HINT_2: Если Вы забыли имя пользователя, введите E-Mail. Если забыли пароль, необходимо ввести имя пользователя и E-Mail.
+  LOST_PW_SUBJECT_1: "{config}pagetitle{/config}: Восстановление логина."
+  LOST_PW_SUBJECT_2: "{config}pagetitle{/config}: Восстановление пароля."
+  MAXIMUM_LOGIN_ATTEMPTS_REACHED: Достигнуто максимальное количество попыток входа.
+  NO_ACCESS: Недействительная сессия.
+  NO_ACTIVATION: Указанный пользователь еще не активирован.
+  OPEN_SOURCE: Open Source
+  PASSWORD_CHANGED: Пароль был успешно изменен
+  PASSWORD_CHECK: "Пароль должен быть от %d до %d символов."
+  PASSWORD_FORGOTTEN: Напомнить пароль
+  PASSWORD_INVALID: Неверный пароль.
+  PW_LOST_EMAIL_SUCCESS: Дальнейшие инструкции Вы получите по электронной почте.
+  REGISTRATION: Регистрация
+  REGISTRATION_BANNED_FOR_IP: Вы только что зарегистрировались. Подождите {@minutes} минут и попробуйте снова.
+  REGISTRATION_MAIL: "Спасибо {@regUsername} за регистрацию в {config}pagetitle{/config}! <br /><br /> Ваш пароль: {@regPassword} <br /><br /> Вам нужно активировать учетную запись. Перейдите по ссылке ниже для подтверждения или скопируйте ее в адресную строку Вашего браузера: <br /><br /> {@activationLink} <br /><br /> Если у Вас возникли вопросы, вы можете обратиться на форум игры. <br /><br /> С уважением,<br /> команда {config}pagetitle{/config}"
+  REGISTRATION_MAIL_AGAIN: "Спасибо {@regUsername} за регистрацию в {config}pagetitle{/config}! <br /><br /> Вам нужно активировать учетную запись. Перейдите по ссылке ниже для подтверждения или скопируйте ее в адресную строку Вашего браузера: <br /><br /> {@activationLink} <br /><br /> Если у Вас возникли вопросы, вы можете обратиться на форум игры. <br /><br /> С уважением, <br /> команда {config}pagetitle{/config}"
+  REQUEST_DATA: Отправить
+  REQUEST_PASSWORD: "Здравствуйте, {@req_username}! <br /><br /> Кто-то, возможно Вы, на сайте {config}pagetitle{/config} запросил забытый пароль. Если Вы действительно забыли пароль, то для получения нового нажмите на ссылку ниже: <br /><br /> {@new_pw_url} <br /><br /> Если Вы не запрашивали пароля, проигнорируйте это письмо. <br /><br /> Запрос был отправлен с IP-адреса {@req_ipaddress}. <br /><br /> Чтобы активировать аккаунт без смены пароля, нажмите на ссылку ниже: <br /><br /> {@reactivate_url} <br /><br /> С уважением, <br /> Ваша команда {config}pagetitle{/config}"
+  REQUEST_USERNAME: "Здравствуйте, {@req_username}!\r\n\r\nКто-то, возможно Вы, на сайте {config}pagetitle{/config} запросили забытый логин.\r\n\r\nВаш Логин: {@req_username}\r\n\r\nЕсли Вы не забывали свой логин, советуем Вам в настройках изменить адрес электронной почты. Запрос был отправлен с IP-адреса {@req_ipaddress}.\r\n\r\nС уважением,\r\nВаша команда {config}pagetitle{/config}"
+  RULES: Правила
+  SCREENSHOTS: Скриншоты
+  SCREENSHOT_GALAXY_BROWSER: Представление Галактики
+  SCREENSHOT_MAIN_PAGE: Домашнаяя страница
+  SIGN_IN: Войти
+  SIGN_UP: Регистрироваться
+  SPACE_EVENTS_LIST: Текущие задания во вселенной
+  START_UP_MESSAGE: "Добро пожаловать в {config}pagetitle{/config}!\r\n\r\n{config}pagetitle{/config} - это многопользовательская космическая онлайн игра. Все игроки развиваются в единной вселенной. Здесь можно приглашать друзей и объединять свои усилия в нападении на врагов и обороне, использовать уникальную систему боя и собственный симулятор сражений. Биржа позволит вести торговлю ресурсами, кораблями и артефактами с другими игроками, научные исследования откроют новые технологии и более совершенные системы вооружения. Используя множество стратегий и тактик развития, ты сможешь расширять свою империю и усиливать влияние на другие галактики во имя главной цели – стать хозяином {config}pagetitle{/config}.\r\n\r\nЧтобы развитие империи шло полным ходом, строй шахты по добыче ресурсов. Когда заканчивается постройка или накапливается нужное количество ресурсов, строй новые здания в меню <i>Постройки</i>. Однако, не забывай про Энергию. Без Энергии ни одна шахта не сможет добывать ресурсы.\r\n\r\nСистема Достижений поможет тебе стать грозой {config}pagetitle{/config}. Следуй ее подсказкам и твое развитие пойдет по оптимальному пути.\r\n\r\nЛюбые вопросы по игре можно обсудить в <i>Чате</i>, не стесняйся, спрашивай, там всегда готовы прийти на помощь.\r\n\r\nС уважением,\r\nтвоя команда {config}pagetitle{/config}"
+  START_UP_MESSAGE_SUBJECT: Добро пожаловать, {@regUsername}!
+  SUCCESS_REGISTRATION: Вы успешно зарегистрировались во Вселенной. Для того чтобы начать играть, зайдите в свой почтовый ящик, дождитесь получения письма и следуйте приведенным там инструкциям. Вселенная ждет тебя, поторопись!
+  TERMS_AND_CONDITIONS: Общие положения и условия
+  THE_STORY: История
+  TUTORIAL_DESC: Помощь для новичков.
+  UNIVERSE: Вселенная
+  UNKOWN_LANGUAGE: Неизвестный язык.
+  USERNAME_DOES_NOT_EXIST: Пользователь не найден.
+  USERNAME_EXISTS: Такое имя пользователя уже существует.
+  USERNAME_INVALID: Имя пользователя является недействительным.
+  USER_CHECK: "Имя пользователя должно быть от %d до %d символов."
+  WELCOME: Добро пожаловать!
+  WIKI_DESC: Википедия содержит указания и представляет собой обширное справочное пособие.
+Resource:
+  CAPACITY: Вместимость
+  CONSUME: Потребляет
+  DAILY_PRDOUCTION: За день
+  DAILY_PRODUCTION: За день
+  DEFENSE_CONSUMPTION: Оборона
+  DIFFERENCE: Разница
+  FLEET_CONSUMPTION: Флот
+  HALTING_CONSUMPTION: Удержание {@fleet} с {@planet}
+  HOURLY_PRODUCTION: За час
+  MONTHLY_PRDOUCTION: За месяц
+  MONTHLY_PRODUCTION: За месяц
+  ONE_UNIT_CONSUMPTION: "Один юнит потребляет: {@basicHydrogenCons} водорода."
+  ONE_UNIT_CONSUMPTION_EXT: "Один юнит потребляет: {@basicHydrogenCons} водорода <br />(что составляет: {@metalCons} металла, {@siliconCons} кремния и {@hydrogenCons} водорода)"
+  PRODUCTION: Производство
+  PROD_ONE_SOLAR_SATELLITE: "Один спутник добывает: {@prodPerSat} энергии"
+  RESOURCE_PRODUCTION_FOR_PLANET: "Производство ресурсов на планете:"
+  SHUT_DOWN: Выключить
+  START_UP: Включить
+  SUM: Всего
+  WEEKLY_PRDOUCTION: За неделю
+  WEEKLY_PRODUCTION: За неделю
+Statistics:
+  ALLIANCES: Альянс
+  ATTACKER_LOST: Потери атаки
+  AVERAGE: Среднее
+  BAN_USER: Отменить заявку и забанить продавца
+  BATTLE_EXPERIENCE: Военный опыт
+  BROWSE_UNIVERSE: Поиск
+  BS_ALLIANCE_FILTER: Альянс
+  BS_ALLIANCE_FILTER_INFO: ""
+  BS_MOON_BATTLE: ограничить боями на лунах
+  BS_NEW_MOON: ограничить боями, где появился лунный творец
+  BS_OUTCOME: Итог
+  BS_SHOW_BATTLES: Показывать бои
+  BS_SHOW_DRAWN: показывать ничьи
+  BS_SHOW_NO_DESTROYED: показывать бои без потерь (грабежи ресурсов)
+  BS_SHOW_UFO_BATTLES: показывать бои в экспедициях (с инопланетянами)
+  BS_USER_FILTER: Имя игрока
+  BS_USER_FILTER_INFO: ""
+  DATE: Дата
+  DATE_FIRST: Конечная дата
+  DATE_INTERVAL_COMMENT: "Сражения за последние %d дня закрыты для общего просмотра."
+  DATE_LAST: Ближайшая дата
+  DEFENDER_LOST: Потери защиты
+  DFNDR_DEFEAT: Атакующий победил
+  DFNDR_VICTORY: Обороняющийся победил
+  DRAWN: Ничья
+  EXCH_DATE_COMMENT: Период, за который Вы желает просмотреть статистику.
+  EXCH_DEF_FEE: "Отчисления охране, %"
+  EXCH_DEF_FEE_NOTE: Процент от прибыли, который будет отчисляться защитникам биржи.
+  EXCH_DELIVERY_BUYER: Топливо оплачивается покупателем.
+  EXCH_DELIVERY_HYDRO: Макс. количество топлива на доставку.
+  EXCH_DELIVERY_PERCENT: Часть топлива(в процентах), которую оплачивает продавец
+  EXCH_EXECUTING: Транспорт занят
+  EXCH_FEE: "Комиссионный сбор, %"
+  EXCH_FEE_NOTE: Процент, который будет взиматься с каждой сделки. Оплачивает продавец.
+  EXCH_FREE_SLOTS: "Свободных слотов:"
+  EXCH_LOT: Лот
+  EXCH_LOTS_SOLD: Лотов продано
+  EXCH_LOTS_TOTAL: Лотов всего
+  EXCH_LOT_AMOUNT: Кол-во
+  EXCH_LOT_MIN_PRICE: За партию
+  EXCH_LOT_PRICE: Цена (кр.)
+  EXCH_PROFIT: Прибыль
+  EXCH_SELLER: Продавец
+  EXCH_TITLE: Название биржи
+  EXCH_TURNOVER: Оборот
+  FLEET: Флот
+  FUEL: Топливо
+  MEMBERS: Игроки
+  MODE: Режим
+  MODERATE: Редактировать
+  NEXT: След.
+  PAGE: Страница
+  PARTS: Стороны
+  PARTS_NOTICE: Соотношение сторон, принимавших участие в битве, атакующие - обороняющиеся (общее количество)
+  PLANETS: Планета
+  PLAYER: Игрок
+  PLAYERS: Игроки
+  POINTS: Очки
+  POSITION: Координаты
+  PREV: Пред.
+  RANK: место
+  RESEARCH: Исследование
+  RT_GROUP_RECIEVER: Группировать по получателю
+  RT_GROUP_SENDER: Группировать по отправителю
+  RT_SEARCH_USER: Поиск по имени
+  STAT_BUILD_COUNT: Постройки (колич.)
+  STAT_BUILD_POINTS: Постройки (очков)
+  STAT_POINTS: Всего очков
+  STAT_RESEARCH_COUNT: Технологии (колич.)
+  STAT_RESEARCH_POINTS: Технологии (очков)
+  STAT_UNIT_COUNT: Юниты (колич.)
+  STAT_UNIT_POINTS: Юниты (очков)
+  TAG: Аббревиатура
+  TOTAL: Всего
+  TOTAL_RES_TRANSFER: Сумма ресурсов
+  TRANSFERS_COUNT: Количество разгрузок
+  TYPE: по
+UnitInfo:
+  ATTACK: Атаковать
+  BALLISTICS_POWER: Баллистика
+  BASIC_SPEED: Скорость
+  BATTLE_WEIGHT: Фронт
+  CAPACITY: Вместимость
+  CONSUMPTION: Потребляет
+  COST: Стоимость
+  FRONT: Фронт
+  MASKING_POWER: Маскировка
+  RAPIDFIRE: "Скорострелы:"
+  RAPIDFIRE_FROM: "%s одним залпом поражает"
+  RAPIDFIRE_TO: "Одним залпом поражает: %s"
+  SHELL: Броня
+  SHIELD: Щит
+  STRUCTURE: Структура
+UserAgreement:
+  USER_AGREEMENT_NEW_PRE_TEXT: "<span class='true'>Чтобы продолжить игру, подтвердите Соглашение (кнопочка в конце этой страницы).</span>"
+  USER_AGREEMENT_POST_TEXT: ""
+  USER_AGREEMENT_PRE_TEXT: ""
+buildings:
+  ALREADY_BUILDED: Уже построено
+  BUILD: Построить
+  BUILDING_AT_WORK: Занято
+  BUILDING_MAX_LEVEL_REACHED: Достигнут максимальный уровень для постройки
+  CONSTRUCTION: Постройки
+  CONSTRUCTIONS: Здания
+  CURRENTLY_IN_WORK: "Текущее задание:"
+  DEFENSE: Оборона
+  DEFENSE_FACTORY_DESC: В оборонном заводе производятся все виды оборонительных сооружений.
+  DEMOLISH_CONSTRUCTION: Снос здания
+  DISASSEMBLE: Утилизировать
+  HYDROGEN_LAB_DESC: Извлекает из воды на планете незначительную долю водорода.
+  HYDROGEN_PLANT_DESC: Добывает энергию из процесса образования атома гелия двумя атомами тяжёлого водорода.
+  HYDROGEN_STORAGE_DESC: Огромные ёмкости для сберегания добытого водорода.
+  IN_LIST: В очередь
+  IN_LIST_LEVEL: В очередь уровень
+  MAX_REPAIR_QUANTITIES: Свободного места на
+  METALMINE_DESC: Основной поставщик сырья для строительства несущих структур построек и кораблей.
+  METAL_STORAGE_DESC: Хранилище для необработанных руд металлов до их дальнейшей переработки.
+  MOON_BUILDING: Особые постройки
+  MOON_HYDROGEN_LAB_DESC: Лунный синтезатор добывает водород изо льда с кратеров, расположенных на полюсах луны. Это самые темные и неизведанные места. Энергию для синтезатора могут дать захваченные в бою солнечные спутники.
+  MOON_ROBOTIC_FACTORY_DESC: Предоставляет простую рабочую силу, которую можно применять при строительстве планетарной инфраструктуры. Каждый уровень развития фабрики повышает скорость строительства зданий.
+  NANO_FACTORY_DESC: Фабрика нанитов производит специальных эволюционированных роботов - нанитов. Наниты - это роботы, которые путём объединения в состоянии выполнять экстраординарные задания.
+  NO_SHIELDS_FIELDS: Недостаточно уровней щитовой технологии
+  OLD_QUEUE_ITEM: Запущено до обновления
+  OUTSTANDING_MISSIONS: Очередь постройки
+  QUANTITIES_EXIST: В наличии
+  QUANTITY: Число
+  REPAIR: Ремонтировать
+  REPAIR_FREE: Свободно
+  REPAIR_NEEDED_UNITS: Поврежденные юниты
+  REPAIR_NOT_AVAILABLE: Технология ремонта не известна
+  REPAIR_STORAGE: Вместимость
+  REPAIR_UNITS_CAPACITY: Вмещается в ангар
+  REPAIR_UNIT_TOO_LARGE: Не умещается в ангаре
+  REPAIR_USED: Использовано
+  REPAIR_ZERO_QUANTITIES: Не хватает места
+  REQUIREMENTS: Требования
+  RESEARCH: Исследование
+  RESEARCH_LAB_DESC: Необходима для исследования новых технологий.
+  RESEARCH_OF_LEVEL: Исследовать уровень
+  ROBOTIC_FACTORY_DESC: Предоставляет простую рабочую силу, которую можно применять при строительстве планетарной инфраструктуры. Каждый уровень развития фабрики повышает скорость строительства зданий.
+  ROCKET_STATION_FULL: Шахта заполнена
+  SHIPS_EXIST: "в наличии %s"
+  SHIPYARD_DESC: В строительной верфи производятся все виды кораблей.
+  SHIP_CONSTRUCTION: Верфь
+  SILICON_LAB_DESC: Основной поставщик сырья для электронных строительных элементов и сплавов.
+  SILICON_STORAGE_DESC: Хранилище для обработанного кремния.
+  SOLAR_PLANT_DESC: Производит энергию из солнечных лучей. Энергия требуется для работы большинства построек.
+  STARTED: Запустилось
+  START_IMM: "Запустить сейчас за %s кредитов"
+  START_IN: "<nobr>Старт через</nobr>"
+  UPGRADE_TO_LEVEL: Построить уровень
+error:
+  ACCOUNT_ACTIVATION: Аккаунт еще на активирован.
+  ACCOUNT_ACTIVATION_MAIL: Аккаунт еще не активирован. Мы послали вам еще одно письмо с ссылкой на активацию.
+  ACCOUNT_BANNED: "Аккаунт заблокирован.<br/>Причина: {@reason}"
+  BIG_LOT_ARTEFACT: Артефакт уже в полете или на бирже.
+  BIG_LOT_CANT_RESERV: У вас недостаточно ресурсов для выставления лота на биржу. Попробуйте выставить лот снова.
+  BIG_LOT_COMISSION: У вас недостаточно кредитов для выставления лота на биржу.
+  BIG_LOT_FLEET: У вас недостаточно кораблей.
+  CANNOT_DELETE_HOME_PLANET: Нельзя покинуть главную планету.
+  CANNOT_DELETE_PLANET: Колония не может быть удалена. Помните, что для удаления на колонии не должно быть никаких видов деятельности.
+  CANNOT_DELETE_RELATIONSHIP: Нет разрешения на прекращение отношений.
+  ENTER_FORMATION_NAME: Введите имя формации.
+  ERROR_WITH_DOPLOMACY_APPLICATION: "Заявка не отправлена: пустое содержание или такая заявка уже подана."
+  HOMEPAGE_INVALID: Домашняя страница не верна.
+  IPADDRESS_INVALID: Недействительный IP
+  LOGO_INVALID: Это ошибочный логотип.
+  MESSAGE_TOO_SHORT: Сообщение слишком короткое.
+  NOT_ENOUGH_CAPACITY: Нехватает места в трюмах.
+  NO_MATCHES_ALLIANCE: Альянс не был найден.
+  PLANET_FULLY_DEVELOPED: Планета заполнена.
+  SELF_MESSAGE: Вы не можете отправить сообщение себе.
+  SENT_SUCCESSFUL: Сообщение успешно отправлено.
+  SIM_NO_ATTER_UNITS: Введите атакующие юниты.
+  SIM_NO_DEFENDER_UNITS: Введите обороняющиеся юниты.
+  SIM_NO_UNITS: Введите атакующие и обороняющиеся юниты.
+  SUBJECT_TOO_SHORT: Введите тему сообщения.
+  TEXT_INVALID: Текст слишком длинный.
+  UNABLE_TO_INVITE_USER: Пользователь не существует или не может быть приглашен.
+  USER_NOT_FOUND: Пользователь не существует.
+  WRONG_PASSWORD: Указан неверный пароль.
+global:
+  ACCOUNT_WILL_BE_DELETED: Аккаунт будет удалён!
+  ACHIEVEMENT: Достижение
+  ADD_TO_BUDDYLIST: Добавить в список друзей
+  AGREE: Согласиться
+  ALL: Все
+  ALLIANCE: Альянс
+  ALLIANCE_ATTACK: Совместная атака
+  ALLIANCE_DESTROY_ATTACK: Совместно разрушить постройку
+  ALLIANCE_MOON_DESTROY_ATTACK: Совместно уничтожить Луну
+  ARTEFACTS: Артефакты
+  ARTEFACT_PACKED_BUILDING_FULL_DESC: Позволяет мгновенно построить находящееся внутри строение.
+  ATTACK: Атака
+  BACK: Назад
+  BASIC_PRODUCTION: Естественное производство
+  BIG_LOT: Недостаточно активов для резервации.
+  BS_IN_SPACE: Где-то в космосе
+  BS_MOON_POST: ' (луна)'
+  BUY: Купить
+  BUY_FAILED: Невозможно совершить покупку.
+  BUY_SECCEED: Спасибо за покупку на Межгалактической бирже!
+  BUY_SUCCEED: Покупка совершена.
+  CANT_RECALL_YET: Нельзя отозвать лот так рано.
+  CHARACTERS: cимволов
+  COLONIZE: Колонизировать
+  COLONIZE_RANDOM_PLANET: Колонизировать неизведанные дали
+  COLONY: Колония
+  COMMIT: Ok
+  CONFIRM_PROCEEDING: Вы уверены?
+  COUNTDOWN_TW: ТР
+  COUNTDOWN_WAIT: Выполняется
+  CR: кр.
+  CREDIT: Кредит
+  CREDITS: Кредиты
+  CREDIT_PAY: Пополнить
+  DATE_FORMAT: d.m.Y
+  DECIMAL_POINT: ','
+  DELIVERY_ARTEFACTS: Доставка купленных артефактов
+  DELIVERY_RESOURSES: Доставка купленных ресурсов
+  DELIVERY_UNITS: Доставка купленного флота
+  DELIVERY_UNITS_SELLER: Доставка проданного флота
+  DESTROY_ATTACK: Разрушить постройку
+  DISTANCE: Расстояние
+  EDIT: Изменить
+  EMAIL: E-Mail
+  ENERGY: Энергия
+  ERROR: Ошибка
+  ERROROUS_PARAM: Ошибочный параметр
+  EXCH_BAN: Вас забанил хозяин биржи
+  EXCH_CANNT_RETREAT_TRANSPORT: Вы не можете расторгнуть договор купли-продажи и отозвать транспорт.
+  EXCH_COMISSION: Плата за подачу заявки
+  EXCH_COMISSION_NOTE: Единоразовый сбор, который взымается с продавца во время подачи заявки(при отзыве заявки не возвращается).
+  EXCH_COST: Стоимость лота
+  EXCH_DELIVERY_MSG: Доставка
+  EXCH_DELIVERY_STR: "Продавец оплачивает {@percent}% топлива, но не более {@hydro}"
+  EXCH_DISCOUNT: "Скидка для торговых союзов, %"
+  EXCH_DISTANCE: Радиус действия биржи, зв. систем
+  EXCH_DISTANCE_PAID: Оплачиваемое расстояние
+  EXCH_EXPIRY_DATE: Дата автоснятия заявки
+  EXCH_FILTER_COMMENT: Фильтр
+  EXCH_GROUP_EXCH: Груп. по биржам
+  EXCH_LOTS: Лотов на бирже (занято/макс.)
+  EXCH_LOT_DETAILS: Лот
+  EXCH_LOT_MIN_AMOUNT: Мин. партия
+  EXCH_LOT_OPTIONS: Добавление заявки
+  EXCH_LOT_PRICE_COMMISSION: Учитывая комиссию биржи
+  EXCH_LOT_TYPE: Тип лота
+  EXCH_MAX_PRICE_ERR: Цена лота не может быть такой высокой.
+  EXCH_MET_EQUIV: '&quot;Металлический&quot; эквивалент'
+  EXCH_MIN_PRICE_ERR: Цена лота не может быть такой низкой.
+  EXCH_MUST_BE_MULTIPLE: Количество должно быть кратным мин. партии
+  EXCH_MY_EXCH: Лоты на моей бирже
+  EXCH_MY_LOTS: Мои лоты
+  EXCH_NEWLOT_S1: Доступные биржи
+  EXCH_NEW_LOT: Подать заявку на биржу
+  EXCH_NO_SLOTS: Нет свободных слотов для заявки.
+  EXCH_PURCHASE: Покупка лота
+  EXCH_QUANT: Минимальная партия
+  EXCH_REAL_PRICE: Себестоимость
+  EXCH_SLOTS: Емкость инфраструктуры (занято/макс.)
+  EXCH_TITLE: Название биржи
+  EXCH_TTL: Время жизни заявки, дней
+  EXPEDITION: Экспедиция
+  EXTERN_LINK: Вы покидаете {config}pagetitle{/config}. Обратите внимание, что {config}pagetitle{/config} не несет ответственности за содержание Веб-конента.
+  FAILURE: Ошибка!
+  FLEET: Флот
+  F_NEW_MESSAGE: (1 новое сообщение)
+  F_NEW_MESSAGES: "(%d новых сообщений)"
+  GAME_NAME: Мир Oxsar©Niro
+  HALT: Удержание
+  HOME_PLANET: Планета
+  HYDROGEN: Водород
+  IMAGE_PACKAGE: Стиль
+  LEVEL: Уровень
+  LOON_POST: ' (луна)'
+  MAXIMUM: Макс.
+  MENU_ACHIEVEMENTS: Достижения
+  MENU_ALLIANCE: Альянс
+  MENU_ARTEFACTS: Артефакты
+  MENU_BATTLESTATS: Сражения
+  MENU_CONSTRUCTIONS: Постройки
+  MENU_DEFENSE: Оборона
+  MENU_DISASSEMBLE: Утилизация
+  MENU_EMPIRE: Империя
+  MENU_EXCHANGE: Моя Биржа (упр.)
+  MENU_FLEET: Флот
+  MENU_FORUMS: Форум
+  MENU_FRIENDS: Друзья
+  MENU_GALAXY: Галактика
+  MENU_LOGOUT: Выход
+  MENU_MAIN: Обзор
+  MENU_MESSAGES: Сообщения
+  MENU_NOTEPAD: Блокнот
+  MENU_PLANET_OPTIONS: Планета
+  MENU_PREFERENCES: Настройки
+  MENU_RANKING: Статистика
+  MENU_RECORDS: Рекорды
+  MENU_REFERAL: Рефералы
+  MENU_REPAIR: Ремонт
+  MENU_RESEARCH: Исследования
+  MENU_RESOURCE: Сырьё
+  MENU_RESTRANSFERS: Переданные ресурсы
+  MENU_SEARCH: Поиск
+  MENU_SHIPYARD: Верфь
+  MENU_SIMULATOR: Симулятор боя
+  MENU_STOCK: Биржа
+  MENU_SUPPORT: Регламент тех поддержки
+  MENU_TECHTREE: Технологии
+  MENU_TUTORIAL: Туториал
+  MENU_USER_AGREEMENT: Соглашение
+  METAL: Металл
+  MOON: Луна
+  MOON_DESTROY_ATTACK: Уничтожить Луну
+  MUST_LOGIN: Необходима авторизация
+  NEUTRAL_PLANET_NAME: UFO-251
+  NEXT: След.
+  NEXT_PAGE: След.
+  NOTEPAD: Блокнот
+  NOT_ENOUGH_EXCHANGE_RANGE: Не хватает радиуса действия биржи.
+  NO_MATCHES_FOUND: Не найдено
+  OK: Ok
+  OR: или
+  OTHER: Прочее
+  PAGE: Страница
+  PASSWORD: Пароль
+  PAY_MAIN_TEXT: Приобретая кредиты, Вы оказываете поддержку Миру Oxsar. Полученные средства идут на разработку новых версий и обновления в игре.
+  PAY_SUPPORT_TEXT: "В случае проблемы напишите письмо в тех. поддержку на <b>support@oxsar.ru</b>, укажите дату и время платежа, логин в игре, платежную систему, сумму платежа и сумму кредита, кот. не зачислился."
+  PLANET: Планета
+  PLANET_FREE: нет заданий
+  PREV: Пред.
+  PREV_PAGE: Пред.
+  PROCEED: Применить
+  PRODUCTION: Производство
+  QUANTITY: Количество
+  RAISING_DATE: Дата подачи заявки
+  RECALL: Снять
+  RECIEVER: Получатель
+  RECYCLING: Собрать обломки
+  REFERRAL_CREDIT_MESSAGE: За Вашего реферала {@ref_username} Вам был начислен бонус {@credits} кредитов.
+  REFERRAL_CREDIT_SUBJECT: Начисление кредитов
+  RELATED_MSG: Сообщения, связанные с этим игроком.
+  REQUIRED_CONSTRUCTIONS: Невыполненные требования
+  REQUIRED_LIST_TITLE: Требования
+  RESEARCH_EXPO_TECH: Необходимо исследовать экспедиционную технологию
+  RESET_BUTTON: Отменить изменения
+  RESOURCE: Ресурс
+  RESOURCES: Ресурсы
+  RETURN_FLY: Возвращение
+  ROCKET_ATTACK: Ракетная атака
+  SENDER: Отправитель
+  SEQ_NUM: №
+  SHOW_UNAVAILABLE: Показывать недоступные
+  SHOW_UNAVAILABLE_UNITS: Показывать недоступные юниты
+  SILICON: Кремний
+  SPY: Шпионаж
+  STARGATE_TRANSPORT: Гипер полет
+  STATIONATE: Оставить
+  STATISTICS: Статистика
+  TF: Обломки
+  THOUSANDS_SEPERATOR: .
+  TIME_FORMAT: "H:i:s"
+  TODAY: "<strong>Сегодня</strong>"
+  TOO_MANY_EXPOS: Уровень экспедиционной технологии не позволяет отправлять такое количество экспедиций.
+  TOP_MENU: Меню
+  TOP_MENU_BUY_CREDIT: Пополнить кредиты
+  TOP_MENU_PLANETS: Планеты
+  TRANSPORT: Транспорт
+  TW_IN_PROGRESS: В данный момент идут технические работы (ТР).
+  TW_UPCOMING: Скоро начнутся технические работы (ТР). Любые завершающиеся во время ТР задания будут приостановлены. Порядок возобновления заданий сохранится. ТР завершатся в {@tw_end_time} (время московское).
+  TW_UPCOMING_BLOCK: Скоро начнутся технические работы (ТР). Во время работ Вы не сможете войти в игру. ТР завершатся в {@tw_end_time} (время московское).
+  UMODE_ENABLED: Аккаунт находится в режиме отпуска.
+  UNFORMED_PLANET_NAME: Туманность
+  UNIT_FIELDS: Занимает места
+  UNKOWN: Неизвестно
+  USER: Игрок
+  USERNAME: Имя пользователя
+  USER_AGREEMENT: Пользовательское соглашение
+  USER_BACKGROUND_STYLE: Стиль фона
+  USER_TABLE_STYLE: Стиль таблиц
+  WIKI: Wiki
+  WRITE_MESSAGE: Написать сообщение
+  YESTERDAY: "<strong>Вчера</strong>"
+info:
+  ABORT: Отмена
+  ALIEN_TECH: Инопланетная технология
+  ALIEN_TECH_DESC: Эта технология позволяет ремонтировать инопланетные корабли.
+  ALIEN_TECH_FULL_DESC: Эта технология позволяет ремонтировать инопланетные корабли.
+  ANNIHILATION_ENGINE: Аннигиляционный модуль
+  ANNIHILATION_ENGINE_DESC: "При подключении к любому типу двигателей увеличивает скорость флота в полете на 10%."
+  ANNIHILATION_ENGINE_FULL_DESC: "Аннигиляция - взаимоуничтожение частицы и античастицы при их столкновении с высвобождением огромного количества энергии. Антиматерию крайне сложно синтезировать и хранить, поэтому создание эффективного двигателя, основанного на принципе аннигиляции, пока невозможно. Однако среди обломков крупных инопланетных кораблей были найдены модули двигателей, работающих именно по такому принципу. Некоторые из них находятся в рабочем состоянии и могут быть совмещены с известными типами двигателей, давая им прирост производительности в 10%."
+  ARTEFACT: Артефакт
+  ARTEFACTS_TECH: Изучение артефактов
+  ARTEFACTS_TECH_DESC: Технология позволяет активировать артефакты. Количество одновременно работающих артефактов на всех планетах увеличивается с каждым уровнем на 1.
+  ARTEFACTS_TECH_FULL_DESC: В исследовании инопланетных артефактов работают самые лучшие научные подразделения Вашей империи. Для изучения неизвестных технологий и механизмов работы артефактов используются лучшие эвристические методы анализа и супер компьютерные технологии. Данная технология позволяет использовать артефакты и поддерживать некоторые из них в рабочем состоянии некоторое время. Максимальное количество активированных артефактов на всех планетах ограничено уровнем этой технологии.
+  ARTEFACT_PACKED_BUILDING: Запакованное строение
+  ARTEFACT_PACKED_RESEARCH: Запакованное исследование
+  ARTEFACT_PACKING_BUILDING: Конструкторский модуль
+  ARTEFACT_PACKING_RESEARCH: Исследовательский модуль
+  ASSAULT_REPORT_TITLE: Отчет о сражении
+  ASSEMBLY_MODULE__31_10: Модуль сборки
+  ASSEMBLY_MODULE__31_10_DESC: Добавляет к флоту 10 легких истребителей.
+  ASSEMBLY_MODULE__31_10_FULL_DESC: Развитие инопланетной техники позволяет создавать роботов, подобных известным в галактике нанитам. Однако вместо нанитов общего назначения инопланетяне предпочитают использовать специализированных нанитов, оптимизированных для выполнения единственной задачи. Модуль сборки состоит из микрокомпьютера, управляющего процессом сборки, и множества нанитов, предназначенных для создания кораблей конкретного типа. Этот модуль предназначен для сборки 10 легких истребителей.
+  ASSEMBLY_MODULE__42_1: Модуль сборки
+  ASSEMBLY_MODULE__42_1_DESC: Добавляет к флоту 1 Звезду смерти.
+  ASSEMBLY_MODULE__42_1_FULL_DESC: Развитие инопланетной техники позволяет создавать роботов, подобных известным в галактике нанитам. Однако вместо нанитов общего назначения инопланетяне предпочитают использовать специализированных нанитов, оптимизированных для выполнения единственной задачи. Модуль сборки состоит из микрокомпьютера, управляющего процессом сборки, и множества нанитов, предназначенных для создания кораблей конкретного типа. Этот модуль предназначен для сборки 1 Звезды смерти.
+  ATOMIC_DENSIFIER: Атомный уплотнитель
+  ATOMIC_DENSIFIER_DESC: "Увеличивает емкость хранилищ на 10%."
+  ATOMIC_DENSIFIER_FULL_DESC: "Генерирует силовое поле, сжимающее вещество, что позволяет хранилищам вмещать больше ресурсов. В течение недели емкость хранилищ ресурсов на всех планетах увеличивается на 10%."
+  BALLISTICS_TECH: Баллистическая технология
+  BALLISTICS_TECH_DESC: Баллистический анализатор управляет высокоточным наведением оружия, увеличивая точность прямых попаданий в юниты противника.
+  BALLISTICS_TECH_FULL_DESC: Технология баллистического анализа позволяет компьютерным системам просчитывать бой до его начала на основе пространственного расположения, технических характеристик юнитов и траекторий огневых путей и излучений. Это делает возможным вести прицельный и высокоточный огонь на всем протяжении боя. Технология уменьшает промахи и попадания в уже уничтоженные юниты.
+  BATTLE_ATTACK_POWER: Единство атаки
+  BATTLE_ATTACK_POWER_DESC: "Увеличивает во время сражения силу атаки на 10% для всех юнитов всех игроков своей стороны."
+  BATTLE_ATTACK_POWER_FULL_DESC: "Увеличивает во время сражения силу атаки на 10% для всех юнитов всех игроков своей стороны."
+  BATTLE_SHELL_POWER: Единство брони
+  BATTLE_SHELL_POWER_DESC: "Увеличивает во время сражения силу брони на 10% для всех юнитов всех игроков своей стороны."
+  BATTLE_SHELL_POWER_FULL_DESC: "Увеличивает во время сражения силу брони на 10% для всех юнитов всех игроков своей стороны."
+  BATTLE_SHIELD_POWER: Единство щитов
+  BATTLE_SHIELD_POWER_DESC: "Увеличивает во время сражения силу щитов на 10% для всех юнитов всех игроков своей стороны."
+  BATTLE_SHIELD_POWER_FULL_DESC: "Увеличивает во время сражения силу щитов на 10% для всех юнитов всех игроков своей стороны."
+  BATTLE_SHIP: Линкор
+  BATTLE_SHIP_DESC: Линкоры как правило составляют основу флота. Их тяжёлые орудия, высокая скорость и большой грузовой тоннаж делают их серьёзными противниками.
+  BATTLE_SHIP_FULL_DESC: Линкоры как правило составляют основу флота. Их тяжёлые орудия, высокая скорость и большой грузовой тоннаж делают их серьёзными противниками.
+  BOMBER: Бомбардир
+  BOMBER_DESC: Бомбардировщик был разработан специально для того, чтобы уничтожать планетарную защиту.
+  BOMBER_FULL_DESC: "Бомбардировщик был разработан специально для того, чтобы уничтожать планетарную защиту. С помощью лазерного прицела он точно сбрасывает плазменные бомбы на поверхность планеты и таким образом наносит огромные повреждения оборонительным сооружениям.\r\nНедостатки: Сильно медленный корабль."
+  CATALYST: Катализатор
+  CATALYST_DESC: "Увеличивает выработку ресурсов на 10%."
+  CATALYST_FULL_DESC: "Универсальный катализатор ускоряет ход химических процессов при синтезе металла, кремния и водорода. В течение недели выработка ресурсов на всех планетах увеличивается на 10%."
+  COLONY_SHIP: Колонизатор
+  COLONY_SHIP_DESC: При помощи этого корабля можно осваивать незаселённые планеты.
+  COLONY_SHIP_FULL_DESC: Колонизатор предназначен для освоения ранее не занятых планет. Он используется в новой колонии в качестве поставщика сырья - его разбирают и используют весь полезный материал для освоения нового света.
+  COMBUSTION_ENGINE: Реактивный двигатель
+  COMBUSTION_ENGINE_DESC: Технология для развития двигателей небольших комсических кораблей, что позволяет летать с небольшим потреблением топлива на большие растояния.
+  COMBUSTION_ENGINE_FULL_DESC: "Реактивный двигатель основывается на принципе отдачи. Материя, разогретая до высоких температур, выбрасывается в направлении, противоположном движению и даёт ускорение кораблю. Эффективность этих двигателей достаточно мала, но они достаточно надёжны, дёшевы в производстве и обслуживании. Кроме того они занимают гораздо меньше места на корабле по сравнению с остальными двигателями, поэтому их всё ещё достаточно часто можно встретить на маленьких кораблях. Так как реактивные двигатели являются основой любого полёта в космос, следует исследовать их как можно раньше. Дальнейшее развитие этих двигателей делает следующие корабли с каждым уровнем на 10% быстрее:<br /><br />\r\nмалые транспорты (до тех пор пока не будет исследован импульсный двигатель 5-го уровня) , большие транспорты, лёгкие истребители и шпионские зонды."
+  COMPUTER_TECH: Компьютерная технология
+  COMPUTER_TECH_DESC: С увеличением мощности компьютеров можно командовать всё большим количеством флотов. Каждый уровень компьютерной технологии увеличивает максимальное количество флотов на один.
+  COMPUTER_TECH_FULL_DESC: Компьютерная технология предназначена для расширения имеющихся в наличии компьютерных мощностей. В результате на планете развиваются более продуктивные и эффективные компьютерные системы, возрастает вычислительная мощность и скорость протекания вычислительных процессов. С повышением мощности компьютеров можно одновременно командовать всё большим количеством флотов. Каждый уровень развития компьютерной технологии даёт возможность командовать +1 флотом. Чем больше рассылается флотов, тем больше можно совершать налётов и тем самым захватывать больше сырья. Естественно, что эта технология полезна и торговцам, так как она позволяет им одновременно рассылать больше торговых флотов. По этой причине следует постоянно развивать компьютерную технологию на протяжении всей игры.
+  CONTINUE: Продолжить
+  CRUISER: Крейсер
+  CRUISER_DESC: Крейсеры почти втрое сильней защищены, чем тяжёлые истребители, а по огневой мощи они превосходят тяжёлые истребители почти в два раза. К тому же они очень быстры.
+  CRUISER_FULL_DESC: С развитием тяжёлых лазеров и ионных пушек тяжёлые истребители всё больше вытеснялись. Несмотря на многочисленные усовершенствования огневая мощь и бронирование не могли быть настолько изменены, чтобы действенно противостоять этим оборонительным орудиям. Поэтому было решено построить новый класс кораблей, который объединял бы в себе больше бронирования и огневой мощи. Так появился крейсер. Крейсеры почти втрое сильней защищены, чем тяжёлые истребители и обладают более чем удвоенной огневой мощью. К тому же они очень быстры. Нет лучшего оружия против средней защиты. Почти столетие крейсеры неограниченно господствовали во вселенной. С появлением орудий Гаусса и плазменных орудий их господство закончилось. Однако и сегодня их охотно применяют против групп истребителей.
+  DEATH_STAR: Звезда смерти
+  DEATH_STAR_DESC: Звезда смерти оснащена гигантской гравитонной пушкой, которая может уничтожать корабли и даже луны.
+  DEATH_STAR_FULL_DESC: Звезда Смерти оснащена гравитонной пушкой, которая может уничтожать все типы кораблей и даже луны. Для производства достаточного количества энергии, звезда смерти практически полностью состоит из генераторов. Только огромные звёздные империи имеют достаточно ресурсов и работников для строительства этого огромного корабля.
+  DEFENSE_FACTORY: Оборонный завод
+  DEFENSE_FACTORY_FULL_DESC: В оборонном заводе производятся все виды оборонительных сооружений. Чем он больше, тем быстрее можно строить более сложные и более крупные оборонительные сооружения. Посредством строительства фабрики нанитов производятся миниатюрные роботы, которые помогают работникам работать быстрее.
+  DEFENSE_FACTORY_REQUIRED: Необходимо построить оборонный завод.
+  DEMOLISH: "Уничтожение:"
+  DEMOLISH_NOW: '&laquo; Снести &laquo;'
+  DONE: Завершилось
+  ENERGY_TECH: Энергетическая технология
+  ENERGY_TECH_DESC: Обладание различными видами энергии необходимо для многих новых технологий.
+  ENERGY_TECH_FULL_DESC: Обладание различными видами энергии необходимо для многих новых технологий.
+  ESPIONAGE_SENSOR: Шпионский зонд
+  ESPIONAGE_SENSOR_DESC: Шпионские зонды - это маленькие манёвренные корабли, которые доставляют с больших расстояний данные о флотах и планетах.
+  ESPIONAGE_SENSOR_FULL_DESC: Шпионские зонды - это маленькие манёвренные корабли, которые доставляют с больших расстояний данные о флотах и планетах. Их высокомощный двигатель позволяет им преодолевать большие расстояния за несколько секунд. Однажды попав на орбиту какой-нибудь планеты, они пребывают там некоторое время для сборки данных. В это время враг может их относительно легко обнаружить и атаковать. Для экономии места не было установлено ни брони, ни щитов, ни орудий, что делает зонды в случае обнаружения лёгкими целями.
+  EVENT_MODE_ALLIANCE_ATTACK: Атака альянса
+  EVENT_MODE_ATTACK: Атака
+  EVENT_MODE_COLONIZE: Колонизация
+  EVENT_MODE_CONSTRUCTION: Строительство
+  EVENT_MODE_DEFENSE: Оборона
+  EVENT_MODE_DEMOLISH: Снос постройки
+  EVENT_MODE_EXPEDITION: Экспедиция
+  EVENT_MODE_FLEET: Флот
+  EVENT_MODE_FLEET_RETURNED: Возвращение флота
+  EVENT_MODE_HALT: Остановка
+  EVENT_MODE_HOLDING: Заморозка
+  EVENT_MODE_MOON_DESTRUCTION: Уничтожение луны
+  EVENT_MODE_POSITION: Перемещение флота
+  EVENT_MODE_RECYCLING: Переработка
+  EVENT_MODE_RESEARCH: Исследование
+  EVENT_MODE_ROCKET_ATTACK: Атака
+  EVENT_MODE_SPY: Шпионаж
+  EVENT_MODE_TRANSPORT: Перемещение транспорта
+  EXCHANGE: Межгалактическая биржа
+  EXCHANGE_DESC: На межгалактической бирже игроки подают заявки на продажу товаров.
+  EXCHANGE_FULL_DESC: Межгалактическая биржа необходима для осуществления торговых сделок в галактиках. Для нормального ее функционирования, необходимо создать и поддерживать в рабочем состоянии инфраструктуру из Межгалактических спутников и Биржевых подстанций.
+  EXCH_OFFICE: Торговое представительство
+  EXCH_OFFICE_DESC: Торговое представительство необходимо для возможности продавать на Межгалактической бирже.
+  EXCH_OFFICE_FULL_DESC: Торговое представительство необходимо для возможности продавать на Межгалактической бирже. Каждый уровень представительства увеличивает максимальное количество Ваших лотов на 2.
+  EXPO_TECH: Экспедиционная технология
+  EXPO_TECH_DESC: Теперь корабли можно оснащать исследовательским модулем, обеспечивающим обработку собранных данных в условиях длительных полётов.
+  EXPO_TECH_FULL_DESC: Экспедиционная технология охватывает различные технологии сканирования и даёт возможность оснащать корабли различных классов исследовательским модулем. Он содержит базу данных, маленькую передвижную лабораторию, а также различные биоклетки и сосуды для проб. Для безопасности корабля при исследовании опасных объектов исследовательский модуль оснащён автономным энергообеспечением и генератором энергетического поля, который в экстремальных ситуациях может окружать исследовательский модуль мощным энергетическим полем.
+  FRIGATE: Линейный крейсер
+  FRIGATE_DESC: Линейный крейсер специализируется на перехвате вражеских флотов.
+  FRIGATE_FULL_DESC: Этот высокотехнологичный корабль несёт смерть атакующим флотам. Его усовершенствованные лазерные орудия удерживают тяжёлые корабли противника на расстоянии и могут уничтожать несколько единиц одним залпом. За счёт его малых размеров и невероятно мощного вооружения, грузоподъёмность линейного крейсера очень мала, но за счёт гиперпространственного двигателя также мало потребление топлива.
+  GAUSS_GUN: Пушка Гаусса
+  GAUSS_GUN_DESC: Пушка Гаусса ускоряет многотонные заряды с гигантскими затратами энергии.
+  GAUSS_GUN_FULL_DESC: Долгое время артиллерийские орудия считались устаревшими на фоне развития современной лазерной и ионной техники и постоянно улучшающейся защиты, пока новые исследования в области энергетической технологии не позволили поднять артиллерию на качественно новый уровень. Вообще-то принципы электромагнитных ускорителей масс были известны на Земле уже с 20-го столетия. Один из них - пушка Гаусса. С решением технических трудностей использование ее в качестве оружия стало реальностью. Многотонные снаряды ускоряются магнитным полем при огромных затратах энергии и имеют такую выходную скорость, что частички пыли в воздухе вокруг снаряда сгорают, а звуковая волна сотрясает землю. Даже современная броня и щиты с трудом могут противостоять пробивной силе пушки Гаусса, и нередко случается так, что цель просто простреливается насквозь. Оборонительные сооружения деактивируются сами по себе, как только они сильно повреждаются.
+  GRAVI: Гравитационная технология
+  GRAVI_DESC: Гравитон - это частица, которая не обладает ни массой ни зарядом и определяет силу притяжения. Путём запуска концентрированного заряда гравитонов можно создавать искусственное гравитационное поле, которое, подобно чёрной дыре, втягивает в себя массу, благодаря чему можно уничтожать корабли или даже луны.
+  GRAVI_FULL_DESC: Гравитон - это частица, которая не обладает ни массой ни зарядом и определяет силу притяжения. Путём запуска концентрированного заряда гравитонов можно создавать искусственное гравитационное поле, которое, подобно чёрной дыре, втягивает в себя массу, благодаря чему можно уничтожать корабли или даже луны. Чтобы произвести достаточное количество гравитонов, требуются огромные количества энергии.
+  GUN_TECH: Оружейная технология
+  GUN_TECH_DESC: "Оружейная технология делает системы вооружения эффективней. Каждый уровень увеличивает мощность вооружения войсковых частей на 10% от основной мощности."
+  GUN_TECH_FULL_DESC: "Оружейная технология занимается прежде всего дальнейшим развитием имеющихся в наличии систем вооружения. При этом особое значение придаётся тому, чтобы снабжать имеющиеся в наличии системы большей энергией и более точно эту энергию направлять. Благодаря этому системы вооружения становятся эффективней, а оружие вызывает больше разрушений. Каждый уровень оружейной технологии увеличивает мощность вооружения войсковых частей на 10%. Оружейная технология важна для конкурентоспособного содержания частей. Поэтому следовало бы её постоянно развивать в течение всей игры."
+  HISTORY: История
+  HOME_PLANET_REQUIRED: Ваши колонисты уже ищут во вселенной подходящую планету для колонизации. Вы пока можете осмотреться, загляните в чат. При желании ник можно сменить в меню (оно слева) в Настройках (в самом низу).
+  HYDROGEN_LAB: Синтезатор водорода
+  HYDROGEN_LAB_FULL_DESC: Совершенствование синтезатора способствует увеличению его эффективности по обработке воды океана планеты и, как следствие, большей выработке водорода. Водород необходим в качестве топлива для кораблей, почти для всех исследований, просмотра галактик, а также для использования сенсорной фаланги.
+  HYDROGEN_PLANT: Термоядерная электростанция
+  HYDROGEN_PLANT_FULL_DESC: На термоядерных электростанциях при помощи термоядерного синтеза под огромным давлением и при высокой температуре 2 атома тяжёлого водорода объединяются в один атом гелия. При этом, при образовании ядра гелия, вырабатывается энергия в 41,32*10^-13 Дж в виде излучения (т.о. при сгорании 1 г водорода вырабатывается 172 МВт*ч энергии). Чем больше термоядерный реактор, тем сложнее процессы синтезирования, реактор производит больше энергии. Добыча энергии также может быть повышена за счёт развития энергетической технологии.
+  HYDROGEN_STORAGE: Емкость для водорода
+  HYDROGEN_STORAGE_FULL_DESC: Огромные ёмкости для хранения добытого водорода. Они обычно находятся вблизи космических портов. Чем они больше, тем больше водорода в них может сберегаться. Если они заполнены, то добыча водорода прекращается.
+  HYPERSPACE_ENGINE: Гиперпространственный двигатель
+  HYPERSPACE_ENGINE_DESC: Выгибает пространство вокруг корабля. Дальнейшее развитие этих двигателей делает некоторые корабли быстрее.
+  HYPERSPACE_ENGINE_FULL_DESC: "Благодаря пространственно-временному изгибу в непосредственном окружении корабля пространство сжимается, чем быстрее преодолеваются далёкие расстояния. Чем выше развит гиперпространственный привод, тем выше сжатие пространства, благодаря чему с каждым уровнем скорость кораблей повышается на 30%."
+  HYPERSPACE_TECH: Гиперпространственная технология
+  HYPERSPACE_TECH_DESC: Путём сплетения 4-го и 5-го измерения стало возможным исследовать новый более экономный и эффективный двигатель. Кроме этого ученные обнаружили, что искривленное пространство увеличивает радиус действия сенсорной фаланги.
+  HYPERSPACE_TECH_FULL_DESC: "Путём сплетения 4-го и 5-го измерения стало возможным исследовать новый более экономный и эффективный двигатель. Кроме этого ученные обнаружили, что искривленное пространство увеличивает радиус действия сенсорной фаланги на 10% за каждый уровень технологии."
+  IGN: Межгалактическая исследовательская сеть
+  IGN_DESC: Эта сеть делает возможным общение учёных, работающих в исследовательских лабораториях разных планет. Каждый новый уровень позволяет присоединить к сети дополнительную лабораторию.
+  IGN_FULL_DESC: Эта сеть делает возможным общение учёных, работающих в исследовательских лабораториях разных планет. Каждый новый уровень позволяет присоединить к сети дополнительную лабораторию (в первую очередь присоединяются лаборатории старших уровней). Из всех объединённых в сеть лабораторий, в каждом исследовании принимают участие только те, которые имеют достаточный для проведения данного исследования уровень. Скорость исследования соответствует сумме уровней участвующих в нём лабораторий.
+  IMPULSE_ENGINE: Импульсный двигатель
+  IMPULSE_ENGINE_DESC: Импульсный двигатель основывается на принципе отдачи. Дальнейшее развитие этих двигателей делает некоторые корабли быстрее,
+  IMPULSE_ENGINE_FULL_DESC: "Импульсный двигатель основывается на принципе отдачи, причём разогрев материи осуществляется в ходе ядерной реакции. Также можно впрыснуть дополнительную массу. Дальнейшее развитие этих двигателей делает следующие корабли с каждым уровнем на 20% быстрее: бомбардировщики, крейсеры, тяжёлые истребители и колонизаторы. Каждый уровень развития увеличивает радиус действия межпланетных ракет."
+  INTERCEPTOR_ROCKET: Ракета-перехватчик
+  INTERCEPTOR_ROCKET_DESC: Ракеты-перехватчики уничтожают атакующие межпланетные ракеты.
+  INTERCEPTOR_ROCKET_FULL_DESC: Ракеты-перехватчики уничтожают атакующие межпланетные ракеты. Одна ракета-перехватчик уничтожает одну межпланетную ракету.
+  INTERPLANETARY_ROCKET: Межпланетная ракета
+  INTERPLANETARY_ROCKET_DESC: Межпланетные ракеты уничтожают вражескую оборону.
+  INTERPLANETARY_ROCKET_FULL_DESC: Межпланетные ракеты уничтожают защиту противника. Уничтоженные межпланетными ракетами оборонительные сооружения больше не восстанавливаются.
+  IN_FLIGHT: в полете
+  ION_GUN: Ионное орудие
+  ION_GUN_DESC: Ионное орудие направляет на цель волну ионов, которая дестабилизирует щиты и повреждает электронику.
+  ION_GUN_FULL_DESC: В 21-м столетии на Земле уже существовало то, что общеизвестно как ЭМИ. ЭМИ означает электромагнитный импульс, который обладает способностью индуцировать дополнительные напряжения в схемы и тем самым причинять массовые помехи, которые могут уничтожить все чувствительные приборы. Тогда ЭМИ-орудия были в основном на базе ракет и бомб, также в комбинации с ядерными орудиями. Между тем ЭМИ-орудия постоянно развивались, так как в них видели большой потенциал не уничтожать цели, а делать их неспособными к бою и манёвренности и, тем самым, упрощать их захват. Пока что наивысшая форма ЭМИ-орудий представлена ионным орудием. Оно направляет на цель волну ионов (электрически заряженных частиц), которая дестабилизирует щиты и повреждает электронику, только если она не очень хорошо защищена, что иногда подобно полному уничтожению. Кинетической пробивной силой можно пренебречь. Ионная техника используется только на крейсерах, так как потребление энергии ионными орудиями огромно, и в бою часто приходится уничтожать, а не парализовать цель. Оборонительные сооружения деактивируются сами по себе, как только они сильно повреждаются.
+  ION_TECH: Ионная технология
+  ION_TECH_DESC: Поистине смертоносный наводимый луч из ускоренных ионов. При попадании на какой-либо объект они наносят огромный ущерб.
+  ION_TECH_FULL_DESC: Поистине смертоносный наводимый луч из ускоренных ионов. При попадании на какой-либо объект они наносят огромный ущерб.
+  LANCER_SHIP: Лансер
+  LANCER_SHIP_DESC: Быстрый и эффективный военный корабль, построенный на самых современных технологиях. Оснащен мощнейшим вооружением, но для перезарядки оружие требует некоторого времени, что исключает скорострельность.
+  LANCER_SHIP_FULL_DESC: Быстрый и эффективный военный корабль, построенный на самых современных технологиях. Оснащен мощнейшим вооружением, которое способно наносить катастрофические разрушения противнику. Для перезарядки энергетической пушки корабля требуется время, поэтому корабль не обладает скорострельностью. Корабль спроектирован учеными, как вспомогательное оружие при нанесении масштабного удара врагу, поэтому наиболее эффективен в сочетании с остальным флотом.
+  LARGE_SHIELD: Большой щитовой купол
+  LARGE_SHIELD_DESC: Дальнейшее развитие малого щитового купола. Он может сдерживать ещё более сильные атаки на планету, поглощая значительно большее количество энергии.
+  LARGE_SHIELD_FULL_DESC: Дальнейшее развитие малого щитового купола. Он может сдерживать ещё более сильные атаки на планету, поглощая значительно большее количество энергии. Возможное количество щитовых куполов зависит от уровня щитовой технологии. С каждым повышением уровня щитовой технологии можно строить на 1 большой щитовой купол больше.
+  LARGE_TRANSPORTER: Большой транспорт
+  LARGE_TRANSPORTER_DESC: Дальнейшее развитие малых транспортов позволило создать корабли, обладающие большей вместительностью и, благодаря более развитому двигателю, способными передвигаться быстрее, чем малый транспорт.
+  LARGE_TRANSPORTER_FULL_DESC: На борту этого корабля есть лишь слабое вооружение и нет серьёзных технологий... По этой причине их никогда не следует запускать без сопровождения. Благодаря своему высокоразвитому реактивному двигателю большой транспорт служит в качестве быстрого межпланетного доставщика ресурсов, также он сопровождает флоты при нападениях на вражеские планеты, чтобы захватить как можно больше ресурсов.
+  LASER_TECH: Лазерная технология
+  LASER_TECH_DESC: Благодаря фокусированию света возникает луч, который при попадании на объект наносит ему повреждения.
+  LASER_TECH_FULL_DESC: Лазеры (усиление света при помощи индуцированного выброса излучения) производят насыщенный энергетический луч когерентного света. Эти приборы находят применение во всевозможных областях, от оптических компьютеров до тяжёлых лазеров, которые свободно режут броню космических кораблей. Лазерная технология является важным элементом для исследования дальнейших оружейных технологий.
+  LEAVE: ПОКИНУТЬ
+  LIGHT_FIGHTER: Легкий истребитель
+  LIGHT_FIGHTER_DESC: Лёгкий истребитель - это манёвренный корабль, который можно найти почти на каждой планете. Затраты на него не особо велики, главное предназначение - поддержка в сражении для крупных кораблей.
+  LIGHT_FIGHTER_FULL_DESC: Лёгкий истребитель - это манёвренный корабль, который можно найти почти на каждой планете. Он имеет слабую защиту и простые системы вооружения и служит в качестве атакующего корабля поддержки. Его скорость в сочетании с большим количеством, могут обеспечить превосходную буферную зону и защиту для более крупных кораблей.
+  LIGHT_LASER: Легкий лазер
+  LIGHT_LASER_DESC: При помощи концентрированного обстрела цели фотонами можно достичь значительно бoльших разрушений, чем при применении обычного баллистического вооружения.
+  LIGHT_LASER_FULL_DESC: Для компенсации чрезмерных успехов в области технологии космических кораблей, учёные должны были создать оборонительное сооружение, справляющееся с более крупными и лучше вооружёнными флотами. Это привело к появлению лёгкого лазера. При помощи концентрированного обстрела цели фотонами можно достичь значительно больших разрушений, чем при применении обычного баллистического вооружения. Для противостояния более сильной огневой мощи новых типов кораблей он также оснащён усовершенствованными щитами. Однако, чтобы стоимость производства оставалась низкой, структура дальше не усиливалась. Лёгкий лазер обладает наилучшим соотношением цены и качества, поэтому он также интересен и для более развитых цивилизаций. Оборонительные сооружения деактивируются сами по себе, как только они сильно повреждаются.
+  LOCATED: Находится
+  MASKING_TECH: Маскировочная технология
+  MASKING_TECH_DESC: Технология радио-локационной маскировки создает помехи в работе баллистического анализатора и систем наведения огня противника.
+  MASKING_TECH_FULL_DESC: Технология радио-локационной маскировки создает помехи в работе баллистического анализатора и систем наведения огня противника. Эта технология увеличивает живучесть своих юнитов за счет уменьшения точности стрельбы огневых орудий противника.
+  MEMORY_MODULE__110_1: Модуль памяти
+  MEMORY_MODULE__110_1_DESC: Дает возможность изучить инопланетную технологию.
+  MEMORY_MODULE__110_1_FULL_DESC: Иногда в экспедициях удается найти инопланетные модули памяти и расшифровать хранящиеся в них данные. Этот модуль содержит информацию об инопланетной технологии 1 уровня.
+  MEMORY_MODULE__15_15: Модуль памяти
+  MEMORY_MODULE__15_15_DESC: "Повышает уровень оружейной технологии до 15.<br /><i>Требования: Оружейная технология (Уровень 14)</i>"
+  MEMORY_MODULE__15_15_FULL_DESC: Иногда в экспедициях удается найти инопланетные модули памяти и расшифровать хранящиеся в них данные. Этот модуль содержит информацию об оружейной технологии 15 уровня.
+  MEMORY_MODULE__16_15: Модуль памяти
+  MEMORY_MODULE__16_15_DESC: "Повышает уровень щитовой технологии до 15.<br /><i>Требования: Щитовая технология (Уровень 14)</i>"
+  MEMORY_MODULE__16_15_FULL_DESC: Иногда в экспедициях удается найти инопланетные модули памяти и расшифровать хранящиеся в них данные. Этот модуль содержит информацию о щитовой технологии 15 уровня.
+  MEMORY_MODULE__17_15: Модуль памяти
+  MEMORY_MODULE__17_15_DESC: "Повышает уровень броневой технологии до 15.<br /><i>Требования: Броневая технология (Уровень 14)</i>"
+  MEMORY_MODULE__17_15_FULL_DESC: Иногда в экспедициях удается найти инопланетные модули памяти и расшифровать хранящиеся в них данные. Этот модуль содержит информацию о броневой технологии 15 уровня.
+  MEMORY_MODULE__23_12: Модуль памяти
+  MEMORY_MODULE__23_12_DESC: "Повышает уровень лазерной технологии до 12.<br /><i>Требования: Лазерная технология (Уровень 11)</i>"
+  MEMORY_MODULE__23_12_FULL_DESC: Иногда в экспедициях удается найти инопланетные модули памяти и расшифровать хранящиеся в них данные. Этот модуль содержит информацию о лазерной технологии 12 уровня.
+  MEMORY_MODULE__28_1: Модуль памяти
+  MEMORY_MODULE__28_1_DESC: Дает возможность изучить гравитационную технологию.
+  MEMORY_MODULE__28_1_FULL_DESC: Иногда в экспедициях удается найти инопланетные модули памяти и расшифровать хранящиеся в них данные. Этот модуль содержит информацию о гравитационной технологии 1 уровня.
+  MERCHANTS_MARK: Знак торговца
+  MERCHANTS_MARK_DESC: "Уменьшает комиссию при обмене ресурсов до 3%."
+  MERCHANTS_MARK_FULL_DESC: "Дает возможность совершать обмен ресурсов со сниженной до 3% комиссией."
+  METALMINE: Рудник по добыче металла
+  METALMINE_FULL_DESC: Основной поставщик сырья для строительства несущих структур построек и кораблей. Металл - самое дешёвое сырьё, но зато его требуется больше, чем всего остального. Для производства металла требуется меньше всего энергии. Чем рудники больше, тем они глубже. На большинстве планет металл находится на больших глубинах, при помощи этих более глубоких рудников можно добывать больше металлов, производство растёт. В то же время более крупные рудники требуют больше энергии.
+  METAL_STORAGE: Хранилище металла
+  METAL_STORAGE_FULL_DESC: Огромное хранилище для добытых руд. Чем оно больше, тем больше металла можно в нём хранить. Если оно заполнено, то добыча металла прекращается.
+  MOON_BASE: Лунная база
+  MOON_BASE_DESC: Луна не располагает атмосферой, поэтому перед заселением требуется соорудить лунную базу.
+  MOON_BASE_FULL_DESC: Луна не располагает атмосферой, поэтому перед заселением требуется соорудить лунную базу. Она обеспечивает необходимые воздух, гравитацию и тепло. Чем выше уровень развития лунной базы, тем больше обеспеченная биосферой площадь. Каждый уровень лунной базы может застроить 3 поля, максимум до площади всей луны. Она составляет 2 (диаметр луны/1000)^2, причём каждый уровень лунной базы сам занимает одно поле.
+  MOON_CREATOR: Лунный творец
+  MOON_CREATOR_DESC: Позволяет создать луну на орбите планеты.
+  MOON_CREATOR_FULL_DESC: Позволяет создать луну на орбите планеты.
+  MOON_HYDROGEN_LAB: Лунный синтезатор водорода
+  MOON_HYDROGEN_LAB_FULL_DESC: Лунный синтезатор добывает водород изо льда с кратеров, расположенных на полюсах луны. Это самые темные и неизведанные места на луне, туда никогда не попадает свет со звезды. Ученные активно работают над изучением скрытых возможностей по добыче водорода на луне. Энергию для синтезатора могут дать захваченные в бою солнечные спутники.
+  MOON_ROBOTIC_FACTORY: Лунная фабрика роботов
+  MOON_ROBOTIC_FACTORY_FULL_DESC: Предоставляет простую рабочую силу, которую можно применять при строительстве планетарной инфраструктуры. Каждый уровень развития фабрики повышает скорость строительства зданий.
+  NANO_FACTORY: Фабрика нанитов
+  NANO_FACTORY_FULL_DESC: Фабрика нанитов представляет собой венец робототехники. Наниты - это роботы размером в нанометр, которые путём объединения в сеть в состоянии выполнять экстраординарные задания. Сразу же после исследования они увеличивают производительность почти во всех областях. С каждым уровнем фабрика нанитов сокращает время строительства зданий, кораблей и оборонительных сооружений вдвое.
+  NO_ARTEFACTS: Нет артефактов
+  NO_EXCHANGE_SLOTS: Недостаточно уровней Межгалактической биржи
+  ON_PLANET: на планете
+  OPTIONS: Установки
+  PACK_BUILDING_NOW: Запаковать текущий уровень в артефакт
+  PACK_RESEARCH_NOW: Запаковать исследование
+  PLANET_CREATOR: Планетарный творец
+  PLANET_CREATOR_DESC: Позволяет создать дополнительную планету. Необходимо отправить в составе флота с колонизатором на свободные координаты.
+  PLANET_CREATOR_FULL_DESC: Позволяет создать дополнительную планету. Необходимо отправить в составе флота с колонизатором на свободные координаты.
+  PLASMA_GUN: Плазменное орудие
+  PLASMA_GUN_DESC: Лазерная технология была доведена до совершенства, ионная техника достигла конечной стадии.
+  PLASMA_GUN_FULL_DESC: Лазерная технология была доведена до совершенства, ионная техника достигла конечной стадии и считалось, что практически невозможно, даже с качественной точки зрения орудийной системы, достичь ещё большей эффективности. Но всё должно было измениться, когда появилась идея объединить обе системы. Используя технологии термоядерного синтеза, лазерами нагревают вещество (обычно водород) до сверхвысоких температур, достигающих миллионов градусов. Ионная техника обеспечивает обогащение плазмы электрическим зарядом, её стабилизацию и ускорение. Как только заряд достаточно нагрет, ионизирован и находится под давлением, то его выпускают при помощи ускорителей в направлении цели. Светящийся голубоватым цветом плазменный шар выглядит внушительно, только спрашивается, долго ли им будет наслаждаться команда корабля-цели, если через несколько секунд броня разорвётся на куски, а электроника сгорит... Плазменное орудие считается вообще самым страшным оружием, и у этой техники есть своя цена. Оборонительные сооружения деактивируются сами по себе, как только они сильно повреждаются.
+  PLASMA_TECH: Плазменная технология
+  PLASMA_TECH_DESC: Дальнейшее развитие ионной технологии, которая ускоряет не ионы, а высокоэнергетическую плазму. Она оказывает опустошительное действие при попадании на какой-либо объект.
+  PLASMA_TECH_FULL_DESC: Дальнейшее развитие ионной технологии, которая ускоряет не ионы, а высокоэнергетическую плазму. Она оказывает опустошительное действие при попадании на какой-либо объект.
+  POWER_GENERATOR: Энерготранс
+  POWER_GENERATOR_DESC: "Увеличивает выработку энергии на 10%."
+  POWER_GENERATOR_FULL_DESC: "Дает прирост производительности всех электростанций и спутников на 10%."
+  PRODUCTION_TIME: "Нужно времени:"
+  QUEUE_DISASSEMBLE_PREFIX: Утилизация
+  QUEUE_REPAIR_PREFIX: Ремонт
+  RECYCLER: Переработчик
+  RECYCLER_DESC: С помощью переработчика добывается сырьё из обломков.
+  RECYCLER_FULL_DESC: Космические бои принимали всё большие масштабы. Уничтожались тысячи кораблей и возникавшие при этом обломки казались навсегда потерянными. Нормальные транспорты не могли близко к ним приблизиться, не будучи сильно повреждёнными маленькими обломками. С новым открытием в области щитовой технологии стало возможно эффективно устранять эту проблему, возник новый класс корабля, подобный большому транспорту - переработчик. С его помощью можно было заново использовать казавшиеся потерянными ресурсы. Из-за новых щитов маленькие обломки больше не представляли собой опасности. К сожалению, эти устройства требуют пространства, поэтому его грузовой тоннаж ограничен до 20 000.
+  REG_AGREE: Прочел и согласен.
+  REG_AGREEMENT: Ознакомтесь с пользовательским соглашением.
+  REG_NO_AGREEMENT: Вы не согласились с пользовательским соглашением.
+  REPAIR_BOT: Ремонтный робот
+  REPAIR_BOT_DESC: Ремонтирует все корабли на планете.
+  REPAIR_BOT_FULL_DESC: Ремонтный робот способен анализировать структуру любых кораблей и восстанавливать их броню. За один запуск он способен отремонтировать весь флот на планете. Однако робот имеет ограниченный запас энергии, поэтому после трех запусков он становится бесполезным.
+  REPAIR_FACTORY: Ремонтный ангар
+  REPAIR_FACTORY_DESC: Ремонтный ангар необходим для ремонта поврежденных и утилизации ненужных юнитов.
+  REPAIR_FACTORY_FULL_DESC: "Ремонтный ангар необходим для выполнения двух операций: 1 - ремонт поврежденных кораблей и оборонительных сооружений, 2 - утилизация ненужных кораблей и обороны для получения ресурсов."
+  REPAIR_REQUIRED: Необходимо построить ангар.
+  REQUIRES: Требуется
+  REQUIRE_TIME: Время
+  REQUIRE_TIME_EXT: Время строительства
+  RESEARCH_LAB: Исследовательская лаборатория
+  RESEARCH_LAB_FULL_DESC: Для исследования новых технологий необходима работа исследовательской станции. Уровень развития исследовательской станции является решающим фактором того, как быстро могут быть освоены новые технологии. Чем выше уровень развития исследовательской лаборатории, тем больше может быть исследовано новых технологий. Для того, чтобы как можно быстрее завершить исследовательские работы на одной планете, на неё посылаются все имеющиеся в наличии учёные и, таким образом, покидают свои планеты. Как только технология исследована, учёные возвращаются на свои родные планеты и переносят с собой знания о ней. Так новые технологии можно применять и на других планетах.
+  RESEARCH_LAB_REQUIRED: Необходимо построить исследовательскую лабораторию.
+  ROBOTIC_FACTORY: Фабрика роботов
+  ROBOTIC_FACTORY_FULL_DESC: Предоставляет простую рабочую силу, которую можно применять при строительстве планетарной инфраструктуры. Каждый уровень развития фабрики повышает скорость строительства зданий.
+  ROBOT_CONTROL_SYSTEM: Система управления роботами
+  ROBOT_CONTROL_SYSTEM_DESC: 'Система управления роботами (СУР) повышает в 2 раза скорость строительства зданий, флота и обороны. Срабатывает для заданий запущенных после активации СУР. После деактивации, ускоренные задания не замедляются! '
+  ROBOT_CONTROL_SYSTEM_FULL_DESC: Система управления роботами (СУР) позволяет эффективнее распределять задачи для роботов при строительстве на планете зданий, флота и обороны. Скорость строительства увеличивается в 2 раза. Срабатывает для заданий запущенных после активации СУР. После деактивации, ускоренные задания не замедляются! Два СУР увеличат скорость строительства в 4-е раза!
+  ROCKET_LAUNCHER: Ракетная установка
+  ROCKET_LAUNCHER_DESC: Ракетная установка - простое и дешёвое средство обороны.
+  ROCKET_LAUNCHER_FULL_DESC: Ракетная установка - простое и дешёвое средство обороны. Так как это развитие обычных баллистических орудий, то ему не требуется дальнейшей модернизации. Малые затраты на его производство оправдывают его применение против более маленьких флотов, но со временем он теряет значение. Позднее его используют лишь для отвода вражеских выстрелов. Оборонительные сооружения деактивируются сами по себе, как только они сильно повреждаются.
+  ROCKET_STATION: Ракетная шахта
+  ROCKET_STATION_DESC: Служит для хранения ракет.
+  ROCKET_STATION_FULL_DESC: Ракетные шахты служат для хранения ракет. С каждым уровнем можно хранить на пять межпланетных или десять ракет-перехватчиков больше. Одна межпланетная ракета требует места в два раза больше, чем ракета-перехватчик. Возможно любое комбинирование различных типов ракет.
+  SAMPLE_ARTEFACT: Артефакт
+  SAMPLE_ARTEFACT_DESC: Это какой-то артефакт
+  SAMPLE_ARTEFACT_FULL_DESC: Это какой-то артефакт
+  SHADOW_SHIP: Тень
+  SHADOW_SHIP_DESC: Быстрый и неуловимый корабль для эффективного обстрела противника с большого расстояния.
+  SHADOW_SHIP_FULL_DESC: Быстрый и неуловимый корабль для эффективного обстрела противника.  Корабль Тень - это секретная военная разработка лучших ученых империи. Он появился при переработке и модернизации Легкого истребителя. Специально разработанное для Тени многозарядное орудие идеально приспособлено для стрельбы по большим кораблям противника. Тень обладает совершено новой системой вооружения, способной вести прицельный огонь с огромных расстояний, новым генератором щитового поля, высокой маневренностью и генератором помех для улучшения маскировки.
+  SHELL_TECH: Броневая технология
+  SHELL_TECH_DESC: "Специальные сплавы улучшают броню космических кораблей. Так, устойчивость брони может увеличиваться с каждым уровнем на 10%."
+  SHELL_TECH_FULL_DESC: "Специальные сплавы улучшают броню космических кораблей. Как только найден очень стойкий сплав, специальные лучи изменяют молекулярную структуру космического корабля, и доводит её до состояния изученного сплава. Так, устойчивость брони может увеличиваться с каждым уровнем на 10%."
+  SHIELD_TECH: Щитовая технология
+  SHIELD_TECH_DESC: "Эта технология делает щиты кораблей и оборонительных сооружений эффективней. Каждый уровень повышает эффективность щитов на 10% от основной мощности. С каждым уровнем можно строить больше защитных куполов."
+  SHIELD_TECH_FULL_DESC: "Развитие этой технологии позволяет увеличивать снабжение энергией щитов и защитных экранов, что в свою очередь повышает их устойчивость и способность поглощать или отражать энергию атак противника. Благодаря этому с каждым изученным уровнем эффективность корабельных щитов и стационарных генераторов энергополей повышается на 10% от номинальной мощности. Кроме этого, с каждым уровнем можно строить в обороне больше защитных куполов. Каждый уровень позволяет построить один большой щитовой купол или два малых. Возможно любое комбинирование щитовых куполов."
+  SHIPYARD: Верфь
+  SHIPYARD_FULL_DESC: В строительной верфи производятся все виды кораблей. Чем она больше, тем быстрее можно строить более сложные и более крупные корабли. Посредством строительства фабрики нанитов производятся миниатюрные роботы, которые помогают работникам работать быстрее.
+  SHIPYARD_REQUIRED: Необходимо построить верфь.
+  SILICON_LAB: Рудник по добыче кремния
+  SILICON_LAB_FULL_DESC: Основной поставщик сырья для электронных строительных элементов и сплавов. Для добычи кремния требуется примерно вдвое больше энергии, чем для добычи металла, поэтому он, соответственно, ценится больше. Кремний требуется для всех кораблей и зданий. К сожалению, так необходимые для строительства и исследований, месторождения кремния обычно очень редки и, как и большинство металлов, залегают на больших глубинах. Поэтому при усовершенствовании рудника также повышается производство, так как осваиваются более крупные и чистые залежи кремния.
+  SILICON_STORAGE: Хранилище кремния
+  SILICON_STORAGE_FULL_DESC: В этом огромном хранилище складируется ещё не обработанный кремний. Чем больше хранилище, тем больше кремния туда помещается. Если оно заполнено, то добыча данного ресурса прекращается.
+  SIMULATE: Симулировать
+  SIM_TECH_LIST: Технологии
+  SMALL_SHIELD: Малый щитовой купол
+  SMALL_SHIELD_DESC: Малый щитовой защищает планету и поглощает удары атаки.
+  SMALL_SHIELD_FULL_DESC: Задолго до того, как щитовые генераторы стали достаточно малы для того, чтобы найти применение на кораблях, уже существовали огромные генераторы на поверхности планет. Они обволакивали целую планету силовым полем, которое могло поглощать удары атаки. Малые атакующие флоты постоянно разбиваются об эти щитовые купола. Благодаря растущему технологическому развитию эти щиты можно ещё усилить. Возможное количество щитовых куполов зависит от уровня щитовой технологии. С каждым повышением уровня щитовой технологии можно строить на 2 малых щитовых купола больше.
+  SMALL_TRANSPORTER: Малый транспорт
+  SMALL_TRANSPORTER_DESC: Малый транспорт - это манёвренный корабль, который может быстро транспортировать сырьё на другие планеты.
+  SMALL_TRANSPORTER_FULL_DESC: Транспорты имеют примерно такой же размер, что и истребители, но они не обладают мощными двигателями и бортовым вооружением ради экономии места. Малый транспорт вмещает 5000 единиц сырья. По причине малой огневой мощи малые транспорты часто сопровождаются другими кораблями.Когда импульсный двигатель исследован до 5-й ступени, у малого транспорта повышается базовая скорость и он оснащается этим типом двигателя.
+  SOLAR_PLANT: Солнечная электростанция
+  SOLAR_PLANT_FULL_DESC: Для обеспечения энергией рудников и синтезаторов необходимы огромные солнечные электростанции. Чем больше построено станций, тем больше поверхности покрыто кварцевыми пластинами, которые перерабатывают световую энергию в электроэнергию. Солнечные электростанции представляют собой основу энергообеспечения планеты.
+  SOLAR_SATELLITE: Солнечный спутник
+  SOLAR_SATELLITE_DESC: Солнечные спутники - это простые платформы из солнечных батарей, которые находятся на высокой орбите. Они собирают солнечный свет и передают его с помощью лазера на наземную станцию.
+  SOLAR_SATELLITE_FULL_DESC: "Солнечные спутники запускаются на орбиту планеты. Они собирают солнечную энергию и передают её на наземную станцию. Эффективность солнечных спутников зависит от мощи солнечного излучения. В принципе, добыча энергии на орбитах, более приближённых к солнцу, выше, чем на планетах, удалённых от солнца. Из-за своего соотношения цены и качества солнечные спутники решают энергетические проблемы многих миров. Но внимание: солнечные спутники могут быть уничтожены в бою."
+  SPYWARE: Шпионаж
+  SPYWARE_DESC: С помощью этой технологии добываются данные о других планетах.
+  SPYWARE_FULL_DESC: Шпионаж предназначен для исследования новых и более эффективных сенсоров. Чем выше развита эта технология, тем больше информации имеет игрок о событиях в своём окружении. Разница в уровнях шпионажа с противником играет решающую роль - чем больше исследована собственная шпионская технология, тем больше информации содержится в разведданных и тем меньше шанс быть обнаруженным. Чем больше послано зондов, тем больше собирается подробностей о противнике, но при этом растёт опасность быть обнаруженным. Также шпионаж совершенствует определение местонахождения чужих флотов. При этом также важен уровень развития собственного шпионажа. Начиная со второго уровня его развития при атаке на Вас кроме сообщения о нападении показывается также и общая численность нападающих кораблей. С четвёртого уровня распознаётся вид нападающих кораблей, равно как и их общая численность, а с восьмого - точная численность каждого типа кораблей. Для налётчиков эта технология очень важна, так как она предоставляет информацию о том, выставила ли жертва флот и/или защиту или нет, поэтому следует исследовать её как можно раньше. Лучше всего - сразу же после исследования малых транспортов.
+  STAR_DESTROYER: Уничтожитель
+  STAR_DESTROYER_DESC: Уничтожитель - король среди военных кораблей.
+  STAR_DESTROYER_FULL_DESC: "Уничтожитель - король среди военных кораблей. Его мультифланговые ионные, плазменные и гауссовые орудийные башни могут благодаря своим усовершенствованным пеленгационным сенсорам поражать с точностью до 99% даже скоростные манёвренные истребители. Так как уничтожители очень велики, их манёвренность очень ограничена, и в бою они подобны скорее боевой станции, чем боевому кораблю. Потребление водорода у них так же высоко, как и их боевая мощь."
+  STAR_GATE: Межгалактические врата
+  STAR_GATE_DESC: Ворота - это огромные телепортеры, которые могут пересылать между собой флоты любых размеров без временных затрат.
+  STAR_GATE_FULL_DESC: Ворота - это огромные телепортеры, которые могут пересылать между собой флоты любых размеров без временных затрат. Эти телепортеры не требуют водорода, однако между двумя прыжками должен пройти один час, иначе ворота перегреются. Невозможна также пересылка ресурсов. Весь процесс требует крайне высоко развитой технологии.
+  STAR_SURVEILLANCE: Сенсорная фаланга
+  STAR_SURVEILLANCE_DESC: Высокочастотные сенсоры полностью просматривают спектр частот всех попадающих на фалангу излучений.
+  STAR_SURVEILLANCE_FULL_DESC: Высокочастотные сенсоры полностью просматривают спектр частот всех попадающих на фалангу излучений. Мощные компьютеры комбинируют мельчайшие колебания энергии и таким образом получают информацию о передвижениях кораблей на отдалённых планетах. Для просмотра на луне должна быть предоставлена энергия в форме водорода (5 000 за просмотр). Просмотр осуществляется переходом с луны в меню Галактика и нажатием на соответствующую иконку в меню Действие планеты, находящейся в радиусе действия сенсоров.
+  STATIC_ARTEFACT: Неприкрепляемый артефакт
+  STATIC_ARTEFACT_DESC: Это артефакт без возможности прикрепления к флоту
+  STATIC_ARTEFACT_FULL_DESC: Это артефакт без возможности прикрепления к флоту
+  STORAGE_CAPICITY: Вместимость
+  STRONG_FIGHTER: Тяжелый истребитель
+  STRONG_FIGHTER_DESC: Дальнейшее развитие лёгкого истребителя, он лучше защищён и обладает большей силой атаки.
+  STRONG_FIGHTER_FULL_DESC: При дальнейшем развитии лёгкого истребителя учёные дошли до момента, когда стало ясно, что обыкновенный двигатель не обладает необходимой мощью. Для того, чтобы оптимально передвигать корабль, был впервые использован импульсный двигатель. Хоть он и повысил стоимость, однако он также открыл новые возможности. Благодаря применению этого двигателя осталось больше энергии для вооружения и щитов, кроме того, для этого вида истребителей также использовались ценные материалы. Это привело к улучшенной структурной целостности и более сильной огневой мощи, благодаря чему в бою он представляет большую угрозу, чем его предшественник. После этих изменений тяжёлый истребитель представляет собой новую эру технологии кораблестроения, основу технологии крейсеростроения.
+  STRONG_LASER: Тяжелый лазер
+  STRONG_LASER_DESC: Тяжёлый лазер представляет собой дальнейшее развитие лёгкого лазера.
+  STRONG_LASER_FULL_DESC: Тяжёлый лазер представляет собой дальнейшее развитие лёгкого лазера. Структура была усилена и усовершенствована новыми материалами. Оболочку смогли сделать значительно более стойкой. Одновременно была улучшена и энергетическая система и целевой компьютер, так что тяжёлый лазер может концентрировать значительно больше энергии на цели. Оборонительные сооружения деактивируются сами по себе, как только они сильно повреждаются.
+  SUPERCOMPUTER: Суперкомпьютер
+  SUPERCOMPUTER_DESC: Повышает уровень компьютерной технологии на 1 и увеличивает скорость исследований в два раза. Срабатывает для исследований запущенных после активации Суперкомпьютера.
+  SUPERCOMPUTER_FULL_DESC: В одной из экспедиций удалось захватить уникальное инопланетное устройство, которое при подробном изучении оказалось суперкомпьютером инопланетян. Суперкомпьютер удалось привести в действие и включить в исследовательскую сеть. Он обладает огромной вычислительной мощностью и способен контролировать действия дополнительного флота. Одновременно с этим Суперкомпьютер занимается решением наиболее сложных исследовательских задач, уменьшая время исследований в 2 раза. Срабатывает для исследований запущенных после активации Суперкомпьютера. После деактивации, ускоренные исследования не замедляются! Два Суперкомпьютера увеличат скорость исследований в 4-е раза!
+  TERRA_FORMER: Терраформер
+  TERRA_FORMER_DESC: Терраформер может преобразовывать огромные территории делая их пригодными для застройки.
+  TERRA_FORMER_FULL_DESC: По мере застройки планет всё более важным становился вопрос об ограниченности пригодных для использования площадей. Такие традиционные методы, как строительство ввысь и вглубь, оказались недостаточными. Маленькая группа физиков и нанотехников нашла решение - терраформер. Затрачивая огромное количество энергии терраформер может преобразовывать огромные территории и даже целые континенты, делая их пригодными для застройки. В этом строении беспрерывно производятся специальные наниты, отвечающие за постоянное качество почвы.
+  TW_SIMULATOR: Идут технические работы, симуляция боя недоступна.
+  UNIQUE_ARTEFACT: Уникальный артефакт
+  UNIQUE_ARTEFACT_DESC: Это уникальный артефакт с историей
+  UNIQUE_ARTEFACT_FULL_DESC: Это уникальный артефакт с историей
+  UNIT_A_CORVETTE: Корвет инопланетян
+  UNIT_A_CORVETTE_DESC: Очень быстрый и экономичный боевой корабль с хорошим вооружением.
+  UNIT_A_CORVETTE_FULL_DESC: Очень быстрый и экономичный боевой корабль с хорошим вооружением.
+  UNIT_A_FRIGATE: Фрегат инопланетян
+  UNIT_A_FRIGATE_DESC: Огромная огневая мощь и большая вместимость. Способен наносить разрушающие удары противнику.
+  UNIT_A_FRIGATE_FULL_DESC: Огромная огневая мощь и большая вместимость. Способен наносить разрушающие удары противнику.
+  UNIT_A_PALADIN: Паладин инопланетян
+  UNIT_A_PALADIN_DESC: Небольшой корабль огневой поддержки. Оснащен высокоточным оружием и системой маскировки.
+  UNIT_A_PALADIN_FULL_DESC: Небольшой корабль огневой поддержки. Оснащен высокоточным оружием и системой маскировки.
+  UNIT_A_SCREEN: Щитовой корабль инопланетян
+  UNIT_A_SCREEN_DESC: Уникальный щитовой корабль. Непревзойденная защищенность позволяет принимать на себе основной удар противника.
+  UNIT_A_SCREEN_FULL_DESC: Уникальный щитовой корабль. Непревзойденная защищенность позволяет принимать на себе основной удар противника.
+  UNIT_A_TORPEDOCARIER: Торпедоносец инопланетян
+  UNIT_A_TORPEDOCARIER_DESC: Быстрый корабль для нанесения внезапного удара. Оснащен мощным оружием с системой автоматического наведения.
+  UNIT_A_TORPEDOCARIER_FULL_DESC: Быстрый корабль для нанесения внезапного удара. Оснащен мощным оружием с системой автоматического наведения.
+  UNIT_EXCH_SUPPORT_RANGE: Межгалактический спутник
+  UNIT_EXCH_SUPPORT_RANGE_DESC: Межгалактический спутник увеличивает радиус действия биржи. Продавцы могут добавлять лоты на продажу только в случае нахождения в радиусе действия.
+  UNIT_EXCH_SUPPORT_RANGE_FULL_DESC: Межгалактический спутник - это огромный объект, вращающийся на орбите планеты. Он практически полностью состоит из высокотехнологичной аппаратуры для поддержания стабильной и бесперебойной связи с самыми далекими звездными системами во вселенной. При объединении таких спутников в группы, они способны улучшать качество связи многократно. Межгалактический спутник необходим для работы биржи. Каждый такой спутник увеличивает радиус действия межгалактической биржи на двойное количество уровней компьютерной технологии. Радиус действия измеряется в звездных системах. Каждые 300 систем увеличивают радиус действия на 1 галактику. Продавцы могут добавлять лоты на продажу только в случае нахождения в радиусе действия биржи.
+  UNIT_EXCH_SUPPORT_SLOT: Биржевая подстанция
+  UNIT_EXCH_SUPPORT_SLOT_DESC: Биржевая подстанция увеличивает максимальное количество лотов, обслуживаемое биржей.
+  UNIT_EXCH_SUPPORT_SLOT_FULL_DESC: Биржевая подстанция увеличивает максимальное количество лотов, обслуживаемое биржей.
+  USABLE_ARTEFACT: Используемый артефакт
+  USABLE_ARTEFACT_DESC: Это артефакт с возможностью использования
+  USABLE_ARTEFACT_FULL_DESC: Это артефакт с возможностью использования
+  USE_NEW_ASSAULT: Использовать новую систему боя
+  WRONG_LEAVE_PHRASE: Вы неправильно ввели фразу. Фраза чувствительна к регистру.
+mission:
+  ALL_RESOURCES: Все ресурсы
+  ALL_SHIPS: Все корабли
+  ARRIVAL: Прибытие
+  CAPICITY: Вместимость
+  DELETE_PARTICIPANT: Удалить
+  DISTANCE: Расстояние
+  EXECUTE_JUMP: Гиперпространственный прыжок
+  EXPEDITION_TIME: Время на исследования в экспедиции
+  FLEET: Флот
+  FLEET_FORMATION: Союзники
+  FLEET_SENT: "Результат:"
+  FORMATION: Боевой союз
+  FORMATION_INVATATIONS: Боевые союзы
+  FORMATION_NAME: Имя союза
+  FUEL: Расход водорода
+  HOLDING_TIME: Время удержания
+  HOURS: Часов
+  INVITED_PARTICIPANTS: Приглашенные участники
+  INVITE_PARTICIPANT: Пригласить
+  JUMP_SUCCESSFUL: Телепортация прошла успешно.
+  MAX: max
+  MAX_SPEED: Максимальная скорость
+  MIN: min
+  MISSION: Задание
+  NEW_MISSION: Новое задание
+  NEXT: Далее
+  NOT_ENOUGH_FUEL: Не хватает водорода.
+  NO_FREE_EXPO_SLOTS: Нет свободных экспедиционных слотов
+  NO_FREE_FLEET_SLOTS: Нет свободных полетных слотов.
+  NO_MISSIONS_AVAILABLE: Нет доступных миссий
+  NO_RESOURCES: Нет ресурсов
+  NO_SHIPS: Обнулить
+  NO_SHIPS_REDEADY: Нет кораблей
+  ORDER: Действие
+  QUANTITY: Число
+  RELOADING_STAR_GATE: Телепорт еще не готов.
+  RESOURCES: Ресурсы
+  RETREAT: Отозвать
+  RETURN: Возвращение
+  RUNNING_MISSIONS: Текущие миссии
+  SELECTION: Выбрано
+  SELECT_TARGET: Выберите цель
+  SELECT_TARGET_MOON: Цель
+  SHIP_NAME: Тип корабля
+  SHORTLINKS: Быстрый доступ
+  SPEED: Скорость
+  SPEED_CAPICITY: Скорость
+  START: Старт
+  STAR_GATE_JUMP: Телепортация
+  TARGET: Цель
+  TIME: Время
+  UNKOWN_MISSION: Задание не известно или не доступно.
+  UNKOWN_PLANET: Неизвестная планета
+  WAITING: Готово

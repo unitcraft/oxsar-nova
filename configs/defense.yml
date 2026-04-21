@@ -1,0 +1,51 @@
+# Баланс обороны. Placeholder, выверяется на M2.
+
+defense:
+  rocket_launcher:
+    id: 43
+    cost: { metal: 2000, silicon: 0, hydrogen: 0 }
+    attack: 80
+    shield: 20
+    shell: 2000
+
+  light_laser:
+    id: 44
+    cost: { metal: 1500, silicon: 500, hydrogen: 0 }
+    attack: 100
+    shield: 25
+    shell: 2000
+
+  strong_laser:
+    id: 45
+    cost: { metal: 6000, silicon: 2000, hydrogen: 0 }
+    attack: 250
+    shield: 100
+    shell: 8000
+
+  gauss_gun:
+    id: 47
+    cost: { metal: 20000, silicon: 15000, hydrogen: 2000 }
+    attack: 1100
+    shield: 200
+    shell: 35000
+
+  plasma_gun:
+    id: 48
+    cost: { metal: 50000, silicon: 50000, hydrogen: 30000 }
+    attack: 3000
+    shield: 300
+    shell: 100000
+
+  small_shield:
+    id: 49
+    cost: { metal: 10000, silicon: 10000, hydrogen: 0 }
+    attack: 1
+    shield: 2000
+    shell: 20000
+
+  large_shield:
+    id: 50
+    cost: { metal: 50000, silicon: 50000, hydrogen: 0 }
+    attack: 1
+    shield: 10000
+    shell: 100000

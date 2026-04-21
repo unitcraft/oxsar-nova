@@ -1,0 +1,130 @@
+# Зависимости: что нужно построить/исследовать, чтобы получить доступ
+# к юниту. Значения — placeholder на базе OGame classic; сверяем с
+# oxsar2 Requirements_YII на этапе M2.
+#
+# Формат:
+#   <target_key>:
+#     - { kind: building|research, key: <other>, level: <n> }
+#
+# kind building — означает здание на ЭТОЙ ЖЕ планете.
+# kind research — означает исследование игрока.
+
+requirements:
+  # Исследовательская лаборатория открывает все исследования.
+  spyware:         [{ kind: building, key: research_lab, level: 3 }]
+  computer_tech:   [{ kind: building, key: research_lab, level: 1 }]
+  gun_tech:        [{ kind: building, key: research_lab, level: 4 }]
+  shield_tech:     [{ kind: building, key: research_lab, level: 6 }]
+  shell_tech:      [{ kind: building, key: research_lab, level: 2 }]
+  energy_tech:     [{ kind: building, key: research_lab, level: 3 }]
+  hyperspace_tech: [
+    { kind: building, key: research_lab, level: 7 },
+    { kind: research, key: energy_tech,  level: 5 },
+    { kind: research, key: shield_tech,  level: 5 },
+  ]
+  combustion_engine:
+    - { kind: building, key: research_lab, level: 1 }
+    - { kind: research, key: energy_tech,  level: 1 }
+  impulse_engine:
+    - { kind: building, key: research_lab, level: 2 }
+    - { kind: research, key: energy_tech,  level: 1 }
+  hyperspace_engine:
+    - { kind: building, key: research_lab, level: 7 }
+    - { kind: research, key: hyperspace_tech, level: 3 }
+  laser_tech:
+    - { kind: building, key: research_lab, level: 1 }
+    - { kind: research, key: energy_tech,  level: 2 }
+  ion_tech:
+    - { kind: building, key: research_lab, level: 4 }
+    - { kind: research, key: laser_tech,   level: 5 }
+    - { kind: research, key: energy_tech,  level: 4 }
+  plasma_tech:
+    - { kind: building, key: research_lab, level: 4 }
+    - { kind: research, key: ion_tech,     level: 5 }
+    - { kind: research, key: laser_tech,   level: 8 }
+    - { kind: research, key: energy_tech,  level: 8 }
+  expo_tech:
+    - { kind: building, key: research_lab, level: 3 }
+    - { kind: research, key: impulse_engine,    level: 3 }
+    - { kind: research, key: spyware,           level: 4 }
+  ballistics_tech:
+    - { kind: building, key: research_lab, level: 5 }
+    - { kind: research, key: gun_tech, level: 5 }
+  masking_tech:
+    - { kind: building, key: research_lab, level: 5 }
+    - { kind: research, key: hyperspace_tech, level: 3 }
+
+  # Корабли: нужна верфь + профильные исследования.
+  small_transporter:
+    - { kind: building, key: shipyard, level: 2 }
+    - { kind: research, key: combustion_engine, level: 2 }
+  large_transporter:
+    - { kind: building, key: shipyard, level: 4 }
+    - { kind: research, key: combustion_engine, level: 6 }
+  light_fighter:
+    - { kind: building, key: shipyard, level: 1 }
+    - { kind: research, key: combustion_engine, level: 1 }
+  strong_fighter:
+    - { kind: building, key: shipyard, level: 3 }
+    - { kind: research, key: impulse_engine, level: 2 }
+    - { kind: research, key: shell_tech,     level: 2 }
+  cruiser:
+    - { kind: building, key: shipyard, level: 5 }
+    - { kind: research, key: impulse_engine, level: 4 }
+    - { kind: research, key: ion_tech,       level: 2 }
+  battle_ship:
+    - { kind: building, key: shipyard, level: 7 }
+    - { kind: research, key: hyperspace_engine, level: 4 }
+  colony_ship:
+    - { kind: building, key: shipyard, level: 4 }
+    - { kind: research, key: impulse_engine, level: 3 }
+  recycler:
+    - { kind: building, key: shipyard, level: 4 }
+    - { kind: research, key: combustion_engine, level: 6 }
+    - { kind: research, key: shield_tech, level: 2 }
+  espionage_sensor:
+    - { kind: building, key: shipyard, level: 3 }
+    - { kind: research, key: combustion_engine, level: 3 }
+    - { kind: research, key: spyware,   level: 2 }
+  solar_satellite:
+    - { kind: building, key: shipyard, level: 1 }
+  bomber:
+    - { kind: building, key: shipyard, level: 8 }
+    - { kind: research, key: impulse_engine, level: 6 }
+    - { kind: research, key: plasma_tech, level: 5 }
+  death_star:
+    - { kind: building, key: shipyard, level: 12 }
+    - { kind: research, key: hyperspace_tech, level: 6 }
+    - { kind: research, key: hyperspace_engine, level: 7 }
+    - { kind: research, key: gravi, level: 1 }
+
+  # Оборона.
+  rocket_launcher:  [{ kind: building, key: shipyard, level: 1 }]
+  light_laser:
+    - { kind: building, key: shipyard, level: 2 }
+    - { kind: research, key: laser_tech, level: 3 }
+  strong_laser:
+    - { kind: building, key: shipyard, level: 4 }
+    - { kind: research, key: laser_tech, level: 6 }
+    - { kind: research, key: energy_tech, level: 3 }
+  gauss_gun:
+    - { kind: building, key: shipyard, level: 6 }
+    - { kind: research, key: gun_tech,   level: 3 }
+    - { kind: research, key: shield_tech, level: 1 }
+    - { kind: research, key: energy_tech, level: 6 }
+  plasma_gun:
+    - { kind: building, key: shipyard, level: 8 }
+    - { kind: research, key: plasma_tech, level: 7 }
+  small_shield:
+    - { kind: building, key: shipyard, level: 1 }
+    - { kind: research, key: shield_tech, level: 2 }
+  large_shield:
+    - { kind: building, key: shipyard, level: 6 }
+    - { kind: research, key: shield_tech, level: 6 }
+  interceptor_rocket:
+    - { kind: building, key: shipyard, level: 1 }
+    - { kind: building, key: rocket_station, level: 2 }
+  interplanetary_rocket:
+    - { kind: building, key: shipyard, level: 1 }
+    - { kind: building, key: rocket_station, level: 4 }
+    - { kind: research, key: impulse_engine, level: 1 }

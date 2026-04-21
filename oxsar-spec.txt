@@ -1,0 +1,2245 @@
+================================================================================
+OXSAR-NOVA — ТЕХНИЧЕСКОЕ ЗАДАНИЕ
+================================================================================
+
+Дата составления: 2026-04-21
+Версия ТЗ: 1.6
+Источник: переписывание legacy-проекта d:\Sources\oxsar2 (PHP + MySQL +
+          Memcache, версия 2.14.2) на современный стек с доработкой
+          механик до полного паритета с OGame.
+
+ВАЖНО: в legacy-проекте сосуществуют три кодовые ветки. Эталоном для
+паритета являются ветки game/ и ext/, НЕ new_game/ (см. раздел 1.3).
+
+
+================================================================================
+0. НАЗНАЧЕНИЕ ДОКУМЕНТА
+================================================================================
+
+Документ описывает новую реализацию oxsar-nova: браузерной MMO-стратегии в
+стиле OGame (метал/кристалл/дейтерий, флоты, бои, альянсы, экспедиции).
+За основу берётся игровая логика проекта oxsar2; расчётные формулы,
+ID юнитов, механики боя, цепочки событий, структура ресурсов и зависимости
+сохраняются. Технологический стек переводится на Go (бэкенд) + TypeScript
+(фронтенд). В ТЗ отдельно выделены механики OGame, которые в oxsar2
+отсутствуют или не доведены до конца (см. раздел 12).
+
+
+================================================================================
+1. ЦЕЛИ И НЕ-ЦЕЛИ
+================================================================================
+
+1.1. Цели
+---------
+- Сохранить игровой баланс и механики oxsar2 (здания, исследования, юниты,
+  бои, экспедиции, артефакты, альянсы).
+- Устранить legacy-проблемы: Yii 1.1, прямое использование $_POST,
+  отсутствие миграций, отсутствие тестов, sim_*-таблицы-песочницы рядом
+  с продом.
+- Реализовать недостающие механики OGame: маскировка (masking), баллистика
+  (ballistics), полноценная система миссий флота, лунное уничтожение
+  с формулой из OGame, бонусы офицеров, полный список достижений, Lifeforms
+  опционально (см. 12.10).
+- Ввести единую кодовую базу без «Sim*»-дублей: симуляция боя — та же
+  функция, что и настоящий расчёт, просто без записи в БД.
+
+1.2. Не-цели (вне scope первой версии)
+--------------------------------------
+- Миграция пользовательских данных из oxsar2 (старт с чистой БД).
+- Поддержка старых соцсетевых авторизаций (ВК, Одноклассники, Mail.ru).
+  В v1 — только e-mail + OAuth2 (Google). Остальное опционально.
+- Мобильное нативное приложение (только адаптивный web).
+- Платежный процессинг (credit-механика остаётся, но без реальных покупок
+  в v1 — только админская выдача и внутренний обмен).
+
+
+1.3. СТРУКТУРА LEGACY — ТРИ ВЕТКИ КОДОВОЙ БАЗЫ (ВАЖНО)
+------------------------------------------------------
+
+В d:\Sources\oxsar2\www\ одновременно живут ТРИ кодовые ветки. На них
+НЕЛЬЗЯ смотреть как на равноправные — они представляют разные этапы
+жизни проекта. Это критично для правильного портирования:
+
+  www/game/       — PRODUCTION-ЯДРО (~22k строк PHP, 30+ классов + 45
+                    page-классов). Реально работавшая на oxsar.ru
+                    версия. Содержит: EventHandler.class.php (2769
+                    строк!), NS.class.php (2410), Artefact (1876),
+                    AutoMsg (1228), Exchange (1205), Planet (1212),
+                    AlienAI (1127), Expedition (1160), Achievements
+                    (1044), Assault (974), Participant (636),
+                    PlanetCreator, PointRenewer, Relation, Menu,
+                    Functions.inc.php (1993).
+                    ЭТО ОСНОВНОЙ ЭТАЛОН ПОВЕДЕНИЯ.
+
+  www/ext/        — PRODUCTION-НАДСТРОЙКА над game/ (~6300 строк PHP).
+                    Классы Ext* extends-ят классы из game/:
+                      ExtEventHandler extends EventHandler (927)
+                      ExtMission extends Mission (1062)
+                      ExtRepair extends Construction (688)
+                      ExtArtefactMarket extends Construction (322)
+                      ExtSimulator extends Page (749)
+                      ExtArtefacts (392), ExtPayment (546),
+                      ExtAchievements (207), ExtTutorial (61),
+                      ExpedPlanetCreator (149), ExtMenu (136),
+                      payment.inc.php (515), global.inc.php (217).
+                    Сюда вынесены фичи, которых нет в ext-free версии:
+                    репейр-фабрика, артефакт-маркет, платёжные шлюзы
+                    (WebMoney/Robokassa/A1/2Pay/VK/OK/MailRu),
+                    туториал, боевой симулятор с UI.
+
+  www/new_game/   — НЕЗАКОНЧЕННАЯ ПОПЫТКА ПЕРЕПИСАТЬ на Yii 1.1
+                    (~101 модель, ~10 контроллеров). Ответвление, не
+                    использовавшееся в проде. Полезна как
+                    «структурированная сводка сущностей» и как
+                    индекс консонтант (consts.php), но НЕ КАК
+                    ИСТОЧНИК ПОВЕДЕНИЯ.
+                    ПРИМЕЧАНИЕ: в версии ТЗ 1.0–1.2 эта ветка
+                    ошибочно использовалась как основной эталон.
+                    Скорректировано в 1.3.
+
+  www/templates/standard/    — UI-ШАБЛОНЫ (.tpl) основной ветки,
+                               103 файла, ~9866 строк. Smarty-подобный
+                               синтаксис с {foreach}, {if}, {loop=...},
+                               {@var}, {const=...}. Это РАЗМЕТКА ВСЕХ
+                               реально использовавшихся экранов:
+                                 layout.tpl (509) — основной фрейм
+                                 chat.tpl (485)
+                                 stock_new_3.tpl (447)
+                                 adv_tech_calc.tpl (348)
+                                 missions.tpl (335) + missions2/3/4.tpl
+                                 assault_report.tpl (259)
+                                 galaxy.tpl, empire.tpl, constructions.tpl,
+                                 shipyard.tpl, research.tpl, market.tpl,
+                                 ally.tpl, allystats.tpl, manage_ranks.tpl,
+                                 messages.tpl, folder.tpl, techtree.tpl,
+                                 artefacts.tpl, artefactmarket.tpl/2,
+                                 officer.tpl, preferences.tpl, ...
+                               ПРИМЕЧАНИЕ: в версиях ТЗ 1.0–1.4 я
+                               упускал, что .tpl — это именно вёрстка
+                               UI, а не легаси-заготовки. Добавлено в 1.5.
+
+  www/ext/templates/standard/ — UI-ШАБЛОНЫ надстройки ext, 31 файл,
+                                ~2748 строк. Экраны, которых нет в
+                                базовой ветке:
+                                  simulator.tpl (427) — симулятор боя
+                                  achievements.tpl (375)
+                                  payment.tpl (315) и paymentA1/2Pay/
+                                    Robokassa/Webmoney.tpl
+                                  mission_control.tpl (255)
+                                  tutorials.tpl, widgets.tpl,
+                                  technicalWorks.tpl, notes.tpl,
+                                  menu_counters.tpl, game_counters.tpl,
+                                  banner_*, before_content, blank, ...
+
+  www/js/                    — клиентский JS: main.js, chat.js, fleet.js,
+                               simulator.js, stats.js, sendreport.js.
+                               Работает в паре с .tpl — шаблон рисует
+                               разметку, JS даёт поведение.
+
+  www/css/                   — стили (front, layout, style, preview,
+                               темы ui-darkness, skin, us_bg, us_table).
+
+Правила для oxsar-nova:
+
+  - При расхождениях между game/ + ext/ и new_game/ — истина за
+    game/+ext/.
+  - Мы переписываем поведение из game/ + ext/; new_game/ помогает,
+    только когда в нём что-то явно яснее структурировано.
+  - Боевая логика (Assault + Participant в game/ 974+636 = 1610
+    строк) + Java-движок d:\Sources\oxsar2-java (4500 строк) —
+    рассматриваются вместе. Java-jar был СИМУЛЯТОРОМ для симулятор-
+    UI (ext/page/ExtSimulator), а реальный бой на оружии шёл через
+    game/Assault.class.php и game/Participant.class.php. Для
+    паритета нам нужно сверять Go-движок с ОБОИМИ: и с java-jar,
+    и с PHP Assault.
+  - Консты UNIT_* / EVENT_* берутся из game/Functions.inc.php
+    (основной) и new_game/protected/config/consts.php (сводный
+    индекс). При расхождении — игнорируем new_game/.
+
+
+1.4. SQL-АРТЕФАКТЫ legacy — БАЛАНС И I18N КАК ИСТОЧНИК ИСТИНЫ
+-------------------------------------------------------------
+
+В d:\Sources\oxsar2\sql\ лежит не просто «схема БД», а несколько
+разных типов артефактов, важных для портирования. До v1.6 ТЗ
+учитывало только наличие oxsar2-schema.sql — остальные файлы
+считал «историей миграций».
+
+Реальная структура sql/:
+
+  sql/oxsar2-schema.sql                  -- снимок схемы, 193 таблицы,
+                                            4396 строк (эталонный).
+  sql/oxsar2-schema_ivan_local.sql       -- локальная копия того же
+                                            разработчика, 4452 строки.
+                                            Полезна для diff-проверок.
+  sql/schema-before-2.0.sql              -- схема версии v1.x
+                                            (110 таблиц, 2660 строк).
+                                            Показывает, что было
+                                            ДО major-релиза.
+  sql/schema-after-2.0.sql               -- схема после v2.0
+                                            (94 таблицы, 2177 строк).
+  sql/schema-change-2.0.sql              -- дельта v1 → v2, 342 строки.
+                                            История реальной
+                                            миграции. Для нас — учебник
+                                            «как переходили на новую
+                                            модель».
+  sql/sql-2010-11-12/schema_beta1_1.sql  -- бета-версия 2010 года,
+                                            самый старый срез.
+  sql/new-for-dm/                        -- схема + data для
+                                            DeathMatch-вселенной
+                                            (отдельный сервер OGame-
+                                            style с ускоренным
+                                            ритмом).
+
+  sql/table_dump/                        -- ★ БАЛАНСОВЫЕ ДАННЫЕ ★
+                                            Это не схема, а реальные
+                                            INSERT-значения из прода
+                                            oxsar2-srv-01 (2011 г.):
+
+    na_phrases.sql            1549 строк — 1489 i18n-ключей с русскими
+                                           переводами. 24 phrasegroup'а
+                                           (global, error, info, mission,
+                                           buildings, Resource, UnitInfo,
+                                           UserAgreement, Registration,
+                                           Statistics и т.д.). ЭТО
+                                           ПОЛНЫЙ СЛОВАРЬ ИГРЫ.
+    na_construction.sql        169 строк — балансы зданий/исследований/
+                                           кораблей/обороны. Формулы
+                                           добычи и потребления хранятся
+                                           КАК СТРОКИ с DSL-подстановками
+                                           ({level}, {tech=N}, {temp},
+                                           {basic}). См. §5.2.
+    na_ship_datasheet.sql       69 строк — attack/shield/capacity/speed/
+                                           consume кораблей.
+    na_artefact_datasheet.sql   70 строк — lifetime, delay, auto_active,
+                                           buyable, effect_type, max_active,
+                                           quota по каждому артефакту.
+    na_achievement_datasheet.sql 89 строк — 15+ условий достижения +
+                                           5+ типов бонуса + картинка.
+    na_requirements.sql        207 строк — дерево зависимостей
+                                           building_id → needs_id
+                                           (level >= X) со 100+ правилами.
+    na_tutorial_states.sql      46 строк — 18 шагов туториала с
+                                           таргетами элементов UI
+                                           (arrow_of: '#menu_build',
+                                            '.for_pointer_bonus'...).
+    na_tutorial_states_category.sql 11 строк — категории шагов.
+    "Tutorial texts.sql"        45 строк — тексты туториала.
+
+  sql/achievements with req and text.sql -- достижения с человеко-
+                                            читаемыми названиями.
+  sql/constractions.sql                  -- варианты баланса
+                                            конструкций (альт.формулы).
+  sql/tutorial.sql, tutorial_text.sql    -- туториал раскладкой.
+  sql/user_agreement.sql                 -- текст UA.
+  sql/create_views.sql                   -- DB-views.
+  sql/useful-queries.sql                 -- набор админских SQL
+                                            (поиск зависших флотов,
+                                            удаление артефактов,
+                                            стат-отчёты). КЛЮЧЕВОЕ:
+                                            эти запросы описывают
+                                            реальные админ-сценарии,
+                                            которые надо перенести
+                                            в admin-UI nova.
+
+Правила для oxsar-nova:
+
+  - Схема БД nova проектируется ЗАНОВО (PostgreSQL, goose-миграции),
+    не переносится из oxsar2-schema.sql. Но при работе над
+    соответствующим модулем разработчик ОБЯЗАН открыть соответст-
+    вующий CREATE TABLE в oxsar2-schema.sql как референс: какие
+    поля, какие типы, какие индексы были в легаси. Это не «копия»,
+    а «проверка полноты».
+
+  - Балансовые числа (стоимости, параметры кораблей, требования,
+    достижения) НЕ берём «на глаз» и не копируем из OGame classic
+    без сверки. Источник истины — table_dump/*.sql. На этапе M1.5
+    пишется CLI cmd/tools/import-datasheets, который парсит эти
+    dump'ы и генерит YAML в configs/. YAML ручной правки — только
+    после этого, иначе уйдём в дрейф от legacy-баланса.
+
+  - I18N-строки. na_phrases.sql (1489 ключей) — полный словарь
+    игры на русском. Все UI-тексты в nova берутся ОТТУДА. Добавлять
+    новый ключ можно, но «перепридумывать» существующий нельзя —
+    это нарушит привычные игроку формулировки. См. новый §10.3.
+
+  - Parametric formulas в na_construction (prod_metal, cons_energy,
+    charge_metal и т.д.) — это мини-DSL. Мы НЕ портируем eval()
+    PHP, а делаем в Go типизированный вычислитель с фиксированным
+    набором переменных ({level}, {tech=N}, {temp}, {basic}). Это
+    даёт паритет без уязвимости. См. новый §5.2.1.
+
+  - Варианты schema-*.sql полезны для исторического контекста,
+    но в nova не портируются. Разве что schema-change-2.0.sql
+    можно почитать как пример «как делать большие миграции
+    правильно» (этот опыт уходит в стандарты §17).
+
+  - sql/useful-queries.sql — выписать в отдельный документ
+    docs/admin-scenarios.md, превратить в admin-UI endpoints
+    (см. §11).
+
+
+================================================================================
+2. ТЕХНОЛОГИЧЕСКИЙ СТЕК
+================================================================================
+
+2.1. Backend
+------------
+- Язык: Go 1.23+
+- HTTP: стандартная библиотека net/http + chi router.
+- Транспорт: REST (JSON) + WebSocket для real-time (чат, live-обновление
+  очередей, уведомления о прилете флота).
+- БД: PostgreSQL 16 (вместо MySQL — JSONB, range types, better locking).
+- Кеш: Redis 7 (сессии, rate-limit, кеш галактики, pub/sub для WebSocket).
+- ORM: sqlc (типобезопасные запросы из SQL) + ручной SQL для сложной
+  агрегации. НИКАКОЙ рефлексивной ORM-магии, наследия WarperActiveRecord.
+- Миграции: goose (up/down SQL-файлы) — в отличие от oxsar2, где миграций не
+  было вообще.
+- Планировщик: внутренний «tick» для event-loop, плюс cron-задачи внутри
+  Go-процесса (без BAT-файлов).
+- Аутентификация: JWT (access 15 мин) + refresh (httpOnly cookie, 30 дней).
+- Логи: slog (structured) + OTel traces.
+- Тесты: testify + dockertest (integration) + go-fuzz для боевой системы.
+
+2.2. Frontend
+-------------
+- Язык: TypeScript 5.x (strict).
+- Фреймворк: React 18 + Vite.
+- Стейт: TanStack Query (server state) + Zustand (UI state). Redux не
+  используется.
+- Роутинг: TanStack Router (типобезопасный).
+- Стили: CSS Modules + CSS variables (для тем/скинов).
+- WebSocket-клиент: нативный WS + реконнект + heartbeat.
+- Симулятор боя: чистый TS-модуль, переиспользуется сервером через
+  перенос формул (бой — детерминированный, seed-based); дублирует
+  серверную логику для офлайнового расчёта, как simulator.js в oxsar2.
+
+2.2.1. Визуальный дизайн (полностью из oxsar2)
+----------------------------------------------
+Весь визуальный язык, UX-layout и графические ассеты берутся 1-в-1 из
+legacy-проекта d:\Sources\oxsar2. Фронтенд переписывается на React/TS,
+но «выглядеть» должен как старый oxsar2 — чтобы существующие игроки
+не заметили смены движка.
+
+Источники ассетов (копируем и портируем):
+  d:\Sources\oxsar2\www\css\               -- front.css, layout.css,
+                                              style.css, preview.css,
+                                              skin/, ui-darkness/,
+                                              us_bg/, us_table/
+  d:\Sources\oxsar2\www\images\            -- фон, иконки зданий,
+                                              кораблей, обороны,
+                                              артефактов, альянс-права
+                                              (CAN_*.png), ajax-loader'ы
+  d:\Sources\oxsar2\www\fonts\             -- шрифты интерфейса
+
+  d:\Sources\oxsar2\www\templates\standard\      -- *.tpl, 103 файла,
+                                                    ~9866 строк
+  d:\Sources\oxsar2\www\ext\templates\standard\  -- *.tpl, 31 файл,
+                                                    ~2748 строк
+                                              ЭТО ЭТАЛОН HTML-РАЗМЕТКИ.
+                                              См. §1.3.
+
+  d:\Sources\oxsar2\www\js\                -- main.js, chat.js,
+                                              fleet.js, simulator.js,
+                                              stats.js, sendreport.js —
+                                              ЭТАЛОН КЛИЕНТСКОГО
+                                              ПОВЕДЕНИЯ (валидация
+                                              форм, аяксы, анимации).
+
+  d:\Sources\oxsar2\www\new_game\protected\views\  -- Yii-views
+                                              незавершённой ветки.
+                                              Вторичный источник,
+                                              НЕ основной.
+
+Правила переноса:
+- CSS переводится в CSS Modules, но классовая структура/цвета/размеры
+  сохраняются. Тёмная скин-схема ui-darkness — как default.
+- Темы пользователя (user_bg_style, user_table_style из users-таблицы)
+  сохраняются: список us_bg/a-bg-*.css и us_table/table_td2_bg_*.css
+  переезжает в configs/themes.yml, пользователь переключает их как
+  раньше.
+- Графика (иконки юнитов/зданий, preview-кадры, баннеры, ajax-лоадеры)
+  копируется в assets/ фронта без переотрисовки. Ресайз и WebP/AVIF —
+  на этапе сборки Vite, исходники не трогаем.
+- Разметка экранов (Overview, Resources, Buildings, Shipyard, Galaxy,
+  Fleet, Alliance, Messages, Highscore) воспроизводит табличные
+  сетки и порядок колонок из соответствующих .tpl. Для каждого
+  React-экрана в nova ставится комментарий-ссылка:
+    // layout reference: oxsar2/www/templates/standard/<name>.tpl
+  чтобы при доработке было ясно, откуда скопирована разметка.
+- Smarty-директивы ({foreach}, {if}, {loop=...}, {@var}, {const=...})
+  НЕ портируются один-в-один — React-компоненты используют .map(),
+  тернарники, props. Но порядок элементов, table-сетки, классы
+  сохраняются максимально близко.
+- Клиентское поведение из www/js/ портируется как React-хуки:
+    main.js   -> useAppShell, useMenu
+    fleet.js  -> useFleetDispatcher
+    simulator.js -> src/sim/battle.ts (единый движок с бэком)
+    chat.js   -> useWebSocketChat
+    stats.js  -> usePlayerStats
+- Шрифты, курсор, стиль всплывающих подсказок (tooltip'ов), рамки
+  кнопок, скин чата — без изменений.
+- Всё, что добавляется из OGame-доработок (раздел 12), рисуется в том
+  же стилевом ключе: новые иконки (masking, ballistics, офицеры,
+  достижения) выполняются в стиле существующих ассетов oxsar2.
+- Баннерные/платёжные .tpl (banner_*, appgrade-*, payment*) портировать
+  в v1 не нужно — это legacy-интеграции соцсетей и платёжек (§1.2
+  «не-цели» + §5.22 «платёжки в M9»).
+
+2.3. Инфраструктура
+-------------------
+- Docker Compose для dev (postgres, redis, backend, frontend).
+- GitHub Actions: линт (golangci-lint, eslint), тесты, сборка Docker-образа.
+- Staging / production — разворачивается одной командой, конфиг через ENV
+  (как env-vars, не как consts.local.php).
+
+
+================================================================================
+3. ВЫСОКОУРОВНЕВАЯ АРХИТЕКТУРА
+================================================================================
+
+3.1. Модули бэкенда (Go-пакеты)
+-------------------------------
+  cmd/
+    server/                 -- HTTP + WS entry point
+    worker/                 -- фоновый процессор очереди событий
+    tools/                  -- CLI: reseed, rebalance points, fix galaxy
+  internal/
+    auth/                   -- регистрация, логин, JWT, OAuth2
+    user/                   -- профиль, счётчики очков, настройки
+    planet/                 -- планеты, луны, ресурсы, производство
+    galaxy/                 -- генерация и выборка координат
+    building/               -- здания, очередь строительства
+    research/               -- исследования, очередь
+    shipyard/               -- верфь: корабли и оборона, очередь
+    repair/                 -- ремонт и разборка флота (§5.16)
+    fleet/                  -- флоты, миссии, перелёты
+    battle/                 -- расчёт боя (единый для sim и реального)
+    expedition/             -- экспедиции
+    alien/                  -- Alien AI и их миссии (§5.18)
+    artefact/               -- артефакты
+    artefactmarket/         -- покупка артефактов за credit (§5.17)
+    alliance/               -- альянсы, ранги, отношения
+    chat/                   -- глобальный, альянсовый, личный
+    message/                -- внутриигровые письма и отчёты
+    automsg/                -- шаблоны автосообщений (§5.19)
+    market/                 -- биржа ресурсов
+    event/                  -- event-loop, обработка по времени
+    economy/                -- формулы производства, энергии, ёмкости
+    score/                  -- пересчёт очков (u/r/b/total)
+    tutorial/               -- стартовый туториал (§5.20)
+    achievement/            -- достижения
+    officer/                -- офицеры (бонусы за кредиты)
+    payment/                -- интеграции платёжек (v2, §5.22)
+    admin/                  -- админка, ban, teamspeak и т.п.
+    requirements/           -- валидатор зависимостей юнитов
+    config/                 -- чтение конфигурации (см. раздел 11)
+  pkg/
+    rng/                    -- детерминированный ГПСЧ для боя (seed-based)
+    proto/                  -- общие типы для WS/HTTP
+
+3.2. Структура фронтенда
+------------------------
+  src/
+    api/                    -- REST + WS клиенты, кодогенерация из OpenAPI
+    features/
+      auth/ planet/ galaxy/ fleet/ battle-sim/
+      research/ shipyard/ alliance/ chat/ messages/ market/
+    components/             -- UI-примитивы
+    stores/                 -- Zustand
+    routes/                 -- TanStack Router
+    i18n/                   -- локализация (ru, en)
+    sim/                    -- офлайновый боевой симулятор (dup с бэка)
+    styles/
+
+3.3. Слоистая архитектура бэкенда
+---------------------------------
+  handler (HTTP/WS)  ->  service (бизнес-логика)  ->  repo (sqlc)  ->  PG
+
+Все операции, изменяющие игровое состояние, обязаны идти через event-loop
+(см. раздел 6), чтобы сериализовать расчёты и избежать гонок при
+одновременном прилёте флота и команды пользователя.
+
+
+================================================================================
+4. МОДЕЛЬ ДАННЫХ (ПОСТГРЕС)
+================================================================================
+
+Нумерация таблиц и полей берётся за основу из sql/oxsar2-schema.sql.
+Ниже перечислены основные сущности; полный DDL поставляется миграциями
+в каталоге migrations/.
+
+4.1. Ядро
+---------
+- users(user_id, username, email, password_hash, language, timezone,
+        cur_planet_id, points, u_points, r_points, b_points, a_points,
+        e_points, battles, hp, credit, exchange_rate, research_factor,
+        race, regtime, last_seen, umode (vacation flag), umode_min,
+        tutorial_state, newbie_observer, settings JSONB)
+  ВАЖНО: exchange_rate (default 1.2) и research_factor (default 1) —
+  это «материализованные» эффекты активных артефактов MERCHANTS_MARK
+  (300) и SUPERCOMPUTER (305) соответственно. НЕ путать с курсом
+  биржи как таковым (тот — в configs/market.yml). Подробности в §5.10.1.
+
+- planets(planet_id, user_id, is_moon, name, galaxy, system, position,
+          diameter, used_fields, temperature_min, temperature_max,
+          metal, silicon, hydrogen, last_res_update, solar_satellite_prod,
+          build_factor, research_factor, produce_factor, energy_factor,
+          storage_factor, destroyed_at)
+  ВАЖНО: четыре множителя (build_factor, produce_factor, energy_factor,
+  storage_factor) с дефолтом 1 — материализованные эффекты артефактов
+  ROBOT_CONTROL_SYSTEM / CATALYST / POWER_GENERATOR / ATOMIC_DENSIFIER.
+  planets.research_factor зарезервировано, но в oxsar2 обнуляется при
+  resyncUser — исследовательский фактор на УРОВНЕ ПЛАНЕТЫ не
+  используется активно (в расчётах тика берётся users.research_factor).
+  Подробности в §5.10.1.
+
+- galaxy(galaxy, system, position, planet_id NULL, is_empty, is_debris,
+         metal_debris BIGINT, silicon_debris BIGINT)
+  (range-constrained: galaxy 1..NUM_GALAXYS, system 1..NUM_SYSTEMS,
+   position 1..15).
+
+4.2. Прогресс
+-------------
+- buildings(planet_id, unit_id, level) PK(planet_id, unit_id)
+- research(user_id, unit_id, level) PK(user_id, unit_id)
+- ships(planet_id, unit_id, count, damaged_count) PK(planet_id, unit_id)
+- defense(planet_id, unit_id, count) PK(planet_id, unit_id)
+- construction_queue(id, planet_id, unit_id, unit_type, target_level,
+                     start_at, end_at, cost_metal, cost_silicon,
+                     cost_hydrogen, status)
+- shipyard_queue(id, planet_id, unit_id, count, per_unit_seconds,
+                 start_at, end_at, status)
+
+4.3. Флот и миссии
+------------------
+- fleets(fleet_id, owner_user_id, src_planet_id, dst_planet_id,
+         dst_galaxy, dst_system, dst_position, dst_is_moon,
+         mission, depart_at, arrive_at, return_at, state,
+         hold_seconds, carried_metal, carried_silicon, carried_hydrogen,
+         carried_artefact_id NULL, speed_percent)
+- fleet_ships(fleet_id, unit_id, count, damaged_count)
+
+4.4. Бои
+--------
+- assaults(id, attacker_user_id, defender_user_id, galaxy, system,
+           position, is_moon, started_at, result, rounds,
+           debris_metal, debris_silicon, loot_metal, loot_silicon,
+           loot_hydrogen, moon_created, moon_probability, seed,
+           report JSONB)
+- assault_participants(assault_id, user_id, side, flying) — стороны боя.
+- assault_fleet(assault_id, user_id, unit_id, count_start, count_end,
+                damaged_start, damaged_end)
+
+4.5. Альянсы и соц.
+-------------------
+- alliances(alliance_id, tag, name, description, internal_description,
+            applications_open, founder_user_id, created_at, points)
+- alliance_ranks(alliance_id, rank_id, name, permissions BITMASK)
+- alliance_members(user_id, alliance_id, rank_id, joined_at)
+- alliance_applications(id, user_id, alliance_id, text, created_at)
+- alliance_relationships(a_id, b_id, type[NAP|WAR|ALLY], since)
+- chats(chat_id, type[GLOBAL|ALLY|PM], owner_id)
+- chat_messages(id, chat_id, author_id, text, created_at)
+- messages(message_id, to_user_id, from_user_id, folder, subject,
+           body, created_at, read_at) — инбокс игрока
+- buddies(user_id, buddy_id, status)
+- notes(id, user_id, title, body, updated_at)
+
+4.6. Артефакты, достижения, экспедиции
+--------------------------------------
+- artefact_datasheet(unit_id, effect_type, value, lifetime_seconds,
+                     delay_seconds, is_stackable)
+- artefacts_user(user_id, planet_id NULL, unit_id, state[HELD|ACTIVE],
+                 activated_at, expire_at)
+- achievements_user(user_id, achievement_id, progress, completed_at)
+- expedition_stats(user_id, count, success_count, total_reward_metal,
+                   total_reward_silicon, total_reward_hydrogen,
+                   dm_count, aliens_found_count, ships_found_count)
+- expedition_found_units(expedition_id, unit_id, count)
+
+4.7. Экономика и рынок
+----------------------
+- res_log(id, user_id, planet_id, reason, delta_metal, delta_silicon,
+          delta_hydrogen, at)
+- exchange_lots(id, owner_user_id, sell_res, sell_amount, buy_res,
+                buy_amount, rate, expires_at, state)
+- payments(id, user_id, amount, credit_given, method, created_at, state)
+
+4.8. Событийная шина
+--------------------
+- events(event_id, user_id, planet_id NULL, kind, state, fire_at,
+         payload JSONB, created_at, processed_at) — аналог na_events
+  oxsar2. Все игровые действия по времени выполняются через эту таблицу.
+
+4.9. Отказ от Sim-таблиц
+------------------------
+В oxsar2 существует ~10 sim_*-таблиц и отдельные модели-симуляторы.
+В oxsar-nova симулятор боя — чистая функция battle.Simulate(input) без
+записи в БД. Эндпоинт /api/battle-sim принимает JSON и возвращает
+расчёт. На фронте — та же функция в TS (src/sim/).
+
+
+================================================================================
+5. ИГРОВАЯ МЕХАНИКА (ПАРИТЕТ С OXSAR2)
+================================================================================
+
+5.1. Константы и справочники юнитов
+-----------------------------------
+Сохранить ID юнитов из oxsar2/config/consts.php:
+
+  Здания планеты (UNIT_TYPE_CONSTRUCTION=1):
+    1 metal_mine, 2 silicon_lab, 3 hydrogen_lab, 4 solar_plant,
+    5 hydrogen_plant, 6 robotic_factory, 7 nano_factory, 8 shipyard,
+    9 metal_storage, 10 silicon_storage, 11 hydrogen_storage,
+    12 research_lab, 53 rocket_station, 58 terra_former,
+    100 repair_factory, 101 defense_factory,
+    107 exchange, 108 exch_office.
+
+  Лунные здания (UNIT_TYPE_MOON_CONSTRUCTION=5):
+    54 moon_base, 55 star_surveillance, 56 star_gate,
+    57 moon_robotic_factory, 326 moon_hydrogen_lab,
+    350 moon_lab, 351 moon_repair_factory.
+
+  Исследования (UNIT_TYPE_RESEARCH=2):
+    13 spyware, 14 computer_tech, 15 gun_tech, 16 shield_tech,
+    17 shell_tech, 18 energy_tech, 19 hyperspace_tech,
+    20 combustion_engine, 21 impulse_engine, 22 hyperspace_engine,
+    23 laser_tech, 24 ion_tech, 25 plasma_tech, 26 ign (alliance tech),
+    27 expo_tech, 28 gravi, 103 ballistics_tech (новый, см. 12.1),
+    104 masking_tech (новый, см. 12.1), 110 alien_tech,
+    111 artefacts_tech.
+
+  Корабли (UNIT_TYPE_FLEET=3):
+    29 small_transporter, 30 large_transporter, 31 light_fighter,
+    32 strong_fighter, 33 cruiser, 34 battle_ship, 35 frigate,
+    36 colony_ship, 37 recycler, 38 espionage_sensor,
+    39 solar_satellite, 40 bomber, 41 star_destroyer, 42 death_star,
+    102 lancer_ship, 105 exch_support_range, 325 shadow_ship,
+    352 ship_transplantator, 353 ship_collector.
+
+  Оборона (UNIT_TYPE_DEFENSE=4):
+    43 rocket_launcher, 44 light_laser, 45 strong_laser, 46 ion_gun,
+    47 gauss_gun, 48 plasma_gun, 49 small_shield, 50 large_shield,
+    51 interceptor_rocket, 52 interplanetary_rocket,
+    106 exch_support_slot, 354 small_planet_shield,
+    355 large_planet_shield, 358 ship_armored_terran.
+
+  Артефакты (UNIT_TYPE_ARTEFACT=6): 300..365 — полный список оставить как
+  в oxsar2 (см. ARTEFACT_* в consts.php).
+
+  Достижения (UNIT_TYPE_ACHIEVEMENT=7): сохраняем существующие + см. 12.7.
+
+  Виртуальные юниты (1000000..1000003): UNIT_VIRT_FLEET, VIRT_STOCK_FLEET,
+  VIRT_DEFENSE, VIRT_HALTING_START — используются только в отчётах боя.
+
+5.2. Ресурсы и экономика
+------------------------
+- Три ресурса: metal, silicon (кристалл в OGame), hydrogen (дейтерий).
+  Хранятся как float64 на планете, целочисленно — в транзакциях.
+- Производство в секунду вычисляется из уровня шахты, температуры,
+  produce_factor, research_factor (plasma), бонусов артефактов/офицеров,
+  и текущей доли энергии. Формулы — как в oxsar2 (metal/silicon/hydrogen
+  rate = base * level * 1.1^level * factor). Точные коэффициенты взять
+  из oxsar2 CronCommand.php::updatePlanetRes() и Planet_YII.php.
+- Ёмкость хранилища растёт экспоненциально от уровня склада, модуль
+  storage_factor. Переполнение — остановка добычи ресурса (как OGame).
+- Энергия: сумма по солнечным станциям + спутникам + синтезатор. Недостача
+  энергии масштабирует добычу всех шахт пропорционально (как OGame).
+- GAMESPEED = 0.75 (берём как default, вынести в config; для серверов
+  speed-x2/x5 менять одним параметром).
+
+5.2.1. Parametric formulas из na_construction (ВАЖНО)
+-----------------------------------------------------
+
+В legacy-oxsar2 балансовые формулы хранятся как СТРОКИ в таблице
+na_construction (см. §1.4). Пример для METALMINE (buildingid=1):
+
+  prod_metal    = floor(30 * {level} * pow(1.1+{tech=23}*0.0006, {level}))
+  cons_energy   = floor(10 * {level} * pow(1.1-{tech=18}*0.0005, {level}))
+  charge_metal  = floor({basic} * pow(1.5, ({level} - 1)))
+
+Для HYDROGEN_LAB (buildingid=3) — формула ещё зависит от температуры:
+
+  prod_hydrogen = floor(10 * {level} * pow(1.1+{tech=25}*0.0008, {level})
+                         * (-0.002 * {temp} + 1.28))
+
+DSL-переменные:
+
+  {level}         — уровень здания/исследования/количество единиц
+  {basic}         — базовое значение поля basic_metal / basic_silicon /
+                    basic_hydrogen / basic_energy / basic_credit
+  {tech=N}        — уровень исследования с buildingid=N в research2user
+                    (23 = laser_tech, 18 = energy_tech, 25 = plasma_tech)
+  {temp}          — средняя температура планеты (для hydrogen_lab)
+
+Реализация в nova:
+
+  pkg/formula/                -- evaluator DSL
+    parser.go                 -- разбор строки в AST
+    eval.go                   -- исполнение с контекстом
+    context.go                -- безопасный набор переменных
+                                 (level int, basic int64, tech map[int]int,
+                                 temp int)
+    funcs.go                  -- whitelist функций: floor, ceil, round,
+                                 pow, min, max, sqrt. НИЧЕГО БОЛЬШЕ.
+                                 Никакого eval, никакого PHP-интерпретатора.
+
+  configs/buildings.yml       -- содержит строки-формулы в том же
+                                 синтаксисе, что oxsar2. Экспортируются
+                                 конвертером import-datasheets из
+                                 table_dump/na_construction.sql.
+
+Почему не хардкодить формулы в Go: если геймдизайн хочет изменить
+множитель с 1.5 на 1.48 — это правка YAML без редеплоя Go-кода.
+Если формулы зашиты — каждая правка требует Go-ревью и билда.
+
+Почему не использовать goja или другой JS/lua runtime: overkill
+и attack surface. Наш DSL — 7 функций и 4 переменных, пишется
+за выходные, проверяется fuzz-тестами.
+
+Это ЗАКРЫВАЕТ ранее обозначенную задачу §5.2 «Точные коэффициенты
+взять из oxsar2 CronCommand.php::updatePlanetRes() и Planet_YII.php».
+На деле этих формул в PHP-коде нет — они в na_construction.
+
+5.3. Здания, очередь строительства
+----------------------------------
+- На планете один слот очереди зданий, на луне — один (как OGame).
+- Стоимость/время — из формул oxsar2; проверить через REQ_BUILDING /
+  requirements. Хранить datasheet в yaml в configs/buildings.yml
+  (НЕ в БД, как было в oxsar2), грузить в память при старте.
+- Отмена очереди: EV_ABORT_SAVE_TIME = 15 сек (ресурсы возвращаются
+  100%), после — EV_ABORT_MAX_BUILD_PERCENT = 95%.
+
+5.4. Исследования
+-----------------
+- Одновременно одно исследование (если не куплен астрофизик из OGame —
+  см. 12.6). Лаборатория суммируется из связанных планет через
+  межгалактическую сеть (intergalactic research network) — механика
+  OGame, которой в oxsar2 реализовано частично; довести до паритета.
+- MAX_RESEARCH_LEVEL = 40 (как в oxsar2).
+
+5.5. Верфь и оборона
+--------------------
+- Очередь строительства кораблей/обороны — массив задач, исполняется
+  последовательно (как na_shipyard в oxsar2). Отмена — EV_ABORT_MAX_
+  SHIPYARD_PERCENT = 70%.
+- Nano factory делит время постройки, Robotic — время зданий (как oxsar2
+  и OGame).
+
+5.6. Флот и миссии
+------------------
+Сохранить типы миссий oxsar2 (см. EVENT_* в consts.php):
+  EVENT_POSITION=6        — перебазирование (stationing)
+  EVENT_TRANSPORT=7       — транспорт
+  EVENT_COLONIZE=8        — колонизация
+  EVENT_RECYCLING=9       — сбор обломков
+  EVENT_ATTACK_SINGLE=10  — атака
+  EVENT_SPY=11            — шпионаж
+  EVENT_ATTACK_ALLIANCE=12 — ACS (союзная атака)
+  EVENT_HALT=13           — удержание (hold)
+  EVENT_MOON_DESTRUCTION=14 — уничтожение луны
+  EVENT_EXPEDITION=15     — экспедиция
+  EVENT_ROCKET_ATTACK=16  — межпланетные ракеты
+  EVENT_HOLDING=17        — ACS defend
+  EVENT_STARGATE_TRANSPORT=28
+  EVENT_DELIVERY_ARTEFACTS=29
+  EVENT_STARGATE_JUMP=32
+  EVENT_RETURN=20 / _DELIVERY_UNITS=21 / _DELIVERY_RESOURCES=22
+  EVENT_ATTACK_DESTROY_BUILDING=23 / _MOON=25
+  EVENT_TELEPORT_PLANET=39
+
+Для каждой миссии — свой handler, единый интерфейс:
+  type Mission interface {
+      Validate(ctx, user, fleet) error
+      Cost(ctx, fleet) (m, s, h int64)
+      OnArrive(ctx, world) ([]*Event, error)
+      OnReturn(ctx, world) error
+  }
+
+5.7. Боевая система
+-------------------
+Эталонов реализации ДВА (важно для правильного порта):
+
+  А) PHP: d:\Sources\oxsar2\www\game\Assault.class.php (974 строк)
+     + Participant.class.php (636 строк) = 1610 строк.
+     Это ПРОДАКШН-ПУТЬ реальных боёв на oxsar.ru: вызывается из
+     EventHandler при наступлении EVENT_ATTACK_*.
+
+  Б) Java: d:\Sources\oxsar2-java\assault\src\assault\ (4483 строки).
+     Используется как ДВИЖОК-СИМУЛЯТОР для UI симулятора боя
+     (ext/page/ExtSimulator.class.php, §5.21): игрок собирает
+     гипотетический бой, запускается из jar через shell-вызов.
+     Реальные бои на продакшене шли через PHP-путь (А).
+
+Прежнее утверждение (версии ТЗ 1.0–1.2) о том, что "настоящий бой
+в oxsar2 считался через JAR" — ОШИБКА. JAR — это отдельный
+симулятор-калькулятор, а не прод-путь.
+
+PHP-BattleComponent.php в new_game/ — обрубок-прототип, не
+использовать.
+
+Задача портирования: получить Go-движок, который бьётся с ОБОИМИ
+эталонами (А и Б). При расхождении между PHP и Java — сверяем с
+расчётами OGame classic и принимаем решение в ADR. Вероятнее всего,
+PHP-версия (А) ближе к фактическому поведению, которое видели
+игроки, поэтому при неразрешимых конфликтах приоритет за ней.
+
+Состав java-движка (d:\Sources\oxsar2-java\assault\src\assault\):
+  Assault.java        1941 строк — ядро: раунды, распределение
+                                   выстрелов, rapidfire, masking,
+                                   ballistics, debris, формирование
+                                   боевого отчёта.
+  Participant.java     988 строк — сторона боя: технологии владельца
+                                   (attack/shield/shell/laser/ion/
+                                   plasma/ballistics/masking levels),
+                                   ресурсы, флот, луна/планета,
+                                   подсчёт потерь и очков.
+  Party.java           778 строк — группировка участников одной
+                                   стороны (ACS, инопланетяне).
+  Units.java           650 строк — unit-stats, damaged/shell_percent,
+                                   front, weight, rapidfire-таблицы.
+  Database.java        126 строк — выгрузка входа/записи результата
+                                   в MySQL (в nova НЕ портируем,
+                                   см. ниже).
+
+Задача — переписать всю боевую логику java-пакета assault на Go в
+internal/battle/. Database.java не портируется: в Go-версии чтение
+входа и запись отчёта идёт через sqlc-репозиторий Postgres рядом
+с движком, а сам battle.Calculate(input BattleInput) остаётся
+чистой функцией без I/O.
+
+Высокоуровневый алгоритм (как в Assault.java):
+
+  for turn := 0; turn < 6; turn++ {
+      prepareTurn(turn)                 // пересчёт sum_weight, щитов
+      applyArtefacts(turn)              // BATTLE-артефакты стороны
+      for each participant {
+          distributeShots(participant)  // c учётом ballistics/masking
+      }
+      resolveDamage()                   // щит -> броня -> уничтожение
+      finishTurn()
+      if aliveSides <= 1 { break }
+  }
+  buildReport()   // раунды, потери, lootable, debris, moon chance
+
+Ключевые поля юнита (Units.java): unit_id, mode, quantity, damaged,
+shell_percent, front (вес = 2^front), attack[0..2], shield[0..2],
+shell. Три «канала» урона (index 0..2) — обычный/laser-mode/ion-mode
+(extended battle, see Assault.java isExtended).
+
+Обязательный паритет с Java-движком:
+- Rapidfire-таблицы (rapid_fire_by_unit в Assault.java) переносятся
+  один-в-один в configs/rapidfire.yml.
+- Формулы applyBallistics() и applyMasking() из Assault.java
+  портируются без изменений (это закрывает TODO, который остался
+  в прототипе BattleComponent.php — см. 12.1, там теперь только
+  ссылка на факт портирования).
+- primaryTargetUnitid (Participant.java) — поддержать: возможность
+  выбрать приоритетную цель для своего флота.
+- Учёт технологий владельца: attack = 1 + 0.1 * gunTech,
+  shield = 1 + 0.1 * shieldTech, shell = 1 + 0.1 * shellTech и т.д.
+  Точные множители берутся из Participant.java (applyLevels).
+
+Детерминированность: в Java-оригинале используется java.util.Random
+с системным seed. В Go-порте боевая функция ОБЯЗАТЕЛЬНО принимает
+seed (uint64), все random-вызовы идут через pkg/rng. Тот же seed
+и тот же вход => бит-в-бит тот же отчёт. Это нужно для:
+  - симулятора боя на фронте (src/sim/) — работает на том же seed,
+    что и сервер, с кросс-компиляцией формул в TS;
+  - репродьюса инцидентов (в репорт пишется seed, по тикету можно
+    прогнать заново);
+  - property-based тестов (раздел 14.2).
+
+Верификация паритета:
+- Прогоняем пачку боёв через исходный Assault.jar (d:\Sources\
+  oxsar2-java\assault\dist\oxsar2-java.jar) и через новый Go-движок
+  с одним и тем же входом.
+- Допускается расхождение ТОЛЬКО в местах, где мы явно меняем
+  формулу (например, формула луны в 12.2 или новые OGame-механики
+  раздела 12). Всё остальное должно совпадать по урону и потерям
+  с точностью до целых юнитов.
+
+5.8. Обломки и луны
+-------------------
+- FLEET_BULK_INTO_DEBRIS = 0.50 (50% ресурсов уничтоженных флотов).
+- DEFENCE_BULK_INTO_DEBRIS = 0.01 (1% от обороны, как в OGame).
+- Шанс появления луны = min(20%, потерянный_металл_и_кристалл/100000)
+  — формула OGame (в oxsar2 была упрощённая, исправить согласно 12.2).
+
+5.9. Экспедиции
+---------------
+- Слоты экспедиций = floor(sqrt(expo_tech)) (как OGame).
+- Исходы: ресурсы, корабли, обломки, потеря флота, ничего, DM (dark
+  matter в OGame = credit в oxsar2), инопланетяне (ALIEN_PROB = 1%).
+- Результаты логируются в expedition_stats и expedition_found_units.
+
+5.10. Артефакты
+---------------
+Источник: d:\Sources\oxsar2\www\game\Artefact.class.php (1876 строк).
+
+- Типы эффектов: PLANET, EMPIRE, FLEET, BATTLE, AUTO (из consts.php).
+- Длительность + задержка активации + lifetime. После expire —
+  событие EVENT_ARTEFACT_EXPIRE. Удаление — EVENT_ARTEFACT_DISAPPEAR.
+
+5.10.1. Персональные факторы игрока и планеты
+---------------------------------------------
+Ключевая архитектурная особенность, которую НЕЛЬЗЯ терять при порте:
+эффекты ряда артефактов «материализованы» как поля в БД, а не как
+список активных бонусов. Это проще для чтения (добыча = base *
+produce_factor, никаких join'ов), но требует аккуратного учёта
+при активации/деактивации.
+
+Шесть персональных полей-множителей:
+  users.exchange_rate         -- устанавливается 1.2 ↔ 1.03
+                                 ARTEFACT_MERCHANTS_MARK (300)
+  users.research_factor       -- изменяется ± 1
+                                 ARTEFACT_SUPERCOMPUTER (305)
+  planets.build_factor        -- изменяется ± 1 на КОНКРЕТНОЙ планете
+                                 ARTEFACT_ROBOT_CONTROL_SYSTEM (315)
+  planets.produce_factor      -- изменяется ± 0.1 на ВСЕХ планетах игрока
+                                 ARTEFACT_CATALYST (301)
+  planets.energy_factor       -- изменяется ± 0.15 на ВСЕХ планетах
+                                 ARTEFACT_POWER_GENERATOR (302)
+  planets.storage_factor      -- изменяется ± 0.15 на ВСЕХ планетах
+                                 ARTEFACT_ATOMIC_DENSIFIER (303)
+
+Дефолтные значения (Artefact::resyncUser, строки 1225–1229):
+  users.exchange_rate          = 1.2
+  users.research_factor        = 1
+  planets.build_factor         = 1
+  planets.produce_factor       = 1
+  planets.energy_factor        = 1
+  planets.storage_factor       = 1
+
+Правила применения:
+- Активация артефакта: UPDATE поля с оператором $op = '+' или '-'
+  (см. switch в Artefact::activateArtefact / deactivateArtefact).
+- Деактивация — зеркальная операция, чтобы поле вернулось в исходное
+  значение ТОЛЬКО при отсутствии других активных артефактов того же
+  класса. Если два CATALYST'а активны, produce_factor = 1 + 0.1 + 0.1
+  = 1.2. Снять один — 1.1, снять оба — 1.0.
+- MERCHANTS_MARK — исключение: он не additive, а set (1.2 → 1.03),
+  поэтому активировать второй запрещено:
+    if (getActiveCount(type_id, user_id, art_id) > 0) return false;
+- Исследования и здания «добавленные артефактом» идут в отдельные
+  поля research2user.added, building2planet.added (legacy-схема),
+  чтобы resyncUser мог вернуть все back к базовому level.
+- Cron-команда ResyncArtefacts (scripts/cron-win32/ResyncArtefacts
+  .bat) периодически сбрасывает и переприменяет все активные
+  артефакты — защита от накопленной рассинхронизации.
+
+В nova:
+- Поля сохраняем один-в-один (миграции 0001 и 0002 уже это делают,
+  проверка в §4).
+- Доменный пакет artefact публикует функции Apply(ctx, tx, userID,
+  artefactInstance) и Revert(ctx, tx, userID, artefactInstance).
+- Resync — отдельная CLI-команда в cmd/tools, плюс админский endpoint.
+- Тесты: activate/revert на single-thread — factor возвращается в
+  дефолт; activate/activate/revert — частично откатывается.
+
+5.10.2. Артефакты с разовым эффектом (non-stackable)
+----------------------------------------------------
+- PACKED_BUILDING (321), PACKING_BUILDING (323), PACKED_RESEARCH (322),
+  PACKING_RESEARCH (324) — упаковка и распаковка здания/исследования.
+  Уровни, разрешённые к упаковке: $GLOBALS["PACKED_ARTEFACT_BUILDING_
+  LEVELS"] = [2,3,4,5,6,8,10,15].
+- MOON_CREATOR (319), PLANET_CREATOR (320), PLANET_TEMP_CREATOR
+  (347), PLANET_TELEPORTER (357), IGLA_MORI (349) — одноразовые
+  «инструменты».
+- REPAIR_BOT (314), NANOBOT_REPAIR_SYSTEM (363) — ремонт флота
+  (см. §5.16).
+- BATTLE_* (316, 317, 318, 356, 359, 360, 361) — временный бонус
+  на следующий бой.
+- ALLY_IGN (364) — временный альянс-эффект.
+
+5.10.3. Задержка активации (delay)
+----------------------------------
+- Некоторые артефакты имеют delay_seconds до вступления в силу.
+- Событие EVENT_ARTEFACT_DELAY (63) — срабатывает после delay и
+  переводит артефакт из HELD в ACTIVE.
+- EVENT_ARTEFACT_EXPIRE (60) — снимает эффект после lifetime.
+- EVENT_ARTEFACT_DISAPPEAR (61) — физически удаляет запись
+  (после expire + grace period).
+
+5.11. Альянсы
+-------------
+- Создание за N очков (config). Ранги с permissions-битмаской
+  (KickMember, EditDescription, SeeFleet, ManageRelationships ...).
+- Отношения: NAP, WAR, ALLY (alliance_relationships). ACS-атаки работают
+  только между ALLY или при WAR с общей целью.
+
+5.12. Чат и сообщения
+---------------------
+- Global / Alliance / PM. Поток — WebSocket + персист в chat_messages.
+- Инбокс: папки MSG_FOLDER_INBOX..MSG_FOLDER_SURVEILLANCE_DETECTED
+  (см. consts.php). Боевые отчёты хранятся отдельной таблицей и
+  линкуются в папку BATTLE_REPORTS.
+
+5.13. Защита новичков
+---------------------
+- NEWBIE_PROTECTION_1: атака запрещена, если разница очков > 30x.
+- NEWBIE_PROTECTION_2: 20x. NEWBIE_PROTECTION_3: 10x. Параметры —
+  из consts.php (NEWBIE_PROTECTION_*). Если цель неактивна > N дней —
+  правила смягчаются (как в OGame).
+
+5.14. Bashing / Ally-block
+--------------------------
+- BASHING_PERIOD, BASHING_MAX_ATTACKS — в oxsar2 были нули. В nova
+  включить по умолчанию: 6 атак за 24 часа по одной цели.
+- BLOCK_TARGET_BY_ALLY_ATTACK_USED_PERIOD: блокировка цели, по которой
+  идёт союзная атака.
+
+5.15. Режим отпуска (u-mode)
+----------------------------
+- Пока включён: ресурсы не производятся, атака невозможна, корабли
+  возвращаются мгновенно.
+- Минимальная длительность умолчанием 48 часов (как OGame).
+- Выключение: не ранее umodemin.
+
+5.16. Repair Factory / ремонт и разборка флота
+----------------------------------------------
+Источник: d:\Sources\oxsar2\www\ext\page\ExtRepair.class.php (688 строк)
+и game/EventHandler.class.php (EVENT_REPAIR=50, EVENT_DISASSEMBLE=51).
+
+- Здание UNIT_REPAIR_FACTORY (100) ремонтирует повреждённые корабли
+  (quantity.damaged > 0) и оборону на планете. На луне аналог —
+  UNIT_MOON_REPAIR_FACTORY (351).
+- Ремонт возвращает часть стоимости юнита как цену: стоимость_ремонта
+  = basic_cost * damaged_ratio * scale. Точные формулы — в ExtRepair.
+- Можно «разобрать» неповреждённый юнит на ресурсы:
+  EV_ABORT_MAX_DISASSEMBLE_PERCENT = 70%.
+- VIP-ускорение (startRepairVIP / startDisassembleVIP) — мгновенно за
+  credit.
+- События EVENT_REPAIR/EVENT_DISASSEMBLE обрабатываются event-loop'ом,
+  отмена — через EV_ABORT_MAX_REPAIR_PERCENT = 70%.
+
+5.17. Artefact Market (покупка артефактов за credit)
+----------------------------------------------------
+Источник: ext/page/ExtArtefactMarket.class.php (322 строки).
+
+- Игрок тратит credit (внутриигровая валюта) и получает артефакт.
+- Список «запакованных уровней» зданий и исследований:
+  PACKED_ARTEFACT_BUILDING_LEVELS = [2,3,4,5,6,8,10,15]
+  PACKED_ARTEFACT_RESEARCH_LEVELS = [2,3,4,5,6,8,10,15]
+- Артефакт PACKED_BUILDING/PACKED_RESEARCH при активации мгновенно
+  даёт здание/исследование указанного уровня.
+- Артефакты, запрещённые к продаже: $GLOBALS["CANT_PACK_UNITS"]
+  (EXCHANGE, GRAVI, IGN, MOON_LAB, ALIEN_TECH).
+- NS::processCreditBonusItems() — дневные акции (+% к покупке в
+  определённые даты, см. ext/global.inc.php SUPER_CREDIT_BONUS_ENABLED).
+
+5.18. Интеллект инопланетян (AlienAI)
+-------------------------------------
+Источник: game/AlienAI.class.php (1127 строк).
+
+- Инопланетные флоты, генерируемые event-loop'ом с событиями
+  EVENT_ALIEN_FLY_UNKNOWN=33, EVENT_ALIEN_HOLDING=34, EVENT_ALIEN_
+  ATTACK=35, EVENT_ALIEN_HALT=36, EVENT_ALIEN_GRAB_CREDIT=37,
+  EVENT_ALIEN_ATTACK_CUSTOM=38, EVENT_ALIEN_HOLDING_AI=80,
+  EVENT_ALIEN_CHANGE_MISSION_AI=81.
+- Поведение: AI выбирает цель (активный игрок с ресурсами), летит,
+  атакует, возвращается. Вероятности появления:
+  USER_READY_PROB=10, LOW_LEVEL_PROB=50, MID_LEVEL_PROB=20,
+  HIGH_LEVEL_PROB=5, ALIEN_PROB=1.
+- Классы кораблей инопланетян: UNIT_A_CORVETTE=200..UNIT_A_
+  TORPEDOCARIER=204.
+- Шанс уронить артефакт после боя — см. ABANDONED_USER_ARTEFACT_
+  CAPTURE_CHANCE_SCALE=2.0, ABANDONED_USER_MIN_ARTEFACT_CAPTURE_
+  CHANCE=10, MAX=90.
+
+5.19. AutoMsg — игровые события и уведомления
+----------------------------------------------
+Источник: game/AutoMsg.class.php (1228 строк).
+
+- Система системных сообщений игроку: письма в инбокс по типу
+  события (атака, прибытие флота, результат экспедиции, истечение
+  артефакта). Каждое сообщение укладывается в folder из списка
+  MSG_FOLDER_* (11 папок — см. §5.12).
+- Шаблоны сообщений с подстановкой (координаты, суммы ресурсов,
+  имена игроков).
+- В nova реализуется как domain/message + конфиг шаблонов в
+  configs/automsg.yml.
+
+5.20. Туториал (полная система)
+-------------------------------
+Источник: ext/page/ExtTutorial.class.php (61) + ext/templates/standard/
+tutorials.tpl + game-классы. Таблицы na_tutorial_states / _category.
+
+- Многошаговый туториал, включающий квест-подсказки: построй
+  metalmine, построй solar_plant, построй research_lab,
+  исследуй computer_tech, построй first ship, отправь первую
+  экспедицию.
+- Каждый шаг имеет trigger (что проверять в состоянии игрока) и
+  reward (например, немного credit).
+- Отключается в DEATHMATCH-режиме.
+
+5.21. Симулятор боя с UI
+-------------------------
+Источник: ext/page/ExtSimulator.class.php (749 строк) + templates/
+standard/simulator.tpl + www/js/simulator.js.
+
+- Отдельная страница, где игрок собирает гипотетический бой:
+  выбирает unit-ы из стока, задаёт противника, жмёт «simulate».
+- SIM_MAX_SIMS_NUMBER=5 прогонов для статистики (вероятность победы).
+- SIM_MAX_TIME=20 сек — жёсткий таймаут.
+- Работает без записи в БД (плюс история боя уходит в sim_*-таблицы
+  в oxsar2, которые мы выкинули — §18.2).
+- В nova: endpoint /api/battle-sim уже существует (каркас), добавить
+  multiple-run параметр (num_sim) и усреднённый результат.
+
+5.22. Платёжные системы (credit purchase)
+-----------------------------------------
+Источник: ext/page/ExtPayment.class.php (546) + payment.inc.php (515)
++ ext/global.inc.php (217).
+
+- Интеграции: WebMoney (Z/R/E кошельки), Robokassa, A1 (Beeline
+  Partner), 2Pay, ВКонтакте (голоса), Одноклассники (ОКи), Mail.ru
+  рубли, Google Play, Facebook.
+- Формула конвертации: credit = pow(amount / change, POW_MODIFIER)
+  * CREDITS_SCALE_MODIFIER. POW_MODIFIER=1.03, CREDITS_SCALE_
+  MODIFIER=2 (или 1 вне бонусных дней).
+- SUPER_CREDIT_BONUS_ENABLED — бонусные дни (дни рождения игры
+  08-10, 08-28, 12-10 + вычисляемые по формуле от месяца и года).
+- В nova v1 все платёжки вынесены в НЕ-ЦЕЛИ (см. 1.2); сохраняем
+  credit как валюту, но начисление — только через админа и внутренний
+  обмен до v2.
+
+5.23. Планетный создатель экспедиций (ExpedPlanetCreator)
+---------------------------------------------------------
+Источник: ext/ExpedPlanetCreator.class.php (149).
+
+- Создаёт временные планеты (is_moon=false, destroyed_at через
+  event EVENT_TEMP_PLANET_DISAPEAR=52) при успешной экспедиции
+  с результатом «найдена планета».
+- Нужно для миссии EVENT_COLONIZE_NEW_USER_PLANET=31 и артефакта
+  ARTEFACT_PLANET_TEMP_CREATOR=347, ARTEFACT_PLANET_CREATOR=320.
+
+
+================================================================================
+6. EVENT-LOOP
+================================================================================
+
+Единый источник игрового времени — таблица events.
+
+6.1. Принципы
+-------------
+- Все действия, имеющие задержку (стройка, полёт, исследование, экспирация
+  артефакта, экспедиция), создают запись в events с fire_at.
+- Воркер каждые EVENT_BATCH_PROCESS_TIME=10 сек выбирает события,
+  у которых fire_at <= now() AND state=WAIT, блокирует их FOR UPDATE SKIP
+  LOCKED, обрабатывает по типу, переводит в OK / ERROR.
+- При пользовательском запросе «дай мне текущее состояние планеты»
+  бэкенд синхронно прогоняет pending-события этого игрока до now(),
+  чтобы не было рассинхрона UI (так же как CronCommand перед запросом).
+- Обработка события должна быть идемпотентной: повторный запуск с тем же
+  event_id не должен дублировать эффект.
+
+6.2. Типы событий — как EVENT_* в oxsar2 (раздел 5.6) + новые:
+  EVENT_MOON_DESTROY_RESULT    — рекалькуляция после уничтожения
+  EVENT_LIFEFORM_TICK          — если включены Lifeforms (12.10)
+
+6.3. Ретрит (отзыв флота)
+-------------------------
+- Игрок может отозвать свой флот из полёта (EVENT_RETURN).
+- Допустимые миссии — из RETREAT_FLEET_EVENTS в consts.php.
+- RETREAT_EVENT_BLOCK_END_TIME = 5 сек — нельзя отозвать флот за
+  5 сек до прибытия.
+
+
+================================================================================
+7. API (HTTP + WS)
+================================================================================
+
+7.1. REST (ниже — выборка, полный контракт в OpenAPI)
+-----------------------------------------------------
+  POST   /api/auth/register
+  POST   /api/auth/login
+  POST   /api/auth/logout
+  POST   /api/auth/refresh
+  GET    /api/me
+  PATCH  /api/me/settings
+  GET    /api/planets
+  GET    /api/planets/{id}
+  PATCH  /api/planets/{id}              # переименование
+  POST   /api/planets/{id}/abandon
+  POST   /api/planets/{id}/buildings/{unitId}/queue
+  DELETE /api/planets/{id}/buildings/queue/{taskId}
+  POST   /api/planets/{id}/research/{unitId}/queue
+  POST   /api/planets/{id}/shipyard/queue
+  GET    /api/galaxy/{g}/{s}            # просмотр системы
+  POST   /api/fleet                     # отправка флота
+  GET    /api/fleet
+  POST   /api/fleet/{id}/recall
+  POST   /api/battle-sim                # офлайновый симулятор
+  GET    /api/messages
+  POST   /api/messages
+  GET    /api/market/lots
+  POST   /api/market/lots
+  POST   /api/alliances
+  POST   /api/alliances/{id}/applications
+  GET    /api/highscore?type=total|u|r|b|a|e
+  GET    /api/highscore/alliances
+
+7.2. WebSocket
+--------------
+  /ws  — один канал на сессию; сервер пушит:
+    - chat.message
+    - fleet.event          (flyby, arrive, return)
+    - queue.update         (здание/исследование/верфь)
+    - message.new
+    - notification         (атака, артефакт, экспедиция-результат)
+
+7.3. Контракты
+--------------
+- OpenAPI 3.1 (в repo/api/openapi.yaml). Фронт генерирует типы через
+  openapi-typescript.
+- WebSocket payload-ы — тоже типизированы (pkg/proto на go, src/api/proto
+  на ts, общий JSON Schema).
+
+
+================================================================================
+8. ФРОНТЕНД — ЭКРАНЫ
+================================================================================
+
+Для каждого React-экрана указан .tpl-эталон из legacy (см. §1.3
+и §2.2.1). При реализации экрана разработчик открывает tpl и
+воспроизводит разметку (таблицы, порядок полей, тексты-метки) на
+React. Оригинальные имена колонок и сами заголовки переводим только
+если очевидно локализованы; иначе сохраняем как есть — это часть
+«визуал от oxsar2».
+
+Минимальный набор v1 (повторяет oxsar2 layout.tpl + main.js):
+  /login                    <- login.tpl
+  /register                 <- signup.tpl / signup_sub.tpl / signup_ext.tpl
+  /overview                 <- main.tpl
+  /resources                <- resource.tpl
+  /buildings                <- constructions.tpl
+  /research                 <- research.tpl
+  /techtree                 <- techtree.tpl
+  /shipyard                 <- shipyard.tpl
+  /repair                   <- repair.tpl + disassemble.tpl
+  /fleet                    <- missions.tpl (+ missions2/3/4.tpl для
+                               пошаговых диалогов отправки флота)
+  /galaxy/:g/:s             <- galaxy.tpl
+  /empire                   <- empire.tpl (карта всех планет)
+  /alliance                 <- ally.tpl, allypage_own.tpl,
+                               ally_diplomacy.tpl, manage_ally.tpl,
+                               manage_ranks.tpl, memberlist.tpl,
+                               relation_applications.tpl,
+                               allysearch.tpl, allystats.tpl, apply.tpl
+  /messages                 <- messages.tpl, folder.tpl, writemessages.tpl,
+                               globalmail.tpl
+  /battle-report/:id        <- assault_report.tpl
+  /espionage-report/:id     <- (часть folder.tpl)
+  /battle-sim               <- ext/templates/standard/simulator.tpl
+  /market                   <- market.tpl + market_{metal,silicon,
+                               hydrogen,credit}.tpl + lot_details.tpl
+  /exchange                 <- exchange.tpl
+  /artefacts                <- artefacts.tpl + artefactinfo.tpl +
+                               artefact_row_info.tpl
+  /artefact-market          <- artefactmarket.tpl / artefactmarket2.tpl
+  /achievements             <- ext/templates/standard/achievements.tpl
+                               (+ achievement.tpl — детали)
+  /stats/battles            <- battlestats.tpl, statsheader.tpl
+  /stats/player             <- playerstats.tpl
+  /highscore                <- records.tpl, searchheader.tpl,
+                               player_search_result.tpl
+  /monitor                  <- monitor_planet.tpl (премиум-фича)
+  /officer                  <- officer.tpl
+  /stock                    <- stock.tpl / stock_new_1/2/3.tpl
+  /techtree-calc            <- adv_tech_calc.tpl
+  /unit-info/:id            <- unitinfo.tpl, buildinginfo.tpl
+  /tutorial                 <- ext/templates/standard/tutorials.tpl
+                               (+ tutorial.tpl — пошаговые подсказки)
+  /rocket-attack            <- rocket_attack.tpl
+  /stargate                 <- stargatejump.tpl
+  /referral                 <- referral.tpl
+  /preferences              <- preferences.tpl + select_style_form.tpl
+  /buddies                  <- buddylist.tpl
+  /chat                     <- chat.tpl, chatally.tpl
+  /profession               <- profession.tpl
+  /changelog                <- changelog.tpl
+  /forgot-password          <- fgpassword.tpl, set_new_pw.tpl
+
+Каркас без экрана, но обязательный для UI (портируется в v1):
+  layout.tpl                -> корневой AppShell (меню, топ-бар,
+                               ресурсные счётчики, выбор планеты).
+                               509 строк в legacy — большой, это
+                               важный фундамент.
+  menu_counters.tpl         -> боковое меню с бейджами (сообщения,
+                               флоты в пути, очередь).
+  game_counters.tpl         -> счётчики ресурсов в верхней панели
+                               (live-обновление через WS).
+  mission_control.tpl       -> виджет активных миссий в шапке.
+  error.tpl / technicalWorks.tpl -> экран «технические работы»
+                                    и общий error-boundary.
+
+Порядок реализации в nova:
+  M0/M1 — AppShell (layout), login, signup, overview, resources,
+          buildings, research, shipyard. ПОРТИРОВАНО.
+  M2    — techtree, repair (после M4.1), artefacts.
+  M3    — galaxy, fleet (missions + missions2/3/4), empire.
+  M4    — battle-report (+ ref oxsar2-java для sim'а).
+  M5    — expedition отчёты, artefact-market, rocket-attack,
+          stargate, alien-related.
+  M6    — alliance-группа (9 tpl), messages, chat, market,
+          exchange, buddies.
+  M7    — achievements, officer, preferences, tutorial, highscore,
+          stats/*, profession, monitor.
+  M8    — changelog, referral, moderate_user (админский).
+  M9    — payment-tpl'ы (если платёжки включаются).
+
+
+================================================================================
+9. БЕЗОПАСНОСТЬ
+================================================================================
+
+9.1. Учётные данные
+-------------------
+- Пароли: argon2id, никаких PASSWORD_SALT в конфиге (убрать legacy из
+  oxsar2/consts.php).
+- Сессии: JWT access + refresh cookie (httpOnly, SameSite=Lax, Secure).
+- 2FA по e-mail для восстановления доступа.
+
+9.2. IP-check (закрываем TODO из oxsar2)
+----------------------------------------
+- Флаг users.ipcheck → если включён, refresh-token привязан к сетевому
+  классу /24. В oxsar2 было «TODO: Make ipcheck!» в WebUser.php.
+
+9.3. Анти-чит
+-------------
+- Все гейм-эффекты применяются ТОЛЬКО на сервере. Клиент показывает
+  предсказания, но каждая операция валидируется.
+- Рейт-лимит команд по user_id через Redis.
+- Проверка галактических координат по constraint'ам, не доверять UI.
+- Детект ферм (две учётки с одного IP + транспорт между ними) —
+  репорт в админку.
+
+9.4. OWASP
+----------
+- Защита от SQLi обеспечивается sqlc.
+- CSRF: double-submit cookie для не-API форм.
+- XSS: React экранирует по умолчанию; письма игроков — санитайзить
+  DOMPurify'ом перед рендером (особенно важно, в oxsar2 было сыровато).
+
+9.5. Удаление файлов
+--------------------
+- rmFile() в oxsar2 использовал preg_match для «защиты». В nova: файловые
+  операции только через allow-list абсолютных путей в конфиге.
+
+
+================================================================================
+10. КОНФИГУРАЦИЯ
+================================================================================
+
+10.1. Источники
+---------------
+- ENV-переменные (12-factor): DB_URL, REDIS_URL, JWT_SECRET, SMTP_*,
+  OAUTH_GOOGLE_*, GAMESPEED, UNIVERSE_NAME.
+- Справочники (здания, корабли, исследования, артефакты, требования) —
+  файлы в configs/:
+    configs/buildings.yml
+    configs/research.yml
+    configs/ships.yml
+    configs/defense.yml
+    configs/artefacts.yml
+    configs/achievements.yml
+    configs/rapidfire.yml
+  Загружаются при старте, хранятся immutable в памяти. Обновление —
+  передеплой.
+- Динамические настройки (баны, цена кредита, режим DM) — таблица
+  config (как oxsar2 na_config) с админкой.
+
+10.2. Режимы вселенной
+----------------------
+- UNIVERSE_NAME, GAMESPEED, DEATHMATCH. DEATHMATCH=true снимает защиту
+  новичков, отключает туториал, отключает достижения (как в oxsar2).
+
+10.3. Локализация (i18n)
+------------------------
+
+Источник истины: d:\Sources\oxsar2\sql\table_dump\na_phrases.sql.
+
+Факты из legacy:
+  - 1489 русских строк (languageid=1) в 24 группах:
+    global, error, info, mission, buildings, Resource, UnitInfo,
+    UserAgreement, Registration, Statistics, и т.д.
+  - Формат ключа: UPPERCASE_SNAKE_CASE (ACCOUNT_WILL_BE_DELETED,
+    ALLIANCE_ATTACK, PLANET_UNDER_ATTACK, UNKOWN_MISSION, ...).
+  - Ключ + группа уникальны в рамках языка.
+  - Контент — строка, допустимо HTML (<b>, <br>) и %s/%d-
+    подстановки.
+
+Реализация в nova:
+
+  configs/i18n/ru.yml          -- сгенерировано из na_phrases.sql
+                                   конвертером import-phrases,
+                                   разбито по группам на подразделы.
+  configs/i18n/en.yml          -- перевод на английский, переведено
+                                   вручную (в legacy английского не
+                                   было — это gap, который мы
+                                   закрываем).
+
+  Формат YAML:
+    global:
+      ACCOUNT_WILL_BE_DELETED: "Аккаунт будет удалён!"
+      ALLIANCE: "Альянс"
+      ATTACK: "Атака"
+    mission:
+      COLONIZE_FAILED: "Колонизация не удалась."
+    error:
+      PLANET_UNDER_ATTACK: "Планета атакована, действие невозможно."
+    ...
+
+  Backend:
+    internal/i18n/
+      loader.go      -- загружает ru.yml + en.yml в immutable map
+      lookup.go      -- Tr(lang, group, key, args...) -> string
+                        Если ключ отсутствует в запрошенном языке,
+                        падает в ru (fallback). Если и в ru нет —
+                        возвращает "[group.key]" как маркер.
+
+  Использование:
+    - AutoMsg (§5.19) рендерит шаблоны, беря текст из i18n:
+        i18n.Tr(user.Lang, "mission", "ATTACK_REPORT_SUBJECT", ...)
+    - HTTP-ошибки наружу — по ключу error.*, а не по строке.
+    - Fronтенд: получает язык пользователя + fetch /api/i18n/{lang}
+      один раз на сессию, кеширует.
+
+Frontend i18n:
+  - src/i18n/dicts/ru.ts, en.ts — копия YAML, сгенерированная
+    скриптом gen:i18n (читает configs/i18n/*.yml).
+  - Хук useTranslation(group) возвращает t(key, args) с
+    TypeScript-автодополнением благодаря codegen.
+
+Правила:
+  - Не переизобретать ключи. Если в legacy есть UNKOWN_MISSION
+    (да, там опечатка), добавляем как UNKOWN_MISSION —
+    НЕ исправляем на UNKNOWN. Это критично для совместимости
+    с сохранёнными боевыми отчётами и документацией сообщества.
+  - Новые ключи — в новых группах или с префиксом NOVA_
+    (NOVA_REPAIR_STARTED), чтобы в diff были видны добавления.
+  - Перевод на английский — обязательная часть PR, даже если
+    черновой. Ревизор-native-speaker правит отдельным PR.
+
+
+================================================================================
+11. АДМИН-ПАНЕЛЬ
+================================================================================
+
+- Встроенный web-admin на том же фронте, ролевая модель через users.role
+  (SUPERADMIN/ADMIN/SUPPORT).
+- Функции: просмотр игроков, бан/разбан, выдача кредитов, выдача
+  артефактов, запуск rebalance-скрипта, просмотр очереди events, отмена
+  события, отправка глобальных сообщений.
+- Инструменты ресинка (cron-win32 в oxsar2): как CLI-утилиты
+  cmd/tools/*: clean_sessions, resync_artefacts, rebuild_galaxy_free,
+  mark_inactive (выставляет users.inactive_since — НЕ удаляет
+  игроков, §19.4).
+  ВНИМАНИЕ: legacy-утилита RemoveInactiveUser из oxsar2/scripts/
+  cron-win32/ В NOVA НЕ ПОРТИРУЕТСЯ. Пользователей не удаляем
+  никогда, см. §19.4.
+
+
+================================================================================
+12. ДОРАБОТКИ ИЗ OGAME (ЧЕГО НЕТ В OXSAR2)
+================================================================================
+
+В этом разделе — механики, которых в oxsar2 либо нет, либо реализованы
+частично. Все они обязательны к реализации в oxsar-nova.
+
+12.1. Маскировка и баллистика
+-----------------------------
+Технологии UNIT_BALLISTICS_TECH (103) и UNIT_MASKING_TECH (104) уже
+реализованы в production java-движке d:\Sources\oxsar2-java
+(см. Participant.java: ballisticsLevel, maskingLevel и их применение
+в Assault.java). «TODO: apply masking & ballistics» стоит только в
+прототипе oxsar2/BattleComponent.php, который мы всё равно не берём
+за основу (см. 5.7).
+
+Задача для oxsar-nova — не «придумать формулу», а портировать
+готовый Java-код в Go без изменения семантики. Все числовые
+коэффициенты, cap'ы и целевые классы юнитов (для кого работает
+masking) берутся из Assault.java/Participant.java. Никаких новых
+формул не вводим — паритет с Java-движком.
+
+12.2. Формула появления луны
+----------------------------
+OGame: P = min(debris_metal + debris_silicon, 1_000_000) / 1_000_000 * 20%.
+В oxsar2 формула упрощена. Сделать по OGame, результат лога — в
+moon_creation_stats, событие EVENT_MOON_DESTRUCTION_RESULT (не путать
+с уничтожением).
+
+12.3. Уничтожение луны (RIP-миссия)
+-----------------------------------
+- Только на ударах DEATH_STAR (UNIT_DEATH_STAR=42).
+- Вероятности успеха и гибели звезды смерти — по формулам OGame:
+    chance_destroy = (100 - sqrt(moon_diameter)) * sqrt(rip_count)
+    chance_rip_die = sqrt(moon_diameter) / 2
+- Событие EVENT_ATTACK_DESTROY_MOON уже описано в consts.php; довести
+  логику до паритета.
+
+12.4. Межпланетные ракеты
+-------------------------
+- UNIT_INTERPLANETARY_ROCKET (52). Атакуют только оборонительные юниты
+  цели.
+- Дальность: impulse_engine_level * 5 - 15 систем (формула OGame).
+- Перехват: UNIT_INTERCEPTOR_ROCKET (51) сбивает по 1:1.
+- Миссия — не флотовая, отдельный event EVENT_ROCKET_ATTACK. В oxsar2
+  описана в consts.php, но код неполный. Реализовать до конца.
+
+12.5. Astrophysics / параллельные исследования
+----------------------------------------------
+- Astrophysics в OGame даёт +1 слот колонизации на каждые два уровня
+  и до 3 параллельных исследований (через интергалактическую сеть).
+- В oxsar2 аналога astrophysics нет, только expo_tech.
+- Добавить новое исследование ASTRO_TECH (новый unit_id, например 112)
+  с такой же механикой.
+
+12.6. Интергалактическая исследовательская сеть
+-----------------------------------------------
+- Research network в OGame позволяет суммировать лаборатории N планет
+  (N = network_level). В oxsar2 частично присутствует через
+  research_factor, но сети нет.
+- Добавить: research_network_level на user (новый технологический
+  unit, условно 113). На расчёте времени исследования суммируется
+  min(N, network_level) планет с research_lab >= level_of_research.
+
+12.7. Полный каталог достижений
+-------------------------------
+- В oxsar2 есть achievements, но ACHIEVEMENTS_ENABLED=false в DM и
+  частично заполнен только newbie-набор.
+- Список обязательных achievements (configs/achievements.yml):
+    NEWBIE_END, FIRST_COLONY, FIRST_MOON, FIRST_ATTACK_WIN,
+    DESTROYED_FLEETS_x (tiers), BUILT_SHIPS_x, RESEARCH_x,
+    POINTS_x, EXPEDITIONS_x, MOON_DESTROYED, DEATH_STAR_BUILT.
+
+12.8. Офицеры
+-------------
+- В oxsar2 уже есть таблица na_officer, но без контента.
+- Офицеры OGame (дают бонусы за credit, действуют 7/30/90 дней):
+    Commander             — очередь строительства, overview-плюсы
+    Admiral               — +1 слот флота
+    Engineer              — защита энергии 10%, защита обломков 25%
+    Geologist             — +10% к добыче
+    Technocrat            — -25% к шпионской видимости, +1 исследование
+- Реализовать как таблицу officers_user(user_id, officer_id, expire_at).
+
+12.9. Ежедневные награды, достижения входа, событийные турниры
+--------------------------------------------------------------
+- В oxsar2 есть EVENT_TOURNAMENT_SCHEDULE, но логика неполная.
+- Добавить daily-login-reward, простую ротацию еженедельных челленджей
+  (10 сбитых кораблей, 3 успешные экспедиции). Награды — credit и
+  мелкие артефакты.
+
+12.10. Lifeforms (опционально, флаг конфигурации)
+-------------------------------------------------
+- Современный OGame добавил «Lifeforms» (новые здания/бонусы на уровне
+  цивилизации).
+- В v1 oxsar-nova включить заглушку: структура данных + отключённый
+  флаг config.lifeforms_enabled, чтобы можно было включить в v2 без
+  миграций.
+
+12.11. Фронтовые улучшения
+--------------------------
+- Drag&drop-перемещение юнитов в окне отправки флота.
+- Массовая отправка (shortcut 10%/25%/50%/max) — в oxsar2 был частично.
+- Боевой симулятор с импортом/экспортом пресетов (JSON) и ссылкой
+  share-by-url — отсутствует в oxsar2.
+- Клиентская локализация (ru/en) с fallback и hot-reload в dev.
+
+12.12. Анти-многоаккаунт
+------------------------
+- Простой детектор ферм: если между A и B было N транспортов, общий
+  IP/отпечаток браузера, игрок B «снабжает» A ресурсами — отчёт в
+  admin-панель.
+- В oxsar2 такого не было.
+
+
+================================================================================
+13. НАГРУЗКА И МАСШТАБИРОВАНИЕ
+================================================================================
+
+- Ожидаемая нагрузка: 5 000 активных пользователей одновременно,
+  50 000 зарегистрированных, 500 RPS пиково.
+- Узкое место oxsar2 — CronCommand.php (40 КБ PHP, single-threaded).
+  В nova event-loop шардируется по user_id (N воркеров, каждый
+  обрабатывает свой шард).
+- PostgreSQL — одна primary + read replica для highscore и галактики.
+- Redis — кеш галактики (invalidate по событию колонизации/
+  уничтожения), сессии, rate-limit, pub/sub WebSocket-фанаута.
+- Профилирование через pprof, метрики — Prometheus, панели — Grafana.
+
+
+================================================================================
+14. ТЕСТИРОВАНИЕ
+================================================================================
+
+14.1. Unit
+----------
+- Все формулы (производство, стоимость, время, уравнения боя) покрыть
+  table-driven-тестами.
+
+14.2. Бой — property-based / fuzz
+---------------------------------
+- Пакет battle: fuzzing инвариантов (quantity не уходит в отрицательное;
+  симметрия при равенстве сторон и seed; репродуцируемость по seed).
+
+14.3. Integration
+-----------------
+- dockertest: реальный Postgres и Redis.
+- Сценарии: регистрация → первая планета → шахта → первый флот → бой.
+
+14.4. Сравнительный тест с эталонным Java-движком
+-------------------------------------------------
+- Основной способ верификации боя: параллельный прогон одинакового
+  входа через d:\Sources\oxsar2-java\assault\dist\oxsar2-java.jar
+  и через новый Go-движок. Сравнение по:
+    число раундов, потери по каждому unit_id, обломки, luminance/
+    loot, moon_probability, seed-репродьюсибельность.
+  Допустимое расхождение: 0 по юнитам. Допустимое расхождение по
+  формуле луны и новым OGame-механикам — только там, где это явно
+  указано в разделе 12.
+- Фикстуры входов готовятся как JSON (флоты, технологии, артефакты,
+  оборона, признак ismoon, seed) и коммитятся в testdata/battle/.
+- Java-jar вызывается из Go-теста как внешний процесс (exec) с
+  stdin-JSON и stdout-JSON; адаптер к Database.java не нужен.
+
+14.5. Frontend
+--------------
+- Компонентные: Vitest + Testing Library.
+- E2E: Playwright. Критические пути: login, build, send fleet, read msg.
+
+
+================================================================================
+15. ЛОГИРОВАНИЕ, МОНИТОРИНГ, АУДИТ
+================================================================================
+
+- Все изменения ресурсов — в res_log с reason-кодом (BUILD, RESEARCH,
+  FLEET_COST, LOOT, DEBRIS, TRANSFER, MARKET, ADMIN_GIFT, REFUND).
+- Все действия админа — в audit_log.
+- SLO: P99 API < 250 мс, event-loop лаг < 30 сек.
+
+
+================================================================================
+16. ЭТАПЫ РАЗРАБОТКИ
+================================================================================
+
+M0. Каркас: go server, docker-compose, миграции, auth.
+M0.1. Конвертер table_dump → YAML (cmd/tools/import-datasheets):
+      парсит sql/table_dump/na_{construction,ship_datasheet,
+      artefact_datasheet,achievement_datasheet,requirements,
+      tutorial_states,tutorial_states_category}.sql, генерит
+      configs/{buildings,ships,defense,artefacts,achievements,
+      requirements,tutorial}.yml. Один прогон — один полный набор
+      справочников вместо ручного YAML. Идемпотентно: повторный
+      запуск даёт тот же выход, если легаси не изменился.
+M0.2. Конвертер na_phrases → i18n YAML (cmd/tools/import-phrases):
+      парсит sql/table_dump/na_phrases.sql → configs/i18n/ru.yml
+      по группам (§10.3). Стартовая заготовка configs/i18n/en.yml
+      с пустыми значениями — ожидает перевода.
+M0.3. Пакет pkg/formula (§5.2.1): parser + eval + tests для DSL
+      {level}/{tech=N}/{temp}/{basic} + whitelist функций floor,
+      ceil, round, pow, min, max, sqrt. Fuzz-тесты на вход.
+M1. Планеты, ресурсы, здания, очередь строительства, тики экономики.
+    Экономика использует pkg/formula, читая строки из YAML
+    (сгенерированных M0.1). Проверка: пара выбранных зданий (METALMINE,
+    HYDROGEN_LAB с температурой) даёт тот же output, что оригинальный
+    PHP-eval с теми же {level}, {tech}, {temp}.
+M2. Исследования, верфь, оборона, requirements-валидатор.
+M3. Галактика, флот, миссии TRANSPORT/POSITION/HALT/ATTACK/SPY/COLONIZE.
+M4. Битвы: порт боя на Go — приоритет источников:
+    (1) game/Assault.class.php + game/Participant.class.php (прод-
+        поведение, 974+636 строк)
+    (2) d:\Sources\oxsar2-java (симулятор и эталон, 4500 строк)
+    rapidfire-таблицы, masking, ballistics, обломки, луны,
+    боевой отчёт, верификация паритета с обоими.
+M4.1. Repair Factory и разборка флота (§5.16).
+M4.2. AutoMsg-шаблоны для боевых отчётов (§5.19).
+M5. Экспедиции (+ExpedPlanetCreator, §5.23), ракеты, звёздные врата,
+    артефакты.
+M5.0.1. Артефакты: apply/revert с материализованными факторами
+    (§5.10.1). Портирование Artefact::activateArtefact и
+    deactivateArtefact из game/Artefact.class.php как чистых функций
+    над полями users/planets.
+M5.0.2. Cron resync-artefacts — периодический пересчёт factor-полей
+    (эквивалент oxsar2 CronCommand::actionResyncArtefacts +
+    scripts/cron-win32/ResyncArtefacts.bat).
+M5.1. Artefact Market (§5.17) — UI покупки за credit.
+M5.2. Alien AI (§5.18) — EVENT_ALIEN_* полный набор.
+M6. Альянсы, чат, сообщения, биржа.
+M7. Офицеры, достижения, ежедневные награды, туториал (§5.20).
+M7.1. Simulator UI (§5.21) — multi-run, общий движок с M4.
+M8. Админка, моды вселенной, тесты нагрузки, релиз-ready.
+M9 (v2). Payment-интеграции (§5.22) — вне scope v1, архитектура
+    заранее готова.
+
+Каждый milestone — релизный тэг, CI green, не менее 70% покрытия
+изменённого кода тестами.
+
+ВАЖНО: ранее (версии ТЗ 1.0–1.2) scope-оценка опиралась на ~5k строк
+PHP из new_game/. После обнаружения game/ + ext/ (см. §1.3)
+реальный объём legacy-логики оценивается в ~30k строк PHP + 4.5k
+строк Java. Сроки милестоунов M4–M7 пересмотрены в большую
+сторону, M4 теперь имеет M4.1/M4.2, M5 — M5.1/M5.2, M7 — M7.1.
+
+
+================================================================================
+17. СТАНДАРТЫ РАЗРАБОТКИ
+================================================================================
+
+Раздел фиксирует обязательные практики. Цель — чтобы oxsar-nova с
+первого коммита был проектом, в который легко зайти новому разработчику
+и легко поддерживать через 5 лет. Legacy-анти-практики oxsar2
+(прямые $_POST, отсутствие миграций, отсутствие тестов, нет CI,
+нет CLAUDE.md) не допускаются.
+
+17.1. Репозиторий и ветвление
+-----------------------------
+- Монорепо: /backend (Go), /frontend (TS), /configs, /migrations,
+  /testdata, /docs, /deploy. Один репозиторий, общий CI.
+- Trunk-based development: main всегда deployable. Фичи — короткие
+  ветки feat/<slug>, fix/<slug>, chore/<slug>. Rebase, не merge
+  commits. Длительные фичи — под feature-flag в config.
+- Conventional Commits (feat:, fix:, chore:, refactor:, test:,
+  docs:, perf:, build:, ci:). Обязательно для changelog-генерации.
+- Semantic Versioning для API и релизных тэгов.
+- Squash-merge в main. История PR сохраняется в описании.
+- Защищённый main: запрещён прямой push, обязателен PR + 1 review +
+  зелёный CI.
+- Все PR требуют заполненного шаблона: что/зачем/как тестировалось/
+  риски.
+- Changelog генерируется автоматически из commit-сообщений (release
+  please или аналог).
+
+17.2. Go backend — стандарты
+----------------------------
+- Target: Go 1.23+, один go.mod в /backend.
+- Форматирование: gofmt + goimports (strict). CI падает при
+  расхождении.
+- Линтеры: golangci-lint с набором: errcheck, govet, staticcheck,
+  revive, gocritic, gosec, bodyclose, contextcheck, nilerr,
+  prealloc, errorlint, misspell. Конфиг в .golangci.yml.
+- Запрещено: init() с побочными эффектами, глобальные изменяемые
+  переменные (кроме конфига, загруженного один раз на старте),
+  panic в прод-коде (кроме main.go bootstrap), interface{}/any в
+  публичных API без явной причины.
+- Обработка ошибок: errors.Is / errors.As, обёртка через
+  fmt.Errorf("context: %w", err). Никаких голых strings-ошибок
+  между слоями. Domain-ошибки — typed (например, battle.ErrInvalid
+  Input).
+- Контекст: ctx первым параметром у любого IO/долгого вызова.
+  Передаётся по цепочке. Запрещён context.Background() в бизнес-
+  коде (только main.go и воркеры).
+- Структурное логирование: log/slog с полями user_id, planet_id,
+  event_id, trace_id. Никаких log.Println/fmt.Println в прод-коде.
+- Dependency injection: руками через конструкторы (New*). Никаких
+  DI-контейнеров. Никаких service locator'ов.
+- БД-доступ: только через sqlc-сгенерированные методы. Сырой SQL
+  допустим только для сложных агрегатов и тоже лежит в /queries/.
+  Транзакции — через явный repo.InTx(ctx, fn). Запрещён доступ из
+  handler в БД минуя service-слой.
+- Конкурентность: errgroup + context для фанаута, мьютексы только
+  в пакетах с явным state (кеш), в остальном — каналы и immutable
+  данные. go-routine-ы всегда имеют понятный конец жизни.
+- Тайм-ауты: любой HTTP-клиент и любой SQL-вызов имеют deadline.
+- Graceful shutdown: SIGTERM -> прекратить приём запросов, дождаться
+  in-flight, остановить воркеры, закрыть пул БД. Таймаут 30 сек.
+- Публичные пакеты имеют godoc для всех экспортируемых сущностей.
+  Внутренние — там, где смысл неочевиден.
+
+17.3. TypeScript frontend — стандарты
+-------------------------------------
+- tsconfig: strict, noUncheckedIndexedAccess, noImplicitOverride,
+  exactOptionalPropertyTypes.
+- ESLint + typescript-eslint (recommended-type-checked),
+  eslint-plugin-react, eslint-plugin-react-hooks,
+  eslint-plugin-import, eslint-plugin-jsx-a11y.
+- Prettier — единственный форматтер. Конфликт с ESLint решён через
+  eslint-config-prettier.
+- Запрещено: any, @ts-ignore (только @ts-expect-error с описанием),
+  default exports (кроме роут-модулей), console.log в прод-коде.
+- API-слой генерируется из OpenAPI (openapi-typescript). Ручные
+  типы DTO запрещены.
+- Компоненты: функциональные, без classComponent. Код-сплиттинг
+  по роутам. Suspense + ErrorBoundary на каждом маршруте.
+- State: server state — TanStack Query, UI state — Zustand.
+  Смешивать запрещено.
+- Accessibility: jsx-a11y в CI, все интерактивные элементы имеют
+  role/aria-label/keyboard.
+- Формы: react-hook-form + zod. Валидация на клиенте ИДЕНТИЧНА
+  серверной (zod-схема генерируется из того же источника, что и
+  go-валидация, или пишется парой в одном PR).
+
+17.4. Контракты API
+-------------------
+- OpenAPI 3.1 — источник истины для REST. В CI проверяется, что
+  handler-ы соответствуют спецификации (oapi-codegen или equiv.).
+- JSON Schema — источник истины для WebSocket-событий. Из него
+  кодогенерация и в Go (pkg/proto), и в TS (src/api/proto).
+- Breaking changes в API — только через версионирование (/v1, /v2).
+  Deprecated-эндпоинты помечаются заголовком и удаляются не раньше,
+  чем через 1 major-релиз.
+- ID и временные метки в API — строки (uuid, RFC3339). Никаких
+  числовых time_t и autoincrement int в публичных контрактах.
+
+17.5. База данных
+-----------------
+- Миграции: goose, только append-only, down-миграции обязательны
+  для первых 30 дней после релиза.
+- Именование: snake_case, таблицы — во множественном числе
+  (users, planets). Никаких префиксов na_ (как в oxsar2).
+- PK: bigint generated always as identity или uuid v7.
+- Индексы — с префиксом ix_<table>_<cols>. Unique — ux_.
+- Все денежные/ресурсные поля — numeric(20, 0) для целых,
+  numeric(20, 4) для дробей. Никаких float для ресурсов (в oxsar2
+  было double — копить 1e15 металла уже ломало точность).
+- Timestamptz, не timestamp. TIME ZONE — UTC везде.
+- Soft-delete через deleted_at для пользовательского контента
+  (сообщения, заметки), hard-delete для машинных таблиц (events
+  после обработки).
+- Партиционирование по времени для growing-таблиц: res_log,
+  assaults, events_processed, chat_messages.
+
+17.6. Тестирование
+------------------
+- Coverage threshold: backend ≥ 70% изменённых строк, критичные
+  пакеты (battle, economy, event) ≥ 85%. CI блокирует merge при
+  деградации.
+- Пирамида: unit (быстрые, без IO) > integration (dockertest) >
+  e2e (Playwright). Обратная пирамида (много e2e, мало unit) —
+  запрещена.
+- Детерминизм: все тесты должны проходить локально и в CI с
+  одинаковым результатом. Flaky-тесты квотируются — retry 3 раза,
+  если не стабилизировался за сутки, карантин + тикет.
+- Тесты боя — property-based (gopter/rapid) + golden files
+  (testdata/battle/*.json).
+- Нет shared mutable state между тестами. t.Parallel() по умолчанию.
+- Seed в тестах боя фиксированный для репродьюса.
+
+17.7. Наблюдаемость
+-------------------
+- OpenTelemetry traces на все HTTP/WS-запросы и обработку событий.
+- Метрики Prometheus: RED (Rate, Errors, Duration) для HTTP,
+  USE (Utilization, Saturation, Errors) для БД-пула и воркеров,
+  продуктовые (новые регистрации/час, активных флотов, время
+  между fire_at и processed_at).
+- Логи: JSON, ELK-совместимые, с trace_id. PII (email, IP) —
+  либо хешируется, либо попадает только в отдельный stream
+  с коротким retention.
+- Alerting (Alertmanager): SLO-burn, event-loop лаг > 30 сек,
+  ошибка 5xx > 1%, очередь задач растёт быстрее, чем обрабатывается.
+- Dashboards в Grafana: по одному на домен (Auth, Planets, Fleet,
+  Battle, Alliance). Разворачиваются как код (Jsonnet/Grafonnet).
+
+17.8. CI/CD
+-----------
+- GitHub Actions. Джобы: lint, test, build, docker, migration-
+  check, openapi-breaking-check, frontend-bundle-size.
+- Все зависимости пиннутся: go.mod с sums, package-lock.json в
+  git, Docker base-images по дайджесту (не :latest).
+- Security-сканы в CI: gosec, npm audit, trivy для образов,
+  gitleaks для секретов. Critical-findings блокируют merge.
+- SBOM (Syft) генерируется на каждый релиз.
+- Образы подписываются cosign. Прод-деплой принимает только
+  подписанные образы.
+- Деплой: blue/green через feature-флаги или canary (5% → 50% →
+  100%). Автороллбек по SLO-burn.
+
+17.9. Документация и AI-ready кодовая база
+------------------------------------------
+- CLAUDE.md в корне репозитория: как запустить, где что лежит,
+  правила стиля. В oxsar2 отсутствовал — в nova это обязательное
+  артефакт первого коммита.
+- /docs: ADR (Architecture Decision Records) для всех нетривиальных
+  решений. Формат — MADR.
+- README.md на каждом верхнем пакете Go и каждой feature-папке
+  фронта.
+- Комментарии в коде — только про «почему», никогда про «что»
+  (это задача нейминга).
+
+17.10. Безопасность как процесс
+-------------------------------
+- Threat model на фичу с внешним поверхностным слоем (регистрация,
+  OAuth, рынок, ракеты) документируется как ADR.
+- Зависимости обновляются через Dependabot/Renovate еженедельно.
+  Критические CVE — out-of-band релиз в течение 48 часов.
+- Все секреты — через secret manager окружения. В репо — только
+  .env.example. pre-commit hook gitleaks.
+- Rate-limit на все публичные эндпоинты (Redis token bucket).
+- Аудит-лог: любое административное действие + любое изменение
+  прав, балансов, артефактов — в audit_log с before/after JSONB.
+
+17.11. Производительность
+-------------------------
+- Бюджеты: P99 /api/* < 250 мс, событие в event-loop от fire_at
+  до processed_at < 10 сек при нормальной нагрузке, < 60 сек при
+  пиковой.
+- N+1 к БД — баг. В PR с новым SQL обязателен pg_stat или
+  комментарий про план.
+- Пагинация: только keyset (seek method), никаких OFFSET на
+  больших таблицах.
+- Горячие чтения (галактика, highscore) — через Redis-кеш с явной
+  инвалидацией по событию. TTL — как fallback, не как основной
+  механизм.
+
+17.12. Код-ревью
+----------------
+- Минимум один approve, для изменений в battle/economy/security —
+  два, один из которых — maintainer соответствующего домена.
+- Review checklist (в PR-шаблоне): тесты, миграции вверх и вниз,
+  обратная совместимость API, обновлена ли документация,
+  покрытие, нет ли лишней абстракции.
+- Размер PR: целевой ≤ 400 строк diff. Большие фичи — серия PR
+  за флагом.
+
+
+================================================================================
+18. БЕЗОПАСНЫЕ УЛУЧШЕНИЯ МЕХАНИКИ, ПРИНЯТЫЕ СРАЗУ
+================================================================================
+
+Раздел перечисляет изменения относительно oxsar2, которые признаны
+безопасными (не ломают игровой баланс, не требуют отдельного
+обсуждения у геймдизайна) и делаются сразу в v1. Каждое изменение —
+с обоснованием «почему безопасно».
+
+18.1. Численные типы ресурсов
+-----------------------------
+В oxsar2 metal/silicon/hydrogen хранились как MySQL double. На
+длинных горизонтах (триллионы ресурсов) появлялась потеря точности.
+В nova: numeric(20,4) в Postgres, int64 в Go на уровне бизнес-логики.
+  Почему безопасно: уровень точности выше, чем был; баланс
+  не трогаем.
+
+18.2. Отказ от Sim-таблиц
+-------------------------
+В oxsar2 была параллельная схема sim_* и дубли моделей Sim*_YII.php
+для симулятора боя. В nova симулятор — чистая функция.
+  Почему безопасно: это реорганизация кода, не поведения.
+  Результаты прогона Sim и Real должны совпадать — в oxsar2 этого
+  гарантии не было, мы эту гарантию вводим.
+
+18.3. Идемпотентность event-loop
+--------------------------------
+В oxsar2 CronCommand при падении в середине обработки мог оставить
+полусостояние. В nova каждый обработчик события — идемпотентный,
+событие помечается processed только при коммите транзакции.
+  Почему безопасно: устраняет баги, эффект для игрока — меньше
+  "застрявших" очередей и дубликатов при ретраях.
+
+18.4. Детерминированный бой по seed
+-----------------------------------
+В Java-движке используется системный Random. В nova seed пишется в
+отчёт боя и лог. По seed + входу — полный репродьюс.
+  Почему безопасно: меняется инфраструктура расчёта, не распределение
+  вероятностей. RNG-алгоритм переносим так, чтобы статистически
+  совпадал с Java-оригиналом (см. 14.4).
+
+18.5. Отмена очереди за 15 секунд
+---------------------------------
+В oxsar2 EV_ABORT_SAVE_TIME = 15 сек — корректная, безопасная
+механика. Сохраняем без изменений, но явно выносим в config и
+покрываем тестом.
+  Почему безопасно: ровно то же поведение, только верифицировано.
+
+18.6. Bashing / Ally-block — включить по умолчанию
+--------------------------------------------------
+В oxsar2 BASHING_PERIOD = 0 и BASHING_MAX_ATTACKS = 0 — фактически
+выключено, что приводило к стейкингу одной цели. В nova: включаем
+по умолчанию 6 атак/24 часа на цель, BLOCK_TARGET_BY_ALLY_ATTACK_
+USED_PERIOD = 10 минут.
+  Почему безопасно: это отраслевой дефолт OGame, защищает слабых
+  игроков. Значения — в конфиге, админ вселенной может вернуть 0.
+
+18.7. Защита новичков уточнена
+------------------------------
+Оставляем пороги 3000/10000/1000000 очков. Добавляем OGame-правило:
+если жертва неактивна более 7 дней, верхний порог не применяется
+(чтобы «спящие» не были безнаказанной кормушкой-невидимкой).
+  Почему безопасно: это OGame-стандарт; защищает активных новичков,
+  не ломает экономику ветеранов.
+
+18.8. Режим отпуска — минимум 48 часов
+--------------------------------------
+В oxsar2 VACATION_DISABLE_TIME был выражен в секундах без явного
+нижнего порога. В nova — минимум 48 часов включённого umode
+(как OGame), досрочно выйти нельзя.
+  Почему безопасно: стандарт OGame, защищает от абуза umode как
+  щита во время атаки.
+
+18.9. Правильное округление ресурсов
+------------------------------------
+В oxsar2 встречались floor/ceil без единого правила (в одном месте
+шахта даёт целые числа, в другом дробные). В nova: добыча —
+аккумулируется в fixed-point, списание стоимостей — ceil в пользу
+системы, начисление лута — floor в пользу игрока. Документировано
+единообразно.
+  Почему безопасно: устраняет копеечные расхождения, общая
+  экономика не сдвигается.
+
+18.10. res_log: обязательный причинно-следственный код
+------------------------------------------------------
+В oxsar2 na_res_log писался не везде. В nova: любое изменение
+ресурса проходит через централизованный RecordDelta(reason, ...).
+Отсутствие reason — ошибка времени компиляции (enum).
+  Почему безопасно: улучшает наблюдаемость и борьбу с жалобами
+  «куда делись ресурсы». Баланс не трогаем.
+
+18.11. Единый справочник юнитов (unit registry)
+-----------------------------------------------
+В oxsar2 ID юнитов хардкодились через define() в consts.php и
+дублировались в Java-движке и JS. В nova: единый YAML-реестр,
+из которого генерируются Go-константы, TS-типы и seed базы.
+  Почему безопасно: ID сохраняются теми же, меняется только
+  способ их объявления. Исключает рассинхрон между слоями.
+
+18.12. Rapidfire-таблицы — декларативные
+----------------------------------------
+В oxsar2 rapidfire собирался SQL-запросами к na_rapidfire. В nova —
+YAML (configs/rapidfire.yml), загруженный в immutable-структуру
+на старте, с проверкой консистентности (нет rapidfire по
+несуществующему юниту).
+  Почему безопасно: значения берутся один-в-один из Java-движка;
+  меняется только механизм загрузки.
+
+18.13. Явный таймзон
+--------------------
+В oxsar2 TIMEZONE = "Europe/Moscow" влиял на cron. В nova: все
+внутренние расчёты и хранение — UTC. Пользовательский таймзон —
+только для отображения в UI.
+  Почему безопасно: техника, невидимая игроку; устраняет баги с
+  переходом на летнее время.
+
+18.14. Отказ от хардкод-админов в конфиге
+-----------------------------------------
+В oxsar2 $GLOBALS["ADMIN_USERS"] = [1, 3] — хардкод userid в PHP.
+В nova: роль (role=ADMIN) в таблице users + admin-панель для
+назначения.
+  Почему безопасно: функционально эквивалентно, безопаснее и
+  управляемо без деплоя.
+
+18.15. Пароли: argon2id, отказ от единого соли
+----------------------------------------------
+В oxsar2 PASSWORD_SALT — глобальная строка в консте. В nova: per-
+password соль в argon2id, без глобального секрета. Старые хеши
+не мигрируются (новая БД).
+  Почему безопасно: криптографически сильнее, без потери
+  совместимости (новый универс).
+
+18.16. IP-check действительно работает
+--------------------------------------
+В oxsar2 «TODO: Make ipcheck!» — функция не реализована. В nova
+включена по умолчанию на уровне /24 с явным opt-out в настройках.
+  Почему безопасно: снижает шанс угона сессии; у легитимных
+  игроков с мобильным интернетом ложные срабатывания
+  смягчаются privacy-настройкой.
+
+18.17. Чат — модерируемый, ссылки проверяются
+---------------------------------------------
+В oxsar2 чат принимал HTML с минимальной фильтрацией. В nova:
+текст + разрешённая подмножество markdown, ссылки
+санитайзятся DOMPurify на фронте и валидируются на беке.
+  Почему безопасно: закрывает XSS-вектор, функция чата
+  эквивалентна.
+
+18.18. Формула луны — как в OGame
+---------------------------------
+См. 12.2. Приводим к стандартной формуле сразу, не переносим
+упрощённую из oxsar2.
+  Почему безопасно: это общепринятый OGame-стандарт,
+  игроки-ветераны ожидают именно его. Фиксируем в testdata/
+  moon_probability.json.
+
+18.19. Единообразные коды выхода миссий
+---------------------------------------
+В oxsar2 RETREAT_FLEET_* и RETURN_* имели пересекающиеся смыслы.
+В nova: enum MissionOutcome { OK, AlreadyDone, Blocked, NotOwner,
+  TooLate, TargetVanished, Protected }. Возврат клиенту —
+этим enum'ом.
+  Почему безопасно: чище API, UX-сообщения точнее.
+
+18.20. Валидация координат
+--------------------------
+В oxsar2 проверка координат галактики делалась частично в UI.
+В nova: DB-constraint + валидация в service-слое.
+  Почему безопасно: закрывает класс багов «флот в координате 0:0:0».
+
+18.21. ОТОЗВАНО (users.exchange_rate остаётся полем игрока)
+-----------------------------------------------------------
+Изначально в этом пункте предлагалось выпилить users.exchange_rate
+и хранить курс биржи только в configs/market.yml. ОТОЗВАНО в версии
+ТЗ 1.4 после разбора d:\Sources\oxsar2\www\game\Artefact.class.php.
+
+Корректное понимание:
+- users.exchange_rate — это НЕ «глобальный курс биржи», а ИМЕННО
+  персональный модификатор курса у конкретного игрока.
+- Значение меняется артефактом ARTEFACT_MERCHANTS_MARK (id=300) с
+  дефолта 1.2 на улучшенное 1.03 при активации и обратно на 1.2
+  при деактивации (Artefact.class.php:1061, 1187).
+- Это один из шести персональных множителей, которые артефакты
+  переключают:
+    users.exchange_rate       MERCHANTS_MARK            set 1.2 ↔ 1.03
+    users.research_factor     SUPERCOMPUTER             ± 1
+    planets.build_factor      ROBOT_CONTROL_SYSTEM      ± 1 (planet)
+    planets.produce_factor    CATALYST                  ± 0.1 (all user planets)
+    planets.energy_factor     POWER_GENERATOR           ± 0.15 (all user planets)
+    planets.storage_factor    ATOMIC_DENSIFIER          ± 0.15 (all user planets)
+- Функция Artefact::resyncUser() (Artefact.class.php:1225) сбрасывает
+  все эти поля в дефолт, что используется cron-ом ResyncArtefacts.
+  Это официальный «пересчёт», а не хак.
+
+Что ДЕЙСТВИТЕЛЬНО надо сделать в nova:
+- users.exchange_rate и users.research_factor ОСТАЮТСЯ полями
+  игрока (с начальными значениями 1.2 и 1 соответственно).
+- planets.{build,produce,energy,storage}_factor ОСТАЮТСЯ полями
+  планеты.
+- Базовый курс/коэффициент вселенной (дефолты 1.2, 1, 1, ...) —
+  в configs/market.yml + configs/planets.yml как константы, чтобы
+  resyncUser() знал, чем сбрасывать.
+- Доменный пакет artefact (§5.10) публикует функции Apply(user,
+  artefactID) / Revert(user, artefactID), которые под капотом
+  делают точно то же, что Artefact.class.php::activateArtefact
+  (см. switch по type_id: MERCHANTS_MARK, SUPERCOMPUTER, ROBOT_
+  CONTROL_SYSTEM, CATALYST, POWER_GENERATOR, ATOMIC_DENSIFIER и
+  остальные эффекты).
+- Добавить тест-golden: activate -> revert должно вернуть
+  все шесть полей к исходным значениям. Это не обязательно
+  восстановит «побитовый дефолт», потому что другой артефакт мог
+  быть активен параллельно, но математика должна быть обратимой.
+
+Ошибка предыдущей версии ТЗ (1.3): я прочитал «users.exchange_rate
+= 1.2 по дефолту» как «это дефолт курса вселенной, торчащий не в
+том месте». На деле — это ПОЛЕ СОСТОЯНИЯ игрока, отражающее
+активные артефакты. Правильная архитектура — его сохранить, а не
+убирать.
+
+18.22. Unicode-имена игроков
+----------------------------
+В oxsar2 username — varbinary/varchar с кастомной фильтрацией.
+В nova: CITEXT с NFC-нормализацией, список запрещённых unicode-
+атрибутов (homoglyph check). Длина 3..24.
+  Почему безопасно: решает проблему дубликатов "Player" и
+  "Pl᧐yer", никакой механики не трогает.
+
+18.23. Наблюдаемость по ресурсному балансу
+------------------------------------------
+Нет в oxsar2. В nova: ежечасный джоб проверяет сумму добытого
+минус списанного по всем res_log = дельта балансов. Если
+расходится — алерт.
+  Почему безопасно: пассивная проверка, чисто наблюдаемость.
+  Помогает быстро ловить баги экономики.
+
+
+================================================================================
+19. ЗАКРЫТЫЕ РАНЕЕ ОТКРЫТЫМИ ВОПРОСЫ
+================================================================================
+
+Правило, по которому закрываются открытые вопросы: **стабильность и
+логика OGame приоритетнее легаси-квирков**. Зафиксировано в v1.5.
+
+19.1. Artefact probability
+--------------------------
+Вопрос был: сохранять ли legacy-таблицу na_artefact_probobility
+один-в-один? Есть подозрение, что баланс перекошен.
+
+РЕШЕНИЕ: опираемся на OGame-стандарт выпадения артефактов из
+экспедиций/боёв с инопланетянами (базовые вероятности 1–5%,
+редкие — <1%). Legacy-таблица используется как ОРИЕНТИР для
+«какие артефакты бывают в каких контекстах», но абсолютные
+вероятности пересчитываются под OGame.
+
+Где хранить: configs/artefact_probability.yml — список с полями
+{artefact_key, source: expedition|alien_battle|boss|market,
+ base_chance, min_chance, max_chance, scaling_formula}.
+
+Плюсы стабильного подхода: баланс вселенной не зависит от
+конкретных legacy-цифр oxsar.ru, которые могли быть hotfix'ами
+под рекламные акции. Game-design может тюнинговать через PR без
+риска «откатить продюсерский хак».
+
+19.2. Импорт legacy-боёвых отчётов
+----------------------------------
+Вопрос был: как импортировать бой-репорты oxsar2, если в nova нет
+MySQL?
+
+РЕШЕНИЕ: НЕ импортируем. Nova стартует с чистой БД (§1.2 не-цели).
+Legacy-отчёты сохраняются «снимком» — старый хостинг oxsar.ru
+можно оставить read-only как архив, ссылки «посмотреть отчёт
+с прошлого универса» ведут туда.
+
+Для тестов боевого движка (§14.4) используем не импорт, а
+синтетические фикстуры + параллельный прогон PHP/Java/Go на
+одних и тех же входах. Это даёт верификацию без зависимости от
+исторической БД.
+
+19.3. Seasonal-серверы / ротация вселенных
+------------------------------------------
+Вопрос был: вводить ли seasonal-серверы?
+
+РЕШЕНИЕ: да, как в OGame (universe-система). Каждая вселенная —
+отдельный логический инстанс со своим universe_id.
+
+Архитектура (зафиксирована в v1.5, детали в M8):
+  - Все таблицы игрового состояния (users, planets, fleets,
+    events, artefacts_user, ...) получают колонку universe_id.
+  - Запросы фильтруются по universe_id middleware'ом.
+  - Старт новой вселенной = запись в таблицу universes + прогон
+    galaxy-генератора для её namespace.
+  - Merge старого универса в main — по OGame-схеме: персонажи
+    импортируются как сохранённая статистика, но прогрессия
+    обнуляется. Детали — отдельный ADR при подходе к M8.
+
+Это даёт: управляемый lifecycle, честную возможность балансовых
+корректировок между сезонами, меньше риск «накопленной руды»
+ломающей экономику.
+
+19.4. Кого считать «неактивным»
+-------------------------------
+Вопрос был: применимо ли к nova правило oxsar2 LAST_TIME_ON_
+VACATION_DISABLE = 20 дней?
+
+РЕШЕНИЕ: ПОЛЬЗОВАТЕЛЕЙ НЕ УДАЛЯЕМ. Никогда, даже при очень долгой
+неактивности. Это сознательное решение (v1.5).
+
+Почему:
+  - Удаление = безвозвратная потеря прогресса игрока, даже если
+    он вернулся через год.
+  - Юридические вопросы (GDPR-запросы «удалить меня» обрабатываем
+    отдельно через support-endpoint, см. §9).
+  - Экономические: «спящий» аккаунт — это потенциальный таргет
+    атаки для других игроков (fair game при соблюдении защиты
+    новичков §5.13).
+  - Стабильность: отсутствие фонового cron-remove снимает целый
+    класс багов «удалили активного игрока по ошибке».
+
+Что делаем вместо удаления:
+  - Флаг users.inactive_since (timestamptz) — выставляется через
+    N дней без логина (N из config, default 30).
+  - Правила над этим флагом:
+      • в highscore отображается приглушённо/скрывается (OGame-
+        style);
+      • защита новичков смягчается для атакующих (§18.7);
+      • экспедиции не трогаются;
+      • ресурсы/флот остаются.
+  - При возврате (очередной логин) флаг сбрасывается автоматически.
+
+Единственное исключение — soft-delete ручным админским банхаммером
+для нарушителей правил (users.deleted_at + anonymize email/
+username). Данные на диске остаются, просто скрыты из UI.
+
+Никаких массовых cron-утилит «удалить всех неактивных» в nova нет
+и не будет.
+
+
+================================================================================
+20. ОТКРЫТЫЕ ВОПРОСЫ (будущих версий)
+================================================================================
+
+Пока пусто. Появятся по мере работы — фиксируются здесь с датой
+постановки, решаются в следующих версиях ТЗ.
+
+
+================================================================================
+Конец документа.
+================================================================================

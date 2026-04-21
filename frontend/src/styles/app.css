@@ -1,0 +1,117 @@
+/*
+ * Базовая стилизация в духе oxsar2:
+ *  - тёмно-синяя палитра (ui-darkness наследник)
+ *  - моноширинные цифры ресурсов
+ *  - табличная сетка на полу-прозрачном фоне
+ *
+ * Это временный placeholder. На M0+ сюда переезжают:
+ *   oxsar2/www/css/{front,layout,style,preview}.css и темы
+ *   us_bg/*.css, us_table/*.css (см. §2.2.1 ТЗ).
+ */
+
+:root {
+  --ox-bg:        #0a1420;
+  --ox-bg-panel:  rgba(16, 28, 44, 0.85);
+  --ox-fg:        #c8d6e5;
+  --ox-fg-dim:    #7e8d9f;
+  --ox-accent:    #4fc3f7;
+  --ox-warning:   #ffb74d;
+  --ox-danger:    #ef5350;
+  --ox-border:    #1e3a5a;
+  --ox-monofont:  'Consolas', 'Menlo', 'DejaVu Sans Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+  background: var(--ox-bg) url('/img/bg.jpg') top center / cover no-repeat fixed;
+  color: var(--ox-fg);
+  font: 14px/1.45 'Segoe UI', 'Helvetica Neue', sans-serif;
+}
+
+a { color: var(--ox-accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button {
+  background: linear-gradient(#1e3a5a, #15293f);
+  color: var(--ox-fg);
+  border: 1px solid var(--ox-border);
+  padding: 6px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+button:hover { background: linear-gradient(#26486f, #1a334e); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ox-layout {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px;
+  gap: 12px;
+}
+
+.ox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--ox-bg-panel);
+  border: 1px solid var(--ox-border);
+}
+.ox-header h1 { margin: 0; font-size: 20px; color: var(--ox-accent); }
+
+.ox-main {
+  background: var(--ox-bg-panel);
+  border: 1px solid var(--ox-border);
+  padding: 16px;
+}
+
+.ox-footer {
+  color: var(--ox-fg-dim);
+  text-align: center;
+}
+
+.ox-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.ox-table th, .ox-table td {
+  border: 1px solid var(--ox-border);
+  padding: 6px 10px;
+  text-align: left;
+}
+.ox-table th { background: rgba(30, 58, 90, 0.6); color: var(--ox-accent); }
+.ox-table td.num { font-family: var(--ox-monofont); text-align: right; }
+
+.ox-form { display: grid; gap: 10px; max-width: 400px; }
+.ox-form label { display: grid; gap: 4px; }
+.ox-form input {
+  background: rgba(10, 20, 32, 0.6);
+  border: 1px solid var(--ox-border);
+  color: var(--ox-fg);
+  padding: 8px 10px;
+  font: inherit;
+}
+.ox-form input:focus { outline: 1px solid var(--ox-accent); }
+.ox-error { color: var(--ox-danger); }
+.ox-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.ox-tabs button[aria-pressed="true"] { background: linear-gradient(#2c5282, #1a365d); }
+.ox-res-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.ox-res-card {
+  padding: 10px 12px;
+  background: rgba(10, 20, 32, 0.55);
+  border: 1px solid var(--ox-border);
+}
+.ox-res-card .label { color: var(--ox-fg-dim); font-size: 12px; text-transform: uppercase; }
+.ox-res-card .value { font: 700 20px var(--ox-monofont); color: var(--ox-accent); }

@@ -1,0 +1,104 @@
+# Балансовые формулы зданий. Значения — ориентировочные, соответствующие
+# ogame/oxsar2 defaults. Точные коэффициенты выверяются против legacy
+# на этапе M1 (cross-check с oxsar2 Planet_YII / CronCommand).
+#
+# cost_base: базовая стоимость уровня 1 (metal, silicon, hydrogen, energy)
+# cost_factor: множитель стоимости на каждый следующий уровень
+# time_base_seconds: базовое время постройки уровня 1 на robotic_factory=0
+#
+# Формула времени:
+#   time_seconds = time_base * cost_factor^(level-1) /
+#                  (1 + robotic_factory_level) /
+#                  (2^nano_factory_level) /
+#                  GAMESPEED
+#
+# Формула стоимости уровня N:
+#   cost_N = cost_base * cost_factor^(N-1)
+#
+# Формула добычи (metal_mine): base_rate * level * 1.1^level * factors
+
+buildings:
+  metal_mine:
+    id: 1
+    cost_base:   { metal: 60,  silicon: 15,  hydrogen: 0 }
+    cost_factor: 1.5
+    time_base_seconds: 60
+    base_rate_per_hour: 30   # при level=1
+    energy_per_level: 10
+
+  silicon_lab:
+    id: 2
+    cost_base:   { metal: 48,  silicon: 24,  hydrogen: 0 }
+    cost_factor: 1.6
+    time_base_seconds: 75
+    base_rate_per_hour: 20
+    energy_per_level: 10
+
+  hydrogen_lab:
+    id: 3
+    cost_base:   { metal: 225, silicon: 75,  hydrogen: 0 }
+    cost_factor: 1.5
+    time_base_seconds: 90
+    base_rate_per_hour: 10
+    energy_per_level: 20
+
+  solar_plant:
+    id: 4
+    cost_base:   { metal: 75,  silicon: 30,  hydrogen: 0 }
+    cost_factor: 1.5
+    time_base_seconds: 60
+    energy_output_per_level: 20
+
+  hydrogen_plant:
+    id: 5
+    cost_base:   { metal: 900, silicon: 360, hydrogen: 180 }
+    cost_factor: 1.8
+    time_base_seconds: 90
+
+  robotic_factory:
+    id: 6
+    cost_base:   { metal: 400, silicon: 120, hydrogen: 200 }
+    cost_factor: 2.0
+    time_base_seconds: 180
+
+  shipyard:
+    id: 8
+    cost_base:   { metal: 400, silicon: 200, hydrogen: 100 }
+    cost_factor: 2.0
+    time_base_seconds: 180
+
+  metal_storage:
+    id: 9
+    cost_base:   { metal: 1000, silicon: 0, hydrogen: 0 }
+    cost_factor: 2.0
+    time_base_seconds: 120
+    capacity_base: 5_000
+
+  silicon_storage:
+    id: 10
+    cost_base:   { metal: 1000, silicon: 500, hydrogen: 0 }
+    cost_factor: 2.0
+    time_base_seconds: 120
+    capacity_base: 5_000
+
+  hydrogen_storage:
+    id: 11
+    cost_base:   { metal: 1000, silicon: 1000, hydrogen: 0 }
+    cost_factor: 2.0
+    time_base_seconds: 120
+    capacity_base: 5_000
+
+  research_lab:
+    id: 12
+    cost_base:   { metal: 200, silicon: 400, hydrogen: 200 }
+    cost_factor: 2.0
+    time_base_seconds: 180
+
+  # Ремонтная фабрика (legacy UNIT_REPAIR_FACTORY=100, na_construction id=100).
+  # Стоимость 800/400/200 с удвоением уровня, время ~30 * 1.6^level.
+  # Используется disassemble/repair-очередью (backend/internal/repair).
+  repair_factory:
+    id: 100
+    cost_base:   { metal: 800, silicon: 400, hydrogen: 200 }
+    cost_factor: 2.0
+    time_base_seconds: 30

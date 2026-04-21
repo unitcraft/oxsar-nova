@@ -1,0 +1,83 @@
+# Каталог артефактов. ID и эффекты 1-в-1 из oxsar2/consts.php +
+# game/Artefact.class.php (см. §5.10.1 oxsar-spec.txt).
+#
+# effect:
+#   type: factor_user | factor_planet | factor_all_planets |
+#         one_shot | battle_bonus
+#   field: exchange_rate | research_factor | build_factor |
+#          produce_factor | energy_factor | storage_factor
+#   op:    set | add
+#   value: число (для add: дельта; для set: пара [active, inactive])
+#
+# На M5 достаточно реализовать factor_* — это самые распространённые
+# и самые «ломкие» при порте. Остальные (one_shot, battle_bonus)
+# добавляем в M5.1.
+
+artefacts:
+  merchants_mark:
+    id: 300
+    name: "Merchant's Mark"
+    effect:
+      type: factor_user
+      field: exchange_rate
+      op: set
+      active_value: 1.03
+      inactive_value: 1.2
+    # set-эффект НЕ стакается; activate второго даёт ошибку.
+    stackable: false
+    lifetime_seconds: 604800   # 7 дней
+
+  catalyst:
+    id: 301
+    name: "Catalyst"
+    effect:
+      type: factor_all_planets
+      field: produce_factor
+      op: add
+      value: 0.1
+    stackable: true
+    lifetime_seconds: 604800
+
+  power_generator:
+    id: 302
+    name: "Power Generator"
+    effect:
+      type: factor_all_planets
+      field: energy_factor
+      op: add
+      value: 0.15
+    stackable: true
+    lifetime_seconds: 604800
+
+  atomic_densifier:
+    id: 303
+    name: "Atomic Densifier"
+    effect:
+      type: factor_all_planets
+      field: storage_factor
+      op: add
+      value: 0.15
+    stackable: true
+    lifetime_seconds: 604800
+
+  supercomputer:
+    id: 305
+    name: "Supercomputer"
+    effect:
+      type: factor_user
+      field: research_factor
+      op: add
+      value: 1.0
+    stackable: true
+    lifetime_seconds: 604800
+
+  robot_control_system:
+    id: 315
+    name: "Robot Control System"
+    effect:
+      type: factor_planet       # привязан к конкретной планете
+      field: build_factor
+      op: add
+      value: 1.0
+    stackable: true
+    lifetime_seconds: 604800

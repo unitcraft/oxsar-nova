@@ -1,0 +1,24 @@
+# Migrator — отдельный контейнер, который прогоняет goose up и
+# завершается. В compose живёт как one-shot-сервис (restart=no),
+# которого ждёт backend через depends_on.condition=service_completed_successfully.
+#
+# Проще, чем пихать goose в entrypoint backend-контейнера: миграции
+# это deployment concern, не runtime concern сервера.
+
+FROM golang:1.23-alpine AS build
+RUN apk add --no-cache git && \
+    go install github.com/pressly/goose/v3/cmd/goose@v3.22.1
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates
+COPY --from=build /go/bin/goose /usr/local/bin/goose
+COPY migrations /migrations
+WORKDIR /migrations
+
+# DB_URL подхватывается из compose-env. goose up применяет все
+# pending миграции и выходит с 0, если всё ок.
+#
+# ВАЖНО: НЕ выставляем GOOSE_DRIVER — в goose v3.22 комбинация
+# GOOSE_DRIVER из env + driver в позиционных аргументах ломает парсер
+# (он считает URL первым позиционным и ищет в нём command).
+ENTRYPOINT ["sh", "-c", "goose -dir /migrations postgres \"$DB_URL\" up"]

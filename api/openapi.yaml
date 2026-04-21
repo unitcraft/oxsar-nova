@@ -1,0 +1,792 @@
+openapi: 3.1.0
+info:
+  title: oxsar-nova API
+  version: 0.1.0
+  description: |
+    REST API for oxsar-nova. Источник истины для клиентских типов —
+    TS-клиент генерируется из этого файла (см. CLAUDE.md).
+
+servers:
+  - url: http://localhost:8080
+    description: local dev
+
+tags:
+  - name: auth
+  - name: planets
+  - name: buildings
+  - name: research
+  - name: shipyard
+  - name: repair
+  - name: artefacts
+  - name: galaxy
+  - name: fleet
+  - name: battle
+  - name: system
+
+paths:
+  /healthz:
+    get:
+      tags: [system]
+      summary: Liveness probe
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Status" }
+
+  /api/auth/register:
+    post:
+      tags: [auth]
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthResponse" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/auth/login:
+    post:
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/auth/refresh:
+    post:
+      tags: [auth]
+      summary: Refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh]
+              properties:
+                refresh: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tokens: { $ref: "#/components/schemas/Tokens" }
+
+  /api/planets:
+    get:
+      tags: [planets]
+      security: [{ bearerAuth: [] }]
+      summary: List my planets
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  planets:
+                    type: array
+                    items: { $ref: "#/components/schemas/Planet" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/planets/{id}:
+    get:
+      tags: [planets]
+      security: [{ bearerAuth: [] }]
+      summary: Get planet by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Planet" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/planets/{id}/buildings:
+    post:
+      tags: [buildings]
+      security: [{ bearerAuth: [] }]
+      summary: Enqueue a building upgrade
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unit_id]
+              properties:
+                unit_id: { type: integer, minimum: 1 }
+      responses:
+        "201":
+          description: queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QueueItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/planets/{id}/buildings/queue:
+    get:
+      tags: [buildings]
+      security: [{ bearerAuth: [] }]
+      summary: List building queue
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  queue:
+                    type: array
+                    items: { $ref: "#/components/schemas/QueueItem" }
+
+  /api/planets/{id}/buildings/queue/{taskId}:
+    delete:
+      tags: [buildings]
+      security: [{ bearerAuth: [] }]
+      summary: Cancel queued building
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: taskId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: cancelled }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/planets/{id}/research:
+    post:
+      tags: [research]
+      security: [{ bearerAuth: [] }]
+      summary: Start a research on a planet
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unit_id]
+              properties:
+                unit_id: { type: integer }
+      responses:
+        "201":
+          description: queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QueueItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/research:
+    get:
+      tags: [research]
+      security: [{ bearerAuth: [] }]
+      summary: List my research (queue + levels)
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  queue:
+                    type: array
+                    items: { $ref: "#/components/schemas/QueueItem" }
+                  levels:
+                    type: object
+                    additionalProperties: { type: integer }
+
+  /api/planets/{id}/shipyard:
+    post:
+      tags: [shipyard]
+      security: [{ bearerAuth: [] }]
+      summary: Build ships or defense
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unit_id, count]
+              properties:
+                unit_id: { type: integer }
+                count:   { type: integer, format: int64, minimum: 1 }
+      responses:
+        "201":
+          description: queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipyardQueueItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/planets/{id}/shipyard/queue:
+    get:
+      tags: [shipyard]
+      security: [{ bearerAuth: [] }]
+      summary: Shipyard queue on a planet
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  queue:
+                    type: array
+                    items: { $ref: "#/components/schemas/ShipyardQueueItem" }
+
+  /api/planets/{id}/shipyard/inventory:
+    get:
+      tags: [shipyard]
+      security: [{ bearerAuth: [] }]
+      summary: Ships & defense on a planet
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ships:   { type: object, additionalProperties: { type: integer, format: int64 } }
+                  defense: { type: object, additionalProperties: { type: integer, format: int64 } }
+
+  /api/planets/{id}/repair/disassemble:
+    post:
+      tags: [repair]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Enqueue a batch disassembly of healthy units. Charges required
+        cost and subtracts units up-front; returns cost is credited when
+        the event fires (see DisassembleHandler).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unit_id, count]
+              properties:
+                unit_id: { type: integer }
+                count:   { type: integer, format: int64, minimum: 1 }
+      responses:
+        "201":
+          description: queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RepairQueueItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/planets/{id}/repair/queue:
+    get:
+      tags: [repair]
+      security: [{ bearerAuth: [] }]
+      summary: Active repair/disassemble queue on a planet
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  queue:
+                    type: array
+                    items: { $ref: "#/components/schemas/RepairQueueItem" }
+
+  /api/artefacts:
+    get:
+      tags: [artefacts]
+      security: [{ bearerAuth: [] }]
+      summary: List my artefacts
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  artefacts:
+                    type: array
+                    items: { $ref: "#/components/schemas/Artefact" }
+
+  /api/artefacts/{id}/activate:
+    post:
+      tags: [artefacts]
+      security: [{ bearerAuth: [] }]
+      summary: Activate an artefact from inventory
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Artefact" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/artefacts/{id}/deactivate:
+    post:
+      tags: [artefacts]
+      security: [{ bearerAuth: [] }]
+      summary: Deactivate an active artefact (revert its effect)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: deactivated }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/galaxy/{g}/{s}:
+    get:
+      tags: [galaxy]
+      security: [{ bearerAuth: [] }]
+      summary: Read a system (15 positions, planets/moons/debris)
+      parameters:
+        - in: path
+          name: g
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 16 }
+        - in: path
+          name: s
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 999 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SystemView" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/fleet:
+    get:
+      tags: [fleet]
+      security: [{ bearerAuth: [] }]
+      summary: List active fleets of the current user
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fleets:
+                    type: array
+                    items: { $ref: "#/components/schemas/Fleet" }
+    post:
+      tags: [fleet]
+      security: [{ bearerAuth: [] }]
+      summary: Dispatch a fleet (v1 = TRANSPORT only, mission=7)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FleetDispatch" }
+      responses:
+        "201":
+          description: dispatched
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fleet" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/fleet/{id}/recall:
+    post:
+      tags: [fleet]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Recall a fleet while it is still outbound. Works only for
+        state=outbound; any other state → 409 Conflict. Cargo stays
+        on board and is refunded back to the source planet together
+        with the ships by the return handler.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: returning
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fleet" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/battle-sim:
+    post:
+      tags: [battle]
+      summary: Offline battle simulation (pure function, no side effects)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BattleInput" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BattleReport" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      description: bad request
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+    Unauthorized:
+      description: unauthorized
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+    Forbidden:
+      description: forbidden
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+    NotFound:
+      description: not found
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+    Conflict:
+      description: conflict
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+
+  schemas:
+    Status:
+      type: object
+      properties:
+        status: { type: string }
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+
+    RegisterRequest:
+      type: object
+      required: [username, email, password]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 24 }
+        email:    { type: string, format: email }
+        password: { type: string, minLength: 8 }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:    { type: string, format: email }
+        password: { type: string }
+
+    Tokens:
+      type: object
+      properties:
+        access:  { type: string }
+        refresh: { type: string }
+        expires: { type: string, format: date-time }
+
+    User:
+      type: object
+      properties:
+        id:       { type: string, format: uuid }
+        username: { type: string }
+        email:    { type: string, format: email }
+
+    AuthResponse:
+      type: object
+      properties:
+        user:   { $ref: "#/components/schemas/User" }
+        tokens: { $ref: "#/components/schemas/Tokens" }
+
+    Planet:
+      type: object
+      properties:
+        id:       { type: string, format: uuid }
+        user_id:  { type: string, format: uuid }
+        is_moon:  { type: boolean }
+        name:     { type: string }
+        galaxy:   { type: integer }
+        system:   { type: integer }
+        position: { type: integer }
+        metal:    { type: number }
+        silicon:  { type: number }
+        hydrogen: { type: number }
+        last_res_update: { type: string, format: date-time }
+
+    QueueItem:
+      type: object
+      properties:
+        id:           { type: string, format: uuid }
+        planet_id:    { type: string, format: uuid }
+        unit_id:      { type: integer }
+        target_level: { type: integer }
+        start_at:     { type: string, format: date-time }
+        end_at:       { type: string, format: date-time }
+        status:       { type: string }
+
+    ShipyardQueueItem:
+      type: object
+      properties:
+        id:               { type: string, format: uuid }
+        planet_id:        { type: string, format: uuid }
+        unit_id:          { type: integer }
+        count:            { type: integer, format: int64 }
+        per_unit_seconds: { type: integer }
+        start_at:         { type: string, format: date-time }
+        end_at:           { type: string, format: date-time }
+        status:           { type: string }
+
+    RepairQueueItem:
+      type: object
+      properties:
+        id:               { type: string, format: uuid }
+        planet_id:        { type: string, format: uuid }
+        user_id:          { type: string, format: uuid }
+        unit_id:          { type: integer }
+        is_defense:       { type: boolean }
+        mode:             { type: string, enum: [disassemble, repair] }
+        count:            { type: integer, format: int64 }
+        return_metal:     { type: integer, format: int64 }
+        return_silicon:   { type: integer, format: int64 }
+        return_hydrogen:  { type: integer, format: int64 }
+        per_unit_seconds: { type: integer }
+        start_at:         { type: string, format: date-time }
+        end_at:           { type: string, format: date-time }
+        status:           { type: string }
+
+    SystemView:
+      type: object
+      properties:
+        galaxy: { type: integer }
+        system: { type: integer }
+        cells:
+          type: array
+          items: { $ref: "#/components/schemas/GalaxyCell" }
+
+    GalaxyCell:
+      type: object
+      properties:
+        position:        { type: integer }
+        has_planet:      { type: boolean }
+        planet_name:     { type: string, nullable: true }
+        has_moon:        { type: boolean }
+        moon_name:       { type: string, nullable: true }
+        owner_id:        { type: string, format: uuid, nullable: true }
+        owner_username:  { type: string, nullable: true }
+        debris_metal:    { type: integer, format: int64 }
+        debris_silicon:  { type: integer, format: int64 }
+
+    FleetDispatch:
+      type: object
+      required: [src_planet_id, dst, ships, speed_percent]
+      properties:
+        src_planet_id: { type: string, format: uuid }
+        dst:           { $ref: "#/components/schemas/Coords" }
+        ships:
+          type: object
+          additionalProperties: { type: integer, format: int64, minimum: 1 }
+        carry_metal:    { type: integer, format: int64, minimum: 0 }
+        carry_silicon:  { type: integer, format: int64, minimum: 0 }
+        carry_hydrogen: { type: integer, format: int64, minimum: 0 }
+        speed_percent:  { type: integer, minimum: 10, maximum: 100 }
+        mission:        { type: integer, description: "7 = TRANSPORT (единственная в v1)" }
+
+    Coords:
+      type: object
+      required: [galaxy, system, position]
+      properties:
+        galaxy:   { type: integer, minimum: 1, maximum: 16 }
+        system:   { type: integer, minimum: 1, maximum: 999 }
+        position: { type: integer, minimum: 1, maximum: 15 }
+        is_moon:  { type: boolean }
+
+    Fleet:
+      type: object
+      properties:
+        id:              { type: string, format: uuid }
+        owner_user_id:   { type: string, format: uuid }
+        src_planet_id:   { type: string, format: uuid }
+        dst_galaxy:      { type: integer }
+        dst_system:      { type: integer }
+        dst_position:    { type: integer }
+        dst_is_moon:     { type: boolean }
+        mission:         { type: integer }
+        state:           { type: string, enum: [outbound, hold, returning, done] }
+        depart_at:       { type: string, format: date-time }
+        arrive_at:       { type: string, format: date-time }
+        return_at:       { type: string, format: date-time, nullable: true }
+        carry:
+          type: object
+          properties:
+            metal:    { type: integer, format: int64 }
+            silicon:  { type: integer, format: int64 }
+            hydrogen: { type: integer, format: int64 }
+        speed_percent:   { type: integer }
+        ships:
+          type: object
+          additionalProperties: { type: integer, format: int64 }
+
+    Artefact:
+      type: object
+      properties:
+        id:            { type: string, format: uuid }
+        user_id:       { type: string, format: uuid }
+        planet_id:     { type: string, format: uuid, nullable: true }
+        unit_id:       { type: integer }
+        state:         { type: string, enum: [held, delayed, active, expired, consumed] }
+        acquired_at:   { type: string, format: date-time }
+        activated_at:  { type: string, format: date-time, nullable: true }
+        expire_at:     { type: string, format: date-time, nullable: true }
+
+    BattleInput:
+      type: object
+      properties:
+        seed:      { type: integer, format: int64 }
+        rounds:    { type: integer }
+        is_moon:   { type: boolean }
+        attackers:
+          type: array
+          items: { $ref: "#/components/schemas/BattleSide" }
+        defenders:
+          type: array
+          items: { $ref: "#/components/schemas/BattleSide" }
+
+    BattleSide:
+      type: object
+      properties:
+        user_id:  { type: string }
+        username: { type: string }
+        tech:
+          type: object
+          properties:
+            gun:        { type: integer }
+            shield:     { type: integer }
+            shell:      { type: integer }
+            ballistics: { type: integer }
+            masking:    { type: integer }
+        units:
+          type: array
+          items:
+            type: object
+            properties:
+              unit_id:  { type: integer }
+              quantity: { type: integer, format: int64 }
+              front:    { type: integer }
+              attack:   { type: array, items: { type: number } }
+              shield:   { type: array, items: { type: number } }
+              shell:    { type: number }
+
+    BattleReport:
+      type: object
+      properties:
+        seed:   { type: integer, format: int64 }
+        winner: { type: string, enum: [attackers, defenders, draw] }
+        rounds: { type: integer }

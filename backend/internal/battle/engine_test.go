@@ -1,0 +1,257 @@
+package battle
+
+import "testing"
+
+// Для тестов используем упрощённые юниты. Формулы M4.0 детерминированы
+// при одинаковом входе (нет rand в shootAtSides), поэтому разные seed'ы
+// дают одинаковый результат. Это OK — в M4.1 seed начнёт влиять на
+// masking/ballistics-roll.
+
+func simpleAttacker(q int64, attack float64, shell float64) Side {
+	return Side{
+		UserID: "att",
+		Units: []Unit{{
+			UnitID:   33,
+			Quantity: q,
+			Front:    0,
+			Attack:   [3]float64{attack, 0, 0},
+			Shell:    shell,
+			Cost:     UnitCost{Metal: 20000, Silicon: 7000, Hydrogen: 2000},
+		}},
+	}
+}
+
+func simpleDefender(q int64, attack float64, shell float64) Side {
+	return Side{
+		UserID: "def",
+		Units: []Unit{{
+			UnitID:   31,
+			Quantity: q,
+			Front:    0,
+			Attack:   [3]float64{attack, 0, 0},
+			Shell:    shell,
+			Cost:     UnitCost{Metal: 3000, Silicon: 1000},
+		}},
+	}
+}
+
+func TestCalculate_AttackersWin(t *testing.T) {
+	t.Parallel()
+	// 10 сильных атакующих (attack=1000, shell=10000) против 10 слабых
+	// защитников (attack=50, shell=1000). В первом раунде атакующие
+	// наносят 10*1000 = 10000 урона = уничтожают всех защитников.
+	in := Input{
+		Seed:      42,
+		Attackers: []Side{simpleAttacker(10, 1000, 10000)},
+		Defenders: []Side{simpleDefender(10, 50, 1000)},
+	}
+	rep, err := Calculate(in)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rep.Winner != "attackers" {
+		t.Fatalf("expected attackers to win, got %q", rep.Winner)
+	}
+	if rep.Defenders[0].Units[0].QuantityEnd != 0 {
+		t.Fatalf("expected defenders wiped, got %d remaining",
+			rep.Defenders[0].Units[0].QuantityEnd)
+	}
+	if rep.Rounds != 1 {
+		t.Fatalf("expected 1 round (early exit), got %d", rep.Rounds)
+	}
+}
+
+func TestCalculate_DefendersWin(t *testing.T) {
+	t.Parallel()
+	// Ровно наоборот: 10 слабых атакующих, 10 сильных защитников.
+	in := Input{
+		Seed:      42,
+		Attackers: []Side{simpleAttacker(10, 50, 1000)},
+		Defenders: []Side{simpleDefender(10, 1000, 10000)},
+	}
+	rep, err := Calculate(in)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rep.Winner != "defenders" {
+		t.Fatalf("expected defenders, got %q", rep.Winner)
+	}
+	if rep.Attackers[0].Units[0].QuantityEnd != 0 {
+		t.Fatalf("expected attackers wiped, got %d", rep.Attackers[0].Units[0].QuantityEnd)
+	}
+}
+
+func TestCalculate_Draw(t *testing.T) {
+	t.Parallel()
+	// Равные силы 100 vs 100, атака 100, shell 100. В одном раунде
+	// обе стороны наносят по 100*100 = 10000 урона = уничтожают друг
+	// друга (total shell = 100*100 = 10000). Итог — ничья.
+	in := Input{
+		Seed:      42,
+		Attackers: []Side{simpleAttacker(100, 100, 100)},
+		Defenders: []Side{simpleDefender(100, 100, 100)},
+	}
+	rep, err := Calculate(in)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rep.Winner != "draw" {
+		t.Fatalf("expected draw, got %q", rep.Winner)
+	}
+}
+
+func TestCalculate_Deterministic(t *testing.T) {
+	t.Parallel()
+	build := func() Input {
+		return Input{
+			Seed:      12345,
+			Attackers: []Side{simpleAttacker(50, 300, 5000)},
+			Defenders: []Side{simpleDefender(50, 50, 1000)},
+		}
+	}
+	a, err1 := Calculate(build())
+	b, err2 := Calculate(build())
+	if err1 != nil || err2 != nil {
+		t.Fatalf("unexpected errors: %v / %v", err1, err2)
+	}
+	if a.Winner != b.Winner ||
+		a.Rounds != b.Rounds ||
+		len(a.RoundsTrace) != len(b.RoundsTrace) {
+		t.Fatalf("non-deterministic: %+v vs %+v", a, b)
+	}
+	for i := range a.Attackers[0].Units {
+		if a.Attackers[0].Units[i].QuantityEnd != b.Attackers[0].Units[i].QuantityEnd {
+			t.Fatalf("attacker unit %d end differs: %d vs %d",
+				i, a.Attackers[0].Units[i].QuantityEnd, b.Attackers[0].Units[i].QuantityEnd)
+		}
+	}
+}
+
+func TestCalculate_LostResources(t *testing.T) {
+	t.Parallel()
+	// Убедимся, что lost metal/silicon считается корректно:
+	// 10 уничтоженных атакующих × cost (20000/7000/2000) = 200000/70000/20000.
+	// Подбираем сценарий, где ровно 10 атакующих умирают: 10 vs 10,
+	// атака/shell равны.
+	in := Input{
+		Seed:      7,
+		Attackers: []Side{simpleAttacker(10, 100, 100)},
+		Defenders: []Side{simpleDefender(10, 100, 100)},
+	}
+	rep, err := Calculate(in)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got := rep.Attackers[0].LostMetal
+	want := int64(10) * 20000
+	if got != want {
+		t.Fatalf("LostMetal: got %d, want %d", got, want)
+	}
+}
+
+func TestCalculate_InvalidInput(t *testing.T) {
+	t.Parallel()
+	in := Input{Seed: 1, Defenders: []Side{simpleDefender(1, 10, 10)}}
+	if _, err := Calculate(in); err == nil {
+		t.Fatalf("expected error on missing attackers")
+	}
+}
+
+// --- M4.1 shield tests ---
+
+// shieldedDefender — защитник с полностью заполненным щитом и корпусом.
+// Использует primary-канал 0 (normal).
+func shieldedDefender(q int64, attack, shield, shell float64) Side {
+	return Side{
+		UserID: "def",
+		Units: []Unit{{
+			UnitID:   31,
+			Quantity: q,
+			Front:    0,
+			Attack:   [3]float64{attack, 0, 0},
+			Shield:   [3]float64{shield, 0, 0},
+			Shell:    shell,
+			Cost:     UnitCost{Metal: 3000, Silicon: 1000},
+		}},
+	}
+}
+
+func TestCalculate_ShieldIgnoreThreshold(t *testing.T) {
+	t.Parallel()
+	// 10 атакующих с attack=50 стреляют по 10 защитников с
+	// shield=10000 (огромный щит). ignoreThreshold = shield/100 = 100,
+	// а attack=50 < 100 → выстрелы полностью абсорбируются щитом,
+	// корпус нетронут. За 6 раундов никто не гибнет.
+	in := Input{
+		Seed:      1,
+		Attackers: []Side{simpleAttacker(10, 50, 1000)},
+		Defenders: []Side{shieldedDefender(10, 0, 10000, 1000)},
+	}
+	rep, err := Calculate(in)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := rep.Defenders[0].Units[0].QuantityEnd; got != 10 {
+		t.Fatalf("defender quantity: got %d, want 10 (shield should block)", got)
+	}
+	if got := rep.Attackers[0].Units[0].QuantityEnd; got != 10 {
+		t.Fatalf("attacker quantity: got %d, want 10 (def has attack=0)", got)
+	}
+}
+
+func TestCalculate_ShieldPierced(t *testing.T) {
+	t.Parallel()
+	// Shield небольшой и быстро падает; корпус тоже лёгкий.
+	// 10 × attack=500 за один раунд дают пул 5000 на общую защиту
+	// 10×100 (щит) + 10×300 (shell) = 4000 → все цели гибнут в 1 раунде.
+	in := Input{
+		Seed:      1,
+		Attackers: []Side{simpleAttacker(10, 500, 100000)},
+		Defenders: []Side{shieldedDefender(10, 0, 100, 300)},
+	}
+	rep, err := Calculate(in)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := rep.Defenders[0].Units[0].QuantityEnd; got != 0 {
+		t.Fatalf("defender wiped expected, got %d", got)
+	}
+	if rep.Winner != "attackers" {
+		t.Fatalf("expected attackers win, got %q", rep.Winner)
+	}
+	if rep.Rounds != 1 {
+		t.Fatalf("expected rounds=1, got %d", rep.Rounds)
+	}
+}
+
+func TestCalculate_ShieldRegensBetweenRounds(t *testing.T) {
+	t.Parallel()
+	// В каждом раунде атакующие наносят ровно столько, чтобы снять
+	// щит (без урона корпусу). Shield regen должен возвращать щит
+	// на следующий раунд. Итог — бой уходит в draw за Rounds раундов,
+	// никто не гибнет.
+	//
+	// attack=1000, shots=10 → pool=10000 на раунд.
+	// shield=1000, quantity=10 → totalShield=10000.
+	// Точное равенство → весь пул тратится на щит, shell не страдает.
+	// regen после раунда возвращает totalShield=10000.
+	in := Input{
+		Seed:      1,
+		Rounds:    3,
+		Attackers: []Side{simpleAttacker(10, 1000, 1000000)},
+		Defenders: []Side{shieldedDefender(10, 0, 1000, 5000)},
+	}
+	rep, err := Calculate(in)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := rep.Defenders[0].Units[0].QuantityEnd; got != 10 {
+		t.Fatalf("defender should survive regen: got %d, want 10", got)
+	}
+	if rep.Rounds != 3 {
+		t.Fatalf("expected full 3 rounds, got %d", rep.Rounds)
+	}
+	if rep.Winner != "draw" {
+		t.Fatalf("expected draw, got %q", rep.Winner)
+	}
+}
