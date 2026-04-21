@@ -381,16 +381,14 @@
   условия). Но только если шаблоны станут сложнее.
 - **Приоритет**: L.
 
-### [AutoMsg] Только event-driven, нет scheduled messages
-- **Где**: отсутствует soaking/scheduler.
-- **Что**: шлются только WELCOME/STARTER_GUIDE при регистрации.
-  Нет inactivity-reminder, weekly-digest, event-before-raid (за N
-  минут до прибытия вражеского флота).
-- **Почему**: scheduled автосообщения требуют отдельного cron/worker
-  и трекинга last_seen_at.
-- **Как чинить**: добавить `users.last_seen_at` + воркер, который
-  раз в день ищет неактивных и шлёт reminder.
-- **Приоритет**: M — важно для retention.
+### [AutoMsg] Только event-driven, нет scheduled messages — ЧАСТИЧНО ЗАКРЫТО
+- **Статус**: Закрыто в итерации 43 для inactivity-reminder.
+  users.last_seen_at обновляется через LastSeenMiddleware (async).
+  Воркер ежедневно шлёт INACTIVITY_REMINDER тем, кто не заходил 3+ дней.
+  Нет: weekly-digest, event-before-raid (за N минут до прибытия флота).
+- **Как чинить** (остаток): event-before-raid — добавить INSERT events
+  (kind=NEW) при создании флота с fire_at = arrive_at - 10min.
+- **Приоритет**: L — inactivity уже есть.
 
 ### [AutoMsg] Нет CMS / редактирования через UI
 - **Где**: шаблоны только в миграции `0016_automsg.sql` seed.

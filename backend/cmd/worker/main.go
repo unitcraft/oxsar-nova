@@ -12,7 +12,10 @@ import (
 	"syscall"
 	"time"
 
+	"fmt"
+
 	"github.com/oxsar/nova/backend/internal/artefact"
+	"github.com/oxsar/nova/backend/internal/automsg"
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/event"
 	"github.com/oxsar/nova/backend/internal/fleet"
@@ -97,6 +100,7 @@ func run() error {
 	w.Register(event.KindOfficerExpire, officerSvc.ExpireHandler())
 
 	scoreSvc := score.NewService(db, cat)
+	automsgSvc := automsg.NewService(db)
 
 	// Периодический пересчёт очков всех игроков (раз в 5 минут).
 	go func() {
@@ -109,6 +113,27 @@ func run() error {
 			case <-t.C:
 				if err := scoreSvc.RecalcAll(ctx, log); err != nil {
 					log.ErrorContext(ctx, "score_recalc_all_failed", slog.String("err", err.Error()))
+				}
+			}
+		}
+	}()
+
+	// Ежедневная рассылка уведомлений о неактивности.
+	go func() {
+		t := time.NewTicker(24 * time.Hour)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case tick := <-t.C:
+				year, week := tick.ISOWeek()
+				weekSuffix := fmt.Sprintf("%dW%02d", year, week)
+				n, err := automsgSvc.SendInactivityReminders(ctx, 3, weekSuffix)
+				if err != nil {
+					log.ErrorContext(ctx, "inactivity_reminders_failed", slog.String("err", err.Error()))
+				} else if n > 0 {
+					log.InfoContext(ctx, "inactivity_reminders_sent", slog.Int("count", n))
 				}
 			}
 		}
