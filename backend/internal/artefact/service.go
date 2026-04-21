@@ -108,6 +108,30 @@ func (s *Service) Activate(ctx context.Context, userID, artefactID string) (Reco
 			}
 		}
 
+		// Если у артефакта есть delay — переводим в delayed и планируем
+		// событие KindArtefactDelay (63). Сами эффекты применятся позже,
+		// когда delay-событие сработает.
+		if spec.DelaySeconds > 0 && r.State == StateHeld {
+			now := time.Now().UTC()
+			fireAt := now.Add(time.Duration(spec.DelaySeconds) * time.Second)
+			if _, err := tx.Exec(ctx, `
+				UPDATE artefacts_user SET state = $1, activated_at = $2 WHERE id = $3
+			`, StateDelayed, now, r.ID); err != nil {
+				return fmt.Errorf("set delayed: %w", err)
+			}
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
+				VALUES ($1, $2, $3, 63, 'wait', $4, $5)
+			`, ids.New(), userID, r.PlanetID, fireAt,
+				fmt.Sprintf(`{"artefact_id":"%s"}`, r.ID)); err != nil {
+				return fmt.Errorf("insert delay event: %w", err)
+			}
+			r.State = StateDelayed
+			r.ActivatedAt = &now
+			rec = r
+			return nil
+		}
+
 		change, err := computeChanges(spec, dirApply)
 		if err != nil && !errors.Is(err, ErrUnsupported) {
 			return err

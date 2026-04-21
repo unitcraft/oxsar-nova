@@ -21,7 +21,7 @@ export function ArtefactsScreen() {
     },
   });
   const deactivate = useMutation({
-    mutationFn: (id: string) => api.delete<void>(`/api/artefacts/${id}/deactivate`),
+    mutationFn: (id: string) => api.post<void>(`/api/artefacts/${id}/deactivate`),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
@@ -65,7 +65,9 @@ export function ArtefactsScreen() {
       ? tf('Main', 'ARTEFACT_DEACTIVATE', 'Деактивировать')
       : a.state === 'held'
         ? tf('Main', 'ARTEFACT_ACTIVATE', 'Активировать')
-        : '—';
+        : a.state === 'delayed'
+          ? tf('Main', 'ARTEFACT_DELAYED', 'Активируется…')
+          : '—';
 
   return (
     <section>

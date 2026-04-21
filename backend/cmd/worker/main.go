@@ -83,6 +83,7 @@ func run() error {
 	w.Register(event.KindBuildFleet, event.HandleBuildFleet)
 	w.Register(event.KindBuildDefense, event.HandleBuildFleet)
 	w.Register(event.KindArtefactExpire, artefactSvc.ExpireEvent())
+	w.Register(event.KindArtefactDelay, artefactSvc.DelayEvent())
 	w.Register(event.KindTransport, transportSvc.ArriveHandler())
 	w.Register(event.KindReturn, transportSvc.ReturnHandler())
 	w.Register(event.KindAttackSingle, transportSvc.AttackHandler())

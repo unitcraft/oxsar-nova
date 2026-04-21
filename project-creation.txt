@@ -2922,5 +2922,56 @@ docs/status.md — синхронизация с реальным кодом:
 
 
 ================================================================================
+37. ARTEFACT MODULE — BUGFIX + DELAY ACTIVATION
+================================================================================
+
+Дата: 2026-04-21
+
+Аудит выявил два реальных бага и одну незакрытую фичу в модуле artefact:
+
+Баг 1 — Deactivate: DELETE вместо POST (frontend/src/features/artefacts/
+ArtefactsScreen.tsx:24). api.delete() → api.post(). Кнопка «Деактивировать»
+падала с 405 Method Not Allowed. Однострочный фикс.
+
+Баг 2 (фича) — Delay activation не реализована.
+Spec §5.10.3 + config.ArtefactSpec.DelaySeconds > 0 → артефакт должен
+переходить held → delayed при нажатии «Активировать», а active только
+после истечения delay через EVENT_ARTEFACT_DELAY (kind=63).
+
+Реализация:
+  backend/internal/artefact/service.go:
+    В Activate() добавлена ветка для spec.DelaySeconds > 0:
+      - state = 'delayed', activated_at = now()
+      - INSERT INTO events (kind=63, fire_at = now + delaySeconds)
+      - возврат без применения эффектов.
+    Прямая активация (DelaySeconds == 0) — поведение не изменилось.
+
+  backend/internal/artefact/delay.go (новый, ~80 строк):
+    DelayEvent() event.Handler:
+      - читает artefact_id из payload
+      - проверяет state = 'delayed' (идемпотентность)
+      - применяет computeChanges(spec, dirApply) → applyChange()
+      - UPDATE state = 'active', expire_at
+      - INSERT events kind=60 (expire) если LifetimeSeconds > 0
+
+  backend/cmd/worker/main.go:
+    +w.Register(event.KindArtefactDelay, artefactSvc.DelayEvent())
+
+  frontend/src/features/artefacts/ArtefactsScreen.tsx:
+    actionLabel() дополнен состоянием 'delayed' → «Активируется…»
+
+Статистика итерации 37.
+   ArtefactsScreen.tsx: 1 строка bugfix + 2 строки UI для delayed.
+   artefact/service.go: +22 строки ветки delay.
+   artefact/delay.go: новый файл, ~80 строк.
+   worker/main.go: +1 строка регистрации.
+   docs/status.md: Artefact → ✅.
+
+Что дальше:
+   - Message Compose (M6): user-to-user сообщения.
+   - После него — Alliance (M6): создание, вступление, выход.
+
+
+================================================================================
 Конец дневника.
 ================================================================================
