@@ -102,7 +102,7 @@ func run() error {
 	automsgSvc := automsg.NewService(db)
 
 	authSvc := auth.NewService(db, jwt, starter, automsgSvc)
-	authH := auth.NewHandler(authSvc)
+	authH := auth.NewHandler(authSvc, pool)
 
 	reqs := requirements.New(cat)
 
@@ -178,6 +178,7 @@ func run() error {
 	r.Post("/api/auth/register", authH.Register)
 	r.Post("/api/auth/login", authH.Login)
 	r.Post("/api/auth/refresh", authH.Refresh)
+	r.With(auth.Middleware(jwt)).Get("/api/me", authH.Me)
 	r.Post("/api/battle-sim", battleSimHandler)
 
 	// i18n доступна без авторизации (логин-экран тоже использует).

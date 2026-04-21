@@ -177,15 +177,10 @@
 - **Как чинить**: не нужно.
 - **Приоритет**: —
 
-### [ArtefactMarket] Фильтр «мои» — по username, не по user_id
-- **Где**: `features/artmarket/ArtefactMarketScreen.tsx::shown`.
-- **Что**: `filter === 'mine'` сравнивает `seller_name` с
-  `credit?.toString()` — это мусор.
-- **Почему**: на клиенте не знаем свой user_id без отдельного запроса
-  `/api/me`.
-- **Как чинить**: добавить `/api/me` → `{user_id, username}` или
-  парсить JWT-claims на клиенте.
-- **Приоритет**: M — сейчас «мои» работает неправильно.
+### [ArtefactMarket] Фильтр «мои» — ЗАКРЫТО
+- **Закрыто**: добавлен `GET /api/me` → `{user_id, username}`,
+  фильтр сравнивает `seller_user_id === me.user_id`. Кнопка действия
+  теперь тоже разделена: Cancel — для своих, Buy — для чужих.
 
 ### [ArtefactMarket] Цена через window.prompt
 - **Где**: `features/artefacts/ArtefactsScreen.tsx`.
