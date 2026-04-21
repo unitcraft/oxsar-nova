@@ -102,11 +102,17 @@ interface BattleReportFull {
   report: BattleReportPayload;
 }
 
+interface ReplyInit {
+  to: string;
+  subject: string;
+}
+
 export function MessagesScreen() {
   const { t, tf } = useTranslation();
   const qc = useQueryClient();
   const [selectedID, setSelectedID] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
+  const [replyInit, setReplyInit] = useState<ReplyInit | undefined>(undefined);
 
   const list = useQuery({
     queryKey: ['messages'],
@@ -134,7 +140,17 @@ export function MessagesScreen() {
   function onSelect(m: Message) {
     setSelectedID(m.id);
     setComposing(false);
+    setReplyInit(undefined);
     if (!m.read_at) markRead.mutate(m.id);
+  }
+
+  function onReply(m: Message) {
+    setReplyInit({
+      to: m.from_username ?? '',
+      subject: m.subject.startsWith('Re: ') ? m.subject : `Re: ${m.subject}`,
+    });
+    setComposing(true);
+    setSelectedID(null);
   }
 
   return (
@@ -157,11 +173,13 @@ export function MessagesScreen() {
 
       {composing && (
         <ComposeForm
+          init={replyInit}
           onSent={() => {
             setComposing(false);
+            setReplyInit(undefined);
             void qc.invalidateQueries({ queryKey: ['messages'] });
           }}
-          onCancel={() => setComposing(false)}
+          onCancel={() => { setComposing(false); setReplyInit(undefined); }}
         />
       )}
 
@@ -212,17 +230,17 @@ export function MessagesScreen() {
               })}
             </tbody>
           </table>
-          <div>{selected ? <MessageDetail message={selected} /> : <p>—</p>}</div>
+          <div>{selected ? <MessageDetail message={selected} onReply={onReply} /> : <p>—</p>}</div>
         </div>
       )}
     </section>
   );
 }
 
-function ComposeForm({ onSent, onCancel }: { onSent: () => void; onCancel: () => void }) {
+function ComposeForm({ init, onSent, onCancel }: { init?: ReplyInit | undefined; onSent: () => void; onCancel: () => void }) {
   const { tf } = useTranslation();
-  const [to, setTo] = useState('');
-  const [subject, setSubject] = useState('');
+  const [to, setTo] = useState(init?.to ?? '');
+  const [subject, setSubject] = useState(init?.subject ?? '');
   const [body, setBody] = useState('');
   const [error, setError] = useState('');
 
@@ -277,7 +295,7 @@ function ComposeForm({ onSent, onCancel }: { onSent: () => void; onCancel: () =>
   );
 }
 
-function MessageDetail({ message }: { message: Message }) {
+function MessageDetail({ message, onReply }: { message: Message; onReply: (m: Message) => void }) {
   const { tf } = useTranslation();
   const report = useQuery({
     queryKey: ['battle-report', message.battle_report_id],
@@ -308,6 +326,12 @@ function MessageDetail({ message }: { message: Message }) {
         </span>
       </p>
       <p>{message.body}</p>
+
+      {message.from_user_id && (
+        <button type="button" onClick={() => onReply(message)} style={{ marginBottom: 12 }}>
+          {tf('Main', 'MSG_REPLY', '↩ Ответить')}
+        </button>
+      )}
 
       {message.battle_report_id && (
         <>
