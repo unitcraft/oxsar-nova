@@ -107,12 +107,22 @@ interface ReplyInit {
   subject: string;
 }
 
+const FOLDERS: { folder: number | null; label: string }[] = [
+  { folder: null, label: 'Все' },
+  { folder: 1, label: 'Личные' },
+  { folder: 2, label: 'Бой' },
+  { folder: 3, label: 'Шпионаж' },
+  { folder: 4, label: 'Экспедиции' },
+  { folder: 13, label: 'Система' },
+];
+
 export function MessagesScreen() {
   const { t, tf } = useTranslation();
   const qc = useQueryClient();
   const [selectedID, setSelectedID] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
   const [replyInit, setReplyInit] = useState<ReplyInit | undefined>(undefined);
+  const [activeFolder, setActiveFolder] = useState<number | null>(null);
 
   const list = useQuery({
     queryKey: ['messages'],
@@ -134,7 +144,8 @@ export function MessagesScreen() {
     },
   });
 
-  const msgs = list.data?.messages ?? [];
+  const allMsgs = list.data?.messages ?? [];
+  const msgs = activeFolder === null ? allMsgs : allMsgs.filter((m) => m.folder === activeFolder);
   const selected = msgs.find((m) => m.id === selectedID) ?? null;
 
   function onSelect(m: Message) {
@@ -156,6 +167,19 @@ export function MessagesScreen() {
   return (
     <section>
       <h2>{tf('global', 'MENU_MESSAGES', 'Сообщения')}</h2>
+
+      <div style={{ marginBottom: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {FOLDERS.map(({ folder, label }) => (
+          <button
+            key={folder ?? 'all'}
+            type="button"
+            onClick={() => { setActiveFolder(folder); setSelectedID(null); }}
+            style={{ fontWeight: activeFolder === folder ? 700 : 400, opacity: activeFolder === folder ? 1 : 0.6 }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       <div style={{ marginBottom: 12 }}>
         <button type="button" onClick={() => { setComposing(true); setSelectedID(null); }}>

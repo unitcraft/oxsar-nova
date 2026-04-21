@@ -253,13 +253,9 @@
 - LEFT JOIN users ua/ud добавлен в GetBattleReport. Поля
   attacker_username/defender_username теперь в ответе (commit 10555a6).
 
-### [Messages] Folders не используются в UI
-- **Где**: `features/messages/MessagesScreen.tsx`.
-- **Что**: все messages в одном inbox, без фильтров по folder (2=battle,
-  4=spy, etc).
-- **Почему**: для MVP fields достаточно одного списка.
-- **Как чинить**: tab'ы по folder.
-- **Приоритет**: L.
+### [Messages] Folders — ЗАКРЫТО
+- Закрыто: tab-фильтры «Все / Личные / Бой / Шпионаж / Экспедиции / Система»
+  в MessagesScreen. Фильтрация на клиенте по `m.folder`.
 
 ---
 
