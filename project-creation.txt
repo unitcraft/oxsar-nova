@@ -3249,5 +3249,43 @@ docs/status.md: Simulator UI — комментарий дополнен "+ mult
 
 
 ================================================================================
+Итерация 45 — Чистка + openapi sync
+================================================================================
+
+Удалено мёртвое:
+  - backend/internal/fleet/service.go — старый каркас Service/Register/Send
+    (заменён TransportService; никто не вызывал).
+  - fleet/mission.go: удалён неиспользуемый интерфейс Mission (остались
+    только типы Dispatch/Fleet/Resources, которые реально нужны).
+  - galaxy/service.go: убран стейл TODO-комментарий у Distance().
+
+docs/status.md: Achievements 🟡 → ✅ (lazy-check — намеренный подход).
+
+api/openapi.yaml — синхронизирован с реальным сервером:
+  - Новые пути: /api/messages DELETE+POST, /api/messages/unread-count,
+    /api/messages/{id}, /api/espionage-reports/{id},
+    /api/expedition-reports/{id}, /api/achievements, /api/officers,
+    /api/officers/{key}/activate, /api/market/rates,
+    /api/planets/{id}/market/exchange, /api/planets/{id}/rockets,
+    /api/planets/{id}/rockets/launch, /api/highscore, /api/highscore/me,
+    /api/alliances (GET+POST), /api/alliances/me, /api/alliances/leave,
+    /api/alliances/{id} (GET+DELETE), /api/alliances/{id}/join,
+    /api/artefacts/{id}/sell, /api/artefact-market/*,
+    /api/i18n, /api/i18n/{lang}.
+  - Новые схемы: SimStats, AchievementEntry, Officer, MarketRates,
+    ExchangeResult, HighscoreEntry, Alliance, AllianceMember,
+    AllianceDetail, ArtMarketOffer.
+  - battle-sim response теперь oneOf[BattleReport|SimStats].
+  - Новые tags: artmarket, achievements, officers, market, rockets,
+    score, alliances, i18n.
+
+Статистика итерации 45:
+   api/openapi.yaml: +578 строк (пути + схемы).
+   fleet/service.go: удалён (-40 строк).
+   fleet/mission.go: -20 строк (интерфейс).
+   galaxy/service.go: -2 строки (комментарий).
+
+
+================================================================================
 Конец дневника.
 ================================================================================
