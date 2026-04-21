@@ -3694,5 +3694,18 @@ migrations/0023_officer_admiral_desc.sql (новый):
 docs/simplifications.md: [Officers] ADMIRAL — ЗАКРЫТО.
 
 ================================================================================
+Итерация 63 — feat(rocket): anti-ballistic missile (ABM) перехват
+================================================================================
+
+backend/internal/rocket/events.go:
+  - Константа interceptorRocketUnitID=51 (unit key interceptor_rocket).
+  - ImpactHandler: перед расчётом урона вычитает min(abm_count, rockets)
+    → survivingRockets. ABM-юниты расходуются (UPDATE defense SET count).
+  - Уведомление: "X/N ракет долетели (Y сбито ABM) (урон Z)".
+  - Если все сбиты: "N ракет перехвачено антиракетами".
+
+docs/simplifications.md: [Rockets] ABM — ЗАКРЫТО.
+
+================================================================================
 Конец дневника.
 ================================================================================

@@ -11,15 +11,21 @@ import (
 	"github.com/oxsar/nova/backend/pkg/ids"
 )
 
+// interceptorRocketUnitID — unit_id юнита "interceptor_rocket" (§5.16).
+const interceptorRocketUnitID = 51
+
 // ImpactHandler — event.Handler для KindRocketAttack=16. Идемпотентен
 // через отметку events.state воркером.
 //
-// Модель урона (M5):
-//   totalDamage = count × missileDamage
+// Модель урона:
+//   intercepted = min(abm_count, rocket_count)
+//   surviving = rocket_count - intercepted
+//   abm_count -= intercepted   (перехватчики расходуются)
+//   totalDamage = surviving × missileDamage
 //   для каждого defense-стека планеты:
 //     share = stack.count × shell / Σ(count × shell)
-//     damaged = floor((totalDamage × share) / shell)
-//     new_count = max(0, stack.count - damaged)
+//     killed = floor(totalDamage × share / shell)
+//     new_count = max(0, stack.count - killed)
 //
 // Ракеты бьют только defense. Щитов и hp-такого защита не имеет
 // (legacy-модель: defense имеет только `count` и `cost`).
@@ -102,14 +108,42 @@ func (s *Service) ImpactHandler() event.Handler {
 		}
 		rows.Close()
 
-		totalDamage := pl.Count * int64(missileDamage)
+		// Anti-ballistic missile interception.
+		survivingRockets := pl.Count
+		var abmIntercepted int64
+		for i, d := range stacks {
+			if d.UnitID != interceptorRocketUnitID {
+				continue
+			}
+			abmIntercepted = d.Count
+			if abmIntercepted > survivingRockets {
+				abmIntercepted = survivingRockets
+			}
+			survivingRockets -= abmIntercepted
+			newABM := d.Count - abmIntercepted
+			if _, err := tx.Exec(ctx,
+				`UPDATE defense SET count=$1 WHERE planet_id=$2 AND unit_id=$3`,
+				newABM, planetID, interceptorRocketUnitID); err != nil {
+				return fmt.Errorf("rocket impact: update abm: %w", err)
+			}
+			// Remove ABM from stacks so it's not included in damage calc.
+			stacks = append(stacks[:i], stacks[i+1:]...)
+			break
+		}
 
-		if len(stacks) == 0 {
-			// У цели нет defense — пишем сообщение «оборона отсутствует,
-			// урон пропал».
+		totalDamage := survivingRockets * int64(missileDamage)
+
+		if len(stacks) == 0 || survivingRockets == 0 {
+			// Все ракеты сбиты или нет defense — пишем сообщение.
 			subj := fmt.Sprintf("Ракетный удар %d:%d:%d", pl.Dst.Galaxy, pl.Dst.System, pl.Dst.Position)
-			body := fmt.Sprintf("%d ракет долетели. Оборона отсутствует — урон %d пропал.",
-				pl.Count, totalDamage)
+			var body string
+			if survivingRockets == 0 {
+				body = fmt.Sprintf("%d ракет перехвачено антиракетами (%d ABM). Урон отсутствует.",
+					abmIntercepted, abmIntercepted)
+			} else {
+				body = fmt.Sprintf("%d ракет долетели. Оборона отсутствует — урон %d пропал.",
+					survivingRockets, totalDamage)
+			}
 			return notifyBoth(ctx, tx, pl.AttackerID, targetOwner, subj, body)
 		}
 
@@ -152,8 +186,12 @@ func (s *Service) ImpactHandler() event.Handler {
 		for _, l := range losses {
 			lossStr += fmt.Sprintf("\n- юнит #%d: -%d", l.UnitID, l.Lost)
 		}
-		body := fmt.Sprintf("%d ракет долетели (общий урон %d). Потери обороны:%s",
-			pl.Count, totalDamage, lossStr)
+		abmNote := ""
+		if abmIntercepted > 0 {
+			abmNote = fmt.Sprintf(" (%d сбито ABM)", abmIntercepted)
+		}
+		body := fmt.Sprintf("%d/%d ракет долетели%s (урон %d). Потери обороны:%s",
+			survivingRockets, pl.Count, abmNote, totalDamage, lossStr)
 		return notifyBoth(ctx, tx, pl.AttackerID, targetOwner, subj, body)
 	}
 }
