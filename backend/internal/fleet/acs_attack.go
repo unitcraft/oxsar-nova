@@ -240,13 +240,13 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 		debrisM, debrisS := calcDebris(report, defenseIDs, s.catalog)
 		if debrisM > 0 || debrisS > 0 {
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO debris_fields (galaxy, system, position, metal, silicon)
-				VALUES ($1, $2, $3, $4, $5)
-				ON CONFLICT (galaxy, system, position) DO UPDATE
+				INSERT INTO debris_fields (galaxy, system, position, is_moon, metal, silicon)
+				VALUES ($1, $2, $3, $4, $5, $6)
+				ON CONFLICT (galaxy, system, position, is_moon) DO UPDATE
 				SET metal = debris_fields.metal + EXCLUDED.metal,
 				    silicon = debris_fields.silicon + EXCLUDED.silicon,
 				    last_update = now()
-			`, lead.g, lead.sys, lead.pos, debrisM, debrisS); err != nil {
+			`, lead.g, lead.sys, lead.pos, isMoon, debrisM, debrisS); err != nil {
 				return fmt.Errorf("acs attack: debris: %w", err)
 			}
 			if !isMoon {

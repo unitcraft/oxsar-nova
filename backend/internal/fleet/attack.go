@@ -191,13 +191,13 @@ func (s *TransportService) AttackHandler() event.Handler {
 		debrisM, debrisS := calcDebris(report, defenseIDs, s.catalog)
 		if debrisM > 0 || debrisS > 0 {
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO debris_fields (galaxy, system, position, metal, silicon)
-				VALUES ($1, $2, $3, $4, $5)
-				ON CONFLICT (galaxy, system, position) DO UPDATE
+				INSERT INTO debris_fields (galaxy, system, position, is_moon, metal, silicon)
+				VALUES ($1, $2, $3, $4, $5, $6)
+				ON CONFLICT (galaxy, system, position, is_moon) DO UPDATE
 				SET metal = debris_fields.metal + EXCLUDED.metal,
 				    silicon = debris_fields.silicon + EXCLUDED.silicon,
 				    last_update = now()
-			`, g, sys, pos, debrisM, debrisS); err != nil {
+			`, g, sys, pos, isMoon, debrisM, debrisS); err != nil {
 				return fmt.Errorf("attack: write debris: %w", err)
 			}
 			// Moon-chance: min(20, total_debris/100000)%.

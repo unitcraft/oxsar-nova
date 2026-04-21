@@ -110,13 +110,9 @@
 - **Как чинить**: не нужно.
 - **Приоритет**: —
 
-### [RECYCLING] Debris один на координаты, без is_moon
-- **Где**: `migrations/0010_debris_fields.sql`.
-- **Что**: PK (galaxy, system, position), is_moon не учитывается —
-  debris над планетой и над луной считаются одним полем.
-- **Почему**: упрощение схемы. OGame позволяет обе орбиты.
-- **Как чинить**: добавить колонку `is_moon` в PK.
-- **Приоритет**: L.
+### [RECYCLING] Debris один на координаты, без is_moon — ЗАКРЫТО
+- Закрыто: migration 0030 добавляет `is_moon bool` в PK debris_fields.
+  Все INSERT/UPDATE/SELECT в attack.go, acs_attack.go, events.go обновлены.
 
 ### [SPY] Counter-espionage + research>=8 — ЗАКРЫТО
 - Закрыто: `buildEspionageReport` добавляет Research при ratio>=8 через
