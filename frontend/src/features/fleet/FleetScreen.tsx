@@ -117,7 +117,7 @@ export function FleetScreen({ planet }: { planet: Planet }) {
         P&nbsp;<input type="number" min={1} max={15} value={pos} onChange={(e) => setPos(Number(e.target.value))} style={{ width: 60 }} />
         <label>
           <input type="checkbox" checked={isMoon} onChange={(e) => setIsMoon(e.target.checked)} />
-          &nbsp;moon
+          &nbsp;{tf('Main', 'MOON', 'Луна')}
         </label>
       </div>
 
@@ -171,15 +171,15 @@ export function FleetScreen({ planet }: { planet: Planet }) {
             {t('global', 'METAL')} / {t('global', 'SILICON')} / {t('global', 'HYDROGEN')}
           </h3>
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <input type="number" min={0} value={metal} onChange={(e) => setMetal(Number(e.target.value))} placeholder="metal" />
-            <input type="number" min={0} value={silicon} onChange={(e) => setSilicon(Number(e.target.value))} placeholder="silicon" />
-            <input type="number" min={0} value={hydrogen} onChange={(e) => setHydrogen(Number(e.target.value))} placeholder="hydrogen" />
+            <input type="number" min={0} value={metal} onChange={(e) => setMetal(Number(e.target.value))} placeholder={t('global', 'METAL')} />
+            <input type="number" min={0} value={silicon} onChange={(e) => setSilicon(Number(e.target.value))} placeholder={t('global', 'SILICON')} />
+            <input type="number" min={0} value={hydrogen} onChange={(e) => setHydrogen(Number(e.target.value))} placeholder={t('global', 'HYDROGEN')} />
           </div>
         </>
       )}
 
       <div style={{ marginBottom: 12 }}>
-        speed %&nbsp;
+        {tf('Main', 'SPEED_PERCENT', 'Скорость %')}&nbsp;
         <input type="range" min={10} max={100} step={10} value={speed} onChange={(e) => setSpeed(Number(e.target.value))} />
         &nbsp;{speed}%
       </div>
@@ -189,7 +189,7 @@ export function FleetScreen({ planet }: { planet: Planet }) {
       </button>
       {send.isError && (
         <div className="ox-error">
-          {send.error instanceof Error ? send.error.message : 'error'}
+          {send.error instanceof Error ? send.error.message : t('global', 'ERROR')}
         </div>
       )}
 
@@ -202,9 +202,9 @@ export function FleetScreen({ planet }: { planet: Planet }) {
             <tr>
               <th>#</th>
               <th>{t('Main', 'POSITION')}</th>
-              <th>state</th>
-              <th>arrive</th>
-              <th>return</th>
+              <th>{tf('Main', 'FLEET_STATE', 'Статус')}</th>
+              <th>{tf('Main', 'FLEET_ARRIVE', 'Прилёт')}</th>
+              <th>{tf('Main', 'FLEET_RETURN', 'Возврат')}</th>
               <th />
             </tr>
           </thead>
@@ -237,7 +237,7 @@ export function FleetScreen({ planet }: { planet: Planet }) {
       )}
       {recall.isError && (
         <div className="ox-error">
-          {recall.error instanceof Error ? recall.error.message : 'recall error'}
+          {recall.error instanceof Error ? recall.error.message : t('global', 'ERROR')}
         </div>
       )}
     </section>
