@@ -642,6 +642,7 @@ Registration:
   NO_ACCESS: Недействительная сессия.
   NO_ACTIVATION: Указанный пользователь еще не активирован.
   OPEN_SOURCE: Open Source
+  PASSWORD: Пароль
   PASSWORD_CHANGED: Пароль был успешно изменен
   PASSWORD_CHECK: "Пароль должен быть от %d до %d символов."
   PASSWORD_FORGOTTEN: Напомнить пароль
