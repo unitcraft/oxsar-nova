@@ -314,6 +314,16 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 				`, totalLootM, totalLootS, totalLootH, planetID); err != nil {
 					return fmt.Errorf("acs attack: subtract loot: %w", err)
 				}
+				// Аудит: defender теряет, лидер — как представитель группы.
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO res_log (user_id, planet_id, reason, delta_metal, delta_silicon, delta_hydrogen)
+					VALUES ($1, $2, 'loot', $3, $4, $5),
+					       ($6, $7, 'loot', $8, $9, $10)
+				`, lead.ownerUserID, planetID, totalLootM, totalLootS, totalLootH,
+					defenderUserID, planetID, -totalLootM, -totalLootS, -totalLootH,
+				); err != nil {
+					return fmt.Errorf("acs attack: res_log: %w", err)
+				}
 			}
 		}
 
