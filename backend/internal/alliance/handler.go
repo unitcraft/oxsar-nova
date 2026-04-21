@@ -263,3 +263,49 @@ func (h *Handler) Disband(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}
 }
+
+// GetRelations GET /api/alliances/{id}/relations
+func (h *Handler) GetRelations(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	rels, err := h.svc.GetRelations(r.Context(), id)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"relations": rels})
+}
+
+// SetRelation PUT /api/alliances/{id}/relations/{target_id}
+func (h *Handler) SetRelation(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	targetID := chi.URLParam(r, "target_id")
+
+	var body struct {
+		Relation string `json:"relation"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+
+	err := h.svc.SetRelation(r.Context(), uid, id, targetID, body.Relation)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrTargetNotFound):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrNotFound, err.Error()))
+	case errors.Is(err, ErrNotOwner):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrInvalidRelation), errors.Is(err, ErrRelationSelf):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}

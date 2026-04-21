@@ -495,3 +495,97 @@ func isAlphanumASCII(r rune) bool {
 func isDupKey(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "duplicate key")
 }
+
+// Relationship — запись об отношениях между альянсами.
+type Relationship struct {
+	TargetAllianceID  string    `json:"target_alliance_id"`
+	TargetTag         string    `json:"target_tag"`
+	TargetName        string    `json:"target_name"`
+	Relation          string    `json:"relation"` // "nap" | "war" | "ally"
+	SetAt             time.Time `json:"set_at"`
+}
+
+var (
+	ErrInvalidRelation  = errors.New("alliance: relation must be 'nap', 'war', or 'ally'")
+	ErrTargetNotFound   = errors.New("alliance: target alliance not found")
+	ErrRelationSelf     = errors.New("alliance: cannot set relation with own alliance")
+)
+
+// SetRelation устанавливает отношение alliance_id → target_alliance_id.
+// Только owner альянса может это делать. Relation="none" — удаляет запись.
+func (s *Service) SetRelation(ctx context.Context, userID, allianceID, targetID, relation string) error {
+	if allianceID == targetID {
+		return ErrRelationSelf
+	}
+	if relation != "nap" && relation != "war" && relation != "ally" && relation != "none" {
+		return ErrInvalidRelation
+	}
+
+	// Проверяем что userID — owner альянса.
+	var ownerID string
+	err := s.db.Pool().QueryRow(ctx,
+		`SELECT owner_id FROM alliances WHERE id=$1`, allianceID).Scan(&ownerID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		return fmt.Errorf("set relation: read alliance: %w", err)
+	}
+	if ownerID != userID {
+		return ErrNotOwner
+	}
+
+	// Проверяем что target существует.
+	var targetExists bool
+	if err := s.db.Pool().QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM alliances WHERE id=$1)`, targetID).Scan(&targetExists); err != nil {
+		return fmt.Errorf("set relation: check target: %w", err)
+	}
+	if !targetExists {
+		return ErrTargetNotFound
+	}
+
+	if relation == "none" {
+		if _, err := s.db.Pool().Exec(ctx,
+			`DELETE FROM alliance_relationships WHERE alliance_id=$1 AND target_alliance_id=$2`,
+			allianceID, targetID); err != nil {
+			return fmt.Errorf("set relation: delete: %w", err)
+		}
+		return nil
+	}
+
+	if _, err := s.db.Pool().Exec(ctx, `
+		INSERT INTO alliance_relationships (alliance_id, target_alliance_id, relation)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (alliance_id, target_alliance_id)
+		DO UPDATE SET relation=$3, set_at=now()
+	`, allianceID, targetID, relation); err != nil {
+		return fmt.Errorf("set relation: upsert: %w", err)
+	}
+	return nil
+}
+
+// GetRelations возвращает все отношения, установленные альянсом allianceID.
+func (s *Service) GetRelations(ctx context.Context, allianceID string) ([]Relationship, error) {
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT r.target_alliance_id, a.tag, a.name, r.relation::text, r.set_at
+		FROM alliance_relationships r
+		JOIN alliances a ON a.id = r.target_alliance_id
+		WHERE r.alliance_id = $1
+		ORDER BY r.set_at DESC
+	`, allianceID)
+	if err != nil {
+		return nil, fmt.Errorf("get relations: %w", err)
+	}
+	defer rows.Close()
+	var out []Relationship
+	for rows.Next() {
+		var rel Relationship
+		if err := rows.Scan(&rel.TargetAllianceID, &rel.TargetTag, &rel.TargetName,
+			&rel.Relation, &rel.SetAt); err != nil {
+			return nil, err
+		}
+		out = append(out, rel)
+	}
+	return out, rows.Err()
+}

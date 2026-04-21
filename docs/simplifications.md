@@ -399,15 +399,13 @@
 
 ## Alliance (M6)
 
-### [Alliance] MVP без заявок, рангов, отношений и WebSocket-чата
+### [Alliance] MVP без рангов и WebSocket-чата
 - **Где**: `internal/alliance/service.go`, `features/alliance/AllianceScreen.tsx`.
-- **Что**: только create / join / leave / disband. Нет: alliance applications
-  (заявки на вступление с текстом), кастомных рангов, отношений NAP/WAR/ALLY,
-  WebSocket chat (global/alliance/PM), ACS-атак.
-- **Почему**: полный scope M6 — ~1200 LOC PHP (alliance/ + chat/). MVP достаточен
-  для игрового процесса M6-запуска.
-- **Как чинить**: добавить `alliance_applications` + `alliance_relationships` таблицы,
-  WebSocket Hub с fan-out в `chat_messages`, эндпоинты ACS-флота.
+- **Что**: ~~отношения NAP/WAR/ALLY~~ — ЗАКРЫТО (migration 0028, SetRelation/GetRelations,
+  RelationsPanel в UI). Остаток: кастомные ранги, отношения NAP/WAR/ALLY (встречный
+  acknowledge), WebSocket chat (global/alliance/PM), ACS-атаки.
+- **Как чинить**: добавить WebSocket Hub с fan-out в `chat_messages`, встречное
+  подтверждение отношений, ранги участников.
 - **Приоритет**: M.
 
 ### [Alliance] Join approval flow — ЗАКРЫТО
