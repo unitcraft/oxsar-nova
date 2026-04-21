@@ -243,6 +243,26 @@ func (s *Service) lookupBuilding(unitID int) (string, config.BuildingSpec, bool)
 	return "", config.BuildingSpec{}, false
 }
 
+// Levels возвращает map unit_id → level для всех построенных зданий планеты.
+func (s *Service) Levels(ctx context.Context, planetID string) (map[int]int, error) {
+	rows, err := s.db.Pool().Query(ctx,
+		`SELECT unit_id, level FROM buildings WHERE planet_id=$1 AND level>0`,
+		planetID)
+	if err != nil {
+		return nil, fmt.Errorf("building levels: %w", err)
+	}
+	defer rows.Close()
+	out := make(map[int]int)
+	for rows.Next() {
+		var uid, lvl int
+		if err := rows.Scan(&uid, &lvl); err != nil {
+			return nil, err
+		}
+		out[uid] = lvl
+	}
+	return out, rows.Err()
+}
+
 func currentLevel(ctx context.Context, tx pgx.Tx, planetID string, unitID int) (int, error) {
 	var lvl int
 	err := tx.QueryRow(ctx,

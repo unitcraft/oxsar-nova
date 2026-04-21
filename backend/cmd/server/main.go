@@ -197,6 +197,7 @@ func run() error {
 		pr.Get("/planets", planetH.List)
 		pr.Get("/planets/{id}", planetH.Get)
 
+		pr.Get("/planets/{id}/buildings", buildingH.Levels)
 		pr.Post("/planets/{id}/buildings", buildingH.Enqueue)
 		pr.Get("/planets/{id}/buildings/queue", buildingH.List)
 		pr.Delete("/planets/{id}/buildings/queue/{taskId}", buildingH.Cancel)
