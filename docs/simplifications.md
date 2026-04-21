@@ -371,14 +371,10 @@
 
 ## Economy / Catalog
 
-### [planet.tick] Нет production.yml с формулами в runtime
-- **Где**: `backend/internal/planet/service.go`.
-- **Что**: `construction.yml` не коммитится (зависит от внешнего SQL-дампа
-  oxsar2). В проде всегда fallback на `productionRatesApprox`.
-- **Почему**: import-datasheets требует `OXSAR2_DUMP` — внешний путь.
-- **Как чинить**: запустить `make import-datasheets OXSAR2_DUMP=<path>`,
-  закоммитить `configs/construction.yml`. Или добавить в CI-артефакт.
-- **Приоритет**: M.
+### [planet.tick] construction.yml — ЗАКРЫТО
+- Закрыто: запущен `go run ./cmd/tools/import-datasheets` из na_construction.sql.
+  `configs/construction.yml` сгенерирован и закоммичен. DSL-путь (legacy-формулы)
+  теперь активен в проде без fallback на приближения.
 
 ### [economy] Storage cap — ЗАКРЫТО (было ошибочно открыто)
 - `storageCap()` в planet/service.go корректно читает уровни metal_storage/
