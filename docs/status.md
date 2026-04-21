@@ -24,7 +24,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Defense                     | ✅     | M2 | В рамках shipyard — общая очередь.                       |
 | Galaxy                      | ✅     | M3 | Repository + GET /api/galaxy/{g}/{s} + GalaxyScreen.      |
 | Fleet / missions            | ✅     | M5 | TRANSPORT + ATTACK + RECYCLING + SPY + COLONIZE (kind=7,8,9,10,11). |
-| Battle engine               | 🟡     | M4.4b | rapidfire ✅, RECYCLING ✅, debris ✅. Нет: moon creation (kind=14), ACS multi-side. |
+| Battle engine               | 🟡     | M4.4b | rapidfire ✅, RECYCLING ✅, debris ✅, moon creation ✅. Нет: ACS multi-side (M5). |
 | Expedition                  | ✅     | M5 | 5 исходов (resources/artefact/pirates/loss/nothing), PvE-бой, отчёт + сообщение. |
 | ExpedPlanetCreator          | ✅     | M5 | extra_planet outcome (5%): создаёт планету на случайном свободном слоте, проверяет лимит. |
 | Rockets / stargate          | ✅     | M5 | Interplanetary rockets (kind=16): Launch → Impact. Stargate — позже. |

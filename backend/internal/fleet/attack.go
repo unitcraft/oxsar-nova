@@ -23,7 +23,8 @@
 //   * только single attacker (ACS — в M5).
 //   * debris целиком в loot (упрощение). Отдельная миссия
 //     RECYCLING (kind=9) придёт позже.
-//   * moon-chance не считаем.
+//   * moon-chance: реализован (min(20, debris/100000)%). Создаётся
+//     при первом бое с достаточным полем обломков.
 //   * report-тексты простые.
 package fleet
 
@@ -39,6 +40,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/event"
 	"github.com/oxsar/nova/backend/pkg/ids"
+	"github.com/oxsar/nova/backend/pkg/rng"
 )
 
 // unitStack — «плоская» запись в ships/defense/fleet_ships.
@@ -197,6 +199,13 @@ func (s *TransportService) AttackHandler() event.Handler {
 				    last_update = now()
 			`, g, sys, pos, debrisM, debrisS); err != nil {
 				return fmt.Errorf("attack: write debris: %w", err)
+			}
+			// Moon-chance: min(20, total_debris/100000)%.
+			if !isMoon {
+				if err := tryCreateMoon(ctx, tx, g, sys, pos, debrisM+debrisS,
+					report.Seed, defenderUserID, attackerUserID); err != nil {
+					return fmt.Errorf("attack: moon: %w", err)
+				}
 			}
 		}
 
@@ -618,6 +627,63 @@ func finalizeAttack(ctx context.Context, tx pgx.Tx,
 	if _, err := tx.Exec(ctx,
 		`UPDATE fleets SET state='returning' WHERE id=$1`, fleetID); err != nil {
 		return fmt.Errorf("finalize: fleet state: %w", err)
+	}
+	return nil
+}
+
+// tryCreateMoon проверяет шанс создания луны по формуле OGame:
+// chance = min(20, debrisTotal/100000)%. Если луна уже есть — пропуск.
+// seed берётся из battle.Report.Seed для детерминированности.
+func tryCreateMoon(ctx context.Context, tx pgx.Tx, g, sys, pos int,
+	debrisTotal int64, battleSeed uint64, defUserID, attUserID string) error {
+	chance := int(debrisTotal / 100000)
+	if chance > 20 {
+		chance = 20
+	}
+	if chance <= 0 {
+		return nil
+	}
+	r := rng.New(battleSeed ^ uint64(g)<<32 ^ uint64(sys)<<16 ^ uint64(pos))
+	if r.IntN(100) >= chance {
+		return nil // не повезло
+	}
+	// Луна уже есть?
+	var exists bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM planets
+			WHERE galaxy=$1 AND system=$2 AND position=$3 AND is_moon=true AND destroyed_at IS NULL
+		)
+	`, g, sys, pos).Scan(&exists); err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+	// Размер луны — 2000..6800 (OGame-диапазон для мун).
+	diameter := 2000 + r.IntN(4800)
+	moonID := ids.New()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO planets (id, user_id, is_moon, name, galaxy, system, position,
+		                     diameter, used_fields, temperature_min, temperature_max,
+		                     metal, silicon, hydrogen)
+		VALUES ($1, $2, true, 'Moon', $3, $4, $5, $6, 0, -100, -60, 0, 0, 0)
+	`, moonID, defUserID, g, sys, pos, diameter); err != nil {
+		return fmt.Errorf("insert moon: %w", err)
+	}
+	// Сообщения обеим сторонам.
+	subj := fmt.Sprintf("Луна создана в %d:%d:%d", g, sys, pos)
+	body := fmt.Sprintf("В результате боя образовалась луна на %d:%d:%d (диаметр %d).", g, sys, pos, diameter)
+	for _, uid := range []string{defUserID, attUserID} {
+		if uid == "" {
+			continue
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
+			VALUES ($1, $2, NULL, 2, $3, $4)
+		`, ids.New(), uid, subj, body); err != nil {
+			return fmt.Errorf("moon message: %w", err)
+		}
 	}
 	return nil
 }

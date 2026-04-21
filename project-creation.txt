@@ -3148,5 +3148,32 @@ docs/status.md: ExpedPlanetCreator ⬜ → ✅.
 
 
 ================================================================================
+42. MOON CREATION (M4.4b) — ЛУНА ИЗ БОЕВЫХ ОБЛОМКОВ
+================================================================================
+
+Дата: 2026-04-21
+
+Реализован moon-chance по формуле OGame: min(20, debris_total/100000)%.
+
+backend/internal/fleet/attack.go:
+  - tryCreateMoon(ctx, tx, g, sys, pos, debrisTotal, battleSeed, defUserID, attUserID):
+    * chance = min(20, debrisTotal/100000); если 0 — выход.
+    * rng seed = battleSeed XOR (g<<32 | sys<<16 | pos) — детерминированно.
+    * Проверка is_moon EXISTS — не создаём вторую луну.
+    * INSERT planets (is_moon=true, name='Moon', diameter 2000..6800,
+      temperature -100..-60, metal/silicon/hydrogen=0).
+    * Сообщения атакующему и защитнику: «Луна создана в G:S:P».
+  - Вызывается в finalizeAttack после записи debris_fields,
+    только если !isMoon (луна не атакует сама луну).
+  - Добавлен import pkg/rng в attack.go.
+
+docs/simplifications.md: [M4.4a] moon-chance → ЗАКРЫТО.
+docs/status.md: Battle engine добавлено moon creation ✅.
+
+Статистика итерации 42:
+   attack.go: +55 строк (tryCreateMoon + вызов + import rng).
+
+
+================================================================================
 Конец дневника.
 ================================================================================
