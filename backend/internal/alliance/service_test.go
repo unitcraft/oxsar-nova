@@ -75,10 +75,33 @@ func TestErrorSentinels_NotNil(t *testing.T) {
 		ErrNotFound, ErrAlreadyMember, ErrNotMember,
 		ErrNotOwner, ErrTagTaken, ErrNameTaken,
 		ErrInvalidTag, ErrCannotLeaveOwn,
+		ErrApplicationExists, ErrApplicationNotFound,
 	}
 	for _, err := range sentinels {
 		if err == nil {
 			t.Errorf("sentinel error is nil: %T", err)
 		}
+	}
+}
+
+func TestApplication_FieldsPresent(t *testing.T) {
+	t.Parallel()
+	ap := Application{
+		ID:         "id1",
+		AllianceID: "al1",
+		UserID:     "u1",
+		Username:   "alice",
+		Message:    "hello",
+	}
+	if ap.ID == "" || ap.AllianceID == "" || ap.Username == "" {
+		t.Fatal("Application fields must be set")
+	}
+}
+
+func TestAlliance_IsOpen_DefaultTrue(t *testing.T) {
+	t.Parallel()
+	al := Alliance{IsOpen: true}
+	if !al.IsOpen {
+		t.Fatal("default Alliance should have IsOpen=true")
 	}
 }

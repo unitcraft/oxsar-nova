@@ -254,20 +254,22 @@ func (s *Service) GetEspionageReport(ctx context.Context, userID, reportID strin
 
 // BattleReport — полный отчёт боя + метаданные из battle_reports.
 type BattleReport struct {
-	ID             string          `json:"id"`
-	AttackerUserID *string         `json:"attacker_user_id,omitempty"`
-	DefenderUserID *string         `json:"defender_user_id,omitempty"`
-	PlanetID       *string         `json:"planet_id,omitempty"`
-	Seed           int64           `json:"seed"`
-	Winner         string          `json:"winner"`
-	Rounds         int             `json:"rounds"`
-	DebrisMetal    int64           `json:"debris_metal"`
-	DebrisSilicon  int64           `json:"debris_silicon"`
-	LootMetal      int64           `json:"loot_metal"`
-	LootSilicon    int64           `json:"loot_silicon"`
-	LootHydrogen   int64           `json:"loot_hydrogen"`
-	At             time.Time       `json:"at"`
-	Report         json.RawMessage `json:"report"`
+	ID               string          `json:"id"`
+	AttackerUserID   *string         `json:"attacker_user_id,omitempty"`
+	AttackerUsername string          `json:"attacker_username,omitempty"`
+	DefenderUserID   *string         `json:"defender_user_id,omitempty"`
+	DefenderUsername string          `json:"defender_username,omitempty"`
+	PlanetID         *string         `json:"planet_id,omitempty"`
+	Seed             int64           `json:"seed"`
+	Winner           string          `json:"winner"`
+	Rounds           int             `json:"rounds"`
+	DebrisMetal      int64           `json:"debris_metal"`
+	DebrisSilicon    int64           `json:"debris_silicon"`
+	LootMetal        int64           `json:"loot_metal"`
+	LootSilicon      int64           `json:"loot_silicon"`
+	LootHydrogen     int64           `json:"loot_hydrogen"`
+	At               time.Time       `json:"at"`
+	Report           json.RawMessage `json:"report"`
 }
 
 // GetBattleReport читает report по id, доступ открыт только
@@ -276,14 +278,18 @@ type BattleReport struct {
 func (s *Service) GetBattleReport(ctx context.Context, userID, reportID string) (BattleReport, error) {
 	var r BattleReport
 	err := s.db.Pool().QueryRow(ctx, `
-		SELECT id, attacker_user_id, defender_user_id, planet_id,
-		       seed, winner, rounds,
-		       debris_metal, debris_silicon,
-		       loot_metal, loot_silicon, loot_hydrogen,
-		       at, report
-		FROM battle_reports
-		WHERE id = $1
-	`, reportID).Scan(&r.ID, &r.AttackerUserID, &r.DefenderUserID, &r.PlanetID,
+		SELECT br.id, br.attacker_user_id, COALESCE(ua.username,''), br.defender_user_id, COALESCE(ud.username,''),
+		       br.planet_id,
+		       br.seed, br.winner, br.rounds,
+		       br.debris_metal, br.debris_silicon,
+		       br.loot_metal, br.loot_silicon, br.loot_hydrogen,
+		       br.at, br.report
+		FROM battle_reports br
+		LEFT JOIN users ua ON ua.id = br.attacker_user_id
+		LEFT JOIN users ud ON ud.id = br.defender_user_id
+		WHERE br.id = $1
+	`, reportID).Scan(&r.ID, &r.AttackerUserID, &r.AttackerUsername, &r.DefenderUserID, &r.DefenderUsername,
+		&r.PlanetID,
 		&r.Seed, &r.Winner, &r.Rounds,
 		&r.DebrisMetal, &r.DebrisSilicon,
 		&r.LootMetal, &r.LootSilicon, &r.LootHydrogen,
