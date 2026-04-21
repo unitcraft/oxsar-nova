@@ -78,7 +78,7 @@ export function AdminScreen() {
 
   return (
     <section>
-      <h2>Admin Panel</h2>
+      <h2>Панель администратора</h2>
 
       {stats.data && (
         <div style={{ display: 'flex', gap: 24, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -150,10 +150,10 @@ export function AdminScreen() {
         <table className="ox-table">
           <thead>
             <tr>
-              <th>Username</th>
-              <th>Role</th>
-              <th>Credit</th>
-              <th>Score</th>
+              <th>Игрок</th>
+              <th>Роль</th>
+              <th>Кредиты</th>
+              <th>Очки</th>
               <th>Создан</th>
               <th>Действия</th>
             </tr>

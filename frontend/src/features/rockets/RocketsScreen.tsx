@@ -92,7 +92,7 @@ export function RocketsScreen({ planet }: { planet: Planet }) {
         P&nbsp;<input type="number" min={1} max={15} value={pos} onChange={(e) => setPos(Number(e.target.value))} style={{ width: 60 }} />
         <label>
           <input type="checkbox" checked={isMoon} onChange={(e) => setIsMoon(e.target.checked)} />
-          &nbsp;moon
+          &nbsp;{tf('Main', 'MOON', 'Луна')}
         </label>
       </div>
 

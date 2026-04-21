@@ -83,16 +83,16 @@ function LotsPanel({ planet }: { planet: Planet }) {
         <span>Продать:</span>
         <input type="number" min={1} value={sellAmt} onChange={(e) => setSellAmt(Math.max(1, Number(e.target.value)))} style={{ width: 100 }} />
         <select value={sellRes} onChange={(e) => setSellRes(e.target.value as Res)}>
-          <option value="metal">Metal</option>
-          <option value="silicon">Silicon</option>
-          <option value="hydrogen">Hydrogen</option>
+          <option value="metal">Металл</option>
+          <option value="silicon">Кремний</option>
+          <option value="hydrogen">Водород</option>
         </select>
         <span>за:</span>
         <input type="number" min={1} value={buyAmt} onChange={(e) => setBuyAmt(Math.max(1, Number(e.target.value)))} style={{ width: 100 }} />
         <select value={buyRes} onChange={(e) => setBuyRes(e.target.value as Res)}>
-          <option value="metal">Metal</option>
-          <option value="silicon">Silicon</option>
-          <option value="hydrogen">Hydrogen</option>
+          <option value="metal">Металл</option>
+          <option value="silicon">Кремний</option>
+          <option value="hydrogen">Водород</option>
         </select>
         <button onClick={() => create.mutate()} disabled={create.isPending || sellRes === buyRes}>
           {create.isPending ? '…' : 'Выставить лот'}
@@ -234,7 +234,7 @@ export function MarketScreen({ planet }: { planet: Planet }) {
         <div style={{ marginTop: 12 }}>
           <b>{tf('Main', 'MARKET_LAST', 'Последний обмен')}:</b>{' '}
           {last.from_amount} {last.from} → {last.to_amount} {last.to}{' '}
-          (rate {last.rate.toFixed(4)})
+          ({tf('Main', 'RATE', 'курс')} {last.rate.toFixed(4)})
         </div>
       )}
       <LotsPanel planet={planet} />

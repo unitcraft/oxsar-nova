@@ -174,7 +174,7 @@ export function BattleSimScreen() {
             {' · '}
             <b>{tf('Main', 'BATTLE_ROUNDS', 'Раундов')}:</b> {(r as SimReport).rounds}
             {' · '}
-            <b>Seed:</b> {(r as SimReport).seed}
+            <b>{tf('Main', 'SEED', 'Сид')}:</b> {(r as SimReport).seed}
           </p>
           {((r as SimReport).debris_metal > 0 || (r as SimReport).debris_silicon > 0) && (
             <p>
@@ -265,9 +265,9 @@ function UnitPicker({
         <thead>
           <tr>
             <th>{tf('Main', 'UNIT_ID', 'Юнит')}</th>
-            <th>Atk</th>
-            <th>Shld</th>
-            <th>HP</th>
+            <th>{tf('Main', 'ATK', 'Атк')}</th>
+            <th>{tf('Main', 'SHLD', 'Щит')}</th>
+            <th>{tf('Main', 'HP', 'Корп')}</th>
             <th>{tf('Main', 'COUNT', 'Кол-во')}</th>
           </tr>
         </thead>

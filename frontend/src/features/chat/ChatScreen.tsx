@@ -50,7 +50,7 @@ export function ChatScreen() {
         // ignore malformed frames
       }
     };
-    ws.onerror = () => setWsError('WebSocket disconnected');
+    ws.onerror = () => setWsError('Соединение прервано');
     ws.onclose = () => setWsError('Соединение закрыто');
 
     return () => {
@@ -104,7 +104,7 @@ export function ChatScreen() {
             <span style={{ color: '#aaa', fontSize: 11 }}>
               {new Date(m.created_at).toLocaleTimeString()}
             </span>{' '}
-            <strong>{m.author_name || 'Unknown'}</strong>:{' '}
+            <strong>{m.author_name || '???'}</strong>:{' '}
             {m.body}
           </div>
         ))}

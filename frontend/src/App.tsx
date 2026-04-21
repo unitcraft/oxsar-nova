@@ -306,7 +306,7 @@ function AuthenticatedApp() {
           label={t('global', 'MENU_SIMULATOR')}
         />
         {isAdmin && (
-          <TabButton current={tab} value="admin" onClick={setTab} label="Admin" />
+          <TabButton current={tab} value="admin" onClick={setTab} label="Админ" />
         )}
       </div>
 
