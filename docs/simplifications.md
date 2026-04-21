@@ -407,12 +407,10 @@
   и `nginx:alpine`.
 - **Приоритет**: M — когда выйдем на внешнее demo.
 
-### [docker] Никакого auth-rate-limiting
-- **Где**: `backend/cmd/server/main.go`.
-- **Что**: `/api/auth/login` без rate-limit или fail2ban.
-- **Почему**: MVP не публикуется.
-- **Как чинить**: middleware на redis-counter.
-- **Приоритет**: H перед публикацией.
+### [docker] Auth rate-limiting — ЗАКРЫТО
+- Реализован `auth.RateLimiter` (Redis sliding-window): 20 req/min per IP.
+  Применён к `/api/auth/login`, `/api/auth/register`, `/api/auth/refresh`.
+  Fail-open при недоступном Redis (commit 1a27dc4).
 
 ### [i18n] Только ru/en, en.yml stub
 - **Где**: `configs/i18n/en.yml`.
