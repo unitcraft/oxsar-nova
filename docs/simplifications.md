@@ -193,13 +193,9 @@
 
 ## Rockets
 
-### [Rockets] Нет anti-ballistic missile (перехвата)
-- **Где**: `internal/rocket/events.go::ImpactHandler`.
-- **Что**: все ракеты долетают до цели, счёт без anti-ballistic.
-- **Почему**: легко добавить позже, нужен второй unit_id.
-- **Как чинить**: в ImpactHandler до применения урона вычитать
-  `min(abm_count, interceptors)` из `pl.Count`.
-- **Приоритет**: M.
+### [Rockets] Anti-ballistic missile (перехват) — ЗАКРЫТО
+- Реализовано: `interceptorRocketUnitID=51`, вычитается из rocket_count
+  до расчёта урона. ABM-юниты расходуются. Уведомление включает ABM-статистику.
 
 ### [Rockets] Урон размазан по всей defense без приоритета
 - **Где**: `internal/rocket/events.go::ImpactHandler`.
