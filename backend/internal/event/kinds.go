@@ -38,6 +38,7 @@ const (
 	KindDisassemble                Kind = 51
 	KindArtefactExpire             Kind = 60
 	KindArtefactDisappear          Kind = 61
+	KindOfficerExpire              Kind = 62
 	KindArtefactDelay              Kind = 63
 	KindBatchProcessIntervalSecond      = 10
 )

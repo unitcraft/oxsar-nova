@@ -322,6 +322,51 @@
 
 ---
 
+## Officers
+
+### [Officers] Стеккаются с артефактами без suppression
+- **Где**: `internal/officer/service.go::applyFactor`.
+- **Что**: если активен артефакт +0.1 к produce_factor и officer
+  GEOLOGIST +0.1, итоговая сумма = baseline + 0.2. Legacy может
+  иметь «mutually exclusive» группы, у нас — нет.
+- **Почему**: простая модель; пересечения редкие (артефакт как
+  правило short-lived).
+- **Как чинить**: добавить колонку `group` в officer_defs/
+  artefact_defs и проверять «уже есть active в этой group'е».
+- **Приоритет**: L.
+
+### [Officers] Нет auto-renew
+- **Где**: `officer/service.go::Activate`.
+- **Что**: после expire игрок должен вручную активировать снова.
+  В legacy была подписка с auto-renew за credit.
+- **Почему**: UX проще; избегаем «случайно списало credit».
+- **Как чинить**: флаг `auto_renew` в officer_active + новый kind
+  события «попытка продлить».
+- **Приоритет**: L.
+
+### [Officers] ADMIRAL — build_factor, не attack
+- **Где**: seed в `migrations/0015_officers.sql`.
+- **Что**: описание говорит «+10% attack», а эффект — на
+  `build_factor` (нет поля attack_factor в модели).
+- **Почему**: в БД у нас только 6 фактор-полей, attack_factor не
+  заведён. Legacy применяет attack-бонус прямо в бою (Participant
+  getAttack()).
+- **Как чинить**: добавить `users.attack_factor` + учёт в
+  `fleet/attack.go::stacksToBattleUnits` (умножать attack).
+  Или переписать описание на «+10% build».
+- **Приоритет**: M — сейчас название вводит в заблуждение.
+
+### [Officers] Credit не восстанавливается при expire
+- **Где**: `officer/service.go::ExpireHandler`.
+- **Что**: при истечении credit НЕ возвращается — это подписка-
+  расходник.
+- **Почему**: соответствие legacy (и экономики PvE — бонус за
+  деньги).
+- **Как чинить**: не нужно.
+- **Приоритет**: —
+
+---
+
 ## Economy / Catalog
 
 ### [planet.tick] Нет production.yml с формулами в runtime

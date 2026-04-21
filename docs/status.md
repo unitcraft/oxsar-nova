@@ -35,7 +35,7 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | AutoMsg                     | ⬜     | M4.2 | ex game/AutoMsg.class.php 1228 LOC.                    |
 | Alliance / chat / message   | 🟡     | M6 | messages: inbox + mark-read + battle-report view (M4.4b). Compose/folders/alliance — M6. |
 | Market (exchange)           | 🟡     | M6 | MVP: M↔Si↔H по фиксированным курсам (1:2:4) × users.exchange_rate. Order-book / офферы — позже. |
-| Officers                    | ⬜     | M7 | Планируется.                                             |
+| Officers                    | 🟡     | M7 | 4 officer (ADMIRAL/GEOLOGIST/ENGINEER/MERCHANT), Activate→Expire через event kind=62, factor-поля. |
 | Achievements                | 🟡     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), lazy-check при GET. Идемпотентно. |
 | Tutorial                    | ⬜     | M7 | ex ext/page/ExtTutorial + game-классы.                   |
 | Simulator UI                | ⬜     | M7.1 | ex ext/page/ExtSimulator 749 LOC.                      |

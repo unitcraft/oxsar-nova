@@ -29,6 +29,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/market"
 	"github.com/oxsar/nova/backend/internal/message"
+	"github.com/oxsar/nova/backend/internal/officer"
 	"github.com/oxsar/nova/backend/internal/planet"
 	"github.com/oxsar/nova/backend/internal/repair"
 	"github.com/oxsar/nova/backend/internal/repo"
@@ -130,6 +131,9 @@ func run() error {
 	achSvc := achievement.NewService(db)
 	achH := achievement.NewHandler(achSvc)
 
+	officerSvc := officer.NewService(db)
+	officerH := officer.NewHandler(officerSvc)
+
 	// i18n: папка необязательна — если её нет или пустая, i18n просто
 	// пропускается, HTTP-эндпоинты не регистрируются. Это ожидаемо
 	// до первого прогона cmd/tools/import-phrases (§10.3 ТЗ).
@@ -190,6 +194,9 @@ func run() error {
 		pr.Delete("/artefact-market/offers/{id}", artMarketH.Cancel)
 
 		pr.Get("/achievements", achH.List)
+
+		pr.Get("/officers", officerH.List)
+		pr.Post("/officers/{key}/activate", officerH.Activate)
 
 		pr.Get("/galaxy/{g}/{s}", galaxyH.System)
 
