@@ -77,11 +77,6 @@ func (s *Service) ImpactHandler() event.Handler {
 		}
 
 		// Читаем defense-таблицу цели.
-		type defStack struct {
-			UnitID int
-			Count  int64
-			Shell  int
-		}
 		var stacks []defStack
 		rows, err := tx.Query(ctx,
 			`SELECT unit_id, count FROM defense WHERE planet_id=$1 AND count>0 FOR UPDATE`,
@@ -150,61 +145,21 @@ func (s *Service) ImpactHandler() event.Handler {
 
 		// Если задана приоритетная цель — бьём её первой, остаток урона
 		// распределяем по оставшимся стекам.
-		remainingDamage := totalDamage
-		type loss struct {
-			UnitID int
-			Lost   int64
-		}
-		var losses []loss
-		var otherStacks []defStack
-		if pl.TargetUnitID > 0 {
+		losses := applyRocketDamage(survivingRockets, stacks, pl.TargetUnitID)
+
+		// Применяем потери в БД.
+		for _, l := range losses {
+			var cur int64
 			for _, d := range stacks {
-				if d.UnitID != pl.TargetUnitID {
-					otherStacks = append(otherStacks, d)
-					continue
-				}
-				killed := remainingDamage / int64(d.Shell)
-				if killed > d.Count {
-					killed = d.Count
-				}
-				if killed > 0 {
-					remainingDamage -= killed * int64(d.Shell)
-					newCount := d.Count - killed
-					if _, err := tx.Exec(ctx,
-						`UPDATE defense SET count=$1 WHERE planet_id=$2 AND unit_id=$3`,
-						newCount, planetID, d.UnitID); err != nil {
-						return fmt.Errorf("rocket impact: update priority target: %w", err)
-					}
-					losses = append(losses, loss{UnitID: d.UnitID, Lost: killed})
+				if d.UnitID == l.UnitID {
+					cur = d.Count
+					break
 				}
 			}
-		} else {
-			otherStacks = stacks
-		}
-
-		// Σ(count × shell) для нормировки остатка урона.
-		var totalPool int64
-		for _, d := range otherStacks {
-			totalPool += d.Count * int64(d.Shell)
-		}
-		if totalPool > 0 && remainingDamage > 0 {
-			for _, d := range otherStacks {
-				share := float64(d.Count*int64(d.Shell)) / float64(totalPool)
-				dmg := int64(float64(remainingDamage) * share)
-				killed := dmg / int64(d.Shell)
-				if killed > d.Count {
-					killed = d.Count
-				}
-				if killed <= 0 {
-					continue
-				}
-				newCount := d.Count - killed
-				if _, err := tx.Exec(ctx,
-					`UPDATE defense SET count=$1 WHERE planet_id=$2 AND unit_id=$3`,
-					newCount, planetID, d.UnitID); err != nil {
-					return fmt.Errorf("rocket impact: update defense: %w", err)
-				}
-				losses = append(losses, loss{UnitID: d.UnitID, Lost: killed})
+			if _, err := tx.Exec(ctx,
+				`UPDATE defense SET count=$1 WHERE planet_id=$2 AND unit_id=$3`,
+				cur-l.Lost, planetID, l.UnitID); err != nil {
+				return fmt.Errorf("rocket impact: update defense unit %d: %w", l.UnitID, err)
 			}
 		}
 
