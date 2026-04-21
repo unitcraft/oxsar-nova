@@ -4181,5 +4181,39 @@ BuildingsScreen теперь использует buildingName() в очеред
   - Все go test ./... — PASS.
 
 ================================================================================
+Итерация — 2026-04-22
+================================================================================
+
+[AutoMsg] Welcome + Starter Guide при регистрации.
+  - automsg/service.go: Send принимает tx *pgx.Tx для транзакционной отправки.
+  - auth/service.go: Register вызывает automsg.Send для WELCOME и STARTER_GUIDE
+    после успешного создания пользователя и стартовой планеты.
+  - worker/main.go: InactivityReminderWorker — ежедневный воркер, шлёт
+    INACTIVITY_REMINDER игрокам, у которых last_seen_at > 3 дней.
+  - users: колонка last_seen_at; LastSeenMiddleware обновляет async.
+
+================================================================================
+Итерация — 2026-04-22
+================================================================================
+
+[UI] Аудит и исправление английских строк во всех экранах.
+  - FleetScreen.tsx: moon → Луна, плейсхолдеры metal/silicon/hydrogen → t('global'),
+    speed % → Скорость %, заголовки state/arrive/return → русские, fallbacks 'error'.
+  - MarketScreen.tsx: опции Metal/Silicon/Hydrogen в LotsPanel → Металл/Кремний/Водород,
+    rate → курс.
+  - BattleSimScreen.tsx: Atk/Shld/HP → Атк/Щит/Корп, Seed → Сид.
+  - ChatScreen.tsx: 'WebSocket disconnected' → 'Соединение прервано', 'Unknown' → '???'.
+  - App.tsx: вкладка 'Admin' → 'Админ'.
+  - AdminScreen.tsx: 'Admin Panel' → 'Панель администратора', Username/Role/Credit/Score → русские.
+  - RocketsScreen.tsx: moon → Луна.
+
+[API] json snake_case теги для сериализации.
+  - auth.User (service.go): ID/Username/Email → json:"id"/"username"/"email".
+    Без тегов register/login возвращали PascalCase, фронт не мог читать user.id.
+  - fleet.Fleet (mission.go): все 15 полей получили json-теги.
+  - fleet.Resources (mission.go): Metal/Silicon/Hydrogen → json:"metal"/"silicon"/"hydrogen".
+  - Docker-образ пересобран и перезапущен (deploy/docker-compose.yml).
+
+================================================================================
 Конец дневника.
 ================================================================================
