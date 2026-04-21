@@ -54,6 +54,21 @@ func (h *Handler) Enqueue(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Levels GET /api/planets/{id}/buildings
+func (h *Handler) Levels(w http.ResponseWriter, r *http.Request) {
+	if _, ok := auth.UserID(r.Context()); !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	levels, err := h.svc.Levels(r.Context(), planetID)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"levels": levels})
+}
+
 // List GET /api/planets/{id}/buildings/queue
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if _, ok := auth.UserID(r.Context()); !ok {

@@ -13,6 +13,13 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
     refetchInterval: 2000,
   });
 
+  const levelsQ = useQuery({
+    queryKey: ['buildings-levels', planet.id],
+    queryFn: () => api.get<{ levels: Record<string, number> }>(`/api/planets/${planet.id}/buildings`),
+    refetchInterval: 10000,
+  });
+  const levels = levelsQ.data?.levels ?? {};
+
   const enqueue = useMutation({
     mutationFn: (unitId: number) =>
       api.post<QueueItem>(`/api/planets/${planet.id}/buildings`, { unit_id: unitId }),
@@ -37,7 +44,14 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
         <tbody>
           {BUILDINGS.map((b) => (
             <tr key={b.id}>
-              <td>{b.name}</td>
+              <td>
+                {b.name}
+                {(levels[b.id] ?? 0) > 0 && (
+                  <span style={{ color: 'var(--ox-muted, #888)', marginLeft: 6 }}>
+                    {tf('Main', 'LEVEL_SHORT', 'ур.')} {levels[b.id]}
+                  </span>
+                )}
+              </td>
               <td>
                 <button
                   type="button"
