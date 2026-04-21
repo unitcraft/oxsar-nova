@@ -3523,5 +3523,35 @@ frontend/src/features/market/MarketScreen.tsx:
 docs/status.md: Market 🟡 → ✅.
 
 ================================================================================
+Итерация 53 — test(auth,alliance,ids): unit-тесты чистых функций
+================================================================================
+
+backend/internal/auth/middleware_test.go (новый файл):
+  - TestMiddleware_BearerHeader — bearer-заголовок пропускает запрос.
+  - TestMiddleware_QueryParamToken — ?token= query param (WebSocket-путь).
+  - TestMiddleware_NoToken_Returns401 — без токена → 401, next не вызывается.
+  - TestMiddleware_BadToken_Returns401 — невалидный JWT → 401.
+  - TestMiddleware_RefreshToken_Rejected — refresh-токен как access → 401.
+  - TestUserID_NoMiddleware — UserID без middleware → "", false.
+  - TestJWT_ExpiredToken — истёкший токен отклоняется.
+  - TestJWT_RefreshRoundtrip — refresh round-trip.
+  - TestJWT_ExpiresFieldSet — поле Expires в допустимом диапазоне.
+  Покрытие auth: 23% → 34%.
+
+backend/internal/alliance/service_test.go (новый файл):
+  - validateTag: корректные теги (3-5 alphanumASCII), слишком короткий,
+    слишком длинный, спецсимволы, кириллица.
+  - isAlphanumASCII: позитивные и негативные руны.
+  - isDupKey(nil) → false.
+  - Все 8 sentinel-ошибок != nil.
+
+backend/pkg/ids/ids_test.go (новый файл):
+  - TestNew_IsValidUUID — 5 частей UUID с правильной длиной.
+  - TestNew_Version7 — первый символ 3-й группы == '7'.
+  - TestNew_Unique — 1000 уникальных ID.
+  - TestNew_Monotonic — лексикографически возрастающая последовательность.
+  Покрытие ids: 0% → 75%.
+
+================================================================================
 Конец дневника.
 ================================================================================
