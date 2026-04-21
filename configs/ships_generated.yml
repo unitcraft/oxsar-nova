@@ -1,0 +1,232 @@
+ships:
+  unit_102:
+    id: 102
+    cargo: 200
+    speed: 8000
+    consume: 100
+    attack: 5500
+    shield: 200
+  unit_105:
+    id: 105
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 0
+    shield: 50
+  unit_106:
+    id: 106
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 1
+    shield: 50
+  unit_200:
+    id: 200
+    cargo: 300
+    speed: 20000
+    consume: 150
+    attack: 200
+    shield: 75
+  unit_201:
+    id: 201
+    cargo: 800
+    speed: 10000
+    consume: 75
+    attack: 25
+    shield: 5000
+  unit_202:
+    id: 202
+    cargo: 50
+    speed: 8000
+    consume: 20
+    attack: 75
+    shield: 50
+  unit_203:
+    id: 203
+    cargo: 2000
+    speed: 10000
+    consume: 300
+    attack: 1250
+    shield: 150
+  unit_204:
+    id: 204
+    cargo: 200
+    speed: 13000
+    consume: 100
+    attack: 350
+    shield: 100
+  unit_29:
+    id: 29
+    cargo: 5000
+    speed: 5000
+    consume: 10
+    attack: 5
+    shield: 10
+  unit_30:
+    id: 30
+    cargo: 25000
+    speed: 7500
+    consume: 50
+    attack: 5
+    shield: 25
+  unit_31:
+    id: 31
+    cargo: 50
+    speed: 12500
+    consume: 20
+    attack: 50
+    shield: 10
+  unit_32:
+    id: 32
+    cargo: 100
+    speed: 10000
+    consume: 75
+    attack: 150
+    shield: 25
+  unit_325:
+    id: 325
+    cargo: 75
+    speed: 13000
+    consume: 35
+    attack: 30
+    shield: 25
+  unit_33:
+    id: 33
+    cargo: 800
+    speed: 15000
+    consume: 300
+    attack: 400
+    shield: 50
+  unit_34:
+    id: 34
+    cargo: 1500
+    speed: 10000
+    consume: 500
+    attack: 1000
+    shield: 200
+  unit_35:
+    id: 35
+    cargo: 750
+    speed: 10000
+    consume: 250
+    attack: 700
+    shield: 400
+  unit_36:
+    id: 36
+    cargo: 7500
+    speed: 2500
+    consume: 1000
+    attack: 50
+    shield: 100
+  unit_37:
+    id: 37
+    cargo: 20000
+    speed: 2000
+    consume: 300
+    attack: 1
+    shield: 10
+  unit_38:
+    id: 38
+    cargo: 5
+    speed: 100000000
+    consume: 1
+    attack: 0
+    shield: 0
+  unit_39:
+    id: 39
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 1
+    shield: 1
+  unit_40:
+    id: 40
+    cargo: 500
+    speed: 4000
+    consume: 1000
+    attack: 1000
+    shield: 500
+  unit_41:
+    id: 41
+    cargo: 2000
+    speed: 5000
+    consume: 1000
+    attack: 2000
+    shield: 500
+  unit_42:
+    id: 42
+    cargo: 1000000
+    speed: 100
+    consume: 1
+    attack: 200000
+    shield: 50000
+  unit_43:
+    id: 43
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 80
+    shield: 20
+  unit_44:
+    id: 44
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 100
+    shield: 25
+  unit_45:
+    id: 45
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 250
+    shield: 100
+  unit_46:
+    id: 46
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 150
+    shield: 500
+  unit_47:
+    id: 47
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 1100
+    shield: 200
+  unit_48:
+    id: 48
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 3000
+    shield: 300
+  unit_49:
+    id: 49
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 1
+    shield: 2000
+  unit_50:
+    id: 50
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 1
+    shield: 10000
+  unit_51:
+    id: 51
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 1
+    shield: 1
+  unit_52:
+    id: 52
+    cargo: 0
+    speed: 0
+    consume: 0
+    attack: 12000
+    shield: 1

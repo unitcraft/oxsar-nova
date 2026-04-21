@@ -1,0 +1,425 @@
+requirements:
+  unit_100:
+    - needs: 6
+      level: 3
+    - needs: 12
+      level: 2
+  unit_101:
+    - needs: 6
+      level: 1
+  unit_102:
+    - needs: 8
+      level: 8
+    - needs: 21
+      level: 7
+    - needs: 23
+      level: 11
+    - needs: 24
+      level: 8
+    - needs: 25
+      level: 6
+  unit_103:
+    - needs: 15
+      level: 5
+  unit_104:
+    - needs: 16
+      level: 8
+    - needs: 103
+      level: 3
+  unit_105:
+    - needs: 107
+      level: 1
+  unit_106:
+    - needs: 107
+      level: 1
+  unit_107:
+    - needs: 14
+      level: 10
+    - needs: 18
+      level: 10
+  unit_108:
+    - needs: 14
+      level: 1
+  unit_111:
+    - needs: 14
+      level: 1
+    - needs: 18
+      level: 1
+  unit_13:
+    - needs: 12
+      level: 3
+  unit_14:
+    - needs: 12
+      level: 1
+  unit_15:
+    - needs: 12
+      level: 4
+  unit_16:
+    - needs: 12
+      level: 6
+    - needs: 18
+      level: 3
+  unit_17:
+    - needs: 12
+      level: 2
+  unit_18:
+    - needs: 12
+      level: 1
+  unit_19:
+    - needs: 12
+      level: 7
+    - needs: 16
+      level: 5
+    - needs: 18
+      level: 5
+  unit_20:
+    - needs: 18
+      level: 1
+  unit_200:
+    - needs: 110
+      level: 1
+  unit_201:
+    - needs: 110
+      level: 1
+  unit_202:
+    - needs: 110
+      level: 1
+  unit_203:
+    - needs: 110
+      level: 1
+  unit_204:
+    - needs: 110
+      level: 1
+  unit_21:
+    - needs: 12
+      level: 2
+    - needs: 18
+      level: 1
+  unit_22:
+    - needs: 19
+      level: 3
+  unit_23:
+    - needs: 18
+      level: 2
+  unit_24:
+    - needs: 12
+      level: 4
+    - needs: 18
+      level: 4
+    - needs: 23
+      level: 5
+  unit_25:
+    - needs: 18
+      level: 8
+    - needs: 23
+      level: 10
+    - needs: 24
+      level: 5
+  unit_26:
+    - needs: 12
+      level: 10
+    - needs: 14
+      level: 8
+    - needs: 19
+      level: 8
+  unit_27:
+    - needs: 13
+      level: 4
+    - needs: 21
+      level: 3
+  unit_28:
+    - needs: 12
+      level: 12
+  unit_29:
+    - needs: 8
+      level: 2
+    - needs: 20
+      level: 2
+  unit_30:
+    - needs: 8
+      level: 4
+    - needs: 20
+      level: 6
+  unit_300:
+    - needs: 108
+      level: 1
+  unit_305:
+    - needs: 14
+      level: 5
+    - needs: 18
+      level: 2
+  unit_31:
+    - needs: 8
+      level: 1
+    - needs: 20
+      level: 1
+  unit_314:
+    - needs: 6
+      level: 2
+  unit_315:
+    - needs: 18
+      level: 1
+  unit_32:
+    - needs: 8
+      level: 3
+    - needs: 17
+      level: 2
+    - needs: 21
+      level: 2
+  unit_325:
+    - needs: 8
+      level: 6
+    - needs: 20
+      level: 6
+    - needs: 103
+      level: 5
+    - needs: 104
+      level: 5
+  unit_326:
+    - needs: 54
+      level: 5
+  unit_33:
+    - needs: 8
+      level: 5
+    - needs: 21
+      level: 4
+    - needs: 24
+      level: 2
+  unit_331:
+    - needs: 1
+      level: 1
+    - needs: 334
+      level: 1
+  unit_332:
+    - needs: 2
+      level: 1
+    - needs: 331
+      level: 1
+  unit_333:
+    - needs: 3
+      level: 1
+    - needs: 332
+      level: 1
+  unit_334:
+    - needs: 4
+      level: 1
+    - needs: 330
+      level: 1
+  unit_335:
+    - needs: 4
+      level: 3
+    - needs: 6
+      level: 1
+    - needs: 333
+      level: 1
+  unit_336:
+    - needs: 1
+      level: 3
+    - needs: 2
+      level: 3
+    - needs: 2
+      level: 3
+    - needs: 4
+      level: 4
+    - needs: 335
+      level: 1
+  unit_337:
+    - needs: 31
+      level: 4
+    - needs: 339
+      level: 1
+  unit_338:
+    - needs: 18
+      level: 1
+    - needs: 336
+      level: 1
+  unit_339:
+    - needs: 29
+      level: 8
+    - needs: 341
+      level: 1
+  unit_34:
+    - needs: 8
+      level: 7
+    - needs: 22
+      level: 4
+  unit_340:
+    - needs: 101
+      level: 2
+    - needs: 336
+      level: 1
+  unit_341:
+    - needs: 20
+      level: 1
+    - needs: 338
+      level: 1
+  unit_342:
+    - needs: 43
+      level: 3
+    - needs: 340
+      level: 1
+  unit_343:
+    - needs: 31
+      level: 5
+    - needs: 337
+      level: 1
+    - needs: 339
+      level: 1
+    - needs: 345
+      level: 1
+  unit_344:
+    - needs: 43
+      level: 4
+    - needs: 342
+      level: 1
+  unit_345:
+    - needs: 339
+      level: 1
+    - needs: 346
+      level: 1
+  unit_346:
+    - needs: 14
+      level: 1
+    - needs: 341
+      level: 1
+  unit_35:
+    - needs: 8
+      level: 8
+    - needs: 19
+      level: 5
+    - needs: 22
+      level: 5
+    - needs: 23
+      level: 12
+  unit_36:
+    - needs: 8
+      level: 4
+    - needs: 21
+      level: 3
+  unit_37:
+    - needs: 8
+      level: 4
+    - needs: 16
+      level: 2
+    - needs: 20
+      level: 6
+  unit_38:
+    - needs: 8
+      level: 3
+    - needs: 13
+      level: 2
+    - needs: 20
+      level: 3
+  unit_39:
+    - needs: 8
+      level: 1
+  unit_40:
+    - needs: 8
+      level: 8
+    - needs: 21
+      level: 6
+    - needs: 25
+      level: 5
+  unit_41:
+    - needs: 8
+      level: 9
+    - needs: 19
+      level: 5
+    - needs: 22
+      level: 6
+  unit_42:
+    - needs: 8
+      level: 12
+    - needs: 19
+      level: 6
+    - needs: 22
+      level: 7
+    - needs: 28
+      level: 1
+  unit_43:
+    - needs: 101
+      level: 1
+  unit_44:
+    - needs: 18
+      level: 1
+    - needs: 23
+      level: 3
+    - needs: 101
+      level: 2
+  unit_45:
+    - needs: 18
+      level: 3
+    - needs: 23
+      level: 6
+    - needs: 101
+      level: 4
+  unit_46:
+    - needs: 24
+      level: 4
+    - needs: 101
+      level: 4
+  unit_47:
+    - needs: 15
+      level: 3
+    - needs: 16
+      level: 1
+    - needs: 18
+      level: 6
+    - needs: 101
+      level: 6
+  unit_48:
+    - needs: 25
+      level: 7
+    - needs: 101
+      level: 8
+  unit_49:
+    - needs: 16
+      level: 2
+    - needs: 101
+      level: 1
+  unit_5:
+    - needs: 3
+      level: 5
+    - needs: 18
+      level: 3
+  unit_50:
+    - needs: 16
+      level: 6
+    - needs: 101
+      level: 6
+  unit_51:
+    - needs: 53
+      level: 2
+    - needs: 101
+      level: 1
+  unit_52:
+    - needs: 21
+      level: 1
+    - needs: 53
+      level: 4
+    - needs: 101
+      level: 1
+  unit_55:
+    - needs: 54
+      level: 1
+  unit_56:
+    - needs: 19
+      level: 7
+    - needs: 54
+      level: 1
+  unit_57:
+    - needs: 54
+      level: 1
+  unit_58:
+    - needs: 7
+      level: 1
+    - needs: 18
+      level: 11
+  unit_7:
+    - needs: 6
+      level: 10
+    - needs: 14
+      level: 10
+  unit_8:
+    - needs: 6
+      level: 2
