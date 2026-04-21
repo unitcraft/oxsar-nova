@@ -141,3 +141,43 @@ func rapidfireToMap(cat *config.Catalog) map[int]map[int]int {
 	}
 	return cat.Rapidfire.Rapidfire
 }
+
+func applyDefenderLosses(ctx context.Context, tx pgx.Tx, planetID string,
+	startShips, startDefense []unitStack, end []battle.UnitResult) error {
+	endByID := map[int]battle.UnitResult{}
+	for _, r := range end {
+		endByID[r.UnitID] = r
+	}
+	for _, s := range startShips {
+		r, ok := endByID[s.UnitID]
+		if !ok {
+			continue
+		}
+		if r.QuantityEnd == 0 {
+			if _, err := tx.Exec(ctx,
+				`UPDATE ships SET count=0, damaged_count=0, shell_percent=0 WHERE planet_id=$1 AND unit_id=$2`,
+				planetID, s.UnitID); err != nil {
+				return err
+			}
+			continue
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE ships SET count=$1, damaged_count=$2, shell_percent=$3 WHERE planet_id=$4 AND unit_id=$5`,
+			r.QuantityEnd, r.DamagedEnd, r.ShellPercentEnd, planetID, s.UnitID); err != nil {
+			return err
+		}
+	}
+	for _, s := range startDefense {
+		r, ok := endByID[s.UnitID]
+		if !ok {
+			continue
+		}
+		cnt := r.QuantityEnd
+		if _, err := tx.Exec(ctx,
+			`UPDATE defense SET count=$1 WHERE planet_id=$2 AND unit_id=$3`,
+			cnt, planetID, s.UnitID); err != nil {
+			return err
+		}
+	}
+	return nil
+}

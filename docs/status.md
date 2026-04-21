@@ -30,14 +30,13 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Rockets / stargate          | ✅     | M5 | Interplanetary rockets (kind=16): Launch → Impact. Stargate — позже. |
 | Artefact                    | ✅     | M5.0 | Apply/Revert/Resync + delay activation (kind=63). Deactivate bugfix. |
 | Artefact Market (credit)    | ✅     | M5.1 | List/Sell/Buy/Cancel + UI. users.credit как валюта. |
-| Alien AI                    | 🟡     | M5.2 | MVP: spawn раз в 6ч (30% per player), 3 тира флота, KindAlienAttack=35, лут 30%. Нет: HALT/GRAB_CREDIT/custom, артефакт-дроп, координаты полёта. |
+| Alien AI                    | 🟡     | M5.2 | MVP: spawn раз в 6ч (30% per player), 3 тира флота, KindAlienAttack=35, лут 30%, потери защитника ✅, artefact drop 20% ✅. Нет: HALT/GRAB_CREDIT/custom, координаты полёта. |
 | Repair Factory              | ✅     | M4.4c | DISASSEMBLE + REPAIR end-to-end (API + worker + UI). damaged-юниты из боя чинятся целой пачкой. |
 | AutoMsg                     | ✅     | M4.2 | WELCOME/STARTER_GUIDE при регистрации + INACTIVITY_REMINDER (ежедневный воркер, last_seen_at). |
 | Alliance / chat / message   | 🟡     | M6 | messages: inbox + mark-read + compose + delete ✅. Alliance MVP ✅ (create/join/leave/disband). Chat (WebSocket) — M6+. |
 | Market (exchange)           | 🟡     | M6 | MVP: M↔Si↔H по фиксированным курсам (1:2:4) × users.exchange_rate. Order-book / офферы — позже. |
 | Officers                    | ✅     | M7 | 4 officer (ADMIRAL/GEOLOGIST/ENGINEER/MERCHANT), Activate→Expire через event kind=62, factor-поля. |
-| Achievements                | ✅     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), lazy-check при GET. Идемпотентно. |
-| Tutorial                    | ✅     | M7 | 6 шагов (mine→solar→lab→computer_tech→ship→expedition), +10 кредитов за шаг, lazy-check. |
+| Achievements                | ✅     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), laны                | ✅     | M7 | 6 шагов (mine→solar→lab→computer_tech→ship→expedition), +10 кредитов за шаг, lazy-check. |
 | Simulator UI                | ✅     | M7.1 | BattleSimScreen с реальными боевыми характеристиками из каталога + таблица потерь + multi-run (num_sim 2–20). |
 | Admin panel                 | ✅     | M8 | GET /admin/stats + users list/ban/unban/credit/role. AdminOnly middleware (role=admin/superadmin). |
 | Payment integrations        | ⬜     | M9 | v2: WebMoney/Robokassa/A1/2Pay/VK/OK/MailRu.             |

@@ -6,7 +6,6 @@
 //   - Только один тип события: KindAlienAttack=35 (нет HALT/GRAB_CREDIT/CUSTOM).
 //   - Флот инопланетян фиксирован по уровню активности игрока (3 тира).
 //   - Нет учёта координат и времени полёта (телепорт — бой сразу).
-//   - Шанс выпадения артефакта: 20% при победе защитника (≠ ABANDONED_USER_...).
 package alien
 
 import (
@@ -168,6 +167,14 @@ func (s *Service) AttackHandler() event.Handler {
 			}
 		}
 
+		// Применяем потери защитника.
+		if len(report.Defenders) > 0 {
+			if err := applyDefenderLosses(ctx, tx, pl.PlanetID,
+				defShips, defDefense, report.Defenders[0].Units); err != nil {
+				return fmt.Errorf("alien attack: apply defender losses: %w", err)
+			}
+		}
+
 		// Лут: при победе инопланетян — 30% ресурсов планеты.
 		if report.Winner == "attackers" {
 			lootM := int64(defMetal * 0.3)
@@ -180,6 +187,16 @@ func (s *Service) AttackHandler() event.Handler {
 					 WHERE id = $4`,
 					lootM, lootS, lootH, pl.PlanetID); err != nil {
 					return fmt.Errorf("alien attack: loot: %w", err)
+				}
+			}
+		}
+
+		// Artefact drop: 20% шанс при победе защитника.
+		if report.Winner == "defenders" {
+			artSeed := rng.New(fnvHash(e.ID) ^ 0xdeadbeef)
+			if artSeed.IntN(100) < 20 {
+				if err := grantRandomArtefact(ctx, tx, defUserID, s.cat); err != nil {
+					return fmt.Errorf("alien attack: artefact drop: %w", err)
 				}
 			}
 		}
@@ -201,6 +218,23 @@ func (s *Service) AttackHandler() event.Handler {
 
 		return nil
 	}
+}
+
+// grantRandomArtefact вставляет случайный артефакт из каталога игроку.
+func grantRandomArtefact(ctx context.Context, tx pgx.Tx, userID string, cat *config.Catalog) error {
+	if len(cat.Artefacts.Artefacts) == 0 {
+		return nil
+	}
+	artIDs := make([]int, 0, len(cat.Artefacts.Artefacts))
+	for _, spec := range cat.Artefacts.Artefacts {
+		artIDs = append(artIDs, spec.ID)
+	}
+	artID := artIDs[rand.IntN(len(artIDs))]
+	_, err := tx.Exec(ctx, `
+		INSERT INTO artefacts_user (id, user_id, planet_id, unit_id, state, acquired_at)
+		VALUES ($1, $2, NULL, $3, 'held', now())
+	`, ids.New(), userID, artID)
+	return err
 }
 
 func scoreTier(score int64) int {
