@@ -1,10 +1,17 @@
-// Мини-каталог юнитов для UI. Значения дублируют configs/units.yml.
+// Мини-каталог юнитов для UI. Значения дублируют configs/ships.yml + defense.yml.
 // TODO: сгенерировать из YAML на этапе gen:api (см. CLAUDE.md).
 
 export interface UnitEntry {
   id: number;
   key: string;
   name: string;
+}
+
+// CombatEntry — юнит с боевыми характеристиками для симулятора.
+export interface CombatEntry extends UnitEntry {
+  attack: number;
+  shield: number;
+  shell: number;
 }
 
 export const BUILDINGS: UnitEntry[] = [
@@ -39,29 +46,29 @@ export const RESEARCH: UnitEntry[] = [
   { id: 104, key: 'masking_tech', name: 'Masking' },
 ];
 
-export const SHIPS: UnitEntry[] = [
-  { id: 29, key: 'small_transporter', name: 'Small Transporter' },
-  { id: 30, key: 'large_transporter', name: 'Large Transporter' },
-  { id: 31, key: 'light_fighter', name: 'Light Fighter' },
-  { id: 32, key: 'strong_fighter', name: 'Heavy Fighter' },
-  { id: 33, key: 'cruiser', name: 'Cruiser' },
-  { id: 34, key: 'battle_ship', name: 'Battleship' },
-  { id: 36, key: 'colony_ship', name: 'Colony Ship' },
-  { id: 37, key: 'recycler', name: 'Recycler' },
-  { id: 38, key: 'espionage_sensor', name: 'Espionage Probe' },
-  { id: 39, key: 'solar_satellite', name: 'Solar Satellite' },
-  { id: 40, key: 'bomber', name: 'Bomber' },
-  { id: 42, key: 'death_star', name: 'Deathstar' },
+export const SHIPS: CombatEntry[] = [
+  { id: 29, key: 'small_transporter', name: 'Small Transporter', attack: 5,      shield: 10,    shell: 4000 },
+  { id: 30, key: 'large_transporter', name: 'Large Transporter', attack: 5,      shield: 25,    shell: 12000 },
+  { id: 31, key: 'light_fighter',     name: 'Light Fighter',     attack: 50,     shield: 10,    shell: 4000 },
+  { id: 32, key: 'strong_fighter',    name: 'Heavy Fighter',     attack: 150,    shield: 25,    shell: 10000 },
+  { id: 33, key: 'cruiser',           name: 'Cruiser',           attack: 400,    shield: 50,    shell: 27000 },
+  { id: 34, key: 'battle_ship',       name: 'Battleship',        attack: 1000,   shield: 200,   shell: 60000 },
+  { id: 36, key: 'colony_ship',       name: 'Colony Ship',       attack: 50,     shield: 100,   shell: 30000 },
+  { id: 37, key: 'recycler',          name: 'Recycler',          attack: 1,      shield: 10,    shell: 16000 },
+  { id: 38, key: 'espionage_sensor',  name: 'Espionage Probe',   attack: 0,      shield: 0,     shell: 1000 },
+  { id: 39, key: 'solar_satellite',   name: 'Solar Satellite',   attack: 1,      shield: 1,     shell: 2000 },
+  { id: 40, key: 'bomber',            name: 'Bomber',            attack: 1000,   shield: 500,   shell: 75000 },
+  { id: 42, key: 'death_star',        name: 'Deathstar',         attack: 200000, shield: 50000, shell: 9000000 },
 ];
 
-export const DEFENSE: UnitEntry[] = [
-  { id: 43, key: 'rocket_launcher', name: 'Rocket Launcher' },
-  { id: 44, key: 'light_laser', name: 'Light Laser' },
-  { id: 45, key: 'strong_laser', name: 'Heavy Laser' },
-  { id: 47, key: 'gauss_gun', name: 'Gauss Cannon' },
-  { id: 48, key: 'plasma_gun', name: 'Plasma Turret' },
-  { id: 49, key: 'small_shield', name: 'Small Shield Dome' },
-  { id: 50, key: 'large_shield', name: 'Large Shield Dome' },
+export const DEFENSE: CombatEntry[] = [
+  { id: 43, key: 'rocket_launcher', name: 'Rocket Launcher',    attack: 80,   shield: 20,    shell: 2000 },
+  { id: 44, key: 'light_laser',     name: 'Light Laser',        attack: 100,  shield: 25,    shell: 2000 },
+  { id: 45, key: 'strong_laser',    name: 'Heavy Laser',        attack: 250,  shield: 100,   shell: 8000 },
+  { id: 47, key: 'gauss_gun',       name: 'Gauss Cannon',       attack: 1100, shield: 200,   shell: 35000 },
+  { id: 48, key: 'plasma_gun',      name: 'Plasma Turret',      attack: 3000, shield: 300,   shell: 100000 },
+  { id: 49, key: 'small_shield',    name: 'Small Shield Dome',  attack: 1,    shield: 2000,  shell: 20000 },
+  { id: 50, key: 'large_shield',    name: 'Large Shield Dome',  attack: 1,    shield: 10000, shell: 100000 },
 ];
 
 // Артефакты — только те, что реально реализованы в M5.0.1 (факторы).

@@ -1,20 +1,49 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { SHIPS, DEFENSE, nameOf } from '@/api/catalog';
+import { SHIPS, DEFENSE, nameOf, type CombatEntry } from '@/api/catalog';
 import { useTranslation } from '@/i18n/i18n';
 
-// Экран симулятора боя. Пока минимальный: два списка юнитов (атакующий
-// и защитник), кнопка «рассчитать». Бек возвращает плейсхолдер-отчёт
-// (каркас боя, M4). Когда движок будет полностью портирован, UI
-// подхватит без переделок — он работает через /api/battle-sim.
-
 type UnitMap = Record<number, number>;
+
+interface UnitResult {
+  unit_id: number;
+  quantity_start: number;
+  quantity_end: number;
+  damaged_end?: number;
+}
+
+interface SideResult {
+  user_id: string;
+  lost_metal: number;
+  lost_silicon: number;
+  lost_hydrogen: number;
+  units: UnitResult[];
+}
 
 interface SimReport {
   seed: number;
   winner: 'attackers' | 'defenders' | 'draw';
   rounds: number;
+  debris_metal: number;
+  debris_silicon: number;
+  attackers: SideResult[];
+  defenders: SideResult[];
+}
+
+// COMBAT_UNITS — корабли + оборона с боевыми характеристиками.
+const COMBAT_SHIPS = SHIPS.filter((u) => u.attack > 0 || u.shell > 0);
+const COMBAT_DEFENSE = DEFENSE;
+
+function makeUnit(entry: CombatEntry, qty: number) {
+  return {
+    unit_id: entry.id,
+    quantity: qty,
+    front: 10,
+    attack: [entry.attack, 0, 0] as [number, number, number],
+    shield: [entry.shield, 0, 0] as [number, number, number],
+    shell: entry.shell,
+  };
 }
 
 export function BattleSimScreen() {
@@ -28,55 +57,45 @@ export function BattleSimScreen() {
   });
 
   function runSim() {
-    const toSide = (m: UnitMap) => [
-      {
-        user_id: 'sim',
-        units: Object.entries(m)
-          .filter(([, count]) => count > 0)
-          .map(([unitId, count]) => ({
-            unit_id: Number(unitId),
-            quantity: count,
-            front: 10,
-            attack: [100, 0, 0],
-            shield: [10, 0, 0],
-            shell: 4000,
-          })),
-      },
-    ];
+    const toSide = (map: UnitMap, entries: CombatEntry[]) =>
+      [
+        {
+          user_id: 'sim',
+          units: entries
+            .filter((e) => (map[e.id] ?? 0) > 0)
+            .map((e) => makeUnit(e, map[e.id] ?? 0)),
+        },
+      ];
+
     sim.mutate({
       seed,
-      attackers: toSide(attackers),
-      defenders: toSide(defenders),
+      attackers: toSide(attackers, COMBAT_SHIPS),
+      defenders: toSide(defenders, [...COMBAT_SHIPS, ...COMBAT_DEFENSE]),
     });
   }
+
+  const r = sim.data;
 
   return (
     <section>
       <h2>{t('global', 'MENU_SIMULATOR')}</h2>
-      <p>
-        {tf(
-          'Main',
-          'BATTLE_SIM_WIP',
-          'Внимание: бой ещё портируется (M4). Сейчас endpoint возвращает «draw» на любом входе — это каркас, а не реальный расчёт. Скрин/API стабильные, логика придёт вместе с портом game/Assault.class.php.',
-        )}
-      </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <UnitPicker
           title={tf('Main', 'BATTLE_SIM_ATTACKERS', 'Атакующий флот')}
-          units={[...SHIPS]}
+          units={COMBAT_SHIPS}
           value={attackers}
           onChange={setAttackers}
         />
         <UnitPicker
           title={tf('Main', 'BATTLE_SIM_DEFENDERS', 'Защита + флот')}
-          units={[...SHIPS, ...DEFENSE]}
+          units={[...COMBAT_SHIPS, ...COMBAT_DEFENSE]}
           value={defenders}
           onChange={setDefenders}
         />
       </div>
 
-      <label style={{ display: 'block', margin: '12px 0' }}>
+      <label style={{ display: 'block', marginBottom: 12 }}>
         {tf('Main', 'BATTLE_SIM_SEED', 'Seed:')}&nbsp;
         <input
           type="number"
@@ -93,56 +112,135 @@ export function BattleSimScreen() {
       </button>
 
       {sim.isError && (
-        <div className="ox-error">
+        <div className="ox-error" style={{ marginTop: 8 }}>
           {sim.error instanceof Error ? sim.error.message : t('global', 'ERROR')}
         </div>
       )}
-      {sim.data && (
-        <div style={{ marginTop: 12 }}>
+
+      {r && (
+        <div style={{ marginTop: 16 }}>
           <h3>{tf('Main', 'BATTLE_SIM_RESULT', 'Результат')}</h3>
-          <ul>
-            <li>{tf('Main', 'BATTLE_SIM_SEED', 'Seed:')} {sim.data.seed}</li>
-            <li>{tf('Main', 'BATTLE_SIM_ROUNDS', 'Раундов:')} {sim.data.rounds}</li>
-            <li>{tf('Main', 'BATTLE_SIM_WINNER', 'Победитель:')} {sim.data.winner}</li>
-          </ul>
+          <p>
+            <b>{tf('Main', 'BATTLE_WINNER', 'Победитель')}:</b>{' '}
+            {r.winner === 'attackers'
+              ? tf('Main', 'BATTLE_WIN_ATT', 'Атакующие')
+              : r.winner === 'defenders'
+                ? tf('Main', 'BATTLE_WIN_DEF', 'Защитники')
+                : tf('Main', 'BATTLE_DRAW', 'Ничья')}
+            {' · '}
+            <b>{tf('Main', 'BATTLE_ROUNDS', 'Раундов')}:</b> {r.rounds}
+            {' · '}
+            <b>Seed:</b> {r.seed}
+          </p>
+          {(r.debris_metal > 0 || r.debris_silicon > 0) && (
+            <p>
+              <b>{tf('Main', 'DEBRIS', 'Обломки')}:</b>{' '}
+              {r.debris_metal} M / {r.debris_silicon} Si
+            </p>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 8 }}>
+            {r.attackers[0] && (
+              <LossesTable
+                title={tf('Main', 'ATTACKERS', 'Атакующие')}
+                side={r.attackers[0]}
+                original={attackers}
+              />
+            )}
+            {r.defenders[0] && (
+              <LossesTable
+                title={tf('Main', 'DEFENDERS', 'Защитники')}
+                side={r.defenders[0]}
+                original={defenders}
+              />
+            )}
+          </div>
         </div>
       )}
     </section>
   );
 }
 
-function UnitPicker({
-  title,
-  units,
-  value,
-  onChange,
+function LossesTable({
+  title, side, original,
 }: {
   title: string;
-  units: { id: number; name: string }[];
+  side: SideResult;
+  original: UnitMap;
+}) {
+  const { tf } = useTranslation();
+  const changed = side.units.filter((u) => u.quantity_end !== u.quantity_start || u.damaged_end);
+  return (
+    <div>
+      <h4>{title}</h4>
+      <p>
+        {tf('Main', 'BATTLE_LOSSES', 'Потери')}:{' '}
+        <b>{side.lost_metal}</b> M / <b>{side.lost_silicon}</b> Si
+      </p>
+      {changed.length > 0 ? (
+        <table className="ox-table">
+          <thead>
+            <tr>
+              <th>{tf('Main', 'UNIT_ID', 'Юнит')}</th>
+              <th>{tf('Main', 'BEFORE', 'Было')}</th>
+              <th>{tf('Main', 'AFTER', 'Стало')}</th>
+              <th>{tf('Main', 'DAMAGED', 'Повреждено')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {changed.map((u) => (
+              <tr key={u.unit_id}>
+                <td>{nameOf(u.unit_id)}</td>
+                <td className="num">{original[u.unit_id] ?? u.quantity_start}</td>
+                <td className="num">{u.quantity_end}</td>
+                <td className="num">{u.damaged_end ?? 0}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p>{tf('Main', 'NO_LOSSES', 'Потерь нет.')}</p>
+      )}
+    </div>
+  );
+}
+
+function UnitPicker({
+  title, units, value, onChange,
+}: {
+  title: string;
+  units: CombatEntry[];
   value: UnitMap;
   onChange: (v: UnitMap) => void;
 }) {
+  const { tf } = useTranslation();
   return (
     <div>
       <h3>{title}</h3>
       <table className="ox-table">
         <thead>
           <tr>
-            <th>Юнит</th>
-            <th>Кол-во</th>
+            <th>{tf('Main', 'UNIT_ID', 'Юнит')}</th>
+            <th>Atk</th>
+            <th>Shld</th>
+            <th>HP</th>
+            <th>{tf('Main', 'COUNT', 'Кол-во')}</th>
           </tr>
         </thead>
         <tbody>
           {units.map((u) => (
             <tr key={u.id}>
               <td>{nameOf(u.id)}</td>
+              <td className="num">{u.attack}</td>
+              <td className="num">{u.shield}</td>
+              <td className="num">{u.shell}</td>
               <td>
                 <input
                   type="number"
                   min={0}
                   value={value[u.id] ?? 0}
                   onChange={(e) => onChange({ ...value, [u.id]: Math.max(0, Number(e.target.value)) })}
-                  style={{ width: 100 }}
+                  style={{ width: 80 }}
                 />
               </td>
             </tr>
