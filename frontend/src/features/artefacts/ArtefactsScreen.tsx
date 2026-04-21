@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { nameOf } from '@/api/catalog';
@@ -7,6 +8,10 @@ import type { Artefact } from '@/api/types';
 export function ArtefactsScreen() {
   const { t, tf } = useTranslation();
   const qc = useQueryClient();
+  // ID артефакта, для которого открыта inline-форма продажи.
+  const [sellingID, setSellingID] = useState<string | null>(null);
+  const [priceInput, setPriceInput] = useState('100');
+
   const list = useQuery({
     queryKey: ['artefacts'],
     queryFn: () => api.get<{ artefacts: Artefact[] | null }>('/api/artefacts'),
@@ -31,6 +36,7 @@ export function ArtefactsScreen() {
     mutationFn: (p: { id: string; price: number }) =>
       api.post<void>(`/api/artefacts/${p.id}/sell`, { price: p.price }),
     onSuccess: () => {
+      setSellingID(null);
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
       void qc.invalidateQueries({ queryKey: ['artefact-market'] });
     },
@@ -69,6 +75,17 @@ export function ArtefactsScreen() {
           ? tf('Main', 'ARTEFACT_DELAYED', 'Активируется…')
           : '—';
 
+  function openSellForm(id: string) {
+    setSellingID(id);
+    setPriceInput('100');
+  }
+
+  function confirmSell() {
+    if (!sellingID) return;
+    const price = Number(priceInput);
+    if (price > 0) sell.mutate({ id: sellingID, price });
+  }
+
   return (
     <section>
       <h2>{t('global', 'MENU_ARTEFACTS')}</h2>
@@ -88,7 +105,7 @@ export function ArtefactsScreen() {
               <td>{a.state}</td>
               <td>{a.expire_at ? new Date(a.expire_at).toLocaleString('ru-RU') : '—'}</td>
               <td>
-                {a.state === 'held' && (
+                {a.state === 'held' && sellingID !== a.id && (
                   <>
                     <button
                       type="button"
@@ -100,20 +117,30 @@ export function ArtefactsScreen() {
                     <button
                       type="button"
                       disabled={sell.isPending}
-                      onClick={() => {
-                        const raw = window.prompt(
-                          tf('Main', 'ART_SELL_PROMPT', 'Цена в credit:'),
-                          '100',
-                        );
-                        const price = Number(raw);
-                        if (price > 0) {
-                          sell.mutate({ id: a.id, price });
-                        }
-                      }}
+                      onClick={() => openSellForm(a.id)}
                     >
                       {tf('Main', 'ART_SELL', 'Продать')}
                     </button>
                   </>
+                )}
+                {a.state === 'held' && sellingID === a.id && (
+                  <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      min={1}
+                      value={priceInput}
+                      onChange={(e) => setPriceInput(e.target.value)}
+                      style={{ width: 80 }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') confirmSell(); if (e.key === 'Escape') setSellingID(null); }}
+                      autoFocus
+                    />
+                    <button type="button" disabled={sell.isPending || Number(priceInput) <= 0} onClick={confirmSell}>
+                      {tf('Main', 'OK', 'OK')}
+                    </button>
+                    <button type="button" onClick={() => setSellingID(null)}>
+                      {tf('Main', 'CANCEL', 'Отмена')}
+                    </button>
+                  </span>
                 )}
                 {a.state === 'active' && (
                   <button
@@ -145,6 +172,13 @@ export function ArtefactsScreen() {
           {deactivate.error instanceof Error
             ? deactivate.error.message
             : tf('Main', 'ARTEFACT_DEACTIVATE_ERROR', 'ошибка деактивации')}
+        </div>
+      )}
+      {sell.isError && (
+        <div className="ox-error">
+          {sell.error instanceof Error
+            ? sell.error.message
+            : tf('Main', 'ART_SELL_ERROR', 'ошибка выставления на продажу')}
         </div>
       )}
     </section>

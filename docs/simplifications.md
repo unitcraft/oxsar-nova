@@ -166,12 +166,9 @@
   фильтр сравнивает `seller_user_id === me.user_id`. Кнопка действия
   теперь тоже разделена: Cancel — для своих, Buy — для чужих.
 
-### [ArtefactMarket] Цена через window.prompt
-- **Где**: `features/artefacts/ArtefactsScreen.tsx`.
-- **Что**: ввод цены через `window.prompt`, без inline-form.
-- **Почему**: минимальный UX для MVP.
-- **Как чинить**: inline-form в отдельной строке при клике «Продать».
-- **Приоритет**: L.
+### [ArtefactMarket] Цена через window.prompt — ЗАКРЫТО
+- Закрыто: inline price input в строке таблицы (number input + OK/Cancel).
+  Enter подтверждает, Escape отменяет. window.prompt удалён.
 
 ---
 
