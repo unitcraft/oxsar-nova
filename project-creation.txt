@@ -4118,5 +4118,19 @@ BuildingsScreen теперь использует buildingName() в очеред
   - AllianceScreen.tsx: RelationsPanel показывает статус, входящие pending — кнопки ✓/✕.
 
 ================================================================================
+Итерация — 2026-04-22
+================================================================================
+
+[Admin] AutoMsg CMS + Stats/Credit API fixes.
+  - admin/handler.go: Stats теперь возвращает users/planets/fleets_active/events_pending
+    (ранее возвращал total_users/active_last24h/total_planets — не совпадало с фронтом).
+  - admin/handler.go: Credit принимает "amount" вместо "delta" (согласование с фронтом).
+  - admin/handler.go: ListUsers включает score (LEFT JOIN scores) и COALESCE для role.
+  - admin/handler.go: ListAutomsgs + UpdateAutomsg — GET/PUT для automsg_defs.
+  - main.go: маршруты GET /admin/automsgs и PUT /admin/automsgs/{key}.
+  - AdminScreen.tsx: AutomsgsPanel — таблица шаблонов с inline-редактором
+    (заголовок, папка, шаблон тела; сохранение через PUT).
+
+================================================================================
 Конец дневника.
 ================================================================================

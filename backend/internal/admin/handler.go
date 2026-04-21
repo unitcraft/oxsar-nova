@@ -62,6 +62,7 @@ type UserRow struct {
 	Email      string     `json:"email"`
 	Role       string     `json:"role"`
 	Credit     int64      `json:"credit"`
+	Score      int64      `json:"score"`
 	BannedAt   *time.Time `json:"banned_at,omitempty"`
 	CreatedAt  time.Time  `json:"created_at"`
 	LastSeenAt time.Time  `json:"last_seen_at"`
@@ -76,8 +77,11 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 
 	rows, err := h.db.Pool().Query(r.Context(), `
-		SELECT id, username, email, role, credit, banned_at, created_at, last_seen_at
-		FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2
+		SELECT u.id, u.username, u.email, COALESCE(u.role,''), u.credit,
+		       COALESCE(s.score, 0), u.banned_at, u.created_at, u.last_seen_at
+		FROM users u
+		LEFT JOIN scores s ON s.user_id = u.id
+		ORDER BY u.created_at DESC LIMIT $1 OFFSET $2
 	`, limit, offset)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
@@ -89,7 +93,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var u UserRow
 		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.Credit,
-			&u.BannedAt, &u.CreatedAt, &u.LastSeenAt); err != nil {
+			&u.Score, &u.BannedAt, &u.CreatedAt, &u.LastSeenAt); err != nil {
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 			return
 		}
@@ -134,11 +138,11 @@ func (h *Handler) Unban(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Credit POST /api/admin/users/{id}/credit  body: {"delta": N}
+// Credit POST /api/admin/users/{id}/credit  body: {"amount": N}
 func (h *Handler) Credit(w http.ResponseWriter, r *http.Request) {
 	uid := chi.URLParam(r, "id")
 	var body struct {
-		Delta int64 `json:"delta"`
+		Amount int64 `json:"amount"`
 	}
 	if err := decodeJSON(r, &body); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
@@ -148,7 +152,7 @@ func (h *Handler) Credit(w http.ResponseWriter, r *http.Request) {
 	err := h.db.Pool().QueryRow(r.Context(), `
 		UPDATE users SET credit = credit + $1 WHERE id = $2
 		RETURNING credit
-	`, body.Delta, uid).Scan(&newCredit)
+	`, body.Amount, uid).Scan(&newCredit)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			httpx.WriteError(w, r, httpx.ErrNotFound)
@@ -189,6 +193,70 @@ func (h *Handler) SetRole(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// AutomsgDef — шаблон системного сообщения.
+type AutomsgDef struct {
+	Key          string `json:"key"`
+	Title        string `json:"title"`
+	BodyTemplate string `json:"body_template"`
+	Folder       int    `json:"folder"`
+}
+
+// ListAutomsgs GET /api/admin/automsgs
+func (h *Handler) ListAutomsgs(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.db.Pool().Query(r.Context(),
+		`SELECT key, title, body_template, folder FROM automsg_defs ORDER BY key`)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	defer rows.Close()
+	var out []AutomsgDef
+	for rows.Next() {
+		var d AutomsgDef
+		if err := rows.Scan(&d.Key, &d.Title, &d.BodyTemplate, &d.Folder); err != nil {
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+			return
+		}
+		out = append(out, d)
+	}
+	if err := rows.Err(); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"defs": out})
+}
+
+// UpdateAutomsg PUT /api/admin/automsgs/{key}
+// Body: {"title":"...","body_template":"...","folder":2}
+func (h *Handler) UpdateAutomsg(w http.ResponseWriter, r *http.Request) {
+	key := chi.URLParam(r, "key")
+	var body struct {
+		Title        string `json:"title"`
+		BodyTemplate string `json:"body_template"`
+		Folder       int    `json:"folder"`
+	}
+	if err := decodeJSON(r, &body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+		return
+	}
+	if body.Title == "" || body.BodyTemplate == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "title and body_template required"))
+		return
+	}
+	tag, err := h.db.Pool().Exec(r.Context(), `
+		UPDATE automsg_defs SET title=$1, body_template=$2, folder=$3 WHERE key=$4
+	`, body.Title, body.BodyTemplate, body.Folder, key)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func decodeJSON(r *http.Request, into any) error {
 	dec := json.NewDecoder(io.LimitReader(r.Body, 1<<20))
 	dec.DisallowUnknownFields()
@@ -198,19 +266,20 @@ func decodeJSON(r *http.Request, into any) error {
 // Stats GET /api/admin/stats — базовая статистика сервера.
 func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	var totalUsers, activeLast24h, totalPlanets int64
-	_ = h.db.Pool().QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&totalUsers)
+	var users, planets, fleetsActive, eventsPending int64
+	_ = h.db.Pool().QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&users)
 	_ = h.db.Pool().QueryRow(ctx,
-		`SELECT COUNT(*) FROM users WHERE last_seen_at > now() - interval '24 hours'`,
-	).Scan(&activeLast24h)
+		`SELECT COUNT(*) FROM planets WHERE destroyed_at IS NULL`).Scan(&planets)
 	_ = h.db.Pool().QueryRow(ctx,
-		`SELECT COUNT(*) FROM planets WHERE destroyed_at IS NULL`,
-	).Scan(&totalPlanets)
+		`SELECT COUNT(*) FROM fleets WHERE state IN ('outbound','inbound')`).Scan(&fleetsActive)
+	_ = h.db.Pool().QueryRow(ctx,
+		`SELECT COUNT(*) FROM events WHERE fire_at > now()`).Scan(&eventsPending)
 
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
-		"total_users":    totalUsers,
-		"active_last24h": activeLast24h,
-		"total_planets":  totalPlanets,
+		"users":          users,
+		"planets":        planets,
+		"fleets_active":  fleetsActive,
+		"events_pending": eventsPending,
 	})
 }
 

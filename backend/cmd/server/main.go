@@ -287,6 +287,8 @@ func run() error {
 			ar.Post("/users/{id}/unban", adminH.Unban)
 			ar.Post("/users/{id}/credit", adminH.Credit)
 			ar.Post("/users/{id}/role", adminH.SetRole)
+			ar.Get("/automsgs", adminH.ListAutomsgs)
+			ar.Put("/automsgs/{key}", adminH.UpdateAutomsg)
 		})
 	})
 
