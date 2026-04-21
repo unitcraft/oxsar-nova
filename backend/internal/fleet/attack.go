@@ -342,14 +342,15 @@ func deriveSeed(fleetID string) uint64 {
 	return h
 }
 
-// rapidfireToMap — плейсхолдер. Реальная rapidfire-таблица лежит в
-// cat.Rapidfire (map[string]map[string]int по ключам-именам). Чтобы
-// привести к map[int]map[int]int нужно знать unit_id. Отложим до
-// M4.4b, пока возвращаем nil → rf=1 по всем парам (как в M4.2
-// engine при отсутствии таблицы).
+// rapidfireToMap — таблица rapidfire из каталога. В нашем YAML
+// (configs/rapidfire.yml) ключи изначально unit_id, поэтому конвертер
+// тривиальный — возвращаем as is. nil-map легальна (engine читает
+// как rf=1 для всех пар).
 func rapidfireToMap(cat *config.Catalog) map[int]map[int]int {
-	_ = cat
-	return nil
+	if cat == nil {
+		return nil
+	}
+	return cat.Rapidfire.Rapidfire
 }
 
 // grabLoot — 50% metal/silicon/hydrogen цели, зажатое свободным
