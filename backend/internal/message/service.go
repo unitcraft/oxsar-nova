@@ -52,7 +52,7 @@ func (s *Service) Inbox(ctx context.Context, userID string, limit int) ([]Messag
 		       m.battle_report_id, m.espionage_report_id, m.expedition_report_id
 		FROM messages m
 		LEFT JOIN users u ON u.id = m.from_user_id
-		WHERE m.to_user_id = $1
+		WHERE m.to_user_id = $1 AND m.deleted_at IS NULL
 		ORDER BY m.created_at DESC
 		LIMIT $2
 	`, userID, limit)
@@ -79,7 +79,7 @@ func (s *Service) Inbox(ctx context.Context, userID string, limit int) ([]Messag
 func (s *Service) UnreadCount(ctx context.Context, userID string) (int, error) {
 	var n int
 	err := s.db.Pool().QueryRow(ctx,
-		`SELECT COUNT(*) FROM messages WHERE to_user_id = $1 AND read_at IS NULL`,
+		`SELECT COUNT(*) FROM messages WHERE to_user_id = $1 AND read_at IS NULL AND deleted_at IS NULL`,
 		userID).Scan(&n)
 	if err != nil {
 		return 0, fmt.Errorf("unread count: %w", err)
@@ -166,10 +166,10 @@ func (s *Service) Compose(ctx context.Context, fromUserID, toUsername, subject, 
 	return nil
 }
 
-// Delete удаляет сообщение. Только владелец (to_user_id) может удалить своё.
+// Delete soft-удаляет сообщение (ставит deleted_at). Только владелец может удалить своё.
 func (s *Service) Delete(ctx context.Context, userID, messageID string) error {
 	tag, err := s.db.Pool().Exec(ctx,
-		`DELETE FROM messages WHERE id = $1 AND to_user_id = $2`,
+		`UPDATE messages SET deleted_at = now() WHERE id = $1 AND to_user_id = $2 AND deleted_at IS NULL`,
 		messageID, userID)
 	if err != nil {
 		return fmt.Errorf("delete message: %w", err)

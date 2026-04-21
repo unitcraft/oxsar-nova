@@ -235,12 +235,10 @@
 - Закрыто: кнопка «↩ Ответить» в MessageDetail (только для сообщений
   с from_user_id). Pre-fill ComposeForm: to=from_username, subject=«Re: …».
 
-### [Messages] Нет soft-delete
-- **Где**: `internal/message/service.go`, `MessagesScreen.tsx`.
-- **Что**: Delete — hard DELETE из БД (нет корзины, нет sent-folder).
-- **Почему**: soft-delete усложняет schema.
-- **Как чинить**: добавить `deleted_at` column + WHERE deleted_at IS NULL в Inbox.
-- **Приоритет**: L.
+### [Messages] Нет soft-delete — ЗАКРЫТО
+- Закрыто: migration 0027 добавляет `deleted_at TIMESTAMPTZ` + частичный индекс
+  `WHERE deleted_at IS NULL`. Delete→`UPDATE SET deleted_at=now()`. Inbox и UnreadCount
+  фильтруют `deleted_at IS NULL`.
 
 ### [Messages] Username в BattleReport — ЗАКРЫТО
 - LEFT JOIN users ua/ud добавлен в GetBattleReport. Поля
