@@ -148,11 +148,12 @@ func (s *TransportService) AttackHandler() event.Handler {
 		}
 
 		// Пустая планета (нет ships и нет defense) — без боя, сразу loot.
+		// Debris=0 (ship'ов не было, уничтожать нечего).
 		if len(defSide.Units) == 0 {
 			loot := grabLoot(defMetal, defSil, defHydro, attackerShips, s.catalog, cm, csil, ch)
 			rep := battle.Report{Winner: "attackers", Rounds: 0, Seed: deriveSeed(pl.FleetID)}
 			return finalizeAttack(ctx, tx, pl.FleetID, attackerUserID, defenderUserID, planetID,
-				rep, loot, cm, csil, ch, nil, nil)
+				rep, loot, 0, 0, cm, csil, ch, nil, nil)
 		}
 
 		input := battle.Input{
@@ -177,13 +178,65 @@ func (s *TransportService) AttackHandler() event.Handler {
 			return fmt.Errorf("attack: apply defender losses: %w", err)
 		}
 
+		// Debris: 30% metal+silicon от стоимости уничтоженных SHIPS
+		// (defense не переходит в debris — OGame-правило). Считаем
+		// по UnitResult обеих сторон, защитные юниты defenderDefense
+		// исключаем по unit_id.
+		defenseIDs := map[int]bool{}
+		for _, d := range defenderDefense {
+			defenseIDs[d.UnitID] = true
+		}
+		debrisM, debrisS := calcDebris(report, defenseIDs, s.catalog)
+		if debrisM > 0 || debrisS > 0 {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO debris_fields (galaxy, system, position, metal, silicon)
+				VALUES ($1, $2, $3, $4, $5)
+				ON CONFLICT (galaxy, system, position) DO UPDATE
+				SET metal = debris_fields.metal + EXCLUDED.metal,
+				    silicon = debris_fields.silicon + EXCLUDED.silicon,
+				    last_update = now()
+			`, g, sys, pos, debrisM, debrisS); err != nil {
+				return fmt.Errorf("attack: write debris: %w", err)
+			}
+		}
+
 		var loot lootAmount
 		if report.Winner == "attackers" && len(atkSurvivors) > 0 {
 			loot = grabLoot(defMetal, defSil, defHydro, atkSurvivors, s.catalog, cm, csil, ch)
 		}
 		return finalizeAttack(ctx, tx, pl.FleetID, attackerUserID, defenderUserID, planetID,
-			report, loot, cm, csil, ch, atkSurvivors, nil)
+			report, loot, debrisM, debrisS, cm, csil, ch, atkSurvivors, nil)
 	}
+}
+
+// calcDebris — 30% (metal+silicon) от стоимости ships, погибших в
+// бою. defenseIDs — идентификаторы defensive-юнитов (чтобы исключить
+// их из debris). Cost per-unit берём из каталога по UnitResult.UnitID.
+func calcDebris(rep battle.Report, defenseIDs map[int]bool, cat *config.Catalog) (int64, int64) {
+	var m, s int64
+	sides := append([]battle.SideResult{}, rep.Attackers...)
+	sides = append(sides, rep.Defenders...)
+	for _, side := range sides {
+		for _, u := range side.Units {
+			if defenseIDs[u.UnitID] {
+				continue
+			}
+			lost := u.QuantityStart - u.QuantityEnd
+			if lost <= 0 {
+				continue
+			}
+			// ищем cost в Ships (все атакующие — ships, defenders без
+			// defense тоже ships).
+			for _, spec := range cat.Ships.Ships {
+				if spec.ID == u.UnitID {
+					m += lost * spec.Cost.Metal * 30 / 100
+					s += lost * spec.Cost.Silicon * 30 / 100
+					break
+				}
+			}
+		}
+	}
+	return m, s
 }
 
 // -----------------------------------------------------------------
@@ -501,6 +554,7 @@ func applyDefenderLosses(ctx context.Context, tx pgx.Tx, planetID string,
 func finalizeAttack(ctx context.Context, tx pgx.Tx,
 	fleetID, attUID, defUID, planetID string,
 	rep battle.Report, loot lootAmount,
+	debrisM, debrisS int64,
 	prevM, prevS, prevH int64,
 	_unusedSurvivors []unitStack, _unusedDef any) error {
 	// battle_reports
@@ -512,11 +566,13 @@ func finalizeAttack(ctx context.Context, tx pgx.Tx,
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO battle_reports (id, attacker_user_id, defender_user_id, planet_id,
 		                            seed, winner, rounds,
+		                            debris_metal, debris_silicon,
 		                            loot_metal, loot_silicon, loot_hydrogen,
 		                            report)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`, reportID, attUID, defUID, planetID,
 		int64(rep.Seed), rep.Winner, rep.Rounds,
+		debrisM, debrisS,
 		loot.Metal, loot.Silicon, loot.Hydrogen,
 		reportJSON,
 	); err != nil {

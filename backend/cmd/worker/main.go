@@ -80,6 +80,7 @@ func run() error {
 	w.Register(event.KindTransport, transportSvc.ArriveHandler())
 	w.Register(event.KindReturn, transportSvc.ReturnHandler())
 	w.Register(event.KindAttackSingle, transportSvc.AttackHandler())
+	w.Register(event.KindRecycling, transportSvc.RecyclingHandler())
 	w.Register(event.KindDisassemble, repairSvc.DisassembleHandler())
 	w.Register(event.KindRepair, repairSvc.RepairHandler())
 
