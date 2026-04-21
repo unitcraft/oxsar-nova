@@ -3114,5 +3114,39 @@ docs/status.md: Simulator UI ⬜ → ✅.
 
 
 ================================================================================
+41. EXPED PLANET CREATOR (M5) — НОВАЯ ПЛАНЕТА ИЗ ЭКСПЕДИЦИИ
+================================================================================
+
+Дата: 2026-04-21
+
+Добавлен 6-й исход экспедиции: extra_planet (5%, roll 35–40).
+
+backend/internal/fleet/expedition.go:
+  - Новый кейс roll 35–40 → outcome = "extra_planet".
+  - Перераспределены вероятности: pirates 20→20 (roll 40–60),
+    loss 15→15 (roll 60–75), nothing 30→25 (roll 75–99).
+  - expExtraPlanet(ctx, tx, r, userID): проверяет лимит планет
+    (computer_tech + 1), ищет свободный слот (до 50 попыток),
+    INSERT planets ("Expedition Colony", 0 ресурсов). Если лимит
+    достигнут или слот не найден — возвращает map с объяснением
+    без ошибки (outcome сохраняется, планета не создаётся).
+
+frontend/src/features/messages/MessagesScreen.tsx:
+  - ExpeditionReportFull.outcome: добавлен 'extra_planet'.
+  - outcomeText: 'extra_planet' → 'Обнаружена новая планета'.
+
+Упрощения (без добавлений в docs/simplifications.md):
+  - Планета создаётся с 0 ресурсов (нет cargo на борту экспедиции).
+  - Имя «Expedition Colony» — нет выбора имени.
+  Оба — уже покрыты общим [COLONIZE] треком в simplifications.md.
+
+docs/status.md: ExpedPlanetCreator ⬜ → ✅.
+
+Статистика итерации 41:
+   expedition.go: +55 строк (expExtraPlanet + новый case).
+   MessagesScreen.tsx: +2 строки (тип + outcomeText).
+
+
+================================================================================
 Конец дневника.
 ================================================================================

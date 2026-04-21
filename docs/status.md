@@ -24,9 +24,9 @@ Milestones из §16 [oxsar-spec.txt](../oxsar-spec.txt).
 | Defense                     | ✅     | M2 | В рамках shipyard — общая очередь.                       |
 | Galaxy                      | ✅     | M3 | Repository + GET /api/galaxy/{g}/{s} + GalaxyScreen.      |
 | Fleet / missions            | ✅     | M5 | TRANSPORT + ATTACK + RECYCLING + SPY + COLONIZE (kind=7,8,9,10,11). |
-| Battle engine               | 🟡     | M4.4b | rapidfire из каталога ✅, RECYCLING ✅, debris ✅. Нет: compose/delete messages, moon creation. |
+| Battle engine               | 🟡     | M4.4b | rapidfire ✅, RECYCLING ✅, debris ✅. Нет: moon creation (kind=14), ACS multi-side. |
 | Expedition                  | ✅     | M5 | 5 исходов (resources/artefact/pirates/loss/nothing), PvE-бой, отчёт + сообщение. |
-| ExpedPlanetCreator          | ⬜     | M5 | ex ext/ExpedPlanetCreator.class.php.                     |
+| ExpedPlanetCreator          | ✅     | M5 | extra_planet outcome (5%): создаёт планету на случайном свободном слоте, проверяет лимит. |
 | Rockets / stargate          | ✅     | M5 | Interplanetary rockets (kind=16): Launch → Impact. Stargate — позже. |
 | Artefact                    | ✅     | M5.0 | Apply/Revert/Resync + delay activation (kind=63). Deactivate bugfix. |
 | Artefact Market (credit)    | ✅     | M5.1 | List/Sell/Buy/Cancel + UI. users.credit как валюта. |

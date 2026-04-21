@@ -1,13 +1,14 @@
 // EXPEDITION (mission=15) — полёт в неисследованную зону.
 //
-// При прибытии флот выполняет 1 из 5 исходов, выбранных по seed от
+// При прибытии флот выполняет 1 из 6 исходов, выбранных по seed от
 // fleetID (детерминированно по uuid):
 //
-//   resources  (30%): +N ресурсов в carry (до cargo cap).
-//   artefact   (5%) : случайный артефакт в artefacts_user state=held.
-//   pirates    (20%): battle против PvE-флота (5 light_fighter).
-//   loss       (15%): 5-20% ship'ов теряются.
-//   nothing    (30%): пустой отчёт, возврат без изменений.
+//   resources    (30%): +N ресурсов в carry (до cargo cap).
+//   artefact      (5%): случайный артефакт в artefacts_user state=held.
+//   extra_planet  (5%): новая планета создаётся на случайном свободном слоте.
+//   pirates       (20%): battle против PvE-флота (5 light_fighter).
+//   loss          (15%): 5-20% ship'ов теряются.
+//   nothing       (25%): пустой отчёт, возврат без изменений.
 //
 // Поток:
 //   1. Читаем fleet + fleet_ships.
@@ -79,13 +80,19 @@ func (s *TransportService) ExpeditionHandler() event.Handler {
 		case roll < 35:
 			outcome = "artefact"
 			reportData = expArtefact(ctx, tx, r, ownerUserID, s.catalog)
-		case roll < 55:
+		case roll < 40:
+			outcome = "extra_planet"
+			reportData, err = expExtraPlanet(ctx, tx, r, ownerUserID)
+			if err != nil {
+				return err
+			}
+		case roll < 60:
 			outcome = "pirates"
 			reportData, err = expPirates(ctx, tx, pl.FleetID, fleetShips, s.catalog)
 			if err != nil {
 				return err
 			}
-		case roll < 70:
+		case roll < 75:
 			outcome = "loss"
 			reportData, err = expLoss(ctx, tx, r, pl.FleetID, fleetShips)
 			if err != nil {
@@ -120,6 +127,69 @@ func (s *TransportService) ExpeditionHandler() event.Handler {
 		}
 		return nil
 	}
+}
+
+// expExtraPlanet — создаёт новую пустую планету на случайном свободном
+// слоте. Проверяет лимит (computer_tech + 1). Если слот не найден
+// за 50 попыток или лимит достигнут — возвращает reportData с причиной
+// без ошибки (исход всё равно "extra_planet", просто без планеты).
+func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string) (map[string]any, error) {
+	// Лимит планет.
+	computerLvl := readComputerLevel(ctx, tx, userID)
+	maxPlanets := computerLvl + 1
+	var curPlanets int
+	if err := tx.QueryRow(ctx,
+		`SELECT COUNT(*) FROM planets WHERE user_id=$1 AND destroyed_at IS NULL AND is_moon=false`,
+		userID).Scan(&curPlanets); err != nil {
+		return nil, fmt.Errorf("expExtraPlanet: count: %w", err)
+	}
+	if curPlanets >= maxPlanets {
+		return map[string]any{
+			"message": fmt.Sprintf("Обнаружена пригодная планета, но достигнут лимит (%d/%d). Улучшите computer_tech.", curPlanets, maxPlanets),
+		}, nil
+	}
+
+	// Ищем свободный слот.
+	for attempt := 0; attempt < 50; attempt++ {
+		g := r.IntN(8) + 1
+		sys := r.IntN(500) + 1
+		pos := r.IntN(13) + 2 // 2..14
+
+		var exists bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM planets
+				WHERE galaxy=$1 AND system=$2 AND position=$3 AND is_moon=false AND destroyed_at IS NULL
+			)
+		`, g, sys, pos).Scan(&exists); err != nil {
+			return nil, fmt.Errorf("expExtraPlanet: check slot: %w", err)
+		}
+		if exists {
+			continue
+		}
+
+		rCoord := rng.New(coordsSeed(g, sys, pos))
+		diameter := 12800 + rCoord.IntN(2000)
+		tempMax := -40 + rCoord.IntN(80)
+		tempMin := tempMax - 40
+
+		newID := ids.New()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO planets (id, user_id, is_moon, name, galaxy, system, position,
+			                     diameter, used_fields, temperature_min, temperature_max,
+			                     metal, silicon, hydrogen)
+			VALUES ($1, $2, false, 'Expedition Colony', $3, $4, $5, $6, 0, $7, $8, 0, 0, 0)
+		`, newID, userID, g, sys, pos, diameter, tempMin, tempMax); err != nil {
+			return nil, fmt.Errorf("expExtraPlanet: insert: %w", err)
+		}
+		return map[string]any{
+			"planet_id": newID,
+			"galaxy":    g,
+			"system":    sys,
+			"position":  pos,
+		}, nil
+	}
+	return map[string]any{"message": "Пригодная планета найдена, но подходящая позиция не обнаружена."}, nil
 }
 
 // expResources — бонус ресурсов в carry, ограниченный свободным cargo.

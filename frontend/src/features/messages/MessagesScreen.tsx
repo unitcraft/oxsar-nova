@@ -31,7 +31,7 @@ interface ExpeditionReportFull {
   id: string;
   user_id?: string | null;
   fleet_id?: string | null;
-  outcome: 'resources' | 'artefact' | 'pirates' | 'loss' | 'nothing';
+  outcome: 'resources' | 'artefact' | 'extra_planet' | 'pirates' | 'loss' | 'nothing';
   at: string;
   report: Record<string, unknown>;
 }
@@ -359,6 +359,7 @@ function ExpeditionReportView({ data }: { data: ExpeditionReportFull }) {
   const outcomeText: Record<string, string> = {
     resources: tf('Main', 'EXP_RESOURCES', 'Найдены ресурсы'),
     artefact: tf('Main', 'EXP_ARTEFACT', 'Найден артефакт'),
+    extra_planet: tf('Main', 'EXP_EXTRA_PLANET', 'Обнаружена новая планета'),
     pirates: tf('Main', 'EXP_PIRATES', 'Столкновение с пиратами'),
     loss: tf('Main', 'EXP_LOSS', 'Потери'),
     nothing: tf('Main', 'EXP_NOTHING', 'Ничего не найдено'),
