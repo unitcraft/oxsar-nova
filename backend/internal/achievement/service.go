@@ -148,7 +148,7 @@ func (s *Service) CheckAll(ctx context.Context, userID string) error {
 				SELECT 1 FROM events
 				WHERE user_id = $1 AND kind = 16
 			)`},
-		{"SCORE_1000", `SELECT (score >= 1000) FROM users WHERE id = $1`},
+		{"SCORE_1000", `SELECT (COALESCE(points,0) >= 1000) FROM users WHERE id = $1`},
 	}
 	for _, c := range checks {
 		var ok bool
@@ -174,7 +174,7 @@ type progressCheck struct {
 var progressChecks = []progressCheck{
 	{"BATTLE_10", `SELECT COUNT(*) FROM battle_reports WHERE attacker_user_id=$1 AND winner='attackers'`, 10},
 	{"FLEET_50", `SELECT COALESCE(SUM(s.count),0) FROM ships s JOIN planets p ON p.id=s.planet_id WHERE p.user_id=$1`, 50},
-	{"SCORE_1000", `SELECT COALESCE(score,0) FROM users WHERE id=$1`, 1000},
+	{"SCORE_1000", `SELECT COALESCE(points,0) FROM users WHERE id=$1`, 1000},
 }
 
 // List возвращает все defs + флаг unlocked + timestamp (если есть) + прогресс для числовых.

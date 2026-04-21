@@ -4228,3 +4228,36 @@ BuildingsScreen теперь использует buildingName() в очеред
 ================================================================================
 Конец дневника.
 ================================================================================
+
+================================================================================
+Итерация — 2026-04-22 (продолжение)
+================================================================================
+
+[Fix] achievement/service.go: SCORE_1000 использовал несуществующую колонку score.
+  - Строка 151: SELECT (score >= 1000) → SELECT (COALESCE(points,0) >= 1000).
+  - Строка 177: SELECT COALESCE(score,0) → SELECT COALESCE(points,0).
+  - Колонка в users называется points, а не score.
+
+[i18n] catalog.ts: все имена юнитов переведены на русский язык.
+  - BUILDINGS (13 юнитов): Metal Mine → Рудник металла, Silicon Lab → Рудник по добыче кремния, итд.
+  - RESEARCH (16 технологий): Espionage → Шпионаж, итд.
+  - SHIPS (12 кораблей): Small Transporter → Малый транспорт, итд.
+  - DEFENSE (7 юнитов): Rocket Launcher → Ракетная установка, итд.
+  - ARTEFACTS (6): Merchant's Mark → Знак торговца, итд.
+
+[i18n] GalaxyScreen.tsx: t('Ranking','USERNAME','Игрок') → tf(...) чтобы сработал fallback.
+
+[UI] Навигация переработана с горизонтальной на вертикальную боковую панель.
+  - App.tsx: TabButton → NavBtn, div.ox-tabs → nav.ox-sidebar + div.ox-app + div.ox-content.
+  - app.css: добавлены классы ox-app (grid 160px + 1fr), ox-sidebar, ox-sidebar-section, ox-content.
+  - Пункты сгруппированы по смыслу (планета / флот / социальное / рынок / прочее / админ).
+
+[Assets] Иконки юнитов скопированы из legacy oxsar2 в frontend/public/images/units/.
+  - 123 файла (.gif/.png) из oxsar2/www/images/buildings/std/.
+  - catalog.ts: добавлена функция imageOf(key) → /images/units/{key}.gif.
+  - BuildingsScreen.tsx: <img> иконка 40×40 рядом с названием здания.
+  - ShipyardScreen.tsx: UnitList принимает {key}, показывает иконку юнита.
+
+[Chat] WebSocket keepalive: ping каждые 30s в chat/handler.go.
+  - Без пинга браузер/прокси закрывает idle-соединение.
+  - Фронтенд: auto-reconnect через 3s при разрыве (ChatScreen.tsx).

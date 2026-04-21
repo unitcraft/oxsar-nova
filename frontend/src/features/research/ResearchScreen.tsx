@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { RESEARCH, nameOf } from '@/api/catalog';
+import { RESEARCH, nameOf, imageOf } from '@/api/catalog';
 import { useTranslation } from '@/i18n/i18n';
 import type { Planet, QueueItem, ResearchState } from '@/api/types';
 

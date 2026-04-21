@@ -12,7 +12,7 @@ import type { Planet, SystemView } from '@/api/types';
 // атаковать / транспорт». В v1 делаем чистое чтение; fleet-действия
 // подключаем следующей итерацией (M3-fleet).
 export function GalaxyScreen({ homePlanet }: { homePlanet: Planet }) {
-  const { t } = useTranslation();
+  const { t, tf } = useTranslation();
   const [g, setG] = useState(homePlanet.galaxy);
   const [s, setS] = useState(homePlanet.system);
 
@@ -78,7 +78,7 @@ export function GalaxyScreen({ homePlanet }: { homePlanet: Planet }) {
             <tr>
               <th>{t('Main', 'POSITION')}</th>
               <th>{t('Main', 'NEW_PLANET_NAME')}</th>
-              <th>{t('Ranking', 'USERNAME', 'Игрок')}</th>
+              <th>{tf('Ranking', 'USERNAME', 'Игрок')}</th>
               <th>{t('Main', 'DEBRIS')}</th>
             </tr>
           </thead>

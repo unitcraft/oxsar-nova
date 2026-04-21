@@ -100,6 +100,56 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 .ox-form input:focus { outline: 1px solid var(--ox-accent); }
 .ox-error { color: var(--ox-danger); }
+.ox-app {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.ox-sidebar {
+  background: var(--ox-bg-panel);
+  border: 1px solid var(--ox-border);
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: 12px;
+}
+
+.ox-sidebar button {
+  width: 100%;
+  text-align: left;
+  padding: 7px 14px;
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ox-sidebar button:hover { background: rgba(79, 195, 247, 0.08); }
+.ox-sidebar button[aria-pressed="true"] {
+  background: rgba(79, 195, 247, 0.15);
+  border-left-color: var(--ox-accent);
+  color: var(--ox-accent);
+}
+
+.ox-sidebar-section {
+  height: 1px;
+  background: var(--ox-border);
+  margin: 4px 0;
+}
+
+.ox-content {
+  background: var(--ox-bg-panel);
+  border: 1px solid var(--ox-border);
+  padding: 16px;
+  min-width: 0;
+}
+
 .ox-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
 .ox-tabs button[aria-pressed="true"] { background: linear-gradient(#2c5282, #1a365d); }
 .ox-res-grid {
