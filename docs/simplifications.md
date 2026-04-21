@@ -93,6 +93,8 @@
 ### [M4.4a] Нет unit-тестов AttackHandler
 - **Где**: `fleet/attack.go`.
 - **Что**: 500 строк handler'а, только e2e smoke через docker.
+  Ракетный урон частично покрыт: `rocket/damage.go::applyRocketDamage`
+  (pure func) + 6 unit-тестов в `rocket/damage_test.go`.
 - **Почему**: mock `pgx.Tx` + `battle.Calculate` — большая работа.
 - **Как чинить**: testcontainers или interface-инъекция с моками.
 - **Приоритет**: M — когда начнём рефакторить attack под ACS.

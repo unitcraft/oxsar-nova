@@ -4059,5 +4059,17 @@ BuildingsScreen теперь использует buildingName() в очеред
     siloLevel + siloMax, ограничивает ввод maxLaunch = min(have, siloMax).
 
 ================================================================================
+Итерация — 2026-04-22
+================================================================================
+
+[Rocket damage] Рефакторинг + тесты.
+  - rocket/damage.go: defStack, damageResult, applyRocketDamage() — чистая функция
+    без DB-зависимостей. Вся математика (ABM-interception не входит, только
+    proportional + priority damage).
+  - rocket/events.go: использует applyRocketDamage(); DB-update в отдельном цикле.
+  - rocket/damage_test.go: 6 unit-тестов: NoStacks, ZeroRockets, Proportional,
+    PriorityTarget, PriorityOverflow, CannotKillMoreThanCount.
+
+================================================================================
 Конец дневника.
 ================================================================================
