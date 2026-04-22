@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 
-// Auth-стор хранит только токены и userID. Остальные данные игрока —
-// в TanStack Query (server state). Никакого смешения.
 interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
@@ -11,18 +9,24 @@ interface AuthState {
 }
 
 const STORAGE_KEY = 'oxsar-auth';
+const STORAGE_VERSION = 2; // bump при изменении формата
 
 function loadInitial(): Pick<AuthState, 'accessToken' | 'refreshToken' | 'userId'> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { accessToken: null, refreshToken: null, userId: null };
-    const obj = JSON.parse(raw) as { access?: string; refresh?: string; userId?: string };
+    const obj = JSON.parse(raw) as { v?: number; access?: string; refresh?: string; userId?: string };
+    if (obj.v !== STORAGE_VERSION) {
+      localStorage.removeItem(STORAGE_KEY);
+      return { accessToken: null, refreshToken: null, userId: null };
+    }
     return {
       accessToken: obj.access ?? null,
       refreshToken: obj.refresh ?? null,
       userId: obj.userId ?? null,
     };
   } catch {
+    localStorage.removeItem(STORAGE_KEY);
     return { accessToken: null, refreshToken: null, userId: null };
   }
 }
@@ -30,7 +34,7 @@ function loadInitial(): Pick<AuthState, 'accessToken' | 'refreshToken' | 'userId
 export const useAuthStore = create<AuthState>((set) => ({
   ...loadInitial(),
   setTokens: ({ access, refresh, userId }) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ access, refresh, userId }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: STORAGE_VERSION, access, refresh, userId }));
     set({ accessToken: access, refreshToken: refresh, userId });
   },
   logout: () => {

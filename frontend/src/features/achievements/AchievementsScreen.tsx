@@ -1,9 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { useTranslation } from '@/i18n/i18n';
-
-// AchievementsScreen — lazy-trigger: backend CheckAll выполняется
-// при каждом GET, поэтому список всегда актуален без ws/refresh.
+import { ProgressBar } from '@/ui/ProgressBar';
 
 interface Entry {
   key: string;
@@ -16,7 +13,6 @@ interface Entry {
 }
 
 export function AchievementsScreen() {
-  const { t, tf } = useTranslation();
   const q = useQuery({
     queryKey: ['achievements'],
     queryFn: () => api.get<{ achievements: Entry[] | null }>('/api/achievements'),
@@ -24,65 +20,85 @@ export function AchievementsScreen() {
   });
 
   const list = q.data?.achievements ?? [];
-  const unlockedCount = list.filter((e) => e.unlocked_at).length;
-  const totalPoints = list
-    .filter((e) => e.unlocked_at)
-    .reduce((acc, e) => acc + e.points, 0);
+  const unlocked = list.filter((e) => e.unlocked_at);
+  const totalPoints = unlocked.reduce((acc, e) => acc + e.points, 0);
 
   return (
-    <section>
-      <h2>{tf('global', 'MENU_ACHIEVEMENTS', 'Достижения')}</h2>
-      <p>
-        <b>{tf('Main', 'ACH_PROGRESS', 'Открыто')}:</b> {unlockedCount} / {list.length}
-        {' · '}
-        <b>{tf('Main', 'ACH_POINTS', 'Очки')}:</b> {totalPoints}
-      </p>
-
-      {q.isLoading && <p>…</p>}
-      {q.error && (
-        <p className="ox-error">
-          {t('global', 'ERROR')}: {q.error instanceof Error ? q.error.message : ''}
-        </p>
-      )}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
+          🎖 Достижения
+        </h2>
+        <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>
+          Открыто:{' '}
+          <span style={{ fontWeight: 700, color: 'var(--ox-accent)', fontFamily: 'var(--ox-mono)' }}>
+            {unlocked.length}/{list.length}
+          </span>
+          {' · '}
+          Очки:{' '}
+          <span style={{ fontWeight: 700, fontFamily: 'var(--ox-mono)', color: 'var(--ox-success)' }}>
+            {totalPoints}
+          </span>
+        </div>
+      </div>
 
       {list.length > 0 && (
-        <table className="ox-table">
-          <thead>
-            <tr>
-              <th>{tf('Main', 'ACH_TITLE', 'Достижение')}</th>
-              <th>{tf('Main', 'ACH_DESC', 'Описание')}</th>
-              <th>{tf('Main', 'ACH_POINTS', 'Очки')}</th>
-              <th>{tf('Main', 'ACH_UNLOCKED_AT', 'Получено')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map((e) => (
-              <tr
-                key={e.key}
-                style={{
-                  opacity: e.unlocked_at ? 1 : 0.5,
-                  fontWeight: e.unlocked_at ? 600 : 400,
-                }}
-              >
-                <td>
-                  {e.unlocked_at ? '✓ ' : '○ '}
-                  {e.title}
-                </td>
-                <td>
+        <div style={{ marginBottom: 4 }}>
+          <ProgressBar pct={list.length > 0 ? (unlocked.length / list.length) * 100 : 0} variant="success" height={6} showLabel />
+        </div>
+      )}
+
+      {q.isLoading && (
+        <div>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="ox-skeleton" style={{ height: 64, marginBottom: 8 }} />
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {list.map((e) => {
+          const done = !!e.unlocked_at;
+          const hasProg = e.progress_max != null && !done;
+          const pct = hasProg ? Math.min(100, ((e.progress ?? 0) / e.progress_max!) * 100) : 0;
+          return (
+            <div
+              key={e.key}
+              className="ox-panel"
+              style={{
+                padding: '12px 16px',
+                opacity: done ? 1 : 0.65,
+                borderColor: done ? 'var(--ox-success)' : undefined,
+                display: 'flex', gap: 14, alignItems: 'flex-start',
+              }}
+            >
+              <div style={{ fontSize: 28, flexShrink: 0 }}>
+                {done ? '✅' : '🔒'}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{e.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: hasProg ? 6 : 0 }}>
                   {e.description}
-                  {e.progress_max != null && !e.unlocked_at && (
-                    <span style={{ marginLeft: 8, color: '#888', fontSize: '0.85em' }}>
-                      {e.progress ?? 0} / {e.progress_max}
+                  {hasProg && (
+                    <span style={{ marginLeft: 8, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-muted)' }}>
+                      {e.progress ?? 0}/{e.progress_max}
                     </span>
                   )}
-                </td>
-                <td className="num">{e.points}</td>
-                <td>{e.unlocked_at ? new Date(e.unlocked_at).toLocaleString('ru-RU') : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
+                </div>
+                {hasProg && <ProgressBar pct={pct} height={3} />}
+                {done && e.unlocked_at && (
+                  <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginTop: 4 }}>
+                    Получено {new Date(e.unlocked_at).toLocaleString('ru-RU')}
+                  </div>
+                )}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)', flexShrink: 0 }}>
+                +{e.points}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { useTranslation } from '@/i18n/i18n';
+import { ProgressBar } from '@/ui/ProgressBar';
 
 interface TutorialStep {
   index: number;
@@ -16,56 +16,75 @@ interface TutorialStatus {
 }
 
 export function TutorialScreen() {
-  const { tf } = useTranslation();
   const q = useQuery({
     queryKey: ['tutorial'],
     queryFn: () => api.get<TutorialStatus>('/api/tutorial'),
     refetchInterval: 10000,
   });
 
-  if (q.isLoading) return <p>…</p>;
-  if (q.error || !q.data) return <p className="ox-error">error</p>;
+  if (q.isLoading) {
+    return <div style={{ padding: 24 }}><div className="ox-skeleton" style={{ height: 200 }} /></div>;
+  }
+  if (q.error || !q.data) {
+    return <div className="ox-alert ox-alert-danger">Ошибка загрузки туториала</div>;
+  }
 
   const { steps, complete } = q.data;
   const doneCount = steps.filter((s) => s.done).length;
+  const pct = steps.length > 0 ? (doneCount / steps.length) * 100 : 0;
 
   return (
-    <section>
-      <h2>{tf('global', 'MENU_TUTORIAL', 'Туториал')}</h2>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
+          📖 Туториал
+        </h2>
+        <span style={{ fontSize: 13, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
+          {doneCount}/{steps.length}
+        </span>
+      </div>
 
       {complete ? (
-        <p style={{ color: 'var(--ox-ok, green)', fontWeight: 600 }}>
-          {tf('Main', 'TUTORIAL_COMPLETE', '🎉 Туториал завершён! Вы получили все начальные награды.')}
-        </p>
+        <div className="ox-panel" style={{ padding: 20, textAlign: 'center' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🎉</div>
+          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ox-success)' }}>
+            Туториал завершён! Вы получили все начальные награды.
+          </div>
+        </div>
       ) : (
-        <p>
-          {tf('Main', 'TUTORIAL_PROGRESS', 'Выполнено')}:{' '}
-          <b>{doneCount} / {steps.length}</b>
-          {' · '}
-          {tf('Main', 'TUTORIAL_REWARD_HINT', 'Каждый шаг даёт +10 кредитов.')}
-        </p>
+        <div className="ox-panel" style={{ padding: '12px 16px' }}>
+          <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 6 }}>
+            Каждый шаг даёт +10 кредитов.
+          </div>
+          <ProgressBar pct={pct} variant="success" height={6} showLabel />
+        </div>
       )}
 
-      <ol style={{ paddingLeft: 20 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {steps.map((step) => (
-          <li
+          <div
             key={step.index}
+            className="ox-panel"
             style={{
-              marginBottom: 12,
-              opacity: step.done ? 0.6 : 1,
+              padding: '12px 16px',
+              display: 'flex', alignItems: 'flex-start', gap: 12,
+              opacity: step.done ? 0.65 : 1,
             }}
           >
-            <span style={{ fontWeight: step.done ? 400 : 600 }}>
-              {step.done ? '✓ ' : '○ '}
-              {tf('Main', `TUTORIAL_STEP_${step.index}_TITLE`, step.title)}
-            </span>
-            <br />
-            <small style={{ color: 'var(--ox-muted, #888)' }}>
-              {tf('Main', `TUTORIAL_STEP_${step.index}_DESC`, step.description)}
-            </small>
-          </li>
+            <div style={{ fontSize: 22, flexShrink: 0, marginTop: 1 }}>
+              {step.done ? '✅' : '○'}
+            </div>
+            <div>
+              <div style={{ fontWeight: step.done ? 400 : 600, fontSize: 14, marginBottom: 2 }}>
+                {step.title}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>
+                {step.description}
+              </div>
+            </div>
+          </div>
         ))}
-      </ol>
-    </section>
+      </div>
+    </div>
   );
 }

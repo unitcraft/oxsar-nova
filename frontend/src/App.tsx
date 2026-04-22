@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from './stores/auth';
 import { api } from './api/client';
@@ -6,157 +6,54 @@ import type { Planet } from './api/types';
 import { LoginScreen } from './features/auth/LoginScreen';
 import { OverviewScreen } from './features/overview/OverviewScreen';
 import { useTranslation } from './i18n/i18n';
+import { ToastProvider } from './ui/Toast';
+import { ResourceTicker } from './ui/ResourceTicker';
 
-// Лениво грузим тяжёлые экраны: экран активируется — только тогда
-// Vite/браузер подтягивают соответствующий чанк. При HMR правка одного
-// экрана не влияет на модули остальных — пересборка и обновление
-// браузера идут быстрее. Overview остаётся синхронным: это стартовая
-// вкладка и самое частое место входа.
-const BuildingsScreen = lazy(() =>
-  import('./features/buildings/BuildingsScreen').then((m) => ({ default: m.BuildingsScreen })),
-);
-const ResearchScreen = lazy(() =>
-  import('./features/research/ResearchScreen').then((m) => ({ default: m.ResearchScreen })),
-);
-const ShipyardScreen = lazy(() =>
-  import('./features/shipyard/ShipyardScreen').then((m) => ({ default: m.ShipyardScreen })),
-);
-const ArtefactsScreen = lazy(() =>
-  import('./features/artefacts/ArtefactsScreen').then((m) => ({ default: m.ArtefactsScreen })),
-);
-const BattleSimScreen = lazy(() =>
-  import('./features/battle-sim/BattleSimScreen').then((m) => ({ default: m.BattleSimScreen })),
-);
-const GalaxyScreen = lazy(() =>
-  import('./features/galaxy/GalaxyScreen').then((m) => ({ default: m.GalaxyScreen })),
-);
-const FleetScreen = lazy(() =>
-  import('./features/fleet/FleetScreen').then((m) => ({ default: m.FleetScreen })),
-);
-const RepairScreen = lazy(() =>
-  import('./features/repair/RepairScreen').then((m) => ({ default: m.RepairScreen })),
-);
-const MessagesScreen = lazy(() =>
-  import('./features/messages/MessagesScreen').then((m) => ({ default: m.MessagesScreen })),
-);
-const MarketScreen = lazy(() =>
-  import('./features/market/MarketScreen').then((m) => ({ default: m.MarketScreen })),
-);
-const RocketsScreen = lazy(() =>
-  import('./features/rockets/RocketsScreen').then((m) => ({ default: m.RocketsScreen })),
-);
-const ArtefactMarketScreen = lazy(() =>
-  import('./features/artmarket/ArtefactMarketScreen').then((m) => ({
-    default: m.ArtefactMarketScreen,
-  })),
-);
-const OfficersScreen = lazy(() =>
-  import('./features/officers/OfficersScreen').then((m) => ({
-    default: m.OfficersScreen,
-  })),
-);
-const ScoreScreen = lazy(() =>
-  import('./features/score/ScoreScreen').then((m) => ({
-    default: m.ScoreScreen,
-  })),
-);
-const AllianceScreen = lazy(() =>
-  import('./features/alliance/AllianceScreen').then((m) => ({
-    default: m.AllianceScreen,
-  })),
-);
-const AchievementsScreen = lazy(() =>
-  import('./features/achievements/AchievementsScreen').then((m) => ({
-    default: m.AchievementsScreen,
-  })),
-);
-const TutorialScreen = lazy(() =>
-  import('./features/tutorial/TutorialScreen').then((m) => ({
-    default: m.TutorialScreen,
-  })),
-);
-
-const ChatScreen = lazy(() =>
-  import('./features/chat/ChatScreen').then((m) => ({
-    default: m.ChatScreen,
-  })),
-);
-
-const AdminScreen = lazy(() =>
-  import('./features/admin/AdminScreen').then((m) => ({
-    default: m.AdminScreen,
-  })),
-);
+const BuildingsScreen    = lazy(() => import('./features/buildings/BuildingsScreen').then(m => ({ default: m.BuildingsScreen })));
+const ResearchScreen     = lazy(() => import('./features/research/ResearchScreen').then(m => ({ default: m.ResearchScreen })));
+const ShipyardScreen     = lazy(() => import('./features/shipyard/ShipyardScreen').then(m => ({ default: m.ShipyardScreen })));
+const ArtefactsScreen    = lazy(() => import('./features/artefacts/ArtefactsScreen').then(m => ({ default: m.ArtefactsScreen })));
+const BattleSimScreen    = lazy(() => import('./features/battle-sim/BattleSimScreen').then(m => ({ default: m.BattleSimScreen })));
+const GalaxyScreen       = lazy(() => import('./features/galaxy/GalaxyScreen').then(m => ({ default: m.GalaxyScreen })));
+const FleetScreen        = lazy(() => import('./features/fleet/FleetScreen').then(m => ({ default: m.FleetScreen })));
+const RepairScreen       = lazy(() => import('./features/repair/RepairScreen').then(m => ({ default: m.RepairScreen })));
+const MessagesScreen     = lazy(() => import('./features/messages/MessagesScreen').then(m => ({ default: m.MessagesScreen })));
+const MarketScreen       = lazy(() => import('./features/market/MarketScreen').then(m => ({ default: m.MarketScreen })));
+const RocketsScreen      = lazy(() => import('./features/rockets/RocketsScreen').then(m => ({ default: m.RocketsScreen })));
+const ArtefactMarketScreen = lazy(() => import('./features/artmarket/ArtefactMarketScreen').then(m => ({ default: m.ArtefactMarketScreen })));
+const OfficersScreen     = lazy(() => import('./features/officers/OfficersScreen').then(m => ({ default: m.OfficersScreen })));
+const ScoreScreen        = lazy(() => import('./features/score/ScoreScreen').then(m => ({ default: m.ScoreScreen })));
+const AllianceScreen     = lazy(() => import('./features/alliance/AllianceScreen').then(m => ({ default: m.AllianceScreen })));
+const AchievementsScreen = lazy(() => import('./features/achievements/AchievementsScreen').then(m => ({ default: m.AchievementsScreen })));
+const TutorialScreen     = lazy(() => import('./features/tutorial/TutorialScreen').then(m => ({ default: m.TutorialScreen })));
+const ChatScreen         = lazy(() => import('./features/chat/ChatScreen').then(m => ({ default: m.ChatScreen })));
+const AdminScreen        = lazy(() => import('./features/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 
 type Tab =
-  | 'overview'
-  | 'buildings'
-  | 'research'
-  | 'shipyard'
-  | 'repair'
-  | 'artefacts'
-  | 'galaxy'
-  | 'fleet'
-  | 'market'
-  | 'rockets'
-  | 'art-market'
-  | 'officers'
-  | 'achievements'
-  | 'tutorial'
-  | 'score'
-  | 'messages'
-  | 'alliance'
-  | 'chat'
-  | 'sim'
-  | 'admin';
+  | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
+  | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
+  | 'art-market' | 'officers' | 'achievements' | 'tutorial' | 'score'
+  | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin';
+
 
 export function App() {
   const token = useAuthStore((s) => s.accessToken);
-  if (!token) {
-    return (
-      <Layout>
-        <LoginScreen />
-      </Layout>
-    );
-  }
   return (
-    <Layout>
-      <AuthenticatedApp />
-    </Layout>
-  );
-}
-
-function Layout({ children }: { children: React.ReactNode }) {
-  const token = useAuthStore((s) => s.accessToken);
-  const logout = useAuthStore((s) => s.logout);
-  const { t } = useTranslation();
-  return (
-    <div className="ox-layout">
-      <header className="ox-header">
-        <h1>oxsar-nova</h1>
-        <div className="ox-right">
-          {token && (
-            <button type="button" onClick={logout}>
-              {t('global', 'MENU_LOGOUT')}
-            </button>
-          )}
-        </div>
-      </header>
-      <main className="ox-main">{children}</main>
-      <footer className="ox-footer">
-        <small>v0.1.0 — dev preview</small>
-      </footer>
-    </div>
+    <ToastProvider>
+      {token ? <AuthenticatedApp /> : <LoginScreen />}
+    </ToastProvider>
   );
 }
 
 function AuthenticatedApp() {
   const [tab, setTab] = useState<Tab>('overview');
   const { t } = useTranslation();
+  const logout = useAuthStore((s) => s.logout);
+
   const planets = useQuery({
     queryKey: ['planets'],
     queryFn: () => api.get<{ planets: Planet[] }>('/api/planets'),
-    refetchInterval: 5000,
+    refetchInterval: 60000,
   });
   const unread = useQuery({
     queryKey: ['messages', 'unread-count'],
@@ -168,140 +65,387 @@ function AuthenticatedApp() {
     queryFn: () => api.get<{ user_id: string; username: string; role: string }>('/api/me'),
     staleTime: 60000,
   });
+
   const unreadCount = unread.data?.unread ?? 0;
   const isAdmin = me.data?.role === 'admin' || me.data?.role === 'superadmin';
   const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
-
-  if (planets.isLoading) return <p>…</p>;
-  if (planets.error)
-    return (
-      <p className="ox-error">
-        {t('global', 'ERROR')}: {planets.error instanceof Error ? planets.error.message : ''}
-      </p>
-    );
+  const [fleetDst, setFleetDst] = useState<{ g: number; s: number; pos: number; isMoon: boolean; mission: number } | undefined>();
 
   const list = planets.data?.planets ?? [];
   const planet = list.find((p) => p.id === currentPlanetId) ?? list[0];
 
-  if (!planet) {
-    return <p>{t('global', 'ERROR')}: no starter planet</p>;
-  }
+  if (planets.isLoading) return <LoadingSkeleton />;
+  if (planets.isError) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16 }}>
+      <div style={{ fontSize: 40 }}>⚠️</div>
+      <div style={{ color: 'var(--ox-fg-dim)' }}>Ошибка загрузки. Попробуйте обновить страницу.</div>
+      <button type="button" className="btn" onClick={() => window.location.reload()}>Обновить</button>
+    </div>
+  );
+  if (!planet) return <LoadingSkeleton />;
+
+  const navItems = buildNavItems(t, unreadCount, isAdmin);
 
   return (
-    <div>
-      <PlanetSwitcher list={list} currentId={planet.id} onChange={setCurrentPlanetId} />
-      <div className="ox-app">
+    <div className="ox-layout">
+      <Header
+        planet={planet}
+        planets={list}
+        homePlanetId={list[0]?.id}
+        onPlanetChange={setCurrentPlanetId}
+        onLogout={logout}
+        username={me.data?.username ?? ''}
+      />
+
+      <div className="ox-body">
+        {/* Десктоп сайдбар */}
         <nav className="ox-sidebar">
-          <NavBtn current={tab} value="overview" onClick={setTab} label={t('global', 'MENU_MAIN')} />
-          <NavBtn current={tab} value="buildings" onClick={setTab} label={t('global', 'MENU_CONSTRUCTIONS')} />
-          <NavBtn current={tab} value="research" onClick={setTab} label={t('global', 'MENU_RESEARCH')} />
-          <NavBtn current={tab} value="shipyard" onClick={setTab} label={t('global', 'MENU_SHIPYARD')} />
-          <NavBtn current={tab} value="repair" onClick={setTab} label={t('global', 'MENU_REPAIR')} />
-          <div className="ox-sidebar-section" />
-          <NavBtn current={tab} value="galaxy" onClick={setTab} label={t('global', 'MENU_GALAXY')} />
-          <NavBtn current={tab} value="fleet" onClick={setTab} label={t('global', 'MENU_FLEET')} />
-          <NavBtn current={tab} value="rockets" onClick={setTab} label={t('global', 'MENU_ROCKETS')} />
-          <div className="ox-sidebar-section" />
-          <NavBtn
-            current={tab}
-            value="messages"
-            onClick={setTab}
-            label={unreadCount > 0 ? `${t('global', 'MENU_MESSAGES')} (${unreadCount})` : t('global', 'MENU_MESSAGES')}
-          />
-          <NavBtn current={tab} value="chat" onClick={setTab} label="Чат" />
-          <NavBtn current={tab} value="alliance" onClick={setTab} label={t('global', 'MENU_ALLIANCE') || 'Альянс'} />
-          <div className="ox-sidebar-section" />
-          <NavBtn current={tab} value="market" onClick={setTab} label={t('global', 'MENU_MARKET')} />
-          <NavBtn current={tab} value="artefacts" onClick={setTab} label={t('global', 'MENU_ARTEFACTS')} />
-          <NavBtn current={tab} value="art-market" onClick={setTab} label={t('global', 'MENU_ART_MARKET')} />
-          <NavBtn current={tab} value="officers" onClick={setTab} label={t('global', 'MENU_OFFICERS')} />
-          <div className="ox-sidebar-section" />
-          <NavBtn current={tab} value="score" onClick={setTab} label={t('global', 'MENU_HIGHSCORE') || 'Рейтинг'} />
-          <NavBtn current={tab} value="achievements" onClick={setTab} label={t('global', 'MENU_ACHIEVEMENTS') || 'Достижения'} />
-          <NavBtn current={tab} value="tutorial" onClick={setTab} label={t('global', 'MENU_TUTORIAL') || 'Туториал'} />
-          <NavBtn current={tab} value="sim" onClick={setTab} label={t('global', 'MENU_SIMULATOR')} />
-          {isAdmin && (
-            <>
-              <div className="ox-sidebar-section" />
-              <NavBtn current={tab} value="admin" onClick={setTab} label="Админ" />
-            </>
+          {navItems.map((item) =>
+            item.sep
+              ? <div key={item.key} className="ox-sidebar-sep" />
+              : item.groupLabel
+              ? <div key={item.key} className="ox-sidebar-group-label">{item.groupLabel}</div>
+              : (
+                <button
+                  key={item.key}
+                  type="button"
+                  className="ox-nav-btn"
+                  aria-pressed={tab === item.key}
+                  onClick={() => setTab(item.key as Tab)}
+                  title={item.label}
+                >
+                  <span className="icon">{item.icon}</span>
+                  <span className="label">{item.label}</span>
+                  {!!item.badge && <span className="badge">{item.badge}</span>}
+                </button>
+              )
           )}
         </nav>
 
-        <div className="ox-content">
-          <Suspense fallback={<p>…</p>}>
-            {tab === 'overview' && <OverviewScreen />}
-            {tab === 'buildings' && <BuildingsScreen planet={planet} />}
-            {tab === 'research' && <ResearchScreen planet={planet} />}
-            {tab === 'shipyard' && <ShipyardScreen planet={planet} />}
-            {tab === 'repair' && <RepairScreen planet={planet} />}
-            {tab === 'galaxy' && <GalaxyScreen homePlanet={planet} />}
-            {tab === 'fleet' && <FleetScreen planet={planet} />}
-            {tab === 'market' && <MarketScreen planet={planet} />}
-            {tab === 'rockets' && <RocketsScreen planet={planet} />}
-            {tab === 'messages' && <MessagesScreen />}
-            {tab === 'artefacts' && <ArtefactsScreen />}
+        {/* Контент */}
+        <main className="ox-content">
+          <Suspense fallback={<ScreenSkeleton />}>
+            {tab === 'overview'   && <OverviewScreen />}
+            {tab === 'buildings'  && <BuildingsScreen planet={planet} />}
+            {tab === 'research'   && <ResearchScreen planet={planet} />}
+            {tab === 'shipyard'   && <ShipyardScreen planet={planet} />}
+            {tab === 'repair'     && <RepairScreen planet={planet} />}
+            {tab === 'galaxy'     && <GalaxyScreen homePlanet={planet} userId={me.data?.user_id ?? ''} onFleetMission={(fg, fs, fpos, fMoon, fMission) => { setFleetDst({ g: fg, s: fs, pos: fpos, isMoon: fMoon, mission: fMission }); setTab('fleet'); }} />}
+            {tab === 'fleet'      && <FleetScreen planet={planet} {...(fleetDst ? { initialDst: fleetDst } : {})} />}
+            {tab === 'market'     && <MarketScreen planet={planet} />}
+            {tab === 'rockets'    && <RocketsScreen planet={planet} />}
+            {tab === 'messages'   && <MessagesScreen />}
+            {tab === 'artefacts'  && <ArtefactsScreen />}
             {tab === 'art-market' && <ArtefactMarketScreen />}
-            {tab === 'officers' && <OfficersScreen />}
-            {tab === 'tutorial' && <TutorialScreen />}
+            {tab === 'officers'   && <OfficersScreen />}
+            {tab === 'tutorial'   && <TutorialScreen />}
             {tab === 'achievements' && <AchievementsScreen />}
-            {tab === 'score' && <ScoreScreen />}
-            {tab === 'alliance' && <AllianceScreen />}
-            {tab === 'chat' && <ChatScreen />}
-            {tab === 'sim' && <BattleSimScreen />}
-            {tab === 'admin' && isAdmin && <AdminScreen />}
+            {tab === 'score'      && <ScoreScreen />}
+            {tab === 'alliance'   && <AllianceScreen />}
+            {tab === 'chat'       && <ChatScreen />}
+            {tab === 'sim'        && <BattleSimScreen />}
+            {tab === 'admin'      && isAdmin && <AdminScreen />}
           </Suspense>
+        </main>
+      </div>
+
+      {/* Мобильная нижняя навигация */}
+      <BottomNav tab={tab} setTab={setTab} unreadCount={unreadCount} />
+
+      <footer className="ox-footer">
+        <small>oxsar-nova v0.1.0 — dev preview</small>
+      </footer>
+    </div>
+  );
+}
+
+/* ── Server Clock ── */
+function useServerClock() {
+  const [time, setTime] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return time;
+}
+
+/* ── Header ── */
+function Header({
+  planet, planets, homePlanetId, onPlanetChange, onLogout, username,
+}: {
+  planet: Planet;
+  planets: Planet[];
+  homePlanetId: string | undefined;
+  onPlanetChange: (id: string) => void;
+  onLogout: () => void;
+  username: string;
+}) {
+  const metal    = planet.metal    ?? 0;
+  const silicon  = planet.silicon  ?? 0;
+  const hydrogen = planet.hydrogen ?? 0;
+  const clock    = useServerClock();
+  const timeStr  = clock.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  return (
+    <header className="ox-header">
+      <div className="ox-header-logo">✦ OXSAR</div>
+
+      <div className="ox-header-resources">
+        <div className="ox-res-item">
+          <span className="icon">⛏</span>
+          <span className="label-sm">Мет</span>
+          <ResourceTicker value={metal} ratePerSec={0} />
+        </div>
+        <div className="ox-res-item">
+          <span className="icon">🔷</span>
+          <span className="label-sm">Крем</span>
+          <ResourceTicker value={silicon} ratePerSec={0} />
+        </div>
+        <div className="ox-res-item">
+          <span className="icon">💧</span>
+          <span className="label-sm">Водор</span>
+          <ResourceTicker value={hydrogen} ratePerSec={0} />
+        </div>
+        <div className="ox-res-item ox-energy-item">
+          <span className="icon">⚡</span>
+          <span className="val">+0</span>
         </div>
       </div>
-    </div>
+
+      <div className="ox-header-right">
+        <span style={{ fontSize: 12, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', letterSpacing: '0.04em' }}>
+          {timeStr}
+        </span>
+        <PlanetSwitcher planet={planet} planets={planets} homePlanetId={homePlanetId} onChange={onPlanetChange} />
+        {username && (
+          <span style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginLeft: 4 }}>
+            {username}
+          </span>
+        )}
+        <button type="button" className="btn-ghost btn-sm" onClick={onLogout}>Выйти</button>
+      </div>
+    </header>
   );
 }
 
+/* ── Planet Switcher ── */
 function PlanetSwitcher({
-  list,
-  currentId,
-  onChange,
+  planet, planets, homePlanetId, onChange,
 }: {
-  list: Planet[];
-  currentId: string;
+  planet: Planet;
+  planets: Planet[];
+  homePlanetId: string | undefined;
   onChange: (id: string) => void;
 }) {
-  if (list.length < 2) {
-    const p = list[0];
-    return p ? (
-      <div style={{ marginBottom: 12 }}>
-        Планета: <b>{p.name}</b> [{p.galaxy}:{p.system}:{p.position}]
-      </div>
-    ) : null;
-  }
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
   return (
-    <div style={{ marginBottom: 12 }}>
-      Планета:{' '}
-      <select value={currentId} onChange={(e) => onChange(e.target.value)}>
-        {list.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name} [{p.galaxy}:{p.system}:{p.position}]
-          </option>
-        ))}
-      </select>
+    <div style={{ position: 'relative' }} ref={ref}>
+      <div
+        className="ox-planet-switcher"
+        onClick={() => setOpen((v) => !v)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === 'Enter' && setOpen((v) => !v)}
+      >
+        <span className="ox-planet-switcher-icon">{planet.is_moon ? '🌑' : '🪐'}</span>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{planet.name}</span>
+        {planet.id === homePlanetId && <span style={{ fontSize: 11 }}>🏠</span>}
+        <span className="ox-planet-switcher-coords">
+          [{planet.galaxy}:{planet.system}:{planet.position}]
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginLeft: 2 }}>▾</span>
+      </div>
+
+      {open && planets.length > 1 && (
+        <div className="ox-planet-dropdown">
+          {planets.map((p) => (
+            <div
+              key={p.id}
+              className={`ox-planet-option${p.id === planet.id ? ' active' : ''}`}
+              onClick={() => { onChange(p.id); setOpen(false); }}
+            >
+              <span>{p.is_moon ? '🌑' : '🪐'}</span>
+              <span style={{ flex: 1 }}>{p.name}{p.id === homePlanetId && ' 🏠'}</span>
+              <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 11, color: 'var(--ox-fg-muted)' }}>
+                [{p.galaxy}:{p.system}:{p.position}]
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function NavBtn({
-  current,
-  value,
-  onClick,
-  label,
-}: {
-  current: Tab;
-  value: Tab;
-  onClick: (v: Tab) => void;
-  label: string;
-}) {
+/* ── Bottom Nav (mobile) ── */
+const BOTTOM_ITEMS: Array<{ key: Tab; icon: string; label: string }> = [
+  { key: 'overview',  icon: '🏠', label: 'Обзор' },
+  { key: 'galaxy',    icon: '🌌', label: 'Галакт.' },
+  { key: 'fleet',     icon: '🛸', label: 'Флот' },
+  { key: 'chat',      icon: '💬', label: 'Чат' },
+];
+
+function BottomNav({ tab, setTab, unreadCount }: { tab: Tab; setTab: (t: Tab) => void; unreadCount: number }) {
+  const [sheetOpen, setSheetOpen] = useState(false);
   return (
-    <button type="button" aria-pressed={current === value} onClick={() => onClick(value)}>
-      {label}
-    </button>
+    <>
+      <nav className="ox-bottom-nav">
+        {BOTTOM_ITEMS.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className="ox-bottom-nav-btn"
+            aria-pressed={tab === item.key}
+            onClick={() => setTab(item.key)}
+          >
+            <span className="nav-icon">{item.icon}</span>
+            <span>{item.label}</span>
+            {item.key === 'chat' && unreadCount > 0 && (
+              <span className="badge">{unreadCount}</span>
+            )}
+          </button>
+        ))}
+        <button type="button" className="ox-bottom-nav-btn" onClick={() => setSheetOpen(true)}>
+          <span className="nav-icon">⋯</span>
+          <span>Ещё</span>
+        </button>
+      </nav>
+
+      {sheetOpen && (
+        <div className="ox-modal-overlay" onClick={() => setSheetOpen(false)}>
+          <div
+            className="ox-modal"
+            style={{ maxWidth: '100%', borderRadius: '16px 16px 0 0', padding: '16px 0' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '0 16px 12px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
+              Навигация
+            </div>
+            <MoreSheet tab={tab} setTab={(t) => { setTab(t); setSheetOpen(false); }} />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+const ALL_NAV: Array<{ key: Tab; icon: string; label: string }> = [
+  { key: 'overview',    icon: '🏠', label: 'Обзор' },
+  { key: 'buildings',   icon: '🏗', label: 'Постройки' },
+  { key: 'research',    icon: '🔬', label: 'Исследования' },
+  { key: 'shipyard',    icon: '🚀', label: 'Верфь' },
+  { key: 'repair',      icon: '🔧', label: 'Ремонт' },
+  { key: 'galaxy',      icon: '🌌', label: 'Галактика' },
+  { key: 'fleet',       icon: '🛸', label: 'Флот' },
+  { key: 'rockets',     icon: '💥', label: 'Ракеты' },
+  { key: 'messages',    icon: '📨', label: 'Сообщения' },
+  { key: 'chat',        icon: '💬', label: 'Чат' },
+  { key: 'alliance',    icon: '🤝', label: 'Альянс' },
+  { key: 'market',      icon: '💱', label: 'Рынок' },
+  { key: 'artefacts',   icon: '💎', label: 'Артефакты' },
+  { key: 'art-market',  icon: '🏪', label: 'Арт-рынок' },
+  { key: 'officers',    icon: '⭐', label: 'Офицеры' },
+  { key: 'score',       icon: '🏆', label: 'Рейтинг' },
+  { key: 'achievements',icon: '🥇', label: 'Достижения' },
+  { key: 'tutorial',    icon: '🎓', label: 'Туториал' },
+  { key: 'sim',         icon: '⚔️', label: 'Симулятор' },
+];
+
+function MoreSheet({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
+  return (
+    <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+      {ALL_NAV.map((item) => (
+        <button
+          key={item.key}
+          type="button"
+          onClick={() => setTab(item.key)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            width: '100%', padding: '12px 20px',
+            background: tab === item.key ? 'var(--ox-bg-active)' : 'transparent',
+            border: 'none', borderRadius: 0,
+            color: tab === item.key ? 'var(--ox-accent)' : 'var(--ox-fg)',
+            fontSize: 15, fontWeight: 600, cursor: 'pointer',
+            textAlign: 'left', minHeight: 48,
+          }}
+        >
+          <span style={{ fontSize: 20, width: 28, textAlign: 'center' }}>{item.icon}</span>
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ── Навигационные пункты ── */
+function buildNavItems(t: (ns: string, key: string, fb?: string) => string, unreadCount: number, isAdmin: boolean) {
+  return [
+    { key: 'planet', groupLabel: 'Планета' },
+    { key: 'overview',   icon: '🏠', label: t('global','MENU_MAIN') },
+    { key: 'buildings',  icon: '🏗', label: t('global','MENU_CONSTRUCTIONS') },
+    { key: 'research',   icon: '🔬', label: t('global','MENU_RESEARCH') },
+    { key: 'shipyard',   icon: '🚀', label: t('global','MENU_SHIPYARD') },
+    { key: 'repair',     icon: '🔧', label: t('global','MENU_REPAIR') },
+    { key: 's1', sep: true },
+    { key: 'space', groupLabel: 'Космос' },
+    { key: 'galaxy',     icon: '🌌', label: t('global','MENU_GALAXY') },
+    { key: 'fleet',      icon: '🛸', label: t('global','MENU_FLEET') },
+    { key: 'rockets',    icon: '💥', label: t('global','MENU_ROCKETS') },
+    { key: 's2', sep: true },
+    { key: 'social', groupLabel: 'Общение' },
+    { key: 'messages',   icon: '📨', label: t('global','MENU_MESSAGES'), badge: unreadCount || undefined },
+    { key: 'chat',       icon: '💬', label: 'Чат' },
+    { key: 'alliance',   icon: '🤝', label: t('global','MENU_ALLIANCE') || 'Альянс' },
+    { key: 's3', sep: true },
+    { key: 'trade', groupLabel: 'Торговля' },
+    { key: 'market',     icon: '💱', label: t('global','MENU_MARKET') },
+    { key: 'artefacts',  icon: '💎', label: t('global','MENU_ARTEFACTS') },
+    { key: 'art-market', icon: '🏪', label: t('global','MENU_ART_MARKET') },
+    { key: 'officers',   icon: '⭐', label: t('global','MENU_OFFICERS') },
+    { key: 's4', sep: true },
+    { key: 'stats', groupLabel: 'Статистика' },
+    { key: 'score',      icon: '🏆', label: t('global','MENU_HIGHSCORE') || 'Рейтинг' },
+    { key: 'achievements',icon:'🥇', label: t('global','MENU_ACHIEVEMENTS') || 'Достижения' },
+    { key: 'tutorial',   icon: '🎓', label: t('global','MENU_TUTORIAL') || 'Туториал' },
+    { key: 'sim',        icon: '⚔️', label: t('global','MENU_SIMULATOR') },
+    ...(isAdmin ? [
+      { key: 's5', sep: true },
+      { key: 'admin', icon: '🛠', label: 'Админ' },
+    ] : []),
+  ];
+}
+
+/* ── Скелетоны загрузки ── */
+function LoadingSkeleton() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 16 }}>
+      <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--ox-accent)', textShadow: '0 0 30px rgba(56,189,248,0.4)', animation: 'ox-float 2s ease-in-out infinite' }}>
+        ✦ OXSAR
+      </div>
+      <div style={{ color: 'var(--ox-fg-muted)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        Загрузка вселенной…
+      </div>
+    </div>
+  );
+}
+
+function ScreenSkeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {[1,2,3].map(i => (
+        <div key={i} className="ox-skeleton" style={{ height: i === 1 ? 48 : 80, opacity: 1 - i * 0.2 }} />
+      ))}
+    </div>
   );
 }

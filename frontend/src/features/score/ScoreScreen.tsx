@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { useTranslation } from '@/i18n/i18n';
 
 type ScoreType = 'total' | 'b' | 'r' | 'u' | 'a';
 
@@ -21,16 +20,25 @@ interface MyRank {
   type: string;
 }
 
-const SCORE_TYPES: { value: ScoreType; label: string }[] = [
-  { value: 'total', label: 'Общий' },
-  { value: 'b', label: 'Постройки' },
-  { value: 'r', label: 'Исследования' },
-  { value: 'u', label: 'Флот' },
-  { value: 'a', label: 'Достижения' },
+const SCORE_TYPES: { value: ScoreType; label: string; icon: string }[] = [
+  { value: 'total', label: 'Общий',        icon: '🏆' },
+  { value: 'b',     label: 'Постройки',    icon: '🏗' },
+  { value: 'r',     label: 'Исследования', icon: '🔬' },
+  { value: 'u',     label: 'Флот',         icon: '🛸' },
+  { value: 'a',     label: 'Достижения',   icon: '🎖' },
 ];
 
+function getPoints(e: Entry, type: ScoreType): number {
+  if (type === 'total') return e.points;
+  if (type === 'b') return e.b_points;
+  if (type === 'r') return e.r_points;
+  if (type === 'u') return e.u_points;
+  return e.a_points;
+}
+
+const MEDAL = ['🥇', '🥈', '🥉'];
+
 export function ScoreScreen() {
-  const { t } = useTranslation();
   const [scoreType, setScoreType] = useState<ScoreType>('total');
 
   const q = useQuery({
@@ -46,93 +54,100 @@ export function ScoreScreen() {
   });
 
   const list = q.data?.highscore ?? [];
-
-  const colLabel = (type: ScoreType): string => {
-    const found = SCORE_TYPES.find((s) => s.value === type);
-    return found?.label ?? 'Очки';
-  };
+  const typeMeta = SCORE_TYPES.find((s) => s.value === scoreType)!;
 
   return (
-    <section>
-      <h2>{t('global', 'MENU_HIGHSCORE') || 'Рейтинг'}</h2>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
+        🏆 Рейтинг
+      </h2>
 
-      <div style={{ marginBottom: 12 }}>
+      {/* My rank banner */}
+      {myRank.data && (
+        <div className="ox-panel" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 28 }}>{MEDAL[myRank.data.rank - 1] ?? '🎯'}</span>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>Ваше место в рейтинге «{typeMeta.label}»</div>
+            <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>
+              #{myRank.data.rank}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab switcher */}
+      <div className="ox-tabs">
         {SCORE_TYPES.map((s) => (
           <button
             key={s.value}
             type="button"
             aria-pressed={scoreType === s.value}
-            style={{ marginRight: 6 }}
             onClick={() => setScoreType(s.value)}
           >
-            {s.label}
+            {s.icon} {s.label}
           </button>
         ))}
       </div>
 
-      {myRank.data && (
-        <p>
-          Ваше место в рейтинге «{colLabel(scoreType)}»:{' '}
-          <b>#{myRank.data.rank}</b>
-        </p>
-      )}
-
-      {q.isLoading && <p>…</p>}
-      {q.error && (
-        <p className="ox-error">
-          {t('global', 'ERROR')}:{' '}
-          {q.error instanceof Error ? q.error.message : ''}
-        </p>
-      )}
-
-      {list.length > 0 && (
-        <table className="ox-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Игрок</th>
-              <th>{colLabel(scoreType)}</th>
-              {scoreType === 'total' && (
-                <>
-                  <th>Постройки</th>
-                  <th>Исследования</th>
-                  <th>Флот</th>
-                </>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {list.map((e) => (
-              <tr key={e.user_id}>
-                <td className="num">{e.rank}</td>
-                <td>{e.username}</td>
-                <td className="num">
-                  {scoreType === 'total'
-                    ? e.points.toFixed(0)
-                    : scoreType === 'b'
-                    ? e.b_points.toFixed(0)
-                    : scoreType === 'r'
-                    ? e.r_points.toFixed(0)
-                    : scoreType === 'u'
-                    ? e.u_points.toFixed(0)
-                    : e.a_points.toFixed(0)}
-                </td>
-                {scoreType === 'total' && (
-                  <>
-                    <td className="num">{e.b_points.toFixed(0)}</td>
-                    <td className="num">{e.r_points.toFixed(0)}</td>
-                    <td className="num">{e.u_points.toFixed(0)}</td>
-                  </>
-                )}
-              </tr>
+      {/* Leaderboard */}
+      <div className="ox-panel" style={{ overflow: 'hidden' }}>
+        {q.isLoading && (
+          <div style={{ padding: 20 }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="ox-skeleton" style={{ height: 36, marginBottom: 6 }} />
             ))}
-          </tbody>
-        </table>
-      )}
+          </div>
+        )}
 
-      {!q.isLoading && list.length === 0 && (
-        <p>Рейтинг пока пуст — начните строить!</p>
-      )}
-    </section>
+        {!q.isLoading && list.length === 0 && (
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-muted)' }}>
+            Рейтинг пока пуст — начните строить!
+          </div>
+        )}
+
+        {list.length > 0 && (
+          <div className="ox-table-responsive">
+            <table className="ox-table" style={{ margin: 0 }}>
+              <thead>
+                <tr>
+                  <th style={{ width: 48 }}>#</th>
+                  <th>Игрок</th>
+                  <th>{typeMeta.label}</th>
+                  {scoreType === 'total' && (
+                    <>
+                      <th>🏗</th>
+                      <th>🔬</th>
+                      <th>🛸</th>
+                    </>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {list.map((e) => (
+                  <tr key={e.user_id}>
+                    <td data-label="#" className="num">
+                      {MEDAL[e.rank - 1] ?? e.rank}
+                    </td>
+                    <td data-label="Игрок" style={{ fontWeight: e.rank <= 3 ? 700 : 400 }}>
+                      {e.username}
+                    </td>
+                    <td data-label={typeMeta.label} className="num" style={{ color: 'var(--ox-accent)', fontWeight: 600 }}>
+                      {Math.round(getPoints(e, scoreType)).toLocaleString('ru-RU')}
+                    </td>
+                    {scoreType === 'total' && (
+                      <>
+                        <td data-label="Постройки" className="num">{Math.round(e.b_points).toLocaleString('ru-RU')}</td>
+                        <td data-label="Исследования" className="num">{Math.round(e.r_points).toLocaleString('ru-RU')}</td>
+                        <td data-label="Флот" className="num">{Math.round(e.u_points).toLocaleString('ru-RU')}</td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
