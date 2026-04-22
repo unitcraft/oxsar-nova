@@ -231,7 +231,7 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
                       }}
                     >
                       <img
-                        src="/images/planets/mond.jpg"
+                        src="/images/planets/moon.jpg"
                         alt=""
                         style={{ width: mSize, height: mSize, borderRadius: 2, objectFit: 'cover', display: 'block' }}
                       />
@@ -412,7 +412,7 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
         background: 'linear-gradient(135deg, rgba(99,217,255,0.04) 0%, transparent 60%)',
       }}>
         <img
-          src={planet.is_moon ? '/images/planets/mond.jpg' : planetImageOf(planet.position, planet.id, planet.planet_type)}
+          src={planet.is_moon ? '/images/planets/moon.jpg' : planetImageOf(planet.position, planet.id, planet.planet_type)}
           alt=""
           style={{ width: planetImageSize(planet.diameter), height: planetImageSize(planet.diameter), borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
         />
