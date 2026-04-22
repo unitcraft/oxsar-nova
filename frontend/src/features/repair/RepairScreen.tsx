@@ -187,7 +187,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
 function DisassembleList({
   units, ships, defense, onGo, pending,
 }: {
-  units: { id: number; key: string; name: string }[];
+  units: { id: number; key: string; name: string; cost?: { metal: number; silicon: number; hydrogen: number } }[];
   ships: Record<string, number> | undefined;
   defense: Record<string, number> | undefined;
   onGo: (unitId: number, count: number) => void;
@@ -203,6 +203,11 @@ function DisassembleList({
         const have = stock?.[u.id.toString()] ?? 0;
         const draft = drafts[u.id] ?? 0;
         if (have === 0) return null;
+        const refund = u.cost ? {
+          metal:    Math.floor(u.cost.metal    * draft * 0.7),
+          silicon:  Math.floor(u.cost.silicon  * draft * 0.7),
+          hydrogen: Math.floor(u.cost.hydrogen * draft * 0.7),
+        } : null;
         return (
           <div key={u.id} className="ox-unit-card">
             <div className="ox-unit-card-img">
@@ -211,6 +216,13 @@ function DisassembleList({
             <div className="ox-unit-card-body">
               <div className="ox-unit-card-name">{u.name}</div>
               <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>В наличии: {have}</div>
+              {refund && draft > 0 && (
+                <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', color: 'var(--ox-success)', marginTop: 2, lineHeight: 1.5 }}>
+                  +{refund.metal > 0 && <span style={{ marginRight: 4 }}>⛏{refund.metal.toLocaleString('ru-RU')}</span>}
+                  {refund.silicon > 0 && <span style={{ marginRight: 4 }}>🔷{refund.silicon.toLocaleString('ru-RU')}</span>}
+                  {refund.hydrogen > 0 && <span>💧{refund.hydrogen.toLocaleString('ru-RU')}</span>}
+                </div>
+              )}
             </div>
             <div className="ox-unit-card-footer" style={{ display: 'flex', gap: 6 }}>
               <input
