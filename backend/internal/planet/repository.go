@@ -165,3 +165,28 @@ func (r *Repository) UpdateBuildingFactor(ctx context.Context, planetID string, 
 	`, factor, planetID, unitID)
 	return err
 }
+
+// UpdateBuildingFactors обновляет факторы нескольких зданий в одном батч-запросе.
+func (r *Repository) UpdateBuildingFactors(ctx context.Context, planetID string, factors map[int]int) error {
+	if len(factors) == 0 {
+		return nil
+	}
+
+	// Построить динамический запрос с CASE/WHEN
+	var unitIDs []int
+	caseWhen := `CASE unit_id`
+	for unitID, factor := range factors {
+		unitIDs = append(unitIDs, unitID)
+		caseWhen += fmt.Sprintf(" WHEN %d THEN %d", unitID, factor)
+	}
+	caseWhen += ` ELSE production_factor END`
+
+	query := fmt.Sprintf(`
+		UPDATE buildings
+		SET production_factor = %s
+		WHERE planet_id = $1 AND unit_id = ANY($2::int[])
+	`, caseWhen)
+
+	_, err := r.pool.Exec(ctx, query, planetID, unitIDs)
+	return err
+}
