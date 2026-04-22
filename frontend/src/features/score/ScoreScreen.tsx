@@ -8,6 +8,7 @@ interface Entry {
   rank: number;
   user_id: string;
   username: string;
+  alliance_tag?: string | null;
   points: number;
   b_points: number;
   r_points: number;
@@ -112,6 +113,7 @@ export function ScoreScreen() {
                 <tr>
                   <th style={{ width: 48 }}>#</th>
                   <th>Игрок</th>
+                  <th style={{ width: 60 }}>Альянс</th>
                   <th>{typeMeta.label}</th>
                   {scoreType === 'total' && (
                     <>
@@ -130,6 +132,9 @@ export function ScoreScreen() {
                     </td>
                     <td data-label="Игрок" style={{ fontWeight: e.rank <= 3 ? 700 : 400 }}>
                       {e.username}
+                    </td>
+                    <td data-label="Альянс" style={{ fontSize: 11, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
+                      {e.alliance_tag ? `[${e.alliance_tag}]` : '—'}
                     </td>
                     <td data-label={typeMeta.label} className="num" style={{ color: 'var(--ox-accent)', fontWeight: 600 }}>
                       {Math.round(getPoints(e, scoreType)).toLocaleString('ru-RU')}

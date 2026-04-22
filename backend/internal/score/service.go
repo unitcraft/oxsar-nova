@@ -46,15 +46,16 @@ func NewService(db repo.Exec, cat *config.Catalog) *Service {
 
 // Entry — строка лидерборда.
 type Entry struct {
-	Rank     int     `json:"rank"`
-	UserID   string  `json:"user_id"`
-	Username string  `json:"username"`
-	Points   float64 `json:"points"`
-	BPoints  float64 `json:"b_points"`
-	RPoints  float64 `json:"r_points"`
-	UPoints  float64 `json:"u_points"`
-	APoints  float64 `json:"a_points"`
-	EPoints  float64 `json:"e_points"`
+	Rank        int     `json:"rank"`
+	UserID      string  `json:"user_id"`
+	Username    string  `json:"username"`
+	AllianceTag *string `json:"alliance_tag,omitempty"`
+	Points      float64 `json:"points"`
+	BPoints     float64 `json:"b_points"`
+	RPoints     float64 `json:"r_points"`
+	UPoints     float64 `json:"u_points"`
+	APoints     float64 `json:"a_points"`
+	EPoints     float64 `json:"e_points"`
 }
 
 // RecalcUser пересчитывает все компоненты очков userID и атомарно
@@ -98,10 +99,12 @@ func (s *Service) Top(ctx context.Context, scoreType string, limit int) ([]Entry
 	}
 	col := columnFor(scoreType)
 	rows, err := s.db.Pool().Query(ctx, fmt.Sprintf(`
-		SELECT id, username, points, b_points, r_points, u_points, a_points, e_points
-		FROM users
-		WHERE umode = false
-		ORDER BY %s DESC
+		SELECT u.id, u.username, a.tag,
+		       u.points, u.b_points, u.r_points, u.u_points, u.a_points, u.e_points
+		FROM users u
+		LEFT JOIN alliances a ON a.id = u.alliance_id
+		WHERE u.umode = false
+		ORDER BY u.%s DESC
 		LIMIT $1
 	`, col), limit)
 	if err != nil {
@@ -113,7 +116,7 @@ func (s *Service) Top(ctx context.Context, scoreType string, limit int) ([]Entry
 	rank := 1
 	for rows.Next() {
 		var e Entry
-		if err := rows.Scan(&e.UserID, &e.Username,
+		if err := rows.Scan(&e.UserID, &e.Username, &e.AllianceTag,
 			&e.Points, &e.BPoints, &e.RPoints, &e.UPoints, &e.APoints, &e.EPoints); err != nil {
 			return nil, fmt.Errorf("score.scan: %w", err)
 		}
