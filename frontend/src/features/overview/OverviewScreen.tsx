@@ -161,7 +161,7 @@ export function OverviewScreen() {
               >
                 {p.is_moon
                   ? <span style={{ fontSize: 36, lineHeight: 1 }}>🌑</span>
-                  : <img src={planetImageOf(p.position, p.id, p.planet_type)} alt="" style={{ width: planetImageSize(p.diameter), height: planetImageSize(p.diameter), borderRadius: 5, objectFit: 'cover' }} />
+                  : <img src={planetImageOf(p.position, p.id, p.planet_type)} alt="" style={{ width: planetImageSize(p.diameter), height: planetImageSize(p.diameter), borderRadius: '50%' }} />
                 }
                 <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'var(--ox-accent)' : 'var(--ox-fg)', textAlign: 'center', maxWidth: 76, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.name}
@@ -322,7 +322,7 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
           : <img
               src={planetImageOf(planet.position, planet.id, planet.planet_type)}
               alt=""
-              style={{ width: planetImageSize(planet.diameter), height: planetImageSize(planet.diameter), borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
+              style={{ width: planetImageSize(planet.diameter), height: planetImageSize(planet.diameter), borderRadius: '50%', flexShrink: 0 }}
             />
         }
         <div style={{ flex: 1, minWidth: 0 }}>
