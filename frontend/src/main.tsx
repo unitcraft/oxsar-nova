@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
 import { I18nProvider, type Lang } from './i18n/i18n';
+import { reportWebVitals, logWebVitals } from './lib/web-vitals';
 import './styles/app.css';
 
 class RootErrorBoundary extends React.Component<
@@ -80,3 +81,9 @@ ReactDOM.createRoot(root).render(
     </RootErrorBoundary>
   </React.StrictMode>,
 );
+
+// Отслеживание Web Vitals метрик (только в development)
+declare const __DEV__: boolean;
+if (typeof __DEV__ !== 'undefined' && __DEV__) {
+  reportWebVitals(logWebVitals);
+}
