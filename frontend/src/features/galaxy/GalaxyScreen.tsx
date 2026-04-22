@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { planetImageOf } from '@/api/catalog';
 import type { Planet } from '@/api/types';
 
 interface CellView {
   position: number;
   has_planet: boolean;
   planet_name?: string;
+  planet_id?: string | null;
+  planet_type?: string | null;
   has_moon: boolean;
   moon_name?: string;
   owner_username?: string;
@@ -189,11 +192,18 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
                       </td>
                       <td data-label="Планета">
                         {c.has_planet ? (
-                          <span>
-                            {isOwn && <span style={{ marginRight: 4, fontSize: 11 }}>🏠</span>}
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            {c.planet_id && (
+                              <img
+                                src={planetImageOf(c.position, c.planet_id, c.planet_type ?? undefined)}
+                                alt=""
+                                style={{ width: 24, height: 24, borderRadius: 3, objectFit: 'cover', flexShrink: 0 }}
+                              />
+                            )}
+                            {isOwn && <span style={{ fontSize: 11 }}>🏠</span>}
                             <span style={{ fontWeight: isOwn ? 700 : 400 }}>{c.planet_name}</span>
                             {c.has_moon && (
-                              <span title={c.moon_name ?? 'Луна'} style={{ marginLeft: 5, fontSize: 13 }}>🌑</span>
+                              <span title={c.moon_name ?? 'Луна'} style={{ fontSize: 13 }}>🌑</span>
                             )}
                           </span>
                         ) : (

@@ -4341,3 +4341,13 @@ BuildingsScreen теперь использует buildingName() в очеред
     Пропущено: письмо всем членам — P3.
   - Messages: добавлена функция удаления всех (UI-11).
     Наш экран значительно богаче legacy (battle/spy/exped viewers, ответ).
+
+================================================================================
+Итерация — 2026-04-22 (UI-12)
+================================================================================
+
+[UI-12] GalaxyScreen: картинки планет в таблице системы.
+  - galaxy/repository.go CellView: добавлены PlanetID, PlanetType.
+  - ReadSystem(): SELECT p.id, p.planet_type; Scan добавляет ID и PlanetType.
+  - GalaxyScreen.tsx: импорт planetImageOf из catalog; в строке Планета —
+    <img 24×24> с детерминированной картинкой по position+id+type.

@@ -22,6 +22,8 @@ type SystemView struct {
 type CellView struct {
 	Position      int     `json:"position"`
 	PlanetName    *string `json:"planet_name,omitempty"`
+	PlanetID      *string `json:"planet_id,omitempty"`
+	PlanetType    *string `json:"planet_type,omitempty"`
 	HasPlanet     bool    `json:"has_planet"`
 	HasMoon       bool    `json:"has_moon"`
 	MoonName      *string `json:"moon_name,omitempty"`
@@ -53,18 +55,20 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 
 	// Собираем планеты и луны на позициях.
 	type planetRow struct {
-		Position  int
-		IsMoon    bool
-		Name      string
-		OwnerID   *string
-		OwnerName *string
-		OwnerRank *int
+		Position    int
+		IsMoon      bool
+		ID          string
+		Name        string
+		PlanetType  *string
+		OwnerID     *string
+		OwnerName   *string
+		OwnerRank   *int
 	}
 	planetRows := map[int]planetRow{} // планеты (is_moon=false)
 	moonRows := map[int]planetRow{}   // луны на тех же координатах
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT p.position, p.is_moon, p.name, p.user_id, u.username,
+		SELECT p.position, p.is_moon, p.id, p.name, p.planet_type, p.user_id, u.username,
 		       CASE WHEN u.id IS NULL THEN NULL
 		            ELSE (SELECT COUNT(*)+1 FROM users u2 WHERE u2.points > u.points AND u2.umode=false)::int
 		       END AS rank
@@ -77,7 +81,8 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 	}
 	for rows.Next() {
 		var pr planetRow
-		if err := rows.Scan(&pr.Position, &pr.IsMoon, &pr.Name, &pr.OwnerID, &pr.OwnerName, &pr.OwnerRank); err != nil {
+		if err := rows.Scan(&pr.Position, &pr.IsMoon, &pr.ID, &pr.Name, &pr.PlanetType,
+			&pr.OwnerID, &pr.OwnerName, &pr.OwnerRank); err != nil {
 			rows.Close()
 			return out, fmt.Errorf("scan planet: %w", err)
 		}
@@ -123,6 +128,8 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 		if p, ok := planetRows[pos]; ok {
 			name := p.Name
 			cell.PlanetName = &name
+			cell.PlanetID = &p.ID
+			cell.PlanetType = p.PlanetType
 			cell.HasPlanet = true
 			cell.OwnerID = p.OwnerID
 			cell.OwnerUsername = p.OwnerName
