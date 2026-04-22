@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { catalog } from '@/api/catalog';
 import type { ResourceBuilding } from '@/api/types';
+import { useToast } from '@/ui/Toast';
 
 interface FactorFormData {
   [unitId: string]: number;
@@ -15,6 +16,7 @@ export function ResourceScreen({
   onBack?: () => void;
 }) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [factors, setFactors] = useState<FactorFormData>({});
 
   const { data: report, isLoading } = useQuery({
@@ -42,10 +44,50 @@ export function ResourceScreen({
         factors: numericFactors,
       });
     },
+    onMutate: async () => {
+      // Отменить все pending запросы для этого ключа
+      await queryClient.cancelQueries({
+        queryKey: ['resource-report', planetId],
+      });
+
+      // Сохранить старые данные для rollback'а при ошибке
+      const previousReport = queryClient.getQueryData<any>([
+        'resource-report',
+        planetId,
+      ]);
+
+      // Оптимистично обновить локальный кэш
+      if (previousReport) {
+        const updatedReport = {
+          ...previousReport,
+          buildings: previousReport.buildings.map((b: any) => ({
+            ...b,
+            factor: factors[b.unit_id.toString()] ?? b.factor,
+          })),
+        };
+        queryClient.setQueryData(['resource-report', planetId], updatedReport);
+      }
+
+      return { previousReport };
+    },
+    onError: (err, variables, context) => {
+      // Откатить на старые данные при ошибке
+      if (context?.previousReport) {
+        queryClient.setQueryData(
+          ['resource-report', planetId],
+          context.previousReport
+        );
+      }
+    },
     onSuccess: () => {
+      // Переопрос чтобы убедиться что данные синхронизированы
       queryClient.invalidateQueries({
         queryKey: ['resource-report', planetId],
       });
+      toast.show('success', 'Факторы сохранены');
+    },
+    onError: () => {
+      toast.show('danger', 'Ошибка сохранения');
     },
   });
 
