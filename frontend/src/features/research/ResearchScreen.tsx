@@ -52,6 +52,11 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
           Исследования
         </h2>
+        {planet.research_factor != null && planet.research_factor > 1 && (
+          <span style={{ fontSize: 12, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
+            🔬 +{Math.round((planet.research_factor - 1) * 100)}% исследование
+          </span>
+        )}
       </div>
 
       {/* Active research */}
