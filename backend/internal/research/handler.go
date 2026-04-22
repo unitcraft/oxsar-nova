@@ -71,8 +71,14 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
+	resSecs, err := h.svc.ResearchSecondsMap(r.Context(), uid, levels)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
-		"queue":  queue,
-		"levels": levels,
+		"queue":            queue,
+		"levels":           levels,
+		"research_seconds": resSecs,
 	})
 }

@@ -183,8 +183,30 @@ function Header({
   const metal    = planet.metal    ?? 0;
   const silicon  = planet.silicon  ?? 0;
   const hydrogen = planet.hydrogen ?? 0;
+  const metalRate    = planet.metal_per_sec    ?? 0;
+  const siliconRate  = planet.silicon_per_sec  ?? 0;
+  const hydrogenRate = planet.hydrogen_per_sec ?? 0;
+  const metalCap    = planet.metal_cap    ?? 0;
+  const siliconCap  = planet.silicon_cap  ?? 0;
+  const hydrogenCap = planet.hydrogen_cap ?? 0;
+  const energyProd      = planet.energy_prod      ?? 0;
+  const energyRemaining = planet.energy_remaining ?? 0;
   const clock    = useServerClock();
   const timeStr  = clock.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  function fmtCap(v: number): string {
+    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `${Math.round(v / 1_000)}k`;
+    return String(Math.round(v));
+  }
+
+  function capColor(cur: number, cap: number): string {
+    if (cap <= 0) return 'var(--ox-fg-muted)';
+    const ratio = cur / cap;
+    if (ratio >= 1) return 'var(--ox-danger)';
+    if (ratio >= 0.9) return 'var(--ox-warn, #f59e0b)';
+    return 'var(--ox-fg-muted)';
+  }
 
   return (
     <header className="ox-header">
@@ -194,21 +216,37 @@ function Header({
         <div className="ox-res-item">
           <span className="icon">⛏</span>
           <span className="label-sm">Мет</span>
-          <ResourceTicker value={metal} ratePerSec={0} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
+            <ResourceTicker value={metal} ratePerSec={metalRate} cap={metalCap} />
+            {metalCap > 0 && <span style={{ fontSize: 10, color: capColor(metal, metalCap), fontFamily: 'var(--ox-mono)' }}>{fmtCap(metalCap)}</span>}
+          </div>
         </div>
         <div className="ox-res-item">
           <span className="icon">🔷</span>
           <span className="label-sm">Крем</span>
-          <ResourceTicker value={silicon} ratePerSec={0} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
+            <ResourceTicker value={silicon} ratePerSec={siliconRate} cap={siliconCap} />
+            {siliconCap > 0 && <span style={{ fontSize: 10, color: capColor(silicon, siliconCap), fontFamily: 'var(--ox-mono)' }}>{fmtCap(siliconCap)}</span>}
+          </div>
         </div>
         <div className="ox-res-item">
           <span className="icon">💧</span>
           <span className="label-sm">Водор</span>
-          <ResourceTicker value={hydrogen} ratePerSec={0} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
+            <ResourceTicker value={hydrogen} ratePerSec={hydrogenRate} cap={hydrogenCap} />
+            {hydrogenCap > 0 && <span style={{ fontSize: 10, color: capColor(hydrogen, hydrogenCap), fontFamily: 'var(--ox-mono)' }}>{fmtCap(hydrogenCap)}</span>}
+          </div>
         </div>
-        <div className="ox-res-item ox-energy-item">
+        <div className="ox-res-item ox-energy-item" style={{ color: energyRemaining < 0 ? 'var(--ox-danger)' : 'var(--ox-fg-dim)' }}>
           <span className="icon">⚡</span>
-          <span className="val">+0</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
+            <span style={{ fontSize: 13, fontFamily: 'var(--ox-mono)', fontWeight: 600 }}>{Math.round(energyProd)}</span>
+            {energyProd > 0 && (
+              <span style={{ fontSize: 10, fontFamily: 'var(--ox-mono)', color: energyRemaining < 0 ? 'var(--ox-danger)' : 'var(--ox-success, #22c55e)' }}>
+                {energyRemaining >= 0 ? '+' : ''}{Math.round(energyRemaining)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

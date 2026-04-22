@@ -332,6 +332,51 @@ func (s *TransportService) List(ctx context.Context, userID string) ([]Fleet, er
 	return out, rows.Err()
 }
 
+// IncomingFleet — краткое описание вражеского флота летящего к планете игрока.
+type IncomingFleet struct {
+	ID          string    `json:"id"`
+	Mission     int       `json:"mission"`
+	DstGalaxy   int       `json:"dst_galaxy"`
+	DstSystem   int       `json:"dst_system"`
+	DstPosition int       `json:"dst_position"`
+	DstIsMoon   bool      `json:"dst_is_moon"`
+	ArriveAt    time.Time `json:"arrive_at"`
+}
+
+// ListIncoming возвращает чужие флоты с hostile-миссиями (атака, АКС-атака),
+// летящие к планетам данного игрока.
+func (s *TransportService) ListIncoming(ctx context.Context, userID string) ([]IncomingFleet, error) {
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT f.id, f.mission, f.dst_galaxy, f.dst_system, f.dst_position, f.dst_is_moon, f.arrive_at
+		FROM fleets f
+		JOIN planets p ON p.galaxy = f.dst_galaxy
+		             AND p.system  = f.dst_system
+		             AND p.position = f.dst_position
+		             AND p.is_moon  = f.dst_is_moon
+		             AND p.destroyed_at IS NULL
+		WHERE p.user_id = $1
+		  AND f.owner_user_id <> $1
+		  AND f.mission IN (10, 12)
+		  AND f.state = 'outbound'
+		  AND f.arrive_at > NOW()
+		ORDER BY f.arrive_at ASC
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list incoming fleets: %w", err)
+	}
+	defer rows.Close()
+	var out []IncomingFleet
+	for rows.Next() {
+		var f IncomingFleet
+		if err := rows.Scan(&f.ID, &f.Mission, &f.DstGalaxy, &f.DstSystem,
+			&f.DstPosition, &f.DstIsMoon, &f.ArriveAt); err != nil {
+			return nil, err
+		}
+		out = append(out, f)
+	}
+	return out, rows.Err()
+}
+
 // Recall — досрочно вернуть флот домой. Доступно только пока флот
 // летит к цели (state='outbound'): после прибытия recall не имеет
 // смысла (груз уже выгружен / корабли в пути обратно). Симметрия:

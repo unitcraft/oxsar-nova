@@ -233,6 +233,7 @@ func run() error {
 
 		pr.Post("/fleet", fleetH.Send)
 		pr.Get("/fleet", fleetH.List)
+		pr.Get("/fleet/incoming", fleetH.Incoming)
 		pr.Post("/fleet/{id}/recall", fleetH.Recall)
 
 		pr.Get("/market/rates", marketH.Rates)

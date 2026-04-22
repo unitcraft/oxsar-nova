@@ -1,4 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+function fmtDuration(secs: number): string {
+  if (secs < 60) return `${secs}с`;
+  const m = Math.floor(secs / 60) % 60;
+  const h = Math.floor(secs / 3600) % 24;
+  const d = Math.floor(secs / 86400);
+  if (d > 0) return `${d}д ${h}ч ${m}м`;
+  if (h > 0) return `${h}ч ${m}м`;
+  return `${m}м`;
+}
 import { api } from '@/api/client';
 import { RESEARCH, imageOf, costForLevel } from '@/api/catalog';
 import type { Planet, QueueItem, ResearchState } from '@/api/types';
@@ -12,7 +22,7 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
 
   const state = useQuery({
     queryKey: ['research'],
-    queryFn: () => api.get<ResearchState>('/api/research'),
+    queryFn: () => api.get<ResearchState & { research_seconds: Record<string, number> }>('/api/research'),
     refetchInterval: 2000,
   });
 
@@ -31,6 +41,7 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
   });
 
   const levels = state.data?.levels ?? {};
+  const resSeconds = state.data?.research_seconds ?? {};
   const queue = (state.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
   const active = queue[0];
   const isBusy = !!active;
@@ -57,6 +68,7 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
           const level = levels[r.id.toString()] ?? 0;
           const isActive = active?.unit_id === r.id;
           const nextCost = costForLevel(r.costBase, r.costFactor, level + 1);
+          const secs = resSeconds[r.id.toString()] ?? 0;
           const canAfford =
             planet.metal    >= nextCost.metal &&
             planet.silicon  >= nextCost.silicon &&
@@ -72,23 +84,30 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
                   {level > 0 ? `Уровень ${level}` : 'Не изучено'}
                 </div>
                 {!isActive && (
-                  <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
-                    {nextCost.metal > 0 && (
-                      <span style={{ marginRight: 6, color: planet.metal >= nextCost.metal ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                        ⛏{nextCost.metal.toLocaleString('ru-RU')}
-                      </span>
+                  <>
+                    <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
+                      {nextCost.metal > 0 && (
+                        <span style={{ marginRight: 6, color: planet.metal >= nextCost.metal ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
+                          ⛏{nextCost.metal.toLocaleString('ru-RU')}
+                        </span>
+                      )}
+                      {nextCost.silicon > 0 && (
+                        <span style={{ marginRight: 6, color: planet.silicon >= nextCost.silicon ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
+                          🔷{nextCost.silicon.toLocaleString('ru-RU')}
+                        </span>
+                      )}
+                      {nextCost.hydrogen > 0 && (
+                        <span style={{ color: planet.hydrogen >= nextCost.hydrogen ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
+                          💧{nextCost.hydrogen.toLocaleString('ru-RU')}
+                        </span>
+                      )}
+                    </div>
+                    {secs > 0 && (
+                      <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
+                        ⏱ {fmtDuration(secs)}
+                      </div>
                     )}
-                    {nextCost.silicon > 0 && (
-                      <span style={{ marginRight: 6, color: planet.silicon >= nextCost.silicon ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                        🔷{nextCost.silicon.toLocaleString('ru-RU')}
-                      </span>
-                    )}
-                    {nextCost.hydrogen > 0 && (
-                      <span style={{ color: planet.hydrogen >= nextCost.hydrogen ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                        💧{nextCost.hydrogen.toLocaleString('ru-RU')}
-                      </span>
-                    )}
-                  </div>
+                  </>
                 )}
               </div>
               <div className="ox-unit-card-footer">

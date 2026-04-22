@@ -103,6 +103,24 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"fleets": list})
 }
 
+// Incoming GET /api/fleet/incoming — вражеские атакующие флоты к планетам игрока.
+func (h *Handler) Incoming(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	list, err := h.transport.ListIncoming(r.Context(), uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	if list == nil {
+		list = []IncomingFleet{}
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"fleets": list})
+}
+
 // Recall POST /api/fleet/{id}/recall — досрочный возврат флота. Работает
 // только для флотов в состоянии outbound.
 func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {

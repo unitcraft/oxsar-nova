@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api } from '@/api/client';
 import { buildingName, imageOfId, nameOf, planetImageOf, planetImageSize } from '@/api/catalog';
-import type { Planet, QueueItem, ShipyardQueueItem } from '@/api/types';
+import type { IncomingFleet, Planet, QueueItem, ShipyardQueueItem } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { ResourceTicker } from '@/ui/ResourceTicker';
@@ -69,8 +69,17 @@ export function OverviewScreen() {
     refetchInterval: 10000,
   });
 
+  const incoming = useQuery({
+    queryKey: ['fleets-incoming'],
+    queryFn: () => api.get<{ fleets: IncomingFleet[] }>('/api/fleet/incoming'),
+    refetchInterval: 15000,
+  });
+
   const list = planets.data?.planets ?? [];
   const [selectedPlanetId, setSelectedPlanetId] = useState<string | null>(null);
+  const incomingFleets = (incoming.data?.fleets ?? []).filter(
+    (f) => new Date(f.arrive_at).getTime() > Date.now()
+  );
   const activeFleets = (fleets.data?.fleets ?? []).filter((f) => {
     if (f.state === 'done') return false;
     const finishAt = f.state === 'returning' && f.return_at ? f.return_at : f.arrive_at;
@@ -127,6 +136,28 @@ export function OverviewScreen() {
           )}
         </div>
       )}
+
+      {/* Входящие атаки */}
+      {incomingFleets.map((f) => (
+        <div key={f.id} style={{
+          padding: '10px 16px', borderRadius: 8,
+          background: 'rgba(239,68,68,0.1)',
+          border: '1px solid rgba(239,68,68,0.5)',
+          display: 'flex', alignItems: 'center', gap: 12,
+          animation: 'ox-pulse-border 1.5s ease-in-out infinite',
+        }}>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>⚠️</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--ox-danger)' }}>
+              Входящая атака!
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
+              Цель: [{f.dst_galaxy}:{f.dst_system}:{f.dst_position}]{f.dst_is_moon ? ' 🌑' : ''}
+            </div>
+          </div>
+          <Countdown finishAt={f.arrive_at} />
+        </div>
+      ))}
 
       {/* Флоты в движении */}
       {activeFleets.length > 0 && (
@@ -395,9 +426,9 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
         background: 'var(--ox-border)',
         borderBottom: hasActivity ? '1px solid var(--ox-border)' : undefined,
       }}>
-        <ResourceCell icon="⛏" label="Металл" value={planet.metal} ratePerSec={0} />
-        <ResourceCell icon="🔷" label="Кремний" value={planet.silicon} ratePerSec={0} />
-        <ResourceCell icon="💧" label="Водород" value={planet.hydrogen} ratePerSec={0} />
+        <ResourceCell icon="⛏" label="Металл" value={planet.metal} ratePerSec={planet.metal_per_sec ?? 0} />
+        <ResourceCell icon="🔷" label="Кремний" value={planet.silicon} ratePerSec={planet.silicon_per_sec ?? 0} />
+        <ResourceCell icon="💧" label="Водород" value={planet.hydrogen} ratePerSec={planet.hydrogen_per_sec ?? 0} />
       </div>
 
       {/* Очереди */}

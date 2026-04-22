@@ -263,6 +263,33 @@ func (s *Service) Levels(ctx context.Context, planetID string) (map[int]int, err
 	return out, rows.Err()
 }
 
+// BuildSecondsMap возвращает время постройки следующего уровня каждого здания
+// в секундах, с учётом robotic_factory на планете и скорости игры.
+func (s *Service) BuildSecondsMap(ctx context.Context, planetID string, levels map[int]int) (map[int]int, error) {
+	roboSpec, ok := s.catalog.Buildings.Buildings["robotic_factory"]
+	if !ok {
+		return map[int]int{}, nil
+	}
+	var roboLevel int
+	_ = s.db.Pool().QueryRow(ctx,
+		`SELECT level FROM buildings WHERE planet_id=$1 AND unit_id=$2`,
+		planetID, roboSpec.ID,
+	).Scan(&roboLevel)
+
+	out := make(map[int]int, len(s.catalog.Buildings.Buildings))
+	for _, spec := range s.catalog.Buildings.Buildings {
+		curLvl := levels[spec.ID]
+		nextLvl := curLvl + 1
+		cost := economy.CostForLevel(economy.Cost{
+			Metal:   spec.CostBase.Metal,
+			Silicon: spec.CostBase.Silicon,
+		}, spec.CostFactor, nextLvl)
+		dur := economy.BuildDuration(spec.TimeBaseSeconds, cost, roboLevel, 0, s.gameSpd)
+		out[spec.ID] = int(dur.Seconds())
+	}
+	return out, nil
+}
+
 func currentLevel(ctx context.Context, tx pgx.Tx, planetID string, unitID int) (int, error) {
 	var lvl int
 	err := tx.QueryRow(ctx,
