@@ -55,9 +55,12 @@ export function ChatScreen() {
           // ignore malformed frames
         }
       };
-      ws.onerror = () => setWsError('Соединение прервано');
-      ws.onclose = () => {
-        if (!stopped) {
+      ws.onerror = () => { /* закрытие придёт в onclose */ };
+      ws.onclose = (ev) => {
+        if (stopped) return;
+        if (ev.wasClean) {
+          setWsError('');
+        } else {
           setWsError('Переподключение…');
           retryTimer = setTimeout(() => {
             setWsError('');

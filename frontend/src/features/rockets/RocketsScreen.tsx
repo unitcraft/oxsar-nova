@@ -70,7 +70,8 @@ export function RocketsScreen({ planet }: { planet: Planet }) {
         )}
       </p>
 
-      <p>
+      <p style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <img src="/images/units/interplanetary_rocket.gif" alt="" width={40} height={40} style={{ imageRendering: 'pixelated' }} />
         <b>{tf('Main', 'ROCKETS_STOCK', 'В наличии')}:</b> {have}
         {siloLevel > 0 && (
           <span style={{ color: 'var(--ox-muted, #888)', marginLeft: 8 }}>

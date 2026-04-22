@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { SHIPS, DEFENSE, nameOf } from '@/api/catalog';
+import { SHIPS, DEFENSE, nameOf, imageOf } from '@/api/catalog';
 import { useTranslation } from '@/i18n/i18n';
 import type { Inventory, Planet } from '@/api/types';
 
@@ -109,9 +109,14 @@ export function RepairScreen({ planet }: { planet: Planet }) {
             </tr>
           </thead>
           <tbody>
-            {damagedList.map((d) => (
+            {damagedList.map((d) => {
+              const unitKey = [...SHIPS, ...DEFENSE].find((u) => u.id === d.unit_id)?.key ?? '';
+              return (
               <tr key={d.unit_id}>
-                <td>{nameOf(d.unit_id)}</td>
+                <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {unitKey && <img src={imageOf(unitKey)} alt="" width={36} height={36} style={{ imageRendering: 'pixelated' }} />}
+                  {nameOf(d.unit_id)}
+                </td>
                 <td className="num">{d.count}</td>
                 <td className="num">{d.damaged}</td>
                 <td className="num">{Math.round(d.shell_percent)}</td>
@@ -125,7 +130,8 @@ export function RepairScreen({ planet }: { planet: Planet }) {
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       )}
@@ -204,7 +210,7 @@ function UnitList({
   pending,
 }: {
   title: string;
-  units: { id: number; name: string }[];
+  units: { id: number; key: string; name: string }[];
   stock: Record<string, number> | undefined;
   onGo: (unitId: number, count: number) => void;
   pending: boolean;
@@ -229,7 +235,10 @@ function UnitList({
             const draft = drafts[u.id] ?? 0;
             return (
               <tr key={u.id}>
-                <td>{u.name}</td>
+                <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <img src={imageOf(u.key)} alt="" width={36} height={36} style={{ imageRendering: 'pixelated' }} />
+                  {u.name}
+                </td>
                 <td className="num">{have}</td>
                 <td>
                   <input
