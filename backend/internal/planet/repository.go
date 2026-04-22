@@ -21,14 +21,14 @@ func (r *Repository) GetByID(ctx context.Context, id string) (Planet, error) {
 	var p Planet
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, user_id, is_moon, name, galaxy, system, position,
-		       diameter, used_fields, temperature_min, temperature_max,
+		       diameter, used_fields, planet_type, temperature_min, temperature_max,
 		       metal, silicon, hydrogen, last_res_update,
 		       solar_satellite_prod, build_factor, research_factor,
 		       produce_factor, energy_factor, storage_factor
 		FROM planets WHERE id = $1 AND destroyed_at IS NULL
 	`, id).Scan(
 		&p.ID, &p.UserID, &p.IsMoon, &p.Name, &p.Galaxy, &p.System, &p.Position,
-		&p.Diameter, &p.UsedFields, &p.TempMin, &p.TempMax,
+		&p.Diameter, &p.UsedFields, &p.PlanetType, &p.TempMin, &p.TempMax,
 		&p.Metal, &p.Silicon, &p.Hydrogen, &p.LastResUpdate,
 		&p.SolarSatelliteProd, &p.BuildFactor, &p.ResearchFactor,
 		&p.ProduceFactor, &p.EnergyFactor, &p.StorageFactor,
@@ -45,7 +45,7 @@ func (r *Repository) GetByID(ctx context.Context, id string) (Planet, error) {
 func (r *Repository) ListByUser(ctx context.Context, userID string) ([]Planet, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, user_id, is_moon, name, galaxy, system, position,
-		       diameter, used_fields, temperature_min, temperature_max,
+		       diameter, used_fields, planet_type, temperature_min, temperature_max,
 		       metal, silicon, hydrogen, last_res_update,
 		       solar_satellite_prod, build_factor, research_factor,
 		       produce_factor, energy_factor, storage_factor
@@ -62,7 +62,7 @@ func (r *Repository) ListByUser(ctx context.Context, userID string) ([]Planet, e
 		var p Planet
 		if err := rows.Scan(
 			&p.ID, &p.UserID, &p.IsMoon, &p.Name, &p.Galaxy, &p.System, &p.Position,
-			&p.Diameter, &p.UsedFields, &p.TempMin, &p.TempMax,
+			&p.Diameter, &p.UsedFields, &p.PlanetType, &p.TempMin, &p.TempMax,
 			&p.Metal, &p.Silicon, &p.Hydrogen, &p.LastResUpdate,
 			&p.SolarSatelliteProd, &p.BuildFactor, &p.ResearchFactor,
 			&p.ProduceFactor, &p.EnergyFactor, &p.StorageFactor,

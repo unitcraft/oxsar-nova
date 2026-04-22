@@ -728,9 +728,9 @@ func tryCreateMoon(ctx context.Context, tx pgx.Tx, g, sys, pos int,
 	moonID := ids.New()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO planets (id, user_id, is_moon, name, galaxy, system, position,
-		                     diameter, used_fields, temperature_min, temperature_max,
+		                     diameter, used_fields, planet_type, temperature_min, temperature_max,
 		                     metal, silicon, hydrogen)
-		VALUES ($1, $2, true, 'Moon', $3, $4, $5, $6, 0, -100, -60, 0, 0, 0)
+		VALUES ($1, $2, true, 'Moon', $3, $4, $5, $6, 0, 'moon', -100, -60, 0, 0, 0)
 	`, moonID, defUserID, g, sys, pos, diameter); err != nil {
 		return fmt.Errorf("insert moon: %w", err)
 	}

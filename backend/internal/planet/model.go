@@ -21,6 +21,7 @@ type Planet struct {
 	Position           int       `json:"position"`
 	Diameter           int       `json:"diameter"`
 	UsedFields         int       `json:"used_fields"`
+	PlanetType         string    `json:"planet_type"`
 	TempMin            int       `json:"temp_min"`
 	TempMax            int       `json:"temp_max"`
 	Metal              float64   `json:"metal"`

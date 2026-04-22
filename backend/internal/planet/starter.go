@@ -64,16 +64,17 @@ func (s *Starter) Assign(ctx context.Context, userID string) (string, error) {
 			}
 
 			id := ids.New()
-			diameter := 12800 + r.IntN(2000) // 12800..14800 (стандарт OGame для pos 4-9)
-			tempMax := -40 + r.IntN(80)      // ±
-			tempMin := tempMax - 40
+			rCoord := rng.New(starterCoordsSeed(g, sys, pos))
+			diameter := starterPositionDiameter(pos, rCoord)
+			pType := starterPlanetTypeOf(pos, rCoord)
+			tempMin, tempMax := starterPositionTemp(pos, rCoord)
 
 			_, err = tx.Exec(ctx, `
 				INSERT INTO planets (id, user_id, is_moon, name, galaxy, system, position,
-				                     diameter, used_fields, temperature_min, temperature_max,
+				                     diameter, used_fields, planet_type, temperature_min, temperature_max,
 				                     metal, silicon, hydrogen)
-				VALUES ($1, $2, false, $3, $4, $5, $6, $7, 0, $8, $9, $10, $11, $12)
-			`, id, userID, "Homeworld", g, sys, pos, diameter, tempMin, tempMax,
+				VALUES ($1, $2, false, $3, $4, $5, $6, $7, 0, $8, $9, $10, $11, $12, $13)
+			`, id, userID, "Homeworld", g, sys, pos, diameter, pType, tempMin, tempMax,
 				StartingResources.Metal, StartingResources.Silicon, StartingResources.Hydrogen)
 			if err != nil {
 				return fmt.Errorf("insert starter planet: %w", err)
@@ -143,6 +144,71 @@ func coordTaken(ctx context.Context, tx pgx.Tx, g, sys, pos int, isMoon bool) (b
 // координат. Разные пользователи получают разные последовательности,
 // но один и тот же пользователь при retry (повторный вызов Assign) —
 // ту же. Это не критично, просто меньше случайности в тестах.
+func starterCoordsSeed(g, sys, pos int) uint64 {
+	var h uint64 = 14695981039346656037
+	for _, v := range []int{g, sys, pos} {
+		for i := 0; i < 4; i++ {
+			h ^= uint64(byte(v >> (i * 8)))
+			h *= 1099511628211
+		}
+	}
+	return h
+}
+
+func starterPositionDiameter(pos int, r *rng.R) int {
+	switch {
+	case pos <= 3:
+		return 6000 + r.IntN(4000)
+	case pos >= 13:
+		return 12000 + r.IntN(5000)
+	default:
+		return 10000 + r.IntN(5000)
+	}
+}
+
+func starterPlanetTypeOf(pos int, r *rng.R) string {
+	switch {
+	case pos <= 2:
+		return "trockenplanet"
+	case pos == 3:
+		if r.IntN(2) == 0 {
+			return "trockenplanet"
+		}
+		return "wuestenplanet"
+	case pos <= 5:
+		return "dschjungelplanet"
+	case pos <= 7:
+		if r.IntN(2) == 0 {
+			return "dschjungelplanet"
+		}
+		return "normaltempplanet"
+	case pos <= 9:
+		return "normaltempplanet"
+	case pos <= 11:
+		if r.IntN(2) == 0 {
+			return "normaltempplanet"
+		}
+		return "wasserplanet"
+	case pos <= 13:
+		return "wasserplanet"
+	case pos == 14:
+		return "eisplanet"
+	default:
+		if r.IntN(2) == 0 {
+			return "eisplanet"
+		}
+		return "gasplanet"
+	}
+}
+
+func starterPositionTemp(pos int, r *rng.R) (tempMin, tempMax int) {
+	base := 110 - pos*14
+	spread := r.IntN(20) - 10
+	tempMax = base + spread
+	tempMin = tempMax - 40
+	return
+}
+
 func seedFromUserID(userID string) uint64 {
 	// FNV-1a, чтобы не тянуть hash/fnv в этот файл ради одной строки.
 	var h uint64 = 14695981039346656037
