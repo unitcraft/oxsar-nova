@@ -165,7 +165,7 @@ func (s *Service) List(ctx context.Context, planetID string) ([]QueueItem, error
 	rows, err := s.db.Pool().Query(ctx, `
 		SELECT id, planet_id, unit_id, target_level, start_at, end_at, status
 		FROM construction_queue
-		WHERE planet_id = $1 AND status IN ('queued','running')
+		WHERE planet_id = $1 AND status IN ('queued','running') AND end_at > NOW()
 		ORDER BY start_at
 	`, planetID)
 	if err != nil {
