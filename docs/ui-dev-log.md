@@ -232,3 +232,45 @@ input:-webkit-autofill {
 - Мобильный sidebar (гамбургер-меню)
 - Production build (сейчас dev-сервер в Docker)
 - OpenAPI-генерация типов (`npm run gen:api`) вместо ручных типов в `types.ts`
+
+---
+
+## Итерация UI-7: Атаки, тикер, луна в карусели (2026-04-22)
+
+### Задача
+Завершить P1 из `docs/ui-plan-overview.md`: живые тикеры ресурсов,
+баннер входящей атаки, луна в карусели.
+
+### Бэкенд
+- `fleet/transport.go`: `IncomingFleet` struct + `ListIncoming` — JOIN флоты→планеты по (galaxy,system,position,is_moon), mission IN (10,12), state='outbound', arrive_at > NOW()
+- `fleet/handler.go`: `GET /api/fleet/incoming`
+- `building/service.go`: `BuildSecondsMap` — время следующего уровня для каждого здания через `economy.BuildDuration`
+- `building/handler.go`: `/api/planets/{id}/buildings/levels` теперь отдаёт `{"levels":…,"build_seconds":…}`
+- `research/service.go`: `ResearchSecondsMap` — время через `(metal+silicon)/(1000*(1+labLevel))/gameSpeed`
+- `research/handler.go`: `/api/research` теперь отдаёт `{"queue":…,"levels":…,"research_seconds":…}`
+
+### Фронтенд
+- `OverviewScreen`: красный пульсирующий баннер атаки (`@keyframes ox-pulse-border`), луна в верхнем правом углу карусельной карточки (`position: absolute, top:3, right:3`)
+- `BuildingsScreen`: время ⏱ Xч Xм на каждой карточке из `build_seconds`
+- `ResearchScreen`: время ⏱ Xч Xм из `research_seconds`
+- `App.tsx ResourceTicker`: получает `metalRate/siliconRate/hydrogenRate` из planet
+
+---
+
+## Итерация UI-8: Склад и энергия в шапке (2026-04-22)
+
+### Задача
+P1 из плана: показать вместимость хранилищ под каждым ресурсом и
+реальную энергию вместо заглушки "+0".
+
+### Бэкенд
+- `planet/model.go`: добавлены поля `MetalCap`, `SiliconCap`, `HydrogenCap`, `EnergyProd`, `EnergyCons`, `EnergyRemaining`
+- `planet/service.go`: `energyStats(p, levels, tech)` — абсолютные значения энергии (prod через solar_plant + solar_satellite×EnergyFactor; cons через mine+labs); `applyTickInTx` присваивает все 6 новых полей
+
+### Фронтенд
+- `types.ts`: добавлены 6 новых полей в `Planet`
+- `App.tsx Header`: под каждым ресурсом — подпись `Nk` (вместимость), цвет зелёный/<90% оранжевый/≥100% красный; `ResourceTicker` получает `cap` (останавливает тикер у потолка); энергия `⚡ prod (+remaining)`, красный при дефиците
+
+### Ключевые решения
+- `energyStats` считает абсолютные значения отдельно от `energyRatio` (который возвращает множитель производства). Дублирования нет — разные use case.
+- cap-подпись выводится только когда `cap > 0` (новые игроки со стартовыми 5000 видят cap сразу)
