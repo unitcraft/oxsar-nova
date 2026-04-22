@@ -43,6 +43,12 @@ function formatCoords(p: Planet) {
   return `[${p.galaxy}:${p.system}:${p.position}]`;
 }
 
+function fmtRes(v: number): string {
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `${Math.round(v / 1_000)}k`;
+  return String(Math.round(v));
+}
+
 
 export function OverviewScreen() {
   const planets = useQuery({
@@ -193,10 +199,10 @@ export function OverviewScreen() {
                   onClick={() => setSelectedPlanetId(p.id)}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    minWidth: 80, padding: '8px 6px', borderRadius: 8, cursor: 'pointer',
+                    minWidth: 84, padding: '8px 6px 6px', borderRadius: 8, cursor: 'pointer',
                     border: `1px solid ${active || moonActive ? 'var(--ox-accent)' : 'var(--ox-border)'}`,
                     background: active ? 'rgba(99,217,255,0.08)' : 'var(--ox-bg-card)',
-                    flexShrink: 0, height: 110, position: 'relative',
+                    flexShrink: 0, position: 'relative',
                   }}
                 >
                   {moon && (
@@ -225,12 +231,17 @@ export function OverviewScreen() {
                       style={{ width: pSize, height: pSize, borderRadius: 5, objectFit: 'cover' }}
                     />
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'var(--ox-accent)' : 'var(--ox-fg)', textAlign: 'center', maxWidth: 76, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'var(--ox-accent)' : 'var(--ox-fg)', textAlign: 'center', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>
                     {p.name}
                   </span>
                   <span style={{ fontSize: 10, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
                     [{p.galaxy}:{p.system}:{p.position}]
                   </span>
+                  <div style={{ display: 'flex', gap: 3, marginTop: 3, fontSize: 9, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)' }}>
+                    <span title="Металл">⛏{fmtRes(p.metal)}</span>
+                    <span title="Кремний">🔷{fmtRes(p.silicon)}</span>
+                    <span title="Водород">💧{fmtRes(p.hydrogen)}</span>
+                  </div>
                 </button>
               );
             })}
