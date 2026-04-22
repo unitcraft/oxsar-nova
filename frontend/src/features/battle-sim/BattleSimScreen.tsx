@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { SHIPS, DEFENSE, nameOf, type CombatEntry } from '@/api/catalog';
+import { SHIPS, DEFENSE, nameOf, imageOf, type CombatEntry } from '@/api/catalog';
 import { useTranslation } from '@/i18n/i18n';
 
 type UnitMap = Record<number, number>;
@@ -232,14 +232,20 @@ function LossesTable({
             </tr>
           </thead>
           <tbody>
-            {changed.map((u) => (
-              <tr key={u.unit_id}>
-                <td>{nameOf(u.unit_id)}</td>
-                <td className="num">{original[u.unit_id] ?? u.quantity_start}</td>
-                <td className="num">{u.quantity_end}</td>
-                <td className="num">{u.damaged_end ?? 0}</td>
-              </tr>
-            ))}
+            {changed.map((u) => {
+              const unitKey = [...SHIPS, ...DEFENSE].find((s) => s.id === u.unit_id)?.key ?? '';
+              return (
+                <tr key={u.unit_id}>
+                  <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {unitKey && <img src={imageOf(unitKey)} alt="" width={32} height={32} style={{ imageRendering: 'pixelated' }} />}
+                    {nameOf(u.unit_id)}
+                  </td>
+                  <td className="num">{original[u.unit_id] ?? u.quantity_start}</td>
+                  <td className="num">{u.quantity_end}</td>
+                  <td className="num">{u.damaged_end ?? 0}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       ) : (
@@ -274,7 +280,10 @@ function UnitPicker({
         <tbody>
           {units.map((u) => (
             <tr key={u.id}>
-              <td>{nameOf(u.id)}</td>
+              <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <img src={imageOf(u.key)} alt="" width={32} height={32} style={{ imageRendering: 'pixelated' }} />
+                {nameOf(u.id)}
+              </td>
               <td className="num">{u.attack}</td>
               <td className="num">{u.shield}</td>
               <td className="num">{u.shell}</td>
