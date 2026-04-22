@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/event"
 	"github.com/oxsar/nova/backend/internal/galaxy"
@@ -36,16 +37,17 @@ import (
 // и чтобы не путать с Mission-интерфейсом, который используется для
 // будущих миссий (SPY/ATTACK/COLONIZE).
 type TransportService struct {
-	db      repo.Exec
-	catalog *config.Catalog
-	speed   float64 // GAMESPEED
+	db       repo.Exec
+	catalog  *config.Catalog
+	speed    float64 // GAMESPEED
+	artefact *artefact.Service
 }
 
-func NewTransportService(db repo.Exec, cat *config.Catalog, gameSpeed float64) *TransportService {
+func NewTransportService(db repo.Exec, cat *config.Catalog, gameSpeed float64, artefactSvc *artefact.Service) *TransportService {
 	if gameSpeed <= 0 {
 		gameSpeed = 1
 	}
-	return &TransportService{db: db, catalog: cat, speed: gameSpeed}
+	return &TransportService{db: db, catalog: cat, speed: gameSpeed, artefact: artefactSvc}
 }
 
 // TransportInput — запрос от UI на отправку флота.

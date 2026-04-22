@@ -37,6 +37,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/battle"
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/event"
@@ -132,10 +133,18 @@ func (s *TransportService) AttackHandler() event.Handler {
 			return fmt.Errorf("attack: defender tech: %w", err)
 		}
 
+		battleMod, err := s.artefact.ActiveBattleModifiers(ctx, tx, attackerUserID)
+		if err != nil {
+			return fmt.Errorf("attack: battle modifiers: %w", err)
+		}
+
+		atkUnits := stacksToBattleUnits(attackerShips, s.catalog, false)
+		atkUnits = applyBattleMod(atkUnits, battleMod)
+
 		atkSide := battle.Side{
 			UserID: attackerUserID,
 			Tech:   attackerTech,
-			Units:  stacksToBattleUnits(attackerShips, s.catalog, false),
+			Units:  atkUnits,
 		}
 		defUnits := stacksToBattleUnits(defenderShips, s.catalog, false)
 		defUnits = append(defUnits, stacksToBattleUnits(defenderDefense, s.catalog, true)...)
@@ -533,6 +542,21 @@ func applyDefenderLosses(ctx context.Context, tx pgx.Tx, planetID string,
 		}
 		return nil
 	}
+
+// applyBattleMod применяет боевые модификаторы к юнитам.
+// Множители умножаются на Attack/Shield/Shell каждого юнита.
+func applyBattleMod(units []battle.Unit, m artefact.BattleModifier) []battle.Unit {
+	for i := range units {
+		for ch := range units[i].Attack {
+			units[i].Attack[ch] *= m.AttackMul
+		}
+		for ch := range units[i].Shield {
+			units[i].Shield[ch] *= m.ShieldMul
+		}
+		units[i].Shell *= m.ShellMul
+	}
+	return units
+}
 	if err := apply("ships", startShips); err != nil {
 		return err
 	}

@@ -198,6 +198,9 @@ type ArtefactEffect struct {
 	Value          float64 `yaml:"value,omitempty"`
 	ActiveValue    float64 `yaml:"active_value,omitempty"`
 	InactiveValue  float64 `yaml:"inactive_value,omitempty"`
+	BattleAttack   float64 `yaml:"battle_attack,omitempty"`
+	BattleShield   float64 `yaml:"battle_shield,omitempty"`
+	BattleShell    float64 `yaml:"battle_shell,omitempty"`
 }
 
 // LoadCatalog читает все YAML-справочники из dir. Если файла нет —

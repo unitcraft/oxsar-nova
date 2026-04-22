@@ -69,7 +69,7 @@ func run() error {
 	db := repo.New(pool)
 	w := event.NewWorker(db, log)
 	artefactSvc := artefact.NewService(db, cat)
-	transportSvc := fleet.NewTransportService(db, cat, cfg.Game.Speed)
+	transportSvc := fleet.NewTransportService(db, cat, cfg.Game.Speed, artefactSvc)
 
 	// repair.Service нужен только ради DisassembleHandler; сами
 	// enqueue-операции идут через server. Конструктор требует полный

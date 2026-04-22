@@ -81,3 +81,30 @@ artefacts:
       value: 1.0
     stackable: true
     lifetime_seconds: 604800
+
+  war_machine:
+    id: 310
+    name: "War Machine"
+    effect:
+      type: battle_bonus
+      battle_attack: 1.1
+    stackable: true
+    lifetime_seconds: 604800
+
+  energy_shield:
+    id: 311
+    name: "Energy Shield"
+    effect:
+      type: battle_bonus
+      battle_shield: 1.1
+    stackable: true
+    lifetime_seconds: 604800
+
+  titanium_hull:
+    id: 312
+    name: "Titanium Hull"
+    effect:
+      type: battle_bonus
+      battle_shell: 1.1
+    stackable: true
+    lifetime_seconds: 604800
