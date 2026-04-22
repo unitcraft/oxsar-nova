@@ -83,15 +83,17 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var username, role string
+	var credit float64
 	if err := h.db.QueryRow(context.Background(),
-		`SELECT username, COALESCE(role::text, '') FROM users WHERE id=$1`, uid).Scan(&username, &role); err != nil {
+		`SELECT username, COALESCE(role::text, ''), credit FROM users WHERE id=$1`, uid).Scan(&username, &role, &credit); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]string{
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
 		"user_id":  uid,
 		"username": username,
 		"role":     role,
+		"credit":   credit,
 	})
 }
 
