@@ -196,6 +196,8 @@ func run() error {
 		pr.Patch("/planets/{id}", planetH.Rename)
 		pr.Post("/planets/{id}/set-home", planetH.SetHome)
 		pr.Delete("/planets/{id}", planetH.Abandon)
+		pr.Get("/planets/{id}/resource-report", planetH.ResourceReport)
+		pr.Post("/planets/{id}/resource-update", planetH.ResourceUpdate)
 
 		pr.Get("/planets/{id}/buildings", buildingH.Levels)
 		pr.Post("/planets/{id}/buildings", buildingH.Enqueue)

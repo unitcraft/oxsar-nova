@@ -215,6 +215,63 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/planets/{id}/resource-report:
+    get:
+      tags: [planets]
+      security: [{ bearerAuth: [] }]
+      summary: Get resource production report for a planet
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: resource report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResourceReport" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/planets/{id}/resource-update:
+    post:
+      tags: [planets]
+      security: [{ bearerAuth: [] }]
+      summary: Update building production factors
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [factors]
+              properties:
+                factors:
+                  type: object
+                  additionalProperties:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+                  description: Map of unit_id to production factor (0-100%)
+      responses:
+        "200":
+          description: updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/planets/{id}/buildings:
     post:
       tags: [buildings]
@@ -1738,6 +1795,46 @@ components:
         banned_at:    { type: string, format: date-time, nullable: true }
         created_at:   { type: string, format: date-time }
         last_seen_at: { type: string, format: date-time }
+
+    ResourceBuilding:
+      type: object
+      properties:
+        unit_id:     { type: integer }
+        name:        { type: string }
+        level:       { type: integer }
+        prod_metal:  { type: number }
+        prod_silicon: { type: number }
+        prod_hydrogen: { type: number }
+        cons_energy: { type: number }
+        factor:      { type: integer, minimum: 0, maximum: 100 }
+        allow_factor: { type: boolean }
+
+    ResourceReport:
+      type: object
+      properties:
+        planet_id:     { type: string, format: uuid }
+        planet_name:   { type: string }
+        buildings:
+          type: array
+          items: { $ref: "#/components/schemas/ResourceBuilding" }
+        basic_metal:   { type: number }
+        basic_silicon: { type: number }
+        basic_hydrogen: { type: number }
+        storage_metal:  { type: number }
+        storage_silicon: { type: number }
+        storage_hydrogen: { type: number }
+        metal_total:   { type: number }
+        silicon_total: { type: number }
+        hydrogen_total: { type: number }
+        metal_per_hour: { type: number }
+        silicon_per_hour: { type: number }
+        hydrogen_per_hour: { type: number }
+        metal_per_day:  { type: number }
+        silicon_per_day: { type: number }
+        hydrogen_per_day: { type: number }
+        metal_per_week: { type: number }
+        silicon_per_week: { type: number }
+        hydrogen_per_week: { type: number }
 
     ArtMarketOffer:
       type: object

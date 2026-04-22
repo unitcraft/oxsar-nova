@@ -124,3 +124,44 @@ var (
 	ErrOnlyPlanet          = errors.New("planet: cannot abandon only planet")
 	ErrCannotAbandonHome   = errors.New("planet: cannot abandon home planet")
 )
+
+// Building — структура здания на планете.
+type Building struct {
+	UnitID int
+	Level  int
+	Factor int // производство 0-100%
+}
+
+// GetBuildings возвращает список всех зданий на планете.
+func (r *Repository) GetBuildings(ctx context.Context, planetID string) ([]Building, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT unit_id, level, production_factor
+		FROM buildings
+		WHERE planet_id = $1
+		ORDER BY unit_id
+	`, planetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var buildings []Building
+	for rows.Next() {
+		var b Building
+		if err := rows.Scan(&b.UnitID, &b.Level, &b.Factor); err != nil {
+			return nil, err
+		}
+		buildings = append(buildings, b)
+	}
+	return buildings, rows.Err()
+}
+
+// UpdateBuildingFactor обновляет фактор производства здания.
+func (r *Repository) UpdateBuildingFactor(ctx context.Context, planetID string, unitID int, factor int) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE buildings
+		SET production_factor = $1
+		WHERE planet_id = $2 AND unit_id = $3
+	`, factor, planetID, unitID)
+	return err
+}

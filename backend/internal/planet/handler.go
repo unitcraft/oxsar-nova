@@ -137,3 +137,57 @@ func (h *Handler) Abandon(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]string{"status": "abandoned"})
 }
+
+// ResourceReport GET /api/planets/{id}/resource-report — отчёт о производстве ресурсов.
+func (h *Handler) ResourceReport(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	id := chi.URLParam(r, "id")
+
+	report, err := h.svc.ResourceReport(r.Context(), uid, id)
+	if err != nil {
+		if err == ErrNotFound {
+			httpx.WriteError(w, r, httpx.ErrNotFound)
+			return
+		}
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, report)
+}
+
+// ResourceUpdate POST /api/planets/{id}/resource-update — обновить факторы производства.
+func (h *Handler) ResourceUpdate(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	id := chi.URLParam(r, "id")
+
+	var body struct {
+		Factors map[string]int `json:"factors"` // unit_id: factor %
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+		return
+	}
+
+	err := h.svc.UpdateResourceFactors(r.Context(), uid, id, body.Factors)
+	if err != nil {
+		if err == ErrNotFound {
+			httpx.WriteError(w, r, httpx.ErrNotFound)
+			return
+		}
+		if errors.Is(err, ErrInvalidInput) {
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+			return
+		}
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
+}
