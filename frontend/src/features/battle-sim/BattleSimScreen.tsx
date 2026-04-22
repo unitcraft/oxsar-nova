@@ -62,9 +62,7 @@ export function BattleSimScreen() {
 
   const sim = useMutation({
     mutationFn: (body: unknown) =>
-      numSim >= 2
-        ? api.post<SimStats>('/api/battle-sim', body)
-        : api.post<SimReport>('/api/battle-sim', body),
+      api.post<SimStats | SimReport>('/api/battle-sim', body),
   });
 
   function runSim() {
@@ -93,7 +91,7 @@ export function BattleSimScreen() {
     <section>
       <h2>{t('global', 'MENU_SIMULATOR')}</h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 24, marginBottom: 16, flexWrap: 'wrap' }}>
         <UnitPicker
           title={tf('Main', 'BATTLE_SIM_ATTACKERS', 'Атакующий флот')}
           units={COMBAT_SHIPS}
@@ -263,43 +261,24 @@ function UnitPicker({
   value: UnitMap;
   onChange: (v: UnitMap) => void;
 }) {
-  const { tf } = useTranslation();
   return (
-    <div>
-      <h3>{title}</h3>
-      <table className="ox-table">
-        <thead>
-          <tr>
-            <th>{tf('Main', 'UNIT_ID', 'Юнит')}</th>
-            <th>{tf('Main', 'ATK', 'Атк')}</th>
-            <th>{tf('Main', 'SHLD', 'Щит')}</th>
-            <th>{tf('Main', 'HP', 'Корп')}</th>
-            <th>{tf('Main', 'COUNT', 'Кол-во')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {units.map((u) => (
-            <tr key={u.id}>
-              <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <img src={imageOf(u.key)} alt="" width={32} height={32} style={{ imageRendering: 'pixelated' }} />
-                {nameOf(u.id)}
-              </td>
-              <td className="num">{u.attack}</td>
-              <td className="num">{u.shield}</td>
-              <td className="num">{u.shell}</td>
-              <td>
-                <input
-                  type="number"
-                  min={0}
-                  value={value[u.id] ?? 0}
-                  onChange={(e) => onChange({ ...value, [u.id]: Math.max(0, Number(e.target.value)) })}
-                  style={{ width: 80 }}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div style={{ minWidth: 260 }}>
+      <h3 style={{ marginTop: 0 }}>{title}</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {units.map((u) => (
+          <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <img src={imageOf(u.key)} alt="" width={32} height={32} style={{ imageRendering: 'pixelated', flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 13 }}>{nameOf(u.id)}</span>
+            <input
+              type="number"
+              min={0}
+              value={value[u.id] ?? 0}
+              onChange={(e) => onChange({ ...value, [u.id]: Math.max(0, Number(e.target.value)) })}
+              style={{ width: 70, flexShrink: 0 }}
+            />
+          </label>
+        ))}
+      </div>
     </div>
   );
 }

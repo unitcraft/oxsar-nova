@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 
+
 interface ChatMessage {
   id: string;
   channel: string;
@@ -22,6 +23,11 @@ export function ChatScreen() {
   const wsRef = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const token = useAuthStore((s) => s.accessToken);
+  const me = useQuery({
+    queryKey: ['me'],
+    queryFn: () => api.get<{ user_id: string; username: string }>('/api/me'),
+    staleTime: 60000,
+  });
 
   const { data: history } = useQuery<ChatMessage[]>({
     queryKey: ['chat-history', kind],
@@ -50,7 +56,18 @@ export function ChatScreen() {
       ws.onmessage = (ev: MessageEvent) => {
         try {
           const msg = JSON.parse(ev.data as string) as ChatMessage;
-          setMessages((prev) => [...prev, msg]);
+          setMessages((prev) => {
+            // заменяем первое tmp-сообщение с тем же телом от того же автора
+            const tmpIdx = prev.findIndex(
+              (m) => m.id.startsWith('tmp-') && m.author_id === msg.author_id && m.body === msg.body,
+            );
+            if (tmpIdx !== -1) {
+              const next = [...prev];
+              next[tmpIdx] = msg;
+              return next;
+            }
+            return [...prev, msg];
+          });
         } catch {
           // ignore malformed frames
         }
@@ -87,10 +104,19 @@ export function ChatScreen() {
   function send() {
     const body = input.trim();
     if (!body) return;
+    // Optimistic: добавляем сообщение сразу, сервер вернёт настоящее через WS
+    const optimistic: ChatMessage = {
+      id: `tmp-${Date.now()}`,
+      channel: kind,
+      author_id: me.data?.user_id ?? '',
+      author_name: me.data?.username ?? '…',
+      body,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ body }));
     } else {
-      // fallback REST
       api.post(`/api/chat/${kind}/send`, { body }).catch(() => null);
     }
     setInput('');
