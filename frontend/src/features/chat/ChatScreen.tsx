@@ -145,16 +145,43 @@ export function ChatScreen() {
 
       {wsError && <div style={{ color: 'orange', marginBottom: 4 }}>{wsError}</div>}
 
-      <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #333', padding: 8, marginBottom: 8 }}>
-        {messages.map((m) => (
-          <div key={m.id} style={{ marginBottom: 4 }}>
-            <span style={{ color: '#aaa', fontSize: 11 }}>
-              {new Date(m.created_at).toLocaleTimeString()}
-            </span>{' '}
-            <strong>{m.author_name || '???'}</strong>:{' '}
-            {m.body}
-          </div>
-        ))}
+      <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #333', padding: '8px 12px', marginBottom: 8 }}>
+        {messages.map((m) => {
+          const isOwn = m.author_id === me.data?.user_id;
+          return (
+            <div
+              key={m.id}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: isOwn ? 'flex-end' : 'flex-start',
+                marginBottom: 8,
+              }}
+            >
+              {!isOwn && (
+                <span style={{ fontSize: 11, color: 'var(--ox-accent)', marginBottom: 2 }}>
+                  {m.author_name || '???'}
+                </span>
+              )}
+              <div
+                style={{
+                  maxWidth: '70%',
+                  padding: '6px 10px',
+                  borderRadius: isOwn ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                  background: isOwn ? 'rgba(79,195,247,0.2)' : 'rgba(255,255,255,0.07)',
+                  border: `1px solid ${isOwn ? 'rgba(79,195,247,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                  wordBreak: 'break-word',
+                  lineHeight: 1.4,
+                }}
+              >
+                {m.body}
+              </div>
+              <span style={{ fontSize: 10, color: '#666', marginTop: 2 }}>
+                {new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          );
+        })}
         <div ref={bottomRef} />
       </div>
 
