@@ -37,6 +37,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const err = new Error(message) as ApiError;
     err.status = res.status;
     err.code = code;
+    if (res.status === 401) {
+      useAuthStore.getState().logout();
+    }
     throw err;
   }
   if (res.status === 204) return undefined as unknown as T;

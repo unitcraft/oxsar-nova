@@ -2,13 +2,22 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { nameOf } from '@/api/catalog';
-import { useTranslation } from '@/i18n/i18n';
 import type { Artefact } from '@/api/types';
+import { useToast } from '@/ui/Toast';
+import { Countdown } from '@/ui/Countdown';
+
+const STATE_LABEL: Record<string, string> = {
+  held: '📦 В инвентаре',
+  active: '✅ Активен',
+  delayed: '⏳ Активируется',
+  listed: '🏷 На продаже',
+  expired: '💀 Истёк',
+  consumed: '⚡ Использован',
+};
 
 export function ArtefactsScreen() {
-  const { t, tf } = useTranslation();
   const qc = useQueryClient();
-  // ID артефакта, для которого открыта inline-форма продажи.
+  const toast = useToast();
   const [sellingID, setSellingID] = useState<string | null>(null);
   const [priceInput, setPriceInput] = useState('100');
 
@@ -20,17 +29,21 @@ export function ArtefactsScreen() {
 
   const activate = useMutation({
     mutationFn: (id: string) => api.post<Artefact>(`/api/artefacts/${id}/activate`),
-    onSuccess: () => {
+    onSuccess: (a) => {
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
+      toast.show('success', 'Артефакт', `${nameOf(a.unit_id)} активирован`);
     },
+    onError: (err) => { toast.show('danger', 'Ошибка активации', err instanceof Error ? err.message : ''); },
   });
   const deactivate = useMutation({
     mutationFn: (id: string) => api.post<void>(`/api/artefacts/${id}/deactivate`),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
+      toast.show('info', 'Артефакт деактивирован');
     },
+    onError: (err) => { toast.show('danger', 'Ошибка', err instanceof Error ? err.message : ''); },
   });
   const sell = useMutation({
     mutationFn: (p: { id: string; price: number }) =>
@@ -39,148 +52,141 @@ export function ArtefactsScreen() {
       setSellingID(null);
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
       void qc.invalidateQueries({ queryKey: ['artefact-market'] });
+      toast.show('success', 'Артефакт выставлен на продажу');
     },
+    onError: (err) => { toast.show('danger', 'Ошибка продажи', err instanceof Error ? err.message : ''); },
   });
 
-  if (list.isLoading) return <p>{tf('Main', 'ARTEFACTS_LOADING', 'Загрузка артефактов…')}</p>;
-  if (list.error)
-    return (
-      <p className="ox-error">
-        {t('global', 'ERROR')}: {list.error instanceof Error ? list.error.message : ''}
-      </p>
-    );
-
   const items = list.data?.artefacts ?? [];
-  if (items.length === 0) {
-    return (
-      <section>
-        <h2>{t('global', 'MENU_ARTEFACTS')}</h2>
-        <p>
-          {tf(
-            'Main',
-            'ARTEFACTS_EMPTY',
-            'Инвентарь пуст. Артефакты появляются как награда за бой/экспедицию, покупаются в Artefact Market за credit (M5.1) или выдаются админом.',
-          )}
-        </p>
-      </section>
-    );
-  }
+  const active = items.filter((a) => a.state === 'active');
+  const held = items.filter((a) => a.state === 'held' || a.state === 'delayed');
+  const other = items.filter((a) => !['active', 'held', 'delayed'].includes(a.state));
 
-  const actionLabel = (a: Artefact): string =>
-    a.state === 'active'
-      ? tf('Main', 'ARTEFACT_DEACTIVATE', 'Деактивировать')
-      : a.state === 'held'
-        ? tf('Main', 'ARTEFACT_ACTIVATE', 'Активировать')
-        : a.state === 'delayed'
-          ? tf('Main', 'ARTEFACT_DELAYED', 'Активируется…')
-          : '—';
-
-  function openSellForm(id: string) {
-    setSellingID(id);
-    setPriceInput('100');
-  }
-
+  function openSellForm(id: string) { setSellingID(id); setPriceInput('100'); }
   function confirmSell() {
     if (!sellingID) return;
     const price = Number(priceInput);
     if (price > 0) sell.mutate({ id: sellingID, price });
   }
 
+  if (list.isLoading) {
+    return <div style={{ padding: 24 }}><div className="ox-skeleton" style={{ height: 80 }} /></div>;
+  }
+
   return (
-    <section>
-      <h2>{t('global', 'MENU_ARTEFACTS')}</h2>
-      <table className="ox-table">
-        <thead>
-          <tr>
-            <th>{tf('Main', 'ARTEFACT', 'Артефакт')}</th>
-            <th>{tf('Main', 'STATE', 'Состояние')}</th>
-            <th>{tf('Main', 'EXPIRES_AT', 'Истекает')}</th>
-            <th>{tf('Main', 'ACTION', 'Действие')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((a) => (
-            <tr key={a.id}>
-              <td>{nameOf(a.unit_id)}</td>
-              <td>{a.state}</td>
-              <td>{a.expire_at ? new Date(a.expire_at).toLocaleString('ru-RU') : '—'}</td>
-              <td>
-                {a.state === 'held' && sellingID !== a.id && (
-                  <>
-                    <button
-                      type="button"
-                      disabled={activate.isPending}
-                      onClick={() => activate.mutate(a.id)}
-                    >
-                      {actionLabel(a)}
-                    </button>{' '}
-                    <button
-                      type="button"
-                      disabled={sell.isPending}
-                      onClick={() => openSellForm(a.id)}
-                    >
-                      {tf('Main', 'ART_SELL', 'Продать')}
-                    </button>
-                  </>
-                )}
-                {a.state === 'held' && sellingID === a.id && (
-                  <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-                    <input
-                      type="number"
-                      min={1}
-                      value={priceInput}
-                      onChange={(e) => setPriceInput(e.target.value)}
-                      style={{ width: 80 }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') confirmSell(); if (e.key === 'Escape') setSellingID(null); }}
-                      autoFocus
-                    />
-                    <button type="button" disabled={sell.isPending || Number(priceInput) <= 0} onClick={confirmSell}>
-                      {tf('Main', 'OK', 'OK')}
-                    </button>
-                    <button type="button" onClick={() => setSellingID(null)}>
-                      {tf('Main', 'CANCEL', 'Отмена')}
-                    </button>
-                  </span>
-                )}
-                {a.state === 'active' && (
-                  <button
-                    type="button"
-                    disabled={deactivate.isPending}
-                    onClick={() => deactivate.mutate(a.id)}
-                  >
-                    {actionLabel(a)}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
+        ✨ Артефакты
+      </h2>
+
+      {items.length === 0 && (
+        <div className="ox-panel" style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-dim)' }}>
+          Инвентарь пуст. Артефакты появляются как награда за бой/экспедицию или покупаются в Рынке артефактов.
+        </div>
+      )}
+
+      {active.length > 0 && (
+        <ArtefactGroup title="Активные" items={active} sellingID={sellingID} priceInput={priceInput}
+          setPriceInput={setPriceInput} openSellForm={openSellForm} confirmSell={confirmSell}
+          onActivate={(id) => activate.mutate(id)} onDeactivate={(id) => deactivate.mutate(id)}
+          pending={activate.isPending || deactivate.isPending || sell.isPending}
+        />
+      )}
+      {held.length > 0 && (
+        <ArtefactGroup title="В инвентаре" items={held} sellingID={sellingID} priceInput={priceInput}
+          setPriceInput={setPriceInput} openSellForm={openSellForm} confirmSell={confirmSell}
+          onActivate={(id) => activate.mutate(id)} onDeactivate={(id) => deactivate.mutate(id)}
+          pending={activate.isPending || deactivate.isPending || sell.isPending}
+        />
+      )}
+      {other.length > 0 && (
+        <ArtefactGroup title="Прочие" items={other} sellingID={sellingID} priceInput={priceInput}
+          setPriceInput={setPriceInput} openSellForm={openSellForm} confirmSell={confirmSell}
+          onActivate={(id) => activate.mutate(id)} onDeactivate={(id) => deactivate.mutate(id)}
+          pending={activate.isPending || deactivate.isPending || sell.isPending}
+        />
+      )}
+    </div>
+  );
+}
+
+function ArtefactGroup({
+  title, items, sellingID, priceInput, setPriceInput,
+  openSellForm, confirmSell, onActivate, onDeactivate, pending,
+}: {
+  title: string;
+  items: Artefact[];
+  sellingID: string | null;
+  priceInput: string;
+  setPriceInput: (v: string) => void;
+  openSellForm: (id: string) => void;
+  confirmSell: () => void;
+  onActivate: (id: string) => void;
+  onDeactivate: (id: string) => void;
+  pending: boolean;
+}) {
+  return (
+    <div>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 8 }}>
+        {title}
+      </div>
+      <div className="ox-cards-grid">
+        {items.map((a) => (
+          <div
+            key={a.id}
+            className="ox-unit-card"
+            style={a.state === 'active' ? { borderColor: 'var(--ox-success)', boxShadow: '0 0 0 1px var(--ox-success)' } : undefined}
+          >
+            <div className="ox-unit-card-img" style={{ fontSize: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              ✨
+            </div>
+            <div className="ox-unit-card-body">
+              <div className="ox-unit-card-name">{nameOf(a.unit_id)}</div>
+              <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 4 }}>
+                {STATE_LABEL[a.state] ?? a.state}
+              </div>
+              {a.expire_at && a.state === 'active' && (
+                <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>
+                  Истекает: <Countdown finishAt={a.expire_at} />
+                </div>
+              )}
+            </div>
+            <div className="ox-unit-card-footer" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {a.state === 'held' && sellingID !== a.id && (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button type="button" className="btn btn-sm" style={{ flex: 1 }} disabled={pending} onClick={() => onActivate(a.id)}>
+                    Активировать
                   </button>
-                )}
-                {a.state === 'listed' && (
-                  <span>{tf('Main', 'ART_LISTED', 'На продаже')}</span>
-                )}
-                {a.state !== 'held' && a.state !== 'active' && a.state !== 'listed' && <span>—</span>}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {activate.isError && (
-        <div className="ox-error">
-          {activate.error instanceof Error
-            ? activate.error.message
-            : tf('Main', 'ARTEFACT_ACTIVATE_ERROR', 'ошибка активации')}
-        </div>
-      )}
-      {deactivate.isError && (
-        <div className="ox-error">
-          {deactivate.error instanceof Error
-            ? deactivate.error.message
-            : tf('Main', 'ARTEFACT_DEACTIVATE_ERROR', 'ошибка деактивации')}
-        </div>
-      )}
-      {sell.isError && (
-        <div className="ox-error">
-          {sell.error instanceof Error
-            ? sell.error.message
-            : tf('Main', 'ART_SELL_ERROR', 'ошибка выставления на продажу')}
-        </div>
-      )}
-    </section>
+                  <button type="button" className="btn-ghost btn-sm" disabled={pending} onClick={() => openSellForm(a.id)}>
+                    Продать
+                  </button>
+                </div>
+              )}
+              {a.state === 'held' && sellingID === a.id && (
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <input
+                    type="number" min={1} value={priceInput}
+                    onChange={(e) => setPriceInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') confirmSell(); if (e.key === 'Escape') openSellForm(''); }}
+                    style={{ width: 70, flexShrink: 0 }}
+                    autoFocus
+                  />
+                  <button type="button" className="btn btn-sm" disabled={pending || Number(priceInput) <= 0} onClick={confirmSell}>OK</button>
+                  <button type="button" className="btn-ghost btn-sm" onClick={() => openSellForm('')}>✕</button>
+                </div>
+              )}
+              {a.state === 'active' && (
+                <button type="button" className="btn-ghost btn-sm" style={{ width: '100%' }} disabled={pending} onClick={() => onDeactivate(a.id)}>
+                  Деактивировать
+                </button>
+              )}
+              {a.state === 'expired' && (
+                <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)', textAlign: 'center' }}>💀 Истёк</div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

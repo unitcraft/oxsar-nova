@@ -27,6 +27,7 @@ type CellView struct {
 	MoonName      *string `json:"moon_name,omitempty"`
 	OwnerUsername *string `json:"owner_username,omitempty"`
 	OwnerID       *string `json:"owner_id,omitempty"`
+	OwnerRank     *int    `json:"owner_rank,omitempty"`
 	DebrisMetal   int64   `json:"debris_metal"`
 	DebrisSilicon int64   `json:"debris_silicon"`
 }
@@ -52,17 +53,21 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 
 	// Собираем планеты и луны на позициях.
 	type planetRow struct {
-		Position   int
-		IsMoon     bool
-		Name       string
-		OwnerID    *string
-		OwnerName  *string
+		Position  int
+		IsMoon    bool
+		Name      string
+		OwnerID   *string
+		OwnerName *string
+		OwnerRank *int
 	}
 	planetRows := map[int]planetRow{} // планеты (is_moon=false)
 	moonRows := map[int]planetRow{}   // луны на тех же координатах
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT p.position, p.is_moon, p.name, p.user_id, u.username
+		SELECT p.position, p.is_moon, p.name, p.user_id, u.username,
+		       CASE WHEN u.id IS NULL THEN NULL
+		            ELSE (SELECT COUNT(*)+1 FROM users u2 WHERE u2.points > u.points AND u2.umode=false)::int
+		       END AS rank
 		FROM planets p
 		LEFT JOIN users u ON u.id = p.user_id
 		WHERE p.galaxy = $1 AND p.system = $2 AND p.destroyed_at IS NULL
@@ -72,7 +77,7 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 	}
 	for rows.Next() {
 		var pr planetRow
-		if err := rows.Scan(&pr.Position, &pr.IsMoon, &pr.Name, &pr.OwnerID, &pr.OwnerName); err != nil {
+		if err := rows.Scan(&pr.Position, &pr.IsMoon, &pr.Name, &pr.OwnerID, &pr.OwnerName, &pr.OwnerRank); err != nil {
 			rows.Close()
 			return out, fmt.Errorf("scan planet: %w", err)
 		}
@@ -121,6 +126,7 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 			cell.HasPlanet = true
 			cell.OwnerID = p.OwnerID
 			cell.OwnerUsername = p.OwnerName
+			cell.OwnerRank = p.OwnerRank
 		}
 		if m, ok := moonRows[pos]; ok {
 			name := m.Name

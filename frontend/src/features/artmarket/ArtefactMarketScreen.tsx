@@ -2,11 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { nameOf } from '@/api/catalog';
-import { useTranslation } from '@/i18n/i18n';
-
-// ArtefactMarketScreen — маркетплейс артефактов за credit.
-// Продажа — через ArtefactsScreen (кнопка «Продать» на held-артефакте).
-// Здесь — покупка и отмена своих офферов.
+import { useToast } from '@/ui/Toast';
 
 interface Offer {
   id: string;
@@ -19,8 +15,8 @@ interface Offer {
 }
 
 export function ArtefactMarketScreen() {
-  const { t, tf } = useTranslation();
   const qc = useQueryClient();
+  const toast = useToast();
   const [filter, setFilter] = useState<'all' | 'mine'>('all');
 
   const me = useQuery({
@@ -40,105 +36,103 @@ export function ArtefactMarketScreen() {
   });
 
   const buy = useMutation({
-    mutationFn: (offerID: string) =>
-      api.post<void>(`/api/artefact-market/offers/${offerID}/buy`),
+    mutationFn: (offerID: string) => api.post<void>(`/api/artefact-market/offers/${offerID}/buy`),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['artefact-market'] });
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
+      toast.show('success', 'Куплено', 'Артефакт добавлен в инвентарь');
     },
+    onError: (err) => { toast.show('danger', 'Ошибка покупки', err instanceof Error ? err.message : ''); },
   });
   const cancel = useMutation({
-    mutationFn: (offerID: string) =>
-      api.delete<void>(`/api/artefact-market/offers/${offerID}`),
+    mutationFn: (offerID: string) => api.delete<void>(`/api/artefact-market/offers/${offerID}`),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['artefact-market'] });
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
+      toast.show('info', 'Оффер отменён');
     },
   });
 
   const all = offers.data?.offers ?? [];
   const myUserID = me.data?.user_id;
+  const creditVal = credit.data?.credit ?? 0;
   const shown = filter === 'all' ? all : all.filter((o) => o.seller_user_id === myUserID);
 
   return (
-    <section>
-      <h2>{tf('global', 'MENU_ART_MARKET', 'Рынок артефактов')}</h2>
-      <p>
-        <b>{tf('Main', 'CREDIT', 'Credit')}:</b> {credit.data?.credit ?? 0}
-      </p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
+          🏷 Рынок артефактов
+        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>Баланс:</span>
+          <span style={{ fontFamily: 'var(--ox-mono)', fontWeight: 700, color: 'var(--ox-accent)', fontSize: 15 }}>
+            {creditVal} cr
+          </span>
+        </div>
+      </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <label>
-          <input
-            type="radio"
-            checked={filter === 'all'}
-            onChange={() => setFilter('all')}
-          />{' '}
-          {tf('Main', 'ART_ALL_OFFERS', 'Все офферы')}
-        </label>{' '}
-        <label style={{ marginLeft: 12 }}>
-          <input
-            type="radio"
-            checked={filter === 'mine'}
-            onChange={() => setFilter('mine')}
-          />{' '}
-          {tf('Main', 'ART_MY_OFFERS', 'Мои')}
-        </label>
+      <div className="ox-tabs">
+        <button type="button" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
+          📋 Все офферы ({all.length})
+        </button>
+        <button type="button" aria-pressed={filter === 'mine'} onClick={() => setFilter('mine')}>
+          👤 Мои ({all.filter((o) => o.seller_user_id === myUserID).length})
+        </button>
       </div>
 
       {shown.length === 0 ? (
-        <p>{tf('Main', 'ART_NO_OFFERS', 'Нет офферов.')}</p>
+        <div style={{ color: 'var(--ox-fg-dim)', fontSize: 14, padding: '8px 0' }}>
+          Нет офферов.
+        </div>
       ) : (
-        <table className="ox-table">
-          <thead>
-            <tr>
-              <th>{tf('Main', 'ARTEFACT', 'Артефакт')}</th>
-              <th>{tf('Main', 'SELLER', 'Продавец')}</th>
-              <th>{tf('Main', 'PRICE', 'Цена')}</th>
-              <th>{tf('Main', 'ACTION', 'Действие')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((o) => (
-              <tr key={o.id}>
-                <td>{nameOf(o.unit_id)}</td>
-                <td>{o.seller_name ?? '—'}</td>
-                <td className="num">{o.price_credit}</td>
-                <td>
-                  {o.seller_user_id === myUserID ? (
-                    <button
-                      type="button"
-                      disabled={cancel.isPending}
-                      onClick={() => cancel.mutate(o.id)}
-                    >
-                      {tf('Main', 'CANCEL', 'Отменить')}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={buy.isPending || (credit.data?.credit ?? 0) < o.price_credit}
-                      onClick={() => buy.mutate(o.id)}
-                    >
-                      {tf('Main', 'BUY', 'Купить')}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {buy.isError && (
-        <div className="ox-error">
-          {buy.error instanceof Error ? buy.error.message : t('global', 'ERROR')}
+        <div className="ox-panel" style={{ overflow: 'hidden' }}>
+          <div className="ox-table-responsive">
+            <table className="ox-table" style={{ margin: 0 }}>
+              <thead>
+                <tr>
+                  <th>Артефакт</th>
+                  <th>Продавец</th>
+                  <th>Цена</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map((o) => {
+                  const isMine = o.seller_user_id === myUserID;
+                  const canAfford = creditVal >= o.price_credit;
+                  return (
+                    <tr key={o.id}>
+                      <td data-label="Артефакт">{nameOf(o.unit_id)}</td>
+                      <td data-label="Продавец">{o.seller_name ?? '—'}</td>
+                      <td data-label="Цена" className="num" style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>
+                        {o.price_credit} cr
+                      </td>
+                      <td>
+                        {isMine ? (
+                          <button type="button" className="btn-ghost btn-sm" disabled={cancel.isPending} onClick={() => cancel.mutate(o.id)}>
+                            Отменить
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className={`btn btn-sm${!canAfford ? ' btn-ghost' : ' btn-success'}`}
+                            disabled={buy.isPending || !canAfford}
+                            title={!canAfford ? 'Недостаточно кредитов' : undefined}
+                            onClick={() => buy.mutate(o.id)}
+                          >
+                            {canAfford ? 'Купить' : 'Мало cr'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
-      {cancel.isError && (
-        <div className="ox-error">
-          {cancel.error instanceof Error ? cancel.error.message : t('global', 'ERROR')}
-        </div>
-      )}
-    </section>
+    </div>
   );
 }

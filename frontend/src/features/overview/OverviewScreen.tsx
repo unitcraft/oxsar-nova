@@ -141,42 +141,71 @@ export function OverviewScreen() {
       )}
 
       {/* Карусель планет */}
-      {list.length > 1 && (
-        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-          {list.map((p) => {
-            const active = p.id === selectedPlanet?.id;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                className="planet-card"
-                onClick={() => setSelectedPlanetId(p.id)}
-                style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  minWidth: 80, padding: '8px 6px', borderRadius: 8, cursor: 'pointer',
-                  border: `1px solid ${active ? 'var(--ox-accent)' : 'var(--ox-border)'}`,
-                  background: active ? 'rgba(99,217,255,0.08)' : 'var(--ox-bg-card)',
-                  flexShrink: 0, height: 110,
-                }}
-              >
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img
-                    src={p.is_moon ? '/images/planets/mond.jpg' : planetImageOf(p.position, p.id, p.planet_type)}
-                    alt=""
-                    style={{ width: planetImageSize(p.diameter), height: planetImageSize(p.diameter), borderRadius: 5, objectFit: 'cover' }}
-                  />
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'var(--ox-accent)' : 'var(--ox-fg)', textAlign: 'center', maxWidth: 76, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>
-                  {p.name}
-                </span>
-                <span style={{ fontSize: 10, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
-                  [{p.galaxy}:{p.system}:{p.position}]
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {list.length > 1 && (() => {
+        const nonMoons = list.filter((p) => !p.is_moon);
+        const moonsByCoord = new Map(
+          list.filter((p) => p.is_moon).map((m) => [`${m.galaxy}:${m.system}:${m.position}`, m])
+        );
+        return (
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+            {nonMoons.map((p) => {
+              const moon = moonsByCoord.get(`${p.galaxy}:${p.system}:${p.position}`);
+              const active = p.id === selectedPlanet?.id;
+              const moonActive = moon?.id === selectedPlanet?.id;
+              const pSize = planetImageSize(p.diameter);
+              const mSize = Math.max(16, Math.round(pSize * 0.38));
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="planet-card"
+                  onClick={() => setSelectedPlanetId(p.id)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    minWidth: 80, padding: '8px 6px', borderRadius: 8, cursor: 'pointer',
+                    border: `1px solid ${active || moonActive ? 'var(--ox-accent)' : 'var(--ox-border)'}`,
+                    background: active ? 'rgba(99,217,255,0.08)' : 'var(--ox-bg-card)',
+                    flexShrink: 0, height: 110, position: 'relative',
+                  }}
+                >
+                  {moon && (
+                    <button
+                      type="button"
+                      title={moon.name}
+                      onClick={(e) => { e.stopPropagation(); setSelectedPlanetId(moon.id); }}
+                      style={{
+                        position: 'absolute', top: 3, right: 3,
+                        padding: 0, lineHeight: 0, cursor: 'pointer',
+                        border: `1px solid ${moonActive ? 'var(--ox-accent)' : 'rgba(255,255,255,0.2)'}`,
+                        borderRadius: 3, background: 'rgba(0,0,0,0.4)',
+                      }}
+                    >
+                      <img
+                        src="/images/planets/mond.jpg"
+                        alt=""
+                        style={{ width: mSize, height: mSize, borderRadius: 2, objectFit: 'cover', display: 'block' }}
+                      />
+                    </button>
+                  )}
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img
+                      src={planetImageOf(p.position, p.id, p.planet_type)}
+                      alt=""
+                      style={{ width: pSize, height: pSize, borderRadius: 5, objectFit: 'cover' }}
+                    />
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'var(--ox-accent)' : 'var(--ox-fg)', textAlign: 'center', maxWidth: 76, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>
+                    {p.name}
+                  </span>
+                  <span style={{ fontSize: 10, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+                    [{p.galaxy}:{p.system}:{p.position}]
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Карточка выбранной планеты */}
       {selectedPlanet && <PlanetOverviewCard key={selectedPlanet.id} planet={selectedPlanet} />}

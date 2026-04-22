@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
+import { Confirm } from '@/ui/Confirm';
 
 interface ChatMessage {
   id: string;
@@ -26,6 +27,7 @@ export function ChatScreen() {
   const [showEmoji, setShowEmoji] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const scrollBoxRef = useRef<HTMLDivElement | null>(null);
   const prevLenRef = useRef(0);
@@ -169,7 +171,13 @@ export function ChatScreen() {
   }
 
   function deleteMsg(id: string) {
-    if (!window.confirm('Удалить сообщение?')) return;
+    setConfirmDeleteId(id);
+  }
+
+  function confirmDelete() {
+    if (!confirmDeleteId) return;
+    const id = confirmDeleteId;
+    setConfirmDeleteId(null);
     api.delete(`/api/chat/messages/${id}`)
       .then(() => setMessages((prev) => prev.filter((m) => m.id !== id)))
       .catch(() => null);
@@ -182,27 +190,28 @@ export function ChatScreen() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '70vh' }}>
-      <div style={{ marginBottom: 8, display: 'flex', gap: 8 }}>
-        <button
-          onClick={() => setKind('global')}
-          style={{ fontWeight: kind === 'global' ? 'bold' : 'normal' }}
-        >
-          Глобальный
+    <div style={{ display: 'flex', flexDirection: 'column', height: '72vh', minHeight: 400 }}>
+      {/* Channel tabs */}
+      <div className="ox-tabs" style={{ marginBottom: 8 }}>
+        <button type="button" aria-pressed={kind === 'global'} onClick={() => setKind('global')}>
+          🌐 Глобальный
         </button>
-        <button
-          onClick={() => setKind('alliance')}
-          style={{ fontWeight: kind === 'alliance' ? 'bold' : 'normal' }}
-        >
-          Альянс
+        <button type="button" aria-pressed={kind === 'alliance'} onClick={() => setKind('alliance')}>
+          ⚔️ Альянс
         </button>
       </div>
 
-      {wsError && <div style={{ color: 'orange', marginBottom: 4 }}>{wsError}</div>}
+      {wsError && (
+        <div style={{ fontSize: 12, color: 'var(--ox-warning)', marginBottom: 6, padding: '4px 8px', background: 'rgba(255,183,77,0.08)', borderRadius: 4 }}>
+          ⚡ {wsError}
+        </div>
+      )}
 
+      {/* Messages area */}
       <div
         ref={scrollBoxRef}
-        style={{ flex: 1, overflowY: 'auto', border: '1px solid #333', padding: '8px 12px', marginBottom: 8 }}
+        className="ox-panel"
+        style={{ flex: 1, overflowY: 'auto', padding: '10px 12px', marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 2 }}
       >
         {messages.map((m) => {
           const isOwn = m.author_id === myId;
@@ -212,77 +221,101 @@ export function ChatScreen() {
           return (
             <div
               key={m.id}
+              className="chat-msg-row"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: isOwn ? 'flex-end' : 'flex-start',
-                marginBottom: 8,
+                marginBottom: 4,
               }}
             >
               {!isOwn && (
-                <span style={{ fontSize: 11, color: 'var(--ox-accent)', marginBottom: 2 }}>
+                <span style={{ fontSize: 11, color: 'var(--ox-accent)', marginBottom: 2, paddingLeft: 4 }}>
                   {m.author_name || '???'}
                 </span>
               )}
-              <div
-                style={{
-                  maxWidth: '70%',
-                  padding: '6px 10px',
-                  borderRadius: isOwn ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                  background: isOwn ? 'rgba(79,195,247,0.2)' : 'rgba(255,255,255,0.07)',
-                  border: `1px solid ${isOwn ? 'rgba(79,195,247,0.4)' : 'rgba(255,255,255,0.1)'}`,
-                  wordBreak: 'break-word',
-                  lineHeight: 1.4,
-                }}
-              >
-                {isEditing ? (
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <input
-                      value={editBody}
-                      onChange={(e) => setEditBody(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') submitEdit(m.id); if (e.key === 'Escape') cancelEdit(); }}
-                      style={{ flex: 1, fontSize: 13, background: 'rgba(0,0,0,0.3)', border: '1px solid #4fc3f7', color: 'inherit', padding: '2px 6px' }}
-                      autoFocus
-                      maxLength={500}
-                    />
-                    <button type="button" onClick={() => submitEdit(m.id)} style={{ padding: '2px 6px', fontSize: 12 }}>✓</button>
-                    <button type="button" onClick={cancelEdit} style={{ padding: '2px 6px', fontSize: 12 }}>✕</button>
-                  </div>
-                ) : (
-                  m.body
-                )}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                <span style={{ fontSize: 10, color: '#666' }}>
-                  {new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                  {m.edited_at && <span style={{ marginLeft: 4, fontStyle: 'italic' }}>изм.</span>}
-                </span>
+
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, flexDirection: isOwn ? 'row-reverse' : 'row', maxWidth: '78%' }}>
+                {/* Action buttons — видны рядом с пузырём */}
                 {modifiable && !isEditing && (
-                  <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
                     <button
                       type="button"
                       onClick={() => startEdit(m)}
-                      style={{ fontSize: 10, padding: '1px 5px', opacity: 0.6 }}
                       title="Редактировать"
+                      style={{
+                        fontSize: 11, lineHeight: 1, padding: '3px 5px',
+                        background: 'rgba(99,217,255,0.12)', border: '1px solid rgba(99,217,255,0.25)',
+                        borderRadius: 4, cursor: 'pointer', color: 'var(--ox-accent)',
+                      }}
                     >✏️</button>
                     <button
                       type="button"
                       onClick={() => deleteMsg(m.id)}
-                      style={{ fontSize: 10, padding: '1px 5px', opacity: 0.6 }}
                       title="Удалить"
+                      style={{
+                        fontSize: 11, lineHeight: 1, padding: '3px 5px',
+                        background: 'rgba(244,67,54,0.12)', border: '1px solid rgba(244,67,54,0.25)',
+                        borderRadius: 4, cursor: 'pointer', color: 'var(--ox-danger)',
+                      }}
                     >🗑️</button>
-                  </>
+                  </div>
                 )}
+
+                {/* Bubble */}
+                <div
+                  style={{
+                    padding: '7px 11px',
+                    borderRadius: isOwn ? '14px 14px 3px 14px' : '14px 14px 14px 3px',
+                    background: isOwn ? 'rgba(99,217,255,0.18)' : 'rgba(255,255,255,0.06)',
+                    border: `1px solid ${isOwn ? 'rgba(99,217,255,0.35)' : 'rgba(255,255,255,0.1)'}`,
+                    wordBreak: 'break-word',
+                    lineHeight: 1.5,
+                    fontSize: 14,
+                  }}
+                >
+                  {isEditing ? (
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <input
+                        value={editBody}
+                        onChange={(e) => setEditBody(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') submitEdit(m.id); if (e.key === 'Escape') cancelEdit(); }}
+                        style={{ flex: 1, minWidth: 120, fontSize: 13, background: 'rgba(0,0,0,0.3)', border: '1px solid var(--ox-accent)', color: 'inherit', padding: '3px 7px', borderRadius: 4 }}
+                        autoFocus
+                        maxLength={500}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => submitEdit(m.id)}
+                        style={{ padding: '3px 8px', fontSize: 13, background: 'var(--ox-accent)', color: '#000', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 700 }}
+                      >✓</button>
+                      <button
+                        type="button"
+                        onClick={cancelEdit}
+                        style={{ padding: '3px 8px', fontSize: 13, background: 'rgba(255,255,255,0.1)', color: 'inherit', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                      >✕</button>
+                    </div>
+                  ) : (
+                    <span style={{ userSelect: 'text' }}>{m.body}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Timestamp + edited */}
+              <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginTop: 2, paddingLeft: isOwn ? 0 : 4, paddingRight: isOwn ? 4 : 0 }}>
+                {new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                {m.edited_at && <span style={{ marginLeft: 4, fontStyle: 'italic', color: 'var(--ox-fg-muted)' }}>изм.</span>}
               </div>
             </div>
           );
         })}
       </div>
 
+      {/* Emoji picker */}
       {showEmoji && (
         <div style={{
-          display: 'flex', flexWrap: 'wrap', gap: 4, padding: '6px 8px',
-          background: 'rgba(16,28,44,0.95)', border: '1px solid #1e3a5a',
+          display: 'flex', flexWrap: 'wrap', gap: 2, padding: '6px 8px',
+          background: 'var(--ox-bg-panel)', border: '1px solid var(--ox-border)',
           marginBottom: 6, borderRadius: 6,
         }}>
           {EMOJIS.map((e) => (
@@ -290,7 +323,7 @@ export function ChatScreen() {
               key={e}
               type="button"
               onClick={() => insertEmoji(e)}
-              style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}
+              style={{ fontSize: 18, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 4 }}
             >
               {e}
             </button>
@@ -298,25 +331,38 @@ export function ChatScreen() {
         </div>
       )}
 
+      {/* Delete confirm */}
+      {confirmDeleteId && (
+        <Confirm
+          title="Удалить сообщение?"
+          message="Сообщение будет удалено безвозвратно."
+          confirmLabel="Удалить"
+          danger
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
+
+      {/* Input bar */}
       <div style={{ display: 'flex', gap: 6 }}>
         <button
           type="button"
           onClick={() => setShowEmoji((v) => !v)}
-          style={{ fontSize: 18, padding: '4px 8px', flexShrink: 0 }}
+          style={{ fontSize: 18, padding: '0 8px', flexShrink: 0, background: showEmoji ? 'var(--ox-bg-active)' : undefined, borderRadius: 6 }}
           title="Смайлики"
-        >
-          😊
-        </button>
+        >😊</button>
         <input
           ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKey}
-          placeholder="Сообщение…"
+          placeholder="Сообщение… (Enter — отправить)"
           maxLength={500}
           style={{ flex: 1 }}
         />
-        <button type="button" onClick={send}>Отправить</button>
+        <button type="button" className="btn" onClick={send} disabled={!input.trim()}>
+          Отправить
+        </button>
       </div>
     </div>
   );

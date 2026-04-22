@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { useTranslation } from '@/i18n/i18n';
+import { Confirm } from '@/ui/Confirm';
 
 interface Alliance {
   id: string;
@@ -208,6 +209,7 @@ function MyAlliancePanel({
 }) {
   const { tf } = useTranslation();
   const qc = useQueryClient();
+  const [confirmDisband, setConfirmDisband] = useState(false);
 
   const setOpen = useMutation({
     mutationFn: ({ id, isOpen }: { id: string; isOpen: boolean }) =>
@@ -291,10 +293,19 @@ function MyAlliancePanel({
           </button>
         )}
         {isOwner && (
-          <button type="button"
-            onClick={() => { if (window.confirm(tf('Main', 'ALLY_DISBAND_CONFIRM', 'Распустить альянс? Это действие необратимо.'))) onDisband(); }}>
+          <button type="button" onClick={() => setConfirmDisband(true)}>
             {tf('Main', 'ALLY_DISBAND', 'Распустить')}
           </button>
+        )}
+        {confirmDisband && (
+          <Confirm
+            title={tf('Main', 'ALLY_DISBAND', 'Распустить альянс')}
+            message={tf('Main', 'ALLY_DISBAND_CONFIRM', 'Распустить альянс? Это действие необратимо.')}
+            confirmLabel={tf('Main', 'ALLY_DISBAND', 'Распустить')}
+            danger
+            onConfirm={() => { setConfirmDisband(false); onDisband(); }}
+            onCancel={() => setConfirmDisband(false)}
+          />
         )}
       </div>
       {leaveError && <p className="ox-error">{leaveError}</p>}
