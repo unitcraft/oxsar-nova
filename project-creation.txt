@@ -4305,7 +4305,7 @@ BuildingsScreen теперь использует buildingName() в очеред
 ================================================================================
 
 [UI-9] OverviewScreen: ресурсы на мини-карточках карусели планет.
-  - Под координатами каждой планеты в карусели: ⛏Nk 🔷Nk 💧Nk.
+  - Под координатами каждой планеты в карусели: 🟠Nk 💎Nk 💧Nk.
   - fmtRes() helper: Nk / N.NM / N.
   - Высота карточки стала auto (убран fixed height: 110).
 
@@ -4405,7 +4405,7 @@ BuildingsScreen теперь использует buildingName() в очеред
   - ShipyardScreen: 📦 N в боевых характеристиках карточки.
   - FleetScreen: totalCargo = сумма cargo × ships, показывается «📦 макс. N» у поля Груз.
   - TutorialScreen: STEP_RESOURCES[] (статика = бэкенд stepResources), показывает
-    💳 +10 cr ⛏+N 🔷+N 💧+N для каждого незавершённого шага.
+    💳 +10 cr 🟠+N 💎+N 💧+N для каждого незавершённого шага.
   - ArtefactMarketScreen: добавлена колонка «Дата» из listed_at.
   - GalaxyScreen: удалён устаревший TODO-комментарий.
 
@@ -4456,4 +4456,4 @@ BuildingsScreen теперь использует buildingName() в очеред
 
 [UI-24] Предварительный расчёт возврата при разборе (RepairScreen).
   - DisassembleList: refund = cost * draft * 0.7, показывается зелёным
-    +⛏N 🔷N 💧N при выборе количества > 0.
+    +🟠N 💎N 💧N при выборе количества > 0.

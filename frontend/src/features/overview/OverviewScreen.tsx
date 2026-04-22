@@ -238,8 +238,8 @@ export function OverviewScreen() {
                     [{p.galaxy}:{p.system}:{p.position}]
                   </span>
                   <div style={{ display: 'flex', gap: 3, marginTop: 3, fontSize: 9, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)' }}>
-                    <span title="Металл">⛏{fmtRes(p.metal)}</span>
-                    <span title="Кремний">🔷{fmtRes(p.silicon)}</span>
+                    <span title="Металл">🟠{fmtRes(p.metal)}</span>
+                    <span title="Кремний">💎{fmtRes(p.silicon)}</span>
                     <span title="Водород">💧{fmtRes(p.hydrogen)}</span>
                   </div>
                 </button>
@@ -337,7 +337,7 @@ function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
           })}
           {f.carry && (f.carry.metal > 0 || f.carry.silicon > 0 || f.carry.hydrogen > 0) && (
             <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginLeft: 4 }}>
-              [{f.carry.metal > 0 && `⛏${f.carry.metal.toLocaleString('ru-RU')}`}{f.carry.silicon > 0 && ` 🔷${f.carry.silicon.toLocaleString('ru-RU')}`}{f.carry.hydrogen > 0 && ` 💧${f.carry.hydrogen.toLocaleString('ru-RU')}`}]
+              [{f.carry.metal > 0 && `🟠${f.carry.metal.toLocaleString('ru-RU')}`}{f.carry.silicon > 0 && ` 💎${f.carry.silicon.toLocaleString('ru-RU')}`}{f.carry.hydrogen > 0 && ` 💧${f.carry.hydrogen.toLocaleString('ru-RU')}`}]
             </span>
           )}
         </div>
@@ -444,8 +444,8 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
         background: 'var(--ox-border)',
         borderBottom: hasActivity ? '1px solid var(--ox-border)' : undefined,
       }}>
-        <ResourceCell icon="⛏" label="Металл" value={planet.metal} ratePerSec={planet.metal_per_sec ?? 0} />
-        <ResourceCell icon="🔷" label="Кремний" value={planet.silicon} ratePerSec={planet.silicon_per_sec ?? 0} />
+        <ResourceCell icon="🟠" label="Металл" value={planet.metal} ratePerSec={planet.metal_per_sec ?? 0} />
+        <ResourceCell icon="💎" label="Кремний" value={planet.silicon} ratePerSec={planet.silicon_per_sec ?? 0} />
         <ResourceCell icon="💧" label="Водород" value={planet.hydrogen} ratePerSec={planet.hydrogen_per_sec ?? 0} />
       </div>
 
