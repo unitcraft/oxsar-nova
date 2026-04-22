@@ -37,13 +37,13 @@ type Tab =
   | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
   | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
   | 'art-market' | 'officers' | 'achievements' | 'score'
-  | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource';
+  | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource' | 'tutorial';
 
 const VALID_TABS = new Set<string>([
   'overview', 'buildings', 'research', 'shipyard', 'repair',
   'artefacts', 'galaxy', 'fleet', 'market', 'rockets',
   'art-market', 'officers', 'achievements', 'score',
-  'messages', 'alliance', 'chat', 'sim', 'admin', 'planet-options', 'resource',
+  'messages', 'alliance', 'chat', 'sim', 'admin', 'planet-options', 'resource', 'tutorial',
 ]);
 
 function tabFromHash(): Tab {
@@ -234,7 +234,7 @@ function AuthenticatedApp() {
             {tab === 'sim'        && <BattleSimScreen />}
             {tab === 'admin'      && isAdmin && <AdminScreen />}
             {tab === 'planet-options' && <PlanetOptionsScreen planet={planet} planets={list} homePlanetId={list[0]?.id ?? null} onBack={() => navigateTo('overview')} />}
-            {tab === 'resource'   && <ResourceScreen planetId={planet.id} onBack={() => navigateTo('overview')} />}
+            {tab === 'resource'   && <ResourceScreen planetId={planet.id} />}
           </Suspense>
         </main>
       </div>
