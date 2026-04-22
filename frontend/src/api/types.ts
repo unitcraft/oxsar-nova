@@ -157,4 +157,5 @@ export interface ResourceReport {
   metal_per_week: number;
   silicon_per_week: number;
   hydrogen_per_week: number;
+  total_energy: number;
 }

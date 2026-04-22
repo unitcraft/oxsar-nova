@@ -1,25 +1,31 @@
-import { useEffect, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { catalog } from '@/api/catalog';
+import { useEffect, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { catalog, BUILDINGS } from '@/api/catalog';
+
+const BUILDING_NAMES: Record<number, string> = Object.fromEntries(
+  BUILDINGS.map((b) => [b.id, b.name]),
+);
 import type { ResourceBuilding } from '@/api/types';
 import { useToast } from '@/ui/Toast';
-import { ResourceScreenSkeleton } from '@/ui/Skeleton';
-import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
+import { ScreenSkeleton } from '@/ui/Skeleton';
 
-interface FactorFormData {
-  [unitId: string]: number;
+function fmt(v: number): string {
+  const n = Math.round(v);
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}k`;
+  return n.toLocaleString('ru-RU');
 }
 
-export function ResourceScreen({
-  planetId,
-  onBack,
-}: {
-  planetId: string;
-  onBack?: () => void;
-}) {
-  const queryClient = useQueryClient();
+function numStyle(v: number): React.CSSProperties {
+  return { color: v > 0 ? 'var(--ox-success)' : v < 0 ? 'var(--ox-danger)' : 'var(--ox-fg-dim)' };
+}
+
+export function ResourceScreen({ planetId, onBack }: { planetId: string; onBack?: () => void }) {
+  const qc = useQueryClient();
   const toast = useToast();
-  const [factors, setFactors] = useState<FactorFormData>({});
+  const [factors, setFactors] = useState<Record<string, number>>({});
+  const factorsRef = useRef(factors);
+  factorsRef.current = factors;
 
   const { data: report, isLoading } = useQuery({
     queryKey: ['resource-report', planetId],
@@ -27,338 +33,282 @@ export function ResourceScreen({
   });
 
   useEffect(() => {
-    if (report?.buildings) {
-      const initialFactors: FactorFormData = {};
-      report.buildings.forEach((b) => {
-        initialFactors[b.unit_id.toString()] = b.factor;
-      });
-      setFactors(initialFactors);
-    }
+    if (!report) return;
+    const init: Record<string, number> = {};
+    report.buildings.forEach((b) => { init[b.unit_id] = b.factor; });
+    setFactors(init);
   }, [report]);
 
-  const updateMutation = useMutation({
-    mutationFn: () => {
-      const numericFactors: { [unitId: string]: number } = {};
-      Object.entries(factors).forEach(([unitId, factor]) => {
-        numericFactors[unitId] = Math.max(0, Math.min(100, factor));
-      });
-      return catalog.updateResourceFactors(planetId, {
-        factors: numericFactors,
-      });
-    },
-    onMutate: async () => {
-      // Отменить все pending запросы для этого ключа
-      await queryClient.cancelQueries({
-        queryKey: ['resource-report', planetId],
-      });
-
-      // Сохранить старые данные для rollback'а при ошибке
-      const previousReport = queryClient.getQueryData<any>([
-        'resource-report',
-        planetId,
-      ]);
-
-      // Оптимистично обновить локальный кэш
-      if (previousReport) {
-        const updatedReport = {
-          ...previousReport,
-          buildings: previousReport.buildings.map((b: any) => ({
-            ...b,
-            factor: factors[b.unit_id.toString()] ?? b.factor,
-          })),
-        };
-        queryClient.setQueryData(['resource-report', planetId], updatedReport);
-      }
-
-      return { previousReport };
-    },
-    onError: (_err, _variables, context) => {
-      // Откатить на старые данные при ошибке
-      if (context?.previousReport) {
-        queryClient.setQueryData(
-          ['resource-report', planetId],
-          context.previousReport
-        );
-      }
-      toast.show('danger', 'Ошибка сохранения');
-    },
+  const save = useMutation({
+    mutationFn: () =>
+      catalog.updateResourceFactors(planetId, {
+        factors: Object.fromEntries(
+          Object.entries(factorsRef.current).map(([k, v]) => [k, Math.max(0, Math.min(100, v))]),
+        ),
+      }),
     onSuccess: () => {
-      // Переопрос чтобы убедиться что данные синхронизированы
-      queryClient.invalidateQueries({
-        queryKey: ['resource-report', planetId],
-      });
-      toast.show('success', 'Факторы сохранены');
+      void qc.invalidateQueries({ queryKey: ['resource-report', planetId] });
+      toast.show('success', 'Сохранено', 'Настройки производства обновлены');
+    },
+    onError: (err) => {
+      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось сохранить');
     },
   });
 
-  const handleFactorChange = (unitId: string, value: number) => {
-    setFactors((prev) => ({
-      ...prev,
-      [unitId]: Math.max(0, Math.min(100, value)),
-    }));
+  const setAll = (value: number) => {
+    if (!report) return;
+    const next: Record<string, number> = {};
+    report.buildings.forEach((b) => { next[b.unit_id] = value; });
+    setFactors(next);
   };
 
-  const handleQuickSet = (unitId: string, value: number) => {
-    handleFactorChange(unitId, value);
-  };
+  if (isLoading) return <ScreenSkeleton />;
+  if (!report) return <div style={{ color: 'var(--ox-danger)', padding: 24 }}>Ошибка загрузки</div>;
 
-  useKeyboardShortcuts([
-    {
-      key: 's',
-      ctrl: true,
-      handler: () => {
-        const isChanged = report?.buildings?.some(
-          (b) => factors[b.unit_id.toString()] !== b.factor
-        );
-        if (isChanged) updateMutation.mutate();
-      },
-      description: 'Ctrl+S — сохранить изменения',
-    },
-  ]);
-
-  if (isLoading) {
-    return <ResourceScreenSkeleton />;
-  }
-
-  if (!report) {
-    return <div className="alert alert-error">Failed to load resource report</div>;
-  }
-
-  const productionBuildings = report.buildings.filter((b) => b.allow_factor);
+  const buildings = report.buildings.filter((b) => b.level > 0);
+  const ph = report.metal_per_hour;
+  const sh = report.silicon_per_hour;
+  const hh = report.hydrogen_per_hour;
 
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Управление ресурсами</h2>
-        {onBack && (
-          <button className="btn btn-sm btn-ghost" onClick={onBack}>
-            ← Назад
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
+          Производство — {report.planet_name}
+        </h2>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button type="button" className="btn btn-sm btn-ghost" onClick={() => setAll(0)}>
+            Выключить всё
           </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div className="card bg-base-200">
-          <div className="card-body p-4">
-            <div className="text-sm opacity-70">Хранилище Металл</div>
-            <div className="text-xl font-bold">{Math.floor(report.metal_total)}</div>
-            <div className="text-xs opacity-50">
-              +{report.metal_per_hour.toFixed(2)}/ч
-            </div>
-          </div>
-        </div>
-        <div className="card bg-base-200">
-          <div className="card-body p-4">
-            <div className="text-sm opacity-70">Хранилище Кремний</div>
-            <div className="text-xl font-bold">{Math.floor(report.silicon_total)}</div>
-            <div className="text-xs opacity-50">
-              +{report.silicon_per_hour.toFixed(2)}/ч
-            </div>
-          </div>
-        </div>
-        <div className="card bg-base-200">
-          <div className="card-body p-4">
-            <div className="text-sm opacity-70">Хранилище Водород</div>
-            <div className="text-xl font-bold">{Math.floor(report.hydrogen_total)}</div>
-            <div className="text-xs opacity-50">
-              +{report.hydrogen_per_hour.toFixed(2)}/ч
-            </div>
-          </div>
+          <button type="button" className="btn btn-sm btn-ghost" onClick={() => setAll(100)}>
+            Включить всё
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={save.isPending}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending ? '…' : 'Сохранить'}
+          </button>
+          {onBack && (
+            <button type="button" className="btn-ghost btn-sm" onClick={onBack}>
+              ← Назад
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="card bg-base-100 shadow">
-        <div className="card-body">
-          <h3 className="card-title text-lg">Производство (в час)</h3>
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            <div>
-              <div className="text-sm opacity-70">Металл</div>
-              <div className="text-lg font-semibold text-success">
-                +{report.metal_per_hour.toFixed(2)}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm opacity-70">Кремний</div>
-              <div className="text-lg font-semibold text-success">
-                +{report.silicon_per_hour.toFixed(2)}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm opacity-70">Водород</div>
-              <div className="text-lg font-semibold text-success">
-                +{report.hydrogen_per_hour.toFixed(2)}
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Production table */}
+      <div className="ox-panel" style={{ overflow: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid var(--ox-border)' }}>
+              <th style={TH}>Здание</th>
+              <th style={{ ...TH, textAlign: 'right' }}>🟠 Металл</th>
+              <th style={{ ...TH, textAlign: 'right' }}>💎 Кремний</th>
+              <th style={{ ...TH, textAlign: 'right' }}>💧 Водород</th>
+              <th style={{ ...TH, textAlign: 'right' }}>⚡ Энергия</th>
+              <th style={{ ...TH, textAlign: 'center', whiteSpace: 'nowrap' }}>% работы</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            {/* Natural production */}
+            <tr style={{ borderBottom: '1px solid var(--ox-border)', background: 'var(--ox-bg-2)' }}>
+              <td style={{ ...TD, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>Естественное</td>
+              <td style={{ ...TD, textAlign: 'right', ...numStyle(report.basic_metal) }}>{fmt(report.basic_metal)}</td>
+              <td style={{ ...TD, textAlign: 'right', ...numStyle(report.basic_silicon) }}>{fmt(report.basic_silicon)}</td>
+              <td style={{ ...TD, textAlign: 'right', color: 'var(--ox-fg-dim)' }}>—</td>
+              <td style={{ ...TD, textAlign: 'right', color: 'var(--ox-fg-dim)' }}>—</td>
+              <td style={TD}></td>
+            </tr>
+
+            {/* Buildings */}
+            {buildings.map((b) => (
+              <BuildingRow
+                key={b.unit_id}
+                building={b}
+                factor={factors[b.unit_id] ?? b.factor}
+                onFactorChange={(v) => setFactors((prev) => ({ ...prev, [b.unit_id]: v }))}
+              />
+            ))}
+
+            {/* Storage */}
+            <SummaryRow
+              label="Вместимость хранилищ"
+              metal={report.storage_metal}
+              silicon={report.storage_silicon}
+              hydrogen={report.storage_hydrogen}
+              energy={null}
+              topBorder
+              dim
+            />
+
+            {/* Hourly */}
+            <SummaryRow
+              label="За час"
+              metal={ph}
+              silicon={sh}
+              hydrogen={hh}
+              energy={report.total_energy}
+              topBorder
+            />
+
+            {/* Daily */}
+            <SummaryRow
+              label="За сутки"
+              metal={ph * 24}
+              silicon={sh * 24}
+              hydrogen={hh * 24}
+              energy={null}
+            />
+
+            {/* Weekly */}
+            <SummaryRow
+              label="За неделю"
+              metal={ph * 24 * 7}
+              silicon={sh * 24 * 7}
+              hydrogen={hh * 24 * 7}
+              energy={null}
+            />
+
+          </tbody>
+        </table>
       </div>
-
-      {productionBuildings.length > 0 && (
-        <div className="card bg-base-100 shadow">
-          <div className="card-body">
-            <h3 className="card-title text-lg">Корректировка производства</h3>
-            <div className="space-y-4 mt-4">
-              {productionBuildings.map((building) => (
-                <BuildingFactorControl
-                  key={building.unit_id}
-                  building={building}
-                  factor={factors[building.unit_id.toString()] ?? building.factor}
-                  onChange={(value) =>
-                    handleFactorChange(building.unit_id.toString(), value)
-                  }
-                  onQuickSet={(value) =>
-                    handleQuickSet(building.unit_id.toString(), value)
-                  }
-                />
-              ))}
-            </div>
-
-            <div className="mt-6 flex gap-2">
-              <button
-                className="btn btn-primary flex-1"
-                disabled={updateMutation.isPending}
-                onClick={() => updateMutation.mutate()}
-              >
-                {updateMutation.isPending ? (
-                  <span className="loading loading-spinner loading-sm"></span>
-                ) : (
-                  'Сохранить'
-                )}
-              </button>
-              <button
-                className="btn btn-ghost flex-1"
-                onClick={() => {
-                  if (report.buildings) {
-                    const reset: FactorFormData = {};
-                    report.buildings.forEach((b) => {
-                      reset[b.unit_id.toString()] = b.factor;
-                    });
-                    setFactors(reset);
-                  }
-                }}
-              >
-                Отменить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {report.buildings.length > 0 && (
-        <div className="card bg-base-100 shadow">
-          <div className="card-body">
-            <h3 className="card-title text-lg">Полный отчет</h3>
-            <div className="overflow-x-auto mt-4">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Здание</th>
-                    <th>Уровень</th>
-                    <th>Металл/ч</th>
-                    <th>Кремний/ч</th>
-                    <th>Водород/ч</th>
-                    <th>Энергия/ч</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.buildings.map((b) => {
-                    const factor = factors[b.unit_id.toString()] ?? b.factor;
-                    return (
-                      <tr key={b.unit_id}>
-                        <td className="font-semibold">{b.name}</td>
-                        <td>{b.level}</td>
-                        <td className="text-success">
-                          +{(b.prod_metal * factor / 100).toFixed(2)}
-                        </td>
-                        <td className="text-success">
-                          +{(b.prod_silicon * factor / 100).toFixed(2)}
-                        </td>
-                        <td className="text-success">
-                          +{(b.prod_hydrogen * factor / 100).toFixed(2)}
-                        </td>
-                        <td className="text-error">
-                          -{b.cons_energy.toFixed(2)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-function BuildingFactorControl({
-  building,
+function BuildingRow({
+  building: b,
   factor,
-  onChange,
-  onQuickSet,
+  onFactorChange,
 }: {
   building: ResourceBuilding;
   factor: number;
-  onChange: (value: number) => void;
-  onQuickSet: (value: number) => void;
+  onFactorChange: (v: number) => void;
 }) {
+  const metal    = b.prod_metal    * factor / 100;
+  const silicon  = b.prod_silicon  * factor / 100;
+  const hydrogen = b.prod_hydrogen * factor / 100;
+  const energy   = b.cons_energy; // net: >0 производит, <0 потребляет
+
   return (
-    <div className="border-b pb-4 last:border-b-0">
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <div className="font-semibold">{building.name}</div>
-          <div className="text-sm opacity-70">Уровень {building.level}</div>
-        </div>
-        <div className="text-right">
-          <div className="text-lg font-bold">{factor}%</div>
-          <div className="text-xs opacity-70">
-            {building.prod_metal > 0 && (
-              <>
-                +{((building.prod_metal * factor) / 100).toFixed(1)} M{' '}
-              </>
-            )}
-            {building.prod_silicon > 0 && (
-              <>
-                +{((building.prod_silicon * factor) / 100).toFixed(1)} S{' '}
-              </>
-            )}
-            {building.prod_hydrogen > 0 && (
-              <>
-                +{((building.prod_hydrogen * factor) / 100).toFixed(1)} H
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+    <tr style={{ borderBottom: '1px solid var(--ox-border)' }}>
+      <td style={TD}>
+        <span style={{ fontWeight: 500 }}>{BUILDING_NAMES[b.unit_id] ?? b.name}</span>
+        {' '}
+        <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>ур. {b.level}</span>
+      </td>
+      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(metal) }}>
+        {metal !== 0 ? fmt(metal) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
+      </td>
+      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(silicon) }}>
+        {silicon !== 0 ? fmt(silicon) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
+      </td>
+      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(hydrogen) }}>
+        {hydrogen !== 0 ? fmt(hydrogen) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
+      </td>
+      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(energy) }}>
+        {energy !== 0 ? fmt(energy) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
+      </td>
+      <td style={{ ...TD, textAlign: 'center' }}>
+        {b.allow_factor ? (
+          <FactorInput value={factor} onChange={onFactorChange} />
+        ) : (
+          <span style={{ fontSize: 11, color: 'var(--ox-fg-dim)' }}>—</span>
+        )}
+      </td>
+    </tr>
+  );
+}
 
-      <div className="flex gap-2 mb-2">
-        <input
-          type="range"
-          min="0"
-          max="100"
-          step="1"
-          value={factor}
-          onChange={(e) => onChange(parseInt(e.target.value, 10))}
-          className="range range-sm flex-1"
-        />
-      </div>
+function SummaryRow({
+  label, metal, silicon, hydrogen, energy, topBorder, dim,
+}: {
+  label: string;
+  metal: number;
+  silicon: number;
+  hydrogen: number;
+  energy: number | null;
+  topBorder?: boolean;
+  dim?: boolean;
+}) {
+  const bt = topBorder ? '2px solid var(--ox-border)' : undefined;
+  const fg = dim ? 'var(--ox-fg-muted)' : undefined;
+  return (
+    <tr style={{ borderBottom: '1px solid var(--ox-border)', background: dim ? 'var(--ox-bg-2)' : undefined }}>
+      <td style={{ ...TD, fontWeight: 700, borderTop: bt, color: fg }}>{label}</td>
+      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', borderTop: bt, ...numStyle(metal) }}>{fmt(metal)}</td>
+      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', borderTop: bt, ...numStyle(silicon) }}>{fmt(silicon)}</td>
+      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', borderTop: bt, ...numStyle(hydrogen) }}>{fmt(hydrogen)}</td>
+      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', borderTop: bt, color: 'var(--ox-fg-dim)' }}>
+        {energy !== null ? <span style={numStyle(energy)}>{fmt(energy)}</span> : '—'}
+      </td>
+      <td style={{ ...TD, borderTop: bt }}></td>
+    </tr>
+  );
+}
 
-      <div className="flex gap-1 text-xs">
-        {[0, 25, 50, 75, 100].map((val) => (
-          <button
-            key={val}
-            className={`px-2 py-1 rounded font-semibold transition-colors ${
-              factor === val
-                ? 'bg-primary text-primary-content'
-                : 'bg-base-300 hover:bg-base-400'
-            }`}
-            onClick={() => onQuickSet(val)}
-          >
-            {val}%
-          </button>
+function FactorInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const clamp = (n: number) => Math.max(0, Math.min(100, n));
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+      <select
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={{
+          background: 'var(--ox-bg-2)',
+          border: '1px solid var(--ox-border)',
+          borderRadius: 4,
+          color: 'var(--ox-fg)',
+          fontSize: 12,
+          padding: '2px 4px',
+          fontFamily: 'var(--ox-mono)',
+          cursor: 'pointer',
+        }}
+      >
+        {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((v) => (
+          <option key={v} value={v}>{v}%</option>
         ))}
-      </div>
+      </select>
+      <input
+        type="number"
+        min={0}
+        max={100}
+        value={value}
+        onChange={(e) => onChange(clamp(Number(e.target.value)))}
+        style={{
+          width: 46,
+          padding: '2px 4px',
+          fontFamily: 'var(--ox-mono)',
+          fontSize: 12,
+          background: 'var(--ox-bg-2)',
+          border: '1px solid var(--ox-border)',
+          borderRadius: 4,
+          color: 'var(--ox-fg)',
+          textAlign: 'right',
+        }}
+      />
     </div>
   );
 }
+
+const TH: React.CSSProperties = {
+  padding: '8px 12px',
+  fontWeight: 700,
+  fontSize: 11,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  color: 'var(--ox-fg-muted)',
+  textAlign: 'left',
+  whiteSpace: 'nowrap',
+};
+
+const TD: React.CSSProperties = {
+  padding: '7px 12px',
+  fontSize: 13,
+};

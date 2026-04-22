@@ -8,14 +8,22 @@ import './styles/app.css';
 
 class RootErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  { error: Error | null }
+  { error: Error | null; componentStack: string | null }
 > {
   constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { error: null };
+    this.state = { error: null, componentStack: null };
   }
   static getDerivedStateFromError(error: Error) {
     return { error };
+  }
+  override componentDidCatch(_error: Error, info: React.ErrorInfo) {
+    const stack = info.componentStack ?? '';
+    this.setState({ componentStack: stack });
+    // Вывод в заголовок вкладки для быстрой идентификации
+    const match = stack.match(/at (\w+Screen|\w+Component|\w+)/);
+    if (match) document.title = `💥 ${match[1]}`;
+    console.error('[ErrorBoundary] component stack:\n' + stack);
   }
   handleReset = () => {
     localStorage.clear();
@@ -24,6 +32,10 @@ class RootErrorBoundary extends React.Component<
   };
   override render() {
     if (this.state.error) {
+      // Extract first meaningful component name from stack
+      const stack = this.state.componentStack ?? '';
+      const match = stack.match(/^\s*at (\w+)/m);
+      const where = match ? match[1] : null;
       return (
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -32,9 +44,21 @@ class RootErrorBoundary extends React.Component<
         }}>
           <div style={{ fontSize: 40 }}>⚠️</div>
           <div style={{ fontSize: 16, color: '#f66' }}>Ошибка приложения</div>
-          <div style={{ fontSize: 12, color: '#666', maxWidth: 400, textAlign: 'center' }}>
+          {where && (
+            <div style={{ fontSize: 13, color: '#fa0', fontWeight: 700 }}>
+              Компонент: {where}
+            </div>
+          )}
+          <div style={{ fontSize: 12, color: '#aaa', maxWidth: 500, textAlign: 'center' }}>
             {this.state.error.message}
           </div>
+          <pre style={{
+            fontSize: 10, color: '#555', maxWidth: 600, maxHeight: 160,
+            overflow: 'auto', textAlign: 'left', whiteSpace: 'pre-wrap',
+            background: '#111', padding: '8px 12px', borderRadius: 6,
+          }}>
+            {stack.trim().split('\n').slice(0, 12).join('\n')}
+          </pre>
           <button
             type="button"
             onClick={this.handleReset}

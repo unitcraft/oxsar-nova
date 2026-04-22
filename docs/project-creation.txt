@@ -4886,3 +4886,50 @@ MEDIUM Priority:
   ⬜ 6.2 Storybook для UI компонентов
   ⬜ Query profiling для медленных endpoints
 
+
+
+================================================================================
+Итерация (сессия 2026-04-23) — Resource screen fixes + URL hash navigation
+================================================================================
+
+Задача: исправить страницу «Сырьё», сделать её единой по стилю с остальными,
+и синхронизировать навигацию с URL.
+
+## Выполнено
+
+### ResourceScreen — полный переписть
+- Старая версия (от другой модели) удалена, создан новый компонент
+  `frontend/src/features/resource/ResourceScreen.tsx` в стиле BuildingsScreen.
+- Имена зданий из BUILDINGS каталога через `BUILDING_NAMES` record (русские названия).
+- Все хуки вынесены перед early-return (исправлен "Rendered more hooks" crash).
+- Кнопки «Выключить всё» / «Включить всё» + ручное сохранение.
+
+### Backend исправления (planet/service.go)
+- Базовое производство: 10_000_000 → правильные константы (металл 10, кремний 5).
+- Хранилища: пересчёт из уровней зданий вместо кэшированного p.MetalCap.
+- Знак энергии: net = energyProd - energyCons (>0 производит, <0 потребляет).
+
+### URL hash навигация (App.tsx)
+- `tabFromHash()` читает `window.location.hash` при инициализации.
+- `navigateTo(tab)` = setTab + history.pushState — все переходы по меню фиксируют URL.
+- `popstate` listener синхронизирует состояние при нажатии кнопок браузера «Назад/Вперёд».
+- Заменены все `setTab(` вызовы на `navigateTo(` в sidebar, keyboard shortcuts, content area.
+
+### Перемещение «Сырьё» в меню
+- Позиция `resource` перенесена: сразу после `overview` в sidebar и ALL_NAV.
+
+### Plan 06 обновлён
+- docs/plans/06-resource-management.md: добавлена секция «Расхождения с планом UI».
+
+## Simplifications
+- ResourceScreen FactorInput: select+number вместо slider+пресетов (docs/simplifications.md).
+
+## Файлы изменены
+- frontend/src/features/resource/ResourceScreen.tsx (перезаписан)
+- frontend/src/App.tsx (navigateTo, tabFromHash, порядок меню)
+- backend/internal/planet/service.go (BasicMetal, storage, energy)
+- docs/plans/06-resource-management.md (обновлён статус и расхождения)
+- docs/simplifications.md (новая запись FactorInput)
+- docs/project-creation.txt (эта запись)
+
+Статус: ✅ ЗАВЕРШЕНА

@@ -57,15 +57,6 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
     refetchInterval: 10000,
   });
 
-  const levels = levelsQ.data?.levels ?? {};
-  const buildSeconds = levelsQ.data?.build_seconds ?? {};
-  const queueItems = (queue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
-  const busyIds = new Set(queueItems.map((q) => q.unit_id));
-
-  if (levelsQ.isLoading) {
-    return <ScreenSkeleton />;
-  }
-
   const enqueue = useMutation({
     mutationFn: (unitId: number) =>
       api.post<QueueItem>(`/api/planets/${planet.id}/buildings`, { unit_id: unitId }),
@@ -92,6 +83,15 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
       toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось отменить');
     },
   });
+
+  const levels = levelsQ.data?.levels ?? {};
+  const buildSeconds = levelsQ.data?.build_seconds ?? {};
+  const queueItems = (queue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
+  const busyIds = new Set(queueItems.map((q) => q.unit_id));
+
+  if (levelsQ.isLoading) {
+    return <ScreenSkeleton />;
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
