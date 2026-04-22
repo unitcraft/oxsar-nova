@@ -4641,3 +4641,33 @@ Frontend:
   
 Статус: завершена. Подготовка к 03-planet-types (визуализация планет с типами).
 
+
+
+================================================================================
+Итерация — 2026-04-23 (Achievements Unification)
+================================================================================
+
+[Achievements] Объединение Tutorial и Achievement систем в единую.
+
+Backend:
+  - migrations/0040_achievements_category.sql: добавлена колонка category (enum: passive | starter) в achievement_defs.
+  - achievement/service.go:
+    - Entry: добавлено поле Category.
+    - List(): обновлен SQL для получения category из achievement_defs.
+    - CheckAllStarter(): новый метод для проверки стартовых ачивок (Tutorial-цепочка).
+      Триггеры: BUILD_METALMINE, BUILD_SOLARPLANT, BUILD_METALLURGY, BUILD_SHIPYARD, BUILD_LAB, RESEARCH_TECH, BUILD_SHIP, SEND_MISSION.
+  - achievement/handler.go: List() теперь вызывает и CheckAll(), и CheckAllStarter().
+  - openapi.yaml: AchievementEntry добавлено поле category; удален /api/tutorial endpoint, TutorialStep schema и tutorial tag.
+  - cmd/server/main.go: удален импорт tutorial, инициализация tutorialSvc/tutorialH и маршрут /api/tutorial.
+  - backend/internal/tutorial/: пакет полностью удалён.
+
+Frontend:
+  - App.tsx:
+    - Удален импорт TutorialScreen.
+    - Удалена 'tutorial' из Type Tab.
+    - Удален рендер {tab === 'tutorial' && <TutorialScreen />}.
+    - buildNavItems: удалена строка с tutorial в навигации.
+  - frontend/src/features/tutorial/: папка полностью удалена.
+
+Статус: завершена. Пассивные и стартовые достижения объединены в одну систему с категориями.
+
