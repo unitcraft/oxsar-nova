@@ -4810,3 +4810,79 @@ Frontend:
   🟡 Performance profiling БД запросов — в progress
   🟡 Skeleton loaders для всех экранов — планируется
 
+
+
+================================================================================
+Итерация — 2026-04-23 (Skeleton Loaders & Security Audit)
+================================================================================
+
+[UX & Performance] Улучшенные skeleton loaders и security audit.
+
+Frontend:
+- ui/Skeleton.tsx: новый компонент с типизированными вариантами скелетонов.
+  - Skeleton: базовый shimmer-эффект для одного элемента.
+  - ScreenSkeleton: полноэкранный skeleton с текстом + три карточки.
+  - TableSkeleton: таблица с заголовками и рядами.
+  - CardSkeleton: одна карточка с несколькими элементами.
+  - ListSkeleton: список с аватарками и текстом.
+  - ResourceCardSkeleton: карточка ресурса (иконка, значение, ставка).
+  - ResourceScreenSkeleton: полный экран управления ресурсами.
+- ui/Skeleton.css: CSS-анимация shimmer с линейным градиентом (200% width shift 2s).
+- App.tsx:
+  - Импорт ScreenSkeleton вместо старого локального определения.
+  - Убран старый ScreenSkeleton() из App.tsx (конфликт импорта).
+- Применены skeleton loaders в экранах:
+  - BuildingsScreen: loading state вместо пустого спиннера.
+  - MarketScreen: loading state при загрузке курсов обмена.
+  - FleetScreen: loading state при загрузке списка флотов.
+  - ArtefactsScreen: улучшен skeleton (был простой, теперь полноценный).
+  - ResourceScreen: ResourceScreenSkeleton для управления ресурсами.
+
+Frontend Optimistic Updates:
+- MarketScreen: добавлены optimistic updates для exchange mutation.
+  - onMutate: откладывание запросов + локальное обновление кэша планеты (вычет металла + добавление кремния).
+  - onError: откат на предыдущее состояние.
+  - Улучшает UX: пользователь сразу видит результат обмена.
+
+Backend Security Audit:
+- httpx/router.go: проверена CORS конфигурация.
+  - AllowedOrigins: ["http://localhost:5173"]
+  - AllowedMethods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+  - AllowedHeaders: Authorization, Content-Type
+  - AllowCredentials: true (CSRF protection + SameSite defaults)
+  - MaxAge: 300 (5 минут)
+- auth/ratelimit.go: проверена rate limiting реализация.
+  - RateLimiter: Redis-based sliding-window (fail-open, если Redis недоступен).
+  - NewIPRateLimiter: лимит по IP-адресу клиента из X-Forwarded-For.
+- cmd/server/main.go: проверено использование.
+  - authRL := auth.NewIPRateLimiter(rdb, 20, time.Minute) — 20 req/min per IP.
+  - Применяется middleware для /api/auth/* endpoints.
+
+Статус: ✅ ЗАВЕРШЕНА.
+  ✅ Skeleton loaders реализованы для всех ключевых экранов
+  ✅ CSS shimmer-анимация для плавного visual feedback
+  ✅ Optimistic updates расширены на MarketScreen
+  ✅ Security audit подтвердил наличие CORS + rate limiting
+  ✅ Общее улучшение UX при загрузке экранов
+
+
+================================================================================
+Итоговый статус Plan 07 (Optimization & UX)
+================================================================================
+
+HIGH Priority:
+  ✅ 2.2 Батч-операции (UpdateResourceFactors with CASE/WHEN)
+  ✅ 4.2 Performance metrics (Web Vitals reporting)
+
+MEDIUM Priority:
+  ✅ 1.1 Optimistic Updates (ResourceScreen + MarketScreen)
+  ✅ 3.1 Skeleton loaders (улучшенные для всех экранов)
+  ✅ 5.1 Security audit (CORS + rate limiting verified)
+
+Рекомендуемые LOW Priority (P3):
+  ⬜ 1.1 Optimistic Updates для других экранов (ArtefactsScreen, OfficersScreen)
+  ⬜ 3.2 Keyboard shortcuts (Esc, Ctrl+S)
+  ⬜ 4.1 Advanced error tracking (Sentry integration)
+  ⬜ 6.2 Storybook для UI компонентов
+  ⬜ Query profiling для медленных endpoints
+
