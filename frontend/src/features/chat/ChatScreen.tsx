@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 
@@ -33,21 +32,13 @@ export function ChatScreen() {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const token = useAuthStore((s) => s.accessToken);
-  const me = useQuery({
-    queryKey: ['me'],
-    queryFn: () => api.get<{ user_id: string; username: string }>('/api/me'),
-    staleTime: 60000,
-  });
-
-  const { data: history } = useQuery<ChatMessage[]>({
-    queryKey: ['chat-history', kind],
-    queryFn: () => api.get<ChatMessage[]>(`/api/chat/${kind}/history`),
-    staleTime: 0,
-  });
+  const myId = useAuthStore((s) => s.userId);
 
   useEffect(() => {
-    if (history) setMessages(history);
-  }, [history]);
+    api.get<ChatMessage[]>(`/api/chat/${kind}/history`)
+      .then(setMessages)
+      .catch(() => null);
+  }, [kind]);
 
   useEffect(() => {
     if (!token) return;
@@ -130,8 +121,8 @@ export function ChatScreen() {
     const optimistic: ChatMessage = {
       id: `tmp-${Date.now()}`,
       channel: kind,
-      author_id: me.data?.user_id ?? '',
-      author_name: me.data?.username ?? '…',
+      author_id: myId ?? '',
+      author_name: '…',
       body,
       created_at: new Date().toISOString(),
       kind: 'msg',
@@ -178,6 +169,7 @@ export function ChatScreen() {
   }
 
   function deleteMsg(id: string) {
+    if (!window.confirm('Удалить сообщение?')) return;
     api.delete(`/api/chat/messages/${id}`)
       .then(() => setMessages((prev) => prev.filter((m) => m.id !== id)))
       .catch(() => null);
@@ -185,7 +177,7 @@ export function ChatScreen() {
 
   function canModify(m: ChatMessage): boolean {
     if (m.id.startsWith('tmp-')) return false;
-    if (m.author_id !== me.data?.user_id) return false;
+    if (m.author_id !== myId) return false;
     return Date.now() - new Date(m.created_at).getTime() < EDIT_WINDOW_MS;
   }
 
@@ -213,7 +205,7 @@ export function ChatScreen() {
         style={{ flex: 1, overflowY: 'auto', border: '1px solid #333', padding: '8px 12px', marginBottom: 8 }}
       >
         {messages.map((m) => {
-          const isOwn = m.author_id === me.data?.user_id;
+          const isOwn = m.author_id === myId;
           const modifiable = canModify(m);
           const isEditing = editingId === m.id;
 
