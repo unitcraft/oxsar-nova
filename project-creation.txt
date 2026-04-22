@@ -4351,3 +4351,13 @@ BuildingsScreen теперь использует buildingName() в очеред
   - ReadSystem(): SELECT p.id, p.planet_type; Scan добавляет ID и PlanetType.
   - GalaxyScreen.tsx: импорт planetImageOf из catalog; в строке Планета —
     <img 24×24> с детерминированной картинкой по position+id+type.
+
+================================================================================
+Итерация — 2026-04-22 (UI-13)
+================================================================================
+
+[UI-13] OfficersScreen: отображение эффекта офицера.
+  - Entry.effect?: Record<string,number> — парсится из JSONB API.
+  - fmtEffect(): переводит {produce_factor:1.25} → "Производство +25%".
+  - Зелёная строка ✦ Производство +25% на карточке офицера.
+  - EFFECT_LABELS: словарь produce/build/research/energy/storage → русский.
