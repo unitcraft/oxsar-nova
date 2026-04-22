@@ -10,8 +10,29 @@ interface Entry {
   description: string;
   duration_days: number;
   cost_credit: number;
+  effect?: Record<string, number> | null;
   activated_at?: string | null;
   expires_at?: string | null;
+}
+
+const EFFECT_LABELS: Record<string, string> = {
+  produce_factor:  'Производство',
+  build_factor:    'Строительство',
+  research_factor: 'Исследования',
+  energy_factor:   'Энергия',
+  storage_factor:  'Склад',
+};
+
+function fmtEffect(effect: Record<string, number> | null | undefined): string | null {
+  if (!effect) return null;
+  return Object.entries(effect)
+    .filter(([, v]) => v !== 1)
+    .map(([k, v]) => {
+      const label = EFFECT_LABELS[k] ?? k;
+      const pct = Math.round((v - 1) * 100);
+      return `${label} ${pct > 0 ? '+' : ''}${pct}%`;
+    })
+    .join(', ') || null;
 }
 
 export function OfficersScreen() {
@@ -88,6 +109,11 @@ export function OfficersScreen() {
                   <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>
                     {e.duration_days} дн. · {e.cost_credit} cr
                   </div>
+                  {fmtEffect(e.effect) && (
+                    <div style={{ fontSize: 11, color: 'var(--ox-success, #22c55e)', marginTop: 3 }}>
+                      ✦ {fmtEffect(e.effect)}
+                    </div>
+                  )}
                   {active && e.expires_at && (
                     <div style={{ fontSize: 12, color: 'var(--ox-success)', marginTop: 4 }}>
                       Истекает: <Countdown finishAt={e.expires_at} />
