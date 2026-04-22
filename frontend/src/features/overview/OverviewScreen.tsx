@@ -71,7 +71,11 @@ export function OverviewScreen() {
 
   const list = planets.data?.planets ?? [];
   const [selectedPlanetId, setSelectedPlanetId] = useState<string | null>(null);
-  const activeFleets = (fleets.data?.fleets ?? []).filter((f) => f.state !== 'done');
+  const activeFleets = (fleets.data?.fleets ?? []).filter((f) => {
+    if (f.state === 'done') return false;
+    const finishAt = f.state === 'returning' && f.return_at ? f.return_at : f.arrive_at;
+    return new Date(finishAt).getTime() > Date.now();
+  });
   const unreadCount = unread.data?.count ?? 0;
   const selectedPlanet = list.find((p) => p.id === selectedPlanetId) ?? list[0];
 
