@@ -160,10 +160,11 @@ export function OverviewScreen() {
                 }}
               >
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {p.is_moon
-                    ? <span style={{ fontSize: 36, lineHeight: 1 }}>🌑</span>
-                    : <img src={planetImageOf(p.position, p.id, p.planet_type)} alt="" style={{ width: planetImageSize(p.diameter), height: planetImageSize(p.diameter), borderRadius: 5, objectFit: 'cover' }} />
-                  }
+                  <img
+                    src={p.is_moon ? '/images/planets/mond.jpg' : planetImageOf(p.position, p.id, p.planet_type)}
+                    alt=""
+                    style={{ width: planetImageSize(p.diameter), height: planetImageSize(p.diameter), borderRadius: 5, objectFit: 'cover' }}
+                  />
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'var(--ox-accent)' : 'var(--ox-fg)', textAlign: 'center', maxWidth: 76, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>
                   {p.name}
@@ -319,14 +320,11 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
         padding: '14px 20px', borderBottom: '1px solid var(--ox-border)',
         background: 'linear-gradient(135deg, rgba(99,217,255,0.04) 0%, transparent 60%)',
       }}>
-        {planet.is_moon
-          ? <span style={{ fontSize: 32, flexShrink: 0 }}>🌑</span>
-          : <img
-              src={planetImageOf(planet.position, planet.id, planet.planet_type)}
-              alt=""
-              style={{ width: planetImageSize(planet.diameter), height: planetImageSize(planet.diameter), borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
-            />
-        }
+        <img
+          src={planet.is_moon ? '/images/planets/mond.jpg' : planetImageOf(planet.position, planet.id, planet.planet_type)}
+          alt=""
+          style={{ width: planetImageSize(planet.diameter), height: planetImageSize(planet.diameter), borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
+        />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 16, fontFamily: 'var(--ox-font)' }}>
             {planet.name}
