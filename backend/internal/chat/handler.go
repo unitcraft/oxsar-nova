@@ -73,10 +73,10 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := h.db.Pool().Query(r.Context(), `
-		SELECT cm.id, cm.author_id, COALESCE(u.username, ''), cm.body, cm.created_at
+		SELECT cm.id, cm.author_id, COALESCE(u.username, ''), cm.body, cm.created_at, cm.edited_at
 		FROM chat_messages cm
 		LEFT JOIN users u ON u.id = cm.author_id
-		WHERE cm.channel = $1
+		WHERE cm.channel = $1 AND cm.deleted_at IS NULL
 		ORDER BY cm.created_at DESC
 		LIMIT $2
 	`, channel, historyLimit)
@@ -90,12 +90,18 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var m Message
 		var createdAt time.Time
-		if err := rows.Scan(&m.ID, &m.AuthorID, &m.AuthorName, &m.Body, &createdAt); err != nil {
+		var editedAt *time.Time
+		if err := rows.Scan(&m.ID, &m.AuthorID, &m.AuthorName, &m.Body, &createdAt, &editedAt); err != nil {
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 			return
 		}
 		m.Channel = channel
 		m.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+		m.Kind = "msg"
+		if editedAt != nil {
+			s := editedAt.UTC().Format(time.RFC3339)
+			m.EditedAt = &s
+		}
 		msgs = append(msgs, m)
 	}
 	if err := rows.Err(); err != nil {
@@ -197,6 +203,7 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 			AuthorName: username,
 			Body:       body,
 			CreatedAt:  now.Format(time.RFC3339),
+			Kind:       "msg",
 		}
 		h.hub.Broadcast(ctx, msg)
 	}
@@ -251,7 +258,117 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		AuthorName: username,
 		Body:       body,
 		CreatedAt:  now.Format(time.RFC3339),
+		Kind:       "msg",
 	}
 	h.hub.Broadcast(r.Context(), msg)
 	httpx.WriteJSON(w, r, http.StatusCreated, msg)
+}
+
+const editWindow = 5 * time.Minute
+
+// EditMessage PATCH /api/chat/messages/{id}
+// Только автор, только в течение editWindow после создания.
+func (h *Handler) EditMessage(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	msgID := chi.URLParam(r, "id")
+
+	var req struct {
+		Body string `json:"body"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	body := strings.TrimSpace(req.Body)
+	if body == "" || len([]rune(body)) > maxBodyLen {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "body empty or too long"))
+		return
+	}
+
+	now := time.Now().UTC()
+	var channel, authorID string
+	var createdAt time.Time
+	err := h.db.Pool().QueryRow(r.Context(),
+		`SELECT channel, author_id, created_at FROM chat_messages WHERE id=$1 AND deleted_at IS NULL`,
+		msgID,
+	).Scan(&channel, &authorID, &createdAt)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+		return
+	}
+	if authorID != uid {
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+		return
+	}
+	if now.Sub(createdAt) > editWindow {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrForbidden, "edit window expired"))
+		return
+	}
+
+	if _, err := h.db.Pool().Exec(r.Context(),
+		`UPDATE chat_messages SET body=$1, edited_at=$2 WHERE id=$3`,
+		body, now, msgID,
+	); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+
+	editedAt := now.Format(time.RFC3339)
+	msg := Message{
+		ID:        msgID,
+		Channel:   channel,
+		AuthorID:  uid,
+		Body:      body,
+		EditedAt:  &editedAt,
+		Kind:      "edit",
+	}
+	h.hub.Broadcast(r.Context(), msg)
+	httpx.WriteJSON(w, r, http.StatusOK, msg)
+}
+
+// DeleteMessage DELETE /api/chat/messages/{id}
+// Только автор, только в течение editWindow после создания.
+func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	msgID := chi.URLParam(r, "id")
+
+	now := time.Now().UTC()
+	var channel, authorID string
+	var createdAt time.Time
+	err := h.db.Pool().QueryRow(r.Context(),
+		`SELECT channel, author_id, created_at FROM chat_messages WHERE id=$1 AND deleted_at IS NULL`,
+		msgID,
+	).Scan(&channel, &authorID, &createdAt)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+		return
+	}
+	if authorID != uid {
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+		return
+	}
+	if now.Sub(createdAt) > editWindow {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrForbidden, "delete window expired"))
+		return
+	}
+
+	if _, err := h.db.Pool().Exec(r.Context(),
+		`UPDATE chat_messages SET deleted_at=$1 WHERE id=$2`,
+		now, msgID,
+	); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+
+	msg := Message{ID: msgID, Channel: channel, AuthorID: uid, Kind: "delete"}
+	h.hub.Broadcast(r.Context(), msg)
+	w.WriteHeader(http.StatusNoContent)
 }

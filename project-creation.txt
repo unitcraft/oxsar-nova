@@ -4281,3 +4281,21 @@ BuildingsScreen теперь использует buildingName() в очеред
   - При получении broadcast от сервера tmp-запись заменяется реальной.
   - ws.onerror больше не показывает "Соединение прервано" — закрытие
     отслеживается в onclose.wasClean.
+
+[Chat] Пузырьки сообщений Telegram-стайл: свои — справа, чужие — слева.
+  - isOwn по author_id === me.user_id.
+  - Скролл: scrollTop=scrollHeight на контейнере (не scrollIntoView — он
+    скроллил всю страницу). Скроллим только при увеличении длины списка,
+    не при замене tmp→real.
+
+[Chat] Редактирование и удаление своих сообщений (в течение 5 минут).
+  - Backend: EditMessage (PATCH /api/chat/messages/{id}) и DeleteMessage
+    (DELETE /api/chat/messages/{id}) — проверка автора и editWindow=5min.
+  - Soft-delete: колонка deleted_at (migration 0036).
+  - Broadcast: kind:"edit" и kind:"delete" через Hub.Broadcast.
+  - Frontend: inline-редактор в пузырьке, кнопки ✏️ и 🗑️ при canModify.
+
+[Chat] Emoji picker: 20 смайликов в popup-панели над инпутом.
+  - Кнопка 😊 показывает/скрывает панель.
+  - Вставка добавляет emoji к тексту, фокус возвращается в инпут.
+  - Escape закрывает панель.
