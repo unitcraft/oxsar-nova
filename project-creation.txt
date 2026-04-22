@@ -4467,3 +4467,17 @@ BuildingsScreen теперь использует buildingName() в очеред
   - Итоговая система: 🟠 металл, 💎 кремний, 💧 водород (без изменений).
   - sed -i применён к 13 файлам: все экраны фронтенда + docs + project-creation.txt.
 
+
+================================================================================
+Итерация — 2026-04-22 (UI-26)
+================================================================================
+
+[UI-26] Мелкие UX-исправления и описания артефактов.
+  - App.tsx: исправлен query key unread-count (['messages','unread-count']→['messages-unread']),
+    тип ответа {unread}→{count}, синхронизирован в MessagesScreen.
+  - App.tsx: BOTTOM_ITEMS замена chat→messages для правильного бейджа.
+  - catalog.ts: ArtefactEntry + benefit + lifetime для всех 6 артефактов.
+  - ArtefactsScreen: зелёный italic эффект в карточке.
+  - ArtefactMarketScreen: мелкий italic эффект в таблице рынка.
+  - ui-plan-overview.md: "Артефакты на миссию" → заблокировано (battle_bonus ErrUnsupported).
+

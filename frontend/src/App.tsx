@@ -56,8 +56,8 @@ function AuthenticatedApp() {
     refetchInterval: 60000,
   });
   const unread = useQuery({
-    queryKey: ['messages', 'unread-count'],
-    queryFn: () => api.get<{ unread: number }>('/api/messages/unread-count'),
+    queryKey: ['messages-unread'],
+    queryFn: () => api.get<{ count: number }>('/api/messages/unread-count'),
     refetchInterval: 15000,
   });
   const me = useQuery({
@@ -66,7 +66,7 @@ function AuthenticatedApp() {
     staleTime: 60000,
   });
 
-  const unreadCount = unread.data?.unread ?? 0;
+  const unreadCount = unread.data?.count ?? 0;
   const isAdmin = me.data?.role === 'admin' || me.data?.role === 'superadmin';
   const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
   const [fleetDst, setFleetDst] = useState<{ g: number; s: number; pos: number; isMoon: boolean; mission: number } | undefined>();
@@ -341,7 +341,7 @@ const BOTTOM_ITEMS: Array<{ key: Tab; icon: string; label: string }> = [
   { key: 'overview',  icon: '🏠', label: 'Обзор' },
   { key: 'galaxy',    icon: '🌌', label: 'Галакт.' },
   { key: 'fleet',     icon: '🛸', label: 'Флот' },
-  { key: 'chat',      icon: '💬', label: 'Чат' },
+  { key: 'messages',  icon: '📨', label: 'Сообщ.' },
 ];
 
 function BottomNav({ tab, setTab, unreadCount }: { tab: Tab; setTab: (t: Tab) => void; unreadCount: number }) {
@@ -359,7 +359,7 @@ function BottomNav({ tab, setTab, unreadCount }: { tab: Tab; setTab: (t: Tab) =>
           >
             <span className="nav-icon">{item.icon}</span>
             <span>{item.label}</span>
-            {item.key === 'chat' && unreadCount > 0 && (
+            {item.key === 'messages' && unreadCount > 0 && (
               <span className="badge">{unreadCount}</span>
             )}
           </button>
