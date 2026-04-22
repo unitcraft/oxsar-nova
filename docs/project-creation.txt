@@ -4671,3 +4671,31 @@ Frontend:
 
 Статус: завершена. Пассивные и стартовые достижения объединены в одну систему с категориями.
 
+
+
+================================================================================
+Итерация — 2026-04-23 (Battle Bonus)
+================================================================================
+
+[Battle Bonus] Реализация battle_bonus артефактов (боевые модификаторы).
+
+Backend:
+  - config/catalog.go: ArtefactEffect расширена полями BattleAttack, BattleShield, BattleShell.
+  - artefact/effects.go:
+    - BattleModifier: новый тип с множителями AttackMul, ShieldMul, ShellMul.
+    - ComputeBattleModifier(): вычисляет итоговый модификатор из нескольких активных артефактов.
+    - computeChanges(): battle_bonus теперь возвращает nil, nil (не материализуется в БД).
+  - artefact/service.go: ActiveBattleModifiers() запрашивает активные battle_bonus артефакты и применяет модификаторы.
+  - fleet/transport.go: TransportService добавлено поле artefact *artefact.Service.
+  - fleet/attack.go:
+    - Добавлен импорт artefact и battle.
+    - applyBattleMod(): применяет множители к Attack/Shield/Shell юнитов.
+    - AttackHandler(): перед боем запрашивает ActiveBattleModifiers и применяет к атакующей стороне.
+  - cmd/worker/main.go: NewTransportService() передаёт artefactSvc.
+  - configs/artefacts.yml: добавлены три артефакта:
+    - War Machine (id=310): battle_attack=1.1
+    - Energy Shield (id=311): battle_shield=1.1
+    - Titanium Hull (id=312): battle_shell=1.1
+
+Статус: завершена. Battle_bonus артефакты полностью работают — множители применяются in-memory во время боя.
+
