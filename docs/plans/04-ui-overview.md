@@ -120,7 +120,7 @@
 
 ### P2.5 — Скоро
 
-- **UI-34**: Экран PlanetOptions (переименование планеты, установка главной, удаление) — требует PUT/DELETE /api/planets endpoints
+- ~~**UI-34**: Экран PlanetOptions (переименование планеты, установка главной, удаление)~~ ✅ реализовано (UI-34): PATCH/POST/DELETE endpoints, новый таб planet-options, навигация через ⚙️ кнопку в OverviewScreen
 - ~~**UI-35**: Унификация formatNum/toLocaleString по всему фронту для разделителей тысяч~~ ✅ реализовано (UI-35): `formatNum()` добавлена в `catalog.ts`, GalaxyScreen переведена на неё; основной фронт уже использует `toLocaleString('ru-RU')`
 - ~~**UI-36**: Счётчик онлайна (Сейчас играют / За 24 часа) из `/api/stats`~~ ✅ реализовано (UI-36): GET /api/stats добавлен (public endpoint), OverviewScreen показывает online_now и online_24h в панели статистики 
 
