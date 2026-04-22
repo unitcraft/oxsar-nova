@@ -29,7 +29,6 @@ tags:
   - name: rockets
   - name: score
   - name: alliances
-  - name: tutorial
   - name: admin
   - name: i18n
   - name: system
@@ -1343,25 +1342,6 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  /api/tutorial:
-    get:
-      tags: [tutorial]
-      security: [{ bearerAuth: [] }]
-      summary: Статус туториала — шаги + прогресс. Lazy-check автопродвигает шаги.
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  steps:
-                    type: array
-                    items: { $ref: "#/components/schemas/TutorialStep" }
-                  state:    { type: integer, description: "0..6 выполненных шагов" }
-                  complete: { type: boolean }
-
   /api/i18n/{lang}:
     get:
       tags: [i18n]
@@ -1685,6 +1665,7 @@ components:
         title:       { type: string }
         description: { type: string }
         points:      { type: integer }
+        category:    { type: string, enum: [passive, starter] }
         unlocked_at: { type: string, format: date-time, nullable: true }
 
     Officer:
@@ -1757,14 +1738,6 @@ components:
         banned_at:    { type: string, format: date-time, nullable: true }
         created_at:   { type: string, format: date-time }
         last_seen_at: { type: string, format: date-time }
-
-    TutorialStep:
-      type: object
-      properties:
-        index:       { type: integer }
-        title:       { type: string }
-        description: { type: string }
-        done:        { type: boolean }
 
     ArtMarketOffer:
       type: object

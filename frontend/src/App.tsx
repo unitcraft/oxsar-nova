@@ -26,7 +26,6 @@ const OfficersScreen     = lazy(() => import('./features/officers/OfficersScreen
 const ScoreScreen        = lazy(() => import('./features/score/ScoreScreen').then(m => ({ default: m.ScoreScreen })));
 const AllianceScreen     = lazy(() => import('./features/alliance/AllianceScreen').then(m => ({ default: m.AllianceScreen })));
 const AchievementsScreen = lazy(() => import('./features/achievements/AchievementsScreen').then(m => ({ default: m.AchievementsScreen })));
-const TutorialScreen     = lazy(() => import('./features/tutorial/TutorialScreen').then(m => ({ default: m.TutorialScreen })));
 const ChatScreen         = lazy(() => import('./features/chat/ChatScreen').then(m => ({ default: m.ChatScreen })));
 const PlanetOptionsScreen = lazy(() => import('./features/planet-options/PlanetOptionsScreen').then(m => ({ default: m.PlanetOptionsScreen })));
 const AdminScreen        = lazy(() => import('./features/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
@@ -34,7 +33,7 @@ const AdminScreen        = lazy(() => import('./features/admin/AdminScreen').the
 type Tab =
   | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
   | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
-  | 'art-market' | 'officers' | 'achievements' | 'tutorial' | 'score'
+  | 'art-market' | 'officers' | 'achievements' | 'score'
   | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options';
 
 
@@ -171,7 +170,6 @@ function AuthenticatedApp() {
             {tab === 'artefacts'  && <ArtefactsScreen />}
             {tab === 'art-market' && <ArtefactMarketScreen />}
             {tab === 'officers'   && <OfficersScreen />}
-            {tab === 'tutorial'   && <TutorialScreen />}
             {tab === 'achievements' && <AchievementsScreen />}
             {tab === 'score'      && <ScoreScreen />}
             {tab === 'alliance'   && <AllianceScreen />}
@@ -498,7 +496,6 @@ function buildNavItems(t: (ns: string, key: string, fb?: string) => string, unre
     { key: 'stats', groupLabel: 'Статистика' },
     { key: 'score',      icon: '🏆', label: t('global','MENU_HIGHSCORE') || 'Рейтинг' },
     { key: 'achievements',icon:'🥇', label: t('global','MENU_ACHIEVEMENTS') || 'Достижения' },
-    { key: 'tutorial',   icon: '🎓', label: t('global','MENU_TUTORIAL') || 'Туториал' },
     { key: 'sim',        icon: '⚔️', label: t('global','MENU_SIMULATOR') },
     ...(isAdmin ? [
       { key: 's5', sep: true },
