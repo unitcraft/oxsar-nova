@@ -206,3 +206,21 @@ export function nameOf(id: number): string {
 export function buildingName(id: number): string {
   return BUILDINGS.find((b) => b.id === id)?.name ?? `#${id}`;
 }
+
+// API functions for resource management
+import { api } from './client';
+import type { ResourceReport } from './types';
+
+export const resourceAPI = {
+  getResourceReport: (planetId: string) =>
+    api.get<ResourceReport>(`/api/planets/${planetId}/resource-report`),
+
+  updateResourceFactors: (planetId: string, payload: { factors: Record<string, number> }) =>
+    api.post<{ status: string }>(`/api/planets/${planetId}/resource-update`, payload),
+};
+
+// Re-export for convenience
+export const catalog = {
+  getResourceReport: resourceAPI.getResourceReport,
+  updateResourceFactors: resourceAPI.updateResourceFactors,
+};

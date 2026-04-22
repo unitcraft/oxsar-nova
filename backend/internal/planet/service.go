@@ -522,3 +522,223 @@ func clampAdd(cur, delta, max float64) float64 {
 	}
 	return sum
 }
+
+// ResourceReportDTO — отчёт о производстве ресурсов планеты.
+type ResourceReportDTO struct {
+	PlanetID           string                  `json:"planet_id"`
+	PlanetName         string                  `json:"planet_name"`
+	Buildings          []ResourceBuildingDTO   `json:"buildings"`
+	BasicMetal         float64                 `json:"basic_metal"`
+	BasicSilicon       float64                 `json:"basic_silicon"`
+	BasicHydrogen      float64                 `json:"basic_hydrogen"`
+	StorageMetal       float64                 `json:"storage_metal"`
+	StorageSilicon     float64                 `json:"storage_silicon"`
+	StorageHydrogen    float64                 `json:"storage_hydrogen"`
+	TotalMetal         float64                 `json:"total_metal"`
+	TotalSilicon       float64                 `json:"total_silicon"`
+	TotalHydrogen      float64                 `json:"total_hydrogen"`
+	TotalEnergy        float64                 `json:"total_energy"`
+	DailyMetal         float64                 `json:"daily_metal"`
+	DailySilicon       float64                 `json:"daily_silicon"`
+	DailyHydrogen      float64                 `json:"daily_hydrogen"`
+	WeeklyMetal        float64                 `json:"weekly_metal"`
+	WeeklySilicon      float64                 `json:"weekly_silicon"`
+	WeeklyHydrogen     float64                 `json:"weekly_hydrogen"`
+}
+
+type ResourceBuildingDTO struct {
+	UnitID       int     `json:"unit_id"`
+	Name         string  `json:"name"`
+	Level        int     `json:"level"`
+	ProdMetal    float64 `json:"prod_metal"`
+	ProdSilicon  float64 `json:"prod_silicon"`
+	ProdHydrogen float64 `json:"prod_hydrogen"`
+	ConsEnergy   float64 `json:"cons_energy"`
+	Factor       int     `json:"factor"`
+	AllowFactor  bool    `json:"allow_factor"`
+}
+
+// ResourceReport возвращает отчёт о производстве ресурсов для планеты.
+func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (*ResourceReportDTO, error) {
+	p, err := s.repo.GetByID(ctx, planetID)
+	if err != nil {
+		return nil, err
+	}
+	if p.UserID != userID {
+		return nil, ErrNotFound
+	}
+
+	// Прочитаем здания планеты.
+	buildings, err := s.repo.GetBuildings(ctx, planetID)
+	if err != nil {
+		return nil, fmt.Errorf("get buildings: %w", err)
+	}
+
+	report := &ResourceReportDTO{
+		PlanetID:   p.ID,
+		PlanetName: p.Name,
+		Buildings:  []ResourceBuildingDTO{},
+	}
+
+	// Базовое производство (из конфига: каждый день 10M металла, 5M кремния, 1M водорода).
+	// В legacy это значение зависит от версии мира, берётся из конфига.
+	report.BasicMetal = 10_000_000
+	report.BasicSilicon = 5_000_000
+	report.BasicHydrogen = 1_000_000
+
+	// Ёмкости хранилищ.
+	report.StorageMetal = float64(p.MetalCap)
+	report.StorageSilicon = float64(p.SiliconCap)
+	report.StorageHydrogen = float64(p.HydrogenCap)
+
+	// Расчёт производства по зданиям.
+	totalMetal, totalSilicon, totalHydrogen := 0.0, 0.0, 0.0
+	totalEnergy := 0.0
+
+	for _, b := range buildings {
+		// Find the building spec by ID from Construction catalog
+		var buildingKey string
+		for key, spec := range s.catalog.Construction.Buildings {
+			if int(spec.ID) == b.UnitID {
+				buildingKey = key
+				break
+			}
+		}
+		if buildingKey == "" {
+			continue
+		}
+
+		spec := s.catalog.Construction.Buildings[buildingKey]
+
+		// Расчёт почасового производства по формулам.
+		metalHour := s.calcBuildingProduction(spec.Prod.Metal, b.Level, p.ProduceFactor)
+		silHour := s.calcBuildingProduction(spec.Prod.Silicon, b.Level, p.ProduceFactor)
+		hydHour := s.calcBuildingProduction(spec.Prod.Hydrogen, b.Level, p.ProduceFactor)
+		energyHour := s.calcBuildingConsumption(spec.Cons.Energy, b.Level)
+
+		// Применить factor (0-100%).
+		factor := float64(b.Factor) / 100.0
+		metalHour *= factor
+		silHour *= factor
+		hydHour *= factor
+		energyHour *= factor
+
+		totalMetal += metalHour
+		totalSilicon += silHour
+		totalHydrogen += hydHour
+		totalEnergy -= energyHour // потребление — отрицательное
+
+		// Проверить, разрешено ли менять фактор (только для производства, не для потребления).
+		allowFactor := spec.Prod.Metal != "" || spec.Prod.Silicon != "" || spec.Prod.Hydrogen != ""
+
+		// Get building name from catalog
+		buildingName := s.getBuildingName(b.UnitID)
+
+		report.Buildings = append(report.Buildings, ResourceBuildingDTO{
+			UnitID:       b.UnitID,
+			Name:         buildingName,
+			Level:        b.Level,
+			ProdMetal:    metalHour,
+			ProdSilicon:  silHour,
+			ProdHydrogen: hydHour,
+			ConsEnergy:   energyHour,
+			Factor:       b.Factor,
+			AllowFactor:  allowFactor,
+		})
+	}
+
+	// Сводные значения.
+	report.TotalMetal = report.BasicMetal + totalMetal
+	report.TotalSilicon = report.BasicSilicon + totalSilicon
+	report.TotalHydrogen = report.BasicHydrogen + totalHydrogen
+	report.TotalEnergy = totalEnergy
+
+	// Дневное производство (24 часа).
+	report.DailyMetal = report.TotalMetal * 24
+	report.DailySilicon = report.TotalSilicon * 24
+	report.DailyHydrogen = report.TotalHydrogen * 24
+
+	// Недельное производство (7 дней).
+	report.WeeklyMetal = report.DailyMetal * 7
+	report.WeeklySilicon = report.DailySilicon * 7
+	report.WeeklyHydrogen = report.DailyHydrogen * 7
+
+	return report, nil
+}
+
+// UpdateResourceFactors обновляет факторы производства для зданий планеты.
+func (s *Service) UpdateResourceFactors(ctx context.Context, userID, planetID string, factors map[string]int) error {
+	p, err := s.repo.GetByID(ctx, planetID)
+	if err != nil {
+		return err
+	}
+	if p.UserID != userID {
+		return ErrNotFound
+	}
+
+	// Валидация факторов (0-100%).
+	for _, factor := range factors {
+		if factor < 0 || factor > 100 {
+			return fmt.Errorf("invalid factor: %d: %w", factor, ErrInvalidInput)
+		}
+	}
+
+	// Обновить факторы в БД.
+	for unitIDStr, factor := range factors {
+		var unitID int
+		if _, err := fmt.Sscanf(unitIDStr, "%d", &unitID); err != nil {
+			return fmt.Errorf("invalid unit_id: %s: %w", unitIDStr, ErrInvalidInput)
+		}
+
+		err := s.repo.UpdateBuildingFactor(ctx, planetID, unitID, factor)
+		if err != nil {
+			return fmt.Errorf("update building factor: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// getBuildingName возвращает имя здания по его ID.
+func (s *Service) getBuildingName(unitID int) string {
+	for key, spec := range s.catalog.Construction.Buildings {
+		if int(spec.ID) == unitID {
+			return key
+		}
+	}
+	return ""
+}
+
+// calcBuildingProduction парсит и вычисляет производство здания по формуле.
+func (s *Service) calcBuildingProduction(formulaSrc string, level int, factor float64) float64 {
+	if formulaSrc == "" {
+		return 0
+	}
+	expr := s.compile(formulaSrc)
+	if expr == nil {
+		return 0
+	}
+	ctx := formula.Context{Level: level}
+	val, err := expr.Eval(ctx)
+	if err != nil {
+		return 0
+	}
+	return val * factor
+}
+
+// calcBuildingConsumption парсит и вычисляет потребление здания по формуле.
+func (s *Service) calcBuildingConsumption(formulaSrc string, level int) float64 {
+	if formulaSrc == "" {
+		return 0
+	}
+	expr := s.compile(formulaSrc)
+	if expr == nil {
+		return 0
+	}
+	ctx := formula.Context{Level: level}
+	val, err := expr.Eval(ctx)
+	if err != nil {
+		return 0
+	}
+	return val
+}

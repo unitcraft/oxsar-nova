@@ -28,13 +28,14 @@ const AllianceScreen     = lazy(() => import('./features/alliance/AllianceScreen
 const AchievementsScreen = lazy(() => import('./features/achievements/AchievementsScreen').then(m => ({ default: m.AchievementsScreen })));
 const ChatScreen         = lazy(() => import('./features/chat/ChatScreen').then(m => ({ default: m.ChatScreen })));
 const PlanetOptionsScreen = lazy(() => import('./features/planet-options/PlanetOptionsScreen').then(m => ({ default: m.PlanetOptionsScreen })));
+const ResourceScreen     = lazy(() => import('./features/resource/ResourceScreen').then(m => ({ default: m.ResourceScreen })));
 const AdminScreen        = lazy(() => import('./features/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 
 type Tab =
   | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
   | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
   | 'art-market' | 'officers' | 'achievements' | 'score'
-  | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options';
+  | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource';
 
 
 export function App() {
@@ -177,6 +178,7 @@ function AuthenticatedApp() {
             {tab === 'sim'        && <BattleSimScreen />}
             {tab === 'admin'      && isAdmin && <AdminScreen />}
             {tab === 'planet-options' && <PlanetOptionsScreen planet={planet} planets={list} homePlanetId={list[0]?.id ?? null} onBack={() => setTab('overview')} />}
+            {tab === 'resource'   && <ResourceScreen planetId={planet.id} onBack={() => setTab('overview')} />}
           </Suspense>
         </main>
       </div>

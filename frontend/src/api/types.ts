@@ -122,3 +122,39 @@ export interface SystemView {
   system: number;
   cells: GalaxyCell[];
 }
+
+export interface ResourceBuilding {
+  unit_id: number;
+  name: string;
+  level: number;
+  prod_metal: number;
+  prod_silicon: number;
+  prod_hydrogen: number;
+  cons_energy: number;
+  factor: number;
+  allow_factor: boolean;
+}
+
+export interface ResourceReport {
+  planet_id: string;
+  planet_name: string;
+  buildings: ResourceBuilding[];
+  basic_metal: number;
+  basic_silicon: number;
+  basic_hydrogen: number;
+  storage_metal: number;
+  storage_silicon: number;
+  storage_hydrogen: number;
+  metal_total: number;
+  silicon_total: number;
+  hydrogen_total: number;
+  metal_per_hour: number;
+  silicon_per_hour: number;
+  hydrogen_per_hour: number;
+  metal_per_day: number;
+  silicon_per_day: number;
+  hydrogen_per_day: number;
+  metal_per_week: number;
+  silicon_per_week: number;
+  hydrogen_per_week: number;
+}
