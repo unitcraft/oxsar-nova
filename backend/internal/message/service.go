@@ -279,6 +279,9 @@ type BattleReport struct {
 	DefenderUserID   *string         `json:"defender_user_id,omitempty"`
 	DefenderUsername string          `json:"defender_username,omitempty"`
 	PlanetID         *string         `json:"planet_id,omitempty"`
+	DstGalaxy        *int            `json:"dst_galaxy,omitempty"`
+	DstSystem        *int            `json:"dst_system,omitempty"`
+	DstPosition      *int            `json:"dst_position,omitempty"`
 	Seed             int64           `json:"seed"`
 	Winner           string          `json:"winner"`
 	Rounds           int             `json:"rounds"`
@@ -298,7 +301,7 @@ func (s *Service) GetBattleReport(ctx context.Context, userID, reportID string) 
 	var r BattleReport
 	err := s.db.Pool().QueryRow(ctx, `
 		SELECT br.id, br.attacker_user_id, COALESCE(ua.username,''), br.defender_user_id, COALESCE(ud.username,''),
-		       br.planet_id,
+		       br.planet_id, p.galaxy, p.system, p.position,
 		       br.seed, br.winner, br.rounds,
 		       br.debris_metal, br.debris_silicon,
 		       br.loot_metal, br.loot_silicon, br.loot_hydrogen,
@@ -306,9 +309,10 @@ func (s *Service) GetBattleReport(ctx context.Context, userID, reportID string) 
 		FROM battle_reports br
 		LEFT JOIN users ua ON ua.id = br.attacker_user_id
 		LEFT JOIN users ud ON ud.id = br.defender_user_id
+		LEFT JOIN planets p ON p.id = br.planet_id
 		WHERE br.id = $1
 	`, reportID).Scan(&r.ID, &r.AttackerUserID, &r.AttackerUsername, &r.DefenderUserID, &r.DefenderUsername,
-		&r.PlanetID,
+		&r.PlanetID, &r.DstGalaxy, &r.DstSystem, &r.DstPosition,
 		&r.Seed, &r.Winner, &r.Rounds,
 		&r.DebrisMetal, &r.DebrisSilicon,
 		&r.LootMetal, &r.LootSilicon, &r.LootHydrogen,
