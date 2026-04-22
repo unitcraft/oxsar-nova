@@ -269,6 +269,11 @@ function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
 }
 
 function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; used_fields?: number; temp_min?: number; temp_max?: number } }) {
+  const qc = useQueryClient();
+  const invalidateQueues = () => {
+    void qc.invalidateQueries({ queryKey: ['buildings-queue', planet.id] });
+    void qc.invalidateQueries({ queryKey: ['shipyard-queue', planet.id] });
+  };
   const bQueue = useQuery({
     queryKey: ['buildings-queue', planet.id],
     queryFn: () => api.get<{ queue: QueueItem[] }>(`/api/planets/${planet.id}/buildings/queue`),
@@ -280,8 +285,9 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
     refetchInterval: 5000,
   });
 
-  const bItems = bQueue.data?.queue ?? [];
-  const sItems = sQueue.data?.queue ?? [];
+  const now = Date.now();
+  const bItems = (bQueue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > now);
+  const sItems = (sQueue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > now);
   const hasActivity = bItems.length > 0 || sItems.length > 0;
 
   const diameter = planet.diameter;
@@ -362,6 +368,7 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
               label={`${buildingName(item.unit_id)} → ур. ${item.target_level}`}
               startAt={item.start_at}
               endAt={item.end_at}
+              onDone={invalidateQueues}
             />
           ))}
           {sItems.map((item) => (
@@ -371,6 +378,7 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
               label={`${nameOf(item.unit_id)} × ${item.count}`}
               startAt={item.start_at}
               endAt={item.end_at}
+              onDone={invalidateQueues}
             />
           ))}
         </div>
@@ -420,12 +428,13 @@ function ResourceCell({
 }
 
 function ActiveQueueItem({
-  icon, label, startAt, endAt,
+  icon, label, startAt, endAt, onDone,
 }: {
   icon: string;
   label: string;
   startAt: string;
   endAt: string;
+  onDone?: () => void;
 }) {
   const total = new Date(endAt).getTime() - new Date(startAt).getTime();
   const elapsed = Date.now() - new Date(startAt).getTime();
@@ -436,7 +445,7 @@ function ActiveQueueItem({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
         <span>{icon}</span>
         <span style={{ flex: 1, fontWeight: 600 }}>{label}</span>
-        <Countdown finishAt={endAt} />
+        <Countdown finishAt={endAt} {...(onDone ? { onDone } : {})} />
       </div>
       <ProgressBar pct={pct} variant="default" height={4} />
     </div>
