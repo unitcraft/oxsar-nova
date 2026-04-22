@@ -512,6 +512,7 @@ function buildNavItems(t: (ns: string, key: string, fb?: string) => string, unre
     { key: 'research',   icon: '🔬', label: t('global','MENU_RESEARCH') },
     { key: 'shipyard',   icon: '🚀', label: t('global','MENU_SHIPYARD') },
     { key: 'repair',     icon: '🔧', label: t('global','MENU_REPAIR') },
+    { key: 'resource',   icon: '⚙️', label: t('global','MENU_RESOURCES') || 'Сырье' },
     { key: 's1', sep: true },
     { key: 'space', groupLabel: 'Космос' },
     { key: 'galaxy',     icon: '🌌', label: t('global','MENU_GALAXY') },
