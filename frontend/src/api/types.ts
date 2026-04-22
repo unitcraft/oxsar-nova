@@ -45,6 +45,9 @@ export interface Planet {
   energy_prod: number;
   energy_cons: number;
   energy_remaining: number;
+  produce_factor?: number;
+  build_factor?: number;
+  research_factor?: number;
 }
 
 export interface IncomingFleet {

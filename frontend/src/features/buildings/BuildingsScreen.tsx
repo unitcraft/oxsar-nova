@@ -81,11 +81,23 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
           Постройки — {planet.name}
         </h2>
-        {queueItems.length > 0 && (
-          <span style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>
-            В очереди: {queueItems.length}
-          </span>
-        )}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          {planet.build_factor != null && planet.build_factor > 1 && (
+            <span style={{ fontSize: 12, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
+              🏗 +{Math.round((planet.build_factor - 1) * 100)}% строительство
+            </span>
+          )}
+          {planet.produce_factor != null && planet.produce_factor > 1 && (
+            <span style={{ fontSize: 12, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
+              ⛏ +{Math.round((planet.produce_factor - 1) * 100)}% добыча
+            </span>
+          )}
+          {queueItems.length > 0 && (
+            <span style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>
+              В очереди: {queueItems.length}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Active queue */}
