@@ -122,8 +122,8 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 		// 1-3 и 13-15 — меньше; 4-12 — стандарт (как в legacy OGame).
 		r := rng.New(coordsSeed(g, sys, pos))
 		diameter := positionDiameter(pos, r)
-		tempMax := -40 + r.IntN(80)
-		tempMin := tempMax - 40
+		pType := planetTypeOf(pos, r)
+		tempMin, tempMax := positionTemp(pos, r)
 
 		// Имя планеты: из payload или «Colony» по умолчанию.
 		colonyName := pl.ColonyName
@@ -134,10 +134,10 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 		newPlanetID := ids.New()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO planets (id, user_id, is_moon, name, galaxy, system, position,
-			                     diameter, used_fields, temperature_min, temperature_max,
+			                     diameter, used_fields, planet_type, temperature_min, temperature_max,
 			                     metal, silicon, hydrogen)
-			VALUES ($1, $2, false, $3, $4, $5, $6, $7, 0, $8, $9, $10, $11, $12)
-		`, newPlanetID, ownerUserID, colonyName, g, sys, pos, diameter, tempMin, tempMax,
+			VALUES ($1, $2, false, $3, $4, $5, $6, $7, 0, $8, $9, $10, $11, $12, $13)
+		`, newPlanetID, ownerUserID, colonyName, g, sys, pos, diameter, pType, tempMin, tempMax,
 			cm, csil, ch); err != nil {
 			return fmt.Errorf("colonize: insert planet: %w", err)
 		}
@@ -239,4 +239,53 @@ func coordsSeed(g, sys, pos int) uint64 {
 		}
 	}
 	return h
+}
+
+// planetTypeOf — детерминированный тип планеты по позиции и rng.
+// Логика по OGame: слоты 1-3 горячие (сухие/пустынные), 13-15 холодные
+// (ледяные/газовые), середина — умеренные и водные биомы.
+// RNG используется когда на позиции возможно несколько типов.
+func planetTypeOf(pos int, r *rng.R) string {
+	switch {
+	case pos <= 2:
+		return "trockenplanet"
+	case pos == 3:
+		if r.IntN(2) == 0 {
+			return "trockenplanet"
+		}
+		return "wuestenplanet"
+	case pos <= 5:
+		return "dschjungelplanet"
+	case pos <= 7:
+		if r.IntN(2) == 0 {
+			return "dschjungelplanet"
+		}
+		return "normaltempplanet"
+	case pos <= 9:
+		return "normaltempplanet"
+	case pos <= 11:
+		if r.IntN(2) == 0 {
+			return "normaltempplanet"
+		}
+		return "wasserplanet"
+	case pos <= 13:
+		return "wasserplanet"
+	case pos == 14:
+		return "eisplanet"
+	default:
+		if r.IntN(2) == 0 {
+			return "eisplanet"
+		}
+		return "gasplanet"
+	}
+}
+
+// positionTemp — температура по позиции в системе.
+// Слот 1 (ближе к звезде) ≈ +100°C, слот 15 ≈ -100°C, ±10° случайный разброс.
+func positionTemp(pos int, r *rng.R) (tempMin, tempMax int) {
+	base := 110 - pos*14        // слот 1 → 96, слот 15 → -100
+	spread := r.IntN(20) - 10   // -10..+9
+	tempMax = base + spread
+	tempMin = tempMax - 40
+	return
 }

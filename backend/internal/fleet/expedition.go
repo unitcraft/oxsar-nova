@@ -169,17 +169,17 @@ func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string) (ma
 		}
 
 		rCoord := rng.New(coordsSeed(g, sys, pos))
-		diameter := 12800 + rCoord.IntN(2000)
-		tempMax := -40 + rCoord.IntN(80)
-		tempMin := tempMax - 40
+		diameter := positionDiameter(pos, rCoord)
+		pType := planetTypeOf(pos, rCoord)
+		tempMin, tempMax := positionTemp(pos, rCoord)
 
 		newID := ids.New()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO planets (id, user_id, is_moon, name, galaxy, system, position,
-			                     diameter, used_fields, temperature_min, temperature_max,
+			                     diameter, used_fields, planet_type, temperature_min, temperature_max,
 			                     metal, silicon, hydrogen)
-			VALUES ($1, $2, false, 'Expedition Colony', $3, $4, $5, $6, 0, $7, $8, 0, 0, 0)
-		`, newID, userID, g, sys, pos, diameter, tempMin, tempMax); err != nil {
+			VALUES ($1, $2, false, 'Expedition Colony', $3, $4, $5, $6, 0, $7, $8, $9, 0, 0, 0)
+		`, newID, userID, g, sys, pos, diameter, pType, tempMin, tempMax); err != nil {
 			return nil, fmt.Errorf("expExtraPlanet: insert: %w", err)
 		}
 		return map[string]any{

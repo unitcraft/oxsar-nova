@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '@/api/client';
-import { buildingName, nameOf, planetImageOf } from '@/api/catalog';
+import { buildingName, imageOfId, nameOf, planetImageOf, planetImageSize } from '@/api/catalog';
 import type { Planet, QueueItem, ShipyardQueueItem } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
 import { ProgressBar } from '@/ui/ProgressBar';
@@ -156,7 +156,7 @@ export function OverviewScreen() {
               >
                 {p.is_moon
                   ? <span style={{ fontSize: 36, lineHeight: 1 }}>🌑</span>
-                  : <img src={planetImageOf(p.position, p.id)} alt="" style={{ width: 48, height: 48, borderRadius: 5, objectFit: 'cover' }} />
+                  : <img src={planetImageOf(p.position, p.id, p.planet_type)} alt="" style={{ width: planetImageSize(p.diameter), height: planetImageSize(p.diameter), borderRadius: 5, objectFit: 'cover' }} />
                 }
                 <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'var(--ox-accent)' : 'var(--ox-fg)', textAlign: 'center', maxWidth: 76, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.name}
@@ -246,11 +246,16 @@ function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
       <ProgressBar pct={pct} variant={isReturning ? 'success' : 'default'} height={3} />
       {f.ships && Object.keys(f.ships).length > 0 && (
         <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: '2px 10px' }}>
-          {Object.entries(f.ships).map(([unitId, count]) => (
-            <span key={unitId} style={{ fontSize: 11, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
-              {nameOf(Number(unitId))} ×{count}
-            </span>
-          ))}
+          {Object.entries(f.ships).map(([unitId, count]) => {
+            const id = Number(unitId);
+            const img = imageOfId(id);
+            return (
+              <span key={unitId} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
+                {img && <img src={img} alt="" width={16} height={16} style={{ imageRendering: 'pixelated', opacity: 0.85 }} />}
+                {nameOf(id)} ×{count}
+              </span>
+            );
+          })}
           {f.carry && (f.carry.metal > 0 || f.carry.silicon > 0 || f.carry.hydrogen > 0) && (
             <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginLeft: 4 }}>
               [{f.carry.metal > 0 && `⛏${f.carry.metal.toLocaleString('ru-RU')}`}{f.carry.silicon > 0 && ` 🔷${f.carry.silicon.toLocaleString('ru-RU')}`}{f.carry.hydrogen > 0 && ` 💧${f.carry.hydrogen.toLocaleString('ru-RU')}`}]
@@ -295,9 +300,9 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
         {planet.is_moon
           ? <span style={{ fontSize: 32, flexShrink: 0 }}>🌑</span>
           : <img
-              src={planetImageOf(planet.position, planet.id)}
+              src={planetImageOf(planet.position, planet.id, planet.planet_type)}
               alt=""
-              style={{ width: 48, height: 48, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
+              style={{ width: planetImageSize(planet.diameter), height: planetImageSize(planet.diameter), borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
             />
         }
         <div style={{ flex: 1, minWidth: 0 }}>

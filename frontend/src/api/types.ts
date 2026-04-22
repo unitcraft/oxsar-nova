@@ -27,6 +27,8 @@ export interface Planet {
   galaxy: number;
   system: number;
   position: number;
+  diameter?: number;
+  planet_type?: string;
   metal: number;
   silicon: number;
   hydrogen: number;
@@ -85,6 +87,7 @@ export interface GalaxyCell {
   moon_name?: string | null;
   owner_id?: string | null;
   owner_username?: string | null;
+  owner_rank?: number | null;
   debris_metal: number;
   debris_silicon: number;
 }
