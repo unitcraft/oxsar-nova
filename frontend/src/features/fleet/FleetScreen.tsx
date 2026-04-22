@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { SHIPS, nameOf, imageOf } from '@/api/catalog';
+import { SHIPS, nameOf, imageOf, imageOfId } from '@/api/catalog';
 import type { Planet } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
 import { useToast } from '@/ui/Toast';
@@ -19,6 +19,7 @@ interface FleetRow {
   arrive_at: string;
   return_at?: string | null;
   carry: { metal: number; silicon: number; hydrogen: number };
+  ships?: Record<string, number>;
 }
 
 const MISSION_LABELS: Record<number, string> = {
@@ -120,6 +121,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
                 <tr>
                   <th>Миссия</th>
                   <th>Назначение</th>
+                  <th>Состав</th>
                   <th>Статус</th>
                   <th>Прилёт / Возврат</th>
                   <th />
@@ -131,6 +133,22 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
                     <td>{MISSION_LABELS[f.mission] ?? `#${f.mission}`}</td>
                     <td style={{ fontFamily: 'var(--ox-mono)', fontSize: 12 }}>
                       [{f.dst_galaxy}:{f.dst_system}:{f.dst_position}{f.dst_is_moon ? '🌑' : ''}]
+                    </td>
+                    <td>
+                      {f.ships && Object.keys(f.ships).length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 8px' }}>
+                          {Object.entries(f.ships).map(([unitId, count]) => {
+                            const id = Number(unitId);
+                            const img = imageOfId(id);
+                            return (
+                              <span key={unitId} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
+                                {img && <img src={img} alt="" width={14} height={14} style={{ imageRendering: 'pixelated', opacity: 0.85 }} />}
+                                {nameOf(id)} ×{count}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <span className={`ox-badge${f.state === 'outbound' ? ' ox-badge-accent' : ''}`}>
