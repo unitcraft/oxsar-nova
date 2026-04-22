@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '@/api/client';
 import { buildingName, imageOfId, nameOf, planetImageOf, planetImageSize } from '@/api/catalog';
 import type { Planet, QueueItem, ShipyardQueueItem } from '@/api/types';
@@ -268,7 +268,17 @@ function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
   );
 }
 
+function useNow(intervalMs = 1000) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(t);
+  }, [intervalMs]);
+  return now;
+}
+
 function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; used_fields?: number; temp_min?: number; temp_max?: number } }) {
+  const now = useNow();
   const qc = useQueryClient();
   const invalidateQueues = () => {
     void qc.invalidateQueries({ queryKey: ['buildings-queue', planet.id] });
@@ -285,7 +295,6 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
     refetchInterval: 5000,
   });
 
-  const now = Date.now();
   const bItems = (bQueue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > now);
   const sItems = (sQueue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > now);
   const hasActivity = bItems.length > 0 || sItems.length > 0;
