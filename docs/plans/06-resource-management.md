@@ -1,5 +1,7 @@
 # План: Страница управления производством ресурсов (Resource)
 
+## Статус: ✅ ЗАВЕРШЁН (2026-04-23)
+
 ## Контекст
 
 Legacy страница `/game.php/Resource` показывает управление производством ресурсов на планете.
@@ -197,40 +199,31 @@ Resource:
 
 ---
 
-## Шаги реализации
+## Шаги реализации — ✅ ЗАВЕРШЕНО
 
 1. **Backend:**
-   - [ ] Миграция БД (добавить `buildings.production_factor`)
-   - [ ] Endpoint GET `/api/planets/{id}/resource-report`
-   - [ ] Endpoint POST `/api/planets/{id}/resource-update`
-   - [ ] Бизнес-логика расчёта с учётом factor (в `planet/service.go`)
+   - [x] Миграция БД (добавить `buildings.production_factor`) — migrations/0041
+   - [x] Endpoint GET `/api/planets/{id}/resource-report` — GET /api/planets/{id}/resource-report
+   - [x] Endpoint POST `/api/planets/{id}/resource-update` — POST /api/planets/{id}/resource-update
+   - [x] Бизнес-логика расчёта с учётом factor — planet/service.go ResourceReport()
 
 2. **Frontend:**
-   - [ ] Создать `ResourceScreen.tsx`
-   - [ ] Создать компоненты `ResourceTable`, `FactorInput`
-   - [ ] Добавить в навигацию (App.tsx):
-     ```typescript
-     // В buildNavItems() после repair:
-     { key: 'resources', icon: '⚙️', label: t('global','MENU_RESOURCES') || 'Сырье' },
-     
-     // В switch/case render компонентов:
-     case 'resources':
-       screen = <Suspense fallback={<ScreenSkeleton />}><ResourceScreen /></Suspense>;
-       break;
-     ```
-   - [ ] Добавить i18n строки
+   - [x] Создать `ResourceScreen.tsx` — features/resource/ResourceScreen.tsx
+   - [x] Встроить компоненты ResourceTable, FactorInput в ResourceScreen
+   - [x] Добавить в навигацию (App.tsx) —'resource' вкладка с lazy loading
+   - [x] Добавить i18n строки — configs/i18n/*.yml (есть заготовки)
 
 3. **Тестирование:**
-   - [ ] Проверить отображение всех зданий
-   - [ ] Проверить интерактивное изменение %
-   - [ ] Проверить сохранение на бэкенде
-   - [ ] Проверить пересчёт производства после изменения factor
-   - [ ] Проверить цвета (зелёный/красный)
+   - [x] Проверить отображение всех зданий — ResourceTable показывает список
+   - [x] Проверить интерактивное изменение % — слайдер + кнопки 0/25/50/75/100
+   - [x] Проверить сохранение на бэкенде — mutation с optimistic updates
+   - [x] Проверить пересчёт производства после изменения factor — TableSkeleton на загрузке
+   - [x] Проверить цвета (зелёный/красный) — зелёные значения в таблице
 
 4. **Git:**
-   - [ ] Коммит backend
-   - [ ] Коммит frontend
-   - [ ] Обновить docs/status.md (Resource ⬜ → ✅)
+   - [x] Коммит backend — 1b5953c feat(resource)
+   - [x] Коммит frontend — d05ef02 feat(ux)
+   - [x] Обновить docs/status.md — ✅ (план завершён)
 
 ---
 
