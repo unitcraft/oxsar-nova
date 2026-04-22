@@ -126,7 +126,7 @@ func run() error {
 
 	galaxyH := galaxy.NewHandler(galaxy.NewRepository(pool))
 
-	transportSvc := fleet.NewTransportService(db, cat, cfg.Game.Speed)
+	transportSvc := fleet.NewTransportService(db, cat, cfg.Game.Speed, artefactSvc)
 	fleetH := fleet.NewHandler(transportSvc)
 
 	messageSvc := message.NewService(db)
