@@ -34,8 +34,8 @@ interface ProdStat {
 }
 
 const PROD_STAT: Record<string, ProdStat> = {
-  metal_mine:     { icon: '⛏', label: 'Добыча', field: 'metal_per_sec' },
-  silicon_lab:    { icon: '🔷', label: 'Добыча', field: 'silicon_per_sec' },
+  metal_mine:     { icon: '🟠', label: 'Добыча', field: 'metal_per_sec' },
+  silicon_lab:    { icon: '💎', label: 'Добыча', field: 'silicon_per_sec' },
   hydrogen_lab:   { icon: '💧', label: 'Добыча', field: 'hydrogen_per_sec' },
   solar_plant:    { icon: '⚡', label: 'Энергия', field: 'energy_prod', isEnergy: true },
   hydrogen_plant: { icon: '⚡', label: 'Энергия', field: 'energy_prod', isEnergy: true },
@@ -89,7 +89,7 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
           )}
           {planet.produce_factor != null && planet.produce_factor > 1 && (
             <span style={{ fontSize: 12, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
-              ⛏ +{Math.round((planet.produce_factor - 1) * 100)}% добыча
+              🟠 +{Math.round((planet.produce_factor - 1) * 100)}% добыча
             </span>
           )}
           {queueItems.length > 0 && (
@@ -151,12 +151,12 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
                     <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
                       {nextCost.metal > 0 && (
                         <span style={{ marginRight: 6, color: planet.metal >= nextCost.metal ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                          ⛏{nextCost.metal.toLocaleString('ru-RU')}
+                          🟠{nextCost.metal.toLocaleString('ru-RU')}
                         </span>
                       )}
                       {nextCost.silicon > 0 && (
                         <span style={{ marginRight: 6, color: planet.silicon >= nextCost.silicon ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                          🔷{nextCost.silicon.toLocaleString('ru-RU')}
+                          💎{nextCost.silicon.toLocaleString('ru-RU')}
                         </span>
                       )}
                       {nextCost.hydrogen > 0 && (

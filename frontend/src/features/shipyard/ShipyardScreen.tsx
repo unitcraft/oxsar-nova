@@ -139,8 +139,8 @@ function UnitCards({
               )}
               {c && (
                 <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6, marginTop: 4 }}>
-                  {c.metal > 0 && <span style={{ marginRight: 6, color: planet.metal >= c.metal * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>⛏{(c.metal * count).toLocaleString('ru-RU')}</span>}
-                  {c.silicon > 0 && <span style={{ marginRight: 6, color: planet.silicon >= c.silicon * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>🔷{(c.silicon * count).toLocaleString('ru-RU')}</span>}
+                  {c.metal > 0 && <span style={{ marginRight: 6, color: planet.metal >= c.metal * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>🟠{(c.metal * count).toLocaleString('ru-RU')}</span>}
+                  {c.silicon > 0 && <span style={{ marginRight: 6, color: planet.silicon >= c.silicon * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>💎{(c.silicon * count).toLocaleString('ru-RU')}</span>}
                   {c.hydrogen > 0 && <span style={{ color: planet.hydrogen >= c.hydrogen * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>💧{(c.hydrogen * count).toLocaleString('ru-RU')}</span>}
                 </div>
               )}

@@ -33,7 +33,7 @@ interface ExchangeResult {
 
 type Res = 'metal' | 'silicon' | 'hydrogen';
 
-const RES_LABEL: Record<Res, string> = { metal: '⛏ Металл', silicon: '🔷 Кремний', hydrogen: '💧 Водород' };
+const RES_LABEL: Record<Res, string> = { metal: '🟠 Металл', silicon: '💎 Кремний', hydrogen: '💧 Водород' };
 
 export function MarketScreen({ planet }: { planet: Planet }) {
   const qc = useQueryClient();

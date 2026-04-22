@@ -224,7 +224,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
                       <td data-label="Обломки" className="num">
                         {c.debris_metal > 0 || c.debris_silicon > 0 ? (
                           <span style={{ color: 'var(--ox-warning)', fontFamily: 'var(--ox-mono)', fontSize: 12 }}>
-                            ⛏{formatNum(c.debris_metal)} / 🔷{formatNum(c.debris_silicon)}
+                            🟠{formatNum(c.debris_metal)} / 💎{formatNum(c.debris_silicon)}
                           </span>
                         ) : '—'}
                       </td>

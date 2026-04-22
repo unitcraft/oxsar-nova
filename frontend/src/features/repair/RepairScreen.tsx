@@ -218,8 +218,8 @@ function DisassembleList({
               <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>В наличии: {have}</div>
               {refund && draft > 0 && (
                 <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', color: 'var(--ox-success)', marginTop: 2, lineHeight: 1.5 }}>
-                  +{refund.metal > 0 && <span style={{ marginRight: 4 }}>⛏{refund.metal.toLocaleString('ru-RU')}</span>}
-                  {refund.silicon > 0 && <span style={{ marginRight: 4 }}>🔷{refund.silicon.toLocaleString('ru-RU')}</span>}
+                  +{refund.metal > 0 && <span style={{ marginRight: 4 }}>🟠{refund.metal.toLocaleString('ru-RU')}</span>}
+                  {refund.silicon > 0 && <span style={{ marginRight: 4 }}>💎{refund.silicon.toLocaleString('ru-RU')}</span>}
                   {refund.hydrogen > 0 && <span>💧{refund.hydrogen.toLocaleString('ru-RU')}</span>}
                 </div>
               )}

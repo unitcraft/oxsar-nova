@@ -216,7 +216,7 @@ function Header({
 
       <div className="ox-header-resources">
         <div className="ox-res-item">
-          <span className="icon">⛏</span>
+          <span className="icon">🟠</span>
           <span className="label-sm">Мет</span>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
             <ResourceTicker value={metal} ratePerSec={metalRate} cap={metalCap} />
@@ -224,7 +224,7 @@ function Header({
           </div>
         </div>
         <div className="ox-res-item">
-          <span className="icon">🔷</span>
+          <span className="icon">💎</span>
           <span className="label-sm">Крем</span>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
             <ResourceTicker value={silicon} ratePerSec={siliconRate} cap={siliconCap} />

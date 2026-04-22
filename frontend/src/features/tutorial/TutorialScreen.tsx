@@ -94,8 +94,8 @@ export function TutorialScreen() {
                 return (
                   <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', color: 'var(--ox-success)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <span>💳 +10 cr</span>
-                    {m > 0  && <span>⛏ +{m.toLocaleString('ru-RU')}</span>}
-                    {si > 0 && <span>🔷 +{si.toLocaleString('ru-RU')}</span>}
+                    {m > 0  && <span>🟠 +{m.toLocaleString('ru-RU')}</span>}
+                    {si > 0 && <span>💎 +{si.toLocaleString('ru-RU')}</span>}
                     {h > 0  && <span>💧 +{h.toLocaleString('ru-RU')}</span>}
                   </div>
                 );

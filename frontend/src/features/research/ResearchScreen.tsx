@@ -101,12 +101,12 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
                     <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
                       {nextCost.metal > 0 && (
                         <span style={{ marginRight: 6, color: planet.metal >= nextCost.metal ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                          ⛏{nextCost.metal.toLocaleString('ru-RU')}
+                          🟠{nextCost.metal.toLocaleString('ru-RU')}
                         </span>
                       )}
                       {nextCost.silicon > 0 && (
                         <span style={{ marginRight: 6, color: planet.silicon >= nextCost.silicon ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                          🔷{nextCost.silicon.toLocaleString('ru-RU')}
+                          💎{nextCost.silicon.toLocaleString('ru-RU')}
                         </span>
                       )}
                       {nextCost.hydrogen > 0 && (
