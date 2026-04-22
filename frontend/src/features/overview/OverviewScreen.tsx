@@ -494,6 +494,7 @@ function ResourceCell({
   value: number;
   ratePerSec: number;
 }) {
+  const perHour = Math.round(ratePerSec * 3600);
   return (
     <div style={{
       background: 'var(--ox-bg-panel)',
@@ -506,6 +507,11 @@ function ResourceCell({
           {label}
         </div>
         <ResourceTicker value={value} ratePerSec={ratePerSec} />
+        {perHour > 0 && (
+          <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)', marginTop: 1 }}>
+            {perHour.toLocaleString('ru-RU')}/ч
+          </div>
+        )}
       </div>
     </div>
   );
