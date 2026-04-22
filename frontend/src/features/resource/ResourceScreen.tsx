@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { catalog } from '@/api/catalog';
 import type { ResourceBuilding } from '@/api/types';
 import { useToast } from '@/ui/Toast';
+import { ResourceScreenSkeleton } from '@/ui/Skeleton';
 
 interface FactorFormData {
   [unitId: string]: number;
@@ -70,7 +71,7 @@ export function ResourceScreen({
 
       return { previousReport };
     },
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       // Откатить на старые данные при ошибке
       if (context?.previousReport) {
         queryClient.setQueryData(
@@ -103,7 +104,7 @@ export function ResourceScreen({
   };
 
   if (isLoading) {
-    return <div className="loading loading-spinner"></div>;
+    return <ResourceScreenSkeleton />;
   }
 
   if (!report) {

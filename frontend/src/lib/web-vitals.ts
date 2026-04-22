@@ -1,82 +1,55 @@
-import { getCLS, getFID, getFCP, getLCP, getTTFB } from 'web-vitals';
-
-interface VitalMetric {
+interface PerformanceMetric {
   name: string;
   value: number;
-  delta: number;
-  id: string;
   rating?: 'good' | 'needs-improvement' | 'poor';
 }
 
-export function reportWebVitals(onMetric?: (metric: VitalMetric) => void) {
-  // Cumulative Layout Shift — устойчивость макета
-  getCLS((metric) => {
-    if (onMetric) {
-      onMetric({
-        name: 'CLS',
-        value: metric.value,
-        delta: metric.delta,
-        id: metric.id,
-        rating: metric.rating,
-      });
+// Отслеживание базовых метрик производительности через Performance API
+export function reportWebVitals(onMetric?: (metric: PerformanceMetric) => void) {
+  if (typeof window === 'undefined' || !('performance' in window)) {
+    return;
+  }
+
+  const perf = window.performance;
+
+  // Navigation Timing — время загрузки страницы
+  window.addEventListener('load', () => {
+    const navTiming = perf.getEntriesByType('navigation')[0] as any;
+    if (navTiming) {
+      const loadTime = navTiming.loadEventEnd - navTiming.fetchStart;
+      if (onMetric) {
+        onMetric({
+          name: 'Page Load',
+          value: loadTime,
+          rating: loadTime < 3000 ? 'good' : loadTime < 7500 ? 'needs-improvement' : 'poor',
+        });
+      }
     }
   });
 
-  // First Input Delay — отзывчивость на ввод
-  getFID((metric) => {
-    if (onMetric) {
-      onMetric({
-        name: 'FID',
-        value: metric.value,
-        delta: metric.delta,
-        id: metric.id,
-        rating: metric.rating,
+  // First Contentful Paint (PerformanceObserver)
+  if ('PerformanceObserver' in window) {
+    try {
+      const paintObserver = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (entry.name === 'first-contentful-paint' && onMetric) {
+            onMetric({
+              name: 'FCP',
+              value: entry.startTime,
+              rating: entry.startTime < 1800 ? 'good' : entry.startTime < 3000 ? 'needs-improvement' : 'poor',
+            });
+          }
+        }
       });
+      paintObserver.observe({ entryTypes: ['paint'] });
+    } catch (e) {
+      // Ignore if not supported
     }
-  });
-
-  // First Contentful Paint — скорость первого контента
-  getFCP((metric) => {
-    if (onMetric) {
-      onMetric({
-        name: 'FCP',
-        value: metric.value,
-        delta: metric.delta,
-        id: metric.id,
-        rating: metric.rating,
-      });
-    }
-  });
-
-  // Largest Contentful Paint — скорость основного контента
-  getLCP((metric) => {
-    if (onMetric) {
-      onMetric({
-        name: 'LCP',
-        value: metric.value,
-        delta: metric.delta,
-        id: metric.id,
-        rating: metric.rating,
-      });
-    }
-  });
-
-  // Time to First Byte — скорость ответа сервера
-  getTTFB((metric) => {
-    if (onMetric) {
-      onMetric({
-        name: 'TTFB',
-        value: metric.value,
-        delta: metric.delta,
-        id: metric.id,
-        rating: metric.rating,
-      });
-    }
-  });
+  }
 }
 
 // Логирование метрик в консоль (для разработки)
-export function logWebVitals(metric: VitalMetric) {
+export function logWebVitals(metric: PerformanceMetric) {
   const label = `%c ${metric.name} `;
   const style = `
     padding: 2px 4px;

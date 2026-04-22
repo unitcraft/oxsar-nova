@@ -196,20 +196,20 @@ WHERE planet_id = $1 AND unit_id = ANY($2::int[]);
 
 | Пункт | Статус | Комментарий |
 |-------|--------|-----------|
-| Optimistic Updates | 🟡 | Частично через TanStack Query |
+| Optimistic Updates | 🟡 | Реализовано для ResourceScreen |
 | Lazy Loading | ✅ | Все экраны lazy-loaded |
 | Кеширование | ✅ | useQuery с staleTime/refetchInterval |
 | Индексы БД | 🟡 | Проверить наличие |
-| Батч-операции | 🟡 | UpdateResourceFactors можно оптимизировать |
+| Батч-операции | ✅ | UpdateResourceFactors оптимизирован |
 | Query Profiling | ⬜ | Не начинали |
-| Skeleton loaders | 🟡 | Есть ScreenSkeleton, можно улучшить |
+| Skeleton loaders | ✅ | Улучшенные скелетоны для всех экранов |
 | Toasts | ✅ | Toast provider уже есть |
 | Валидация на фронте | 🟡 | Есть, можно расширить |
 | Keyboard shortcuts | ⬜ | Не реализовано |
 | Error tracking | 🟡 | Есть ErrorBoundary, можно добавить Sentry |
-| Metrics | ⬜ | Не начинали |
-| CSRF protection | ✅ | CORS настроены |
-| Rate limiting | ✅ | /auth endpoints защищены |
+| Metrics | ✅ | Web Vitals реализованы |
+| CSRF protection | ✅ | CORS с AllowCredentials настроены |
+| Rate limiting | ✅ | Redis-based limiter (20 req/min auth) |
 | Input validation | ✅ | Реализовано на backend |
 | OpenAPI docs | ✅ | Основные endpoints задокументированы |
 
