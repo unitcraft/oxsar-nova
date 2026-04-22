@@ -54,6 +54,7 @@ type Entry struct {
 	RPoints  float64 `json:"r_points"`
 	UPoints  float64 `json:"u_points"`
 	APoints  float64 `json:"a_points"`
+	EPoints  float64 `json:"e_points"`
 }
 
 // RecalcUser пересчитывает все компоненты очков userID и атомарно
@@ -97,7 +98,7 @@ func (s *Service) Top(ctx context.Context, scoreType string, limit int) ([]Entry
 	}
 	col := columnFor(scoreType)
 	rows, err := s.db.Pool().Query(ctx, fmt.Sprintf(`
-		SELECT id, username, points, b_points, r_points, u_points, a_points
+		SELECT id, username, points, b_points, r_points, u_points, a_points, e_points
 		FROM users
 		WHERE umode = false
 		ORDER BY %s DESC
@@ -113,7 +114,7 @@ func (s *Service) Top(ctx context.Context, scoreType string, limit int) ([]Entry
 	for rows.Next() {
 		var e Entry
 		if err := rows.Scan(&e.UserID, &e.Username,
-			&e.Points, &e.BPoints, &e.RPoints, &e.UPoints, &e.APoints); err != nil {
+			&e.Points, &e.BPoints, &e.RPoints, &e.UPoints, &e.APoints, &e.EPoints); err != nil {
 			return nil, fmt.Errorf("score.scan: %w", err)
 		}
 		e.Rank = rank
@@ -142,6 +143,21 @@ func (s *Service) PlayerRank(ctx context.Context, userID, scoreType string) (int
 		return 0, fmt.Errorf("score.player_rank: %w", err)
 	}
 	return rank, nil
+}
+
+// PlayerScore возвращает очки userID по типу scoreType.
+func (s *Service) PlayerScore(ctx context.Context, userID, scoreType string) (float64, error) {
+	col := columnFor(scoreType)
+	var pts float64
+	if err := s.db.Pool().QueryRow(ctx,
+		fmt.Sprintf(`SELECT %s FROM users WHERE id=$1`, col), userID).
+		Scan(&pts); err != nil {
+		if err == pgx.ErrNoRows {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("score.player_score: %w", err)
+	}
+	return pts, nil
 }
 
 // --- внутренние вычисления ---
@@ -334,6 +350,8 @@ func columnFor(t string) string {
 		return "u_points"
 	case "a":
 		return "a_points"
+	case "e":
+		return "e_points"
 	default:
 		return "points"
 	}
