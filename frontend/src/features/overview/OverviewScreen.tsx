@@ -152,7 +152,7 @@ export function OverviewScreen() {
                   minWidth: 80, padding: '8px 6px', borderRadius: 8, cursor: 'pointer',
                   border: `1px solid ${active ? 'var(--ox-accent)' : 'var(--ox-border)'}`,
                   background: active ? 'rgba(99,217,255,0.08)' : 'var(--ox-bg-card)',
-                  flexShrink: 0, transition: 'border-color 150ms, background 150ms',
+                  flexShrink: 0,
                 }}
               >
                 {p.is_moon
