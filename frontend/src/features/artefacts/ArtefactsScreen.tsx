@@ -5,6 +5,7 @@ import { ARTEFACTS, nameOf, imageOf } from '@/api/catalog';
 import type { Artefact } from '@/api/types';
 import { useToast } from '@/ui/Toast';
 import { Countdown } from '@/ui/Countdown';
+import { ScreenSkeleton } from '@/ui/Skeleton';
 
 const STATE_LABEL: Record<string, string> = {
   held: '📦 В инвентаре',
@@ -70,7 +71,7 @@ export function ArtefactsScreen() {
   }
 
   if (list.isLoading) {
-    return <div style={{ padding: 24 }}><div className="ox-skeleton" style={{ height: 80 }} /></div>;
+    return <ScreenSkeleton />;
   }
 
   return (

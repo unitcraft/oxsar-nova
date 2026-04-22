@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ScreenSkeleton } from '@/ui/Skeleton';
 
 function fmtDuration(secs: number): string {
   if (secs < 60) return `${secs}с`;
@@ -60,6 +61,10 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
   const buildSeconds = levelsQ.data?.build_seconds ?? {};
   const queueItems = (queue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
   const busyIds = new Set(queueItems.map((q) => q.unit_id));
+
+  if (levelsQ.isLoading) {
+    return <ScreenSkeleton />;
+  }
 
   const enqueue = useMutation({
     mutationFn: (unitId: number) =>

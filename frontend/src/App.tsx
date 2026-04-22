@@ -9,6 +9,7 @@ import { useTranslation } from './i18n/i18n';
 import { ToastProvider } from './ui/Toast';
 import { ResourceTicker } from './ui/ResourceTicker';
 import { Countdown } from './ui/Countdown';
+import { ScreenSkeleton } from './ui/Skeleton';
 
 const BuildingsScreen    = lazy(() => import('./features/buildings/BuildingsScreen').then(m => ({ default: m.BuildingsScreen })));
 const ResearchScreen     = lazy(() => import('./features/research/ResearchScreen').then(m => ({ default: m.ResearchScreen })));
@@ -516,16 +517,6 @@ function LoadingSkeleton() {
       <div style={{ color: 'var(--ox-fg-muted)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
         Загрузка вселенной…
       </div>
-    </div>
-  );
-}
-
-function ScreenSkeleton() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {[1,2,3].map(i => (
-        <div key={i} className="ox-skeleton" style={{ height: i === 1 ? 48 : 80, opacity: 1 - i * 0.2 }} />
-      ))}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { SHIPS, nameOf, imageOf, imageOfId } from '@/api/catalog';
 import type { Planet } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
 import { useToast } from '@/ui/Toast';
+import { ScreenSkeleton } from '@/ui/Skeleton';
 
 const GAME_SPEED = 0.75;
 
@@ -148,6 +149,10 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
     }, 0);
     return { secs, totalFuel };
   })();
+
+  if (fleets.isLoading) {
+    return <ScreenSkeleton />;
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

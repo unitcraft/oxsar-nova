@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import type { Planet } from '@/api/types';
 import { useToast } from '@/ui/Toast';
+import { ScreenSkeleton } from '@/ui/Skeleton';
 
 interface Lot {
   id: string;
@@ -53,17 +54,43 @@ export function MarketScreen({ planet }: { planet: Planet }) {
 
   const exchange = useMutation({
     mutationFn: () => api.post<ExchangeResult>(`/api/planets/${planet.id}/market/exchange`, { from, to, amount }),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ['planets'] });
+      const previous = qc.getQueryData(['planets']);
+      if (previous) {
+        qc.setQueryData(['planets'], (old: any) => ({
+          ...old,
+          planets: old.planets.map((p: any) =>
+            p.id === planet.id ? {
+              ...p,
+              [from]: (p[from] ?? 0) - amount,
+              [to]: (p[to] ?? 0) + (preview ?? 0),
+            } : p
+          ),
+        }));
+      }
+      return { previous };
+    },
     onSuccess: (res) => {
       setLast(res);
       void qc.invalidateQueries({ queryKey: ['planets'] });
       toast.show('success', 'Обмен', `${res.from_amount} ${res.from} → ${res.to_amount} ${res.to}`);
     },
-    onError: (err) => { toast.show('danger', 'Ошибка обмена', err instanceof Error ? err.message : ''); },
+    onError: (_err, _variables, context) => {
+      if (context?.previous) {
+        qc.setQueryData(['planets'], context.previous);
+      }
+      toast.show('danger', 'Ошибка обмена', _err instanceof Error ? _err.message : '');
+    },
   });
 
   const preview = rates.data
     ? Math.floor((amount * rates.data[from]) / rates.data[to] / rates.data.user_rate)
     : null;
+
+  if (rates.isLoading) {
+    return <ScreenSkeleton />;
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
