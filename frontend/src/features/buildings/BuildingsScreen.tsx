@@ -1,93 +1,149 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { BUILDINGS, buildingName, imageOf } from '@/api/catalog';
-import { useTranslation } from '@/i18n/i18n';
+import { BUILDINGS, imageOf, costForLevel } from '@/api/catalog';
 import type { Planet, QueueItem } from '@/api/types';
+import { Countdown } from '@/ui/Countdown';
+import { ProgressBar } from '@/ui/ProgressBar';
+import { useToast } from '@/ui/Toast';
 
 export function BuildingsScreen({ planet }: { planet: Planet }) {
-  const { t, tf } = useTranslation();
   const qc = useQueryClient();
+  const toast = useToast();
+
   const queue = useQuery({
     queryKey: ['buildings-queue', planet.id],
     queryFn: () => api.get<{ queue: QueueItem[] }>(`/api/planets/${planet.id}/buildings/queue`),
     refetchInterval: 2000,
   });
-
   const levelsQ = useQuery({
     queryKey: ['buildings-levels', planet.id],
     queryFn: () => api.get<{ levels: Record<string, number> }>(`/api/planets/${planet.id}/buildings`),
     refetchInterval: 10000,
   });
+
   const levels = levelsQ.data?.levels ?? {};
+  const queueItems = (queue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
+  const busyIds = new Set(queueItems.map((q) => q.unit_id));
 
   const enqueue = useMutation({
     mutationFn: (unitId: number) =>
       api.post<QueueItem>(`/api/planets/${planet.id}/buildings`, { unit_id: unitId }),
-    onSuccess: () => {
+    onSuccess: (_, unitId) => {
       void qc.invalidateQueries({ queryKey: ['buildings-queue', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
+      const name = BUILDINGS.find((b) => b.id === unitId)?.name ?? `#${unitId}`;
+      toast.show('success', 'В очередь', `${name} добавлена в очередь строительства`);
+    },
+    onError: (err) => {
+      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось добавить в очередь');
     },
   });
 
   return (
-    <section>
-      <h2>
-        {t('global', 'MENU_CONSTRUCTIONS')} — {planet.name}
-      </h2>
-      <table className="ox-table">
-        <thead>
-          <tr>
-            <th>{t('global', 'MENU_CONSTRUCTIONS')}</th>
-            <th>{tf('Main', 'ACTION', 'Действие')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {BUILDINGS.map((b) => (
-            <tr key={b.id}>
-              <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <img src={imageOf(b.key)} alt="" width={40} height={40} style={{ imageRendering: 'pixelated' }} />
-                <span>
-                  {b.name}
-                  {(levels[b.id] ?? 0) > 0 && (
-                    <span style={{ color: 'var(--ox-muted, #888)', marginLeft: 6 }}>
-                      {tf('Main', 'LEVEL_SHORT', 'ур.')} {levels[b.id]}
-                    </span>
-                  )}
-                </span>
-              </td>
-              <td>
-                <button
-                  type="button"
-                  disabled={enqueue.isPending}
-                  onClick={() => enqueue.mutate(b.id)}
-                >
-                  {tf('Main', 'BUILD_BUTTON', 'Построить')}
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
+          Постройки — {planet.name}
+        </h2>
+        {queueItems.length > 0 && (
+          <span style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>
+            В очереди: {queueItems.length}
+          </span>
+        )}
+      </div>
 
-      {enqueue.isError && (
-        <div className="ox-error">
-          {enqueue.error instanceof Error ? enqueue.error.message : t('global', 'ERROR')}
+      {/* Active queue */}
+      {queueItems.length > 0 && (
+        <div className="ox-panel" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 2 }}>
+            Активная очередь
+          </div>
+          {queueItems.map((item, i) => (
+            <QueueRow key={item.id} item={item} isActive={i === 0} />
+          ))}
         </div>
       )}
 
-      <h3>{tf('Main', 'QUEUE_HEADER', 'Очередь')}</h3>
-      {queue.data && (queue.data.queue ?? []).length > 0 ? (
-        <ul>
-          {(queue.data.queue ?? []).map((q) => (
-            <li key={q.id}>
-              {buildingName(q.unit_id)} → {tf('Main', 'LEVEL_SHORT', 'ур.')} {q.target_level},{' '}
-              {tf('Main', 'UNTIL', 'до')} {new Date(q.end_at).toLocaleTimeString('ru-RU')}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>{tf('Main', 'QUEUE_EMPTY', 'Очередь пуста.')}</p>
-      )}
-    </section>
+      {/* Building cards */}
+      <div className="ox-cards-grid">
+        {BUILDINGS.map((b) => {
+          const level = levels[b.id] ?? 0;
+          const inQueue = busyIds.has(b.id);
+          const nextCost = costForLevel(b.costBase, b.costFactor, level + 1);
+          const canAfford =
+            planet.metal    >= nextCost.metal &&
+            planet.silicon  >= nextCost.silicon &&
+            planet.hydrogen >= nextCost.hydrogen;
+          return (
+            <div key={b.id} className="ox-unit-card">
+              <div className="ox-unit-card-img">
+                <img src={imageOf(b.key)} alt={b.name} width={64} height={64} style={{ imageRendering: 'pixelated' }} />
+              </div>
+              <div className="ox-unit-card-body">
+                <div className="ox-unit-card-name">{b.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 4 }}>
+                  {level > 0 ? `Уровень ${level}` : 'Не построено'}
+                </div>
+                {!inQueue && (
+                  <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
+                    {nextCost.metal > 0 && (
+                      <span style={{ marginRight: 6, color: planet.metal >= nextCost.metal ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
+                        ⛏{nextCost.metal.toLocaleString('ru-RU')}
+                      </span>
+                    )}
+                    {nextCost.silicon > 0 && (
+                      <span style={{ marginRight: 6, color: planet.silicon >= nextCost.silicon ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
+                        🔷{nextCost.silicon.toLocaleString('ru-RU')}
+                      </span>
+                    )}
+                    {nextCost.hydrogen > 0 && (
+                      <span style={{ color: planet.hydrogen >= nextCost.hydrogen ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
+                        💧{nextCost.hydrogen.toLocaleString('ru-RU')}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="ox-unit-card-footer">
+                <button
+                  type="button"
+                  className={`btn${inQueue || !canAfford ? ' btn-ghost' : ''} btn-sm`}
+                  style={{ width: '100%' }}
+                  disabled={enqueue.isPending || inQueue}
+                  onClick={() => enqueue.mutate(b.id)}
+                >
+                  {inQueue ? '⏳ В очереди' : level === 0 ? 'Построить' : `→ ур. ${level + 1}`}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function QueueRow({ item, isActive }: { item: QueueItem; isActive: boolean }) {
+  const total = new Date(item.end_at).getTime() - new Date(item.start_at).getTime();
+  const elapsed = Date.now() - new Date(item.start_at).getTime();
+  const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
+  const name = BUILDINGS.find((b) => b.id === item.unit_id)?.name ?? `#${item.unit_id}`;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+        <span style={{ fontSize: 16 }}>{isActive ? '🏗' : '⏳'}</span>
+        <span style={{ flex: 1, fontWeight: isActive ? 600 : 400 }}>
+          {name} → ур. {item.target_level}
+        </span>
+        {isActive
+          ? <Countdown finishAt={item.end_at} />
+          : <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+              {new Date(item.end_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+        }
+      </div>
+      {isActive && <ProgressBar pct={pct} height={4} />}
+    </div>
   );
 }
