@@ -105,13 +105,14 @@ export const DEFENSE: CombatEntry[] = [
 
 // Артефакты — только те, что реально реализованы в M5.0.1 (факторы).
 // Остальные 300-365 добавятся в M5.1 вместе с one_shot/battle_bonus.
-export const ARTEFACTS: UnitEntry[] = [
-  { id: 300, key: 'merchants_mark',      name: 'Знак торговца' },
-  { id: 301, key: 'catalyst',            name: 'Катализатор' },
-  { id: 302, key: 'power_generator',     name: 'Энерготранс' },
-  { id: 303, key: 'atomic_densifier',    name: 'Атомный уплотнитель' },
-  { id: 305, key: 'supercomputer',       name: 'Суперкомпьютер' },
-  { id: 315, key: 'robot_control_system',name: 'Система управления роботами' },
+interface ArtefactEntry extends UnitEntry { benefit: string; lifetime: string }
+export const ARTEFACTS: ArtefactEntry[] = [
+  { id: 300, key: 'merchants_mark',       name: 'Знак торговца',                benefit: '+3% курс обмена ресурсов',          lifetime: '7 дней' },
+  { id: 301, key: 'catalyst',             name: 'Катализатор',                  benefit: '+10% добыча на всех планетах',       lifetime: '7 дней' },
+  { id: 302, key: 'power_generator',      name: 'Энерготранс',                  benefit: '+15% энергия на всех планетах',      lifetime: '7 дней' },
+  { id: 303, key: 'atomic_densifier',     name: 'Атомный уплотнитель',          benefit: '+15% ёмкость склада на всех планетах',lifetime: '7 дней' },
+  { id: 305, key: 'supercomputer',        name: 'Суперкомпьютер',               benefit: '+100% скорость исследования',        lifetime: '7 дней' },
+  { id: 315, key: 'robot_control_system', name: 'Система управления роботами',  benefit: '+100% скорость строительства (планета)', lifetime: '7 дней' },
 ];
 
 const KEY_MAP: Record<string, string> = {

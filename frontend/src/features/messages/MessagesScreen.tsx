@@ -132,7 +132,7 @@ export function MessagesScreen() {
     onSuccess: () => {
       setSelectedID(null);
       void qc.invalidateQueries({ queryKey: ['messages'] });
-      void qc.invalidateQueries({ queryKey: ['messages', 'unread-count'] });
+      void qc.invalidateQueries({ queryKey: ['messages-unread'] });
       toast.show('info', 'Сообщение удалено');
     },
   });
@@ -145,7 +145,7 @@ export function MessagesScreen() {
     onSuccess: () => {
       setSelectedID(null);
       void qc.invalidateQueries({ queryKey: ['messages'] });
-      void qc.invalidateQueries({ queryKey: ['messages', 'unread-count'] });
+      void qc.invalidateQueries({ queryKey: ['messages-unread'] });
       toast.show('info', 'Все сообщения удалены');
     },
   });

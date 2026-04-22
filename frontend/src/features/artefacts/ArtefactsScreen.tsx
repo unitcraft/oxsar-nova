@@ -147,9 +147,17 @@ function ArtefactGroup({
             </div>
             <div className="ox-unit-card-body">
               <div className="ox-unit-card-name">{nameOf(a.unit_id)}</div>
-              <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
                 {STATE_LABEL[a.state] ?? a.state}
               </div>
+              {(() => {
+                const meta = ARTEFACTS.find((x) => x.id === a.unit_id);
+                return meta && (
+                  <div style={{ fontSize: 11, color: 'var(--ox-success)', fontStyle: 'italic', marginBottom: 2 }}>
+                    {meta.benefit}
+                  </div>
+                );
+              })()}
               {a.expire_at && a.state === 'active' && (
                 <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>
                   Истекает: <Countdown finishAt={a.expire_at} />

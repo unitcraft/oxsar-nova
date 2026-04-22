@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { nameOf } from '@/api/catalog';
+import { nameOf, ARTEFACTS } from '@/api/catalog';
 import { useToast } from '@/ui/Toast';
 
 interface Offer {
@@ -105,7 +105,10 @@ export function ArtefactMarketScreen() {
                   const listedDate = new Date(o.listed_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
                   return (
                     <tr key={o.id}>
-                      <td data-label="Артефакт">{nameOf(o.unit_id)}</td>
+                      <td data-label="Артефакт">
+                        <div>{nameOf(o.unit_id)}</div>
+                        {(() => { const meta = ARTEFACTS.find((x) => x.id === o.unit_id); return meta && <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>{meta.benefit}</div>; })()}
+                      </td>
                       <td data-label="Продавец">{o.seller_name ?? '—'}</td>
                       <td data-label="Цена" className="num" style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>
                         {o.price_credit} cr
