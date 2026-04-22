@@ -97,8 +97,12 @@ export function ChatScreen() {
     };
   }, [kind, token]);
 
+  const prevLenRef = useRef(0);
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > prevLenRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    prevLenRef.current = messages.length;
   }, [messages]);
 
   function send() {
