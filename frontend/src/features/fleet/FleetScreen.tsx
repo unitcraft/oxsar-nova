@@ -6,6 +6,34 @@ import type { Planet } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
 import { useToast } from '@/ui/Toast';
 
+const GAME_SPEED = 0.75;
+
+function galaxyDistance(
+  { galaxy: g1, system: s1, position: p1 }: { galaxy: number; system: number; position: number },
+  { galaxy: g2, system: s2, position: p2 }: { galaxy: number; system: number; position: number },
+): number {
+  if (g1 !== g2) return 20000 * Math.abs(g1 - g2);
+  if (s1 !== s2) return 2700 + 95 * Math.abs(s1 - s2);
+  if (p1 !== p2) return 1000 + 5 * Math.abs(p1 - p2);
+  return 5;
+}
+
+function flightSecs(dist: number, minSpeed: number, speedPct: number): number {
+  if (minSpeed <= 0) return 60;
+  const raw = 10 + (3500 / speedPct) * Math.sqrt((10 * dist) / minSpeed);
+  return Math.max(1, raw / GAME_SPEED);
+}
+
+function fmtDuration(secs: number): string {
+  if (secs < 60) return `${Math.ceil(secs)}с`;
+  const m = Math.floor(secs / 60) % 60;
+  const h = Math.floor(secs / 3600) % 24;
+  const d = Math.floor(secs / 86400);
+  if (d > 0) return `${d}д ${h}ч ${m}м`;
+  if (h > 0) return `${h}ч ${m}м`;
+  return `${m}м`;
+}
+
 interface FleetRow {
   id: string;
   src_planet_id: string;
@@ -102,6 +130,24 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
   const list = fleets.data?.fleets ?? [];
   const totalShips = Object.values(ships).reduce((a, b) => a + b, 0);
   const totalCargo = SHIPS.reduce((sum, ship) => sum + (ship.cargo ?? 0) * (ships[ship.id] ?? 0), 0);
+
+  const fleetPreview = (() => {
+    if (totalShips === 0) return null;
+    const selectedShips = SHIPS.filter((s) => (ships[s.id] ?? 0) > 0);
+    const minSpeed = Math.min(...selectedShips.map((s) => s.speed ?? Infinity));
+    if (!isFinite(minSpeed) || minSpeed <= 0) return null;
+    const dist = galaxyDistance(
+      { galaxy: planet.galaxy, system: planet.system, position: planet.position },
+      { galaxy: g, system: s, position: pos },
+    );
+    const secs = flightSecs(dist, minSpeed, speed);
+    const totalFuel = selectedShips.reduce((sum, ship) => {
+      const count = ships[ship.id] ?? 0;
+      const f = ship.fuel ?? 0;
+      return sum + Math.round(f * dist / 35000 * (speed / 100 + 1) ** 2) * count;
+    }, 0);
+    return { secs, totalFuel };
+  })();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -267,6 +313,14 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
             </div>
           </div>
         </div>
+
+        {fleetPreview && (
+          <div style={{ marginTop: 16, padding: '10px 14px', background: 'var(--ox-surface)', borderRadius: 6, border: '1px solid var(--ox-border)', display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)' }}>
+            <span>⏱ {fmtDuration(fleetPreview.secs)}</span>
+            <span>↩ {fmtDuration(fleetPreview.secs * 2)}</span>
+            {fleetPreview.totalFuel > 0 && <span>💧 {fleetPreview.totalFuel.toLocaleString('ru-RU')} (туда)</span>}
+          </div>
+        )}
 
         <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button
