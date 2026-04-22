@@ -178,6 +178,15 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
                         </span>
                       )}
                     </div>
+                    {!canAfford && (
+                      <div style={{ fontSize: 10, color: 'var(--ox-danger)', marginTop: 2, fontFamily: 'var(--ox-mono)' }}>
+                        {[
+                          nextCost.metal    > planet.metal    && `🟠−${(nextCost.metal    - planet.metal   ).toLocaleString('ru-RU')}`,
+                          nextCost.silicon  > planet.silicon  && `💎−${(nextCost.silicon  - planet.silicon ).toLocaleString('ru-RU')}`,
+                          nextCost.hydrogen > planet.hydrogen && `💧−${(nextCost.hydrogen - planet.hydrogen).toLocaleString('ru-RU')}`,
+                        ].filter(Boolean).join(' ')}
+                      </div>
+                    )}
                     {secs > 0 && (
                       <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
                         ⏱ {fmtDuration(secs)}
