@@ -196,7 +196,7 @@ WHERE planet_id = $1 AND unit_id = ANY($2::int[]);
 
 | Пункт | Статус | Комментарий |
 |-------|--------|-----------|
-| Optimistic Updates | 🟡 | Реализовано для ResourceScreen |
+| Optimistic Updates | 🟡 | Реализовано для MarketScreen, НЕ реализовано для ResourceScreen |
 | Lazy Loading | ✅ | Все экраны lazy-loaded |
 | Кеширование | ✅ | useQuery с staleTime/refetchInterval |
 | Индексы БД | 🟡 | Проверить наличие |
