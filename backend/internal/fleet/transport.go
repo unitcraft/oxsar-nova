@@ -324,6 +324,9 @@ func (s *TransportService) List(ctx context.Context, userID string) ([]Fleet, er
 		); err != nil {
 			return nil, err
 		}
+		if err := s.loadShips(ctx, s.db.Pool(), &f); err != nil {
+			return nil, err
+		}
 		out = append(out, f)
 	}
 	return out, rows.Err()
@@ -413,9 +416,35 @@ func (s *TransportService) Recall(ctx context.Context, userID, fleetID string) (
 		); err != nil {
 			return fmt.Errorf("read updated fleet: %w", err)
 		}
-		return nil
+		return s.loadShips(ctx, tx, &out)
 	})
 	return out, err
+}
+
+// loadShips читает состав флота из fleet_ships и заполняет Fleet.Ships.
+func (s *TransportService) loadShips(ctx context.Context, q interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+}, f *Fleet) error {
+	rows, err := q.Query(ctx,
+		`SELECT unit_id, count FROM fleet_ships WHERE fleet_id = $1`, f.ID)
+	if err != nil {
+		return fmt.Errorf("load fleet ships: %w", err)
+	}
+	defer rows.Close()
+	ships := make(map[int]int64)
+	for rows.Next() {
+		var unitID int
+		var count int64
+		if err := rows.Scan(&unitID, &count); err != nil {
+			return err
+		}
+		ships[unitID] = count
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	f.Ships = ships
+	return nil
 }
 
 // --- internal helpers ---

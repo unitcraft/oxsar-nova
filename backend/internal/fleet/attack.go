@@ -33,6 +33,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/jackc/pgx/v5"
 
@@ -155,8 +156,11 @@ func (s *TransportService) AttackHandler() event.Handler {
 			loot := grabLoot(defMetal, defSil, defHydro, attackerShips, s.catalog, cm, csil, ch)
 			rep := battle.Report{Winner: "attackers", Rounds: 0, Seed: deriveSeed(pl.FleetID)}
 			return finalizeAttack(ctx, tx, pl.FleetID, attackerUserID, defenderUserID, planetID,
-				rep, loot, 0, 0, cm, csil, ch, nil, nil)
+				rep, loot, 0, 0, cm, csil, ch, 0, 0)
 		}
+
+		atkPower := sidePower(atkSide.Units)
+		defPower := sidePower(defSide.Units)
 
 		input := battle.Input{
 			Seed:      deriveSeed(pl.FleetID),
@@ -214,7 +218,7 @@ func (s *TransportService) AttackHandler() event.Handler {
 			loot = grabLoot(defMetal, defSil, defHydro, atkSurvivors, s.catalog, cm, csil, ch)
 		}
 		return finalizeAttack(ctx, tx, pl.FleetID, attackerUserID, defenderUserID, planetID,
-			report, loot, debrisM, debrisS, cm, csil, ch, atkSurvivors, nil)
+			report, loot, debrisM, debrisS, cm, csil, ch, atkPower, defPower)
 	}
 }
 
@@ -540,12 +544,81 @@ func applyDefenderLosses(ctx context.Context, tx pgx.Tx, planetID string,
 //
 // _unusedSurvivors оставлен для API-симметрии; при победе loot уже
 // посчитан в grabLoot.
+// sidePower — суммарная атака стороны в первом раунде (Java: startBattleAtterPower).
+func sidePower(units []battle.Unit) float64 {
+	var total float64
+	for _, u := range units {
+		ch := 0
+		for i := 1; i < 3; i++ {
+			if u.Attack[i] > u.Attack[ch] {
+				ch = i
+			}
+		}
+		total += u.Attack[ch] * float64(u.Quantity)
+	}
+	return total
+}
+
+// calcExperience — порт формулы Java Assault.java:819-847.
+// Возвращает (atkExp, defExp) — очков боевого опыта за бой.
+func calcExperience(atkPower, defPower float64, rounds int, winner string, isMoon bool) (int, int) {
+	if atkPower <= 0 || defPower <= 0 || rounds == 0 {
+		return 0, 0
+	}
+	const maxRounds = 6
+	turnsCoeff := math.Pow(float64(rounds), 1.1) / maxRounds
+
+	atkExp := (math.Atan(defPower/atkPower*1.5-1.5)+1)*0.4*3*turnsCoeff + 1
+	defExp := (math.Atan(atkPower/defPower*1.5-1.5)+1)*0.4*3*turnsCoeff + 1
+
+	switch winner {
+	case "attackers":
+		atkExp *= 3
+	case "defenders":
+		defExp *= 3
+	default: // draw
+		atkExp *= 1.5
+		defExp *= 1.7
+	}
+
+	battlePower := math.Sqrt(atkPower*defPower) / 1_000_000
+	powerCoeff := (math.Atan(battlePower*10*0.2-1.6)+1)*0.4*19 + 1
+	if isMoon {
+		powerCoeff *= 0.5
+	}
+	atkExp *= powerCoeff
+	defExp *= powerCoeff
+
+	return int(math.Round(atkExp)), int(math.Round(defExp))
+}
+
 func finalizeAttack(ctx context.Context, tx pgx.Tx,
 	fleetID, attUID, defUID, planetID string,
 	rep battle.Report, loot lootAmount,
 	debrisM, debrisS int64,
 	prevM, prevS, prevH int64,
-	_unusedSurvivors []unitStack, _unusedDef any) error {
+	atkPower, defPower float64) error {
+
+	// e_points + battles — по формуле Java (Assault.java:819-847).
+	// Пустые бои (rounds=0, нет юнитов) дают 0 опыта.
+	atkExp, defExp := calcExperience(atkPower, defPower, rep.Rounds, rep.Winner, false)
+	if atkExp > 0 && attUID != "" {
+		if _, err := tx.Exec(ctx,
+			`UPDATE users SET e_points=e_points+$1, battles=battles+1 WHERE id=$2`,
+			atkExp, attUID,
+		); err != nil {
+			return fmt.Errorf("finalize: attacker e_points: %w", err)
+		}
+	}
+	if defExp > 0 && defUID != "" && defUID != attUID {
+		if _, err := tx.Exec(ctx,
+			`UPDATE users SET e_points=e_points+$1, battles=battles+1 WHERE id=$2`,
+			defExp, defUID,
+		); err != nil {
+			return fmt.Errorf("finalize: defender e_points: %w", err)
+		}
+	}
+
 	// battle_reports
 	reportJSON, err := json.Marshal(rep)
 	if err != nil {

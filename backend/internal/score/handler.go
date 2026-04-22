@@ -54,5 +54,17 @@ func (h *Handler) MyRank(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"rank": rank, "type": scoreType})
+	pts, err := h.svc.PlayerScore(r.Context(), uid, scoreType)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	ePts, err := h.svc.PlayerScore(r.Context(), uid, "e")
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+		"rank": rank, "type": scoreType, "points": pts, "e_points": ePts,
+	})
 }
