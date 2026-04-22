@@ -8,6 +8,7 @@ import { OverviewScreen } from './features/overview/OverviewScreen';
 import { useTranslation } from './i18n/i18n';
 import { ToastProvider } from './ui/Toast';
 import { ResourceTicker } from './ui/ResourceTicker';
+import { Countdown } from './ui/Countdown';
 
 const BuildingsScreen    = lazy(() => import('./features/buildings/BuildingsScreen').then(m => ({ default: m.BuildingsScreen })));
 const ResearchScreen     = lazy(() => import('./features/research/ResearchScreen').then(m => ({ default: m.ResearchScreen })));
@@ -65,6 +66,11 @@ function AuthenticatedApp() {
     queryFn: () => api.get<{ user_id: string; username: string; role: string; credit: number }>('/api/me'),
     staleTime: 60000,
   });
+  const incoming = useQuery({
+    queryKey: ['fleets-incoming'],
+    queryFn: () => api.get<{ fleets: Array<{ id: string; dst_galaxy: number; dst_system: number; dst_position: number; dst_is_moon: boolean; arrive_at: string }> }>('/api/fleet/incoming'),
+    refetchInterval: 15000,
+  });
 
   const unreadCount = unread.data?.count ?? 0;
   const isAdmin = me.data?.role === 'admin' || me.data?.role === 'superadmin';
@@ -86,6 +92,10 @@ function AuthenticatedApp() {
 
   const navItems = buildNavItems(t, unreadCount, isAdmin);
 
+  const incomingFleets = (incoming.data?.fleets ?? []).filter(
+    (f) => new Date(f.arrive_at).getTime() > Date.now()
+  );
+
   return (
     <div className="ox-layout">
       <Header
@@ -97,6 +107,27 @@ function AuthenticatedApp() {
         username={me.data?.username ?? ''}
         {...(me.data?.credit !== undefined ? { credit: me.data.credit } : {})}
       />
+
+      {incomingFleets.length > 0 && (
+        <div style={{ padding: '0 12px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {incomingFleets.map((f) => (
+            <div key={f.id} style={{
+              padding: '8px 14px', borderRadius: 6,
+              background: 'rgba(239,68,68,0.12)',
+              border: '1px solid rgba(239,68,68,0.6)',
+              display: 'flex', alignItems: 'center', gap: 10,
+              animation: 'ox-pulse-border 1.5s ease-in-out infinite',
+              fontSize: 13,
+            }}>
+              <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+              <span style={{ color: 'var(--ox-danger)', fontWeight: 600, flex: 1 }}>Атака на [{f.dst_galaxy}:{f.dst_system}:{f.dst_position}]{f.dst_is_moon ? ' 🌑' : ''}</span>
+              <span style={{ fontSize: 12, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', flexShrink: 0 }}>
+                <Countdown finishAt={f.arrive_at} />
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="ox-body">
         {/* Десктоп сайдбар */}
