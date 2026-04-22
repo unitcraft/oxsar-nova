@@ -152,18 +152,20 @@ export function OverviewScreen() {
                 className="planet-card"
                 onClick={() => setSelectedPlanetId(p.id)}
                 style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
                   minWidth: 80, padding: '8px 6px', borderRadius: 8, cursor: 'pointer',
                   border: `1px solid ${active ? 'var(--ox-accent)' : 'var(--ox-border)'}`,
                   background: active ? 'rgba(99,217,255,0.08)' : 'var(--ox-bg-card)',
-                  flexShrink: 0,
+                  flexShrink: 0, height: 110,
                 }}
               >
-                {p.is_moon
-                  ? <span style={{ fontSize: 36, lineHeight: 1 }}>🌑</span>
-                  : <img src={planetImageOf(p.position, p.id, p.planet_type)} alt="" style={{ width: planetImageSize(p.diameter), height: planetImageSize(p.diameter), borderRadius: 5, objectFit: 'cover' }} />
-                }
-                <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'var(--ox-accent)' : 'var(--ox-fg)', textAlign: 'center', maxWidth: 76, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {p.is_moon
+                    ? <span style={{ fontSize: 36, lineHeight: 1 }}>🌑</span>
+                    : <img src={planetImageOf(p.position, p.id, p.planet_type)} alt="" style={{ width: planetImageSize(p.diameter), height: planetImageSize(p.diameter), borderRadius: 5, objectFit: 'cover' }} />
+                  }
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'var(--ox-accent)' : 'var(--ox-fg)', textAlign: 'center', maxWidth: 76, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>
                   {p.name}
                 </span>
                 <span style={{ fontSize: 10, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
