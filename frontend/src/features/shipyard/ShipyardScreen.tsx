@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { SHIPS, DEFENSE, nameOf, imageOf } from '@/api/catalog';
+import { SHIPS, DEFENSE, nameOf, imageOf, fmtReqs } from '@/api/catalog';
 import type { CombatEntry } from '@/api/catalog';
 import type { Inventory, Planet, ShipyardQueueItem } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
@@ -127,6 +127,11 @@ function UnitCards({
                 <span>❤ {u.shell.toLocaleString('ru-RU')}</span>
                 {u.cargo != null && u.cargo > 0 && <span title="Грузоподъёмность">📦 {u.cargo.toLocaleString('ru-RU')}</span>}
               </div>
+              {u.requires && u.requires.length > 0 && (
+                <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginTop: 2, fontFamily: 'var(--ox-mono)' }}>
+                  🔒 {fmtReqs(u.requires)}
+                </div>
+              )}
               {inStock > 0 && (
                 <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginTop: 4 }}>
                   В наличии: {inStock}
