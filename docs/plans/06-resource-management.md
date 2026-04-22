@@ -208,7 +208,16 @@ Resource:
 2. **Frontend:**
    - [ ] Создать `ResourceScreen.tsx`
    - [ ] Создать компоненты `ResourceTable`, `FactorInput`
-   - [ ] Добавить в навигацию (App.tsx)
+   - [ ] Добавить в навигацию (App.tsx):
+     ```typescript
+     // В buildNavItems() после repair:
+     { key: 'resources', icon: '⚙️', label: t('global','MENU_RESOURCES') || 'Сырье' },
+     
+     // В switch/case render компонентов:
+     case 'resources':
+       screen = <Suspense fallback={<ScreenSkeleton />}><ResourceScreen /></Suspense>;
+       break;
+     ```
    - [ ] Добавить i18n строки
 
 3. **Тестирование:**
