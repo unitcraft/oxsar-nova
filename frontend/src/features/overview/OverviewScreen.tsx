@@ -361,6 +361,7 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
   const invalidateQueues = () => {
     void qc.invalidateQueries({ queryKey: ['buildings-queue', planet.id] });
     void qc.invalidateQueries({ queryKey: ['shipyard-queue', planet.id] });
+    void qc.invalidateQueries({ queryKey: ['research'] });
   };
   const bQueue = useQuery({
     queryKey: ['buildings-queue', planet.id],
@@ -372,10 +373,16 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
     queryFn: () => api.get<{ queue: ShipyardQueueItem[] }>(`/api/planets/${planet.id}/shipyard/queue`),
     refetchInterval: 5000,
   });
+  const rQueue = useQuery({
+    queryKey: ['research'],
+    queryFn: () => api.get<{ queue: QueueItem[] }>('/api/research'),
+    refetchInterval: 5000,
+  });
 
   const bItems = (bQueue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > now);
   const sItems = (sQueue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > now);
-  const hasActivity = bItems.length > 0 || sItems.length > 0;
+  const rItems = (rQueue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > now);
+  const hasActivity = bItems.length > 0 || sItems.length > 0 || rItems.length > 0;
 
   const diameter = planet.diameter;
   const usedFields = planet.used_fields ?? 0;
@@ -460,6 +467,16 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
               key={item.id}
               icon="🚀"
               label={`${nameOf(item.unit_id)} × ${item.count}`}
+              startAt={item.start_at}
+              endAt={item.end_at}
+              onDone={invalidateQueues}
+            />
+          ))}
+          {rItems.map((item) => (
+            <ActiveQueueItem
+              key={item.id}
+              icon="🔬"
+              label={`${nameOf(item.unit_id)} → ур. ${item.target_level}`}
               startAt={item.start_at}
               endAt={item.end_at}
               onDone={invalidateQueues}
