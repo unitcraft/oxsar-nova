@@ -10,6 +10,7 @@ import { ToastProvider } from './ui/Toast';
 import { ResourceTicker } from './ui/ResourceTicker';
 import { Countdown } from './ui/Countdown';
 import { ScreenSkeleton } from './ui/Skeleton';
+import { useKeyboardShortcuts } from './lib/useKeyboardShortcuts';
 
 const BuildingsScreen    = lazy(() => import('./features/buildings/BuildingsScreen').then(m => ({ default: m.BuildingsScreen })));
 const ResearchScreen     = lazy(() => import('./features/research/ResearchScreen').then(m => ({ default: m.ResearchScreen })));
@@ -52,6 +53,38 @@ function AuthenticatedApp() {
   const [tab, setTab] = useState<Tab>('overview');
   const { t } = useTranslation();
   const logout = useAuthStore((s) => s.logout);
+
+  useKeyboardShortcuts([
+    {
+      key: 'h',
+      alt: true,
+      handler: () => setTab('overview'),
+      description: 'Alt+H — главный экран',
+    },
+    {
+      key: 'b',
+      alt: true,
+      handler: () => setTab('buildings'),
+      description: 'Alt+B — постройки',
+    },
+    {
+      key: 'r',
+      alt: true,
+      handler: () => setTab('research'),
+      description: 'Alt+R — исследования',
+    },
+    {
+      key: 'm',
+      alt: true,
+      handler: () => setTab('messages'),
+      description: 'Alt+M — сообщения',
+    },
+    {
+      key: 'Escape',
+      handler: () => setTab('overview'),
+      description: 'Esc — вернуться на главный экран',
+    },
+  ]);
 
   const planets = useQuery({
     queryKey: ['planets'],
