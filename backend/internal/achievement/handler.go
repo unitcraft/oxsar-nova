@@ -15,8 +15,8 @@ func NewHandler(s *Service) *Handler { return &Handler{svc: s} }
 
 // List GET /api/achievements
 //
-// Перед возвратом прогоняем CheckAll — идемпотентно открывает всё,
-// что игрок заслужил с последнего визита. Это lazy-trigger подход:
+// Перед возвратом прогоняем CheckAll и CheckAllStarter — идемпотентно открывают
+// всё, что игрок заслужил с последнего визита. Это lazy-trigger подход:
 // не влияет на hot-path (building/attack handler'ы) и гарантирует,
 // что UI показывает актуальное состояние без событий.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
@@ -26,6 +26,10 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.CheckAll(r.Context(), uid); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	if err := h.svc.CheckAllStarter(r.Context(), uid); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}

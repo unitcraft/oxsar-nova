@@ -164,6 +164,73 @@ func (s *Service) CheckAll(ctx context.Context, userID string) error {
 	return nil
 }
 
+// CheckAllStarter пробегает по стартовым достижениям (Tutorial-цепочка).
+// Вызывается после CheckAll для завершённости.
+func (s *Service) CheckAllStarter(ctx context.Context, userID string) error {
+	type check struct {
+		key string
+		sql string
+	}
+	checks := []check{
+		{"STARTER_BUILD_METALMINE", `
+			SELECT EXISTS (
+				SELECT 1 FROM buildings b
+				JOIN planets p ON p.id = b.planet_id
+				WHERE p.user_id = $1 AND b.unit_id = 1 AND b.level >= 1
+			)`},
+		{"STARTER_BUILD_SOLARPLANT", `
+			SELECT EXISTS (
+				SELECT 1 FROM buildings b
+				JOIN planets p ON p.id = b.planet_id
+				WHERE p.user_id = $1 AND b.unit_id = 3 AND b.level >= 1
+			)`},
+		{"STARTER_BUILD_METALLURGY", `
+			SELECT EXISTS (
+				SELECT 1 FROM buildings b
+				JOIN planets p ON p.id = b.planet_id
+				WHERE p.user_id = $1 AND b.unit_id = 4 AND b.level >= 1
+			)`},
+		{"STARTER_BUILD_SHIPYARD", `
+			SELECT EXISTS (
+				SELECT 1 FROM buildings b
+				JOIN planets p ON p.id = b.planet_id
+				WHERE p.user_id = $1 AND b.unit_id = 21 AND b.level >= 1
+			)`},
+		{"STARTER_BUILD_LAB", `
+			SELECT EXISTS (
+				SELECT 1 FROM buildings b
+				JOIN planets p ON p.id = b.planet_id
+				WHERE p.user_id = $1 AND b.unit_id = 22 AND b.level >= 1
+			)`},
+		{"STARTER_RESEARCH_TECH", `
+			SELECT EXISTS (
+				SELECT 1 FROM research WHERE user_id = $1 AND level >= 1
+			)`},
+		{"STARTER_BUILD_SHIP", `
+			SELECT EXISTS (
+				SELECT 1 FROM ships WHERE planet_id IN (
+					SELECT id FROM planets WHERE user_id = $1
+				) AND count >= 1
+			)`},
+		{"STARTER_SEND_MISSION", `
+			SELECT EXISTS (
+				SELECT 1 FROM fleets WHERE owner_user_id = $1 AND mission = 10
+			)`},
+	}
+	for _, c := range checks {
+		var ok bool
+		if err := s.db.Pool().QueryRow(ctx, c.sql, userID).Scan(&ok); err != nil {
+			return fmt.Errorf("check starter %s: %w", c.key, err)
+		}
+		if ok {
+			if err := s.UnlockIfNew(ctx, nil, userID, c.key); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // progressCheck описывает числовое достижение с прогресс-баром.
 type progressCheck struct {
 	key string
@@ -180,11 +247,11 @@ var progressChecks = []progressCheck{
 // List возвращает все defs + флаг unlocked + timestamp (если есть) + прогресс для числовых.
 func (s *Service) List(ctx context.Context, userID string) ([]Entry, error) {
 	rows, err := s.db.Pool().Query(ctx, `
-		SELECT d.key, d.title, d.description, d.points, a.unlocked_at
+		SELECT d.key, d.title, d.description, d.points, d.category, a.unlocked_at
 		FROM achievement_defs d
 		LEFT JOIN achievements_user a
 		  ON a.achievement = d.key AND a.user_id = $1
-		ORDER BY d.points ASC, d.key ASC
+		ORDER BY d.category ASC, d.points ASC, d.key ASC
 	`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("achievements list: %w", err)
@@ -193,7 +260,7 @@ func (s *Service) List(ctx context.Context, userID string) ([]Entry, error) {
 	var out []Entry
 	for rows.Next() {
 		var e Entry
-		if err := rows.Scan(&e.Key, &e.Title, &e.Description, &e.Points, &e.UnlockedAt); err != nil {
+		if err := rows.Scan(&e.Key, &e.Title, &e.Description, &e.Points, &e.Category, &e.UnlockedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, e)
@@ -231,6 +298,7 @@ type Entry struct {
 	Title       string     `json:"title"`
 	Description string     `json:"description"`
 	Points      int        `json:"points"`
+	Category    string     `json:"category"`
 	UnlockedAt  *time.Time `json:"unlocked_at,omitempty"`
 	// Progress/ProgressMax — для числовых достижений (BATTLE_10, FLEET_50, SCORE_1000).
 	// Nil — для булевых (FIRST_* и т.п.).

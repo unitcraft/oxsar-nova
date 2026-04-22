@@ -43,7 +43,6 @@ import (
 	"github.com/oxsar/nova/backend/internal/score"
 	"github.com/oxsar/nova/backend/internal/shipyard"
 	"github.com/oxsar/nova/backend/internal/storage"
-	"github.com/oxsar/nova/backend/internal/tutorial"
 )
 
 func main() {
@@ -153,9 +152,6 @@ func run() error {
 
 	allianceSvc := alliance.NewService(db)
 	allianceH := alliance.NewHandler(allianceSvc)
-
-	tutorialSvc := tutorial.NewService(db)
-	tutorialH := tutorial.NewHandler(tutorialSvc)
 
 	adminH := admin.NewHandler(db)
 
@@ -269,8 +265,6 @@ func run() error {
 		pr.Post("/alliances/{id}/relations/{initiator_id}/accept", allianceH.AcceptRelation)
 		pr.Delete("/alliances/{id}/relations/{initiator_id}", allianceH.RejectRelation)
 		pr.Patch("/alliances/{id}/members/{userID}/rank", allianceH.SetMemberRank)
-
-		pr.Get("/tutorial", tutorialH.Status)
 
 		pr.Get("/chat/{kind}/history", chatH.History)
 		pr.Post("/chat/{kind}/send", chatH.Send)
