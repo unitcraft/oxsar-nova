@@ -302,3 +302,36 @@ func applyChange(ctx context.Context, tx pgx.Tx, c FactorChange, userID string, 
 	}
 	return fmt.Errorf("artefact: unhandled scope/op %q/%q", c.Scope, c.Op)
 }
+
+// ActiveBattleModifiers возвращает итоговый боевой модификатор для userID
+// из всех активных battle_bonus артефактов на момент вызова.
+// Используется в attack.go для применения модификаторов атакующей стороне.
+func (s *Service) ActiveBattleModifiers(ctx context.Context, tx pgx.Tx, userID string) (BattleModifier, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT unit_id FROM artefacts_user
+		WHERE user_id = $1 AND state = $2
+	`, userID, StateActive)
+	if err != nil {
+		return BattleModifier{}, fmt.Errorf("query active artefacts: %w", err)
+	}
+	defer rows.Close()
+
+	var specs []config.ArtefactSpec
+	for rows.Next() {
+		var unitID int
+		if err := rows.Scan(&unitID); err != nil {
+			return BattleModifier{}, err
+		}
+		spec, ok := s.lookupByID(unitID)
+		if !ok {
+			continue // неизвестный артефакт, пропускаем
+		}
+		if spec.Effect.Type == "battle_bonus" {
+			specs = append(specs, spec)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return BattleModifier{}, err
+	}
+	return ComputeBattleModifier(specs), nil
+}

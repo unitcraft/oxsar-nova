@@ -51,13 +51,43 @@ type FactorChange struct {
 var ErrNonStackable = errors.New("artefact: non-stackable already active")
 
 // ErrUnsupported — артефакт описан, но его тип эффекта не
-// поддерживается effects-слоем (например, one_shot, battle_bonus).
-// Их реализация — в M5.1.
+// поддерживается effects-слоем (например, one_shot).
+// Его реализация — в M5.1.
 var ErrUnsupported = errors.New("artefact: effect type not supported yet")
+
+// BattleModifier — итоговые множители для боевых параметров атакующей стороны.
+// Применяются in-memory во время боя, не материализуются в БД.
+type BattleModifier struct {
+	AttackMul float64 // множитель атаки (1.0 = без изменений)
+	ShieldMul float64 // множитель щита
+	ShellMul  float64 // множитель брони
+}
+
+// ComputeBattleModifier суммирует эффекты нескольких активных battle_bonus
+// артефактов в один итоговый множитель через перемножение.
+func ComputeBattleModifier(specs []config.ArtefactSpec) BattleModifier {
+	m := BattleModifier{AttackMul: 1, ShieldMul: 1, ShellMul: 1}
+	for _, s := range specs {
+		if s.Effect.Type != "battle_bonus" {
+			continue
+		}
+		if s.Effect.BattleAttack != 0 {
+			m.AttackMul *= s.Effect.BattleAttack
+		}
+		if s.Effect.BattleShield != 0 {
+			m.ShieldMul *= s.Effect.BattleShield
+		}
+		if s.Effect.BattleShell != 0 {
+			m.ShellMul *= s.Effect.BattleShell
+		}
+	}
+	return m
+}
 
 // computeChanges возвращает одну операцию, которую нужно применить к БД
 // для данного артефакта и направления. nil — если эффект не
-// материализуется в factor-полях (battle-бонус, одноразовое действие).
+// материализуется в factor-полях (battle-бонус: применяется in-memory,
+// одноразовое действие: реализуется отдельно).
 func computeChanges(spec config.ArtefactSpec, dir direction) (*FactorChange, error) {
 	e := spec.Effect
 	switch e.Type {
@@ -67,7 +97,9 @@ func computeChanges(spec config.ArtefactSpec, dir direction) (*FactorChange, err
 		return factorChange("planet", e, dir)
 	case "factor_all_planets":
 		return factorChange("all_planets", e, dir)
-	case "one_shot", "battle_bonus":
+	case "battle_bonus":
+		return nil, nil
+	case "one_shot":
 		return nil, ErrUnsupported
 	default:
 		return nil, fmt.Errorf("artefact: unknown effect type %q", e.Type)
