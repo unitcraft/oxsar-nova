@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 
-type ScoreType = 'total' | 'b' | 'r' | 'u' | 'a';
+type ScoreType = 'total' | 'b' | 'r' | 'u' | 'a' | 'e';
 
 interface Entry {
   rank: number;
@@ -14,6 +14,7 @@ interface Entry {
   r_points: number;
   u_points: number;
   a_points: number;
+  e_points?: number;
 }
 
 interface MyRank {
@@ -27,6 +28,7 @@ const SCORE_TYPES: { value: ScoreType; label: string; icon: string }[] = [
   { value: 'r',     label: 'Исследования', icon: '🔬' },
   { value: 'u',     label: 'Флот',         icon: '🛸' },
   { value: 'a',     label: 'Достижения',   icon: '🎖' },
+  { value: 'e',     label: 'Боевой',       icon: '⚔️' },
 ];
 
 function getPoints(e: Entry, type: ScoreType): number {
@@ -34,6 +36,7 @@ function getPoints(e: Entry, type: ScoreType): number {
   if (type === 'b') return e.b_points;
   if (type === 'r') return e.r_points;
   if (type === 'u') return e.u_points;
+  if (type === 'e') return e.e_points ?? 0;
   return e.a_points;
 }
 
