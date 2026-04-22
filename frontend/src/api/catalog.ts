@@ -38,6 +38,13 @@ export function costForLevel(base: Cost, factor: number, level: number): Cost {
   };
 }
 
+// Форматирование чисел с сокращениями: 1.5M, 2k
+export function formatNum(v: number): string {
+  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + 'M';
+  if (v >= 1_000) return (v / 1_000).toFixed(0) + 'K';
+  return Math.floor(v).toLocaleString('ru-RU');
+}
+
 export const BUILDINGS: BuildingEntry[] = [
   { id: 1,   key: 'metal_mine',       name: 'Рудник металла',                costBase: { metal: 60,    silicon: 15,   hydrogen: 0   }, costFactor: 1.5 },
   { id: 2,   key: 'silicon_lab',      name: 'Рудник по добыче кремния',      costBase: { metal: 48,    silicon: 24,   hydrogen: 0   }, costFactor: 1.6 },

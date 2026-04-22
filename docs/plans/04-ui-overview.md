@@ -1,7 +1,11 @@
 # План доработки UI по всем экранам
 
 Сравнение legacy oxsar2 с текущим oxsar-nova.
-Исследование: main.tpl, planetOptions.tpl, monitor_planet.tpl.
+
+**Legacy** = `d:\Sources\oxsar2` (PHP/Yii 1.1 + MySQL, игра 2000-х годов)
+- Исследование: `main.tpl`, `planetOptions.tpl`, `monitor_planet.tpl` и другие шаблоны
+- Код: `game/`, `ext/`, `consts.php` и т.д.
+
 Обновлено: 2026-04-22 после итераций UI-29..33.
 
 ---
@@ -117,7 +121,7 @@
 ### P2.5 — Скоро
 
 - **UI-34**: Экран PlanetOptions (переименование планеты, установка главной, удаление) — потребует API endpoints
-- **UI-35**: Унификация formatNum/toLocaleString по всему фронту для разделителей тысяч
+- ~~**UI-35**: Унификация formatNum/toLocaleString по всему фронту для разделителей тысяч~~ ✅ реализовано (UI-35): `formatNum()` добавлена в `catalog.ts`, GalaxyScreen переведена на неё; основной фронт уже использует `toLocaleString('ru-RU')`
 - **UI-36**: Счётчик онлайна (Сейчас играют / За 24 часа) из `/api/stats` 
 
 ### P3 — низкий приоритет / заблокировано

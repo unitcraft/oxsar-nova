@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { planetImageOf } from '@/api/catalog';
+import { planetImageOf, formatNum } from '@/api/catalog';
 import type { Planet } from '@/api/types';
 
 interface CellView {
@@ -23,12 +23,6 @@ interface SystemView {
   galaxy: number;
   system: number;
   cells: CellView[];
-}
-
-function formatNum(v: number): string {
-  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + 'M';
-  if (v >= 1_000) return (v / 1_000).toFixed(0) + 'K';
-  return Math.floor(v).toLocaleString('ru-RU');
 }
 
 function clamp(v: number, lo: number, hi: number): number {
