@@ -145,6 +145,7 @@ export function OverviewScreen() {
               <button
                 key={p.id}
                 type="button"
+                className="planet-card"
                 onClick={() => setSelectedPlanetId(p.id)}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
