@@ -4,6 +4,7 @@ import { catalog } from '@/api/catalog';
 import type { ResourceBuilding } from '@/api/types';
 import { useToast } from '@/ui/Toast';
 import { ResourceScreenSkeleton } from '@/ui/Skeleton';
+import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
 
 interface FactorFormData {
   [unitId: string]: number;
@@ -102,6 +103,20 @@ export function ResourceScreen({
   const handleQuickSet = (unitId: string, value: number) => {
     handleFactorChange(unitId, value);
   };
+
+  useKeyboardShortcuts([
+    {
+      key: 's',
+      ctrl: true,
+      handler: () => {
+        const isChanged = report?.buildings?.some(
+          (b) => factors[b.unit_id.toString()] !== b.factor
+        );
+        if (isChanged) updateMutation.mutate();
+      },
+      description: 'Ctrl+S — сохранить изменения',
+    },
+  ]);
 
   if (isLoading) {
     return <ResourceScreenSkeleton />;
