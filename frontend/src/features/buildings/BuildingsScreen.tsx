@@ -75,6 +75,19 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
     },
   });
 
+  const cancel = useMutation({
+    mutationFn: (taskId: string) =>
+      api.delete<void>(`/api/planets/${planet.id}/buildings/queue/${taskId}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['buildings-queue', planet.id] });
+      void qc.invalidateQueries({ queryKey: ['planets'] });
+      toast.show('info', 'Отменено', 'Строительство отменено, ресурсы возвращены');
+    },
+    onError: (err) => {
+      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось отменить');
+    },
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
@@ -107,7 +120,7 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
             Активная очередь
           </div>
           {queueItems.map((item, i) => (
-            <QueueRow key={item.id} item={item} isActive={i === 0} />
+            <QueueRow key={item.id} item={item} isActive={i === 0} onCancel={() => cancel.mutate(item.id)} cancelPending={cancel.isPending} />
           ))}
         </div>
       )}
@@ -192,7 +205,7 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
   );
 }
 
-function QueueRow({ item, isActive }: { item: QueueItem; isActive: boolean }) {
+function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem; isActive: boolean; onCancel: () => void; cancelPending: boolean }) {
   const total = new Date(item.end_at).getTime() - new Date(item.start_at).getTime();
   const elapsed = Date.now() - new Date(item.start_at).getTime();
   const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
@@ -211,6 +224,16 @@ function QueueRow({ item, isActive }: { item: QueueItem; isActive: boolean }) {
               {new Date(item.end_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
             </span>
         }
+        <button
+          type="button"
+          className="btn-ghost btn-sm"
+          disabled={cancelPending}
+          onClick={onCancel}
+          title="Отменить (ресурсы вернутся)"
+          style={{ fontSize: 11, padding: '2px 8px', flexShrink: 0 }}
+        >
+          ✕
+        </button>
       </div>
       {isActive && <ProgressBar pct={pct} height={4} />}
     </div>
