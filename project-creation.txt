@@ -4324,3 +4324,20 @@ BuildingsScreen теперь использует buildingName() в очеред
   - Fleet: retreat/formation/прогресс-бар боя/артефакты на миссию — не реализовано (заблокировано боевыми механиками).
   - Market: кредиты в обменнике — убраны из users (только artefact market), артефакт торговца — не реализован.
   - Score: альянс добавлен (UI-10); легенда статусов и отношения — не приоритет.
+
+================================================================================
+Итерация — 2026-04-22 (UI-11)
+================================================================================
+
+[UI-11] MessagesScreen: кнопка "Удалить все" сообщения в папке.
+  - Backend: message/service.go DeleteAll(ctx, userID, folder) — UPDATE SET deleted_at WHERE folder=$N.
+  - Backend: message/handler.go DeleteAll — DELETE /api/messages?folder=N.
+  - Backend: main.go — зарегистрирован роут pr.Delete("/messages", messageH.DeleteAll).
+  - Frontend: MessagesScreen.tsx — мутация delAll, кнопка 🗑 Удалить все (с confirm).
+    Учитывает activeFolder: удаляет только текущую папку или всё.
+
+[Сравнение Alliance/Messages с legacy]:
+  - Alliance: полностью реализовано, добавлено создание/роспуск/toggle open.
+    Пропущено: письмо всем членам — P3.
+  - Messages: добавлена функция удаления всех (UI-11).
+    Наш экран значительно богаче legacy (battle/spy/exped viewers, ответ).
