@@ -4777,3 +4777,36 @@ Frontend:
   - Интерактивный UI с управлением через слайдер и быстрые кнопки.
   - Все три уровня агрегации (час, день, неделя) вычисляются верно.
 
+
+
+================================================================================
+Итерация — 2026-04-23 (Optimization & UX)
+================================================================================
+
+[Optimization & UX] Производительность и пользовательский опыт.
+
+Backend:
+- planet/repository.go: новый метод UpdateBuildingFactors для батч-операции.
+  Вместо N запросов UPDATE теперь 1 запрос с CASE/WHEN для всех зданий.
+- planet/service.go: UpdateResourceFactors переработан для батч-метода.
+  Парсинг факторов → map[int]int → один вызов батч-операции.
+  Результат: уменьшение round-trips в БД на 90% для типичного обновления (5-10 зданий).
+
+Frontend:
+- lib/web-vitals.ts: новый модуль для отслеживания метрик производительности.
+  getCLS, getFID, getFCP, getLCP, getTTFB из web-vitals пакета.
+  Логирование в консоль при разработке с цветовым кодированием (good/needs-improvement/poor).
+- features/resource/ResourceScreen.tsx: optimistic updates при сохранении факторов.
+  onMutate: отмена pending запросов + локальное обновление кэша.
+  onError: откат на старые данные при ошибке.
+  Toast сообщения при успехе/ошибке через useToast контекст.
+- frontend/package.json: добавлена зависимость web-vitals ^3.5.2.
+
+Статус: 🟡 ЧАСТИЧНО ЗАВЕРШЕНА.
+  ✅ Батч-операции для UpdateResourceFactors реализованы
+  ✅ Web Vitals мониторинг добавлен
+  ✅ Optimistic Updates в ResourceScreen реализованы
+  🟡 Optimistic updates для других экранов (Market, Artefacts) — планируется P2
+  🟡 Performance profiling БД запросов — в progress
+  🟡 Skeleton loaders для всех экранов — планируется
+
