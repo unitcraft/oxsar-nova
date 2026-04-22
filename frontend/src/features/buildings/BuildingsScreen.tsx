@@ -16,6 +16,31 @@ import { Countdown } from '@/ui/Countdown';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
 
+function fmtPerHour(v: number): string {
+  const h = Math.round(v * 3600);
+  if (h >= 1_000_000) return `${(h / 1_000_000).toFixed(1)}M/ч`;
+  if (h >= 1_000) return `${Math.round(h / 1_000)}k/ч`;
+  return `${h}/ч`;
+}
+
+type ProdField = 'metal_per_sec' | 'silicon_per_sec' | 'hydrogen_per_sec';
+type EnergyField = 'energy_prod';
+
+interface ProdStat {
+  icon: string;
+  label: string;
+  field: ProdField | EnergyField;
+  isEnergy?: boolean;
+}
+
+const PROD_STAT: Record<string, ProdStat> = {
+  metal_mine:     { icon: '⛏', label: 'Добыча', field: 'metal_per_sec' },
+  silicon_lab:    { icon: '🔷', label: 'Добыча', field: 'silicon_per_sec' },
+  hydrogen_lab:   { icon: '💧', label: 'Добыча', field: 'hydrogen_per_sec' },
+  solar_plant:    { icon: '⚡', label: 'Энергия', field: 'energy_prod', isEnergy: true },
+  hydrogen_plant: { icon: '⚡', label: 'Энергия', field: 'energy_prod', isEnergy: true },
+};
+
 export function BuildingsScreen({ planet }: { planet: Planet }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -93,9 +118,22 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
               </div>
               <div className="ox-unit-card-body">
                 <div className="ox-unit-card-name">{b.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 4 }}>
+                <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
                   {level > 0 ? `Уровень ${level}` : 'Не построено'}
                 </div>
+                {(() => {
+                  const stat = PROD_STAT[b.key];
+                  if (!stat || level === 0) return null;
+                  const raw = planet[stat.field];
+                  const display = stat.isEnergy
+                    ? `${Math.round(raw as number)}`
+                    : fmtPerHour(raw as number);
+                  return (
+                    <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginBottom: 2, fontFamily: 'var(--ox-mono)' }}>
+                      {stat.icon} {display}
+                    </div>
+                  );
+                })()}
                 {!inQueue && (
                   <>
                     <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>

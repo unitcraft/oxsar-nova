@@ -80,8 +80,11 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
               </div>
               <div className="ox-unit-card-body">
                 <div className="ox-unit-card-name">{r.name}</div>
-                <div style={{ fontSize: 12, color: level > 0 ? 'var(--ox-fg-dim)' : 'var(--ox-fg-muted)', marginBottom: 4 }}>
+                <div style={{ fontSize: 12, color: level > 0 ? 'var(--ox-fg-dim)' : 'var(--ox-fg-muted)', marginBottom: 2 }}>
                   {level > 0 ? `Уровень ${level}` : 'Не изучено'}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
+                  {r.benefit}
                 </div>
                 {!isActive && (
                   <>
