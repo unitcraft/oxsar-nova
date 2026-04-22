@@ -4299,3 +4299,28 @@ BuildingsScreen теперь использует buildingName() в очеред
   - Кнопка 😊 показывает/скрывает панель.
   - Вставка добавляет emoji к тексту, фокус возвращается в инпут.
   - Escape закрывает панель.
+
+================================================================================
+Итерация — 2026-04-22 (UI-фаза продолжение)
+================================================================================
+
+[UI-9] OverviewScreen: ресурсы на мини-карточках карусели планет.
+  - Под координатами каждой планеты в карусели: ⛏Nk 🔷Nk 💧Nk.
+  - fmtRes() helper: Nk / N.NM / N.
+  - Высота карточки стала auto (убран fixed height: 110).
+
+[UI-8] Склад и энергия в шапке — завершено.
+  - planet model: metal_cap/silicon_cap/hydrogen_cap, energy_prod/energy_cons/energy_remaining.
+  - energyStats() в planet/service.go: prod = solar_plant + solar_satellite×EnergyFactor; cons = mines+labs.
+  - App.tsx Header: подпись cap под тикером (зел/оранж/красн), ⚡ prod (+remaining).
+  - Кредиты в шапке — не реализовано: поле credit убрано из users в migration 0013.
+
+[UI] ScoreScreen: колонка Альянс.
+  - score/service.go Entry: добавлено AllianceTag *string.
+  - Top() query: LEFT JOIN alliances ON u.alliance_id = a.id, SELECT a.tag.
+  - ScoreScreen.tsx: колонка "Альянс" [TAG] или —.
+
+[Сравнение с legacy] Fleet/Market/Score — результаты анализа:
+  - Fleet: retreat/formation/прогресс-бар боя/артефакты на миссию — не реализовано (заблокировано боевыми механиками).
+  - Market: кредиты в обменнике — убраны из users (только artefact market), артефакт торговца — не реализован.
+  - Score: альянс добавлен (UI-10); легенда статусов и отношения — не приоритет.
