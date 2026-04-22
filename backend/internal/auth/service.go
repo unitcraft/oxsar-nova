@@ -140,15 +140,16 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (User, Tokens,
 	return User{ID: userID, Username: username, Email: email}, toks, nil
 }
 
-// Login проверяет email+password и возвращает токены.
+// Login проверяет (email или username)+password и возвращает токены.
 func (s *Service) Login(ctx context.Context, email, password string) (User, Tokens, error) {
-	email = strings.ToLower(strings.TrimSpace(email))
+	login := strings.ToLower(strings.TrimSpace(email))
 
 	var id, username, emailRead, hash string
 	var bannedAt *time.Time
 	err := s.db.Pool().QueryRow(ctx, `
-		SELECT id, username, email, password_hash, banned_at FROM users WHERE email = $1
-	`, email).Scan(&id, &username, &emailRead, &hash, &bannedAt)
+		SELECT id, username, email, password_hash, banned_at FROM users
+		WHERE email = $1 OR lower(username) = $1
+	`, login).Scan(&id, &username, &emailRead, &hash, &bannedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return User{}, Tokens{}, ErrInvalidCredential
