@@ -2,6 +2,8 @@
 
 Добавлено: 2026-04-22.
 
+**Legacy UI:** http://localhost:8080/login.php (test / quoYaMe1wHo4xaci) → `d:\Sources\oxsar2\www\templates\standard\planetOptions.tpl`
+
 ## Цель
 
 Каждая планета имеет **тип** (биом), определяемый при создании из позиции в системе

@@ -5,6 +5,10 @@
 **Legacy** = `d:\Sources\oxsar2` (PHP/Yii 1.1 + MySQL, игра 2000-х годов)
 - Исследование: `main.tpl`, `planetOptions.tpl`, `monitor_planet.tpl` и другие шаблоны
 - Код: `game/`, `ext/`, `consts.php` и т.д.
+- **Доступ к legacy UI:** http://localhost:8080/login.php
+  - Пользователь: `test`
+  - Пароль: `quoYaMe1wHo4xaci`
+  - Исходный код UI: `.tpl` файлы в `d:\Sources\oxsar2\www\templates\standard\`
 
 Обновлено: 2026-04-22 после итераций UI-29..33.
 

@@ -8,6 +8,8 @@
 
 Данные из legacy: `game/Artefact.class.php` + `consts.php` (§5.10.1 ТЗ).
 
+**Legacy UI:** http://localhost:8080/login.php (test / quoYaMe1wHo4xaci) → `d:\Sources\oxsar2\www\templates\standard\*.tpl`
+
 ---
 
 ## Шаги
