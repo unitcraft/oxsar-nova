@@ -21,7 +21,7 @@ export function ChatScreen() {
   const [input, setInput] = useState('');
   const [wsError, setWsError] = useState('');
   const wsRef = useRef<WebSocket | null>(null);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+
   const token = useAuthStore((s) => s.accessToken);
   const me = useQuery({
     queryKey: ['me'],
@@ -97,10 +97,12 @@ export function ChatScreen() {
     };
   }, [kind, token]);
 
+  const scrollBoxRef = useRef<HTMLDivElement | null>(null);
   const prevLenRef = useRef(0);
   useEffect(() => {
     if (messages.length > prevLenRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const box = scrollBoxRef.current;
+      if (box) box.scrollTop = box.scrollHeight;
     }
     prevLenRef.current = messages.length;
   }, [messages]);
@@ -149,7 +151,7 @@ export function ChatScreen() {
 
       {wsError && <div style={{ color: 'orange', marginBottom: 4 }}>{wsError}</div>}
 
-      <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #333', padding: '8px 12px', marginBottom: 8 }}>
+      <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', border: '1px solid #333', padding: '8px 12px', marginBottom: 8 }}>
         {messages.map((m) => {
           const isOwn = m.author_id === me.data?.user_id;
           return (
@@ -186,7 +188,6 @@ export function ChatScreen() {
             </div>
           );
         })}
-        <div ref={bottomRef} />
       </div>
 
       <div style={{ display: 'flex', gap: 8 }}>
