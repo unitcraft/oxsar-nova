@@ -15,6 +15,15 @@ interface TutorialStatus {
   complete: boolean;
 }
 
+const STEP_RESOURCES: [number, number, number][] = [
+  [500,  200,  0],
+  [300,  300,  100],
+  [500,  500,  200],
+  [1000, 500,  300],
+  [2000, 1000, 500],
+  [5000, 3000, 1000],
+];
+
 export function TutorialScreen() {
   const q = useQuery({
     queryKey: ['tutorial'],
@@ -53,9 +62,6 @@ export function TutorialScreen() {
         </div>
       ) : (
         <div className="ox-panel" style={{ padding: '12px 16px' }}>
-          <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 6 }}>
-            Каждый шаг даёт +10 кредитов.
-          </div>
           <ProgressBar pct={pct} variant="success" height={6} showLabel />
         </div>
       )}
@@ -74,13 +80,26 @@ export function TutorialScreen() {
             <div style={{ fontSize: 22, flexShrink: 0, marginTop: 1 }}>
               {step.done ? '✅' : '○'}
             </div>
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{ fontWeight: step.done ? 400 : 600, fontSize: 14, marginBottom: 2 }}>
                 {step.title}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>
+              <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 4 }}>
                 {step.description}
               </div>
+              {!step.done && (() => {
+                const res = STEP_RESOURCES[step.index - 1];
+                if (!res) return null;
+                const [m, si, h] = res;
+                return (
+                  <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', color: 'var(--ox-success)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <span>💳 +10 cr</span>
+                    {m > 0  && <span>⛏ +{m.toLocaleString('ru-RU')}</span>}
+                    {si > 0 && <span>🔷 +{si.toLocaleString('ru-RU')}</span>}
+                    {h > 0  && <span>💧 +{h.toLocaleString('ru-RU')}</span>}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         ))}
