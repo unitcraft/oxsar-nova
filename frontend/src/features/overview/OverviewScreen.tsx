@@ -81,6 +81,12 @@ export function OverviewScreen() {
     refetchInterval: 15000,
   });
 
+  const stats = useQuery({
+    queryKey: ['stats'],
+    queryFn: () => api.get<{ online_now: number; online_24h: number }>('/api/stats'),
+    refetchInterval: 60000,
+  });
+
   const list = planets.data?.planets ?? [];
   const [selectedPlanetId, setSelectedPlanetId] = useState<string | null>(null);
   const incomingFleets = (incoming.data?.fleets ?? []).filter(
@@ -132,13 +138,20 @@ export function OverviewScreen() {
         </div>
       )}
 
-      {/* Статистика игрока */}
+      {/* Статистика игрока и онлайна */}
       {me.data && (
         <div className="ox-panel" style={{ padding: '12px 20px', display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'center' }}>
           <StatItem label="Очки" value={Math.floor(me.data.points).toLocaleString('ru-RU')} />
           <StatItem label="Место в рейтинге" value={`#${me.data.rank}`} accent />
           {(me.data.e_points ?? 0) > 0 && (
             <StatItem label="Боевой опыт" value={Math.floor(me.data.e_points!).toLocaleString('ru-RU')} />
+          )}
+          {stats.data && (
+            <>
+              <div style={{ width: 1, height: 40, background: 'var(--ox-border)' }} />
+              <StatItem label="Сейчас играют" value={stats.data.online_now.toString()} />
+              <StatItem label="За 24 часа" value={stats.data.online_24h.toString()} />
+            </>
           )}
         </div>
       )}

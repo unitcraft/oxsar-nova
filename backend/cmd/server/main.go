@@ -149,7 +149,7 @@ func run() error {
 	officerH := officer.NewHandler(officerSvc)
 
 	scoreSvc := score.NewService(db, cat)
-	scoreH := score.NewHandler(scoreSvc)
+	scoreH := score.NewHandlerWithDB(scoreSvc, db)
 
 	allianceSvc := alliance.NewService(db)
 	allianceH := alliance.NewHandler(allianceSvc)
@@ -184,6 +184,7 @@ func run() error {
 	r.With(authRL.Middleware).Post("/api/auth/refresh", authH.Refresh)
 	r.With(auth.Middleware(jwt)).Get("/api/me", authH.Me)
 	r.Post("/api/battle-sim", battleSimHandler)
+	r.Get("/api/stats", scoreH.Stats)
 
 	// i18n доступна без авторизации (логин-экран тоже использует).
 	if i18nH != nil {
