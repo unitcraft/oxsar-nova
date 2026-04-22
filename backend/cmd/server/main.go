@@ -197,6 +197,9 @@ func run() error {
 		pr.Use(auth.LastSeenMiddleware(pool))
 		pr.Get("/planets", planetH.List)
 		pr.Get("/planets/{id}", planetH.Get)
+		pr.Patch("/planets/{id}", planetH.Rename)
+		pr.Post("/planets/{id}/set-home", planetH.SetHome)
+		pr.Delete("/planets/{id}", planetH.Abandon)
 
 		pr.Get("/planets/{id}/buildings", buildingH.Levels)
 		pr.Post("/planets/{id}/buildings", buildingH.Enqueue)

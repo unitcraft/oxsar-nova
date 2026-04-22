@@ -74,5 +74,53 @@ func (r *Repository) ListByUser(ctx context.Context, userID string) ([]Planet, e
 	return out, rows.Err()
 }
 
-// ErrNotFound — планета отсутствует или уничтожена.
-var ErrNotFound = errors.New("planet: not found")
+// Rename обновляет имя планеты.
+func (r *Repository) Rename(ctx context.Context, planetID string, name string) error {
+	res, err := r.pool.Exec(ctx, `
+		UPDATE planets SET name = $1 WHERE id = $2 AND destroyed_at IS NULL
+	`, name, planetID)
+	if err != nil {
+		return fmt.Errorf("rename planet: %w", err)
+	}
+	if res.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// SetHome устанавливает эту планету домашней для юзера (обновляет users.cur_planet_id).
+func (r *Repository) SetHome(ctx context.Context, userID, planetID string) error {
+	res, err := r.pool.Exec(ctx, `
+		UPDATE users SET cur_planet_id = $1 WHERE id = $2
+	`, planetID, userID)
+	if err != nil {
+		return fmt.Errorf("set home planet: %w", err)
+	}
+	if res.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// Abandon мягко удаляет планету (soft-delete через destroyed_at).
+func (r *Repository) Abandon(ctx context.Context, planetID string) error {
+	res, err := r.pool.Exec(ctx, `
+		UPDATE planets SET destroyed_at = now() WHERE id = $1 AND destroyed_at IS NULL
+	`, planetID)
+	if err != nil {
+		return fmt.Errorf("abandon planet: %w", err)
+	}
+	if res.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// Ошибки операций с планетами.
+var (
+	ErrNotFound            = errors.New("planet: not found")
+	ErrInvalidInput        = errors.New("planet: invalid input")
+	ErrMoonRestricted      = errors.New("planet: operation not allowed for moons")
+	ErrOnlyPlanet          = errors.New("planet: cannot abandon only planet")
+	ErrCannotAbandonHome   = errors.New("planet: cannot abandon home planet")
+)

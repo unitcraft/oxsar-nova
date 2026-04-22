@@ -50,7 +50,7 @@ function fmtRes(v: number): string {
 }
 
 
-export function OverviewScreen() {
+export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: () => void } = {}) {
   const planets = useQuery({
     queryKey: ['planets'],
     queryFn: () => api.get<{ planets: Planet[] }>('/api/planets'),
@@ -263,7 +263,7 @@ export function OverviewScreen() {
       })()}
 
       {/* Карточка выбранной планеты */}
-      {selectedPlanet && <PlanetOverviewCard key={selectedPlanet.id} planet={selectedPlanet} />}
+      {selectedPlanet && <PlanetOverviewCard key={selectedPlanet.id} planet={selectedPlanet} onOptions={onShowPlanetOptions ?? (() => {})} />}
     </div>
   );
 }
@@ -368,7 +368,7 @@ function useNow(intervalMs = 1000) {
   return now;
 }
 
-function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; used_fields?: number; temp_min?: number; temp_max?: number } }) {
+function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter?: number; used_fields?: number; temp_min?: number; temp_max?: number }; onOptions: () => void }) {
   const now = useNow();
   const qc = useQueryClient();
   const invalidateQueues = () => {
@@ -428,6 +428,15 @@ function PlanetOverviewCard({ planet }: { planet: Planet & { diameter?: number; 
         {hasActivity && (
           <span className="ox-badge ox-badge-accent" style={{ fontSize: 10 }}>активность</span>
         )}
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={onOptions}
+          style={{ fontSize: 14, padding: '6px 10px', flexShrink: 0 }}
+          title="Параметры планеты"
+        >
+          ⚙️
+        </button>
       </div>
 
       {/* Характеристики планеты */}

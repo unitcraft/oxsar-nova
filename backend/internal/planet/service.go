@@ -416,6 +416,95 @@ func buildingLevels(ctx context.Context, tx pgx.Tx, planetID string) (map[int]in
 	return out, rows.Err()
 }
 
+// Rename переименовывает планету. Валидация: имя 1–50 символов,
+// планета принадлежит юзеру.
+func (s *Service) Rename(ctx context.Context, userID, planetID, name string) error {
+	name = trimSpace(name)
+	if len(name) < 1 || len(name) > 50 {
+		return fmt.Errorf("planet: invalid name length (must be 1–50 chars): %w", ErrInvalidInput)
+	}
+
+	p, err := s.repo.GetByID(ctx, planetID)
+	if err != nil {
+		return err
+	}
+	if p.UserID != userID {
+		return ErrNotFound
+	}
+
+	return s.repo.Rename(ctx, planetID, name)
+}
+
+// SetHome устанавливает планету домашней. Проверка: не луна, принадлежит юзеру.
+func (s *Service) SetHome(ctx context.Context, userID, planetID string) error {
+	p, err := s.repo.GetByID(ctx, planetID)
+	if err != nil {
+		return err
+	}
+	if p.UserID != userID {
+		return ErrNotFound
+	}
+	if p.IsMoon {
+		return fmt.Errorf("planet: cannot set moon as home: %w", ErrMoonRestricted)
+	}
+
+	return s.repo.SetHome(ctx, userID, planetID)
+}
+
+// Abandon удаляет (мягко) планету. Проверка: не луна, не единственная,
+// не домашняя (или есть другая для замены).
+func (s *Service) Abandon(ctx context.Context, userID, planetID string) error {
+	p, err := s.repo.GetByID(ctx, planetID)
+	if err != nil {
+		return err
+	}
+	if p.UserID != userID {
+		return ErrNotFound
+	}
+	if p.IsMoon {
+		return fmt.Errorf("planet: cannot abandon moon: %w", ErrMoonRestricted)
+	}
+
+	// Проверить что есть хотя бы 2 планеты (не луны).
+	planets, err := s.repo.ListByUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+	nonMoons := 0
+	for _, pp := range planets {
+		if !pp.IsMoon {
+			nonMoons++
+		}
+	}
+	if nonMoons < 2 {
+		return fmt.Errorf("planet: cannot abandon only planet: %w", ErrOnlyPlanet)
+	}
+
+	// Проверить что это не домашняя планета.
+	// Home planet = cur_planet_id в таблице users.
+	var curPlanetID string
+	err = s.db.Pool().QueryRow(ctx, `SELECT cur_planet_id FROM users WHERE id = $1`, userID).
+		Scan(&curPlanetID)
+	if err != nil {
+		return fmt.Errorf("planet: check home: %w", err)
+	}
+	if curPlanetID == planetID {
+		return fmt.Errorf("planet: cannot abandon home planet: %w", ErrCannotAbandonHome)
+	}
+
+	return s.repo.Abandon(ctx, planetID)
+}
+
+func trimSpace(s string) string {
+	for len(s) > 0 && (s[0] == ' ' || s[0] == '\t' || s[0] == '\n' || s[0] == '\r') {
+		s = s[1:]
+	}
+	for len(s) > 0 && (s[len(s)-1] == ' ' || s[len(s)-1] == '\t' || s[len(s)-1] == '\n' || s[len(s)-1] == '\r') {
+		s = s[:len(s)-1]
+	}
+	return s
+}
+
 func floatOr(p *float64, def float64) float64 {
 	if p == nil {
 		return def
