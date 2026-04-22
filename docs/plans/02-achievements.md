@@ -16,6 +16,8 @@
 
 **Проблема:** дублирование. Нужна одна **унифицированная система Достижений** с категориями.
 
+**Legacy UI:** http://localhost:8080/login.php (test / quoYaMe1wHo4xaci) → `d:\Sources\oxsar2\www\templates\standard\tutorials.tpl`
+
 ## Новая архитектура
 
 **Единая система `achievement`:**
