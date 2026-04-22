@@ -913,6 +913,25 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/HighscoreEntry" }
 
+  /api/stats:
+    get:
+      tags: [system]
+      summary: Публичная статистика игры (онлайн).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  online_now:
+                    type: integer
+                    description: Игроки активные в последние 5 минут
+                  online_24h:
+                    type: integer
+                    description: Игроки заходившие за последние 24 часа
+
   /api/alliances:
     get:
       tags: [alliances]
