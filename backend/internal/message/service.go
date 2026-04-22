@@ -166,6 +166,25 @@ func (s *Service) Compose(ctx context.Context, fromUserID, toUsername, subject, 
 	return nil
 }
 
+// DeleteAll soft-удаляет все сообщения пользователя (опционально фильтр по folder).
+// folder=0 — удалить все.
+func (s *Service) DeleteAll(ctx context.Context, userID string, folder int) error {
+	var err error
+	if folder > 0 {
+		_, err = s.db.Pool().Exec(ctx,
+			`UPDATE messages SET deleted_at = now() WHERE to_user_id = $1 AND folder = $2 AND deleted_at IS NULL`,
+			userID, folder)
+	} else {
+		_, err = s.db.Pool().Exec(ctx,
+			`UPDATE messages SET deleted_at = now() WHERE to_user_id = $1 AND deleted_at IS NULL`,
+			userID)
+	}
+	if err != nil {
+		return fmt.Errorf("delete all messages: %w", err)
+	}
+	return nil
+}
+
 // Delete soft-удаляет сообщение (ставит deleted_at). Только владелец может удалить своё.
 func (s *Service) Delete(ctx context.Context, userID, messageID string) error {
 	tag, err := s.db.Pool().Exec(ctx,

@@ -276,6 +276,7 @@ func run() error {
 
 		pr.Get("/messages", messageH.Inbox)
 		pr.Post("/messages", messageH.Compose)
+		pr.Delete("/messages", messageH.DeleteAll)
 		pr.Delete("/messages/{id}", messageH.Delete)
 		pr.Get("/messages/unread-count", messageH.UnreadCount)
 		pr.Post("/messages/{id}/read", messageH.MarkRead)

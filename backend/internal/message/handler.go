@@ -3,6 +3,7 @@ package message
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -104,6 +105,24 @@ func (h *Handler) Compose(w http.ResponseWriter, r *http.Request) {
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}
+}
+
+// DeleteAll DELETE /api/messages?folder=N — удаляет все (или все в папке).
+func (h *Handler) DeleteAll(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	folder := 0
+	if f := r.URL.Query().Get("folder"); f != "" {
+		fmt.Sscanf(f, "%d", &folder) //nolint:errcheck
+	}
+	if err := h.svc.DeleteAll(r.Context(), uid, folder); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Delete DELETE /api/messages/{id}

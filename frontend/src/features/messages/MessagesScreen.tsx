@@ -135,6 +135,19 @@ export function MessagesScreen() {
     },
   });
 
+  const delAll = useMutation({
+    mutationFn: () => {
+      const qs = activeFolder != null ? `?folder=${activeFolder}` : '';
+      return api.delete<void>(`/api/messages${qs}`);
+    },
+    onSuccess: () => {
+      setSelectedID(null);
+      void qc.invalidateQueries({ queryKey: ['messages'] });
+      void qc.invalidateQueries({ queryKey: ['messages', 'unread-count'] });
+      toast.show('info', 'Все сообщения удалены');
+    },
+  });
+
   const allMsgs = list.data?.messages ?? [];
   const msgs = activeFolder === null ? allMsgs : allMsgs.filter((m) => m.folder === activeFolder);
   const selected = msgs.find((m) => m.id === selectedID) ?? null;
@@ -162,9 +175,24 @@ export function MessagesScreen() {
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
           Сообщения {unreadCount > 0 && <span style={{ fontSize: 14, color: 'var(--ox-accent)' }}>({unreadCount} новых)</span>}
         </h2>
-        <button type="button" className="btn btn-sm" onClick={() => { setComposing(true); setSelectedID(null); }}>
-          ✉ Написать
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {msgs.length > 0 && (
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              style={{ color: 'var(--ox-danger)', opacity: 0.7 }}
+              disabled={delAll.isPending}
+              onClick={() => {
+                if (window.confirm('Удалить все сообщения в этой папке?')) delAll.mutate();
+              }}
+            >
+              🗑 Удалить все
+            </button>
+          )}
+          <button type="button" className="btn btn-sm" onClick={() => { setComposing(true); setSelectedID(null); }}>
+            ✉ Написать
+          </button>
+        </div>
       </div>
 
       {/* Folder tabs */}
