@@ -666,7 +666,7 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 	return report, nil
 }
 
-// UpdateResourceFactors обновляет факторы производства для зданий планеты.
+// UpdateResourceFactors обновляет факторы производства для зданий планеты (батч-операция).
 func (s *Service) UpdateResourceFactors(ctx context.Context, userID, planetID string, factors map[string]int) error {
 	p, err := s.repo.GetByID(ctx, planetID)
 	if err != nil {
@@ -676,24 +676,22 @@ func (s *Service) UpdateResourceFactors(ctx context.Context, userID, planetID st
 		return ErrNotFound
 	}
 
-	// Валидация факторов (0-100%).
-	for _, factor := range factors {
+	// Парсинг и валидация факторов (0-100%).
+	intFactors := make(map[int]int)
+	for unitIDStr, factor := range factors {
 		if factor < 0 || factor > 100 {
 			return fmt.Errorf("invalid factor: %d: %w", factor, ErrInvalidInput)
 		}
-	}
-
-	// Обновить факторы в БД.
-	for unitIDStr, factor := range factors {
 		var unitID int
 		if _, err := fmt.Sscanf(unitIDStr, "%d", &unitID); err != nil {
 			return fmt.Errorf("invalid unit_id: %s: %w", unitIDStr, ErrInvalidInput)
 		}
+		intFactors[unitID] = factor
+	}
 
-		err := s.repo.UpdateBuildingFactor(ctx, planetID, unitID, factor)
-		if err != nil {
-			return fmt.Errorf("update building factor: %w", err)
-		}
+	// Обновить все факторы в одном батч-запросе.
+	if err := s.repo.UpdateBuildingFactors(ctx, planetID, intFactors); err != nil {
+		return fmt.Errorf("update building factors: %w", err)
 	}
 
 	return nil
