@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { nameOf } from '@/api/catalog';
+import { ARTEFACTS, nameOf, imageOf } from '@/api/catalog';
 import type { Artefact } from '@/api/types';
 import { useToast } from '@/ui/Toast';
 import { Countdown } from '@/ui/Countdown';
@@ -137,8 +137,13 @@ function ArtefactGroup({
             className="ox-unit-card"
             style={a.state === 'active' ? { borderColor: 'var(--ox-success)', boxShadow: '0 0 0 1px var(--ox-success)' } : undefined}
           >
-            <div className="ox-unit-card-img" style={{ fontSize: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              ✨
+            <div className="ox-unit-card-img">
+              {(() => {
+                const meta = ARTEFACTS.find((x) => x.id === a.unit_id);
+                return meta
+                  ? <img src={imageOf(meta.key)} alt={meta.name} width={64} height={64} style={{ imageRendering: 'pixelated' }} />
+                  : <span style={{ fontSize: 36 }}>✨</span>;
+              })()}
             </div>
             <div className="ox-unit-card-body">
               <div className="ox-unit-card-name">{nameOf(a.unit_id)}</div>

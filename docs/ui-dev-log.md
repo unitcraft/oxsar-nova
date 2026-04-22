@@ -367,6 +367,20 @@ P2 из плана: показать баланс кредитов в шапке
 
 ---
 
+## Итерация UI-21: Иконки артефактов (2026-04-22)
+
+### Задача
+ArtefactsScreen показывал `✨` вместо реальных иконок — у нас есть GIF для всех
+6 реализованных артефактов: merchants_mark, catalyst, power_generator, atomic_densifier,
+supercomputer, robot_control_system.
+
+### Реализация
+- Добавлен импорт `ARTEFACTS` и `imageOf` в ArtefactsScreen.
+- В карточке: lookup по `ARTEFACTS.find(x => x.id === a.unit_id)` → `imageOf(meta.key)`.
+- Fallback `✨` оставлен для неизвестных unit_id.
+
+---
+
 ## Итерация UI-20: Требования к юнитам в карточках (2026-04-22)
 
 ### Задача
