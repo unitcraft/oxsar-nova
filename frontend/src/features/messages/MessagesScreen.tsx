@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { Confirm } from '@/ui/Confirm';
 import { useToast } from '@/ui/Toast';
 
 interface Message {
@@ -113,6 +114,7 @@ export function MessagesScreen() {
   const [composing, setComposing] = useState(false);
   const [replyInit, setReplyInit] = useState<ReplyInit | undefined>(undefined);
   const [activeFolder, setActiveFolder] = useState<number | null>(null);
+  const [confirmDelAll, setConfirmDelAll] = useState(false);
 
   const list = useQuery({
     queryKey: ['messages'],
@@ -182,9 +184,7 @@ export function MessagesScreen() {
               className="btn-ghost btn-sm"
               style={{ color: 'var(--ox-danger)', opacity: 0.7 }}
               disabled={delAll.isPending}
-              onClick={() => {
-                if (window.confirm('Удалить все сообщения в этой папке?')) delAll.mutate();
-              }}
+              onClick={() => setConfirmDelAll(true)}
             >
               🗑 Удалить все
             </button>
@@ -283,6 +283,17 @@ export function MessagesScreen() {
             </div>
           )}
         </div>
+      )}
+
+      {confirmDelAll && (
+        <Confirm
+          title="Удалить сообщения"
+          message={activeFolder === null ? 'Удалить все сообщения?' : 'Удалить все сообщения в этой папке?'}
+          confirmLabel="Удалить"
+          danger
+          onConfirm={() => { setConfirmDelAll(false); delAll.mutate(); }}
+          onCancel={() => setConfirmDelAll(false)}
+        />
       )}
     </div>
   );
