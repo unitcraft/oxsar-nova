@@ -583,16 +583,22 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 		Buildings:  []ResourceBuildingDTO{},
 	}
 
-	// Базовое производство (из конфига: каждый день 10M металла, 5M кремния, 1M водорода).
-	// В legacy это значение зависит от версии мира, берётся из конфига.
-	report.BasicMetal = 10_000_000
-	report.BasicSilicon = 5_000_000
-	report.BasicHydrogen = 1_000_000
+	// Базовое (естественное) производство — константа из legacy oxsar2,
+	// не зависит от зданий (metal=10/h, silicon=5/h, hydrogen=0/h).
+	report.BasicMetal = 10
+	report.BasicSilicon = 5
+	report.BasicHydrogen = 0
 
-	// Ёмкости хранилищ.
-	report.StorageMetal = float64(p.MetalCap)
-	report.StorageSilicon = float64(p.SiliconCap)
-	report.StorageHydrogen = float64(p.HydrogenCap)
+	// Ёмкости хранилищ — пересчитываем по текущим уровням зданий,
+	// не из кеша p.MetalCap (который обновляется только при тике).
+	lvls := make(map[int]int, len(buildings))
+	for _, b := range buildings {
+		lvls[b.UnitID] = b.Level
+	}
+	caps := s.storageCap(&p, lvls)
+	report.StorageMetal = caps.metal
+	report.StorageSilicon = caps.silicon
+	report.StorageHydrogen = caps.hydrogen
 
 	// Расчёт производства по зданиям.
 	totalMetal, totalSilicon, totalHydrogen := 0.0, 0.0, 0.0
@@ -617,24 +623,29 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 		metalHour := s.calcBuildingProduction(spec.Prod.Metal, b.Level, p.ProduceFactor)
 		silHour := s.calcBuildingProduction(spec.Prod.Silicon, b.Level, p.ProduceFactor)
 		hydHour := s.calcBuildingProduction(spec.Prod.Hydrogen, b.Level, p.ProduceFactor)
-		energyHour := s.calcBuildingConsumption(spec.Cons.Energy, b.Level)
+		energyProd := s.calcBuildingProduction(spec.Prod.Energy, b.Level, 1.0)
+		energyCons := s.calcBuildingConsumption(spec.Cons.Energy, b.Level)
 
 		// Применить factor (0-100%).
 		factor := float64(b.Factor) / 100.0
 		metalHour *= factor
 		silHour *= factor
 		hydHour *= factor
-		energyHour *= factor
+		energyProd *= factor
+		energyCons *= factor
+
+		// net: положительное = производит энергию, отрицательное = потребляет.
+		netEnergy := energyProd - energyCons
 
 		totalMetal += metalHour
 		totalSilicon += silHour
 		totalHydrogen += hydHour
-		totalEnergy -= energyHour // потребление — отрицательное
+		totalEnergy += netEnergy
 
-		// Проверить, разрешено ли менять фактор (только для производства, не для потребления).
-		allowFactor := spec.Prod.Metal != "" || spec.Prod.Silicon != "" || spec.Prod.Hydrogen != ""
+		// allow_factor: ресурсные шахты и энергостанции.
+		allowFactor := spec.Prod.Metal != "" || spec.Prod.Silicon != "" ||
+			spec.Prod.Hydrogen != "" || spec.Prod.Energy != ""
 
-		// Get building name from catalog
 		buildingName := s.getBuildingName(b.UnitID)
 
 		report.Buildings = append(report.Buildings, ResourceBuildingDTO{
@@ -644,7 +655,7 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 			ProdMetal:    metalHour,
 			ProdSilicon:  silHour,
 			ProdHydrogen: hydHour,
-			ConsEnergy:   energyHour,
+			ConsEnergy:   netEnergy,
 			Factor:       b.Factor,
 			AllowFactor:  allowFactor,
 		})

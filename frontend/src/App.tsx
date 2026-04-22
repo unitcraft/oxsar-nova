@@ -39,6 +39,17 @@ type Tab =
   | 'art-market' | 'officers' | 'achievements' | 'score'
   | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource';
 
+const VALID_TABS = new Set<string>([
+  'overview', 'buildings', 'research', 'shipyard', 'repair',
+  'artefacts', 'galaxy', 'fleet', 'market', 'rockets',
+  'art-market', 'officers', 'achievements', 'score',
+  'messages', 'alliance', 'chat', 'sim', 'admin', 'planet-options', 'resource',
+]);
+
+function tabFromHash(): Tab {
+  const hash = window.location.hash.replace('#', '');
+  return VALID_TABS.has(hash) ? (hash as Tab) : 'overview';
+}
 
 export function App() {
   const token = useAuthStore((s) => s.accessToken);
@@ -50,38 +61,49 @@ export function App() {
 }
 
 function AuthenticatedApp() {
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>(tabFromHash);
   const { t } = useTranslation();
   const logout = useAuthStore((s) => s.logout);
+
+  const navigateTo = (next: Tab) => {
+    setTab(next);
+    history.pushState(null, '', `#${next}`);
+  };
+
+  useEffect(() => {
+    const onPop = () => setTab(tabFromHash());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   useKeyboardShortcuts([
     {
       key: 'h',
       alt: true,
-      handler: () => setTab('overview'),
+      handler: () => navigateTo('overview'),
       description: 'Alt+H — главный экран',
     },
     {
       key: 'b',
       alt: true,
-      handler: () => setTab('buildings'),
+      handler: () => navigateTo('buildings'),
       description: 'Alt+B — постройки',
     },
     {
       key: 'r',
       alt: true,
-      handler: () => setTab('research'),
+      handler: () => navigateTo('research'),
       description: 'Alt+R — исследования',
     },
     {
       key: 'm',
       alt: true,
-      handler: () => setTab('messages'),
+      handler: () => navigateTo('messages'),
       description: 'Alt+M — сообщения',
     },
     {
       key: 'Escape',
-      handler: () => setTab('overview'),
+      handler: () => navigateTo('overview'),
       description: 'Esc — вернуться на главный экран',
     },
   ]);
@@ -178,7 +200,7 @@ function AuthenticatedApp() {
                   type="button"
                   className="ox-nav-btn"
                   aria-pressed={tab === item.key}
-                  onClick={() => setTab(item.key as Tab)}
+                  onClick={() => navigateTo(item.key as Tab)}
                   title={item.label}
                 >
                   <span className="icon">{item.icon}</span>
@@ -192,16 +214,16 @@ function AuthenticatedApp() {
         {/* Контент */}
         <main className="ox-content">
           <Suspense fallback={<ScreenSkeleton />}>
-            {tab === 'overview'   && <OverviewScreen onShowPlanetOptions={() => setTab('planet-options')} />}
+            {tab === 'overview'   && <OverviewScreen onShowPlanetOptions={() => navigateTo('planet-options')} />}
             {tab === 'buildings'  && <BuildingsScreen planet={planet} />}
             {tab === 'research'   && <ResearchScreen planet={planet} />}
             {tab === 'shipyard'   && <ShipyardScreen planet={planet} />}
             {tab === 'repair'     && <RepairScreen planet={planet} />}
-            {tab === 'galaxy'     && <GalaxyScreen homePlanet={planet} userId={me.data?.user_id ?? ''} onFleetMission={(fg, fs, fpos, fMoon, fMission) => { setFleetDst({ g: fg, s: fs, pos: fpos, isMoon: fMoon, mission: fMission }); setTab('fleet'); }} />}
+            {tab === 'galaxy'     && <GalaxyScreen homePlanet={planet} userId={me.data?.user_id ?? ''} onFleetMission={(fg, fs, fpos, fMoon, fMission) => { setFleetDst({ g: fg, s: fs, pos: fpos, isMoon: fMoon, mission: fMission }); navigateTo('fleet'); }} />}
             {tab === 'fleet'      && <FleetScreen planet={planet} {...(fleetDst ? { initialDst: fleetDst } : {})} />}
             {tab === 'market'     && <MarketScreen planet={planet} />}
             {tab === 'rockets'    && <RocketsScreen planet={planet} />}
-            {tab === 'messages'   && <MessagesScreen onFleetMission={(g, s, pos, isMoon, mission) => { setFleetDst({ g, s, pos, isMoon, mission }); setTab('fleet'); }} />}
+            {tab === 'messages'   && <MessagesScreen onFleetMission={(g, s, pos, isMoon, mission) => { setFleetDst({ g, s, pos, isMoon, mission }); navigateTo('fleet'); }} />}
             {tab === 'artefacts'  && <ArtefactsScreen />}
             {tab === 'art-market' && <ArtefactMarketScreen />}
             {tab === 'officers'   && <OfficersScreen />}
@@ -211,14 +233,14 @@ function AuthenticatedApp() {
             {tab === 'chat'       && <ChatScreen />}
             {tab === 'sim'        && <BattleSimScreen />}
             {tab === 'admin'      && isAdmin && <AdminScreen />}
-            {tab === 'planet-options' && <PlanetOptionsScreen planet={planet} planets={list} homePlanetId={list[0]?.id ?? null} onBack={() => setTab('overview')} />}
-            {tab === 'resource'   && <ResourceScreen planetId={planet.id} onBack={() => setTab('overview')} />}
+            {tab === 'planet-options' && <PlanetOptionsScreen planet={planet} planets={list} homePlanetId={list[0]?.id ?? null} onBack={() => navigateTo('overview')} />}
+            {tab === 'resource'   && <ResourceScreen planetId={planet.id} onBack={() => navigateTo('overview')} />}
           </Suspense>
         </main>
       </div>
 
       {/* Мобильная нижняя навигация */}
-      <BottomNav tab={tab} setTab={setTab} unreadCount={unreadCount} />
+      <BottomNav tab={tab} setTab={navigateTo} unreadCount={unreadCount} />
 
       <footer className="ox-footer">
         <small>oxsar-nova v0.1.0 — dev preview</small>
@@ -457,6 +479,7 @@ function BottomNav({ tab, setTab, unreadCount }: { tab: Tab; setTab: (t: Tab) =>
 
 const ALL_NAV: Array<{ key: Tab; icon: string; label: string }> = [
   { key: 'overview',    icon: '🏠', label: 'Обзор' },
+  { key: 'resource',    icon: '⚙️', label: 'Сырьё' },
   { key: 'buildings',   icon: '🏗', label: 'Постройки' },
   { key: 'research',    icon: '🔬', label: 'Исследования' },
   { key: 'shipyard',    icon: '🚀', label: 'Верфь' },
@@ -508,11 +531,11 @@ function buildNavItems(t: (ns: string, key: string, fb?: string) => string, unre
   return [
     { key: 'planet', groupLabel: 'Планета' },
     { key: 'overview',   icon: '🏠', label: t('global','MENU_MAIN') },
+    { key: 'resource',   icon: '⚙️', label: t('global','MENU_RESOURCE') },
     { key: 'buildings',  icon: '🏗', label: t('global','MENU_CONSTRUCTIONS') },
     { key: 'research',   icon: '🔬', label: t('global','MENU_RESEARCH') },
     { key: 'shipyard',   icon: '🚀', label: t('global','MENU_SHIPYARD') },
     { key: 'repair',     icon: '🔧', label: t('global','MENU_REPAIR') },
-    { key: 'resource',   icon: '⚙️', label: t('global','MENU_RESOURCES') || 'Сырье' },
     { key: 's1', sep: true },
     { key: 'space', groupLabel: 'Космос' },
     { key: 'galaxy',     icon: '🌌', label: t('global','MENU_GALAXY') },
