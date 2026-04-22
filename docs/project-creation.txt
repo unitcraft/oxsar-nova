@@ -4602,3 +4602,27 @@ BuildingsScreen теперь использует buildingName() в очеред
   - API: openapi.yaml задокументирован endpoint, server/main.go добавлен маршрут.
   - Статус: завершена. Счётчики видны на OverviewScreen во всех сеансах.
 
+
+================================================================================
+Итерация — 2026-04-22 (UI-34)
+================================================================================
+
+[UI-34] Экран управления планетой (PlanetOptions).
+
+Backend:
+  - planet/repository.go: Rename, SetHome, Abandon методы (soft-delete через destroyed_at).
+  - planet/service.go: сервисные методы с валидацией (имя 1-50 символов, проверка луны, единственности).
+  - planet/handler.go: три HTTP методов Rename (PATCH), SetHome (POST), Abandon (DELETE).
+  - Новые ошибки: ErrInvalidInput, ErrMoonRestricted, ErrOnlyPlanet, ErrCannotAbandonHome.
+  - server/main.go: три маршрута в /api роут.
+  - openapi.yaml: задокументированы endpoints.
+
+Frontend:
+  - Новый файл: features/planet-options/PlanetOptionsScreen.tsx (отдельный экран как в легаси).
+  - Три секции: переименование (input + save), установка домашней (кнопка + confirm), удаление (код + confirm).
+  - App.tsx: добавлен таб 'planet-options', lazy-loaded компонент.
+  - OverviewScreen.tsx: кнопка ⚙️ в PlanetOverviewCard → setTab('planet-options').
+  - Навигация: Обзор → ⚙️ → PlanetOptions → выполнить действие → вернуться на Обзор.
+
+Статус: завершена. Все три операции работают, валидация на фронте и бэкенде.
+
