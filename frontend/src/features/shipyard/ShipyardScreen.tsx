@@ -138,11 +138,22 @@ function UnitCards({
                 </div>
               )}
               {c && (
-                <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6, marginTop: 4 }}>
-                  {c.metal > 0 && <span style={{ marginRight: 6, color: planet.metal >= c.metal * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>🟠{(c.metal * count).toLocaleString('ru-RU')}</span>}
-                  {c.silicon > 0 && <span style={{ marginRight: 6, color: planet.silicon >= c.silicon * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>💎{(c.silicon * count).toLocaleString('ru-RU')}</span>}
-                  {c.hydrogen > 0 && <span style={{ color: planet.hydrogen >= c.hydrogen * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>💧{(c.hydrogen * count).toLocaleString('ru-RU')}</span>}
-                </div>
+                <>
+                  <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6, marginTop: 4 }}>
+                    {c.metal > 0 && <span style={{ marginRight: 6, color: planet.metal >= c.metal * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>🟠{(c.metal * count).toLocaleString('ru-RU')}</span>}
+                    {c.silicon > 0 && <span style={{ marginRight: 6, color: planet.silicon >= c.silicon * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>💎{(c.silicon * count).toLocaleString('ru-RU')}</span>}
+                    {c.hydrogen > 0 && <span style={{ color: planet.hydrogen >= c.hydrogen * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>💧{(c.hydrogen * count).toLocaleString('ru-RU')}</span>}
+                  </div>
+                  {!canAfford && (
+                    <div style={{ fontSize: 10, color: 'var(--ox-danger)', marginTop: 2, fontFamily: 'var(--ox-mono)' }}>
+                      {[
+                        c.metal    * count > planet.metal    && `🟠−${(c.metal    * count - planet.metal   ).toLocaleString('ru-RU')}`,
+                        c.silicon  * count > planet.silicon  && `💎−${(c.silicon  * count - planet.silicon ).toLocaleString('ru-RU')}`,
+                        c.hydrogen * count > planet.hydrogen && `💧−${(c.hydrogen * count - planet.hydrogen).toLocaleString('ru-RU')}`,
+                      ].filter(Boolean).join(' ')}
+                    </div>
+                  )}
+                </>
               )}
             </div>
             <div className="ox-unit-card-footer" style={{ display: 'flex', gap: 6 }}>
