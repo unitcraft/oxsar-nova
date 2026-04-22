@@ -528,22 +528,25 @@ type ResourceReportDTO struct {
 	PlanetID           string                  `json:"planet_id"`
 	PlanetName         string                  `json:"planet_name"`
 	Buildings          []ResourceBuildingDTO   `json:"buildings"`
+	MetalTotal         float64                 `json:"metal_total"`
+	SiliconTotal       float64                 `json:"silicon_total"`
+	HydrogenTotal      float64                 `json:"hydrogen_total"`
+	MetalPerHour       float64                 `json:"metal_per_hour"`
+	SiliconPerHour     float64                 `json:"silicon_per_hour"`
+	HydrogenPerHour    float64                 `json:"hydrogen_per_hour"`
 	BasicMetal         float64                 `json:"basic_metal"`
 	BasicSilicon       float64                 `json:"basic_silicon"`
 	BasicHydrogen      float64                 `json:"basic_hydrogen"`
 	StorageMetal       float64                 `json:"storage_metal"`
 	StorageSilicon     float64                 `json:"storage_silicon"`
 	StorageHydrogen    float64                 `json:"storage_hydrogen"`
-	TotalMetal         float64                 `json:"total_metal"`
-	TotalSilicon       float64                 `json:"total_silicon"`
-	TotalHydrogen      float64                 `json:"total_hydrogen"`
-	TotalEnergy        float64                 `json:"total_energy"`
 	DailyMetal         float64                 `json:"daily_metal"`
 	DailySilicon       float64                 `json:"daily_silicon"`
 	DailyHydrogen      float64                 `json:"daily_hydrogen"`
 	WeeklyMetal        float64                 `json:"weekly_metal"`
 	WeeklySilicon      float64                 `json:"weekly_silicon"`
 	WeeklyHydrogen     float64                 `json:"weekly_hydrogen"`
+	TotalEnergy        float64                 `json:"total_energy"`
 }
 
 type ResourceBuildingDTO struct {
@@ -647,16 +650,21 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 		})
 	}
 
-	// Сводные значения.
-	report.TotalMetal = report.BasicMetal + totalMetal
-	report.TotalSilicon = report.BasicSilicon + totalSilicon
-	report.TotalHydrogen = report.BasicHydrogen + totalHydrogen
+	// Почасовое производство.
+	report.MetalPerHour = totalMetal
+	report.SiliconPerHour = totalSilicon
+	report.HydrogenPerHour = totalHydrogen
+
+	// Сводные значения (текущий запас).
+	report.MetalTotal = float64(p.Metal)
+	report.SiliconTotal = float64(p.Silicon)
+	report.HydrogenTotal = float64(p.Hydrogen)
 	report.TotalEnergy = totalEnergy
 
 	// Дневное производство (24 часа).
-	report.DailyMetal = report.TotalMetal * 24
-	report.DailySilicon = report.TotalSilicon * 24
-	report.DailyHydrogen = report.TotalHydrogen * 24
+	report.DailyMetal = report.MetalPerHour * 24
+	report.DailySilicon = report.SiliconPerHour * 24
+	report.DailyHydrogen = report.HydrogenPerHour * 24
 
 	// Недельное производство (7 дней).
 	report.WeeklyMetal = report.DailyMetal * 7
