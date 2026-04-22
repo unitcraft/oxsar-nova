@@ -193,7 +193,19 @@ button:disabled, .btn:disabled {
   box-shadow: none !important;
 }
 
-.planet-card { transform: none !important; }
+.planet-card {
+  transform: none !important;
+  transition: border-color 150ms, background 150ms, box-shadow 150ms !important;
+}
+.planet-card:hover {
+  border-color: var(--ox-border-hover) !important;
+  background: var(--ox-bg-hover) !important;
+  box-shadow: 0 0 8px rgba(99, 217, 255, 0.18);
+}
+.planet-card:active {
+  background: rgba(99, 217, 255, 0.12) !important;
+  box-shadow: none;
+}
 
 /* ============================================================
    ФОРМЫ
