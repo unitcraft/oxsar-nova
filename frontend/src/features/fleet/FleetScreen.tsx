@@ -100,6 +100,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
 
   const list = fleets.data?.fleets ?? [];
   const totalShips = Object.values(ships).reduce((a, b) => a + b, 0);
+  const totalCargo = SHIPS.reduce((sum, ship) => sum + (ship.cargo ?? 0) * (ships[ship.id] ?? 0), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -202,7 +203,14 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
 
             {(mission === 7 || mission === 8) && (
               <div>
-                <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Груз</label>
+                <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>
+                  Груз
+                  {totalCargo > 0 && (
+                    <span style={{ marginLeft: 8, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-muted)' }}>
+                      📦 макс. {totalCargo.toLocaleString('ru-RU')}
+                    </span>
+                  )}
+                </label>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <input type="number" min={0} value={metal} onChange={(e) => setMetal(Number(e.target.value))} placeholder="Металл" style={{ flex: 1, minWidth: 80 }} />
                   <input type="number" min={0} value={silicon} onChange={(e) => setSilicon(Number(e.target.value))} placeholder="Кремний" style={{ flex: 1, minWidth: 80 }} />

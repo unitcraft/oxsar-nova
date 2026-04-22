@@ -125,6 +125,7 @@ function UnitCards({
                 <span>⚔ {u.attack.toLocaleString('ru-RU')}</span>
                 <span>🛡 {u.shield.toLocaleString('ru-RU')}</span>
                 <span>❤ {u.shell.toLocaleString('ru-RU')}</span>
+                {u.cargo != null && u.cargo > 0 && <span title="Грузоподъёмность">📦 {u.cargo.toLocaleString('ru-RU')}</span>}
               </div>
               {inStock > 0 && (
                 <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginTop: 4 }}>
