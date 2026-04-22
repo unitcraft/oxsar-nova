@@ -20,7 +20,7 @@ function numStyle(v: number): React.CSSProperties {
   return { color: v > 0 ? 'var(--ox-success)' : v < 0 ? 'var(--ox-danger)' : 'var(--ox-fg-dim)' };
 }
 
-export function ResourceScreen({ planetId, onBack }: { planetId: string; onBack?: () => void }) {
+export function ResourceScreen({ planetId }: { planetId: string }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [factors, setFactors] = useState<Record<string, number>>({});
@@ -40,26 +40,32 @@ export function ResourceScreen({ planetId, onBack }: { planetId: string; onBack?
   }, [report]);
 
   const save = useMutation({
-    mutationFn: () =>
+    mutationFn: (fs: Record<string, number>) =>
       catalog.updateResourceFactors(planetId, {
         factors: Object.fromEntries(
-          Object.entries(factorsRef.current).map(([k, v]) => [k, Math.max(0, Math.min(100, v))]),
+          Object.entries(fs).map(([k, v]) => [k, Math.max(0, Math.min(100, v))]),
         ),
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['resource-report', planetId] });
-      toast.show('success', 'Сохранено', 'Настройки производства обновлены');
     },
     onError: (err) => {
       toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось сохранить');
     },
   });
 
+  const commitFactor = (unitId: string, value: number) => {
+    const next = { ...factorsRef.current, [unitId]: value };
+    setFactors(next);
+    save.mutate(next);
+  };
+
   const setAll = (value: number) => {
     if (!report) return;
     const next: Record<string, number> = {};
     report.buildings.forEach((b) => { next[b.unit_id] = value; });
     setFactors(next);
+    save.mutate(next);
   };
 
   if (isLoading) return <ScreenSkeleton />;
@@ -79,25 +85,15 @@ export function ResourceScreen({ planetId, onBack }: { planetId: string; onBack?
           Производство — {report.planet_name}
         </h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button type="button" className="btn btn-sm btn-ghost" onClick={() => setAll(0)}>
+          {save.isPending && (
+            <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>сохраняю…</span>
+          )}
+          <button type="button" className="btn btn-sm btn-ghost" disabled={save.isPending} onClick={() => setAll(0)}>
             Выключить всё
           </button>
-          <button type="button" className="btn btn-sm btn-ghost" onClick={() => setAll(100)}>
+          <button type="button" className="btn btn-sm btn-ghost" disabled={save.isPending} onClick={() => setAll(100)}>
             Включить всё
           </button>
-          <button
-            type="button"
-            className="btn btn-sm"
-            disabled={save.isPending}
-            onClick={() => save.mutate()}
-          >
-            {save.isPending ? '…' : 'Сохранить'}
-          </button>
-          {onBack && (
-            <button type="button" className="btn-ghost btn-sm" onClick={onBack}>
-              ← Назад
-            </button>
-          )}
         </div>
       </div>
 
@@ -133,6 +129,8 @@ export function ResourceScreen({ planetId, onBack }: { planetId: string; onBack?
                 building={b}
                 factor={factors[b.unit_id] ?? b.factor}
                 onFactorChange={(v) => setFactors((prev) => ({ ...prev, [b.unit_id]: v }))}
+                onFactorCommit={(v) => commitFactor(String(b.unit_id), v)}
+                disabled={save.isPending}
               />
             ))}
 
@@ -186,10 +184,14 @@ function BuildingRow({
   building: b,
   factor,
   onFactorChange,
+  onFactorCommit,
+  disabled,
 }: {
   building: ResourceBuilding;
   factor: number;
   onFactorChange: (v: number) => void;
+  onFactorCommit: (v: number) => void;
+  disabled: boolean;
 }) {
   const metal    = b.prod_metal    * factor / 100;
   const silicon  = b.prod_silicon  * factor / 100;
@@ -217,7 +219,12 @@ function BuildingRow({
       </td>
       <td style={{ ...TD, textAlign: 'center' }}>
         {b.allow_factor ? (
-          <FactorInput value={factor} onChange={onFactorChange} />
+          <FactorInput
+            value={factor}
+            onChange={onFactorChange}
+            onCommit={onFactorCommit}
+            disabled={disabled}
+          />
         ) : (
           <span style={{ fontSize: 11, color: 'var(--ox-fg-dim)' }}>—</span>
         )}
@@ -253,46 +260,64 @@ function SummaryRow({
   );
 }
 
-function FactorInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  const clamp = (n: number) => Math.max(0, Math.min(100, n));
+const PRESETS = [0, 25, 50, 75, 100];
+
+function FactorInput({
+  value,
+  onChange,
+  onCommit,
+  disabled,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  onCommit: (v: number) => void;
+  disabled: boolean;
+}) {
+  const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
-      <select
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{
-          background: 'var(--ox-bg-2)',
-          border: '1px solid var(--ox-border)',
-          borderRadius: 4,
-          color: 'var(--ox-fg)',
-          fontSize: 12,
-          padding: '2px 4px',
-          fontFamily: 'var(--ox-mono)',
-          cursor: 'pointer',
-        }}
-      >
-        {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((v) => (
-          <option key={v} value={v}>{v}%</option>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 140 }}>
+      {/* Presets */}
+      <div style={{ display: 'flex', gap: 3 }}>
+        {PRESETS.map((p) => (
+          <button
+            key={p}
+            type="button"
+            disabled={disabled}
+            onClick={() => onCommit(p)}
+            style={{
+              padding: '2px 5px',
+              fontSize: 11,
+              fontFamily: 'var(--ox-mono)',
+              background: value === p ? 'var(--ox-accent)' : 'var(--ox-bg-3)',
+              color: value === p ? '#000' : 'var(--ox-fg-dim)',
+              border: '1px solid var(--ox-border)',
+              borderRadius: 3,
+              cursor: disabled ? 'default' : 'pointer',
+              lineHeight: 1.4,
+            }}
+          >
+            {p}
+          </button>
         ))}
-      </select>
-      <input
-        type="number"
-        min={0}
-        max={100}
-        value={value}
-        onChange={(e) => onChange(clamp(Number(e.target.value)))}
-        style={{
-          width: 46,
-          padding: '2px 4px',
-          fontFamily: 'var(--ox-mono)',
-          fontSize: 12,
-          background: 'var(--ox-bg-2)',
-          border: '1px solid var(--ox-border)',
-          borderRadius: 4,
-          color: 'var(--ox-fg)',
-          textAlign: 'right',
-        }}
-      />
+      </div>
+      {/* Slider + value */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(clamp(Number(e.target.value)))}
+          onMouseUp={(e) => onCommit(clamp(Number((e.target as HTMLInputElement).value)))}
+          onTouchEnd={(e) => onCommit(clamp(Number((e.target as HTMLInputElement).value)))}
+          style={{ flex: 1, accentColor: 'var(--ox-accent)', cursor: disabled ? 'default' : 'pointer' }}
+        />
+        <span style={{ fontSize: 12, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', minWidth: 30, textAlign: 'right' }}>
+          {value}%
+        </span>
+      </div>
     </div>
   );
 }

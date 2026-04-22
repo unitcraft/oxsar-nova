@@ -4933,3 +4933,30 @@ MEDIUM Priority:
 - docs/project-creation.txt (эта запись)
 
 Статус: ✅ ЗАВЕРШЕНА
+
+
+================================================================================
+Итерация (сессия 2026-04-23b) — ResourceScreen UX: slider + автосохранение
+================================================================================
+
+Задача: закрыть расхождения UI из плана 06 (раздел «Расхождения»).
+
+## Выполнено
+
+- FactorInput: заменён select+number на `<input type="range">` + пресеты 0/25/50/75/100
+- Автосохранение: onMouseUp/onTouchEnd вызывает мутацию без кнопки «Сохранить»
+- «Выключить всё» / «Включить всё» теперь тоже сохраняют сразу
+- Кнопки «Сохранить» и «Назад» убраны из шапки
+- Строка «За неделю» оставлена по решению пользователя (план скорректирован)
+- App.tsx: убран проп onBack у ResourceScreen, добавлен 'tutorial' в тип Tab и VALID_TABS
+- simplifications.md: запись FactorInput закрыта
+- docs/plans/06-resource-management.md: все расхождения отмечены закрытыми
+
+## Файлы изменены
+- frontend/src/features/resource/ResourceScreen.tsx
+- frontend/src/App.tsx
+- docs/plans/06-resource-management.md
+- docs/simplifications.md
+- docs/project-creation.txt
+
+Статус: ✅ ЗАВЕРШЕНА
