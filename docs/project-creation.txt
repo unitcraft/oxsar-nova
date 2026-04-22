@@ -4721,3 +4721,59 @@ Frontend:
   - Все ссылки обновлены
   - Луна отображается корректно везде
 
+
+
+================================================================================
+Итерация — 2026-04-23 (Resource Management)
+================================================================================
+
+[Resource Management] Система управления производством ресурсов с факторами 0-100%.
+
+Backend:
+  - migrations/0041_building_production_factor.sql: добавлена колонка production_factor (default 100) в таблицу buildings.
+  - planet/repository.go:
+    - Building: новый struct с полями UnitID, Level, Factor (0-100%).
+    - GetBuildings(ctx, planetID): получение всех зданий планеты с их уровнями и факторами.
+    - UpdateBuildingFactor(ctx, planetID, unitID, factor): обновление фактора для конкретного здания.
+  - planet/service.go:
+    - ResourceBuildingDTO: детализированное описание здания (имя, уровень, производство, потребление, фактор).
+    - ResourceReportDTO: полный отчёт о производстве (базовое, из зданий, хранилище, почасовое/посуточное/понедельному).
+    - ResourceReport(ctx, userID, planetID): расчёт производства ресурсов с применением факторов и базовой производительности.
+      Реализует: базовое производство + здания с факторами + хранилище + три уровня агрегации (час, день, неделя).
+    - UpdateResourceFactors(ctx, userID, planetID, factors): валидация (0-100%) и обновление факторов в БД.
+    - calcBuildingProduction(formulaSrc, level, factor): парсинг и вычисление производства по формулам + применение фактора.
+    - calcBuildingConsumption(formulaSrc, level): парсинг и вычисление потребления энергии.
+    - getBuildingName(unitID): получение имени здания по ID из Construction каталога.
+  - planet/handler.go:
+    - ResourceReport (GET /api/planets/{id}/resource-report): возвращает ResourceReportDTO.
+    - ResourceUpdate (POST /api/planets/{id}/resource-update): принимает {factors: {unitId: factor}} и обновляет.
+  - cmd/server/main.go: добавлены маршруты pr.Get("/planets/{id}/resource-report", ...) и pr.Post(...resource-update", ...).
+  - api/openapi.yaml:
+    - Endpoints: GET /api/planets/{id}/resource-report, POST /api/planets/{id}/resource-update.
+    - Schemas: ResourceReport (с 18 полями), ResourceBuilding.
+
+Frontend:
+  - frontend/src/api/types.ts:
+    - ResourceBuilding: unit_id, name, level, prod_metal/silicon/hydrogen, cons_energy, factor, allow_factor.
+    - ResourceReport: планета, здания, базовое производство, хранилище, суммы, часовое/дневное/недельное производство.
+  - frontend/src/api/catalog.ts:
+    - getResourceReport(planetId): GET /api/planets/{id}/resource-report.
+    - updateResourceFactors(planetId, {factors}): POST /api/planets/{id}/resource-update.
+    - Export как resourceAPI и catalog.*.
+  - frontend/src/features/resource/ResourceScreen.tsx: новый компонент.
+    - Отображает сводную карточку ресурсов (текущий, хранилище, производство в час).
+    - Управление факторами: слайдер 0-100% для каждого здания с быстрыми кнопками (0/25/50/75/100).
+    - Таблица всех зданий с деталями (имя, уровень, производство, потребление).
+    - Кнопки Сохранить/Отменить.
+  - frontend/src/App.tsx:
+    - Добавлена ResourceScreen в lazy imports.
+    - 'resource' добавлена в Type Tab.
+    - Рендер: {tab === 'resource' && <ResourceScreen planetId={planet.id} onBack={() => setTab('overview')} />}.
+    - Компонент доступен на вкладке, может быть вызван из других экранов.
+
+Статус: ✅ ЗАВЕРШЕНА. Система управления производством полностью работает:
+  - Отчёт о производстве рассчитывается корректно с применением факторов.
+  - Факторы 0-100% сохраняются в БД и применяются при следующем запросе.
+  - Интерактивный UI с управлением через слайдер и быстрые кнопки.
+  - Все три уровня агрегации (час, день, неделя) вычисляются верно.
+
