@@ -2,7 +2,7 @@
 
 Сравнение legacy `main.tpl` + `layout.tpl` + `Page.class.php` + `NS.class.php` + `Planet.class.php`
 с текущим `OverviewScreen.tsx` и `App.tsx`.
-Обновлено: 2026-04-22 после итерации UI-16.
+Обновлено: 2026-04-22 после итерации UI-17.
 
 ---
 

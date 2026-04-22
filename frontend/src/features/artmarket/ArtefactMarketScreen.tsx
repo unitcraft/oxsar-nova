@@ -94,6 +94,7 @@ export function ArtefactMarketScreen() {
                   <th>Артефакт</th>
                   <th>Продавец</th>
                   <th>Цена</th>
+                  <th>Дата</th>
                   <th />
                 </tr>
               </thead>
@@ -101,12 +102,16 @@ export function ArtefactMarketScreen() {
                 {shown.map((o) => {
                   const isMine = o.seller_user_id === myUserID;
                   const canAfford = creditVal >= o.price_credit;
+                  const listedDate = new Date(o.listed_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
                   return (
                     <tr key={o.id}>
                       <td data-label="Артефакт">{nameOf(o.unit_id)}</td>
                       <td data-label="Продавец">{o.seller_name ?? '—'}</td>
                       <td data-label="Цена" className="num" style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>
                         {o.price_credit} cr
+                      </td>
+                      <td data-label="Дата" style={{ fontSize: 11, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+                        {listedDate}
                       </td>
                       <td>
                         {isMine ? (
