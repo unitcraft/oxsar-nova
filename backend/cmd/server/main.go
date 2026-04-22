@@ -270,6 +270,8 @@ func run() error {
 		pr.Get("/chat/{kind}/history", chatH.History)
 		pr.Post("/chat/{kind}/send", chatH.Send)
 		pr.Get("/chat/{kind}/ws", chatH.Connect)
+		pr.Patch("/chat/messages/{id}", chatH.EditMessage)
+		pr.Delete("/chat/messages/{id}", chatH.DeleteMessage)
 
 		pr.Get("/messages", messageH.Inbox)
 		pr.Post("/messages", messageH.Compose)

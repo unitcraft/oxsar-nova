@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 
-
 interface ChatMessage {
   id: string;
   channel: string;
@@ -11,16 +10,27 @@ interface ChatMessage {
   author_name: string;
   body: string;
   created_at: string;
+  edited_at?: string;
+  kind?: string; // "msg" | "edit" | "delete"
 }
 
 type ChannelKind = 'global' | 'alliance';
+
+const EMOJIS = ['😀','😂','😍','🤔','👍','👎','❤️','🔥','🎉','😎','😢','🤣','😡','🙏','💀','🚀','⚔️','🛡️','🌟','💰'];
+const EDIT_WINDOW_MS = 5 * 60 * 1000; // 5 минут
 
 export function ChatScreen() {
   const [kind, setKind] = useState<ChannelKind>('global');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [wsError, setWsError] = useState('');
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState('');
   const wsRef = useRef<WebSocket | null>(null);
+  const scrollBoxRef = useRef<HTMLDivElement | null>(null);
+  const prevLenRef = useRef(0);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const token = useAuthStore((s) => s.accessToken);
   const me = useQuery({
@@ -56,8 +66,17 @@ export function ChatScreen() {
       ws.onmessage = (ev: MessageEvent) => {
         try {
           const msg = JSON.parse(ev.data as string) as ChatMessage;
+
+          if (msg.kind === 'delete') {
+            setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+            return;
+          }
+          if (msg.kind === 'edit') {
+            setMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, body: msg.body, ...(msg.edited_at !== undefined ? { edited_at: msg.edited_at } : {}) } : m));
+            return;
+          }
+          // kind === "msg" или не задан (старые сообщения)
           setMessages((prev) => {
-            // заменяем первое tmp-сообщение с тем же телом от того же автора
             const tmpIdx = prev.findIndex(
               (m) => m.id.startsWith('tmp-') && m.author_id === msg.author_id && m.body === msg.body,
             );
@@ -97,8 +116,6 @@ export function ChatScreen() {
     };
   }, [kind, token]);
 
-  const scrollBoxRef = useRef<HTMLDivElement | null>(null);
-  const prevLenRef = useRef(0);
   useEffect(() => {
     if (messages.length > prevLenRef.current) {
       const box = scrollBoxRef.current;
@@ -110,7 +127,6 @@ export function ChatScreen() {
   function send() {
     const body = input.trim();
     if (!body) return;
-    // Optimistic: добавляем сообщение сразу, сервер вернёт настоящее через WS
     const optimistic: ChatMessage = {
       id: `tmp-${Date.now()}`,
       channel: kind,
@@ -118,6 +134,7 @@ export function ChatScreen() {
       author_name: me.data?.username ?? '…',
       body,
       created_at: new Date().toISOString(),
+      kind: 'msg',
     };
     setMessages((prev) => [...prev, optimistic]);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -126,10 +143,50 @@ export function ChatScreen() {
       api.post(`/api/chat/${kind}/send`, { body }).catch(() => null);
     }
     setInput('');
+    setShowEmoji(false);
   }
 
   function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') send();
+    if (e.key === 'Escape') setShowEmoji(false);
+  }
+
+  function insertEmoji(emoji: string) {
+    setInput((prev) => prev + emoji);
+    inputRef.current?.focus();
+  }
+
+  function startEdit(m: ChatMessage) {
+    setEditingId(m.id);
+    setEditBody(m.body);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditBody('');
+  }
+
+  function submitEdit(id: string) {
+    const body = editBody.trim();
+    if (!body) return;
+    api.patch<ChatMessage>(`/api/chat/messages/${id}`, { body })
+      .then((updated) => {
+        setMessages((prev) => prev.map((m) => m.id === id ? { ...m, body: updated.body, ...(updated.edited_at !== undefined ? { edited_at: updated.edited_at } : {}) } : m));
+      })
+      .catch(() => null);
+    cancelEdit();
+  }
+
+  function deleteMsg(id: string) {
+    api.delete(`/api/chat/messages/${id}`)
+      .then(() => setMessages((prev) => prev.filter((m) => m.id !== id)))
+      .catch(() => null);
+  }
+
+  function canModify(m: ChatMessage): boolean {
+    if (m.id.startsWith('tmp-')) return false;
+    if (m.author_id !== me.data?.user_id) return false;
+    return Date.now() - new Date(m.created_at).getTime() < EDIT_WINDOW_MS;
   }
 
   return (
@@ -151,9 +208,15 @@ export function ChatScreen() {
 
       {wsError && <div style={{ color: 'orange', marginBottom: 4 }}>{wsError}</div>}
 
-      <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', border: '1px solid #333', padding: '8px 12px', marginBottom: 8 }}>
+      <div
+        ref={scrollBoxRef}
+        style={{ flex: 1, overflowY: 'auto', border: '1px solid #333', padding: '8px 12px', marginBottom: 8 }}
+      >
         {messages.map((m) => {
           const isOwn = m.author_id === me.data?.user_id;
+          const modifiable = canModify(m);
+          const isEditing = editingId === m.id;
+
           return (
             <div
               key={m.id}
@@ -180,18 +243,80 @@ export function ChatScreen() {
                   lineHeight: 1.4,
                 }}
               >
-                {m.body}
+                {isEditing ? (
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <input
+                      value={editBody}
+                      onChange={(e) => setEditBody(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') submitEdit(m.id); if (e.key === 'Escape') cancelEdit(); }}
+                      style={{ flex: 1, fontSize: 13, background: 'rgba(0,0,0,0.3)', border: '1px solid #4fc3f7', color: 'inherit', padding: '2px 6px' }}
+                      autoFocus
+                      maxLength={500}
+                    />
+                    <button type="button" onClick={() => submitEdit(m.id)} style={{ padding: '2px 6px', fontSize: 12 }}>✓</button>
+                    <button type="button" onClick={cancelEdit} style={{ padding: '2px 6px', fontSize: 12 }}>✕</button>
+                  </div>
+                ) : (
+                  m.body
+                )}
               </div>
-              <span style={{ fontSize: 10, color: '#666', marginTop: 2 }}>
-                {new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                <span style={{ fontSize: 10, color: '#666' }}>
+                  {new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                  {m.edited_at && <span style={{ marginLeft: 4, fontStyle: 'italic' }}>изм.</span>}
+                </span>
+                {modifiable && !isEditing && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(m)}
+                      style={{ fontSize: 10, padding: '1px 5px', opacity: 0.6 }}
+                      title="Редактировать"
+                    >✏️</button>
+                    <button
+                      type="button"
+                      onClick={() => deleteMsg(m.id)}
+                      style={{ fontSize: 10, padding: '1px 5px', opacity: 0.6 }}
+                      title="Удалить"
+                    >🗑️</button>
+                  </>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
+      {showEmoji && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: 4, padding: '6px 8px',
+          background: 'rgba(16,28,44,0.95)', border: '1px solid #1e3a5a',
+          marginBottom: 6, borderRadius: 6,
+        }}>
+          {EMOJIS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              onClick={() => insertEmoji(e)}
+              style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}
+            >
+              {e}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button
+          type="button"
+          onClick={() => setShowEmoji((v) => !v)}
+          style={{ fontSize: 18, padding: '4px 8px', flexShrink: 0 }}
+          title="Смайлики"
+        >
+          😊
+        </button>
         <input
+          ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKey}
@@ -199,7 +324,7 @@ export function ChatScreen() {
           maxLength={500}
           style={{ flex: 1 }}
         />
-        <button onClick={send}>Отправить</button>
+        <button type="button" onClick={send}>Отправить</button>
       </div>
     </div>
   );

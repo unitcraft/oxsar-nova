@@ -11,13 +11,16 @@ import (
 )
 
 // Message — сообщение в чате (отдано клиенту как JSON).
+// Kind: "msg" (новое), "edit" (изменено), "delete" (удалено).
 type Message struct {
-	ID        string `json:"id"`
-	Channel   string `json:"channel"`
-	AuthorID  string `json:"author_id"`
-	AuthorName string `json:"author_name"`
-	Body      string `json:"body"`
-	CreatedAt string `json:"created_at"`
+	ID         string  `json:"id"`
+	Channel    string  `json:"channel"`
+	AuthorID   string  `json:"author_id"`
+	AuthorName string  `json:"author_name"`
+	Body       string  `json:"body"`
+	CreatedAt  string  `json:"created_at"`
+	EditedAt   *string `json:"edited_at,omitempty"`
+	Kind       string  `json:"kind"` // "msg" | "edit" | "delete"
 }
 
 type client struct {
