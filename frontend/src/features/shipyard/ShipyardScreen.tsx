@@ -2,12 +2,17 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { SHIPS, DEFENSE, nameOf, imageOf } from '@/api/catalog';
-import { useTranslation } from '@/i18n/i18n';
+import type { CombatEntry } from '@/api/catalog';
 import type { Inventory, Planet, ShipyardQueueItem } from '@/api/types';
+import { Countdown } from '@/ui/Countdown';
+import { ProgressBar } from '@/ui/ProgressBar';
+import { useToast } from '@/ui/Toast';
 
 export function ShipyardScreen({ planet }: { planet: Planet }) {
-  const { t, tf } = useTranslation();
   const qc = useQueryClient();
+  const toast = useToast();
+  const [tab, setTab] = useState<'ships' | 'defense'>('ships');
+
   const queue = useQuery({
     queryKey: ['shipyard-queue', planet.id],
     queryFn: () => api.get<{ queue: ShipyardQueueItem[] }>(`/api/planets/${planet.id}/shipyard/queue`),
@@ -16,6 +21,7 @@ export function ShipyardScreen({ planet }: { planet: Planet }) {
   const inventory = useQuery({
     queryKey: ['shipyard-inventory', planet.id],
     queryFn: () => api.get<Inventory>(`/api/planets/${planet.id}/shipyard/inventory`),
+    refetchInterval: 15000,
   });
 
   const enqueue = useMutation({
@@ -24,116 +30,160 @@ export function ShipyardScreen({ planet }: { planet: Planet }) {
         unit_id: p.unitId,
         count: p.count,
       }),
-    onSuccess: () => {
+    onSuccess: (_, { unitId, count }) => {
       void qc.invalidateQueries({ queryKey: ['shipyard-queue', planet.id] });
       void qc.invalidateQueries({ queryKey: ['shipyard-inventory', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
+      toast.show('success', 'В очередь', `${nameOf(unitId)} × ${count} добавлено в верфь`);
+    },
+    onError: (err) => {
+      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось добавить');
     },
   });
 
+  const queueItems = (queue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
+  const ships = inventory.data?.ships ?? {};
+  const defense = inventory.data?.defense ?? {};
+
   return (
-    <section>
-      <h2>
-        {t('global', 'MENU_SHIPYARD')} — {planet.name}
-      </h2>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
+          Верфь — {planet.name}
+        </h2>
+      </div>
 
-      <UnitList
-        title={tf('Main', 'UNITS_SHIPS', 'Корабли')}
-        units={SHIPS}
-        stock={inventory.data?.ships}
-        onBuild={(id, n) => enqueue.mutate({ unitId: id, count: n })}
-        pending={enqueue.isPending}
-      />
-      <UnitList
-        title={tf('Main', 'UNITS_DEFENSE', 'Оборона')}
-        units={DEFENSE}
-        stock={inventory.data?.defense}
-        onBuild={(id, n) => enqueue.mutate({ unitId: id, count: n })}
-        pending={enqueue.isPending}
-      />
-
-      {enqueue.isError && (
-        <div className="ox-error">
-          {enqueue.error instanceof Error ? enqueue.error.message : t('global', 'ERROR')}
+      {/* Queue */}
+      {queueItems.length > 0 && (
+        <div className="ox-panel" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 2 }}>
+            Очередь верфи
+          </div>
+          {queueItems.map((item, i) => (
+            <ShipQueueRow key={item.id} item={item} isActive={i === 0} />
+          ))}
         </div>
       )}
 
-      <h3>{tf('Main', 'SHIPYARD_QUEUE', 'Очередь верфи')}</h3>
-      {queue.data && (queue.data.queue ?? []).length > 0 ? (
-        <ul>
-          {(queue.data.queue ?? []).map((q) => (
-            <li key={q.id}>
-              {nameOf(q.unit_id)} × {q.count}, {tf('Main', 'UNTIL', 'до')}{' '}
-              {new Date(q.end_at).toLocaleTimeString('ru-RU')}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>{tf('Main', 'QUEUE_EMPTY', 'Очередь пуста.')}</p>
-      )}
-    </section>
+      {/* Tab switcher */}
+      <div className="ox-tabs">
+        <button type="button" aria-pressed={tab === 'ships'} onClick={() => setTab('ships')}>
+          🛸 Корабли
+        </button>
+        <button type="button" aria-pressed={tab === 'defense'} onClick={() => setTab('defense')}>
+          🛡 Оборона
+        </button>
+      </div>
+
+      {/* Unit cards */}
+      <UnitCards
+        units={tab === 'ships' ? SHIPS : DEFENSE}
+        stock={tab === 'ships' ? ships : defense}
+        planet={planet}
+        onBuild={(unitId, count) => enqueue.mutate({ unitId, count })}
+        pending={enqueue.isPending}
+      />
+    </div>
   );
 }
 
-function UnitList({
-  title,
-  units,
-  stock,
-  onBuild,
-  pending,
+function UnitCards({
+  units, stock, planet, onBuild, pending,
 }: {
-  title: string;
-  units: { id: number; key: string; name: string }[];
-  stock: Record<string, number> | undefined;
+  units: CombatEntry[];
+  stock: Record<string, number>;
+  planet: Planet;
   onBuild: (unitId: number, count: number) => void;
   pending: boolean;
 }) {
-  const { tf } = useTranslation();
   const [drafts, setDrafts] = useState<Record<number, number>>({});
+
   return (
-    <>
-      <h3>{title}</h3>
-      <table className="ox-table">
-        <thead>
-          <tr>
-            <th>{tf('Main', 'UNIT', 'Юнит')}</th>
-            <th>{tf('Main', 'IN_STOCK', 'В наличии')}</th>
-            <th>{tf('Main', 'COUNT', 'Количество')}</th>
-            <th>{tf('Main', 'ACTION', 'Действие')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {units.map((u) => (
-            <tr key={u.id}>
-              <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <img src={imageOf(u.key)} alt="" width={40} height={40} style={{ imageRendering: 'pixelated' }} />
-                {u.name}
-              </td>
-              <td className="num">{stock?.[u.id.toString()] ?? 0}</td>
-              <td>
-                <input
-                  type="number"
-                  min={1}
-                  value={drafts[u.id] ?? 1}
-                  onChange={(e) =>
-                    setDrafts({ ...drafts, [u.id]: Math.max(1, Number(e.target.value)) })
-                  }
-                  style={{ width: 80 }}
-                />
-              </td>
-              <td>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => onBuild(u.id, drafts[u.id] ?? 1)}
-                >
-                  {tf('Main', 'BUILD_BUTTON', 'Построить')}
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
+    <div className="ox-cards-grid">
+      {units.map((u) => {
+        const inStock = stock[u.id.toString()] ?? 0;
+        const count = drafts[u.id] ?? 1;
+        const c = u.cost;
+        const totalCost = c ? {
+          metal:    c.metal    * count,
+          silicon:  c.silicon  * count,
+          hydrogen: c.hydrogen * count,
+        } : null;
+        const canAfford = !totalCost || (
+          planet.metal    >= totalCost.metal &&
+          planet.silicon  >= totalCost.silicon &&
+          planet.hydrogen >= totalCost.hydrogen
+        );
+        return (
+          <div key={u.id} className="ox-unit-card">
+            <div className="ox-unit-card-img">
+              <img src={imageOf(u.key)} alt={u.name} width={64} height={64} style={{ imageRendering: 'pixelated' }} />
+            </div>
+            <div className="ox-unit-card-body">
+              <div className="ox-unit-card-name">{u.name}</div>
+              <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 2 }}>
+                <span>⚔ {u.attack.toLocaleString('ru-RU')}</span>
+                <span>🛡 {u.shield.toLocaleString('ru-RU')}</span>
+                <span>❤ {u.shell.toLocaleString('ru-RU')}</span>
+              </div>
+              {inStock > 0 && (
+                <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginTop: 4 }}>
+                  В наличии: {inStock}
+                </div>
+              )}
+              {c && (
+                <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6, marginTop: 4 }}>
+                  {c.metal > 0 && <span style={{ marginRight: 6, color: planet.metal >= c.metal * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>⛏{(c.metal * count).toLocaleString('ru-RU')}</span>}
+                  {c.silicon > 0 && <span style={{ marginRight: 6, color: planet.silicon >= c.silicon * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>🔷{(c.silicon * count).toLocaleString('ru-RU')}</span>}
+                  {c.hydrogen > 0 && <span style={{ color: planet.hydrogen >= c.hydrogen * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>💧{(c.hydrogen * count).toLocaleString('ru-RU')}</span>}
+                </div>
+              )}
+            </div>
+            <div className="ox-unit-card-footer" style={{ display: 'flex', gap: 6 }}>
+              <input
+                type="number"
+                min={1}
+                value={count}
+                onChange={(e) => setDrafts({ ...drafts, [u.id]: Math.max(1, Number(e.target.value)) })}
+                style={{ width: 64, flexShrink: 0 }}
+              />
+              <button
+                type="button"
+                className={`btn${canAfford ? '' : ' btn-ghost'} btn-sm`}
+                style={{ flex: 1 }}
+                disabled={pending}
+                onClick={() => onBuild(u.id, count)}
+              >
+                Строить
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ShipQueueRow({ item, isActive }: { item: ShipyardQueueItem; isActive: boolean }) {
+  const total = new Date(item.end_at).getTime() - new Date(item.start_at).getTime();
+  const elapsed = Date.now() - new Date(item.start_at).getTime();
+  const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+        <span style={{ fontSize: 16 }}>{isActive ? '🚀' : '⏳'}</span>
+        <span style={{ flex: 1, fontWeight: isActive ? 600 : 400 }}>
+          {nameOf(item.unit_id)} × {item.count}
+        </span>
+        {isActive
+          ? <Countdown finishAt={item.end_at} />
+          : <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+              {new Date(item.end_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+        }
+      </div>
+      {isActive && <ProgressBar pct={pct} height={4} />}
+    </div>
   );
 }
