@@ -542,6 +542,11 @@ func applyDefenderLosses(ctx context.Context, tx pgx.Tx, planetID string,
 		}
 		return nil
 	}
+	if err := apply("ships", startShips); err != nil {
+		return err
+	}
+	return apply("defense", startDefense)
+}
 
 // applyBattleMod применяет боевые модификаторы к юнитам.
 // Множители умножаются на Attack/Shield/Shell каждого юнита.
@@ -556,11 +561,6 @@ func applyBattleMod(units []battle.Unit, m artefact.BattleModifier) []battle.Uni
 		units[i].Shell *= m.ShellMul
 	}
 	return units
-}
-	if err := apply("ships", startShips); err != nil {
-		return err
-	}
-	return apply("defense", startDefense)
 }
 
 // finalizeAttack — запись battle_reports + 2 messages + списание
