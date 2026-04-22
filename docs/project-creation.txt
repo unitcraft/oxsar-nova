@@ -4589,3 +4589,16 @@ BuildingsScreen теперь использует buildingName() в очеред
   - Требует API endpoint: GET /api/stats → { online_now, online_24h }.
   - Frontend готов отобразить на OverviewScreen рядом с рейтингом.
 
+
+================================================================================
+Итерация — 2026-04-22 (UI-36)
+================================================================================
+
+[UI-36] Счётчик онлайна (Сейчас играют / За 24 часа).
+  - Backend: score/handler.go добавлен Stats() → GET /api/stats (public).
+    Запрашивает online_now (last_seen > now - 5 минут) и online_24h (24 часа).
+  - Frontend: OverviewScreen.tsx добавлен useQuery для /api/stats (рефетч 60s).
+    Показывает в панели статистики рядом с рейтингом.
+  - API: openapi.yaml задокументирован endpoint, server/main.go добавлен маршрут.
+  - Статус: завершена. Счётчики видны на OverviewScreen во всех сеансах.
+
