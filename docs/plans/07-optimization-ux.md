@@ -215,18 +215,19 @@ WHERE planet_id = $1 AND unit_id = ANY($2::int[]);
 
 ---
 
-## Приоритизация
+## Приоритизация и выполнение
 
-**High (сразу)**:
-- 2.2 Батч-операции (UpdateResourceFactors)
-- 4.2 Performance metrics (Web Vitals)
+**High (сразу) — ✅ ЗАВЕРШЕНО**:
+- ✅ 2.2 Батч-операции (UpdateResourceFactors с CASE/WHEN)
+- ✅ 4.2 Performance metrics (Web Vitals с Performance API)
 
-**Medium (этот спринт)**:
-- 1.1 Optimistic Updates (ключевые экраны)
-- 3.1 Skeleton loaders (улучшить UX)
-- 5.1 Security audit
+**Medium (этот спринт) — ✅ ЗАВЕРШЕНО**:
+- ✅ 1.1 Optimistic Updates (ResourceScreen + MarketScreen)
+- ✅ 3.1 Skeleton loaders (улучшенные типизированные скелетоны)
+- ✅ 5.1 Security audit (CORS + rate limiting подтверждены)
 
-**Low (P3)**:
-- 4.4 Keyboard shortcuts
-- 6.2 Storybook
-- 4.1 Error tracking (при появлении проблем)
+**Low (P3) — ЧАСТИЧНО**:
+- ✅ 3.4 Keyboard shortcuts (Alt+H/B/R/M, Esc, Ctrl+S)
+- ⬜ 4.1 Error tracking (Sentry integration)
+- ⬜ 6.2 Storybook (UI компоненты)
+- ⬜ 1.1 Optimistic Updates для ArtefactsScreen/OfficersScreen
