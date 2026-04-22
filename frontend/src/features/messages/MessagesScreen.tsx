@@ -83,6 +83,14 @@ interface BattleReportPayload {
 
 interface BattleReportFull {
   id: string;
+  attacker_user_id?: string | null;
+  defender_user_id?: string | null;
+  attacker_username?: string;
+  defender_username?: string;
+  planet_id?: string | null;
+  dst_galaxy?: number | null;
+  dst_system?: number | null;
+  dst_position?: number | null;
   seed: number;
   winner: string;
   rounds: number;
@@ -107,7 +115,9 @@ const FOLDERS: { folder: number | null; label: string; icon: string }[] = [
   { folder: 13,    label: 'Система',    icon: '⚙️' },
 ];
 
-export function MessagesScreen() {
+type FleetMissionCb = (g: number, s: number, pos: number, isMoon: boolean, mission: number) => void;
+
+export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissionCb }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [selectedID, setSelectedID] = useState<string | null>(null);
@@ -279,7 +289,7 @@ export function MessagesScreen() {
           {/* Message detail */}
           {selected && (
             <div className="ox-panel" style={{ padding: '16px 20px' }}>
-              <MessageDetail message={selected} onReply={onReply} />
+              <MessageDetail message={selected} onReply={onReply} onFleetMission={onFleetMission} />
             </div>
           )}
         </div>
@@ -336,7 +346,7 @@ function ComposeForm({ init, onSent, onCancel }: { init?: ReplyInit | undefined;
   );
 }
 
-function MessageDetail({ message, onReply }: { message: Message; onReply: (m: Message) => void }) {
+function MessageDetail({ message, onReply, onFleetMission }: { message: Message; onReply: (m: Message) => void; onFleetMission?: FleetMissionCb }) {
   const report = useQuery({
     queryKey: ['battle-report', message.battle_report_id],
     queryFn: () => api.get<BattleReportFull>(`/api/battle-reports/${message.battle_report_id}`),
@@ -373,7 +383,7 @@ function MessageDetail({ message, onReply }: { message: Message; onReply: (m: Me
       {message.battle_report_id && (
         <div style={{ borderTop: '1px solid var(--ox-border)', paddingTop: 12 }}>
           {report.isLoading && <div style={{ color: 'var(--ox-fg-muted)' }}>Загрузка отчёта…</div>}
-          {report.data && <BattleReportView data={report.data} />}
+          {report.data && <BattleReportView data={report.data} onFleetMission={onFleetMission} />}
         </div>
       )}
       {message.espionage_report_id && (
@@ -440,19 +450,32 @@ function UnitMapBlock({ title, data }: { title: string; data: Record<string, num
   );
 }
 
-function BattleReportView({ data }: { data: BattleReportFull }) {
+function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; onFleetMission?: FleetMissionCb }) {
   const r = data.report;
   const winnerText = r.winner === 'attackers' ? '⚔️ Победа атакующих'
     : r.winner === 'defenders' ? '🛡 Победа защитников'
     : '⚖️ Ничья';
+  const hasDst = data.dst_galaxy != null && data.dst_system != null && data.dst_position != null;
   return (
     <div>
-      <div style={{ fontWeight: 700, marginBottom: 8 }}>⚔️ Боевой отчёт</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+        <div style={{ fontWeight: 700 }}>⚔️ Боевой отчёт</div>
+        {hasDst && onFleetMission && (
+          <button
+            type="button"
+            className="btn btn-sm"
+            style={{ fontSize: 11 }}
+            onClick={() => onFleetMission(data.dst_galaxy!, data.dst_system!, data.dst_position!, false, 10)}
+          >
+            ⚔️ Атаковать [{data.dst_galaxy}:{data.dst_system}:{data.dst_position}]
+          </button>
+        )}
+      </div>
       <div style={{ fontSize: 13, marginBottom: 4 }}>
         <span style={{ fontWeight: 700 }}>{winnerText}</span> · Раундов: {r.rounds}
       </div>
       <div style={{ fontSize: 13, marginBottom: 12 }}>
-        Добыча: {data.loot_metal} M / {data.loot_silicon} Si / {data.loot_hydrogen} H
+        Добыча: {data.loot_metal.toLocaleString('ru-RU')} 🟠 / {data.loot_silicon.toLocaleString('ru-RU')} 💎 / {data.loot_hydrogen.toLocaleString('ru-RU')} 💧
       </div>
 
       {r.rounds_trace && r.rounds_trace.length > 0 && (

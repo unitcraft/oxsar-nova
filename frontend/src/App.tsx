@@ -135,7 +135,7 @@ function AuthenticatedApp() {
             {tab === 'fleet'      && <FleetScreen planet={planet} {...(fleetDst ? { initialDst: fleetDst } : {})} />}
             {tab === 'market'     && <MarketScreen planet={planet} />}
             {tab === 'rockets'    && <RocketsScreen planet={planet} />}
-            {tab === 'messages'   && <MessagesScreen />}
+            {tab === 'messages'   && <MessagesScreen onFleetMission={(g, s, pos, isMoon, mission) => { setFleetDst({ g, s, pos, isMoon, mission }); setTab('fleet'); }} />}
             {tab === 'artefacts'  && <ArtefactsScreen />}
             {tab === 'art-market' && <ArtefactMarketScreen />}
             {tab === 'officers'   && <OfficersScreen />}

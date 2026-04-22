@@ -367,6 +367,37 @@ P2 из плана: показать баланс кредитов в шапке
 
 ---
 
+## Итерация UI-29: Кнопка «Атаковать» из боевого отчёта (2026-04-22)
+
+### Задача
+В боевом отчёте не было кнопки «Атаковать [G:S:P]», хотя enemy-координаты
+известны из отчёта. В legacy игре такая кнопка есть — позволяет сразу перейти
+к отправке флота на цель.
+
+### Проблема
+`BattleReport` содержал `planet_id` (UUID), но не координаты. Переводить UUID
+в G:S:P на фронтенде нельзя — нет endpoints для обратного поиска.
+
+### Реализация
+
+**Backend (`backend/internal/message/service.go`):**
+- `BattleReport` struct: добавлены `DstGalaxy *int`, `DstSystem *int`, `DstPosition *int`.
+- SQL запрос в `GetBattleReport`: добавлен `LEFT JOIN planets p ON p.id = br.planet_id`,
+  в SELECT добавлены `p.galaxy, p.system, p.position`.
+
+**Frontend (`frontend/src/features/messages/MessagesScreen.tsx`):**
+- `BattleReportFull` interface: добавлены `dst_galaxy/dst_system/dst_position` (nullable).
+- Добавлен тип `FleetMissionCb` — колбэк `(g, s, pos, isMoon, mission) => void`.
+- Проброс `onFleetMission?` через `MessagesScreen → MessageDetail → BattleReportView`.
+- В `BattleReportView`: если координаты известны и колбэк передан — кнопка
+  `⚔️ Атаковать [G:S:P]`, mission=10 (атака).
+
+**Frontend (`frontend/src/App.tsx`):**
+- В рендер `<MessagesScreen>` добавлен `onFleetMission` — устанавливает `fleetDst`
+  и переключает таб на `fleet`.
+
+---
+
 ## Итерация UI-28: Вкладка «Боевой» в рейтинге (2026-04-22)
 
 ### Задача

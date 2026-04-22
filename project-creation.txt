@@ -4502,3 +4502,17 @@ BuildingsScreen теперь использует buildingName() в очеред
   - API type=e уже работал (columnFor("e")="e_points" в score/service.go).
   - Вкладка ⚔️ Боевой показывает топ по боевому опыту.
 
+
+
+================================================================================
+Итерация — 2026-04-22 (UI-29)
+================================================================================
+
+[UI-29] Кнопка «Атаковать» из боевого отчёта.
+  - Проблема: BattleReport содержал planet_id (UUID), но не координаты G:S:P.
+  - Backend (message/service.go): добавлен LEFT JOIN planets, в BattleReport struct
+    добавлены DstGalaxy/DstSystem/DstPosition (*int).
+  - Frontend MessagesScreen: BattleReportFull расширен; FleetMissionCb тип;
+    onFleetMission проброшен MessagesScreen → MessageDetail → BattleReportView;
+    кнопка ⚔️ Атаковать [G:S:P] при наличии координат.
+  - App.tsx: onFleetMission → setFleetDst + setTab('fleet').
