@@ -62,7 +62,7 @@ function AuthenticatedApp() {
   });
   const me = useQuery({
     queryKey: ['me'],
-    queryFn: () => api.get<{ user_id: string; username: string; role: string }>('/api/me'),
+    queryFn: () => api.get<{ user_id: string; username: string; role: string; credit: number }>('/api/me'),
     staleTime: 60000,
   });
 
@@ -95,6 +95,7 @@ function AuthenticatedApp() {
         onPlanetChange={setCurrentPlanetId}
         onLogout={logout}
         username={me.data?.username ?? ''}
+        {...(me.data?.credit !== undefined ? { credit: me.data.credit } : {})}
       />
 
       <div className="ox-body">
@@ -171,7 +172,7 @@ function useServerClock() {
 
 /* ── Header ── */
 function Header({
-  planet, planets, homePlanetId, onPlanetChange, onLogout, username,
+  planet, planets, homePlanetId, onPlanetChange, onLogout, username, credit,
 }: {
   planet: Planet;
   planets: Planet[];
@@ -179,6 +180,7 @@ function Header({
   onPlanetChange: (id: string) => void;
   onLogout: () => void;
   username: string;
+  credit?: number | undefined;
 }) {
   const metal    = planet.metal    ?? 0;
   const silicon  = planet.silicon  ?? 0;
@@ -251,6 +253,14 @@ function Header({
       </div>
 
       <div className="ox-header-right">
+        {credit !== undefined && (
+          <div className="ox-res-item" title="Кредиты">
+            <span className="icon">💳</span>
+            <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 13, fontWeight: 600, color: 'var(--ox-accent)' }}>
+              {credit % 1 === 0 ? credit : credit.toFixed(2)}
+            </span>
+          </div>
+        )}
         <span style={{ fontSize: 12, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', letterSpacing: '0.04em' }}>
           {timeStr}
         </span>

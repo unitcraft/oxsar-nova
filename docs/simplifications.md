@@ -429,11 +429,10 @@
 - **Starter-planet без buildings** → iteration 12 (commit 15be227).
 - **planet evalProd не обрабатывал resource='energy'** → iteration 13.
 
-### [UI] Кредиты не показываются в шапке
-- **Ситуация**: в legacy кредиты отображались рядом с ресурсами в шапке.
-- **Причина**: поле `credit` убрано из таблицы `users` в migration 0013 (artefact market redesign). Кредиты теперь только для artefact market, не для обычного gameplay.
-- **Решение**: кредиты в шапке не показываем. Artefact market экран сам отображает баланс при необходимости.
-- **Возврат**: если credit вернётся в users, добавить в `/api/me` и App.tsx Header.
+### [UI] Кредиты в шапке — ЗАКРЫТО
+- Поле `credit numeric(15,2)` существует в `users` с migration 0001, стартовое значение 5.00.
+- Migration 0013 Down (откат) содержит DROP COLUMN — это было ошибочно записано как «поле удалено».
+- Реализовано (UI-15): `/api/me` возвращает `credit`, шапка показывает 💳 N cr.
 
 ### [UI] Fleet: retreat/formation/прогресс-бар боя не реализованы
 - **Ситуация**: legacy показывал кнопки retreat/formation и прогресс-бар при активном бое.

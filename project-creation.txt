@@ -4369,3 +4369,17 @@ BuildingsScreen теперь использует buildingName() в очеред
 [UI-14] OverviewScreen: производство в час на карточке ресурса.
   - ResourceCell: perHour = ratePerSec * 3600, отображается "N/ч" под тикером.
   - Логика в легаси: fNumber(metal_per_hour) в ячейке ресурса.
+
+================================================================================
+Итерация — 2026-04-22 (UI-15)
+================================================================================
+
+[UI-15] Кредиты в шапке.
+  - Поле credit numeric(15,2) EXISTS в users с migration 0001 (стартовое 5.00).
+  - Ошибка: migration 0013 Down содержит DROP COLUMN — это было принято за «поле удалено».
+    На самом деле Down-миграция не применялась.
+  - auth/handler.go Me: добавлен SELECT credit, возвращается в JSON.
+  - App.tsx: me query тип расширен credit:number; Header получает credit prop.
+  - Header: блок 💳 N cr в ox-header-right, показывается когда credit defined.
+  - exactOptionalPropertyTypes: передача через spread {...(credit !== undefined ? {credit} : {})}.
+  - docs/simplifications.md: исправлена ошибочная запись.
