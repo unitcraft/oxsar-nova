@@ -80,6 +80,7 @@ export function ResourceScreen({
           context.previousReport
         );
       }
+      toast.show('danger', 'Ошибка сохранения');
     },
     onSuccess: () => {
       // Переопрос чтобы убедиться что данные синхронизированы
@@ -87,9 +88,6 @@ export function ResourceScreen({
         queryKey: ['resource-report', planetId],
       });
       toast.show('success', 'Факторы сохранены');
-    },
-    onError: () => {
-      toast.show('danger', 'Ошибка сохранения');
     },
   });
 
@@ -263,24 +261,27 @@ export function ResourceScreen({
                   </tr>
                 </thead>
                 <tbody>
-                  {report.buildings.map((b) => (
-                    <tr key={b.unit_id}>
-                      <td className="font-semibold">{b.name}</td>
-                      <td>{b.level}</td>
-                      <td className="text-success">
-                        +{(b.prod_metal * (factors[b.unit_id.toString()] ?? b.factor)) / 100).toFixed(2)}
-                      </td>
-                      <td className="text-success">
-                        +{(b.prod_silicon * (factors[b.unit_id.toString()] ?? b.factor)) / 100).toFixed(2)}
-                      </td>
-                      <td className="text-success">
-                        +{(b.prod_hydrogen * (factors[b.unit_id.toString()] ?? b.factor)) / 100).toFixed(2)}
-                      </td>
-                      <td className="text-error">
-                        -{b.cons_energy.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
+                  {report.buildings.map((b) => {
+                    const factor = factors[b.unit_id.toString()] ?? b.factor;
+                    return (
+                      <tr key={b.unit_id}>
+                        <td className="font-semibold">{b.name}</td>
+                        <td>{b.level}</td>
+                        <td className="text-success">
+                          +{(b.prod_metal * factor / 100).toFixed(2)}
+                        </td>
+                        <td className="text-success">
+                          +{(b.prod_silicon * factor / 100).toFixed(2)}
+                        </td>
+                        <td className="text-success">
+                          +{(b.prod_hydrogen * factor / 100).toFixed(2)}
+                        </td>
+                        <td className="text-error">
+                          -{b.cons_energy.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
