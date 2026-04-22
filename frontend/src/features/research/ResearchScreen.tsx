@@ -10,7 +10,7 @@ function fmtDuration(secs: number): string {
   return `${m}м`;
 }
 import { api } from '@/api/client';
-import { RESEARCH, imageOf, costForLevel } from '@/api/catalog';
+import { RESEARCH, imageOf, costForLevel, fmtReqs } from '@/api/catalog';
 import type { Planet, QueueItem, ResearchState } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
 import { ProgressBar } from '@/ui/ProgressBar';
@@ -91,6 +91,11 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
                 <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
                   {r.benefit}
                 </div>
+                {level === 0 && r.requires && r.requires.length > 0 && (
+                  <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginBottom: 2, fontFamily: 'var(--ox-mono)' }}>
+                    🔒 {fmtReqs(r.requires)}
+                  </div>
+                )}
                 {!isActive && (
                   <>
                     <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
