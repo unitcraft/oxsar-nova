@@ -51,25 +51,26 @@ export const BUILDINGS: BuildingEntry[] = [
 export interface ResearchEntry extends UnitEntry {
   costBase: Cost;
   costFactor: number;
+  benefit: string;
 }
 
 export const RESEARCH: ResearchEntry[] = [
-  { id: 13,  key: 'spyware',           name: 'Шпионаж',                              costBase: { metal: 200,   silicon: 1000,  hydrogen: 200  }, costFactor: 2.0  },
-  { id: 14,  key: 'computer_tech',     name: 'Компьютерная технология',              costBase: { metal: 0,     silicon: 400,   hydrogen: 600  }, costFactor: 2.0  },
-  { id: 15,  key: 'gun_tech',          name: 'Оружейная технология',                 costBase: { metal: 800,   silicon: 200,   hydrogen: 0    }, costFactor: 2.0  },
-  { id: 16,  key: 'shield_tech',       name: 'Щитовая технология',                   costBase: { metal: 200,   silicon: 600,   hydrogen: 0    }, costFactor: 2.0  },
-  { id: 17,  key: 'shell_tech',        name: 'Броневая технология',                  costBase: { metal: 1000,  silicon: 0,     hydrogen: 0    }, costFactor: 2.0  },
-  { id: 18,  key: 'energy_tech',       name: 'Энергетическая технология',            costBase: { metal: 0,     silicon: 800,   hydrogen: 400  }, costFactor: 2.0  },
-  { id: 19,  key: 'hyperspace_tech',   name: 'Гиперпространственная технология',     costBase: { metal: 0,     silicon: 4000,  hydrogen: 2000 }, costFactor: 2.0  },
-  { id: 20,  key: 'combustion_engine', name: 'Реактивный двигатель',                 costBase: { metal: 400,   silicon: 0,     hydrogen: 600  }, costFactor: 2.0  },
-  { id: 21,  key: 'impulse_engine',    name: 'Импульсный двигатель',                 costBase: { metal: 2000,  silicon: 4000,  hydrogen: 600  }, costFactor: 2.0  },
-  { id: 22,  key: 'hyperspace_engine', name: 'Гиперпространственный двигатель',      costBase: { metal: 10000, silicon: 20000, hydrogen: 6000 }, costFactor: 3.0  },
-  { id: 23,  key: 'laser_tech',        name: 'Лазерная технология',                  costBase: { metal: 200,   silicon: 100,   hydrogen: 0    }, costFactor: 2.0  },
-  { id: 24,  key: 'ion_tech',          name: 'Ионная технология',                    costBase: { metal: 1000,  silicon: 300,   hydrogen: 100  }, costFactor: 2.0  },
-  { id: 25,  key: 'plasma_tech',       name: 'Плазменная технология',                costBase: { metal: 2000,  silicon: 4000,  hydrogen: 1000 }, costFactor: 2.0  },
-  { id: 27,  key: 'expo_tech',         name: 'Экспедиционная технология',            costBase: { metal: 4000,  silicon: 8000,  hydrogen: 4000 }, costFactor: 1.75 },
-  { id: 103, key: 'ballistics_tech',   name: 'Баллистическая технология',            costBase: { metal: 4000,  silicon: 8000,  hydrogen: 4000 }, costFactor: 2.0  },
-  { id: 104, key: 'masking_tech',      name: 'Маскировочная технология',             costBase: { metal: 4000,  silicon: 8000,  hydrogen: 4000 }, costFactor: 2.0  },
+  { id: 13,  key: 'spyware',           name: 'Шпионаж',                              benefit: '+1 уровень шпионажа зонда',                costBase: { metal: 200,   silicon: 1000,  hydrogen: 200  }, costFactor: 2.0  },
+  { id: 14,  key: 'computer_tech',     name: 'Компьютерная технология',              benefit: '+1 слот флота',                            costBase: { metal: 0,     silicon: 400,   hydrogen: 600  }, costFactor: 2.0  },
+  { id: 15,  key: 'gun_tech',          name: 'Оружейная технология',                 benefit: '+2% атака флота и обороны',                costBase: { metal: 800,   silicon: 200,   hydrogen: 0    }, costFactor: 2.0  },
+  { id: 16,  key: 'shield_tech',       name: 'Щитовая технология',                   benefit: '+2% щит флота и обороны',                  costBase: { metal: 200,   silicon: 600,   hydrogen: 0    }, costFactor: 2.0  },
+  { id: 17,  key: 'shell_tech',        name: 'Броневая технология',                  benefit: '+2% броня флота и обороны',                costBase: { metal: 1000,  silicon: 0,     hydrogen: 0    }, costFactor: 2.0  },
+  { id: 18,  key: 'energy_tech',       name: 'Энергетическая технология',            benefit: 'требование для высоких технологий',        costBase: { metal: 0,     silicon: 800,   hydrogen: 400  }, costFactor: 2.0  },
+  { id: 19,  key: 'hyperspace_tech',   name: 'Гиперпространственная технология',     benefit: 'требование для гипердвигателя',            costBase: { metal: 0,     silicon: 4000,  hydrogen: 2000 }, costFactor: 2.0  },
+  { id: 20,  key: 'combustion_engine', name: 'Реактивный двигатель',                 benefit: '+10% скорость транспортов и истребителей', costBase: { metal: 400,   silicon: 0,     hydrogen: 600  }, costFactor: 2.0  },
+  { id: 21,  key: 'impulse_engine',    name: 'Импульсный двигатель',                 benefit: '+20% скорость крейсеров и зондов',         costBase: { metal: 2000,  silicon: 4000,  hydrogen: 600  }, costFactor: 2.0  },
+  { id: 22,  key: 'hyperspace_engine', name: 'Гиперпространственный двигатель',      benefit: '+30% скорость линкоров и флагманов',       costBase: { metal: 10000, silicon: 20000, hydrogen: 6000 }, costFactor: 3.0  },
+  { id: 23,  key: 'laser_tech',        name: 'Лазерная технология',                  benefit: 'требование для ионной технологии',         costBase: { metal: 200,   silicon: 100,   hydrogen: 0    }, costFactor: 2.0  },
+  { id: 24,  key: 'ion_tech',          name: 'Ионная технология',                    benefit: 'требование для плазменной технологии',     costBase: { metal: 1000,  silicon: 300,   hydrogen: 100  }, costFactor: 2.0  },
+  { id: 25,  key: 'plasma_tech',       name: 'Плазменная технология',                benefit: 'повышенный урон по ресурсам противника',   costBase: { metal: 2000,  silicon: 4000,  hydrogen: 1000 }, costFactor: 2.0  },
+  { id: 27,  key: 'expo_tech',         name: 'Экспедиционная технология',            benefit: '+1 слот экспедиции за уровень',            costBase: { metal: 4000,  silicon: 8000,  hydrogen: 4000 }, costFactor: 1.75 },
+  { id: 103, key: 'ballistics_tech',   name: 'Баллистическая технология',            benefit: '+1 ракета в шахте за уровень',             costBase: { metal: 4000,  silicon: 8000,  hydrogen: 4000 }, costFactor: 2.0  },
+  { id: 104, key: 'masking_tech',      name: 'Маскировочная технология',             benefit: 'снижение видимости флота для шпионажа',    costBase: { metal: 4000,  silicon: 8000,  hydrogen: 4000 }, costFactor: 2.0  },
 ];
 
 export const SHIPS: CombatEntry[] = [
