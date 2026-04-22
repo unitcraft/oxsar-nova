@@ -36,9 +36,6 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
 
-// Кнопки миссий для строки галактики. Открывает FleetScreen с предзаполненными координатами.
-// Для MVP: переход через state не реализован, поэтому кнопки используют navigator.clipboard.
-// TODO: пробросить setTab + координаты через контекст или колбэк.
 function MissionButtons({ cell, onMission }: {
   cell: CellView;
   onMission: (mission: number, position: number, isMoon: boolean) => void;
