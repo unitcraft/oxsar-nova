@@ -28,11 +28,33 @@ export interface Planet {
   system: number;
   position: number;
   diameter?: number;
+  used_fields?: number;
+  temp_min?: number;
+  temp_max?: number;
   planet_type?: string;
   metal: number;
   silicon: number;
   hydrogen: number;
   last_res_update: string;
+  metal_per_sec: number;
+  silicon_per_sec: number;
+  hydrogen_per_sec: number;
+  metal_cap: number;
+  silicon_cap: number;
+  hydrogen_cap: number;
+  energy_prod: number;
+  energy_cons: number;
+  energy_remaining: number;
+}
+
+export interface IncomingFleet {
+  id: string;
+  mission: number;
+  dst_galaxy: number;
+  dst_system: number;
+  dst_position: number;
+  dst_is_moon: boolean;
+  arrive_at: string;
 }
 
 export interface QueueItem {

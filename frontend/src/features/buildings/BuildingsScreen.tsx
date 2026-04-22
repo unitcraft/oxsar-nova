@@ -1,4 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+function fmtDuration(secs: number): string {
+  if (secs < 60) return `${secs}с`;
+  const m = Math.floor(secs / 60) % 60;
+  const h = Math.floor(secs / 3600) % 24;
+  const d = Math.floor(secs / 86400);
+  if (d > 0) return `${d}д ${h}ч ${m}м`;
+  if (h > 0) return `${h}ч ${m}м`;
+  return `${m}м`;
+}
 import { api } from '@/api/client';
 import { BUILDINGS, imageOf, costForLevel } from '@/api/catalog';
 import type { Planet, QueueItem } from '@/api/types';
@@ -17,11 +27,12 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
   });
   const levelsQ = useQuery({
     queryKey: ['buildings-levels', planet.id],
-    queryFn: () => api.get<{ levels: Record<string, number> }>(`/api/planets/${planet.id}/buildings`),
+    queryFn: () => api.get<{ levels: Record<string, number>; build_seconds: Record<string, number> }>(`/api/planets/${planet.id}/buildings`),
     refetchInterval: 10000,
   });
 
   const levels = levelsQ.data?.levels ?? {};
+  const buildSeconds = levelsQ.data?.build_seconds ?? {};
   const queueItems = (queue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
   const busyIds = new Set(queueItems.map((q) => q.unit_id));
 
@@ -74,6 +85,7 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
             planet.metal    >= nextCost.metal &&
             planet.silicon  >= nextCost.silicon &&
             planet.hydrogen >= nextCost.hydrogen;
+          const secs = buildSeconds[b.id.toString()] ?? 0;
           return (
             <div key={b.id} className="ox-unit-card">
               <div className="ox-unit-card-img">
@@ -85,23 +97,30 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
                   {level > 0 ? `Уровень ${level}` : 'Не построено'}
                 </div>
                 {!inQueue && (
-                  <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
-                    {nextCost.metal > 0 && (
-                      <span style={{ marginRight: 6, color: planet.metal >= nextCost.metal ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                        ⛏{nextCost.metal.toLocaleString('ru-RU')}
-                      </span>
+                  <>
+                    <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
+                      {nextCost.metal > 0 && (
+                        <span style={{ marginRight: 6, color: planet.metal >= nextCost.metal ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
+                          ⛏{nextCost.metal.toLocaleString('ru-RU')}
+                        </span>
+                      )}
+                      {nextCost.silicon > 0 && (
+                        <span style={{ marginRight: 6, color: planet.silicon >= nextCost.silicon ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
+                          🔷{nextCost.silicon.toLocaleString('ru-RU')}
+                        </span>
+                      )}
+                      {nextCost.hydrogen > 0 && (
+                        <span style={{ color: planet.hydrogen >= nextCost.hydrogen ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
+                          💧{nextCost.hydrogen.toLocaleString('ru-RU')}
+                        </span>
+                      )}
+                    </div>
+                    {secs > 0 && (
+                      <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
+                        ⏱ {fmtDuration(secs)}
+                      </div>
                     )}
-                    {nextCost.silicon > 0 && (
-                      <span style={{ marginRight: 6, color: planet.silicon >= nextCost.silicon ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                        🔷{nextCost.silicon.toLocaleString('ru-RU')}
-                      </span>
-                    )}
-                    {nextCost.hydrogen > 0 && (
-                      <span style={{ color: planet.hydrogen >= nextCost.hydrogen ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                        💧{nextCost.hydrogen.toLocaleString('ru-RU')}
-                      </span>
-                    )}
-                  </div>
+                  </>
                 )}
               </div>
               <div className="ox-unit-card-footer">

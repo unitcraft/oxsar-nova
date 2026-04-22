@@ -640,6 +640,7 @@ label {
 @keyframes ox-toast-in   { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes ox-slide-down { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes ox-pulse-ring { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(1.5); opacity: 0; } }
+@keyframes ox-pulse-border { 0%, 100% { border-color: rgba(239,68,68,0.5); box-shadow: 0 0 0 0 rgba(239,68,68,0.2); } 50% { border-color: rgba(239,68,68,0.9); box-shadow: 0 0 8px 2px rgba(239,68,68,0.3); } }
 @keyframes ox-spin        { to { transform: rotate(360deg); } }
 @keyframes ox-float       { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 

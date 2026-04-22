@@ -66,7 +66,15 @@ func (h *Handler) Levels(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"levels": levels})
+	buildSecs, err := h.svc.BuildSecondsMap(r.Context(), planetID, levels)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+		"levels":       levels,
+		"build_seconds": buildSecs,
+	})
 }
 
 // List GET /api/planets/{id}/buildings/queue

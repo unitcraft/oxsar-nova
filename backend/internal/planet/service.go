@@ -123,6 +123,7 @@ func (s *Service) applyTickInTx(ctx context.Context, p *Planet) error {
 
 		rates := s.productionRates(p, levels, techLevels)
 		caps := s.storageCap(p, levels)
+		eProd, eCons := s.energyStats(p, levels, techLevels)
 
 		// Ограничиваем ёмкостью хранилища: при заполнении cap добыча
 		// конкретного ресурса замирает (§5.2 ТЗ, как OGame).
@@ -133,6 +134,15 @@ func (s *Service) applyTickInTx(ctx context.Context, p *Planet) error {
 		p.Silicon = clampAdd(p.Silicon, gainS, caps.silicon)
 		p.Hydrogen = clampAdd(p.Hydrogen, gainH, caps.hydrogen)
 		p.LastResUpdate = now
+		p.MetalPerSec = rates.metalPerSec
+		p.SiliconPerSec = rates.siliconPerSec
+		p.HydrogenPerSec = rates.hydrogenPerSec
+		p.MetalCap = caps.metal
+		p.SiliconCap = caps.silicon
+		p.HydrogenCap = caps.hydrogen
+		p.EnergyProd = eProd
+		p.EnergyCons = eCons
+		p.EnergyRemaining = eProd - eCons
 
 		_, err = tx.Exec(ctx, `
 			UPDATE planets
@@ -232,6 +242,28 @@ func (s *Service) evalProd(key, resource string, levels map[int]int, base formul
 		return 0
 	}
 	return v
+}
+
+// energyStats возвращает (prod, cons) энергии в абсолютных единицах.
+func (s *Service) energyStats(p *Planet, levels map[int]int, tech map[int]int) (prod, cons float64) {
+	base := formula.Context{
+		Temperature: (p.TempMin + p.TempMax) / 2,
+		Tech:        tech,
+	}
+	cons = s.evalCons("metal_mine", "energy", levels, base) +
+		s.evalCons("silicon_lab", "energy", levels, base) +
+		s.evalCons("hydrogen_lab", "energy", levels, base)
+	prod = s.evalProd("solar_plant", "energy", levels, base)
+	// satellite contribution
+	if satSpec, ok := s.catalog.Construction.Buildings["solar_satellite"]; ok {
+		satCtx := base
+		satCtx.Level = levels[int(satSpec.ID)]
+		if v, err := s.compile(satSpec.Prod.Energy).Eval(satCtx); err == nil {
+			prod += v
+		}
+	}
+	prod *= float64(p.EnergyFactor)
+	return prod, cons
 }
 
 // energyRatio считает долю удовлетворённой энергии (0..1) через

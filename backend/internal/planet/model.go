@@ -28,6 +28,15 @@ type Planet struct {
 	Silicon            float64   `json:"silicon"`
 	Hydrogen           float64   `json:"hydrogen"`
 	LastResUpdate      time.Time `json:"last_res_update"`
+	MetalPerSec        float64   `json:"metal_per_sec"`
+	SiliconPerSec      float64   `json:"silicon_per_sec"`
+	HydrogenPerSec     float64   `json:"hydrogen_per_sec"`
+	MetalCap           float64   `json:"metal_cap"`
+	SiliconCap         float64   `json:"silicon_cap"`
+	HydrogenCap        float64   `json:"hydrogen_cap"`
+	EnergyProd         float64   `json:"energy_prod"`
+	EnergyCons         float64   `json:"energy_cons"`
+	EnergyRemaining    float64   `json:"energy_remaining"`
 	SolarSatelliteProd int       `json:"solar_satellite_prod"`
 	BuildFactor        float64   `json:"build_factor"`
 	ResearchFactor     float64   `json:"research_factor"`

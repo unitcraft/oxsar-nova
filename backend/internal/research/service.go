@@ -234,6 +234,42 @@ func (s *Service) Levels(ctx context.Context, userID string) (map[int]int, error
 	return out, rows.Err()
 }
 
+// ResearchSecondsMap возвращает время исследования следующего уровня каждой технологии
+// в секундах. Использует максимальный уровень research_lab среди всех планет пользователя.
+func (s *Service) ResearchSecondsMap(ctx context.Context, userID string, levels map[int]int) (map[int]int, error) {
+	labSpec, ok := s.catalog.Buildings.Buildings["research_lab"]
+	if !ok {
+		return map[int]int{}, nil
+	}
+	var labLvl int
+	_ = s.db.Pool().QueryRow(ctx, `
+		SELECT COALESCE(MAX(b.level), 0)
+		FROM buildings b
+		JOIN planets p ON p.id = b.planet_id
+		WHERE p.user_id = $1 AND b.unit_id = $2 AND p.destroyed_at IS NULL
+	`, userID, labSpec.ID).Scan(&labLvl)
+
+	out := make(map[int]int, len(s.catalog.Research.Research))
+	for _, spec := range s.catalog.Research.Research {
+		curLvl := levels[spec.ID]
+		nextLvl := curLvl + 1
+		cost := economy.CostForLevel(economy.Cost{
+			Metal:   spec.CostBase.Metal,
+			Silicon: spec.CostBase.Silicon,
+		}, spec.CostFactor, nextLvl)
+		resSum := float64(cost.Metal + cost.Silicon)
+		raw := resSum / (1000.0 * float64(1+labLvl))
+		if s.gameSpd > 0 {
+			raw /= s.gameSpd
+		}
+		if raw < 1 {
+			raw = 1
+		}
+		out[spec.ID] = int(raw)
+	}
+	return out, nil
+}
+
 func (s *Service) lookupResearch(unitID int) (string, config.ResearchSpec, bool) {
 	for key, spec := range s.catalog.Research.Research {
 		if spec.ID == unitID {
