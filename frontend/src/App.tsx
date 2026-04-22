@@ -28,13 +28,14 @@ const AllianceScreen     = lazy(() => import('./features/alliance/AllianceScreen
 const AchievementsScreen = lazy(() => import('./features/achievements/AchievementsScreen').then(m => ({ default: m.AchievementsScreen })));
 const TutorialScreen     = lazy(() => import('./features/tutorial/TutorialScreen').then(m => ({ default: m.TutorialScreen })));
 const ChatScreen         = lazy(() => import('./features/chat/ChatScreen').then(m => ({ default: m.ChatScreen })));
+const PlanetOptionsScreen = lazy(() => import('./features/planet-options/PlanetOptionsScreen').then(m => ({ default: m.PlanetOptionsScreen })));
 const AdminScreen        = lazy(() => import('./features/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 
 type Tab =
   | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
   | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
   | 'art-market' | 'officers' | 'achievements' | 'tutorial' | 'score'
-  | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin';
+  | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options';
 
 
 export function App() {
@@ -157,7 +158,7 @@ function AuthenticatedApp() {
         {/* Контент */}
         <main className="ox-content">
           <Suspense fallback={<ScreenSkeleton />}>
-            {tab === 'overview'   && <OverviewScreen />}
+            {tab === 'overview'   && <OverviewScreen onShowPlanetOptions={() => setTab('planet-options')} />}
             {tab === 'buildings'  && <BuildingsScreen planet={planet} />}
             {tab === 'research'   && <ResearchScreen planet={planet} />}
             {tab === 'shipyard'   && <ShipyardScreen planet={planet} />}
@@ -177,6 +178,7 @@ function AuthenticatedApp() {
             {tab === 'chat'       && <ChatScreen />}
             {tab === 'sim'        && <BattleSimScreen />}
             {tab === 'admin'      && isAdmin && <AdminScreen />}
+            {tab === 'planet-options' && <PlanetOptionsScreen planet={planet} planets={list} homePlanetId={list[0]?.id ?? null} onBack={() => setTab('overview')} />}
           </Suspense>
         </main>
       </div>
