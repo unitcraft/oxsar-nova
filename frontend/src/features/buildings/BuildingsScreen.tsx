@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScreenSkeleton } from '@/ui/Skeleton';
 
 function fmtDuration(secs: number): string {
@@ -268,10 +268,23 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
   );
 }
 
+function useLiveProgress(startAt: string, endAt: string): number {
+  const calc = () => {
+    const total = new Date(endAt).getTime() - new Date(startAt).getTime();
+    const elapsed = Date.now() - new Date(startAt).getTime();
+    return total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
+  };
+  const [pct, setPct] = useState(calc);
+  useEffect(() => {
+    const t = setInterval(() => setPct(calc), 1000);
+    return () => clearInterval(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startAt, endAt]);
+  return pct;
+}
+
 function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem; isActive: boolean; onCancel: () => void; cancelPending: boolean }) {
-  const total = new Date(item.end_at).getTime() - new Date(item.start_at).getTime();
-  const elapsed = Date.now() - new Date(item.start_at).getTime();
-  const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
+  const pct = useLiveProgress(item.start_at, item.end_at);
   const name = ([...BUILDINGS, ...MOON_BUILDINGS]).find((b) => b.id === item.unit_id)?.name ?? `#${item.unit_id}`;
 
   return (
