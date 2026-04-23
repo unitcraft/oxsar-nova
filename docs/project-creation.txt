@@ -5890,3 +5890,23 @@ Backend: go build ./... — чистый билд.
 - [ ] Admin endpoints replay/cancel (Ф.1.4).
 
 Backend `go build ./...` чистый.
+
+**Ф.1.3 — Dead-letter таблица + cron**
+
+Миграция 0057_events_dead_letter.sql:
+- events_dead (id PK, user_id, planet_id, kind, fire_at, payload,
+  created_at, processed_at, attempt, last_error, failed_at) + индексы
+  по kind и user_id.
+
+event/worker.go:
+- DeadLetterThreshold = 7 дней (константа).
+- `PruneErrors(ctx) (moved int64, err error)` — одна транзакция с CTE
+  `DELETE ... RETURNING → INSERT INTO events_dead`. Атомарно, не
+  теряет данные.
+- `RunPruner(ctx)` — daemon-goroutine (первый прогон через 1 мин
+  после старта, далее каждые 24 ч).
+
+cmd/worker/main.go: RunPruner запущен в `go func()` рядом с `w.Run`.
+
+events теперь не пухнет от накопленных error-events; анализ тихих сбоев
+доступен через `events_dead`.

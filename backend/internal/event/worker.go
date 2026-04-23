@@ -236,3 +236,71 @@ func (w *Worker) processOne(ctx context.Context, id string) error {
 // (например, зависимость ещё не готова). Сдвигает fire_at на backoff,
 // но не инкрементирует attempt.
 var ErrSkip = errors.New("event: skip for now")
+
+// DeadLetterThreshold — после скольки дней error-event переносится
+// в events_dead. Ограничивает рост основной таблицы events.
+const DeadLetterThreshold = 7 * 24 * time.Hour
+
+// PruneErrors перемещает error-события старше threshold'а в events_dead.
+// Возвращает количество перенесённых записей.
+func (w *Worker) PruneErrors(ctx context.Context) (int64, error) {
+	var moved int64
+	err := w.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `
+			WITH moved AS (
+				DELETE FROM events
+				WHERE state = 'error'
+				  AND processed_at IS NOT NULL
+				  AND processed_at < now() - $1::interval
+				RETURNING id, user_id, planet_id, kind, fire_at, payload,
+				          created_at, processed_at, attempt, last_error
+			)
+			INSERT INTO events_dead (
+				id, user_id, planet_id, kind, fire_at, payload,
+				created_at, processed_at, attempt, last_error
+			)
+			SELECT id, user_id, planet_id, kind, fire_at, payload,
+			       created_at, processed_at, attempt, last_error
+			FROM moved
+		`, DeadLetterThreshold.String())
+		if err != nil {
+			return fmt.Errorf("prune errors: %w", err)
+		}
+		moved = tag.RowsAffected()
+		return nil
+	})
+	return moved, err
+}
+
+// RunPruner запускает демон, раз в сутки перемещающий устаревшие error-events.
+// Отдельная goroutine от Run (чтобы не задерживать tick).
+func (w *Worker) RunPruner(ctx context.Context) error {
+	t := time.NewTicker(24 * time.Hour)
+	defer t.Stop()
+	// Первый прогон через 1 минуту после старта (прогрев).
+	firstRun := time.NewTimer(time.Minute)
+	defer firstRun.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-firstRun.C:
+			w.runPruneOnce(ctx)
+		case <-t.C:
+			w.runPruneOnce(ctx)
+		}
+	}
+}
+
+func (w *Worker) runPruneOnce(ctx context.Context) {
+	moved, err := w.PruneErrors(ctx)
+	if err != nil {
+		w.log.ErrorContext(ctx, "event_prune_failed", slog.String("err", err.Error()))
+		return
+	}
+	if moved > 0 {
+		w.log.InfoContext(ctx, "event_pruned",
+			slog.Int64("moved", moved),
+			slog.String("threshold", DeadLetterThreshold.String()))
+	}
+}
