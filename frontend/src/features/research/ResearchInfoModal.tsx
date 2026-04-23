@@ -1,6 +1,43 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RESEARCH, costForLevel, imageOf, formatNum, fmtReqs } from '@/api/catalog';
 import type { ResearchEntry } from '@/api/catalog';
+
+function ExpandableText({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+
+  useEffect(() => {
+    if (contentRef.current) setHeight(contentRef.current.scrollHeight);
+  }, [text]);
+
+  return (
+    <div style={{ borderTop: '1px solid var(--ox-border)', paddingTop: 8 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+          color: 'var(--ox-fg-muted)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4,
+        }}
+      >
+        <span style={{ transition: 'transform 0.2s', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'none' }}>▶</span>
+        Подробнее
+      </button>
+      <div
+        style={{
+          overflow: 'hidden',
+          maxHeight: open ? height : 0,
+          transition: 'max-height 0.25s ease',
+        }}
+      >
+        <div ref={contentRef} style={{ paddingTop: 8, fontSize: 12, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
+          {text}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   unitId: number;
@@ -132,12 +169,7 @@ export function ResearchInfoModal({ unitId, currentLevel, onClose }: Props) {
           Время указано без учёта уровня исследовательской лаборатории.
         </div>
 
-        {r.fullDesc && (
-          <details style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>
-            <summary style={{ cursor: 'pointer', color: 'var(--ox-fg-muted)', userSelect: 'none', marginBottom: 6 }}>Подробнее</summary>
-            <div style={{ lineHeight: 1.6, paddingTop: 4 }}>{r.fullDesc}</div>
-          </details>
-        )}
+        {r.fullDesc && <ExpandableText text={r.fullDesc} />}
       </div>
     </div>
   );
