@@ -6,7 +6,7 @@ function ExpandableText({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div style={{ borderTop: '1px solid var(--ox-border)', paddingTop: 8 }}>
+    <div style={{ borderTop: '1px solid var(--ox-border)', paddingTop: 8, minHeight: 0 }}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -18,19 +18,11 @@ function ExpandableText({ text }: { text: string }) {
         <span style={{ transition: 'transform 0.2s', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
         Подробнее
       </button>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateRows: open ? '1fr' : '0fr',
-          transition: 'grid-template-rows 0.3s ease',
-        }}
-      >
-        <div style={{ overflow: 'hidden' }}>
-          <div style={{ paddingTop: 8, fontSize: 12, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
-            {text}
-          </div>
+      {open && (
+        <div style={{ paddingTop: 8, fontSize: 12, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
+          {text}
         </div>
-      </div>
+      )}
     </div>
   );
 }
