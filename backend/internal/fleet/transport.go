@@ -37,10 +37,12 @@ import (
 // и чтобы не путать с Mission-интерфейсом, который используется для
 // будущих миссий (SPY/ATTACK/COLONIZE).
 type TransportService struct {
-	db       repo.Exec
-	catalog  *config.Catalog
-	speed    float64 // GAMESPEED
-	artefact *artefact.Service
+	db               repo.Exec
+	catalog          *config.Catalog
+	speed            float64 // GAMESPEED
+	artefact         *artefact.Service
+	maxPlanets       int // MAX_PLANETS override (0 = computer_tech+1)
+	protectionPeriod int // seconds new player is protected
 }
 
 func NewTransportService(db repo.Exec, cat *config.Catalog, gameSpeed float64, artefactSvc *artefact.Service) *TransportService {
@@ -48,6 +50,13 @@ func NewTransportService(db repo.Exec, cat *config.Catalog, gameSpeed float64, a
 		gameSpeed = 1
 	}
 	return &TransportService{db: db, catalog: cat, speed: gameSpeed, artefact: artefactSvc}
+}
+
+func NewTransportServiceWithConfig(db repo.Exec, cat *config.Catalog, gameSpeed float64, artefactSvc *artefact.Service, maxPlanets, protectionPeriod int) *TransportService {
+	svc := NewTransportService(db, cat, gameSpeed, artefactSvc)
+	svc.maxPlanets = maxPlanets
+	svc.protectionPeriod = protectionPeriod
+	return svc
 }
 
 // TransportInput — запрос от UI на отправку флота.

@@ -16,13 +16,25 @@ import (
 // за прошедшее время с последней синхронизации (§6.1 ТЗ: при любом
 // чтении состояния планеты сервер догоняет тики).
 type Service struct {
-	db      repo.Exec
-	repo    *Repository
-	catalog *config.Catalog
+	db                     repo.Exec
+	repo                   *Repository
+	catalog                *config.Catalog
+	storageFactor          float64 // global STORAGE_FACTOR multiplier
+	energyProductionFactor float64 // global ENEGRY_PRODUCTION_FACTOR multiplier
 }
 
 func NewService(db repo.Exec, r *Repository, cat *config.Catalog) *Service {
-	return &Service{db: db, repo: r, catalog: cat}
+	return &Service{db: db, repo: r, catalog: cat, storageFactor: 1, energyProductionFactor: 1}
+}
+
+func NewServiceWithFactors(db repo.Exec, r *Repository, cat *config.Catalog, storageFactor, energyProductionFactor float64) *Service {
+	if storageFactor <= 0 {
+		storageFactor = 1
+	}
+	if energyProductionFactor <= 0 {
+		energyProductionFactor = 1
+	}
+	return &Service{db: db, repo: r, catalog: cat, storageFactor: storageFactor, energyProductionFactor: energyProductionFactor}
 }
 
 // Get возвращает планету с уже применённым тиком.
@@ -191,7 +203,7 @@ func (s *Service) energyStats(p *Planet, levels map[int]int, tech map[int]int) (
 	}
 	// Синтезатор водорода (если есть).
 	prod += economy.HydrogenPlantProdEnergy(levels[economy.IDHydrogenPlant], techE)
-	prod *= float64(p.EnergyFactor)
+	prod *= float64(p.EnergyFactor) * s.energyProductionFactor
 	return prod, cons
 }
 
@@ -209,7 +221,7 @@ func (s *Service) energyRatio(p *Planet, levels map[int]int, tech map[int]int) f
 		output += economy.GraviProdEnergy(graviLvl, 300000)
 	}
 	output += economy.HydrogenPlantProdEnergy(levels[economy.IDHydrogenPlant], techE)
-	ratio := economy.EnergyRatio(output, demand) * float64(p.EnergyFactor)
+	ratio := economy.EnergyRatio(output*s.energyProductionFactor, demand) * float64(p.EnergyFactor)
 	if ratio > 1 {
 		ratio = 1
 	}
@@ -299,7 +311,7 @@ func (s *Service) storageCap(p *Planet, levels map[int]int) caps {
 	baseS := int64OrDefault(sStorage.CapacityBase, 5000)
 	baseH := int64OrDefault(hStorage.CapacityBase, 5000)
 
-	factor := float64(p.StorageFactor)
+	factor := float64(p.StorageFactor) * s.storageFactor
 	return caps{
 		metal:    economy.StorageCapacity(baseM, levels[mStorage.ID], factor),
 		silicon:  economy.StorageCapacity(baseS, levels[sStorage.ID], factor),

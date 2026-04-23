@@ -129,6 +129,19 @@ func (s *TransportService) AttackHandler() event.Handler {
 			return uerr
 		}
 
+		// Если защитник ещё в периоде защиты нового игрока — возвращаемся.
+		if s.protectionPeriod > 0 {
+			var newPlayer int
+			_ = tx.QueryRow(ctx,
+				`SELECT 1 FROM users WHERE id=$1 AND created_at > NOW() - ($2 || ' seconds')::interval`,
+				defenderUserID, s.protectionPeriod).Scan(&newPlayer)
+			if newPlayer == 1 {
+				_, uerr := tx.Exec(ctx,
+					`UPDATE fleets SET state='returning' WHERE id=$1`, pl.FleetID)
+				return uerr
+			}
+		}
+
 		defenderShips, err := readPlanetShips(ctx, tx, planetID)
 		if err != nil {
 			return fmt.Errorf("attack: defender ships: %w", err)

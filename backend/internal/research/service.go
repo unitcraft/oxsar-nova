@@ -37,18 +37,26 @@ var (
 )
 
 type Service struct {
-	db       repo.Exec
-	planets  *planet.Service
-	catalog  *config.Catalog
-	reqs     *requirements.Checker
-	gameSpd  float64
+	db          repo.Exec
+	planets     *planet.Service
+	catalog     *config.Catalog
+	reqs        *requirements.Checker
+	gameSpd     float64
+	researchSpd float64 // RESEARCH_SPEED_FACTOR
 }
 
 func NewService(db repo.Exec, p *planet.Service, cat *config.Catalog, reqs *requirements.Checker, gameSpeed float64) *Service {
+	return NewServiceWithFactors(db, p, cat, reqs, gameSpeed, 1)
+}
+
+func NewServiceWithFactors(db repo.Exec, p *planet.Service, cat *config.Catalog, reqs *requirements.Checker, gameSpeed, researchSpeedFactor float64) *Service {
 	if gameSpeed <= 0 {
 		gameSpeed = 1
 	}
-	return &Service{db: db, planets: p, catalog: cat, reqs: reqs, gameSpd: gameSpeed}
+	if researchSpeedFactor <= 0 {
+		researchSpeedFactor = 1
+	}
+	return &Service{db: db, planets: p, catalog: cat, reqs: reqs, gameSpd: gameSpeed, researchSpd: researchSpeedFactor}
 }
 
 type QueueItem struct {
@@ -149,11 +157,14 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		}
 
 		// 6. Длительность. Формула исследования:
-		//    t = (m+s) / (1000 * (1 + lab_level)) секунд, / GAMESPEED.
+		//    t = (m+s) / (1000 * (1 + lab_level)) секунд, / GAMESPEED / RESEARCH_SPEED_FACTOR.
 		resSum := float64(cost.Metal + cost.Silicon)
 		raw := resSum / (1000.0 * float64(1+labLvl))
 		if s.gameSpd > 0 {
 			raw /= s.gameSpd
+		}
+		if s.researchSpd > 0 {
+			raw /= s.researchSpd
 		}
 		if raw < 1 {
 			raw = 1
@@ -261,6 +272,9 @@ func (s *Service) ResearchSecondsMap(ctx context.Context, userID string, levels 
 		raw := resSum / (1000.0 * float64(1+labLvl))
 		if s.gameSpd > 0 {
 			raw /= s.gameSpd
+		}
+		if s.researchSpd > 0 {
+			raw /= s.researchSpd
 		}
 		if raw < 1 {
 			raw = 1
