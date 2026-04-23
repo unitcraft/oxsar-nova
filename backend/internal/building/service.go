@@ -302,6 +302,22 @@ func (s *Service) BuildSecondsMap(ctx context.Context, planetID string, levels m
 	return out, nil
 }
 
+// RequirementsUnmet возвращает map unitKey → []UnmetItem для всех зданий
+// у которых не выполнены пререквизиты на данной планете.
+func (s *Service) RequirementsUnmet(ctx context.Context, userID, planetID string) (map[string][]requirements.UnmetItem, error) {
+	out := make(map[string][]requirements.UnmetItem)
+	for key := range s.catalog.Buildings.Buildings {
+		unmet, err := s.reqs.UnmetForTarget(ctx, s.db.Pool(), key, userID, planetID)
+		if err != nil {
+			return nil, err
+		}
+		if len(unmet) > 0 {
+			out[key] = unmet
+		}
+	}
+	return out, nil
+}
+
 func currentLevel(ctx context.Context, tx pgx.Tx, planetID string, unitID int) (int, error) {
 	var lvl int
 	err := tx.QueryRow(ctx,

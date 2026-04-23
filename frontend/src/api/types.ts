@@ -70,6 +70,13 @@ export interface QueueItem {
   status: string;
 }
 
+export interface UnmetRequirement {
+  kind: 'building' | 'research';
+  key: string;
+  required: number;
+  current: number;
+}
+
 export interface ShipyardQueueItem {
   id: string;
   planet_id: string;
@@ -91,7 +98,7 @@ export interface ResearchState {
   levels: Record<string, number>;
 }
 
-export type ArtefactState = 'held' | 'delayed' | 'active' | 'expired' | 'consumed';
+export type ArtefactState = 'held' | 'delayed' | 'active' | 'expired' | 'consumed' | 'listed';
 
 export interface Artefact {
   id: string;

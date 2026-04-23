@@ -56,7 +56,8 @@ func (h *Handler) Enqueue(w http.ResponseWriter, r *http.Request) {
 
 // Levels GET /api/planets/{id}/buildings
 func (h *Handler) Levels(w http.ResponseWriter, r *http.Request) {
-	if _, ok := auth.UserID(r.Context()); !ok {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
@@ -71,9 +72,15 @@ func (h *Handler) Levels(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
+	unmet, err := h.svc.RequirementsUnmet(r.Context(), uid, planetID)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
-		"levels":       levels,
-		"build_seconds": buildSecs,
+		"levels":               levels,
+		"build_seconds":        buildSecs,
+		"requirements_unmet":   unmet,
 	})
 }
 

@@ -80,6 +80,56 @@ func (c *Checker) Check(ctx context.Context, tx pgx.Tx, targetKey, userID, plane
 	return nil
 }
 
+// UnmetItem описывает одно невыполненное требование для отображения в UI.
+type UnmetItem struct {
+	Kind     string `json:"kind"`
+	Key      string `json:"key"`
+	Required int    `json:"required"`
+	Current  int    `json:"current"`
+}
+
+// UnmetForTarget возвращает список невыполненных требований для targetKey.
+// Если требований нет или все выполнены — возвращает nil.
+// Использует пул (не транзакцию), т.к. только для чтения и не в составе мутации.
+func (c *Checker) UnmetForTarget(ctx context.Context, db interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}, targetKey, userID, planetID string) ([]UnmetItem, error) {
+	reqs, ok := c.cat.Requirements.Requirements[targetKey]
+	if !ok {
+		return nil, nil
+	}
+	var out []UnmetItem
+	for _, r := range reqs {
+		switch r.Kind {
+		case "building":
+			var lvl int
+			err := db.QueryRow(ctx,
+				`SELECT COALESCE(level, 0) FROM buildings WHERE planet_id = $1 AND unit_id = $2`,
+				planetID, c.lookupBuildingID(r.Key),
+			).Scan(&lvl)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return nil, fmt.Errorf("requirements: %w", err)
+			}
+			if lvl < r.Level {
+				out = append(out, UnmetItem{Kind: "building", Key: r.Key, Required: r.Level, Current: lvl})
+			}
+		case "research":
+			var lvl int
+			err := db.QueryRow(ctx,
+				`SELECT COALESCE(level, 0) FROM research WHERE user_id = $1 AND unit_id = $2`,
+				userID, c.lookupResearchID(r.Key),
+			).Scan(&lvl)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return nil, fmt.Errorf("requirements: %w", err)
+			}
+			if lvl < r.Level {
+				out = append(out, UnmetItem{Kind: "research", Key: r.Key, Required: r.Level, Current: lvl})
+			}
+		}
+	}
+	return out, nil
+}
+
 func (c *Checker) lookupBuildingID(key string) int {
 	if spec, ok := c.cat.Buildings.Buildings[key]; ok {
 		return spec.ID

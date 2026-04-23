@@ -12,7 +12,7 @@ function fmtDuration(secs: number): string {
 }
 import { api } from '@/api/client';
 import { BUILDINGS, imageOf, costForLevel } from '@/api/catalog';
-import type { Planet, QueueItem } from '@/api/types';
+import type { Planet, QueueItem, UnmetRequirement } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
@@ -53,7 +53,11 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
   });
   const levelsQ = useQuery({
     queryKey: ['buildings-levels', planet.id],
-    queryFn: () => api.get<{ levels: Record<string, number>; build_seconds: Record<string, number> }>(`/api/planets/${planet.id}/buildings`),
+    queryFn: () => api.get<{
+      levels: Record<string, number>;
+      build_seconds: Record<string, number>;
+      requirements_unmet: Record<string, UnmetRequirement[]>;
+    }>(`/api/planets/${planet.id}/buildings`),
     refetchInterval: 10000,
   });
 
@@ -86,6 +90,7 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
 
   const levels = levelsQ.data?.levels ?? {};
   const buildSeconds = levelsQ.data?.build_seconds ?? {};
+  const requirementsUnmet = levelsQ.data?.requirements_unmet ?? {};
   const queueItems = (queue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
   const busyIds = new Set(queueItems.map((q) => q.unit_id));
 
@@ -143,6 +148,8 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
             planet.silicon  >= nextCost.silicon &&
             planet.hydrogen >= nextCost.hydrogen;
           const secs = buildSeconds[b.id.toString()] ?? 0;
+          const unmet = requirementsUnmet[b.key] ?? [];
+          const isLocked = unmet.length > 0;
           return (
             <div key={b.id} className="ox-unit-card">
               <div className="ox-unit-card-img">
@@ -158,6 +165,15 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
                 <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
                   {level > 0 ? `Уровень ${level}` : 'Не построено'}
                 </div>
+                {isLocked && (
+                  <div style={{ fontSize: 11, color: 'var(--ox-danger)', marginBottom: 4 }}>
+                    {unmet.map((r) => (
+                      <div key={`${r.kind}-${r.key}`}>
+                        🔒 {r.key} ур.{r.required} (у вас: {r.current})
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {(() => {
                   const stat = PROD_STAT[b.key];
                   if (!stat || level === 0) return null;
@@ -213,12 +229,12 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
                 ) : (
                   <button
                     type="button"
-                    className={`btn${inQueue || !canAfford ? ' btn-ghost' : ''} btn-sm`}
+                    className={`btn${inQueue || !canAfford || isLocked ? ' btn-ghost' : ''} btn-sm`}
                     style={{ width: '100%' }}
-                    disabled={enqueue.isPending || inQueue}
+                    disabled={enqueue.isPending || inQueue || isLocked}
                     onClick={() => enqueue.mutate(b.id)}
                   >
-                    {inQueue ? '⏳ В очереди' : level === 0 ? 'Построить' : `→ ур. ${level + 1}`}
+                    {inQueue ? '⏳ В очереди' : isLocked ? '🔒 Заблокировано' : level === 0 ? 'Построить' : `→ ур. ${level + 1}`}
                   </button>
                 )}
               </div>
