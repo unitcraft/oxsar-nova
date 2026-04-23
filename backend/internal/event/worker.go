@@ -14,8 +14,9 @@ import (
 )
 
 // Handler обрабатывает событие определённого Kind. Вызывается внутри
-// транзакции воркера; если вернёт ошибку — событие помечается error
-// и не повторяется автоматически (защита от шторма).
+// отдельной транзакции на event — ошибка не откатывает соседей по батчу.
+// Возврат ErrSkip оставляет событие в wait с переносом fire_at (backoff не инкрементит attempt).
+// Любая другая ошибка инкрементит attempt и либо планирует retry, либо помечает 'error'.
 type Handler func(ctx context.Context, tx pgx.Tx, e Event) error
 
 // Event — запись из таблицы events в доменном виде.
@@ -27,24 +28,42 @@ type Event struct {
 	FireAt    time.Time
 	Payload   json.RawMessage
 	CreatedAt time.Time
+	Attempt   int
 }
 
 // Worker — ядро event-loop. Не хранит состояние между циклами.
 type Worker struct {
-	db       repo.Exec
-	log      *slog.Logger
-	handlers map[Kind]Handler
-	interval time.Duration
-	batch    int
+	db          repo.Exec
+	log         *slog.Logger
+	handlers    map[Kind]Handler
+	interval    time.Duration
+	batch       int
+	maxAttempts int
+}
+
+// MaxAttempts по умолчанию — 3 попытки (initial + 2 retry).
+const DefaultMaxAttempts = 3
+
+// Backoff: attempt 1 → 10s, 2 → 60s, 3+ → 300s.
+func backoff(attempt int) time.Duration {
+	switch {
+	case attempt <= 1:
+		return 10 * time.Second
+	case attempt == 2:
+		return 60 * time.Second
+	default:
+		return 300 * time.Second
+	}
 }
 
 func NewWorker(db repo.Exec, log *slog.Logger) *Worker {
 	return &Worker{
-		db:       db,
-		log:      log,
-		handlers: map[Kind]Handler{},
-		interval: time.Duration(KindBatchProcessIntervalSecond) * time.Second,
-		batch:    100,
+		db:          db,
+		log:         log,
+		handlers:    map[Kind]Handler{},
+		interval:    time.Duration(KindBatchProcessIntervalSecond) * time.Second,
+		batch:       100,
+		maxAttempts: DefaultMaxAttempts,
 	}
 }
 
@@ -73,62 +92,147 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 }
 
-// tick забирает и обрабатывает пачку готовых событий.
+// tick забирает список event-ID и обрабатывает каждое событие в
+// отдельной транзакции. Ошибка одного события больше не откатывает
+// остальные.
 func (w *Worker) tick(ctx context.Context) error {
+	// Шаг 1: взять ID батча в короткой read-only транзакции.
+	ids, err := w.fetchBatchIDs(ctx)
+	if err != nil {
+		return err
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	// Шаг 2: обработать каждое отдельно.
+	for _, id := range ids {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if err := w.processOne(ctx, id); err != nil {
+			w.log.WarnContext(ctx, "event_tx_failed",
+				slog.String("event_id", id), slog.String("err", err.Error()))
+		}
+	}
+	return nil
+}
+
+func (w *Worker) fetchBatchIDs(ctx context.Context) ([]string, error) {
+	rows, err := w.db.Pool().Query(ctx, `
+		SELECT id FROM events
+		WHERE state = 'wait' AND fire_at <= now()
+		ORDER BY fire_at, id
+		LIMIT $1
+	`, w.batch)
+	if err != nil {
+		return nil, fmt.Errorf("query event ids: %w", err)
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// processOne выполняет полный цикл обработки одного события в
+// отдельной транзакции. FOR UPDATE SKIP LOCKED защищает от дубля между
+// воркерами.
+func (w *Worker) processOne(ctx context.Context, id string) error {
 	return w.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT id, user_id, planet_id, kind, fire_at, payload, created_at
+		var e Event
+		var kind int
+		err := tx.QueryRow(ctx, `
+			SELECT id, user_id, planet_id, kind, fire_at, payload, created_at, attempt
 			FROM events
-			WHERE state = 'wait' AND fire_at <= now()
-			ORDER BY fire_at
-			LIMIT $1
+			WHERE id = $1 AND state = 'wait' AND fire_at <= now()
 			FOR UPDATE SKIP LOCKED
-		`, w.batch)
+		`, id).Scan(&e.ID, &e.UserID, &e.PlanetID, &kind, &e.FireAt, &e.Payload, &e.CreatedAt, &e.Attempt)
 		if err != nil {
-			return fmt.Errorf("query events: %w", err)
-		}
-		var batch []Event
-		for rows.Next() {
-			var e Event
-			var kind int
-			if err := rows.Scan(&e.ID, &e.UserID, &e.PlanetID, &kind, &e.FireAt, &e.Payload, &e.CreatedAt); err != nil {
-				rows.Close()
-				return fmt.Errorf("scan event: %w", err)
+			if errors.Is(err, pgx.ErrNoRows) {
+				// Уже взяли другим воркером / не waiting — это нормально.
+				return nil
 			}
-			e.Kind = Kind(kind)
-			batch = append(batch, e)
+			return fmt.Errorf("select event: %w", err)
 		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return fmt.Errorf("rows err: %w", err)
+		e.Kind = Kind(kind)
+
+		handler, ok := w.handlers[e.Kind]
+		if !ok {
+			// Неизвестный kind — сразу в error без retry.
+			if _, err := tx.Exec(ctx, `
+				UPDATE events SET state='error', processed_at=now(),
+				                  last_error=$1
+				WHERE id=$2
+			`, fmt.Sprintf("no handler for kind %d", e.Kind), e.ID); err != nil {
+				return fmt.Errorf("mark error no-handler: %w", err)
+			}
+			w.log.WarnContext(ctx, "event_no_handler",
+				slog.String("event_id", e.ID), slog.Int("kind", int(e.Kind)))
+			return nil
 		}
 
-		for _, e := range batch {
-			if err := w.process(ctx, tx, e); err != nil {
-				w.log.WarnContext(ctx, "event_failed",
-					slog.String("event_id", e.ID), slog.Int("kind", int(e.Kind)), slog.String("err", err.Error()))
-				if _, uErr := tx.Exec(ctx, `UPDATE events SET state='error', processed_at=now() WHERE id=$1`, e.ID); uErr != nil {
-					return fmt.Errorf("mark error: %w", uErr)
+		if hErr := handler(ctx, tx, e); hErr != nil {
+			if errors.Is(hErr, ErrSkip) {
+				// Skip — сдвинуть fire_at на backoff(attempt+1), но не
+				// инкрементить attempt (это не «сбой», а «зависимость не готова»).
+				delay := backoff(e.Attempt + 1)
+				if _, err := tx.Exec(ctx, `
+					UPDATE events SET fire_at = now() + $1::interval,
+					                  last_error = $2
+					WHERE id = $3
+				`, delay.String(), hErr.Error(), e.ID); err != nil {
+					return fmt.Errorf("mark skip: %w", err)
 				}
-				continue
+				return nil
 			}
-			if _, err := tx.Exec(ctx, `UPDATE events SET state='ok', processed_at=now() WHERE id=$1`, e.ID); err != nil {
-				return fmt.Errorf("mark ok: %w", err)
+			nextAttempt := e.Attempt + 1
+			if nextAttempt >= w.maxAttempts {
+				// Исчерпали попытки.
+				if _, err := tx.Exec(ctx, `
+					UPDATE events SET state='error', processed_at=now(),
+					                  attempt=$1, last_error=$2
+					WHERE id=$3
+				`, nextAttempt, hErr.Error(), e.ID); err != nil {
+					return fmt.Errorf("mark error: %w", err)
+				}
+				w.log.WarnContext(ctx, "event_error_final",
+					slog.String("event_id", e.ID), slog.Int("kind", int(e.Kind)),
+					slog.Int("attempt", nextAttempt), slog.String("err", hErr.Error()))
+				return nil
 			}
+			// Retry.
+			delay := backoff(nextAttempt)
+			retryAt := time.Now().Add(delay)
+			if _, err := tx.Exec(ctx, `
+				UPDATE events SET attempt=$1, fire_at=$2, next_retry_at=$2, last_error=$3
+				WHERE id=$4
+			`, nextAttempt, retryAt, hErr.Error(), e.ID); err != nil {
+				return fmt.Errorf("schedule retry: %w", err)
+			}
+			w.log.InfoContext(ctx, "event_retry",
+				slog.String("event_id", e.ID), slog.Int("kind", int(e.Kind)),
+				slog.Int("attempt", nextAttempt), slog.Duration("delay", delay),
+				slog.String("err", hErr.Error()))
+			return nil
+		}
+
+		// Успех.
+		if _, err := tx.Exec(ctx, `
+			UPDATE events SET state='ok', processed_at=now()
+			WHERE id=$1
+		`, e.ID); err != nil {
+			return fmt.Errorf("mark ok: %w", err)
 		}
 		return nil
 	})
 }
 
-func (w *Worker) process(ctx context.Context, tx pgx.Tx, e Event) error {
-	h, ok := w.handlers[e.Kind]
-	if !ok {
-		return fmt.Errorf("no handler for kind %d", e.Kind)
-	}
-	return h(ctx, tx, e)
-}
-
 // ErrSkip — хэндлер возвращает её, когда событие нужно оставить в wait
-// (например, зависимость ещё не готова). Не используется по умолчанию,
-// но зарезервировано на будущее.
+// (например, зависимость ещё не готова). Сдвигает fire_at на backoff,
+// но не инкрементирует attempt.
 var ErrSkip = errors.New("event: skip for now")
