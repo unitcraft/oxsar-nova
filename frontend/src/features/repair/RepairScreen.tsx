@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { SHIPS, DEFENSE, nameOf, imageOf } from '@/api/catalog';
+import { SHIPS, DEFENSE, nameOf, imageOf, fmtReqs } from '@/api/catalog';
+import type { CombatEntry } from '@/api/catalog';
 import type { Inventory, Planet } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
 import { ProgressBar } from '@/ui/ProgressBar';
@@ -24,6 +25,12 @@ interface RepairQueueItem {
   status: string;
 }
 
+interface RepairStorage {
+  total: number;
+  used: number;
+  free: number;
+}
+
 interface DamagedUnit {
   unit_id: number;
   count: number;
@@ -42,7 +49,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
   });
   const queue = useQuery({
     queryKey: ['repair-queue', planet.id],
-    queryFn: () => api.get<{ queue: RepairQueueItem[] | null }>(`/api/planets/${planet.id}/repair/queue`),
+    queryFn: () => api.get<{ queue: RepairQueueItem[] | null; storage: RepairStorage }>(`/api/planets/${planet.id}/repair/queue`),
     refetchInterval: 2000,
   });
   const damaged = useQuery({
@@ -91,12 +98,27 @@ export function RepairScreen({ planet }: { planet: Planet }) {
 
   const list = (queue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
   const damagedList = damaged.data?.damaged ?? [];
+  const storage = queue.data?.storage ?? { total: 0, used: 0, free: 0 };
+
+  const storagePct = storage.total > 0 ? Math.min(100, (storage.used / storage.total) * 100) : 0;
+  const storageVariant = storagePct > 80 ? 'danger' : storagePct > 50 ? 'warning' : 'success';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-        Ремонтный ангар — {planet.name}
-      </h2>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
+          Ремонтный ангар — {planet.name}
+        </h2>
+        {storage.total > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 160 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ox-fg-muted)' }}>
+              <span>Хранилище</span>
+              <span style={{ fontFamily: 'var(--ox-mono)' }}>{storage.used} / {storage.total}</span>
+            </div>
+            <ProgressBar pct={storagePct} variant={storageVariant} height={6} />
+          </div>
+        )}
+      </div>
 
       {/* Queue */}
       {list.length > 0 && (
@@ -157,6 +179,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
           <div className="ox-cards-grid">
             {damagedList.map((d) => {
               const unitMeta = [...SHIPS, ...DEFENSE].find((u) => u.id === d.unit_id);
+              const hasReqs = !!(unitMeta?.requires?.length);
               return (
                 <div key={d.unit_id} className="ox-unit-card">
                   <div className="ox-unit-card-img">
@@ -169,13 +192,18 @@ export function RepairScreen({ planet }: { planet: Planet }) {
                     <div style={{ marginTop: 4 }}>
                       <ProgressBar pct={d.shell_percent} variant={d.shell_percent < 40 ? 'danger' : 'warning'} height={4} showLabel />
                     </div>
+                    {hasReqs && unitMeta?.requires && (
+                      <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginTop: 4, fontFamily: 'var(--ox-mono)' }}>
+                        🔒 {fmtReqs(unitMeta.requires)}
+                      </div>
+                    )}
                   </div>
                   <div className="ox-unit-card-footer">
                     <button
                       type="button"
-                      className="btn btn-sm"
+                      className={`btn${hasReqs ? ' btn-danger' : ''} btn-sm`}
                       style={{ width: '100%' }}
-                      disabled={repair.isPending}
+                      disabled={repair.isPending || hasReqs}
                       onClick={() => repair.mutate(d.unit_id)}
                     >
                       Починить все
@@ -209,7 +237,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
 function DisassembleList({
   units, ships, defense, onGo, pending,
 }: {
-  units: { id: number; key: string; name: string; cost?: { metal: number; silicon: number; hydrogen: number } }[];
+  units: CombatEntry[];
   ships: Record<string, number> | undefined;
   defense: Record<string, number> | undefined;
   onGo: (unitId: number, count: number) => void;
@@ -238,6 +266,12 @@ function DisassembleList({
             <div className="ox-unit-card-body">
               <div className="ox-unit-card-name">{u.name}</div>
               <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>В наличии: {have}</div>
+              {(u.speed != null || (u.fuel != null && u.fuel > 0)) && (
+                <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', display: 'flex', gap: 8, marginTop: 2 }}>
+                  {u.speed != null && <span>🚀 {u.speed.toLocaleString('ru-RU')}</span>}
+                  {u.fuel != null && u.fuel > 0 && <span>⛽ {u.fuel}/ед.</span>}
+                </div>
+              )}
               {refund && draft > 0 && (
                 <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', color: 'var(--ox-success)', marginTop: 2, lineHeight: 1.5 }}>
                   +{refund.metal > 0 && <span style={{ marginRight: 4 }}>🟠{refund.metal.toLocaleString('ru-RU')}</span>}

@@ -5179,3 +5179,19 @@ MEDIUM Priority:
        frontend/src/features/repair/RepairScreen.tsx, docs/plans/14-repair.md
 
 Статус: ✅ ЗАВЕРШЕНА
+
+================================================================================
+
+## Задача 14.2-4 — Хранилище ремонта, скорость/топливо, требования
+- Storage (задача 2): List response расширен типом ListResponse{Queue, Storage}
+  Storage: total=repairStorageForLevel(lvl), used=сумма count, free=total-used
+  Формула storage: (-1 + ceil(pow(1.61, level))) * 30 (legacy ship_datasheet)
+  Frontend: progress-bar в шапке, цвет success/warning/danger по проценту
+- Speed/fuel (задача 3): DisassembleList использует CombatEntry, показывает 🚀/⛽
+- Requirements (задача 4): frontend читает unitMeta.requires из catalog, показывает
+  🔒 fmtReqs, дизейблит кнопку «Починить все»
+
+Файлы: backend/internal/repair/service.go, handler.go,
+       frontend/src/features/repair/RepairScreen.tsx, docs/plans/14-repair.md
+
+Статус: ✅ ЗАВЕРШЕНА (план 14 полностью закрыт)
