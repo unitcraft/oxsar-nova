@@ -82,7 +82,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
   const modalFactor = modalBuilding ? (factors[modalBuilding.unit_id] ?? modalBuilding.factor) : 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: modalBuilding ? 140 : 0 }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
@@ -108,10 +108,10 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
           <thead>
             <tr style={{ borderBottom: '2px solid var(--ox-border)' }}>
               <th style={TH}>Здание</th>
-              <th style={{ ...TH, textAlign: 'right' }}>🟠 Металл</th>
-              <th style={{ ...TH, textAlign: 'right' }}>💎 Кремний</th>
-              <th style={{ ...TH, textAlign: 'right' }}>💧 Водород</th>
-              <th style={{ ...TH, textAlign: 'right' }}>⚡ Энергия</th>
+              <th style={{ ...TH, textAlign: 'right' }}>🟠 Мет</th>
+              <th style={{ ...TH, textAlign: 'right' }}>💎 Крем</th>
+              <th style={{ ...TH, textAlign: 'right' }}>💧 Вод</th>
+              <th style={{ ...TH, textAlign: 'right' }}>⚡ Энерг</th>
             </tr>
           </thead>
           <tbody>
@@ -291,10 +291,10 @@ function FactorInput({ value, onChange, onCommit, disabled }: {
 }
 
 const TH: React.CSSProperties = {
-  padding: '8px 12px',
+  padding: '8px 8px',
   fontWeight: 700,
   fontSize: 11,
-  letterSpacing: '0.08em',
+  letterSpacing: '0.05em',
   textTransform: 'uppercase',
   color: 'var(--ox-fg-muted)',
   textAlign: 'left',
@@ -302,6 +302,6 @@ const TH: React.CSSProperties = {
 };
 
 const TD: React.CSSProperties = {
-  padding: '7px 12px',
+  padding: '7px 8px',
   fontSize: 13,
 };
