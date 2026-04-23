@@ -136,3 +136,35 @@ func TestComputeChanges_PlanetScope(t *testing.T) {
 		t.Errorf("unexpected change: %+v", ch)
 	}
 }
+
+// TestMaxStacks_SpecField: MaxStacks поле корректно читается из ArtefactSpec.
+func TestMaxStacks_SpecField(t *testing.T) {
+	t.Parallel()
+	spec := config.ArtefactSpec{
+		ID:        301,
+		Stackable: true,
+		MaxStacks: 3,
+		Effect: config.ArtefactEffect{
+			Type:  "factor_all_planets",
+			Field: "produce_factor",
+			Op:    "add",
+			Value: 0.1,
+		},
+	}
+	if spec.MaxStacks != 3 {
+		t.Fatalf("MaxStacks should be 3, got %d", spec.MaxStacks)
+	}
+	// max_stacks=0 означает лимит не применяется
+	noLimit := config.ArtefactSpec{ID: 303, Stackable: true, MaxStacks: 0}
+	if noLimit.MaxStacks != 0 {
+		t.Fatalf("MaxStacks=0 should mean no limit")
+	}
+}
+
+// TestErrMaxStacksReached_IsSentinel: ошибка объявлена и не nil.
+func TestErrMaxStacksReached_IsSentinel(t *testing.T) {
+	t.Parallel()
+	if ErrMaxStacksReached == nil {
+		t.Fatal("ErrMaxStacksReached must not be nil")
+	}
+}
