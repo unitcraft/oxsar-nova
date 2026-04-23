@@ -1,4 +1,11 @@
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/api/client';
+import { RESEARCH, imageOf, costForLevel, fmtReqs } from '@/api/catalog';
+import type { Planet, QueueItem, ResearchState } from '@/api/types';
+import { ProgressBar } from '@/ui/ProgressBar';
+import { useToast } from '@/ui/Toast';
+import { ResearchInfoModal } from './ResearchInfoModal';
 
 function fmtDuration(secs: number): string {
   if (secs < 60) return `${secs}с`;
@@ -9,16 +16,38 @@ function fmtDuration(secs: number): string {
   if (h > 0) return `${h}ч ${m}м`;
   return `${m}м`;
 }
-import { api } from '@/api/client';
-import { RESEARCH, imageOf, costForLevel, fmtReqs } from '@/api/catalog';
-import type { Planet, QueueItem, ResearchState } from '@/api/types';
-import { Countdown } from '@/ui/Countdown';
-import { ProgressBar } from '@/ui/ProgressBar';
-import { useToast } from '@/ui/Toast';
+
+function fmtSecs(sec: number): string {
+  if (sec <= 0) return '00:00:00';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function useLiveProgress(startAt: string, endAt: string): { pct: number; secsLeft: number } {
+  const calc = () => {
+    const now = Date.now();
+    const total = new Date(endAt).getTime() - new Date(startAt).getTime();
+    const elapsed = now - new Date(startAt).getTime();
+    const secsLeft = Math.max(0, Math.round((new Date(endAt).getTime() - now) / 1000));
+    const pct = secsLeft === 0 ? 100 : total > 0 ? Math.min(99, (elapsed / total) * 100) : 100;
+    return { pct, secsLeft };
+  };
+  const [state, setState] = useState(calc);
+  useEffect(() => {
+    const t = setInterval(() => setState(calc), 1000);
+    return () => clearInterval(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startAt, endAt]);
+  return state;
+}
 
 export function ResearchScreen({ planet }: { planet: Planet }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const [infoUnitId, setInfoUnitId] = useState<number | null>(null);
 
   const state = useQuery({
     queryKey: ['research'],
@@ -36,7 +65,11 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
       toast.show('success', 'Исследование', `${name} запущено`);
     },
     onError: (err) => {
-      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось запустить');
+      const msg = err instanceof Error ? err.message : '';
+      const text = msg.includes('queue busy') ? 'Лаборатория занята'
+        : msg.includes('not enough') ? 'Недостаточно ресурсов'
+        : msg || 'Не удалось запустить';
+      toast.show('danger', 'Ошибка', text);
     },
   });
 
@@ -59,7 +92,6 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
         )}
       </div>
 
-      {/* Active research */}
       {active ? (
         <ActiveResearchBanner item={active} />
       ) : (
@@ -80,57 +112,62 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
             planet.hydrogen >= nextCost.hydrogen;
           return (
             <div key={r.id} className="ox-unit-card" style={isActive ? { borderColor: 'var(--ox-accent)', boxShadow: '0 0 0 1px var(--ox-accent)' } : undefined}>
-              <div className="ox-unit-card-img">
-                <img src={imageOf(r.key)} alt={r.name} width={64} height={64} style={{ imageRendering: 'pixelated' }} />
-              </div>
-              <div className="ox-unit-card-body">
-                <div className="ox-unit-card-name">{r.name}</div>
-                <div style={{ fontSize: 12, color: level > 0 ? 'var(--ox-fg-dim)' : 'var(--ox-fg-muted)', marginBottom: 2 }}>
-                  {level > 0 ? `Уровень ${level}` : 'Не изучено'}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
-                  {r.benefit}
-                </div>
-                {level === 0 && r.requires && r.requires.length > 0 && (
-                  <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginBottom: 2, fontFamily: 'var(--ox-mono)' }}>
-                    🔒 {fmtReqs(r.requires)}
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <img
+                  src={imageOf(r.key)} alt={r.name} width={64} height={64}
+                  style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4, cursor: 'pointer' }}
+                  onClick={() => setInfoUnitId(r.id)}
+                  title="Подробнее"
+                />
+                <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                  <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => setInfoUnitId(r.id)}>{r.name}</div>
+                  <div style={{ fontSize: 12, color: level > 0 ? 'var(--ox-fg-dim)' : 'var(--ox-fg-muted)', marginBottom: 2 }}>
+                    {level > 0 ? `Уровень ${level}` : 'Не изучено'}
                   </div>
-                )}
-                {!isActive && (
-                  <>
-                    <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
-                      {nextCost.metal > 0 && (
-                        <span style={{ marginRight: 6, color: planet.metal >= nextCost.metal ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                          🟠{nextCost.metal.toLocaleString('ru-RU')}
-                        </span>
-                      )}
-                      {nextCost.silicon > 0 && (
-                        <span style={{ marginRight: 6, color: planet.silicon >= nextCost.silicon ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                          💎{nextCost.silicon.toLocaleString('ru-RU')}
-                        </span>
-                      )}
-                      {nextCost.hydrogen > 0 && (
-                        <span style={{ color: planet.hydrogen >= nextCost.hydrogen ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                          💧{nextCost.hydrogen.toLocaleString('ru-RU')}
-                        </span>
-                      )}
+                  <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
+                    {r.benefit}
+                  </div>
+                  {level === 0 && r.requires && r.requires.length > 0 && (
+                    <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginBottom: 2, fontFamily: 'var(--ox-mono)' }}>
+                      🔒 {fmtReqs(r.requires)}
                     </div>
-                    {!canAfford && (
-                      <div style={{ fontSize: 10, color: 'var(--ox-danger)', marginTop: 2, fontFamily: 'var(--ox-mono)' }}>
-                        {[
-                          nextCost.metal    > planet.metal    && `🟠−${(nextCost.metal    - planet.metal   ).toLocaleString('ru-RU')}`,
-                          nextCost.silicon  > planet.silicon  && `💎−${(nextCost.silicon  - planet.silicon ).toLocaleString('ru-RU')}`,
-                          nextCost.hydrogen > planet.hydrogen && `💧−${(nextCost.hydrogen - planet.hydrogen).toLocaleString('ru-RU')}`,
-                        ].filter(Boolean).join(' ')}
+                  )}
+                  {!isActive && (
+                    <>
+                      <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
+                        {nextCost.metal > 0 && (
+                          <span style={{ marginRight: 6, color: planet.metal >= nextCost.metal ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
+                            🟠{nextCost.metal.toLocaleString('ru-RU')}
+                          </span>
+                        )}
+                        {nextCost.silicon > 0 && (
+                          <span style={{ marginRight: 6, color: planet.silicon >= nextCost.silicon ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
+                            💎{nextCost.silicon.toLocaleString('ru-RU')}
+                          </span>
+                        )}
+                        {nextCost.hydrogen > 0 && (
+                          <span style={{ color: planet.hydrogen >= nextCost.hydrogen ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
+                            💧{nextCost.hydrogen.toLocaleString('ru-RU')}
+                          </span>
+                        )}
                       </div>
-                    )}
-                    {secs > 0 && (
-                      <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
-                        ⏱ {fmtDuration(secs)}
-                      </div>
-                    )}
-                  </>
-                )}
+                      {!canAfford && (
+                        <div style={{ fontSize: 10, color: 'var(--ox-danger)', marginTop: 2, fontFamily: 'var(--ox-mono)' }}>
+                          {[
+                            nextCost.metal    > planet.metal    && `🟠−${(nextCost.metal    - planet.metal   ).toLocaleString('ru-RU')}`,
+                            nextCost.silicon  > planet.silicon  && `💎−${(nextCost.silicon  - planet.silicon ).toLocaleString('ru-RU')}`,
+                            nextCost.hydrogen > planet.hydrogen && `💧−${(nextCost.hydrogen - planet.hydrogen).toLocaleString('ru-RU')}`,
+                          ].filter(Boolean).join(' ')}
+                        </div>
+                      )}
+                      {secs > 0 && (
+                        <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
+                          ⏱ {fmtDuration(secs)}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
               <div className="ox-unit-card-footer">
                 <button
@@ -147,14 +184,20 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
           );
         })}
       </div>
+
+      {infoUnitId !== null && (
+        <ResearchInfoModal
+          unitId={infoUnitId}
+          currentLevel={levels[infoUnitId.toString()] ?? 0}
+          onClose={() => setInfoUnitId(null)}
+        />
+      )}
     </div>
   );
 }
 
 function ActiveResearchBanner({ item }: { item: QueueItem }) {
-  const total = new Date(item.end_at).getTime() - new Date(item.start_at).getTime();
-  const elapsed = Date.now() - new Date(item.start_at).getTime();
-  const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
+  const { pct, secsLeft } = useLiveProgress(item.start_at, item.end_at);
   const name = RESEARCH.find((r) => r.id === item.unit_id)?.name ?? `#${item.unit_id}`;
 
   return (
@@ -162,7 +205,7 @@ function ActiveResearchBanner({ item }: { item: QueueItem }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
         <span style={{ fontSize: 20 }}>🔬</span>
         <span style={{ flex: 1, fontWeight: 600 }}>{name} → ур. {item.target_level}</span>
-        <Countdown finishAt={item.end_at} />
+        <span className={`ox-timer${secsLeft < 60 ? ' urgent' : ''}`}>{fmtSecs(secsLeft)}</span>
       </div>
       <ProgressBar pct={pct} height={5} variant="default" />
     </div>
