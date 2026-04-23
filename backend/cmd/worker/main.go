@@ -205,6 +205,27 @@ func run() error {
 		}
 	}()
 
+	// Удаление временных планет с истёкшим expires_at (раз в час).
+	go func() {
+		t := time.NewTicker(time.Hour)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				tag, err := pool.Exec(ctx,
+					`DELETE FROM planets WHERE expires_at IS NOT NULL AND expires_at < now()`)
+				if err != nil {
+					log.ErrorContext(ctx, "expire_planets_failed", slog.String("err", err.Error()))
+				} else if tag.RowsAffected() > 0 {
+					log.InfoContext(ctx, "expire_planets_deleted",
+						slog.Int64("count", tag.RowsAffected()))
+				}
+			}
+		}
+	}()
+
 	log.InfoContext(ctx, "worker started")
 	if err := w.Run(ctx); err != nil && err != context.Canceled {
 		return err
