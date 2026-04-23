@@ -42,13 +42,14 @@ const ReferralScreen     = lazy(() => import('./features/referral/ReferralScreen
 const NotepadScreen      = lazy(() => import('./features/notepad/NotepadScreen').then(m => ({ default: m.NotepadScreen })));
 const TechtreeScreen     = lazy(() => import('./features/techtree/TechtreeScreen').then(m => ({ default: m.TechtreeScreen })));
 const BattlestatsScreen  = lazy(() => import('./features/battlestats/BattlestatsScreen').then(m => ({ default: m.BattlestatsScreen })));
+const FriendsScreen      = lazy(() => import('./features/friends/FriendsScreen').then(m => ({ default: m.FriendsScreen })));
 
 type Tab =
   | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
   | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
   | 'art-market' | 'officers' | 'achievements' | 'score'
   | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource'
-  | 'credits' | 'unit-info' | 'profession' | 'empire' | 'settings' | 'referral' | 'notepad' | 'techtree' | 'battlestats';
+  | 'credits' | 'unit-info' | 'profession' | 'empire' | 'settings' | 'referral' | 'notepad' | 'techtree' | 'battlestats' | 'friends';
 
 const VALID_TABS = new Set<string>([
   'overview', 'buildings', 'research', 'shipyard', 'repair',
@@ -56,7 +57,7 @@ const VALID_TABS = new Set<string>([
   'art-market', 'officers', 'achievements', 'score',
   'messages', 'alliance', 'chat', 'sim', 'admin', 'planet-options', 'resource',
   'credits', 'unit-info', 'profession', 'empire', 'settings',
-  'referral', 'notepad', 'techtree', 'battlestats',
+  'referral', 'notepad', 'techtree', 'battlestats', 'friends',
 ]);
 
 type InfoUnit = { kind: 'building' | 'research' | 'ship' | 'defense'; id: number; level: number; fromTab: Tab };
@@ -323,6 +324,7 @@ function AuthenticatedApp() {
             {tab === 'notepad'   && <NotepadScreen />}
             {tab === 'techtree'  && <TechtreeScreen />}
             {tab === 'battlestats' && <BattlestatsScreen />}
+            {tab === 'friends'   && <FriendsScreen />}
           </Suspense>
         </main>
       </div>
@@ -622,6 +624,7 @@ const ALL_NAV: Array<{ key: Tab; icon: string; label: string }> = [
   { key: 'sim',         icon: '⚔️', label: 'Симулятор' },
   { key: 'notepad',     icon: '📝', label: 'Блокнот' },
   { key: 'referral',    icon: '🎁', label: 'Рефералы' },
+  { key: 'friends',     icon: '⭐', label: 'Друзья' },
 ];
 
 function MoreSheet({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
@@ -676,6 +679,7 @@ function buildNavItems(t: (ns: string, key: string, fb?: string) => string, unre
     { key: 'alliance',   icon: '🤝', label: t('global','MENU_ALLIANCE') || 'Альянс' },
     { key: 'notepad',    icon: '📝', label: 'Блокнот' },
     { key: 'referral',   icon: '🎁', label: 'Рефералы' },
+    { key: 'friends',    icon: '⭐', label: 'Друзья' },
     { key: 's3', sep: true },
     { key: 'trade', groupLabel: 'Торговля' },
     { key: 'market',     icon: '💱', label: t('global','MENU_MARKET') },

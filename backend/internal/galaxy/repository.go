@@ -38,6 +38,8 @@ type CellView struct {
 	// Отношение альянса владельца клетки к альянсу viewer'а: nap | war | ally.
 	// pending-отношения не показываются (не active).
 	Relation      *string `json:"relation,omitempty"`
+	// IsFriend = true, если владелец клетки в списке друзей viewer'а.
+	IsFriend      bool    `json:"is_friend,omitempty"`
 	DebrisMetal   int64   `json:"debris_metal"`
 	DebrisSilicon int64   `json:"debris_silicon"`
 }
@@ -167,6 +169,21 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int, v
 		}
 	}
 
+	// Друзья viewer'а: set[friend_id].
+	friends := map[string]struct{}{}
+	if viewerUserID != "" {
+		fRows, err := r.pool.Query(ctx, `SELECT friend_id FROM friends WHERE user_id = $1`, viewerUserID)
+		if err == nil {
+			for fRows.Next() {
+				var fid string
+				if err := fRows.Scan(&fid); err == nil {
+					friends[fid] = struct{}{}
+				}
+			}
+			fRows.Close()
+		}
+	}
+
 	out.Cells = make([]CellView, 0, 16)
 	for pos := 1; pos <= 16; pos++ {
 		cell := CellView{Position: pos}
@@ -186,6 +203,11 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int, v
 				if rel, ok := relations[*p.AllianceID]; ok {
 					r := rel
 					cell.Relation = &r
+				}
+			}
+			if p.OwnerID != nil {
+				if _, ok := friends[*p.OwnerID]; ok {
+					cell.IsFriend = true
 				}
 			}
 			if p.OwnerLastSeen != nil {

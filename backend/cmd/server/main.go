@@ -31,6 +31,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/empire"
 	"github.com/oxsar/nova/backend/internal/fleet"
+	"github.com/oxsar/nova/backend/internal/friends"
 	"github.com/oxsar/nova/backend/internal/galaxy"
 	"github.com/oxsar/nova/backend/internal/httpx"
 	"github.com/oxsar/nova/backend/internal/i18n"
@@ -180,6 +181,7 @@ func run() error {
 	searchH := search.NewHandler(pool)
 	techtreeH := techtree.NewHandler(pool, cat)
 	battlestatsH := battlestats.NewHandler(pool)
+	friendsH := friends.NewHandler(pool)
 
 	adminH := admin.NewHandler(db)
 
@@ -235,6 +237,9 @@ func run() error {
 		pr.Get("/search", searchH.Search)
 		pr.Get("/techtree", techtreeH.Get)
 		pr.Get("/battlestats", battlestatsH.List)
+		pr.Get("/friends", friendsH.List)
+		pr.Post("/friends/{userId}", friendsH.Add)
+		pr.Delete("/friends/{userId}", friendsH.Remove)
 		pr.Get("/planets", planetH.List)
 		pr.Patch("/planets/order", planetH.Reorder)
 		pr.Get("/planets/{id}", planetH.Get)
