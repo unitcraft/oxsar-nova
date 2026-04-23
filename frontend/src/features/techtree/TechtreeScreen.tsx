@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { nameOf } from '@/api/catalog';
+import { TechtreeGraph } from './TechtreeGraph';
 
 type NodeKind = 'building' | 'research' | 'ship' | 'defense';
 
@@ -42,6 +43,7 @@ export function TechtreeScreen() {
   const [kind, setKind] = useState<NodeKind>('research');
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
+  const [view, setView] = useState<'cards' | 'graph'>('cards');
 
   const filtered = useMemo(() => {
     const all = q.data?.nodes ?? [];
@@ -88,6 +90,10 @@ export function TechtreeScreen() {
           <button type="button" className={filter === 'unlocked' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setFilter('unlocked')}>✓ Доступно</button>
           <button type="button" className={filter === 'locked' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setFilter('locked')}>🔒 Закрыто</button>
         </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button type="button" className={view === 'cards' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setView('cards')} title="Карточки">🗂 Карточки</button>
+          <button type="button" className={view === 'graph' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setView('graph')} title="Граф">🌐 Граф</button>
+        </div>
       </div>
 
       {q.isLoading && <div className="ox-skeleton" style={{ height: 400, borderRadius: 8 }} />}
@@ -98,9 +104,13 @@ export function TechtreeScreen() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
-        {filtered.map((n) => <TechCard key={`${n.kind}-${n.key}`} node={n} />)}
-      </div>
+      {view === 'cards' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
+          {filtered.map((n) => <TechCard key={`${n.kind}-${n.key}`} node={n} />)}
+        </div>
+      ) : (
+        <TechtreeGraph nodes={q.data?.nodes ?? []} kind={kind} />
+      )}
     </div>
   );
 }
