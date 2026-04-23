@@ -99,8 +99,8 @@ export function BuildingInfoModal({ unitId, currentLevel, onClose }: Props) {
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
         background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 16,
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        padding: 16, overflowY: 'auto',
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
@@ -111,8 +111,8 @@ export function BuildingInfoModal({ unitId, currentLevel, onClose }: Props) {
         padding: 20,
         maxWidth: 600,
         width: '100%',
-        maxHeight: '90vh',
-        overflowY: 'auto',
+        marginTop: 'auto',
+        marginBottom: 'auto',
         display: 'flex',
         flexDirection: 'column',
         gap: 16,
