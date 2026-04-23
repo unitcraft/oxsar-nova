@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -31,6 +32,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/rocket"
 	"github.com/oxsar/nova/backend/internal/score"
 	"github.com/oxsar/nova/backend/internal/storage"
+	"github.com/oxsar/nova/backend/pkg/metrics"
 )
 
 func main() {
@@ -231,6 +233,33 @@ func run() error {
 		if err := w.RunPruner(ctx); err != nil && err != context.Canceled {
 			log.ErrorContext(ctx, "event_pruner_exit", slog.String("err", err.Error()))
 		}
+	}()
+
+	// Обновлятор queue-depth / lag gauge'ов.
+	go func() {
+		if err := w.RunMetricsUpdater(ctx); err != nil && err != context.Canceled {
+			log.ErrorContext(ctx, "event_metrics_exit", slog.String("err", err.Error()))
+		}
+	}()
+
+	// /metrics HTTP endpoint для Prometheus.
+	metricsAddr := os.Getenv("WORKER_METRICS_ADDR")
+	if metricsAddr == "" {
+		metricsAddr = ":9091"
+	}
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", metrics.Register())
+	metricsSrv := &http.Server{Addr: metricsAddr, Handler: mux, ReadHeaderTimeout: 3 * time.Second}
+	go func() {
+		log.InfoContext(ctx, "worker metrics listening", slog.String("addr", metricsAddr))
+		if err := metricsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.ErrorContext(ctx, "worker metrics exit", slog.String("err", err.Error()))
+		}
+	}()
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = metricsSrv.Shutdown(shutdownCtx)
 	}()
 
 	log.InfoContext(ctx, "worker started")

@@ -5959,3 +5959,35 @@ DoD Ф.1 выполнен полностью:
 - trace_id доступен в БД сразу, можно запрашивать по WHERE trace_id=...
 - future writes через helper получают трассу бесплатно.
 - worker уже готов читать и прокидывать trace_id.
+
+**Ф.2.2 — Prometheus-метрики**
+
+Новая зависимость: github.com/prometheus/client_golang (и транзитивные).
+
+pkg/metrics: 4 метрики
+- oxsar_events_processed_total{kind,state}: counter (state=ok|error|skip|retry).
+- oxsar_events_handler_duration_seconds{kind}: histogram с бакетами
+  1ms / 5ms / 10ms / 50ms / 100ms / 500ms / 1s / 5s / 10s.
+- oxsar_events_queue_depth{state}: gauge, обновляется каждые 15 сек.
+- oxsar_events_lag_seconds: gauge, возраст самого старого wait с
+  fire_at<=now.
+
+event/worker.go:
+- В processOne измеряем Time.Since(startTs) до handler'а и записываем
+  в histogram.
+- В каждой ветке ok/retry/error/skip инкрементируем counter.
+- `RunMetricsUpdater` — daemon-goroutine, обновляет gauge'ы раз в 15 сек.
+
+cmd/worker/main.go:
+- HTTP-сервер `:9091/metrics` (override через `WORKER_METRICS_ADDR`),
+  graceful shutdown через `defer metricsSrv.Shutdown(5s)`.
+- Параллельно с Run/RunPruner запускается RunMetricsUpdater.
+
+Теперь через Grafana/curl можно видеть:
+- `rate(oxsar_events_processed_total[5m])` по kind/state.
+- p95 handler duration по kind.
+- queue depth в реальном времени.
+- lag (отставание) воркера.
+
+Grafana dashboard JSON — не реализован (оставлен как доку-task в плане 09,
+нет необходимости без запущенной prometheus-инстанции).
