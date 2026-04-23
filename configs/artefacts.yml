@@ -36,6 +36,7 @@ artefacts:
       op: add
       value: 0.1
     stackable: true
+    max_stacks: 3   # +30% производства максимум
     lifetime_seconds: 604800
 
   power_generator:
@@ -47,6 +48,7 @@ artefacts:
       op: add
       value: 0.15
     stackable: true
+    max_stacks: 2   # +30% энергии максимум
     lifetime_seconds: 604800
 
   atomic_densifier:

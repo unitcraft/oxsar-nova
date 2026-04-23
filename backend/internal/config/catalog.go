@@ -180,6 +180,7 @@ type ArtefactSpec struct {
 	Name            string         `yaml:"name"`
 	Effect          ArtefactEffect `yaml:"effect"`
 	Stackable       bool           `yaml:"stackable"`
+	MaxStacks       int            `yaml:"max_stacks,omitempty"`
 	LifetimeSeconds int            `yaml:"lifetime_seconds"`
 	DelaySeconds    int            `yaml:"delay_seconds,omitempty"`
 }

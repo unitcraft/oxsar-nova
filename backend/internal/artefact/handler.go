@@ -49,6 +49,8 @@ func (h *Handler) Activate(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "already active"))
 	case errors.Is(err, ErrNonStackable):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "non-stackable already active"))
+	case errors.Is(err, ErrMaxStacksReached):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "max stacks already active"))
 	case errors.Is(err, ErrPlanetRequired):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "artefact requires planet"))
 	case errors.Is(err, ErrUnknownArtefact):

@@ -24,11 +24,12 @@ const (
 
 // Ошибки доменного слоя.
 var (
-	ErrNotFound         = errors.New("artefact: not found")
-	ErrNotOwner         = errors.New("artefact: not owned by user")
-	ErrAlreadyActive    = errors.New("artefact: already active")
-	ErrPlanetRequired   = errors.New("artefact: planet_id required for per-planet effect")
-	ErrUnknownArtefact  = errors.New("artefact: unknown artefact id")
+	ErrNotFound          = errors.New("artefact: not found")
+	ErrNotOwner          = errors.New("artefact: not owned by user")
+	ErrAlreadyActive     = errors.New("artefact: already active")
+	ErrPlanetRequired    = errors.New("artefact: planet_id required for per-planet effect")
+	ErrUnknownArtefact   = errors.New("artefact: unknown artefact id")
+	ErrMaxStacksReached  = errors.New("artefact: max stacks already active")
 )
 
 // Record — одна запись в artefacts_user.
@@ -105,6 +106,19 @@ func (s *Service) Activate(ctx context.Context, userID, artefactID string) (Reco
 			}
 			if activeCount > 0 {
 				return ErrNonStackable
+			}
+		}
+
+		if spec.MaxStacks > 0 {
+			var activeCount int
+			if err := tx.QueryRow(ctx, `
+				SELECT COUNT(*) FROM artefacts_user
+				WHERE user_id = $1 AND unit_id = $2 AND state = $3
+			`, userID, r.UnitID, StateActive).Scan(&activeCount); err != nil {
+				return fmt.Errorf("check max stacks: %w", err)
+			}
+			if activeCount >= spec.MaxStacks {
+				return ErrMaxStacksReached
 			}
 		}
 
