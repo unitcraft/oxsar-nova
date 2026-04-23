@@ -42,11 +42,17 @@ type Worker struct {
 	handlers    map[Kind]Handler
 	interval    time.Duration
 	batch       int
+	maxBatch    int
 	maxAttempts int
 }
 
 // MaxAttempts по умолчанию — 3 попытки (initial + 2 retry).
 const DefaultMaxAttempts = 3
+
+// DefaultMaxBatch — верхняя граница в адаптивном режиме за один tick-cycle.
+// Если БД переполнена, за один тик воркер может обработать до этого числа
+// событий (подряд, без ожидания Ticker), чтобы догнать отставание.
+const DefaultMaxBatch = 1000
 
 // Backoff: attempt 1 → 10s, 2 → 60s, 3+ → 300s.
 func backoff(attempt int) time.Duration {
@@ -67,8 +73,35 @@ func NewWorker(db repo.Exec, log *slog.Logger) *Worker {
 		handlers:    map[Kind]Handler{},
 		interval:    time.Duration(KindBatchProcessIntervalSecond) * time.Second,
 		batch:       100,
+		maxBatch:    DefaultMaxBatch,
 		maxAttempts: DefaultMaxAttempts,
 	}
+}
+
+// Config настраивает размеры батчей и интервал. Все поля опциональны:
+// если 0 — используется default.
+type Config struct {
+	Interval    time.Duration
+	Batch       int
+	MaxBatch    int
+	MaxAttempts int
+}
+
+// WithConfig применяет настройки к существующему Worker.
+func (w *Worker) WithConfig(cfg Config) *Worker {
+	if cfg.Interval > 0 {
+		w.interval = cfg.Interval
+	}
+	if cfg.Batch > 0 {
+		w.batch = cfg.Batch
+	}
+	if cfg.MaxBatch > 0 {
+		w.maxBatch = cfg.MaxBatch
+	}
+	if cfg.MaxAttempts > 0 {
+		w.maxAttempts = cfg.MaxAttempts
+	}
+	return w
 }
 
 // Register добавляет handler для типа события. Паникует при повторной
@@ -81,6 +114,8 @@ func (w *Worker) Register(kind Kind, h Handler) {
 }
 
 // Run запускает цикл. Возврат — только по отмене контекста.
+// Адаптивное поведение: если batch заполнен — не ждать Ticker, а
+// тикать подряд до пустого или до maxBatch событий за цикл.
 func (w *Worker) Run(ctx context.Context) error {
 	t := time.NewTicker(w.interval)
 	defer t.Stop()
@@ -89,36 +124,61 @@ func (w *Worker) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-t.C:
-			if err := w.tick(ctx); err != nil {
+			if err := w.tickLoop(ctx); err != nil {
 				w.log.ErrorContext(ctx, "event_tick_error", slog.String("err", err.Error()))
 			}
 		}
 	}
 }
 
-// tick забирает список event-ID и обрабатывает каждое событие в
+// tickLoop вызывает tick подряд, пока батч полный и не достигли maxBatch.
+// Безопасно при 1 воркере; при N воркерах с SKIP LOCKED — тоже ок,
+// каждый дренирует свою подмножество.
+func (w *Worker) tickLoop(ctx context.Context) error {
+	processed := 0
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if processed >= w.maxBatch {
+			return nil
+		}
+		n, err := w.tickOnce(ctx)
+		if err != nil {
+			return err
+		}
+		processed += n
+		// Если батч неполный — очередь пуста, ждём следующего тикера.
+		if n < w.batch {
+			return nil
+		}
+	}
+}
+
+// tickOnce забирает список event-ID и обрабатывает каждое событие в
 // отдельной транзакции. Ошибка одного события больше не откатывает
-// остальные.
-func (w *Worker) tick(ctx context.Context) error {
+// остальные. Возвращает количество обработанных (или попытавшихся)
+// событий — используется адаптивным tickLoop.
+func (w *Worker) tickOnce(ctx context.Context) (int, error) {
 	// Шаг 1: взять ID батча в короткой read-only транзакции.
 	ids, err := w.fetchBatchIDs(ctx)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if len(ids) == 0 {
-		return nil
+		return 0, nil
 	}
 	// Шаг 2: обработать каждое отдельно.
 	for _, id := range ids {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return len(ids), ctx.Err()
 		}
 		if err := w.processOne(ctx, id); err != nil {
 			w.log.WarnContext(ctx, "event_tx_failed",
 				slog.String("event_id", id), slog.String("err", err.Error()))
 		}
 	}
-	return nil
+	return len(ids), nil
 }
 
 func (w *Worker) fetchBatchIDs(ctx context.Context) ([]string, error) {

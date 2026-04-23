@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -69,7 +70,12 @@ func run() error {
 	defer pool.Close()
 
 	db := repo.New(pool)
-	w := event.NewWorker(db, log)
+	w := event.NewWorker(db, log).WithConfig(event.Config{
+		Interval:    parseDurEnv("WORKER_INTERVAL", 10*time.Second),
+		Batch:       parseIntEnv("WORKER_BATCH", 100),
+		MaxBatch:    parseIntEnv("WORKER_MAX_BATCH", 1000),
+		MaxAttempts: parseIntEnv("WORKER_MAX_ATTEMPTS", 3),
+	})
 	artefactSvc := artefact.NewService(db, cat)
 	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod)
 
@@ -267,4 +273,26 @@ func run() error {
 		return err
 	}
 	return nil
+}
+
+func parseIntEnv(key string, def int) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	if n, err := strconv.Atoi(v); err == nil && n > 0 {
+		return n
+	}
+	return def
+}
+
+func parseDurEnv(key string, def time.Duration) time.Duration {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	if d, err := time.ParseDuration(v); err == nil && d > 0 {
+		return d
+	}
+	return def
 }
