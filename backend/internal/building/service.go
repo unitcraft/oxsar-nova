@@ -87,7 +87,7 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		var busy int
 		if err := tx.QueryRow(ctx, `
 			SELECT COUNT(*) FROM construction_queue
-			WHERE planet_id = $1 AND status IN ('queued','running')
+			WHERE planet_id = $1 AND status IN ('queued','running') AND end_at > NOW()
 		`, p.ID).Scan(&busy); err != nil {
 			return fmt.Errorf("check queue: %w", err)
 		}
