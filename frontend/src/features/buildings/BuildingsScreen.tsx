@@ -14,7 +14,7 @@ function fmtDuration(secs: number): string {
 import { api } from '@/api/client';
 import { BUILDINGS, MOON_BUILDINGS, imageOf, costForLevel } from '@/api/catalog';
 import type { Planet, QueueItem, UnmetRequirement } from '@/api/types';
-import { Countdown } from '@/ui/Countdown';
+
 import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
 
@@ -274,23 +274,35 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
   );
 }
 
-function useLiveProgress(startAt: string, endAt: string): number {
+function useBuildProgress(startAt: string, endAt: string): { pct: number; secsLeft: number } {
   const calc = () => {
+    const now = Date.now();
     const total = new Date(endAt).getTime() - new Date(startAt).getTime();
-    const elapsed = Date.now() - new Date(startAt).getTime();
-    return total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
+    const elapsed = now - new Date(startAt).getTime();
+    const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
+    const secsLeft = Math.max(0, Math.round((new Date(endAt).getTime() - now) / 1000));
+    return { pct, secsLeft };
   };
-  const [pct, setPct] = useState(calc);
+  const [state, setState] = useState(calc);
   useEffect(() => {
-    const t = setInterval(() => setPct(calc), 1000);
+    const t = setInterval(() => setState(calc), 1000);
     return () => clearInterval(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startAt, endAt]);
-  return pct;
+  return state;
+}
+
+function fmtSecs(sec: number): string {
+  if (sec <= 0) return '00:00:00';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem; isActive: boolean; onCancel: () => void; cancelPending: boolean }) {
-  const pct = useLiveProgress(item.start_at, item.end_at);
+  const { pct, secsLeft } = useBuildProgress(item.start_at, item.end_at);
   const name = ([...BUILDINGS, ...MOON_BUILDINGS]).find((b) => b.id === item.unit_id)?.name ?? `#${item.unit_id}`;
 
   return (
@@ -301,7 +313,7 @@ function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem
           {name} → ур. {item.target_level}
         </span>
         {isActive
-          ? <Countdown finishAt={item.end_at} />
+          ? <span className={`ox-timer${secsLeft < 60 ? ' urgent' : ''}`}>{fmtSecs(secsLeft)}</span>
           : <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
               {new Date(item.end_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
             </span>
