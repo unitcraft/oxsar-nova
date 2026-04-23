@@ -5267,3 +5267,31 @@ missile_silo (id=53), описания зданий. Статус обновлё
        backend/internal/achievement/service.go, migrations/0042_daily_credit.sql
 
 Статус: ✅ ЗАВЕРШЕНА
+
+## Задача 18 — План 17: Единый источник стоимостей кораблей
+
+### Проблема
+configs/ships.yml содержал поле `cost` — устаревший OGame-placeholder,
+расходившийся с configs/construction.yml (данные из na_construction MySQL).
+Конкретно: battle_ship имел metal=45000/silicon=15000 в ships.yml vs
+metal=40000/silicon=20000 в construction.yml (правильное — construction).
+Пять кораблей (frigate, recycler, solar_satellite, bomber, star_destroyer)
+отсутствовали в ships.yml полностью.
+
+### Решение
+- configs/ships.yml: убрать поле cost (теперь только боевые/ходовые параметры)
+- configs/ships.yml: добавить 5 недостающих кораблей (параметры из na_ship_datasheet)
+- ShipSpec.Cost: поле остаётся в Go-структуре, но yaml:"-" — заполняется при
+  LoadCatalog из Construction.Buildings. Весь вызывающий код продолжает работать без изменений.
+- configs/rapidfire.yml: добавить RF для frigate/bomber/star_destroyer из na_rapidfire
+
+### Принцип
+construction.yml (= na_construction) — единственный источник истины для
+стоимостей любых юнитов (здания, флот, оборона, исследования). ships.yml
+хранит только боевые и ходовые параметры.
+
+Файлы: configs/ships.yml, configs/rapidfire.yml,
+       backend/internal/config/catalog.go,
+       docs/plans/17-ship-costs-single-source.md
+
+Статус: ✅ ЗАВЕРШЕНА
