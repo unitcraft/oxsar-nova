@@ -1,4 +1,4 @@
-# План 10: Детальные модалы зданий и исследований (ConstructionInfo)
+# План 12: Детальные модалы зданий и исследований (ConstructionInfo)
 
 ## Статус: В РАБОТЕ
 
@@ -115,58 +115,6 @@ hydrogen_plant: энергия = floor(22.5 * level * 1.1^level)
 | `frontend/src/api/catalog.ts` | +`fullDesc` в BuildingEntry/ResearchEntry, заполнить для всех юнитов |
 | `frontend/src/features/buildings/BuildingInfoModal.tsx` | +fullDesc секция, +production колонка, +requires |
 | `frontend/src/features/research/ResearchInfoModal.tsx` | +fullDesc секция, +requires |
-
----
-
----
-
-## Задача 4 — Реальное время строительства с учётом роботов/нанитов [P2]
-
-В легаси таблица времени в ConstructionInfo показывает **реальное время** текущей планеты
-с учётом уровня фабрики роботов и нано-фабрики. Формула (из `NS::getBuildingTime`):
-
-```
-time = (metal + silicon) / 2500.0 / (robo_level + 1) / 2^nano_level / PLANET_CONSTRUCTION_SPEED_FACTOR / 2^(build_factor-1)
-```
-
-Для исследований:
-```
-time = (metal + silicon) / 1000.0 / (1 + lab_level) / RESEARCH_SPEED_FACTOR / 2^(research_factor-1)
-```
-
-Сноска «Время указано без учёта фабрики роботов и нано-фабрики» должна исчезнуть.
-
-### Реализация
-
-**Backend** — новый endpoint или расширение существующего:
-
-Вариант: `GET /api/planets/{id}/buildings/time-table?unit_id={id}` возвращает массив
-`[{level, secs}, ...]` для 10 уровней вокруг текущего, посчитанный с реальным robo/nano планеты.
-
-Или проще — добавить в BuildingInfoModal данные через уже существующий `build_seconds`
-из `/api/planets/{id}/buildings` и `research_seconds` из `/api/research`:
-- `build_seconds[unit_id]` = время **следующего** уровня с учётом роботов.
-- Нам нужно время для произвольного уровня → нужно передавать robo/nano на фронт
-  и считать прямо в TS.
-
-**Предпочтительный вариант (только фронтенд)**:
-Добавить в ответ `/api/planets/{id}/buildings` поля:
-- `robotic_factory_level: int`
-- `nano_factory_level: int`
-
-Тогда `BuildingInfoModal` получает эти уровни через проп и считает время для каждого уровня
-по той же формуле что и Go-бэкенд.
-
-Аналогично для исследований — передавать `lab_level` в `ResearchInfoModal`.
-
-### Файлы
-| Файл | Изменение |
-|------|-----------|
-| `backend/internal/building/handler.go` | добавить `robotic_factory_level` и `nano_factory_level` в ответ `/buildings` |
-| `frontend/src/features/buildings/BuildingInfoModal.tsx` | принять robo/nano как пропы, пересчитать `buildTimeSecs`, убрать сноску |
-| `frontend/src/features/buildings/BuildingsScreen.tsx` | передать robo/nano в `BuildingInfoModal` |
-| `frontend/src/features/research/ResearchInfoModal.tsx` | принять lab_level, пересчитать `researchTimeSecs`, убрать сноску |
-| `frontend/src/features/research/ResearchScreen.tsx` | передать lab_level в `ResearchInfoModal` |
 
 ---
 
