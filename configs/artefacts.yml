@@ -84,29 +84,65 @@ artefacts:
     stackable: true
     lifetime_seconds: 604800
 
-  war_machine:
-    id: 310
-    name: "War Machine"
+  # Боевые артефакты (legacy mode=6). ID верифицированы по oxsar2/sql/data.sql.
+  # +10% за 300 кр; стекаются (до 3 штук = up to +30%).
+  battle_attack_power:
+    id: 318
+    name: "Единство атаки"
     effect:
       type: battle_bonus
       battle_attack: 1.1
     stackable: true
-    lifetime_seconds: 604800
+    max_stacks: 3
+    lifetime_seconds: 0   # одноразовый (lifetime=0 в na_artefacts)
 
-  energy_shield:
-    id: 311
-    name: "Energy Shield"
+  battle_shield_power:
+    id: 317
+    name: "Единство щитов"
     effect:
       type: battle_bonus
       battle_shield: 1.1
     stackable: true
-    lifetime_seconds: 604800
+    max_stacks: 3
+    lifetime_seconds: 0
 
-  titanium_hull:
-    id: 312
-    name: "Titanium Hull"
+  battle_shell_power:
+    id: 316
+    name: "Единство брони"
     effect:
       type: battle_bonus
       battle_shell: 1.1
     stackable: true
-    lifetime_seconds: 604800
+    max_stacks: 3
+    lifetime_seconds: 0
+
+  # +10% версии (legacy BATTLE_*_POWER_10, id=359-361), 2900 кр.
+  battle_attack_power_10:
+    id: 361
+    name: "Единство атаки ×10"
+    effect:
+      type: battle_bonus
+      battle_attack: 1.1
+    stackable: true
+    max_stacks: 3
+    lifetime_seconds: 0
+
+  battle_shield_power_10:
+    id: 360
+    name: "Единство щитов ×10"
+    effect:
+      type: battle_bonus
+      battle_shield: 1.1
+    stackable: true
+    max_stacks: 3
+    lifetime_seconds: 0
+
+  battle_shell_power_10:
+    id: 359
+    name: "Единство брони ×10"
+    effect:
+      type: battle_bonus
+      battle_shell: 1.1
+    stackable: true
+    max_stacks: 3
+    lifetime_seconds: 0
