@@ -195,7 +195,7 @@ function BuildingRow({
   const metal    = b.prod_metal    * factor / 100;
   const silicon  = b.prod_silicon  * factor / 100;
   const hydrogen = b.prod_hydrogen * factor / 100;
-  const energy   = b.cons_energy;
+  const energy   = b.cons_energy   * factor / 100;
 
   return (
     <>
