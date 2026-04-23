@@ -6112,3 +6112,50 @@ cmd/worker/main.go: Register(KindExpirePlanet, HandleExpirePlanet).
 Текущий раз-в-час cron `DELETE FROM planets WHERE expires_at < now()`
 остаётся fallback'ом — если почему-то event не создался или сломался,
 cron подчистит.
+
+**Ф.5.2 — Score RecalcAll: event-based + closed-form O(1)**
+
+score/service.go:
+- `sumGeomCost(cb, factor, level)` — closed-form суммы
+  cost_base * factor^(i-1) по i=1..level:
+  - factor=1 → base * level.
+  - factor≠1 → base * (factor^level - 1) / (factor - 1).
+  O(1) вместо O(level), ускоряет calcBuildings/calcResearch.
+- RecalcAll помечен DEPRECATED (оставлен для /admin/score/recalc).
+
+score/event.go (новый):
+- RecalcAllEvent — handler для KindScoreRecalcAll (=70):
+  1) Reschedule: INSERT следующего event'а на fire_at=now()+24h
+     (делается первым, чтобы цепочка не разорвалась при ошибке).
+  2) В goroutine (вне транзакции event'а) вызывает recalcAllWithLog,
+     который итерирует по users umode=false AND deleted_at IS NULL
+     и делает RecalcUser на каждого. Большой UPDATE не блокируется
+     на event-tx.
+- BootstrapRecalcAllEvent: при старте worker'а проверяет наличие
+  wait-event'а с kind=70, если нет — создаёт на +1 мин.
+
+cmd/worker/main.go:
+- Убран 5-минутный ticker `scoreSvc.RecalcAll`.
+- Register(KindScoreRecalcAll, scoreSvc.RecalcAllEvent()).
+- Вызов BootstrapRecalcAllEvent на старте.
+
+Остающееся (записано в simplifications):
+- Single-SQL batch пересчёт через CTE с JOIN *_specs таблиц
+  (миграция + bootstrap из YAML). Выигрыш только при >10k DAU.
+
+План 09 полностью закрыт (фазы 1-3 core, 4 основа, 5 оба gap'а).
+Остаются отложенные задачи:
+- Ф.2.3 полный structured slog (частично реализовано).
+- Ф.2.4 Grafana dashboard JSON (без prom-инстанции).
+- Ф.2.6 Rate-limit admin replay.
+- Ф.3.3 Шардирование + Ф.3.4 N воркеров (нужны >1k DAU).
+- Ф.3.6 Typed payload wrapper (refactor-задача).
+- Ф.3.7 Partitioning events (нужно >1M rows).
+- Ф.3.8 Autovacuum tuning (ops-задача).
+- Ф.4.2-5 дополнительные тесты (rapid, ACS deadlock, snapshot).
+- Ф.5.2 single-SQL batch + *_specs таблицы (нужно >10k DAU).
+- trace_id в 11 оставшихся raw INSERT'ах.
+
+Все отложенные задачи — либо второстепенные оптимизации (>10k DAU),
+либо ops-прокачка, либо refactoring. Core надёжность/наблюдаемость
+закрыта.

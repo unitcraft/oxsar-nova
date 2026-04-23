@@ -453,6 +453,24 @@
 
 ## UI Porting (H-план, 2026-04-23)
 
+### [09-Ф5.2] Score.RecalcAll: *_specs таблицы и single-SQL batch не реализованы
+- **Где**: `backend/internal/score/`, отсутствует миграция `*_specs`.
+- **Что**: RecalcAllEvent теперь вызывается раз в сутки через
+  KindScoreRecalcAll event (вместо 5-минутного ticker'а), но сам
+  пересчёт всё равно идёт циклом через RecalcUser. Формулу внутри
+  calcBuildings/calcResearch переписал на closed-form (O(1) вместо
+  O(level)), что даёт существенное ускорение. Но single-SQL batch
+  по плану (CTE с JOIN *_specs) не реализован.
+- **Почему**: full batch требует новых таблиц building_specs /
+  research_specs / ship_specs / def_specs с cost_base_sum + cost_factor
+  из YAML + bootstrap на старте. Ощутимый выигрыш только при >10k
+  активных игроков (сейчас ~десятки). O(1) closed-form + раз-в-сутки
+  достаточно для текущей стадии.
+- **Как чинить**: миграция 0059 с `*_specs` таблицами; cmd/tools/sync-specs
+  заполняет их из каталога при деплое; RecalcAllBatch выполняет
+  single CTE из плана 09 секция «SQL для batch-сверки».
+- **Приоритет**: L (пока DAU < 10k).
+
 ### [09-Ф2.1] events.trace_id заполняется только в новых INSERT'ах
 - **Где**: 11 мест в backend/internal/*/service.go, event-producers.
 - **Что**: колонка events.trace_id и индекс добавлены (миграция 0058),

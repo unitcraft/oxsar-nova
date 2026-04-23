@@ -290,15 +290,23 @@ func (s *Service) calcBuildings(ctx context.Context, userID string) (float64, er
 		if !ok {
 			continue
 		}
-		for lvl := 1; lvl <= level; lvl++ {
-			scale := math.Pow(spec.CostFactor, float64(lvl-1))
-			m := float64(spec.CostBase.Metal) * scale
-			si := float64(spec.CostBase.Silicon) * scale
-			h := float64(spec.CostBase.Hydrogen) * scale
-			total += s.kBld * (m + si + h)
-		}
+		total += s.kBld * sumGeomCost(spec.CostBase, spec.CostFactor, level)
 	}
 	return total, rows.Err()
+}
+
+// sumGeomCost — сумма cost_base * factor^(i-1) для i=1..level, O(1).
+// Формула: если factor=1, то cost_base_sum * level;
+// иначе cost_base_sum * (factor^level - 1) / (factor - 1).
+func sumGeomCost(cb config.ResCost, factor float64, level int) float64 {
+	if level <= 0 {
+		return 0
+	}
+	base := float64(cb.Metal + cb.Silicon + cb.Hydrogen)
+	if factor == 1.0 || factor <= 0 {
+		return base * float64(level)
+	}
+	return base * (math.Pow(factor, float64(level)) - 1) / (factor - 1)
 }
 
 func (s *Service) calcResearch(ctx context.Context, userID string) (float64, error) {
@@ -325,13 +333,7 @@ func (s *Service) calcResearch(ctx context.Context, userID string) (float64, err
 		if !ok {
 			continue
 		}
-		for lvl := 1; lvl <= level; lvl++ {
-			scale := math.Pow(spec.CostFactor, float64(lvl-1))
-			m := float64(spec.CostBase.Metal) * scale
-			si := float64(spec.CostBase.Silicon) * scale
-			h := float64(spec.CostBase.Hydrogen) * scale
-			total += s.kRes * (m + si + h)
-		}
+		total += s.kRes * sumGeomCost(spec.CostBase, spec.CostFactor, level)
 	}
 	return total, rows.Err()
 }
@@ -408,7 +410,10 @@ func (s *Service) calcAchievements(ctx context.Context, userID string) (float64,
 }
 
 // RecalcAll пересчитывает очки всех активных игроков (umode=false).
-// Предназначен для периодического запуска из воркера (раз в 5 минут).
+//
+// DEPRECATED с плана 09 Ф.5.2: использовать RecalcAllEvent() и
+// KindScoreRecalcAll (ежедневный event-based пересчёт). Метод оставлен
+// для /admin/score/recalc on-demand и тестов.
 // Ошибки отдельных игроков логируются, но не останавливают цикл.
 func (s *Service) RecalcAll(ctx context.Context, log interface {
 	WarnContext(context.Context, string, ...any)
