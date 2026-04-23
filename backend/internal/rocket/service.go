@@ -30,8 +30,8 @@ import (
 // unitInterplanetary — id ракеты в ships (legacy UNIT_INTERPLANETARY_ROCKET).
 const unitInterplanetary = 52
 
-// buildingMissileSilo — id здания «Ракетная шахта» (legacy UNIT_MISSILE_SILO=13).
-const buildingMissileSilo = 13
+// buildingMissileSilo — id здания «Ракетная шахта» (legacy UNIT_ROCKET_STATION=53).
+const buildingMissileSilo = 53
 
 // kindRocketAttack — event.KindRocketAttack=16 (значение задаётся в
 // event/kinds.go). Держим копию, чтобы не импортировать event

@@ -61,6 +61,12 @@ buildings:
     cost_factor: 2.0
     time_base_seconds: 180
 
+  nano_factory:
+    id: 7
+    cost_base:   { metal: 1000000, silicon: 500000, hydrogen: 100000 }
+    cost_factor: 2.0
+    time_base_seconds: 600
+
   shipyard:
     id: 8
     cost_base:   { metal: 400, silicon: 200, hydrogen: 100 }
@@ -94,11 +100,11 @@ buildings:
     cost_factor: 2.0
     time_base_seconds: 180
 
-  # Ракетная шахта (legacy UNIT_MISSILE_SILO=13).
+  # Ракетная шахта (legacy UNIT_ROCKET_STATION=53).
   # max_rockets = level × rocket_capacity_per_level (legacy: level × 10).
   # Используется rocket/service.go для проверки запаса.
   missile_silo:
-    id: 13
+    id: 53
     cost_base:   { metal: 20000, silicon: 20000, hydrogen: 1000 }
     cost_factor: 2.0
     time_base_seconds: 360

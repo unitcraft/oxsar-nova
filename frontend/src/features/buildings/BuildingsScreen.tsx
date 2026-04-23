@@ -134,6 +134,8 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
       <div className="ox-cards-grid">
         {BUILDINGS.map((b) => {
           const level = levels[b.id] ?? 0;
+          const maxLevel = b.maxLevel ?? 50;
+          const isMax = level >= maxLevel;
           const inQueue = busyIds.has(b.id);
           const nextCost = costForLevel(b.costBase, b.costFactor, level + 1);
           const canAfford =
@@ -148,6 +150,11 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
               </div>
               <div className="ox-unit-card-body">
                 <div className="ox-unit-card-name">{b.name}</div>
+                {b.description && (
+                  <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
+                    {b.description}
+                  </div>
+                )}
                 <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
                   {level > 0 ? `Уровень ${level}` : 'Не построено'}
                 </div>
@@ -201,15 +208,19 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
                 )}
               </div>
               <div className="ox-unit-card-footer">
-                <button
-                  type="button"
-                  className={`btn${inQueue || !canAfford ? ' btn-ghost' : ''} btn-sm`}
-                  style={{ width: '100%' }}
-                  disabled={enqueue.isPending || inQueue}
-                  onClick={() => enqueue.mutate(b.id)}
-                >
-                  {inQueue ? '⏳ В очереди' : level === 0 ? 'Построить' : `→ ур. ${level + 1}`}
-                </button>
+                {isMax ? (
+                  <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ox-fg-muted)', fontWeight: 700, padding: '4px 0' }}>MAX</div>
+                ) : (
+                  <button
+                    type="button"
+                    className={`btn${inQueue || !canAfford ? ' btn-ghost' : ''} btn-sm`}
+                    style={{ width: '100%' }}
+                    disabled={enqueue.isPending || inQueue}
+                    onClick={() => enqueue.mutate(b.id)}
+                  >
+                    {inQueue ? '⏳ В очереди' : level === 0 ? 'Построить' : `→ ур. ${level + 1}`}
+                  </button>
+                )}
               </div>
             </div>
           );
