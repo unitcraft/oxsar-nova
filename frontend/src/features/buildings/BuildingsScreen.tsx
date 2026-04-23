@@ -279,8 +279,8 @@ function useBuildProgress(startAt: string, endAt: string): { pct: number; secsLe
     const now = Date.now();
     const total = new Date(endAt).getTime() - new Date(startAt).getTime();
     const elapsed = now - new Date(startAt).getTime();
-    const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
     const secsLeft = Math.max(0, Math.round((new Date(endAt).getTime() - now) / 1000));
+    const pct = secsLeft === 0 ? 100 : total > 0 ? Math.min(99, (elapsed / total) * 100) : 100;
     return { pct, secsLeft };
   };
   const [state, setState] = useState(calc);
