@@ -228,6 +228,6 @@ WHERE planet_id = $1 AND unit_id = ANY($2::int[]);
 
 **Low (P3) — ЧАСТИЧНО**:
 - ✅ 3.4 Keyboard shortcuts (Alt+H/B/R/M, Esc, Ctrl+S)
-- ⬜ 4.1 Error tracking (Sentry integration)
-- ⬜ 6.2 Storybook (UI компоненты)
-- ⬜ 1.1 Optimistic Updates для ArtefactsScreen/OfficersScreen
+- ⬜ 4.1 Error tracking (Sentry integration) — не делаем, нет аккаунта
+- ⬜ 6.2 Storybook (UI компоненты) — не делаем, нецелесообразно без дизайн-системы
+- ✅ 1.1 Optimistic Updates для ArtefactsScreen/OfficersScreen (2026-04-23)
