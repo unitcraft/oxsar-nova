@@ -104,21 +104,14 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
 
       {/* Production table */}
       <div className="ox-panel" style={{ overflowX: 'auto' }}>
-        <table style={{ minWidth: 480, width: '100%', borderCollapse: 'collapse', fontSize: 13, tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: '45%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '13%' }} />
-          </colgroup>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--ox-border)' }}>
               <th style={TH}>Здание</th>
-              <th style={{ ...TH, textAlign: 'right' }}>🟠 Мет</th>
-              <th style={{ ...TH, textAlign: 'right' }}>💎 Крем</th>
-              <th style={{ ...TH, textAlign: 'right' }}>💧 Вод</th>
-              <th style={{ ...TH, textAlign: 'right' }}>⚡ Энерг</th>
+              <th style={{ ...TH, textAlign: 'right', width: 72 }}>🟠</th>
+              <th style={{ ...TH, textAlign: 'right', width: 72 }}>💎</th>
+              <th style={{ ...TH, textAlign: 'right', width: 72 }}>💧</th>
+              <th style={{ ...TH, textAlign: 'right', width: 72 }}>⚡</th>
             </tr>
           </thead>
           <tbody>
@@ -199,15 +192,18 @@ function BuildingRow({
       style={{ borderBottom: '1px solid var(--ox-border)', cursor: b.allow_factor ? 'pointer' : 'default' }}
       onClick={() => b.allow_factor && onOpen()}
     >
-      <td style={TD}>
-        <span style={{ fontWeight: 500 }}>{BUILDING_NAMES[b.unit_id] ?? b.name}</span>
-        {' '}
-        <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>ур. {b.level}</span>
-        {b.allow_factor && (
-          <span style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', marginLeft: 6, color: factor < 100 ? 'var(--ox-warn, #f59e0b)' : 'var(--ox-fg-dim)' }}>
-            {factor}%
+      <td style={{ ...TD, maxWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, overflow: 'hidden' }}>
+          <span style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {BUILDING_NAMES[b.unit_id] ?? b.name}
           </span>
-        )}
+          <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>ур. {b.level}</span>
+          {b.allow_factor && (
+            <span style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', whiteSpace: 'nowrap', flexShrink: 0, color: factor < 100 ? 'var(--ox-warn, #f59e0b)' : 'var(--ox-fg-dim)' }}>
+              {factor}%
+            </span>
+          )}
+        </div>
       </td>
       <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(metal) }}>
         {metal !== 0 ? fmt(metal) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
@@ -233,7 +229,7 @@ function SummaryRow({ label, metal, silicon, hydrogen, energy, topBorder, dim }:
   const fg = dim ? 'var(--ox-fg-muted)' : undefined;
   return (
     <tr style={{ borderBottom: '1px solid var(--ox-border)', background: dim ? 'var(--ox-bg-2)' : undefined }}>
-      <td style={{ ...TD, fontWeight: 700, borderTop: bt, color: fg }}>{label}</td>
+      <td style={{ ...TD, fontWeight: 700, borderTop: bt, color: fg, maxWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</td>
       <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', borderTop: bt, ...numStyle(metal) }}>{fmt(metal)}</td>
       <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', borderTop: bt, ...numStyle(silicon) }}>{fmt(silicon)}</td>
       <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', borderTop: bt, ...numStyle(hydrogen) }}>{fmt(hydrogen)}</td>
