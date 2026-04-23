@@ -10,6 +10,15 @@ interface SettingsData {
   vacation_since: string | null;
 }
 
+interface PlanetLite {
+  id: string;
+  name: string;
+  galaxy: number;
+  system: number;
+  position: number;
+  is_moon: boolean;
+}
+
 const TIMEZONES = [
   { value: 'UTC', label: 'UTC' },
   { value: 'Europe/Moscow', label: 'Москва (UTC+3)' },
@@ -297,6 +306,9 @@ export function SettingsScreen() {
         )}
       </section>
 
+      {/* Порядок планет */}
+      <PlanetOrderSection />
+
       {/* Опасная зона */}
       <section style={{
         padding: 20,
@@ -386,5 +398,77 @@ export function SettingsScreen() {
         )}
       </section>
     </div>
+  );
+}
+
+function PlanetOrderSection() {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ['planets'],
+    queryFn: () => api.get<{ planets: PlanetLite[] }>('/api/planets'),
+  });
+
+  const reorder = useMutation({
+    mutationFn: (ids: string[]) => api.patch<void>('/api/planets/order', { planet_ids: ids }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['planets'] }),
+  });
+
+  // Локальный порядок только для не-лун (луны следуют за материнской планетой).
+  const [order, setOrder] = useState<PlanetLite[]>([]);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  // Синхронизация с server-данными.
+  if (q.data && order.length === 0 && q.data.planets.length > 0) {
+    setOrder(q.data.planets.filter((p) => !p.is_moon));
+  }
+
+  function onDragStart(i: number) { setDragIdx(i); }
+  function onDragOver(e: React.DragEvent) { e.preventDefault(); }
+  function onDrop(i: number) {
+    if (dragIdx === null || dragIdx === i) return;
+    const copy = [...order];
+    const [moved] = copy.splice(dragIdx, 1);
+    if (moved) copy.splice(i, 0, moved);
+    setOrder(copy);
+    setDragIdx(null);
+    reorder.mutate(copy.map((p) => p.id));
+  }
+
+  if (q.isLoading || !q.data || order.length <= 1) return null;
+
+  return (
+    <section className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>
+        Порядок планет
+      </h3>
+      <p style={{ margin: 0, fontSize: 12, color: 'var(--ox-fg-dim)' }}>
+        Перетащите, чтобы изменить порядок. Этот порядок используется в переключателе планет.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {order.map((p, i) => (
+          <div
+            key={p.id}
+            draggable
+            onDragStart={() => onDragStart(i)}
+            onDragOver={onDragOver}
+            onDrop={() => onDrop(i)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '8px 12px',
+              background: dragIdx === i ? 'rgba(99,217,255,0.08)' : 'var(--ox-bg-panel)',
+              border: '1px solid var(--ox-border)', borderRadius: 4,
+              cursor: 'grab', userSelect: 'none',
+            }}
+          >
+            <span style={{ color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>⋮⋮</span>
+            <span style={{ flex: 1 }}>🪐 {p.name}</span>
+            <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 11, color: 'var(--ox-fg-muted)' }}>
+              [{p.galaxy}:{p.system}:{p.position}]
+            </span>
+          </div>
+        ))}
+      </div>
+      {reorder.isPending && <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>💾 Сохранение…</span>}
+    </section>
   );
 }

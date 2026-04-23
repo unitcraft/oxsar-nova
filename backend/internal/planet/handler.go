@@ -16,6 +16,31 @@ type Handler struct{ svc *Service }
 
 func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 
+// Reorder PATCH /api/planets/order — обновить sort_order по списку planet_ids.
+func (h *Handler) Reorder(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	var req struct {
+		PlanetIDs []string `json:"planet_ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	if err := h.svc.Reorder(r.Context(), uid, req.PlanetIDs); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.WriteError(w, r, httpx.ErrForbidden)
+			return
+		}
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // List GET /api/planets — все планеты текущего пользователя.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
