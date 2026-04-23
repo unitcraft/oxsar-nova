@@ -16,24 +16,28 @@
 
 **Новые исходы (было 6, стало 12):**
 - `resource` — ресурсы по формуле res_k (metal + silicon + hydrogen)
-- `asteroid` — ресурсы без водорода
-- `artefact` — вес зависит от exp_power (hours ≥ 4)
-- `extra_planet` — временная планета (expires_at = 12–24ч)
-- `xSkirmish` — пираты, масштаб по exp_power и силе флота
-- `battlefield` — бой с повреждённым флотом, выжившие переходят к игроку
-- `credit` — начисление кредитов с учётом buy_credit за 3 дня
-- `delay` — сдвиг fire_at события возврата вправо на 10–30%
+- `asteroid` — ресурсы без водорода (и шанс +30 если hours=0)
+- `artefact` — вес зависит от exp_power (hours ≥ 4, cap = xSkirmish/2)
+- `extra_planet` — временная планета (expires_at = 12–24ч из legacy EXPED_PLANET_LIFETIME_MIN/MAX)
+- `xSkirmish` — пираты, масштаб по exp_power и силе флота (только hours ≥ 3)
+- `battlefield` — бой с повреждённым флотом, выжившие переходят к игроку (hours ≥ 1)
+- `credit` — начисление кредитов с учётом buy_credit за 3 дня (hours ≥ 4)
+- `delay` — сдвиг fire_at события возврата вправо на 10–30% (hours ≥ 1)
 - `fast` — сдвиг fire_at влево на 10–60%
-- `ship` — корабли (LF или recycler) добавляются в fleet_ships
+- `ship` — корабли (LF или recycler) добавляются в fleet_ships (только hours ≥ 2)
 - `loss` — потеря 5–20% кораблей
 - `nothing` — пустой исход
 
-**Формулы:**
-- `exp_power = expo_tech + hours×2 + spy_tech/10 × pow(spy_probes, 0.4)`
-- `visited_scale` — штраф повторных посещений (pow(visits, -0.2...-0.7))
-- `res_k = random(500k,1M) × base × jitter × 2` (2% шанс ×100)
-- Weighted random выбор исхода (вместо фиксированных %)
-- Jitter ±5% на каждый вес + 0.01% шанс ×10 или обнуления
+**Формулы (из legacy Expedition.class.php):**
+```
+exp_power = expo_tech + hours×2 + spy_tech/10 × pow(spy_probes, 0.4)
+visited_scale: 3–4 раза → visits^(−0.2), 5–9 → visits^(−0.3),
+               10–19 → visits^(−0.5), 20+ → visits^(−0.7)
+               × ((hours+1)/6)^1.5
+res_k = random(500k,1M) × res_scale × 2   (2% шанс ×100 джекпот)
+resourceDiscovery  = ceil(100 × 1.22^exp_power) × jitter
+xSkirmish штраф: >10000 кораблей → ×0.5, >100 Deathstar → ×0.1
+```
 
 **Новые миграции:**
 - `0043_expedition_visits.sql` — таблица `expedition_visits(user_id, galaxy, system, visits)`
@@ -45,7 +49,7 @@
 
 **Тесты** (`expedition_test.go`):
 - `TestCalcExpPower` — формула exp_power
-- `TestCalcVisitedScale` — 20 посещений < 0.3
+- `TestCalcVisitedScale` — 20 посещений даёт visited_scale < 0.3
 - `TestCalcExpWeights_ZeroPower` — ship/battlefield/artefact = 0 при hours=0
 - `TestCalcExpWeights_HighPower` — artefact/credit ненулевые при hours=4
 - `TestWeightedChoice_Deterministic` — детерминированность
@@ -59,16 +63,19 @@
 ### B.1 Воркер: удаление временных планет (приоритет: MEDIUM)
 
 **Проблема:** `planets.expires_at` выставляется, но воркер не удаляет истёкшие планеты.
+Временные планеты накапливаются в БД. По legacy: `EXPED_PLANET_LIFETIME_MIN = 12ч`,
+`TEMP_PLANET_LIFETIME = 21 day` (постоянная временная планета).
 
-**Решение:** Добавить cron-handler или отдельный KindExpirePlanet event:
+**Решение:** Добавить cron-handler или отдельный KindExpirePlanet event в `cmd/worker/main.go`:
 ```sql
 DELETE FROM planets WHERE expires_at IS NOT NULL AND expires_at < now()
 ```
-Можно добавить как периодическую задачу в `cmd/worker/main.go` (раз в час).
+Запускать раз в час (не нужен точный тайминг).
 
 **Проверка готовности:**
 - [ ] Воркер удаляет планеты с `expires_at < now()`
 - [ ] Тест или интеграционный тест
+- [ ] `make test` зелёный
 
 ---
 
@@ -77,8 +84,8 @@ DELETE FROM planets WHERE expires_at IS NOT NULL AND expires_at < now()
 **Проблема:** `expCredit` делает запрос к `credit_purchases`, которой не существует.
 Сейчас `buyCredit = 0` (ошибка игнорируется), формула работает без этой компоненты.
 
-**Решение:** Создать таблицу `credit_purchases(user_id, amount, created_at)` при
-реализации платёжной системы (план F). Подключить к `expCredit` автоматически.
+**Решение:** Создать таблицу `credit_purchases(id, user_id, amount, price_rub, created_at)`
+при реализации платёжной системы (план F.1). Подключить к `expCredit` автоматически.
 
 ---
 
