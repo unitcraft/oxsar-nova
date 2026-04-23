@@ -142,31 +142,31 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
         </table>
       </div>
 
-      {/* Modal */}
+      {/* Bottom sheet */}
       {modalBuilding && (
-        <div className="ox-modal-overlay" onClick={() => setModalBuilding(null)}>
-          <div className="ox-modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
+          background: 'var(--ox-bg-panel-2)',
+          borderTop: '1px solid var(--ox-border)',
+          backdropFilter: 'blur(12px)',
+          padding: '12px 20px 20px',
+          boxShadow: '0 -4px 24px rgba(0,0,0,0.5)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>
                 {BUILDING_NAMES[modalBuilding.unit_id] ?? modalBuilding.name}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>ур. {modalBuilding.level}</div>
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', marginLeft: 8 }}>ур. {modalBuilding.level}</span>
             </div>
-            <FactorInput
-              value={modalFactor}
-              onChange={(v) => setFactors((prev) => ({ ...prev, [modalBuilding.unit_id]: v }))}
-              onCommit={(v) => commitFactor(String(modalBuilding.unit_id), v)}
-              disabled={save.isPending}
-            />
-            <button
-              type="button"
-              className="btn btn-sm btn-ghost"
-              style={{ marginTop: 16, width: '100%' }}
-              onClick={() => setModalBuilding(null)}
-            >
-              Закрыть
-            </button>
+            <button type="button" className="btn-ghost btn-sm" onClick={() => setModalBuilding(null)}>✕</button>
           </div>
+          <FactorInput
+            value={modalFactor}
+            onChange={(v) => setFactors((prev) => ({ ...prev, [modalBuilding.unit_id]: v }))}
+            onCommit={(v) => commitFactor(String(modalBuilding.unit_id), v)}
+            disabled={save.isPending}
+          />
         </div>
       )}
     </div>
