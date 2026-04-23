@@ -5,7 +5,6 @@
 ships:
   small_transporter:
     id: 29
-    cost: { metal: 2000, silicon: 2000, hydrogen: 0 }
     attack: 5
     shield: 10
     shell: 4000
@@ -15,7 +14,6 @@ ships:
 
   large_transporter:
     id: 30
-    cost: { metal: 6000, silicon: 6000, hydrogen: 0 }
     attack: 5
     shield: 25
     shell: 12000
@@ -25,7 +23,6 @@ ships:
 
   light_fighter:
     id: 31
-    cost: { metal: 3000, silicon: 1000, hydrogen: 0 }
     attack: 50
     shield: 10
     shell: 4000
@@ -35,7 +32,6 @@ ships:
 
   strong_fighter:
     id: 32
-    cost: { metal: 6000, silicon: 4000, hydrogen: 0 }
     attack: 150
     shield: 25
     shell: 10000
@@ -45,7 +41,6 @@ ships:
 
   cruiser:
     id: 33
-    cost: { metal: 20000, silicon: 7000, hydrogen: 2000 }
     attack: 400
     shield: 50
     shell: 27000
@@ -55,7 +50,6 @@ ships:
 
   battle_ship:
     id: 34
-    cost: { metal: 45000, silicon: 15000, hydrogen: 0 }
     attack: 1000
     shield: 200
     shell: 60000
@@ -63,35 +57,17 @@ ships:
     speed: 10000
     fuel: 500
 
-  death_star:
-    id: 42
-    cost: { metal: 5000000, silicon: 4000000, hydrogen: 1000000 }
-    attack: 200000
-    shield: 50000
-    shell: 9000000
-    cargo: 1000000
-    speed: 100
-    fuel: 1
+  frigate:
+    id: 35
+    attack: 700
+    shield: 400
+    shell: 70000
+    cargo: 750
+    speed: 10000
+    fuel: 250
 
-  # Espionage Sensor (id=38 в legacy UNIT_ESPIONAGE_SENSOR). Быстрый
-  # и хрупкий probe для SPY-миссий (mission=11). В бою почти бесполезен
-  # (attack=0, shell=1000); rapidfire battleship→probe=5 сносит пачкой.
-  espionage_sensor:
-    id: 38
-    cost: { metal: 0, silicon: 1000, hydrogen: 0 }
-    attack: 0
-    shield: 0
-    shell: 1000
-    cargo: 5
-    speed: 100000000
-    fuel: 1
-
-  # Colony Ship (id=36 в legacy UNIT_COLONY_SHIP). Для COLONIZE
-  # (mission=8): 1 корабль = 1 новая планета. Cargo 7500 переносит
-  # стартовые ресурсы. Медленный и дорогой — одноразовая миссия.
   colony_ship:
     id: 36
-    cost: { metal: 10000, silicon: 20000, hydrogen: 10000 }
     attack: 50
     shield: 100
     shell: 30000
@@ -99,13 +75,69 @@ ships:
     speed: 2500
     fuel: 1000
 
+  recycler:
+    id: 37
+    attack: 1
+    shield: 10
+    shell: 16000
+    cargo: 20000
+    speed: 2000
+    fuel: 300
+
+  # Espionage Sensor (id=38 в legacy UNIT_ESPIONAGE_SENSOR). Быстрый
+  # и хрупкий probe для SPY-миссий (mission=11). В бою почти бесполезен
+  # (attack=0, shell=1000); rapidfire battleship→probe=5 сносит пачкой.
+  espionage_sensor:
+    id: 38
+    attack: 0
+    shield: 0
+    shell: 1000
+    cargo: 5
+    speed: 100000000
+    fuel: 1
+
+  solar_satellite:
+    id: 39
+    attack: 0
+    shield: 2
+    shell: 2000
+    cargo: 0
+    speed: 0
+    fuel: 0
+
+  bomber:
+    id: 40
+    attack: 900
+    shield: 550
+    shell: 75000
+    cargo: 500
+    speed: 4000
+    fuel: 1000
+
+  star_destroyer:
+    id: 41
+    attack: 2000
+    shield: 500
+    shell: 110000
+    cargo: 2000
+    speed: 5000
+    fuel: 1000
+
+  death_star:
+    id: 42
+    attack: 200000
+    shield: 50000
+    shell: 9000000
+    cargo: 1000000
+    speed: 100
+    fuel: 1
+
   # Interplanetary Missile (id=52 в legacy UNIT_INTERPLANETARY_ROCKET).
   # Не корабль и не участвует в обычном бою (attack=0) — используется
   # только для kind=16 (rocket attack). Летит прямо, без возврата,
   # наносит урон defense на цели.
   interplanetary_missile:
     id: 52
-    cost: { metal: 12500, silicon: 2500, hydrogen: 10000 }
     attack: 0
     shield: 0
     shell: 1500

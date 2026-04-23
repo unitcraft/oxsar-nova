@@ -111,13 +111,15 @@ type ShipCatalog struct {
 
 type ShipSpec struct {
 	ID     int     `yaml:"id"`
-	Cost   ResCost `yaml:"cost"`
 	Attack int     `yaml:"attack"`
 	Shield int     `yaml:"shield"`
 	Shell  int     `yaml:"shell"`
 	Cargo  int64   `yaml:"cargo"`
 	Speed  int     `yaml:"speed"`
 	Fuel   int     `yaml:"fuel"`
+	// Cost заполняется при загрузке из Construction.Buildings (na_construction, mode=3).
+	// В ships.yml это поле отсутствует — источник истины для стоимостей — construction.yml.
+	Cost ResCost `yaml:"-"`
 }
 
 type DefenseCatalog struct {
@@ -251,5 +253,18 @@ func LoadCatalog(dir string) (*Catalog, error) {
 			return nil, fmt.Errorf("parse %s: %w", p.file, err)
 		}
 	}
+	// Заполнить ShipSpec.Cost из construction.yml (na_construction, mode=3).
+	// Это единственный источник истины для стоимостей кораблей.
+	for key, spec := range cat.Ships.Ships {
+		if cs, ok := cat.Construction.Buildings[key]; ok {
+			spec.Cost = ResCost{
+				Metal:    cs.Basic.Metal,
+				Silicon:  cs.Basic.Silicon,
+				Hydrogen: cs.Basic.Hydrogen,
+			}
+			cat.Ships.Ships[key] = spec
+		}
+	}
+
 	return cat, nil
 }
