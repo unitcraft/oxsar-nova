@@ -129,40 +129,14 @@
 
 ---
 
-### E.4 Реальное время постройки в UnitInfo (план 13-real-build-time, приоритет: LOW)
-
-`UnitInfoScreen` показывает базовое время постройки, не учитывая уровни
-robotic_factory и nano_factory текущего игрока.
-
-**Шаг 1** — `GET /api/planets/{id}/build-time?unit_id=N&level=M` — endpoint для расчёта
-реального времени с учётом зданий планеты.
-
-**Шаг 2** — `UnitInfoScreen.tsx`: показывать "Время постройки на [planetName]: Xч Yм"
-(динамически, зависит от выбранной планеты).
-
-**Проверка готовности:**
-- [ ] Backend endpoint build-time
-- [ ] Frontend использует реальное время из API
-- [ ] Тест формулы BuildTime
+### ✅ E.4 Реальное время постройки в UnitInfo (план 13, итерация ~50)
+- `GET /api/planets/{id}/buildings` возвращает `build_seconds` для следующего уровня
+- `UnitInfoScreen.tsx` показывает реальное время с учётом robotic/nano factory
 
 ---
 
-### E.5 Vacation mode (режим отпуска) (приоритет: LOW)
-
-**Контекст:** В legacy (consts.php):
-- `VACATION_DISABLE_TIME = 30 дней` — через 30 дней без входа включается защита
-- `LAST_TIME_ON_VACATION_DISABLE = 20 дней` — мин. интервал между отпусками
-- Пока в отпуске: флот нельзя отправить, атака на игрока невозможна
-
-В nova не реализована.
-
-**Шаг 1** — Миграция: `ALTER TABLE users ADD COLUMN vacation_since TIMESTAMPTZ`
-**Шаг 2** — `backend/internal/player/vacation.go`: `SetVacation / UnsetVacation` с проверкой интервала
-**Шаг 3** — `fleet/attack.go`: проверка vacation у цели
-**Шаг 4** — `FleetScreen.tsx`: кнопка "Режим отпуска" в ProfileScreen
-
-**Проверка готовности:**
-- [ ] `users.vacation_since` в БД
-- [ ] `SetVacation` проверяет минимальный интервал
-- [ ] Атака на игрока в отпуске возвращает 403
-- [ ] `make test` зелёный
+### ✅ E.5 Vacation mode (режим отпуска) (итерация ~18)
+- `users.vacation_since` в БД (миграция 0045)
+- `auth/handler.go`: `POST /api/me/vacation`, `DELETE /api/me/vacation`
+- `fleet/attack.go`: атака на игрока в отпуске → 403
+- `fleet/send.go`: отправка флота в отпуске → 403
