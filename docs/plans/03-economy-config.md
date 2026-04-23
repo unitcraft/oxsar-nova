@@ -34,16 +34,16 @@
 
 ### C.1 Конфиг-консистентность (план 20, приоритет: HIGH)
 
-Четыре независимых несогласованности.
+Четыре независимых несогласованности. Порядок: C.1.1 → C.1.2 → C.1.4 → C.1.3.
 
-#### C.1.1 ion_gun отсутствует в defense.yml (самое маленькое)
+#### C.1.1 ion_gun отсутствует в defense.yml
 
 `units.yml` и `construction.yml` содержат `ion_gun` (id=46), но `defense.yml` не имеет
-боевых статов. Данные из `na_ship_datasheet`:
+боевых статов. Данные из `na_ship_datasheet` (§13.7 balance-analysis.md):
 
-| unitid | attack | shield | shell |
-|--------|--------|--------|-------|
-| 46     | 150    | 500    | 8000  |
+| unitid | attack | shield | shell (броня) |
+|--------|--------|--------|---------------|
+| 46     | 150    | 500    | 8 000         |
 
 Добавить в `configs/defense.yml`:
 ```yaml
@@ -54,32 +54,41 @@ ion_gun:
   shell: 8000
 ```
 
+Примечание: броня (`shell`) вычисляется из `na_construction` по формуле charge_metal+charge_silicon,
+значение 8000 соответствует стоимости 8000/2000/500 (из na_construction для id=46).
+
 #### C.1.2 max_level для зданий
 
 `configs/buildings.yml` не имеет поля `max_level` — можно строить до уровня 999.
-Legacy лимиты (`$GLOBALS["MAX_UNIT_LEVELS"]`):
+Лимиты из legacy `consts.php` (`MAX_BUILDING_LEVEL = 40`, `$GLOBALS["MAX_UNIT_LEVELS"]`):
 
-| Здание | max_level |
-|--------|-----------|
-| По умолчанию (все) | 40 |
-| moon_hydrogen_lab (326) | 10 |
-| nano_factory (7) | 12 |
-| star_gate (56) | 15 |
-| gravi (28) | 10 |
+| Здание | max_level | Источник |
+|--------|-----------|---------|
+| По умолчанию (все) | 40 | `MAX_BUILDING_LEVEL = 40` |
+| moon_hydrogen_lab (326) | 10 | `MAX_UNIT_LEVELS` |
+| moon_repair_factory | 9 | `MAX_UNIT_LEVELS` |
+| moon_lab | 5 | `MAX_UNIT_LEVELS` |
+| nano_factory (7) | 12 | `MAX_UNIT_LEVELS` |
+| star_gate (56) | 15 | `MAX_UNIT_LEVELS` |
+| gravi (28) | 10 | `MAX_UNIT_LEVELS` |
 
 Шаги:
 1. Добавить `MaxLevel int` в `BuildingSpec` (`catalog.go`), `yaml:"max_level,omitempty"`
-2. В `buildings.yml` проставить `max_level: 40` для всех зданий + исключения
+2. В `buildings.yml` проставить `max_level: 40` для всех зданий + исключения выше
 3. В `building/service.go` (enqueue): `level+1 <= spec.MaxLevel` (если MaxLevel > 0)
 
 #### C.1.3 research.yml — устаревшие placeholder-стоимости
 
-`research.yml` содержит base-стоимости расходящиеся с `construction.yml` в 8–16×.
+`research.yml` содержит base-стоимости, расходящиеся с `construction.yml` в 8–16×.
+Пример: `ballistics_tech` — research.yml: 4000/8000/4000, construction.yml: 400/500/0.
 `construction.yml` — источник истины. Аналогично паттерну плана 17 для кораблей:
 
 1. Убрать поле `cost_base` из `ResearchSpec` (или `yaml:"-"`)
 2. В `LoadCatalog` заполнять `ResearchSpec.CostBase` из `Construction.Buildings` (mode=2)
 3. Проверить все вызовы `spec.CostBase` в `research/service.go`
+
+Также: `MAX_RESEARCH_LEVEL = 40` из legacy consts.php — применить аналогично C.1.2
+для исследований если поле отсутствует.
 
 #### C.1.4 exchange/exch_office в building/service.go
 
@@ -90,9 +99,13 @@ Legacy лимиты (`$GLOBALS["MAX_UNIT_LEVELS"]`):
 2. Если только из `Buildings` — добавить fallback
 3. Интеграционный тест: enqueue `exchange` не возвращает `ErrUnknownUnit`
 
-**Порядок:** C.1.1 → C.1.2 → C.1.4 → C.1.3 (по возрастанию сложности)
+**Параметры биржи из legacy consts.php** (для будущей реализации):
+- `EXCH_LEVEL_SLOTS = 15` слотов на уровень биржи
+- `EXCH_MERCHANT_COMMISSION = 13%` (без премиума), `10%` (с премиумом)
+- `EXCH_MAX_TTL = 7 дней`, `EXCH_MIN_TTL = 3 дня`
+- `EXCH_SELLER_MAX_PROFIT = 1000%` — макс. наценка
 
-**Проверка готовности:**
+**Проверка готовности C.1:**
 - [ ] `ion_gun` в `defense.yml` с корректными статами
 - [ ] `buildings.yml`: все здания имеют `max_level`
 - [ ] `building/service.go`: enqueue отклоняет уровень выше max_level
@@ -102,7 +115,82 @@ Legacy лимиты (`$GLOBALS["MAX_UNIT_LEVELS"]`):
 
 ---
 
-### C.2 Рефакторинг formula DSL → статические функции (план 16, приоритет: LOW)
+### C.2 Параметры игрового инстанса (приоритет: MEDIUM)
+
+**Контекст:** Текущий инстанс Dominator имеет нестандартные параметры из `consts.dominator.local.php`.
+В nova нет механизма override параметров на уровне конфига инстанса.
+
+Ключевые отличия Dominator от дефолта (требуют явной конфигурации):
+
+| Параметр | Дефолт | Dominator | Где в nova |
+|----------|--------|-----------|------------|
+| `GAMESPEED` | 1.0 | 0.09375 | `config.GameSpeed` |
+| `RESOURCES_PRODUCTION_FACTOR` | 1.0 | **5** | `config.ProductionFactor` |
+| `STORAGE_FACTOR` | 1.0 | **5** | не реализован |
+| `RESEARCH_SPEED_FACTOR` | 1.0 | **2** | не реализован |
+| `ENEGRY_PRODUCTION_FACTOR` | 1.0 | **0.8** | не реализован |
+| `NUM_GALAXYS` | 8 | **3** | `config.NumGalaxies` (?) |
+| `NUM_SYSTEMS` | 600 | **300** | `config.NumSystems` (?) |
+| `MAX_PLANETS` | 10 | **12** | не реализован |
+| `BASHING_MAX_ATTACKS` | 0 | **4** за 5ч | не реализован |
+| `PROTECTION_PERIOD` | 0 | **24ч** | не реализован |
+
+**Шаг 1** — Добавить в `backend/internal/config/config.go`:
+```go
+StorageFactor         float64  // STORAGE_FACTOR
+ResearchSpeedFactor   float64  // RESEARCH_SPEED_FACTOR
+EnergyProductionFactor float64 // ENEGRY_PRODUCTION_FACTOR
+MaxPlanets            int      // MAX_PLANETS per player
+BashingPeriod         int      // секунды, 0 = выключено
+BashingMaxAttacks     int
+ProtectionPeriod      int      // секунды для нового игрока
+```
+
+**Шаг 2** — Применить `StorageFactor` в `economy/formulas.go`, `ResearchSpeedFactor`
+в `research/service.go`, `EnergyProductionFactor` в производстве энергии.
+
+**Шаг 3** — `MaxPlanets`: проверка в `fleet/colonize.go` при колонизации.
+
+**Шаг 4** — `BashingMaxAttacks` / `ProtectionPeriod`: проверка в `fleet/attack.go`.
+
+**Проверка готовности:**
+- [ ] `StorageFactor`, `ResearchSpeedFactor`, `EnergyProductionFactor` в config
+- [ ] Применены в соответствующих сервисах
+- [ ] `MaxPlanets` проверяется при колонизации
+- [ ] `ProtectionPeriod` проверяется при атаке
+- [ ] `make test` зелёный
+
+---
+
+### C.3 Система профессий (приоритет: LOW)
+
+**Контекст:** В legacy (consts.php) есть 4 профессии с бонусами/штрафами к уровням зданий.
+Смена профессии стоит 1000 кредитов, мин. интервал 14 дней.
+
+| Профессия | Бонусы | Штрафы |
+|-----------|--------|--------|
+| MINER | Metal Mine+1, Silicon Lab+1, Solar Plant+2 | Shipyard−2, Gun/Shield/Shell−2 |
+| ATTACKER | Gun/Shield/Shell+1, Ballistics+1, Shipyard+1 | Metal Mine−1, Silicon Lab−1, Defense Factory−3 |
+| DEFENDER | Masking+1, Shield/Shell+1, Defense Factory+1, Rocket Station+1 | Computer−1, Gun−1, Shipyard−3 |
+| TANK | Gun/Shield/Shell+2 | Gravi−2, все двигатели−2 |
+
+Бонус применяется как виртуальный уровень при расчёте производства и боя.
+Например, MINER с Metal Mine 10 + бонус +1 = производство как при уровне 11.
+
+**Шаг 1** — Миграция: `ALTER TABLE users ADD COLUMN profession TEXT DEFAULT 'none'`
+**Шаг 2** — `configs/professions.yml` — описание профессий
+**Шаг 3** — `profession/service.go`: `ChangeProfession(ctx, userID, profession)`
+**Шаг 4** — Применить бонусы в `economy/formulas.go` и `battle/engine.go`
+
+**Проверка готовности:**
+- [ ] `users.profession` в БД
+- [ ] `ChangeProfession` с проверкой кредитов и интервала
+- [ ] Бонусы применяются в производстве и бою
+- [ ] `make test` зелёный
+
+---
+
+### C.4 Рефакторинг formula DSL → статические функции (приоритет: LOW)
 
 > **Статус:** Частично сделано в итерации 16 (prod/cons функции).
 > Проверить что пакет `backend/pkg/formula/` не используется за пределами import-datasheets.

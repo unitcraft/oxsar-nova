@@ -16,7 +16,7 @@
 - UI: ArtmarketScreen с фильтром «мои/чужие», inline price input
 - Idempotency key для BuyOffer
 
-### ✅ Артефакты из экспедиций (итерация ~30)
+### ✅ Артефакты из экспедиций (итерация ~30, улучшено в план 22)
 - `expArtefact` в `fleet/expedition.go`: случайный артефакт → state=held
 - Вес artefact в weighted-random зависит от exp_power (план 22)
 
@@ -28,7 +28,7 @@
 
 **Проблема:** `Catalyst` (id=301) и `Power Generator` (id=302) имеют `stackable: true`
 без верхнего лимита. 10× Catalyst = +100% производства — потенциальный эксплойт
-через экспедиции + artmarket.
+через экспедиции + artmarket. (§11, §15.6 balance-analysis.md)
 
 **Шаг 1** — `configs/artefacts.yml`:
 ```yaml
@@ -75,4 +75,71 @@ HTTP-handler возвращает 400 при этой ошибке.
 - [ ] `ErrMaxStacksReached` объявлена и возвращается
 - [ ] HTTP-handler возвращает 400
 - [ ] Тесты
+- [ ] `make test` зелёный
+
+---
+
+### D.2 Battle bonus артефакты — верификация ID (приоритет: MEDIUM)
+
+**Контекст:** plan A.2 требует ID и множители боевых артефактов (war_machine/energy_shield/titanium_hull).
+Эти ID должны быть верифицированы по `d:\Sources\oxsar2\consts.php`.
+
+**Шаг:** Найти в consts.php константы вида `ARTEFACT_WAR_MACHINE`, `ARTEFACT_ENERGY_SHIELD`,
+`ARTEFACT_TITANIUM_HULL` и выписать ID + multiplier.
+
+Пример ожидаемого формата для `artefacts.yml`:
+```yaml
+war_machine:
+  id: 310          # верифицировать!
+  stackable: false
+  lifetime_seconds: 604800
+  effect:
+    type: battle_bonus
+    battle_attack: 1.10
+
+energy_shield:
+  id: 311          # верифицировать!
+  stackable: false
+  lifetime_seconds: 604800
+  effect:
+    type: battle_bonus
+    battle_shield: 1.10
+
+titanium_hull:
+  id: 312          # верифицировать!
+  stackable: false
+  lifetime_seconds: 604800
+  effect:
+    type: battle_bonus
+    battle_shell: 1.10
+```
+
+**Проверка готовности:**
+- [ ] ID верифицированы по `oxsar2/consts.php`
+- [ ] `artefacts.yml` обновлён
+- [ ] (зависит от A.2 для применения в бою)
+
+---
+
+### D.3 Реферальная система (приоритет: LOW)
+
+**Контекст:** В legacy есть реферальная система (consts.php):
+- `REFERRAL_CREDIT_PERCENT = 20%` от покупок реферала
+- `REFERRAL_BONUS_POINTS = 3000` очков за каждого реферала
+- `REFERRAL_MAX_BONUS_POINTS = 500000`
+- Бонус ресурсов при регистрации через реф. ссылку: 10 металла, 5 кремния, 2 водорода
+
+В nova не реализована. Нужна для роста аудитории.
+
+**Шаг 1** — Миграция: `ALTER TABLE users ADD COLUMN referred_by TEXT REFERENCES users(id)`,
+индекс на `referred_by`.
+**Шаг 2** — `referral/service.go`: `ProcessReferralReward(ctx, newUserID)` —
+начислить ресурсы + очки реферера.
+**Шаг 3** — При каждой покупке кредитов: `ProcessPurchaseReferral(ctx, buyerID, amount)`.
+**Шаг 4** — Регистрация принимает `?ref=<userID>` параметр.
+
+**Проверка готовности:**
+- [ ] `users.referred_by` в БД
+- [ ] `ProcessReferralReward` реализован
+- [ ] `ProcessPurchaseReferral` вызывается из платёжного webhook (план F.1)
 - [ ] `make test` зелёный
