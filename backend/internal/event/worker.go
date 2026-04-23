@@ -6,11 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/oxsar/nova/backend/internal/repo"
+	"github.com/oxsar/nova/backend/pkg/metrics"
 	"github.com/oxsar/nova/backend/pkg/trace"
 )
 
@@ -184,7 +186,14 @@ func (w *Worker) processOne(ctx context.Context, id string) error {
 			hCtx = trace.WithTraceID(ctx, *e.TraceID)
 		}
 
-		if hErr := handler(hCtx, tx, e); hErr != nil {
+		kindStr := strconv.Itoa(int(e.Kind))
+		startTs := time.Now()
+		hErr := handler(hCtx, tx, e)
+		if metrics.EventHandlerSec != nil {
+			metrics.EventHandlerSec.WithLabelValues(kindStr).Observe(time.Since(startTs).Seconds())
+		}
+
+		if hErr != nil {
 			if errors.Is(hErr, ErrSkip) {
 				// Skip — сдвинуть fire_at на backoff(attempt+1), но не
 				// инкрементить attempt (это не «сбой», а «зависимость не готова»).
@@ -195,6 +204,9 @@ func (w *Worker) processOne(ctx context.Context, id string) error {
 					WHERE id = $3
 				`, delay.String(), hErr.Error(), e.ID); err != nil {
 					return fmt.Errorf("mark skip: %w", err)
+				}
+				if metrics.EventsProcessed != nil {
+					metrics.EventsProcessed.WithLabelValues(kindStr, "skip").Inc()
 				}
 				return nil
 			}
@@ -211,6 +223,9 @@ func (w *Worker) processOne(ctx context.Context, id string) error {
 				w.log.WarnContext(ctx, "event_error_final",
 					slog.String("event_id", e.ID), slog.Int("kind", int(e.Kind)),
 					slog.Int("attempt", nextAttempt), slog.String("err", hErr.Error()))
+				if metrics.EventsProcessed != nil {
+					metrics.EventsProcessed.WithLabelValues(kindStr, "error").Inc()
+				}
 				return nil
 			}
 			// Retry.
@@ -226,6 +241,9 @@ func (w *Worker) processOne(ctx context.Context, id string) error {
 				slog.String("event_id", e.ID), slog.Int("kind", int(e.Kind)),
 				slog.Int("attempt", nextAttempt), slog.Duration("delay", delay),
 				slog.String("err", hErr.Error()))
+			if metrics.EventsProcessed != nil {
+				metrics.EventsProcessed.WithLabelValues(kindStr, "retry").Inc()
+			}
 			return nil
 		}
 
@@ -236,8 +254,56 @@ func (w *Worker) processOne(ctx context.Context, id string) error {
 		`, e.ID); err != nil {
 			return fmt.Errorf("mark ok: %w", err)
 		}
+		if metrics.EventsProcessed != nil {
+			metrics.EventsProcessed.WithLabelValues(kindStr, "ok").Inc()
+		}
 		return nil
 	})
+}
+
+// RunMetricsUpdater периодически обновляет queue-depth gauge'ы.
+// Запускается рядом с Run в goroutine.
+func (w *Worker) RunMetricsUpdater(ctx context.Context) error {
+	t := time.NewTicker(15 * time.Second)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
+			w.updateMetrics(ctx)
+		}
+	}
+}
+
+func (w *Worker) updateMetrics(ctx context.Context) {
+	if metrics.EventsQueue == nil {
+		return
+	}
+	rows, err := w.db.Pool().Query(ctx,
+		`SELECT state, COUNT(*) FROM events GROUP BY state`)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var state string
+		var count int64
+		if err := rows.Scan(&state, &count); err == nil {
+			metrics.EventsQueue.WithLabelValues(state).Set(float64(count))
+		}
+	}
+
+	var lag *float64
+	_ = w.db.Pool().QueryRow(ctx, `
+		SELECT EXTRACT(EPOCH FROM (now() - MIN(fire_at)))
+		FROM events WHERE state='wait' AND fire_at <= now()
+	`).Scan(&lag)
+	if lag != nil {
+		metrics.EventsLagSec.Set(*lag)
+	} else {
+		metrics.EventsLagSec.Set(0)
+	}
 }
 
 // ErrSkip — хэндлер возвращает её, когда событие нужно оставить в wait
