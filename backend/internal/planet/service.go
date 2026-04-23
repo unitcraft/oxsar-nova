@@ -626,21 +626,15 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 		energyProd := s.calcBuildingProduction(spec.Prod.Energy, b.Level, 1.0)
 		energyCons := s.calcBuildingConsumption(spec.Cons.Energy, b.Level)
 
-		// Применить factor (0-100%).
+		// net энергия при factor=100 (базовые значения, фронт применяет factor сам).
+		baseNetEnergy := energyProd - energyCons
+
+		// Применить factor для итоговых сумм.
 		factor := float64(b.Factor) / 100.0
-		metalHour *= factor
-		silHour *= factor
-		hydHour *= factor
-		energyProd *= factor
-		energyCons *= factor
-
-		// net: положительное = производит энергию, отрицательное = потребляет.
-		netEnergy := energyProd - energyCons
-
-		totalMetal += metalHour
-		totalSilicon += silHour
-		totalHydrogen += hydHour
-		totalEnergy += netEnergy
+		totalMetal += metalHour * factor
+		totalSilicon += silHour * factor
+		totalHydrogen += hydHour * factor
+		totalEnergy += baseNetEnergy * factor
 
 		// allow_factor: ресурсные шахты и энергостанции.
 		allowFactor := spec.Prod.Metal != "" || spec.Prod.Silicon != "" ||
@@ -652,10 +646,10 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 			UnitID:       b.UnitID,
 			Name:         buildingName,
 			Level:        b.Level,
-			ProdMetal:    metalHour,
-			ProdSilicon:  silHour,
-			ProdHydrogen: hydHour,
-			ConsEnergy:   netEnergy,
+			ProdMetal:    metalHour,    // при factor=100
+			ProdSilicon:  silHour,      // при factor=100
+			ProdHydrogen: hydHour,      // при factor=100
+			ConsEnergy:   baseNetEnergy, // при factor=100
 			Factor:       b.Factor,
 			AllowFactor:  allowFactor,
 		})
