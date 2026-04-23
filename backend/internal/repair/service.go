@@ -427,8 +427,40 @@ func (s *Service) ListDamaged(ctx context.Context, planetID string) ([]DamagedUn
 	return out, rows.Err()
 }
 
-// List возвращает активные задания на планете.
-func (s *Service) List(ctx context.Context, planetID string) ([]QueueItem, error) {
+// Storage — вместимость ремонтного ангара (legacy: (-1+ceil(pow(1.61,level)))*30).
+type Storage struct {
+	Total int64 `json:"total"`
+	Used  int64 `json:"used"`
+	Free  int64 `json:"free"`
+}
+
+// repairStorageForLevel вычисляет вместимость ангара по уровню (legacy formula).
+func repairStorageForLevel(level int) int64 {
+	if level <= 0 {
+		return 0
+	}
+	return int64((-1 + math.Ceil(math.Pow(1.61, float64(level)))) * 30)
+}
+
+// ListResponse — ответ List: очередь + данные хранилища.
+type ListResponse struct {
+	Queue   []QueueItem `json:"queue"`
+	Storage Storage     `json:"storage"`
+}
+
+// List возвращает активные задания на планете и данные хранилища.
+func (s *Service) List(ctx context.Context, planetID string) (ListResponse, error) {
+	// Узнаём уровень repair_factory.
+	repairSpec, hasRepair := s.catalog.Buildings.Buildings["repair_factory"]
+	var repairLvl int
+	if hasRepair {
+		_ = s.db.Pool().QueryRow(ctx,
+			`SELECT level FROM buildings WHERE planet_id=$1 AND unit_id=$2`,
+			planetID, repairSpec.ID,
+		).Scan(&repairLvl)
+	}
+	storageTotal := repairStorageForLevel(repairLvl)
+
 	rows, err := s.db.Pool().Query(ctx, `
 		SELECT id, planet_id, user_id, unit_id, is_defense, mode, count,
 		       return_metal, return_silicon, return_hydrogen,
@@ -438,20 +470,32 @@ func (s *Service) List(ctx context.Context, planetID string) ([]QueueItem, error
 		ORDER BY start_at
 	`, planetID)
 	if err != nil {
-		return nil, fmt.Errorf("list queue: %w", err)
+		return ListResponse{}, fmt.Errorf("list queue: %w", err)
 	}
 	defer rows.Close()
 	var out []QueueItem
+	var used int64
 	for rows.Next() {
 		var q QueueItem
 		if err := rows.Scan(&q.ID, &q.PlanetID, &q.UserID, &q.UnitID, &q.IsDefense, &q.Mode, &q.Count,
 			&q.ReturnMetal, &q.ReturnSilicon, &q.ReturnHydrogen,
 			&q.PerUnitSeconds, &q.StartAt, &q.EndAt, &q.Status); err != nil {
-			return nil, err
+			return ListResponse{}, err
 		}
+		used += q.Count
 		out = append(out, q)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return ListResponse{}, err
+	}
+	free := storageTotal - used
+	if free < 0 {
+		free = 0
+	}
+	return ListResponse{
+		Queue:   out,
+		Storage: Storage{Total: storageTotal, Used: used, Free: free},
+	}, nil
 }
 
 // Cancel отменяет задание очереди remontного ангара.

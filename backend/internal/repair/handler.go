@@ -154,10 +154,10 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing planet id"))
 		return
 	}
-	list, err := h.svc.List(r.Context(), planetID)
+	resp, err := h.svc.List(r.Context(), planetID)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"queue": list})
+	httpx.WriteJSON(w, r, http.StatusOK, resp)
 }
