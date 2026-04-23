@@ -147,7 +147,7 @@ func run() error {
 	officerSvc := officer.NewService(db)
 	officerH := officer.NewHandler(officerSvc)
 
-	scoreSvc := score.NewService(db, cat)
+	scoreSvc := score.NewServiceWithCoeffs(db, cat, cfg.Game.Points)
 	scoreH := score.NewHandlerWithDB(scoreSvc, db)
 
 	allianceSvc := alliance.NewService(db)

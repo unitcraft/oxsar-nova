@@ -81,7 +81,7 @@ func run() error {
 	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed)
 	officerSvc := officer.NewService(db)
 
-	scoreSvc := score.NewService(db, cat)
+	scoreSvc := score.NewServiceWithCoeffs(db, cat, cfg.Game.Points)
 	achSvc := achievement.NewService(db)
 
 	// withScore оборачивает handler: после успеха пересчитывает очки
