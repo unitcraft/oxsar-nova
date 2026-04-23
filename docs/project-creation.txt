@@ -5161,3 +5161,21 @@ MEDIUM Priority:
        docs/plans/13-shipyard.md
 
 Статус: ✅ ЗАВЕРШЕНА (задача 5 Rapidfire расширение — отложена P3)
+
+================================================================================
+
+## Задача 14.1 — Отмена задания в очереди ремонта
+- Backend: Cancel(ctx, userID, planetID, queueID) в repair/service.go
+  - Транзакция: читает item FOR UPDATE, проверяет ownership
+  - Возвращает required-ресурсы (base×0.2, пересчёт из базовой стоимости)
+  - Для disassemble: дополнительно возвращает юниты через INSERT ON CONFLICT
+  - Удаляет событие из events (payload->>'queue_id') и запись из repair_queue
+  - ErrAlreadyDone если статус != running/queued
+- Handler: DELETE /api/planets/{id}/repair/queue/{queueId} → 204 No Content
+- Route: зарегистрирован в cmd/server/main.go
+- Frontend: мутация cancel + кнопка ✕ в строках очереди (RepairScreen.tsx)
+
+Файлы: backend/internal/repair/service.go, handler.go, cmd/server/main.go,
+       frontend/src/features/repair/RepairScreen.tsx, docs/plans/14-repair.md
+
+Статус: ✅ ЗАВЕРШЕНА

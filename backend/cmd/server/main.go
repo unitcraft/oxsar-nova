@@ -216,6 +216,7 @@ func run() error {
 		pr.Post("/planets/{id}/repair/repair", repairH.EnqueueRepair)
 		pr.Get("/planets/{id}/repair/damaged", repairH.ListDamaged)
 		pr.Get("/planets/{id}/repair/queue", repairH.List)
+		pr.Delete("/planets/{id}/repair/queue/{queueId}", repairH.Cancel)
 
 		pr.Get("/artefacts", artefactH.List)
 		pr.Post("/artefacts/{id}/activate", artefactH.Activate)

@@ -115,6 +115,34 @@ func (h *Handler) ListDamaged(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"damaged": list})
 }
 
+// Cancel DELETE /api/planets/{id}/repair/queue/{queueId}
+func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	queueID := chi.URLParam(r, "queueId")
+	if planetID == "" || queueID == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing id"))
+		return
+	}
+	err := h.svc.Cancel(r.Context(), uid, planetID, queueID)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrQueueItemNotFound):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrNotFound, err.Error()))
+	case errors.Is(err, ErrAlreadyDone):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 // List GET /api/planets/{id}/repair/queue
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if _, ok := auth.UserID(r.Context()); !ok {

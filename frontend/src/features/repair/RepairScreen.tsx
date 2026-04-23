@@ -76,6 +76,19 @@ export function RepairScreen({ planet }: { planet: Planet }) {
     onError: (err) => { toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Ошибка разбора'); },
   });
 
+  const cancel = useMutation({
+    mutationFn: (queueId: string) =>
+      api.delete(`/api/planets/${planet.id}/repair/queue/${queueId}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['repair-queue', planet.id] });
+      void qc.invalidateQueries({ queryKey: ['repair-damaged', planet.id] });
+      void qc.invalidateQueries({ queryKey: ['shipyard-inventory', planet.id] });
+      void qc.invalidateQueries({ queryKey: ['planets'] });
+      toast.show('success', 'Отменено', 'Задание отменено, ресурсы возвращены');
+    },
+    onError: (err) => { toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось отменить'); },
+  });
+
   const list = (queue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
   const damagedList = damaged.data?.damaged ?? [];
 
@@ -108,6 +121,15 @@ export function RepairScreen({ planet }: { planet: Planet }) {
                       {new Date(q.end_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm"
+                    style={{ fontSize: 11, padding: '2px 6px', color: 'var(--ox-fg-muted)' }}
+                    onClick={() => cancel.mutate(q.id)}
+                    title="Отменить"
+                  >
+                    ✕
+                  </button>
                 </div>
                 {i === 0 && <ProgressBar pct={pct} height={4} />}
               </div>
