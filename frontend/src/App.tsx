@@ -1,12 +1,12 @@
 import { Suspense, lazy, useState, useEffect, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from './stores/auth';
 import { api } from './api/client';
 import type { Planet } from './api/types';
 import { LoginScreen } from './features/auth/LoginScreen';
 import { OverviewScreen } from './features/overview/OverviewScreen';
 import { useTranslation } from './i18n/i18n';
-import { ToastProvider } from './ui/Toast';
+import { ToastProvider, useToast } from './ui/Toast';
 import { ResourceTicker } from './ui/ResourceTicker';
 import { Countdown } from './ui/Countdown';
 import { ScreenSkeleton } from './ui/Skeleton';
@@ -33,20 +33,21 @@ const PlanetOptionsScreen = lazy(() => import('./features/planet-options/PlanetO
 const ResourceScreen     = lazy(() => import('./features/resource/ResourceScreen').then(m => ({ default: m.ResourceScreen })));
 const AdminScreen        = lazy(() => import('./features/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const UnitInfoScreen     = lazy(() => import('./features/unit-info/UnitInfoScreen').then(m => ({ default: m.UnitInfoScreen })));
+const CreditsScreen      = lazy(() => import('./features/payment/CreditsScreen').then(m => ({ default: m.CreditsScreen })));
 
 type Tab =
   | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
   | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
   | 'art-market' | 'officers' | 'achievements' | 'score'
   | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource'
-  | 'unit-info';
+  | 'credits' | 'unit-info';
 
 const VALID_TABS = new Set<string>([
   'overview', 'buildings', 'research', 'shipyard', 'repair',
   'artefacts', 'galaxy', 'fleet', 'market', 'rockets',
   'art-market', 'officers', 'achievements', 'score',
   'messages', 'alliance', 'chat', 'sim', 'admin', 'planet-options', 'resource',
-  'unit-info',
+  'credits', 'unit-info',
 ]);
 
 type InfoUnit = { kind: 'building' | 'research' | 'ship' | 'defense'; id: number; level: number; fromTab: Tab };
@@ -79,6 +80,26 @@ function AuthenticatedApp() {
   const [tab, setTab] = useState<Tab>(() => parseHash().tab);
   const { t } = useTranslation();
   const logout = useAuthStore((s) => s.logout);
+  const qc = useQueryClient();
+  const { show: showToast } = useToast();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('payment');
+    if (payment === 'success') {
+      showToast('success', 'Оплата прошла успешно, кредиты зачислены');
+      void qc.invalidateQueries({ queryKey: ['me'] });
+      void qc.invalidateQueries({ queryKey: ['payment', 'history'] });
+    } else if (payment === 'fail') {
+      showToast('danger', 'Оплата не прошла, попробуйте снова');
+    }
+    if (payment) {
+      params.delete('payment');
+      const newSearch = params.toString();
+      history.replaceState(null, '', newSearch ? `?${newSearch}${window.location.hash}` : window.location.hash || '/');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const navigateTo = (next: Tab) => {
     setTab(next);
@@ -270,6 +291,7 @@ function AuthenticatedApp() {
             {tab === 'admin'      && isAdmin && <AdminScreen />}
             {tab === 'planet-options' && <PlanetOptionsScreen planet={planet} planets={list} homePlanetId={list[0]?.id ?? null} onBack={() => navigateTo('overview')} />}
             {tab === 'resource'   && <ResourceScreen planetId={planet.id} />}
+            {tab === 'credits'    && <CreditsScreen />}
           </Suspense>
         </main>
       </div>

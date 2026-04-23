@@ -5569,3 +5569,59 @@ Star Surveillance (localStorage):
 
 Статус: ✅ ЗАВЕРШЕНА
 
+
+================================================================================
+ИТЕРАЦИЯ 24 — Платёжная система (план G)
+================================================================================
+
+Задача: реализовать приём платежей через Робокассу для самозанятых.
+Написано с нуля, без переноса легаси.
+
+**Миграция 0049_credit_purchases.sql:**
+- Таблица credit_purchases: id, user_id, package_key, amount_credits,
+  price_rub, provider, provider_id (UNIQUE), status, created_at, paid_at
+- Индексы: по user_id и по status='pending'
+
+**config.go:**
+- PaymentConfig: Provider, RobokassaLogin/Pass1/Pass2, EnotApiKey/ShopID, ReturnURL
+- Читается из ENV: PAYMENT_PROVIDER, ROBOKASSA_*, ENOT_*, PAYMENT_RETURN_URL
+
+**backend/internal/payment/:**
+- packages.go — 5 пакетов кредитов (trial/starter/medium/big/max),
+  TotalCredits() и PriceRub() методы
+- gateway.go — интерфейс Gateway (BuildPayURL, VerifyWebhook, SuccessResponse),
+  sentinel errors (ErrPackageNotFound, ErrOrderNotFound, ErrAlreadyPaid,
+  ErrWebhookInvalid, ErrGatewayDisabled)
+- robokassa.go — RobokassaGateway: подпись MD5(login:OutSum:InvId:pass1),
+  верификация MD5(OutSum:InvId:pass2), ответ "OK{InvId}"
+- service.go — Service с ReferralProcessor интерфейсом (без цикл. импортов),
+  CreateOrder (pending в БД → pay_url), ConfirmPayment (FOR UPDATE,
+  идемпотентен, зачисляет credit), ListPurchases
+- handler.go — 4 endpoint: GET /packages (публичный), POST /order,
+  POST /webhook (без JWT), GET /history
+
+**main.go:**
+- paymentSvc = payment.NewService(db, cfg.Payment).WithReferral(referralSvc)
+- Публичные маршруты: GET /api/payment/packages, POST /api/payment/webhook
+- Auth-маршруты: POST /api/payment/order, GET /api/payment/history
+
+**api/openapi.yaml:**
+- Тег payment, 4 пути, схемы: CreditPackage, CreateOrderRequest,
+  CreateOrderResponse, Purchase
+
+**frontend/src/features/payment/CreditsScreen.tsx:**
+- Карточки пакетов с кредитами, бонусом, ценой в ₽
+- POST /api/payment/order → window.open(pay_url, '_blank')
+- Таблица истории покупок со статусами
+
+**App.tsx:**
+- Новый таб 'credits', lazy import CreditsScreen
+- useEffect при монтировании: ?payment=success → toast + invalidateQueries(['me'])
+  ?payment=fail → toast danger, URL очищается через history.replaceState
+
+**Тесты:**
+- robokassa_test.go: valid sig, wrong sig, missing fields, case-insensitive sig
+- TestPackageByKey: TotalCredits, PriceRub, unknown key
+- Все тесты зелёные (go test ./...)
+
+Статус: ✅ ЗАВЕРШЕНА

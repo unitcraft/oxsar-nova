@@ -31,6 +31,7 @@ tags:
   - name: alliances
   - name: admin
   - name: i18n
+  - name: payment
   - name: system
 
 paths:
@@ -1415,6 +1416,62 @@ paths:
             application/json:
               schema: { type: object }
 
+  /api/payment/packages:
+    get:
+      tags: [payment]
+      summary: Список пакетов кредитов (публичный).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CreditPackage" }
+
+  /api/payment/order:
+    post:
+      tags: [payment]
+      summary: Создать заказ на покупку кредитов.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateOrderRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreateOrderResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/payment/webhook:
+    post:
+      tags: [payment]
+      summary: Callback от платёжного шлюза (без авторизации).
+      responses:
+        "200":
+          description: ok (тело зависит от шлюза)
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/payment/history:
+    get:
+      tags: [payment]
+      summary: История покупок кредитов игрока.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Purchase" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1844,3 +1901,37 @@ components:
         unit_id:    { type: integer }
         price:      { type: integer, format: int64 }
         created_at: { type: string, format: date-time }
+
+    CreditPackage:
+      type: object
+      properties:
+        key:           { type: string }
+        label:         { type: string }
+        credits:       { type: integer }
+        bonus_credits: { type: integer }
+        total_credits: { type: integer }
+        price_rub:     { type: number }
+
+    CreateOrderRequest:
+      type: object
+      required: [package_key]
+      properties:
+        package_key: { type: string }
+
+    CreateOrderResponse:
+      type: object
+      properties:
+        order_id: { type: string }
+        pay_url:  { type: string, format: uri }
+
+    Purchase:
+      type: object
+      properties:
+        id:            { type: string }
+        package_key:   { type: string }
+        package_label: { type: string }
+        credits:       { type: integer }
+        price_rub:     { type: number }
+        status:        { type: string, enum: [pending, paid, failed, refunded] }
+        created_at:    { type: string, format: date-time }
+        paid_at:       { type: string, format: date-time, nullable: true }
