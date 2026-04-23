@@ -54,13 +54,34 @@ export function OfficersScreen() {
   const activate = useMutation({
     mutationFn: ({ key, autoRenew }: { key: string; autoRenew: boolean }) =>
       api.post<Entry>(`/api/officers/${key}/activate`, { auto_renew: autoRenew }),
+    onMutate: async ({ key }) => {
+      await qc.cancelQueries({ queryKey: ['officers'] });
+      await qc.cancelQueries({ queryKey: ['artefact-market', 'credit'] });
+      const prevOfficers = qc.getQueryData<{ officers: Entry[] | null }>(['officers']);
+      const prevCredit = qc.getQueryData<{ credit: number }>(['artefact-market', 'credit']);
+      const officer = prevOfficers?.officers?.find((e) => e.key === key);
+      if (officer) {
+        const expiresAt = new Date(Date.now() + officer.duration_days * 86400000).toISOString();
+        qc.setQueryData<{ officers: Entry[] | null }>(['officers'], (old) => ({
+          officers: old?.officers?.map((e) => e.key === key ? { ...e, activated_at: new Date().toISOString(), expires_at: expiresAt } : e) ?? null,
+        }));
+        qc.setQueryData<{ credit: number }>(['artefact-market', 'credit'], (old) => ({
+          credit: (old?.credit ?? 0) - officer.cost_credit,
+        }));
+      }
+      return { prevOfficers, prevCredit };
+    },
     onSuccess: (e) => {
       void qc.invalidateQueries({ queryKey: ['officers'] });
       void qc.invalidateQueries({ queryKey: ['artefact-market'] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
       toast.show('success', 'Офицер', `${e.title} активирован на ${e.duration_days} дн.`);
     },
-    onError: (err) => { toast.show('danger', 'Ошибка', err instanceof Error ? err.message : ''); },
+    onError: (err, _vars, ctx) => {
+      if (ctx?.prevOfficers) qc.setQueryData(['officers'], ctx.prevOfficers);
+      if (ctx?.prevCredit) qc.setQueryData(['artefact-market', 'credit'], ctx.prevCredit);
+      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : '');
+    },
   });
 
   const list = officers.data?.officers ?? [];
