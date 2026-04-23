@@ -118,3 +118,32 @@ buildings:
     cost_base:   { metal: 800, silicon: 400, hydrogen: 200 }
     cost_factor: 2.0
     time_base_seconds: 30
+
+  # Лунные здания (legacy mode=5). Только на луне (is_moon=true).
+  moon_base:
+    id: 54
+    moon_only: true
+    cost_base:   { metal: 50000, silicon: 20000, hydrogen: 10000 }
+    cost_factor: 2.0
+    time_base_seconds: 300
+
+  star_surveillance:
+    id: 55
+    moon_only: true
+    cost_base:   { metal: 100000, silicon: 20000, hydrogen: 50000 }
+    cost_factor: 2.0
+    time_base_seconds: 600
+
+  star_gate:
+    id: 56
+    moon_only: true
+    cost_base:   { metal: 4000000, silicon: 2000000, hydrogen: 1000000 }
+    cost_factor: 2.0
+    time_base_seconds: 1800
+
+  moon_robotic_factory:
+    id: 57
+    moon_only: true
+    cost_base:   { metal: 10000, silicon: 6000, hydrogen: 4000 }
+    cost_factor: 2.0
+    time_base_seconds: 240

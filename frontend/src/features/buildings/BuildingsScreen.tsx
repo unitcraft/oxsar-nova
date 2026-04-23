@@ -12,7 +12,7 @@ function fmtDuration(secs: number): string {
   return `${m}м`;
 }
 import { api } from '@/api/client';
-import { BUILDINGS, imageOf, costForLevel } from '@/api/catalog';
+import { BUILDINGS, MOON_BUILDINGS, imageOf, costForLevel } from '@/api/catalog';
 import type { Planet, QueueItem, UnmetRequirement } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
 import { ProgressBar } from '@/ui/ProgressBar';
@@ -71,7 +71,7 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
     onSuccess: (_, unitId) => {
       void qc.invalidateQueries({ queryKey: ['buildings-queue', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      const name = BUILDINGS.find((b) => b.id === unitId)?.name ?? `#${unitId}`;
+      const name = ([...BUILDINGS, ...MOON_BUILDINGS]).find((b) => b.id === unitId)?.name ?? `#${unitId}`;
       toast.show('success', 'В очередь', `${name} добавлена в очередь строительства`);
     },
     onError: (err) => {
@@ -97,6 +97,7 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
   const requirementsUnmet = levelsQ.data?.requirements_unmet ?? {};
   const queueItems = (queue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
   const busyIds = new Set(queueItems.map((q) => q.unit_id));
+  const buildingList = planet.is_moon ? MOON_BUILDINGS : BUILDINGS;
 
   if (levelsQ.isLoading) {
     return <ScreenSkeleton />;
@@ -153,7 +154,7 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
 
       {/* Building cards */}
       <div className="ox-cards-grid">
-        {BUILDINGS.filter((b) => {
+        {buildingList.filter((b) => {
           if (showLocked) return true;
           const lvl = levels[b.id] ?? 0;
           const unmetArr = requirementsUnmet[b.key] ?? [];
@@ -271,7 +272,7 @@ function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem
   const total = new Date(item.end_at).getTime() - new Date(item.start_at).getTime();
   const elapsed = Date.now() - new Date(item.start_at).getTime();
   const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
-  const name = BUILDINGS.find((b) => b.id === item.unit_id)?.name ?? `#${item.unit_id}`;
+  const name = ([...BUILDINGS, ...MOON_BUILDINGS]).find((b) => b.id === item.unit_id)?.name ?? `#${item.unit_id}`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
