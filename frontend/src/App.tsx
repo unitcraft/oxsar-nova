@@ -249,6 +249,7 @@ function AuthenticatedApp() {
                 kind={infoUnit.kind}
                 unitId={infoUnit.id}
                 currentLevel={infoUnit.level}
+                planetId={planet.id}
               />
             )}
             {tab === 'shipyard'   && <ShipyardScreen planet={planet} onOpenInfo={(kind, id) => openInfo(kind, id, 0)} />}

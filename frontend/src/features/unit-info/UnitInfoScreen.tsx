@@ -1,9 +1,12 @@
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/api/client';
 import { BUILDINGS, MOON_BUILDINGS, RESEARCH, SHIPS, DEFENSE, costForLevel, imageOf, formatNum, fmtReqs, nameOf } from '@/api/catalog';
 
 interface Props {
   kind: 'building' | 'research' | 'ship' | 'defense';
   unitId: number;
   currentLevel: number;
+  planetId?: string;
 }
 
 function fmtSecs(secs: number): string {
@@ -57,7 +60,14 @@ const LEVELS_RANGE = 10;
 const cell: React.CSSProperties = { padding: '6px 12px', textAlign: 'right', fontFamily: 'var(--ox-mono)', fontSize: 13 };
 const cellLeft: React.CSSProperties = { ...cell, textAlign: 'left' };
 
-export function UnitInfoScreen({ kind, unitId, currentLevel }: Props) {
+export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) {
+  const buildingsQ = useQuery({
+    queryKey: ['buildings', planetId],
+    queryFn: () => api.get<{ build_seconds: Record<string, number> }>(`/api/planets/${planetId}/buildings`),
+    enabled: kind === 'building' && planetId != null,
+    staleTime: 30000,
+  });
+
   if (kind === 'ship' || kind === 'defense') {
     return <CombatUnitInfo kind={kind} unitId={unitId} />;
   }
@@ -71,6 +81,7 @@ export function UnitInfoScreen({ kind, unitId, currentLevel }: Props) {
   const isBuilding = kind === 'building';
   const prodRate = isBuilding ? PRODUCTION_RATES[entry.key] : undefined;
   const requires = 'requires' in entry ? entry.requires : undefined;
+  const realBuildSeconds = buildingsQ.data?.build_seconds;
 
   const startLevel = Math.max(1, currentLevel - 2);
   const endLevel = startLevel + LEVELS_RANGE - 1;
@@ -118,9 +129,12 @@ export function UnitInfoScreen({ kind, unitId, currentLevel }: Props) {
           <tbody>
             {rows.map((lvl) => {
               const cost = costForLevel(entry.costBase, entry.costFactor, lvl);
-              const secs = isBuilding
+              const staticSecs = isBuilding
                 ? buildTimeSecs(entry.key, entry.costFactor, lvl)
                 : researchTimeSecs(entry.key, entry.costFactor, lvl);
+              const secs = (isBuilding && lvl === currentLevel + 1 && realBuildSeconds?.[String(unitId)] != null)
+                ? realBuildSeconds[String(unitId)]!
+                : staticSecs;
               const prod = productionAtLevel(entry.key, lvl);
               const isCurrent = lvl === currentLevel;
               const isNext = lvl === currentLevel + 1;
@@ -149,7 +163,9 @@ export function UnitInfoScreen({ kind, unitId, currentLevel }: Props) {
       </div>
 
       <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>
-        {isBuilding ? 'Время указано без учёта фабрики роботов и нано-фабрики.' : 'Время указано без учёта уровня исследовательской лаборатории.'}
+        {isBuilding
+          ? (realBuildSeconds ? 'Время следующего уровня с учётом фабрики роботов и нано-фабрики.' : 'Время указано без учёта фабрики роботов и нано-фабрики.')
+          : 'Время указано без учёта уровня исследовательской лаборатории.'}
       </div>
 
     </div>
