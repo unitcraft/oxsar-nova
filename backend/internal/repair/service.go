@@ -44,6 +44,7 @@ var (
 	ErrInvalidCount      = errors.New("repair: invalid count")
 	ErrQueueItemNotFound = errors.New("repair: queue item not found")
 	ErrNothingToRepair   = errors.New("repair: no damaged units")
+	ErrAlreadyDone       = errors.New("repair: queue item already finished or cancelled")
 )
 
 type Service struct {
@@ -451,6 +452,95 @@ func (s *Service) List(ctx context.Context, planetID string) ([]QueueItem, error
 		out = append(out, q)
 	}
 	return out, rows.Err()
+}
+
+// Cancel отменяет задание очереди remontного ангара.
+// Для disassemble — возвращает ресурсы И юниты на планету.
+// Для repair — возвращает только ресурсы (юниты не снимались).
+func (s *Service) Cancel(ctx context.Context, userID, planetID, queueID string) error {
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var item QueueItem
+		err := tx.QueryRow(ctx, `
+			SELECT id, planet_id, user_id, unit_id, is_defense, mode, count,
+			       return_metal, return_silicon, return_hydrogen, status
+			FROM repair_queue
+			WHERE id=$1 FOR UPDATE
+		`, queueID).Scan(
+			&item.ID, &item.PlanetID, &item.UserID, &item.UnitID,
+			&item.IsDefense, &item.Mode, &item.Count,
+			&item.ReturnMetal, &item.ReturnSilicon, &item.ReturnHydrogen,
+			&item.Status,
+		)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrQueueItemNotFound
+			}
+			return fmt.Errorf("read queue item: %w", err)
+		}
+		if item.UserID != userID || item.PlanetID != planetID {
+			return ErrPlanetOwnership
+		}
+		if item.Status != "running" && item.Status != "queued" {
+			return ErrAlreadyDone
+		}
+
+		// Возвращаем ресурсы. Для disassemble был списан required-cost (20%),
+		// возвращаем его обратно (required = return_metal/0.9*0.2 ≈ return/4.5,
+		// но мы просто хранили return_metal уже как total-return за всё).
+		// Нам нужно вернуть то, что было списано, т.е. required:
+		// required = ceil(base*0.2/10)*10 * count.
+		// Но у нас в БД хранится только return (base*0.9). Пересчитаем из базовой стоимости.
+		_, baseCost, isDefense, ok := s.lookupUnit(item.UnitID)
+		if !ok {
+			return ErrUnknownUnit
+		}
+		req := scalePerUnit(baseCost, 0.2)
+		totalReq := multiplyCost(req, item.Count)
+
+		if _, err := tx.Exec(ctx, `
+			UPDATE planets
+			SET metal=metal+$1, silicon=silicon+$2, hydrogen=hydrogen+$3
+			WHERE id=$4
+		`, totalReq.Metal, totalReq.Silicon, totalReq.Hydrogen, planetID); err != nil {
+			return fmt.Errorf("return res: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO res_log (user_id, planet_id, reason, delta_metal, delta_silicon, delta_hydrogen)
+			VALUES ($1, $2, 'cancel_repair', $3, $4, $5)
+		`, userID, planetID, totalReq.Metal, totalReq.Silicon, totalReq.Hydrogen); err != nil {
+			return fmt.Errorf("res_log: %w", err)
+		}
+
+		// Для disassemble — возвращаем юниты обратно в инвентарь.
+		if item.Mode == "disassemble" {
+			stockTable := "ships"
+			if isDefense {
+				stockTable = "defense"
+			}
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO `+stockTable+` (planet_id, unit_id, count)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (planet_id, unit_id)
+				DO UPDATE SET count = `+stockTable+`.count + EXCLUDED.count
+			`, planetID, item.UnitID, item.Count); err != nil {
+				return fmt.Errorf("return units: %w", err)
+			}
+		}
+
+		// Удаляем событие и запись очереди.
+		if _, err := tx.Exec(ctx, `
+			DELETE FROM events
+			WHERE planet_id=$1 AND payload->>'queue_id'=$2
+		`, planetID, queueID); err != nil {
+			return fmt.Errorf("delete event: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			DELETE FROM repair_queue WHERE id=$1
+		`, queueID); err != nil {
+			return fmt.Errorf("delete queue: %w", err)
+		}
+		return nil
+	})
 }
 
 func (s *Service) lookupUnit(unitID int) (key string, cost config.ResCost, isDefense bool, ok bool) {
