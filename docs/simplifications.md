@@ -453,6 +453,20 @@
 
 ## UI Porting (H-план, 2026-04-23)
 
+### [09-Ф2.1] events.trace_id заполняется только в новых INSERT'ах
+- **Где**: 11 мест в backend/internal/*/service.go, event-producers.
+- **Что**: колонка events.trace_id и индекс добавлены (миграция 0058),
+  Event.TraceID читается в worker и прокидывается в context handler'а.
+  Но 11 существующих `INSERT INTO events (...)` не передают trace_id —
+  поле остаётся NULL для этих событий.
+- **Почему**: замена 11 SQL-строк + прокидывание trace.FromContext(ctx)
+  в каждый сервис — это отдельная итерация. Пока trace_id работает
+  end-to-end только для новых INSERT'ов, которые добавим после.
+- **Как чинить**: `event.Insert(ctx, tx, kind, userID, planetID, fireAt, payload)` —
+  один helper + замена 11 raw-INSERT'ов. После этого trace_id
+  гарантированно цепляется от HTTP-запроса до worker-handler'а.
+- **Приоритет**: M.
+
 ### [H.1.7] Messages: фаланга-producer отсутствует
 - **Где**: `backend/internal/fleet` — сканы фаланги не реализованы.
 - **Что**: папка «Фаланга» (folder=11) видима в UI, но не наполняется —

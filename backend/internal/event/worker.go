@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/oxsar/nova/backend/internal/repo"
+	"github.com/oxsar/nova/backend/pkg/trace"
 )
 
 // Handler обрабатывает событие определённого Kind. Вызывается внутри
@@ -29,6 +30,7 @@ type Event struct {
 	Payload   json.RawMessage
 	CreatedAt time.Time
 	Attempt   int
+	TraceID   *string
 }
 
 // Worker — ядро event-loop. Не хранит состояние между циклами.
@@ -147,11 +149,11 @@ func (w *Worker) processOne(ctx context.Context, id string) error {
 		var e Event
 		var kind int
 		err := tx.QueryRow(ctx, `
-			SELECT id, user_id, planet_id, kind, fire_at, payload, created_at, attempt
+			SELECT id, user_id, planet_id, kind, fire_at, payload, created_at, attempt, trace_id
 			FROM events
 			WHERE id = $1 AND state = 'wait' AND fire_at <= now()
 			FOR UPDATE SKIP LOCKED
-		`, id).Scan(&e.ID, &e.UserID, &e.PlanetID, &kind, &e.FireAt, &e.Payload, &e.CreatedAt, &e.Attempt)
+		`, id).Scan(&e.ID, &e.UserID, &e.PlanetID, &kind, &e.FireAt, &e.Payload, &e.CreatedAt, &e.Attempt, &e.TraceID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				// Уже взяли другим воркером / не waiting — это нормально.
@@ -176,7 +178,13 @@ func (w *Worker) processOne(ctx context.Context, id string) error {
 			return nil
 		}
 
-		if hErr := handler(ctx, tx, e); hErr != nil {
+		// Прокидываем trace_id в context handler'а и во все slog-записи ниже.
+		hCtx := ctx
+		if e.TraceID != nil && *e.TraceID != "" {
+			hCtx = trace.WithTraceID(ctx, *e.TraceID)
+		}
+
+		if hErr := handler(hCtx, tx, e); hErr != nil {
 			if errors.Is(hErr, ErrSkip) {
 				// Skip — сдвинуть fire_at на backoff(attempt+1), но не
 				// инкрементить attempt (это не «сбой», а «зависимость не готова»).
