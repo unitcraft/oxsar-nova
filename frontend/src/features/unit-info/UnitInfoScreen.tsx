@@ -156,13 +156,28 @@ export function UnitInfoScreen({ kind, unitId, currentLevel }: Props) {
   );
 }
 
+// Базовое время постройки: (metal+silicon)/5000 * 2 * 3600 сек (при shipyard=1, без нанофабрики)
+function combatBuildTimeSecs(metal: number, silicon: number): number {
+  return Math.round(((metal + silicon) / 5000) * 2 * 3600);
+}
+
 function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: number }) {
-  const catalog = kind === 'ship' ? SHIPS : DEFENSE;
+  const unitCatalog = kind === 'ship' ? SHIPS : DEFENSE;
   const allUnits = [...SHIPS, ...DEFENSE];
-  const entry = catalog.find((x) => x.id === unitId);
+  const entry = unitCatalog.find((x) => x.id === unitId);
   if (!entry) return null;
 
   const c = entry.cost;
+  const isShip = kind === 'ship';
+  const structure = c ? c.metal + c.silicon : null;
+  const buildTime = c ? combatBuildTimeSecs(c.metal, c.silicon) : null;
+
+  // Есть ли различие между атакующим и обороняющимся режимами
+  const hasDualMode = isShip && (
+    (entry.attacker_front != null && entry.attacker_front !== entry.front) ||
+    (entry.attacker_ballistics != null && entry.attacker_ballistics !== entry.ballistics) ||
+    (entry.attacker_masking != null && entry.attacker_masking !== entry.masking)
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -190,30 +205,70 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
       {/* Боевые характеристики */}
       <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
         <div style={{ padding: '10px 14px 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
-          Характеристики
+          Боевые характеристики
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 12 }}>
+              <th style={cellLeft}>Параметр</th>
+              {hasDualMode ? <th style={cell}>В атаке</th> : null}
+              <th style={cell}>{hasDualMode ? 'В обороне' : 'Значение'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {hasDualMode ? (
+              <>
+                <DualRow label="⚔ Атака"       atk={entry.attack.toLocaleString('ru-RU')}       def={entry.attack.toLocaleString('ru-RU')} />
+                <DualRow label="🛡 Щит"         atk={entry.shield.toLocaleString('ru-RU')}       def={entry.shield.toLocaleString('ru-RU')} />
+                <DualRow label="❤ Броня"        atk={entry.shell.toLocaleString('ru-RU')}        def={entry.shell.toLocaleString('ru-RU')} />
+                {entry.front != null && <DualRow label="🎯 Приоритет цели" atk={String(entry.attacker_front ?? entry.front)} def={String(entry.front)} />}
+                {entry.ballistics != null && <DualRow label="🎲 Баллистика" atk={String(entry.attacker_ballistics ?? entry.ballistics)} def={String(entry.ballistics)} />}
+                {entry.masking != null && <DualRow label="👻 Маскировка" atk={String(entry.attacker_masking ?? entry.masking)} def={String(entry.masking)} />}
+              </>
+            ) : (
+              <>
+                <StatRow label="⚔ Атака"  value={entry.attack.toLocaleString('ru-RU')} />
+                <StatRow label="🛡 Щит"    value={entry.shield.toLocaleString('ru-RU')} />
+                <StatRow label="❤ Броня"   value={entry.shell.toLocaleString('ru-RU')} />
+                {entry.front != null && <StatRow label="🎯 Приоритет цели" value={String(entry.front)} />}
+                {entry.ballistics != null && entry.ballistics > 0 && <StatRow label="🎲 Баллистика" value={String(entry.ballistics)} />}
+                {entry.masking != null && entry.masking > 0 && <StatRow label="👻 Маскировка" value={String(entry.masking)} />}
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Другие характеристики */}
+      <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
+        <div style={{ padding: '10px 14px 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
+          Другие характеристики
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <tbody>
-            <StatRow label="⚔ Атака"           value={entry.attack.toLocaleString('ru-RU')} />
-            <StatRow label="🛡 Щит"             value={entry.shield.toLocaleString('ru-RU')} />
-            <StatRow label="❤ Броня"            value={entry.shell.toLocaleString('ru-RU')} />
             {entry.cargo != null && entry.cargo > 0 && (
               <StatRow label="📦 Грузоподъёмность" value={entry.cargo.toLocaleString('ru-RU')} />
             )}
-            {entry.speed != null && (
-              <StatRow label="🚀 Скорость"       value={entry.speed.toLocaleString('ru-RU')} />
+            {entry.speed != null && entry.speed > 0 && (
+              <StatRow label="🚀 Скорость" value={entry.speed.toLocaleString('ru-RU')} />
             )}
             {entry.fuel != null && entry.fuel > 0 && (
-              <StatRow label="⛽ Расход топлива"  value={`${entry.fuel}/ед.`} />
+              <StatRow label="⛽ Расход топлива" value={`${entry.fuel}/ед.`} />
+            )}
+            {structure != null && structure > 0 && (
+              <StatRow label="🔩 Конструкция" value={structure.toLocaleString('ru-RU')} />
             )}
             {c && c.metal > 0 && (
-              <StatRow label="🟠 Стоимость (металл)"   value={c.metal.toLocaleString('ru-RU')} />
+              <StatRow label="🟠 Металл" value={c.metal.toLocaleString('ru-RU')} />
             )}
             {c && c.silicon > 0 && (
-              <StatRow label="💎 Стоимость (кремний)"  value={c.silicon.toLocaleString('ru-RU')} />
+              <StatRow label="💎 Кремний" value={c.silicon.toLocaleString('ru-RU')} />
             )}
             {c && c.hydrogen > 0 && (
-              <StatRow label="💧 Стоимость (водород)"  value={c.hydrogen.toLocaleString('ru-RU')} />
+              <StatRow label="💧 Водород" value={c.hydrogen.toLocaleString('ru-RU')} />
+            )}
+            {buildTime != null && buildTime > 0 && (
+              <StatRow label="⏱ Время постройки (базовое)" value={fmtSecs(buildTime)} />
             )}
           </tbody>
         </table>
@@ -283,6 +338,16 @@ function StatRow({ label, value }: { label: string; value: string }) {
     <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
       <td style={{ ...cellLeft, color: 'var(--ox-fg-muted)', fontSize: 13 }}>{label}</td>
       <td style={{ ...cell, color: 'var(--ox-fg)', fontSize: 13 }}>{value}</td>
+    </tr>
+  );
+}
+
+function DualRow({ label, atk, def }: { label: string; atk: string; def: string }) {
+  return (
+    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <td style={{ ...cellLeft, color: 'var(--ox-fg-muted)', fontSize: 13 }}>{label}</td>
+      <td style={{ ...cell, color: 'var(--ox-fg)', fontSize: 13 }}>{atk}</td>
+      <td style={{ ...cell, color: 'var(--ox-fg)', fontSize: 13 }}>{def}</td>
     </tr>
   );
 }

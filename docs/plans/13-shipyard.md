@@ -1,6 +1,6 @@
 # План 13: Экран верфи — доработка ShipyardScreen
 
-## Статус: В РАБОТЕ (задачи 0–4 + 6 выполнены + hotfix; задачи 5, 7 — P2/P3)
+## Статус: В РАБОТЕ (задачи 0–4 + 6 + 7 выполнены + hotfix; задача 5 — P3)
 
 ## Контекст
 
@@ -316,8 +316,8 @@ DELETE /api/planets/{planetId}/shipyard/{queueId}
 | 4 | Фильтр «Доступные / Все» | P2 | ✅ |
 | 5 | Rapidfire в UnitInfoScreen (расширить) | P3 | — |
 | 6 | UnitInfoScreen для кораблей и обороны | P1 | ✅ |
-| 7a | structure + время постройки в UnitInfoScreen | P2 | — |
-| 7b | front/battle_weight/ballistics/masking | P2 | — |
+| 7a | structure + время постройки в UnitInfoScreen | P2 | ✅ |
+| 7b | front/battle_weight/ballistics/masking | P2 | ✅ |
 
 ---
 

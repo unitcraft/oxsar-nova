@@ -5137,3 +5137,27 @@ MEDIUM Priority:
        docs/plans/13-shipyard.md
 
 Статус: ✅ ЗАВЕРШЕНА
+
+
+================================================================================
+Итерация (сессия 2026-04-23k) — план 13 задачи 7a+7b: UnitInfoScreen полное соответствие legacy
+================================================================================
+
+## Задача 7a — structure + время постройки
+- structure = metal + silicon из cost, отображается как «🔩 Конструкция»
+- Базовое время постройки: (metal+silicon)/5000 * 2 * 3600 сек (shipyard=1, без нанофабрики)
+- Формула из NS::getBuildingTime legacy
+
+## Задача 7b — front, ballistics, masking, attacker_* из ship_datasheet
+- Добавлены поля в CombatEntry: front, ballistics, masking, attacker_front/ballistics/masking
+- Данные из na_ship_datasheet (legacy SQL dump): у большинства front=10, b=0, m=0
+- Отличия: death_star attacker_front=9, ballistics=4; щиты front=16/18;
+  strong_laser masking=1; gauss_gun b=1/m=2; plasma_gun b=2/m=2
+- UnitInfoScreen: таблица «Боевые характеристики» с колонками «В атаке» / «В обороне»
+  для кораблей с различающимися attacker_ значениями (только death_star)
+- Компонент DualRow для двухколоночных строк
+
+Файлы: frontend/src/api/catalog.ts, frontend/src/features/unit-info/UnitInfoScreen.tsx,
+       docs/plans/13-shipyard.md
+
+Статус: ✅ ЗАВЕРШЕНА (задача 5 Rapidfire расширение — отложена P3)
