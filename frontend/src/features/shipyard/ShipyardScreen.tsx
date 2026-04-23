@@ -113,13 +113,17 @@ export function ShipyardScreen({ planet }: { planet: Planet }) {
         onBuild={(unitId, count) => enqueue.mutate({ unitId, count })}
         pending={enqueue.isPending}
         showLocked={showLocked}
+        onShowAll={() => {
+          setShowLocked(true);
+          localStorage.setItem('shipyard-show-locked', 'true');
+        }}
       />
     </div>
   );
 }
 
 function UnitCards({
-  units, stock, planet, onBuild, pending, showLocked,
+  units, stock, planet, onBuild, pending, showLocked, onShowAll,
 }: {
   units: CombatEntry[];
   stock: Record<string, number>;
@@ -127,10 +131,22 @@ function UnitCards({
   onBuild: (unitId: number, count: number) => void;
   pending: boolean;
   showLocked: boolean;
+  onShowAll: () => void;
 }) {
   const [drafts, setDrafts] = useState<Record<number, number>>({});
 
   const visibleUnits = showLocked ? units : units.filter((u) => !u.requires?.length);
+
+  if (visibleUnits.length === 0) {
+    return (
+      <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--ox-fg-muted)', fontSize: 13 }}>
+        Все юниты требуют выполнения условий.{' '}
+        <button type="button" className="btn-ghost btn-sm" style={{ fontSize: 13 }} onClick={onShowAll}>
+          Показать все
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="ox-cards-grid">
