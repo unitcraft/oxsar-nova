@@ -20,31 +20,26 @@ function numColor(v: number): string {
   return v > 0 ? 'var(--ox-success)' : v < 0 ? 'var(--ox-danger)' : 'var(--ox-fg-dim)';
 }
 
-/* Одна строка данных: [название-flex] [число] [число] [число] [число] */
+/* grid: [название 1fr] [4 числа по 48px] */
 const ROW: React.CSSProperties = {
-  display: 'flex',
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0,1fr) 48px 48px 48px 48px',
   alignItems: 'center',
   borderBottom: '1px solid var(--ox-border)',
   minHeight: 36,
-  width: '100%',
-  boxSizing: 'border-box',
 };
 const NUM: React.CSSProperties = {
-  flexBasis: '13%',
-  flexShrink: 0,
-  flexGrow: 0,
   textAlign: 'right',
   fontFamily: 'var(--ox-mono)',
-  fontSize: 13,
-  paddingRight: 8,
+  fontSize: 12,
+  paddingRight: 6,
+  overflow: 'hidden',
 };
 const LABEL: React.CSSProperties = {
-  flexGrow: 1,
-  flexShrink: 1,
-  minWidth: 0,
-  paddingLeft: 16,
+  paddingLeft: 12,
   paddingRight: 4,
   fontSize: 13,
+  minWidth: 0,
   overflow: 'hidden',
   whiteSpace: 'nowrap',
   textOverflow: 'ellipsis',
