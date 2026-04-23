@@ -489,6 +489,15 @@ func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string) (ma
 		`, newID, userID, g, sys, pos, diameter, pType, tempMin, tempMax, expiresAt); err != nil {
 			return nil, fmt.Errorf("expExtraPlanet: insert: %w", err)
 		}
+		// Планируем event KindExpirePlanet=65 на expires_at, чтобы
+		// удалить планету вовремя (альтернатива раз-в-час крону).
+		payload := fmt.Sprintf(`{"planet_id":"%s"}`, newID)
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
+			VALUES ($1, $2, $3, 65, 'wait', $4, $5)
+		`, ids.New(), userID, newID, expiresAt, payload); err != nil {
+			return nil, fmt.Errorf("expExtraPlanet: schedule expire: %w", err)
+		}
 		return map[string]any{
 			"planet_id":  newID,
 			"galaxy":     g,

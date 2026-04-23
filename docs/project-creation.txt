@@ -6089,3 +6089,26 @@ Tests сейчас компилируются и skip'ятся (go test → ok, 
 - Deadlock-тест ACS (требует 2 воркеров в параллели, отложен до 3.3
   шардирования).
 - Snapshot-тест декораторов (отложен).
+
+**Ф.5.1 — KindExpirePlanet event**
+
+event/kinds.go:
+- KindExpirePlanet = 65 (soft-удаление временной планеты).
+- KindScoreRecalcAll = 70 (зарезервирован под Ф.5.2).
+
+event/expire_planet.go (новый):
+- HandleExpirePlanet(ctx, tx, e): DELETE FROM planets WHERE id=? AND
+  expires_at IS NOT NULL AND expires_at <= now(). Идемпотентно:
+  если expires_at сдвинулся (игрок купил постоянство) — RowsAffected=0,
+  возвращаем nil.
+
+fleet/expedition.go:
+- При создании extra_planet с expires_at дополнительно планируется
+  event KindExpirePlanet на fire_at=expires_at. В той же транзакции
+  insert'а планеты — атомарно.
+
+cmd/worker/main.go: Register(KindExpirePlanet, HandleExpirePlanet).
+
+Текущий раз-в-час cron `DELETE FROM planets WHERE expires_at < now()`
+остаётся fallback'ом — если почему-то event не создался или сломался,
+cron подчистит.

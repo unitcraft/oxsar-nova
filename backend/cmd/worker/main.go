@@ -159,6 +159,7 @@ func run() error {
 	w.Register(event.KindRocketAttack, withAchievement(rocketSvc.ImpactHandler()))
 	w.Register(event.KindExpedition, withAchievement(transportSvc.ExpeditionHandler()))
 	w.Register(event.KindOfficerExpire, officerSvc.ExpireHandler())
+	w.Register(event.KindExpirePlanet, event.HandleExpirePlanet)
 
 	alienSvc := alien.NewService(db, cat)
 	w.Register(event.KindAlienAttack, alienSvc.AttackHandler())
