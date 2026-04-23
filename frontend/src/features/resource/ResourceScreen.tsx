@@ -20,29 +20,17 @@ function numColor(v: number): string {
   return v > 0 ? 'var(--ox-success)' : v < 0 ? 'var(--ox-danger)' : 'var(--ox-fg-dim)';
 }
 
-/* grid: [название 1fr] [4 числа по 48px] */
-const ROW: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'minmax(0,1fr) 48px 48px 48px 48px',
-  alignItems: 'center',
-  borderBottom: '1px solid var(--ox-border)',
-  minHeight: 36,
-};
-const NUM: React.CSSProperties = {
+const TD_NUM: React.CSSProperties = {
+  width: 48,
   textAlign: 'right',
   fontFamily: 'var(--ox-mono)',
   fontSize: 12,
-  paddingRight: 6,
-  overflow: 'hidden',
-};
-const LABEL: React.CSSProperties = {
-  paddingLeft: 12,
-  paddingRight: 4,
-  fontSize: 13,
-  minWidth: 0,
-  overflow: 'hidden',
+  paddingRight: 8,
   whiteSpace: 'nowrap',
-  textOverflow: 'ellipsis',
+};
+
+const TR_BASE: React.CSSProperties = {
+  borderBottom: '1px solid var(--ox-border)',
 };
 
 export function ResourceScreen({ planetId }: { planetId: string }) {
@@ -119,62 +107,74 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
         </div>
       </div>
 
-      {/* List */}
+      {/* Table */}
       <div className="ox-panel" style={{ padding: 0 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: 'auto' }} />
+            <col style={{ width: 48 }} />
+            <col style={{ width: 48 }} />
+            <col style={{ width: 48 }} />
+            <col style={{ width: 48 }} />
+          </colgroup>
+          <thead>
+            <tr style={{ borderBottom: '2px solid var(--ox-border)' }}>
+              <th style={{ textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', paddingLeft: 12, paddingTop: 8, paddingBottom: 8 }}>Здание</th>
+              <th style={{ ...TD_NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>🟠</th>
+              <th style={{ ...TD_NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>💎</th>
+              <th style={{ ...TD_NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>💧</th>
+              <th style={{ ...TD_NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>⚡</th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* Natural */}
+            <tr style={{ ...TR_BASE, background: 'var(--ox-bg-2)' }}>
+              <td style={{ paddingLeft: 12, fontSize: 13, paddingTop: 8, paddingBottom: 8, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>Естественное</td>
+              <td style={{ ...TD_NUM, color: numColor(report.basic_metal) }}>{fmt(report.basic_metal)}</td>
+              <td style={{ ...TD_NUM, color: numColor(report.basic_silicon) }}>{fmt(report.basic_silicon)}</td>
+              <td style={{ ...TD_NUM, color: 'var(--ox-fg-dim)' }}>—</td>
+              <td style={{ ...TD_NUM, color: 'var(--ox-fg-dim)' }}>—</td>
+            </tr>
 
-        {/* Header row */}
-        <div style={{ ...ROW, borderBottom: '2px solid var(--ox-border)', minHeight: 32 }}>
-          <div style={{ ...LABEL, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>Здание</div>
-          <div style={{ ...NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)' }}>🟠</div>
-          <div style={{ ...NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)' }}>💎</div>
-          <div style={{ ...NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)' }}>💧</div>
-          <div style={{ ...NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)' }}>⚡</div>
-        </div>
+            {/* Buildings */}
+            {buildings.map((b) => {
+              const factor = factors[b.unit_id] ?? b.factor;
+              const metal    = b.prod_metal    * factor / 100;
+              const silicon  = b.prod_silicon  * factor / 100;
+              const hydrogen = b.prod_hydrogen * factor / 100;
+              const energy   = b.cons_energy   * factor / 100;
+              return (
+                <tr
+                  key={b.unit_id}
+                  style={{ ...TR_BASE, cursor: b.allow_factor ? 'pointer' : 'default' }}
+                  onClick={() => b.allow_factor && setModalBuilding(b)}
+                >
+                  <td style={{ paddingLeft: 12, paddingTop: 8, paddingBottom: 8, overflow: 'hidden' }}>
+                    <span style={{ fontWeight: 500, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                      {BUILDING_NAMES[b.unit_id] ?? b.name}
+                      <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginLeft: 4 }}>ур. {b.level}</span>
+                      {b.allow_factor && (
+                        <span style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', marginLeft: 4, color: factor < 100 ? 'var(--ox-warn, #f59e0b)' : 'var(--ox-fg-dim)' }}>
+                          {factor}%
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td style={{ ...TD_NUM, color: numColor(metal) }}>{metal !== 0 ? fmt(metal) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}</td>
+                  <td style={{ ...TD_NUM, color: numColor(silicon) }}>{silicon !== 0 ? fmt(silicon) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}</td>
+                  <td style={{ ...TD_NUM, color: numColor(hydrogen) }}>{hydrogen !== 0 ? fmt(hydrogen) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}</td>
+                  <td style={{ ...TD_NUM, color: numColor(energy) }}>{energy !== 0 ? fmt(energy) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}</td>
+                </tr>
+              );
+            })}
 
-        {/* Natural */}
-        <div style={{ ...ROW, background: 'var(--ox-bg-2)' }}>
-          <div style={{ ...LABEL, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>Естественное</div>
-          <div style={{ ...NUM, color: numColor(report.basic_metal) }}>{fmt(report.basic_metal)}</div>
-          <div style={{ ...NUM, color: numColor(report.basic_silicon) }}>{fmt(report.basic_silicon)}</div>
-          <div style={{ ...NUM, color: 'var(--ox-fg-dim)' }}>—</div>
-          <div style={{ ...NUM, color: 'var(--ox-fg-dim)' }}>—</div>
-        </div>
-
-        {/* Buildings */}
-        {buildings.map((b) => {
-          const factor = factors[b.unit_id] ?? b.factor;
-          const metal    = b.prod_metal    * factor / 100;
-          const silicon  = b.prod_silicon  * factor / 100;
-          const hydrogen = b.prod_hydrogen * factor / 100;
-          const energy   = b.cons_energy   * factor / 100;
-          return (
-            <div
-              key={b.unit_id}
-              style={{ ...ROW, cursor: b.allow_factor ? 'pointer' : 'default' }}
-              onClick={() => b.allow_factor && setModalBuilding(b)}
-            >
-              <div style={LABEL}>
-                <span style={{ fontWeight: 500 }}>{BUILDING_NAMES[b.unit_id] ?? b.name}</span>
-                <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginLeft: 4 }}>ур. {b.level}</span>
-                {b.allow_factor && (
-                  <span style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', marginLeft: 4, color: factor < 100 ? 'var(--ox-warn, #f59e0b)' : 'var(--ox-fg-dim)' }}>
-                    {factor}%
-                  </span>
-                )}
-              </div>
-              <div style={{ ...NUM, color: numColor(metal) }}>{metal !== 0 ? fmt(metal) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}</div>
-              <div style={{ ...NUM, color: numColor(silicon) }}>{silicon !== 0 ? fmt(silicon) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}</div>
-              <div style={{ ...NUM, color: numColor(hydrogen) }}>{hydrogen !== 0 ? fmt(hydrogen) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}</div>
-              <div style={{ ...NUM, color: numColor(energy) }}>{energy !== 0 ? fmt(energy) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}</div>
-            </div>
-          );
-        })}
-
-        {/* Storage */}
-        <SummaryRow label="Вместимость хранилищ" metal={report.storage_metal} silicon={report.storage_silicon} hydrogen={report.storage_hydrogen} energy={null} topBorder dim />
-        <SummaryRow label="За час"    metal={ph}          silicon={sh}          hydrogen={hh}          energy={te}   topBorder />
-        <SummaryRow label="За сутки"  metal={ph * 24}     silicon={sh * 24}     hydrogen={hh * 24}     energy={null} />
-        <SummaryRow label="За неделю" metal={ph * 24 * 7} silicon={sh * 24 * 7} hydrogen={hh * 24 * 7} energy={null} />
+            {/* Storage */}
+            <SummaryRow label="Вместимость хранилищ" metal={report.storage_metal} silicon={report.storage_silicon} hydrogen={report.storage_hydrogen} energy={null} topBorder dim />
+            <SummaryRow label="За час"    metal={ph}          silicon={sh}          hydrogen={hh}          energy={te}   topBorder />
+            <SummaryRow label="За сутки"  metal={ph * 24}     silicon={sh * 24}     hydrogen={hh * 24}     energy={null} />
+            <SummaryRow label="За неделю" metal={ph * 24 * 7} silicon={sh * 24 * 7} hydrogen={hh * 24 * 7} energy={null} />
+          </tbody>
+        </table>
       </div>
 
       {/* Bottom sheet */}
@@ -211,19 +211,19 @@ function SummaryRow({ label, metal, silicon, hydrogen, energy, topBorder, dim }:
   energy: number | null; topBorder?: boolean; dim?: boolean;
 }) {
   return (
-    <div style={{
-      ...ROW,
+    <tr style={{
       borderTop: topBorder ? '2px solid var(--ox-border)' : undefined,
+      borderBottom: '1px solid var(--ox-border)',
       background: dim ? 'var(--ox-bg-2)' : undefined,
     }}>
-      <div style={{ ...LABEL, fontWeight: 700, color: dim ? 'var(--ox-fg-muted)' : undefined }}>{label}</div>
-      <div style={{ ...NUM, color: numColor(metal) }}>{fmt(metal)}</div>
-      <div style={{ ...NUM, color: numColor(silicon) }}>{fmt(silicon)}</div>
-      <div style={{ ...NUM, color: numColor(hydrogen) }}>{fmt(hydrogen)}</div>
-      <div style={{ ...NUM, color: 'var(--ox-fg-dim)' }}>
+      <td style={{ paddingLeft: 12, paddingTop: 8, paddingBottom: 8, fontSize: 13, fontWeight: 700, color: dim ? 'var(--ox-fg-muted)' : undefined }}>{label}</td>
+      <td style={{ ...TD_NUM, color: numColor(metal) }}>{fmt(metal)}</td>
+      <td style={{ ...TD_NUM, color: numColor(silicon) }}>{fmt(silicon)}</td>
+      <td style={{ ...TD_NUM, color: numColor(hydrogen) }}>{fmt(hydrogen)}</td>
+      <td style={{ ...TD_NUM, color: 'var(--ox-fg-dim)' }}>
         {energy !== null ? <span style={{ color: numColor(energy) }}>{fmt(energy)}</span> : '—'}
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }
 
