@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { SHIPS, nameOf } from '@/api/catalog';
 import type { Planet } from '@/api/types';
 import { useToast } from '@/ui/Toast';
 import { ScreenSkeleton } from '@/ui/Skeleton';
@@ -197,6 +198,7 @@ export function MarketScreen({ planet }: { planet: Planet }) {
 function LotsPanel({ planet, userId }: { planet: Planet; userId: string }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const [subTab, setSubTab] = useState<'resource' | 'fleet'>('resource');
   const [sellRes, setSellRes] = useState<Res>('metal');
   const [sellAmt, setSellAmt] = useState(1000);
   const [buyRes, setBuyRes] = useState<Res>('silicon');
@@ -225,8 +227,24 @@ function LotsPanel({ planet, userId }: { planet: Planet; userId: string }) {
     onError: (err) => { toast.show('danger', 'Ошибка', err instanceof Error ? err.message : ''); },
   });
 
+  if (subTab === 'fleet') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="ox-tabs">
+          <button type="button" aria-pressed={subTab === 'resource'} onClick={() => setSubTab('resource')}>💱 Ресурсы</button>
+          <button type="button" aria-pressed={subTab === 'fleet'} onClick={() => setSubTab('fleet')}>🛸 Флот</button>
+        </div>
+        <FleetLotsPanel planet={planet} userId={userId} />
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="ox-tabs">
+        <button type="button" aria-pressed={subTab === 'resource'} onClick={() => setSubTab('resource')}>💱 Ресурсы</button>
+        <button type="button" aria-pressed={subTab === 'fleet'} onClick={() => setSubTab('fleet')}>🛸 Флот</button>
+      </div>
       {/* Create lot */}
       <div className="ox-panel" style={{ padding: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 12 }}>
@@ -386,5 +404,165 @@ function CreditPanel({ planet, userRate }: { planet: Planet; userRate: number })
         </button>
       </div>
     </div>
+  );
+}
+
+interface FleetLot {
+  id: string;
+  seller_id: string;
+  seller_name: string;
+  planet_id: string;
+  sell_fleet: Record<string, number>;
+  buy_resource: string;
+  buy_amount: number;
+  state: string;
+  created_at: string;
+}
+
+function FleetLotsPanel({ planet, userId }: { planet: Planet; userId: string }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+
+  const lots = useQuery({
+    queryKey: ['market-fleet-lots'],
+    queryFn: () => api.get<{ lots: FleetLot[] }>('/api/market/fleet-lots'),
+    refetchInterval: 15000,
+  });
+
+  const [buildFleet, setBuildFleet] = useState<Record<number, number>>({});
+  const [buyRes, setBuyRes] = useState<Res>('metal');
+  const [buyAmt, setBuyAmt] = useState(10000);
+
+  const createLot = useMutation({
+    mutationFn: () => api.post<FleetLot>(`/api/planets/${planet.id}/market/fleet-lots`, {
+      fleet: buildFleet, buy_resource: buyRes, buy_amount: buyAmt,
+    }),
+    onSuccess: () => {
+      setBuildFleet({});
+      void qc.invalidateQueries({ queryKey: ['market-fleet-lots'] });
+      void qc.invalidateQueries({ queryKey: ['planets'] });
+      toast.show('success', 'Лот флота выставлен');
+    },
+    onError: (e) => toast.show('danger', 'Ошибка', e instanceof Error ? e.message : ''),
+  });
+
+  const cancelLot = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/market/fleet-lots/${id}`),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['market-fleet-lots'] }); toast.show('info', 'Лот отменён'); },
+  });
+
+  const acceptLot = useMutation({
+    mutationFn: (id: string) => api.post(`/api/market/fleet-lots/${id}/accept`, { planet_id: planet.id }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['market-fleet-lots'] });
+      void qc.invalidateQueries({ queryKey: ['planets'] });
+      toast.show('success', 'Сделка выполнена');
+    },
+    onError: (e) => toast.show('danger', 'Ошибка', e instanceof Error ? e.message : ''),
+  });
+
+  const totalShips = Object.values(buildFleet).reduce((s, v) => s + (v || 0), 0);
+
+  return (
+    <>
+      {/* Создание лота */}
+      <div className="ox-panel" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
+          Выставить флот на продажу
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
+          {SHIPS.map((s) => (
+            <div key={s.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <span style={{ flex: 1, fontSize: 12 }}>🛸 {s.name}</span>
+              <input
+                type="number"
+                min={0}
+                value={buildFleet[s.id] ?? 0}
+                onChange={(e) => {
+                  const v = Math.max(0, Number(e.target.value));
+                  setBuildFleet((m) => ({ ...m, [s.id]: v }));
+                }}
+                style={{ width: 70 }}
+              />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div>
+            <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Хочу получить</label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input type="number" min={1} value={buyAmt} onChange={(e) => setBuyAmt(Math.max(1, Number(e.target.value)))} style={{ width: 120 }} />
+              <select value={buyRes} onChange={(e) => setBuyRes(e.target.value as Res)}>
+                {(Object.entries(RES_LABEL) as [Res, string][]).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={createLot.isPending || totalShips === 0 || buyAmt <= 0}
+            onClick={() => {
+              // Отфильтровать 0-значения.
+              const nz: Record<number, number> = {};
+              Object.entries(buildFleet).forEach(([k, v]) => {
+                if (v > 0) nz[Number(k)] = v;
+              });
+              setBuildFleet(nz);
+              createLot.mutate();
+            }}
+          >
+            {createLot.isPending ? '…' : `Выставить (${totalShips} кораблей)`}
+          </button>
+        </div>
+      </div>
+
+      {/* Лоты */}
+      <div className="ox-panel" style={{ overflow: 'hidden' }}>
+        <div className="ox-table-responsive">
+          <table className="ox-table" style={{ margin: 0 }}>
+            <thead>
+              <tr>
+                <th>Продавец</th>
+                <th>Состав</th>
+                <th>Цена</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {(lots.data?.lots ?? []).map((l) => {
+                const isOwn = l.seller_id === userId;
+                return (
+                  <tr key={l.id}>
+                    <td style={{ fontWeight: 600 }}>{isOwn ? '(вы)' : l.seller_name}</td>
+                    <td style={{ fontSize: 12 }}>
+                      {Object.entries(l.sell_fleet).map(([idStr, cnt]) => (
+                        <div key={idStr}>🛸 {nameOf(Number(idStr))} × {cnt}</div>
+                      ))}
+                    </td>
+                    <td className="num" style={{ fontFamily: 'var(--ox-mono)' }}>
+                      {Math.round(l.buy_amount).toLocaleString('ru-RU')} {RES_LABEL[l.buy_resource as Res] ?? l.buy_resource}
+                    </td>
+                    <td>
+                      {isOwn ? (
+                        <button type="button" className="btn-ghost btn-sm" onClick={() => cancelLot.mutate(l.id)}>Отменить</button>
+                      ) : (
+                        <button type="button" className="btn btn-sm" disabled={acceptLot.isPending} onClick={() => acceptLot.mutate(l.id)}>Купить</button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {(lots.data?.lots ?? []).length === 0 && (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: 20, color: 'var(--ox-fg-muted)' }}>
+                    Нет открытых лотов флота
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
   );
 }
