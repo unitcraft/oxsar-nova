@@ -1,15 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BUILDINGS, MOON_BUILDINGS, costForLevel, imageOf, formatNum } from '@/api/catalog';
 import type { BuildingEntry } from '@/api/catalog';
 
 function ExpandableText({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState(0);
-
-  useEffect(() => {
-    if (contentRef.current) setHeight(contentRef.current.scrollHeight);
-  }, [text]);
 
   return (
     <div style={{ borderTop: '1px solid var(--ox-border)', paddingTop: 8 }}>
@@ -21,17 +15,17 @@ function ExpandableText({ text }: { text: string }) {
           color: 'var(--ox-fg-muted)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4,
         }}
       >
-        <span style={{ transition: 'transform 0.2s', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'none' }}>▶</span>
+        <span style={{ transition: 'transform 0.2s', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
         Подробнее
       </button>
       <div
         style={{
           overflow: 'hidden',
-          maxHeight: open ? height : 0,
-          transition: 'max-height 0.25s ease',
+          maxHeight: open ? '600px' : '0px',
+          transition: 'max-height 0.3s ease',
         }}
       >
-        <div ref={contentRef} style={{ paddingTop: 8, fontSize: 12, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
+        <div style={{ paddingTop: 8, fontSize: 12, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
           {text}
         </div>
       </div>
