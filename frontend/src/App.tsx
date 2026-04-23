@@ -38,14 +38,14 @@ type Tab =
   | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
   | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
   | 'art-market' | 'officers' | 'achievements' | 'score'
-  | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource' | 'tutorial'
+  | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource'
   | 'unit-info';
 
 const VALID_TABS = new Set<string>([
   'overview', 'buildings', 'research', 'shipyard', 'repair',
   'artefacts', 'galaxy', 'fleet', 'market', 'rockets',
   'art-market', 'officers', 'achievements', 'score',
-  'messages', 'alliance', 'chat', 'sim', 'admin', 'planet-options', 'resource', 'tutorial',
+  'messages', 'alliance', 'chat', 'sim', 'admin', 'planet-options', 'resource',
   'unit-info',
 ]);
 
@@ -530,7 +530,6 @@ const ALL_NAV: Array<{ key: Tab; icon: string; label: string }> = [
   { key: 'officers',    icon: '⭐', label: 'Офицеры' },
   { key: 'score',       icon: '🏆', label: 'Рейтинг' },
   { key: 'achievements',icon: '🥇', label: 'Достижения' },
-  { key: 'tutorial',    icon: '🎓', label: 'Туториал' },
   { key: 'sim',         icon: '⚔️', label: 'Симулятор' },
 ];
 
