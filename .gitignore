@@ -31,3 +31,6 @@ node_modules/
 /tmp/
 
 ../oxsar2/
+
+# PII экспорт пользователей легаси (email-ы)
+/docs/legacy-users.tsv
