@@ -210,6 +210,7 @@ func run() error {
 		pr.Post("/planets/{id}/shipyard", shipyardH.Enqueue)
 		pr.Get("/planets/{id}/shipyard/queue", shipyardH.List)
 		pr.Get("/planets/{id}/shipyard/inventory", shipyardH.Inventory)
+		pr.Delete("/planets/{id}/shipyard/{queueId}", shipyardH.Cancel)
 
 		pr.Post("/planets/{id}/repair/disassemble", repairH.EnqueueDisassemble)
 		pr.Post("/planets/{id}/repair/repair", repairH.EnqueueRepair)

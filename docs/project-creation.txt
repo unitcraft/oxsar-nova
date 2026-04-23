@@ -5083,3 +5083,32 @@ MEDIUM Priority:
        docs/plans/12-unit-info.md (задачи 6 и 7)
 
 Статус: ✅ ЗАВЕРШЕНА
+
+
+================================================================================
+Итерация (сессия 2026-04-23i) — план 13: ShipyardScreen доработка
+================================================================================
+
+## Задача 0 — Вёрстка карточек
+- Структура карточки приведена к BuildingsScreen: иконка 64px слева,
+  ox-unit-card-body справа (minWidth:0, overflow:hidden), ox-unit-card-footer внизу
+- Устранена «свалка» характеристик — чёткое разделение на блоки
+
+## Задача 1 — Отмена задания в очереди (cancel)
+- Backend: DELETE /api/planets/{id}/shipyard/{queueId} — возврат 100% ресурсов,
+  удаление записи и связанного события
+- Frontend: кнопка ✕ в ShipQueueRow, мутация с invalidate очереди и планеты
+
+## Задача 2 — Описание юнитов
+- description?: string добавлен в CombatEntry
+- Заполнен для всех 12 кораблей и 7 оборонительных сооружений
+
+## Задачи 3+4 — Speed/fuel + фильтр
+- Скорость 🚀 и расход топлива ⛽ отображаются под характеристиками (только корабли)
+- Кнопка «🔒 Скрыть недоступные / ✅ Все» рядом с табами, сохраняется в localStorage
+
+Файлы: backend/internal/shipyard/service.go, backend/internal/shipyard/handler.go,
+       backend/cmd/server/main.go, frontend/src/features/shipyard/ShipyardScreen.tsx,
+       frontend/src/api/catalog.ts, docs/plans/13-shipyard.md
+
+Статус: ✅ ЗАВЕРШЕНА (задача 5 Rapidfire — отложена P3)
