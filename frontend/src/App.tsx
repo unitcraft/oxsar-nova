@@ -49,9 +49,19 @@ const VALID_TABS = new Set<string>([
   'unit-info',
 ]);
 
-function tabFromHash(): Tab {
+type InfoUnit = { kind: 'building' | 'research'; id: number; level: number; fromTab: Tab };
+
+function parseHash(): { tab: Tab; infoUnit: InfoUnit | null } {
   const hash = window.location.hash.replace('#', '');
-  return VALID_TABS.has(hash) ? (hash as Tab) : 'overview';
+  const parts = hash.split('/');
+  if (parts[0] === 'unit-info' && (parts[1] === 'building' || parts[1] === 'research') && parts[2]) {
+    const id = parseInt(parts[2], 10);
+    if (!isNaN(id)) {
+      return { tab: 'unit-info', infoUnit: { kind: parts[1], id, level: 0, fromTab: 'overview' } };
+    }
+  }
+  const tab = VALID_TABS.has(parts[0] ?? '') ? (parts[0] as Tab) : 'overview';
+  return { tab, infoUnit: null };
 }
 
 export function App() {
@@ -64,7 +74,7 @@ export function App() {
 }
 
 function AuthenticatedApp() {
-  const [tab, setTab] = useState<Tab>(tabFromHash);
+  const [tab, setTab] = useState<Tab>(() => parseHash().tab);
   const { t } = useTranslation();
   const logout = useAuthStore((s) => s.logout);
 
@@ -74,7 +84,11 @@ function AuthenticatedApp() {
   };
 
   useEffect(() => {
-    const onPop = () => setTab(tabFromHash());
+    const onPop = () => {
+      const parsed = parseHash();
+      setTab(parsed.tab);
+      if (parsed.infoUnit) setInfoUnit(parsed.infoUnit);
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
@@ -136,11 +150,13 @@ function AuthenticatedApp() {
   const isAdmin = me.data?.role === 'admin' || me.data?.role === 'superadmin';
   const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
   const [fleetDst, setFleetDst] = useState<{ g: number; s: number; pos: number; isMoon: boolean; mission: number } | undefined>();
-  const [infoUnit, setInfoUnit] = useState<{ kind: 'building' | 'research'; id: number; level: number; fromTab: Tab } | null>(null);
+  const [infoUnit, setInfoUnit] = useState<InfoUnit | null>(() => parseHash().infoUnit);
 
   function openInfo(kind: 'building' | 'research', id: number, level: number) {
-    setInfoUnit({ kind, id, level, fromTab: tab });
-    navigateTo('unit-info');
+    const unit: InfoUnit = { kind, id, level, fromTab: tab };
+    setInfoUnit(unit);
+    setTab('unit-info');
+    history.pushState(null, '', `#unit-info/${kind}/${id}`);
   }
 
   const list = planets.data?.planets ?? [];
@@ -231,7 +247,6 @@ function AuthenticatedApp() {
                 kind={infoUnit.kind}
                 unitId={infoUnit.id}
                 currentLevel={infoUnit.level}
-                onBack={() => { setInfoUnit(null); navigateTo(infoUnit.fromTab); }}
               />
             )}
             {tab === 'shipyard'   && <ShipyardScreen planet={planet} />}

@@ -4,7 +4,6 @@ interface Props {
   kind: 'building' | 'research';
   unitId: number;
   currentLevel: number;
-  onBack: () => void;
 }
 
 function fmtSecs(secs: number): string {
@@ -58,7 +57,7 @@ const LEVELS_RANGE = 10;
 const cell: React.CSSProperties = { padding: '6px 12px', textAlign: 'right', fontFamily: 'var(--ox-mono)', fontSize: 13 };
 const cellLeft: React.CSSProperties = { ...cell, textAlign: 'left' };
 
-export function UnitInfoScreen({ kind, unitId, currentLevel, onBack }: Props) {
+export function UnitInfoScreen({ kind, unitId, currentLevel }: Props) {
   const entry = kind === 'building'
     ? [...BUILDINGS, ...MOON_BUILDINGS].find((x) => x.id === unitId)
     : RESEARCH.find((x) => x.id === unitId);
@@ -75,26 +74,16 @@ export function UnitInfoScreen({ kind, unitId, currentLevel, onBack }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Кнопка назад */}
-      <div>
-        <button type="button" className="btn-ghost btn-sm" onClick={onBack} style={{ fontSize: 13 }}>
-          ← Назад
-        </button>
-      </div>
-
       {/* Заголовок */}
       <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
         <img
-          src={imageOf(entry.key)} alt={entry.name} width={64} height={64}
+          src={imageOf(entry.key)} alt={entry.name} width={128} height={128}
           style={{ imageRendering: 'pixelated', borderRadius: 8, background: 'rgba(0,0,0,0.3)', padding: 4, flexShrink: 0 }}
         />
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>{entry.name}</h2>
-          {'description' in entry && entry.description && (
-            <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 4 }}>{entry.description}</div>
-          )}
-          {'benefit' in entry && (
-            <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 4 }}>{entry.benefit}</div>
+          {entry.fullDesc && (
+            <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 4 }}>{entry.fullDesc}</div>
           )}
           {currentLevel > 0 && (
             <div style={{ fontSize: 13, color: 'var(--ox-accent)', marginTop: 4, fontFamily: 'var(--ox-mono)' }}>Уровень {currentLevel}</div>
@@ -159,13 +148,6 @@ export function UnitInfoScreen({ kind, unitId, currentLevel, onBack }: Props) {
         {isBuilding ? 'Время указано без учёта фабрики роботов и нано-фабрики.' : 'Время указано без учёта уровня исследовательской лаборатории.'}
       </div>
 
-      {/* Полное описание */}
-      {entry.fullDesc && (
-        <div className="ox-panel" style={{ padding: '14px 16px' }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ox-fg-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Описание</div>
-          <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', lineHeight: 1.7 }}>{entry.fullDesc}</div>
-        </div>
-      )}
     </div>
   );
 }
