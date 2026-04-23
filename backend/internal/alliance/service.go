@@ -23,11 +23,32 @@ import (
 	"github.com/oxsar/nova/backend/internal/repo"
 )
 
+// AutoMsgSender — узкий интерфейс к automsg.SendDirect.
+type AutoMsgSender interface {
+	SendDirect(ctx context.Context, tx pgx.Tx, userID string, folder int, title, body string) error
+}
+
 type Service struct {
-	db repo.Exec
+	db      repo.Exec
+	automsg AutoMsgSender
 }
 
 func NewService(db repo.Exec) *Service { return &Service{db: db} }
+
+// WithAutoMsg подключает сервис системных сообщений (опционально).
+func (s *Service) WithAutoMsg(a AutoMsgSender) *Service {
+	s.automsg = a
+	return s
+}
+
+// notifyAlliance (folder=6 MSG_FOLDER_ALLIANCE) — помощник для рассылки
+// уведомления конкретному пользователю. Ошибки глотаются (не критично).
+func (s *Service) notifyAlliance(ctx context.Context, userID, title, body string) {
+	if s.automsg == nil {
+		return
+	}
+	_ = s.automsg.SendDirect(ctx, nil, userID, 6, title, body)
+}
 
 var (
 	ErrNotFound          = errors.New("alliance: not found")
@@ -224,6 +245,7 @@ func (s *Service) Create(ctx context.Context, ownerID, tag, name, description st
 // создаётся заявка; owner должен вызвать Approve/Reject.
 // Возвращает (true, nil) при прямом вступлении, (false, nil) при заявке.
 func (s *Service) Join(ctx context.Context, userID, allianceID, message string) (joined bool, err error) {
+	var ownerID, applicantName, allianceTag string
 	err = s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var existing *string
 		if err := tx.QueryRow(ctx,
@@ -235,12 +257,17 @@ func (s *Service) Join(ctx context.Context, userID, allianceID, message string) 
 		}
 		var isOpen bool
 		err := tx.QueryRow(ctx,
-			`SELECT is_open FROM alliances WHERE id=$1`, allianceID).Scan(&isOpen)
+			`SELECT is_open, owner_id, tag FROM alliances WHERE id=$1`,
+			allianceID).Scan(&isOpen, &ownerID, &allianceTag)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrNotFound
 			}
 			return fmt.Errorf("check alliance: %w", err)
+		}
+		if err := tx.QueryRow(ctx,
+			`SELECT username FROM users WHERE id=$1`, userID).Scan(&applicantName); err != nil {
+			return fmt.Errorf("read applicant: %w", err)
 		}
 
 		if !isOpen {
@@ -272,7 +299,20 @@ func (s *Service) Join(ctx context.Context, userID, allianceID, message string) 
 		joined = true
 		return nil
 	})
-	return joined, err
+	if err != nil {
+		return joined, err
+	}
+	// Уведомления — вне транзакции (best-effort).
+	if joined {
+		s.notifyAlliance(ctx, userID,
+			"Вы вступили в альянс",
+			fmt.Sprintf("Вы стали членом альянса [%s].", allianceTag))
+	} else {
+		s.notifyAlliance(ctx, ownerID,
+			"Заявка на вступление в альянс",
+			fmt.Sprintf("Игрок %s подал заявку на вступление в ваш альянс [%s].", applicantName, allianceTag))
+	}
+	return joined, nil
 }
 
 // SetOpen меняет флаг is_open. Только owner.
@@ -332,11 +372,9 @@ func (s *Service) Applications(ctx context.Context, userID, allianceID string) (
 
 // Approve принимает заявку, добавляет участника. Только owner.
 func (s *Service) Approve(ctx context.Context, ownerID, applicationID string) error {
-	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		var (
-			allianceID string
-			applicantID string
-		)
+	var applicantID, allianceTag string
+	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var allianceID string
 		err := tx.QueryRow(ctx,
 			`SELECT alliance_id, user_id FROM alliance_applications WHERE id=$1`,
 			applicationID).Scan(&allianceID, &applicantID)
@@ -347,8 +385,8 @@ func (s *Service) Approve(ctx context.Context, ownerID, applicationID string) er
 			return fmt.Errorf("read application: %w", err)
 		}
 		var allianceOwner string
-		if err := tx.QueryRow(ctx, `SELECT owner_id FROM alliances WHERE id=$1`,
-			allianceID).Scan(&allianceOwner); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT owner_id, tag FROM alliances WHERE id=$1`,
+			allianceID).Scan(&allianceOwner, &allianceTag); err != nil {
 			return fmt.Errorf("check alliance: %w", err)
 		}
 		if allianceOwner != ownerID {
@@ -378,14 +416,23 @@ func (s *Service) Approve(ctx context.Context, ownerID, applicationID string) er
 		_, err = tx.Exec(ctx, `DELETE FROM alliance_applications WHERE id=$1`, applicationID)
 		return err
 	})
+	if err != nil {
+		return err
+	}
+	s.notifyAlliance(ctx, applicantID,
+		"Заявка одобрена",
+		fmt.Sprintf("Ваша заявка на вступление в альянс [%s] одобрена.", allianceTag))
+	return nil
 }
 
 // Reject удаляет заявку. Только owner.
 func (s *Service) Reject(ctx context.Context, ownerID, applicationID string) error {
-	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+	var applicantID, allianceTag string
+	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var allianceID string
 		err := tx.QueryRow(ctx,
-			`SELECT alliance_id FROM alliance_applications WHERE id=$1`, applicationID).Scan(&allianceID)
+			`SELECT alliance_id, user_id FROM alliance_applications WHERE id=$1`,
+			applicationID).Scan(&allianceID, &applicantID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrApplicationNotFound
@@ -393,8 +440,8 @@ func (s *Service) Reject(ctx context.Context, ownerID, applicationID string) err
 			return fmt.Errorf("read application: %w", err)
 		}
 		var allianceOwner string
-		if err := tx.QueryRow(ctx, `SELECT owner_id FROM alliances WHERE id=$1`,
-			allianceID).Scan(&allianceOwner); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT owner_id, tag FROM alliances WHERE id=$1`,
+			allianceID).Scan(&allianceOwner, &allianceTag); err != nil {
 			return fmt.Errorf("check alliance: %w", err)
 		}
 		if allianceOwner != ownerID {
@@ -403,6 +450,13 @@ func (s *Service) Reject(ctx context.Context, ownerID, applicationID string) err
 		_, err = tx.Exec(ctx, `DELETE FROM alliance_applications WHERE id=$1`, applicationID)
 		return err
 	})
+	if err != nil {
+		return err
+	}
+	s.notifyAlliance(ctx, applicantID,
+		"Заявка отклонена",
+		fmt.Sprintf("Ваша заявка на вступление в альянс [%s] отклонена.", allianceTag))
+	return nil
 }
 
 // Leave удаляет пользователя из альянса. Owner не может выйти

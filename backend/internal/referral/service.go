@@ -22,12 +22,24 @@ const (
 
 var ErrReferrerNotFound = errors.New("referral: referrer not found")
 
+// AutoMsgSender — узкий интерфейс к automsg.SendDirect.
+type AutoMsgSender interface {
+	SendDirect(ctx context.Context, tx pgx.Tx, userID string, folder int, title, body string) error
+}
+
 type Service struct {
-	db repo.Exec
+	db      repo.Exec
+	automsg AutoMsgSender
 }
 
 func NewService(db repo.Exec) *Service {
 	return &Service{db: db}
+}
+
+// WithAutoMsg подключает сервис системных сообщений (опционально).
+func (s *Service) WithAutoMsg(a AutoMsgSender) *Service {
+	s.automsg = a
+	return s
 }
 
 // ProcessRegistration записывает referred_by и начисляет стартовые ресурсы
@@ -85,13 +97,34 @@ func (s *Service) ProcessPurchase(ctx context.Context, buyerID string, amount fl
 	if bonus <= 0 {
 		return nil
 	}
-	_, err := s.db.Pool().Exec(ctx, `
-		UPDATE users
-		SET credit = credit + $1
-		WHERE id = (SELECT referred_by FROM users WHERE id=$2 AND referred_by IS NOT NULL)
-	`, bonus, buyerID)
+	// Получаем ID реферера и имя покупателя, чтобы уведомить реферера.
+	var referrerID *string
+	var buyerName string
+	err := s.db.Pool().QueryRow(ctx, `
+		SELECT referred_by, username FROM users WHERE id = $1
+	`, buyerID).Scan(&referrerID, &buyerName)
+	if err != nil {
+		return fmt.Errorf("referral: lookup buyer: %w", err)
+	}
+	if referrerID == nil {
+		return nil
+	}
+
+	_, err = s.db.Pool().Exec(ctx, `
+		UPDATE users SET credit = credit + $1 WHERE id = $2
+	`, bonus, *referrerID)
 	if err != nil {
 		return fmt.Errorf("referral: purchase bonus: %w", err)
+	}
+
+	// Системное сообщение рефереру (folder=8 CREDIT).
+	if s.automsg != nil {
+		title := "Реферальный бонус"
+		body := fmt.Sprintf("Ваш реферал %s совершил покупку. На ваш счёт зачислено %.2f кредитов.", buyerName, bonus)
+		if err := s.automsg.SendDirect(ctx, nil, *referrerID, 8, title, body); err != nil {
+			// Не критично — покупка уже проведена.
+			return nil
+		}
 	}
 	return nil
 }

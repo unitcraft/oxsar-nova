@@ -114,7 +114,7 @@ func run() error {
 	// поэтому инициализируем до auth.NewService.
 	automsgSvc := automsg.NewService(db)
 
-	referralSvc := referral.NewService(db)
+	referralSvc := referral.NewService(db).WithAutoMsg(automsgSvc)
 	authSvc := auth.NewService(db, jwt, starter, automsgSvc).WithReferral(referralSvc)
 	authH := auth.NewHandler(authSvc, pool)
 
@@ -132,7 +132,7 @@ func run() error {
 	repairSvc := repair.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
 	repairH := repair.NewHandler(repairSvc)
 
-	artefactSvc := artefact.NewService(db, cat)
+	artefactSvc := artefact.NewService(db, cat).WithAutoMsg(automsgSvc)
 	artefactH := artefact.NewHandler(artefactSvc)
 
 	galaxyH := galaxy.NewHandler(galaxy.NewRepository(pool))
@@ -161,7 +161,7 @@ func run() error {
 	scoreSvc := score.NewServiceWithCoeffs(db, cat, cfg.Game.Points)
 	scoreH := score.NewHandlerWithDB(scoreSvc, db)
 
-	allianceSvc := alliance.NewService(db)
+	allianceSvc := alliance.NewService(db).WithAutoMsg(automsgSvc)
 	allianceH := alliance.NewHandler(allianceSvc)
 
 	professionSvc := profession.NewService(db, cat)
@@ -170,7 +170,7 @@ func run() error {
 	aiAdvisorSvc := aiadvisor.NewService(db, cfg.AIAdvisor)
 	aiAdvisorH := aiadvisor.NewHandler(aiAdvisorSvc)
 
-	paymentSvc := payment.NewService(db, cfg.Payment).WithReferral(referralSvc)
+	paymentSvc := payment.NewService(db, cfg.Payment).WithReferral(referralSvc).WithAutoMsg(automsgSvc)
 	paymentH := payment.NewHandler(paymentSvc)
 
 	empireH := empire.NewHandler(pool)
