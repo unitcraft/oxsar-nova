@@ -107,13 +107,19 @@ interface ReplyInit {
   subject: string;
 }
 
-const FOLDERS: { folder: number | null; label: string; icon: string }[] = [
-  { folder: null,  label: 'Все',        icon: '📬' },
-  { folder: 1,     label: 'Личные',     icon: '✉️' },
-  { folder: 2,     label: 'Бой',        icon: '⚔️' },
-  { folder: 3,     label: 'Шпионаж',    icon: '🔭' },
-  { folder: 4,     label: 'Экспедиции', icon: '🌌' },
-  { folder: 13,    label: 'Система',    icon: '⚙️' },
+type FolderKey = number | null | 'sent';
+const FOLDERS: { folder: FolderKey; label: string; icon: string }[] = [
+  { folder: null,   label: 'Все',          icon: '📬' },
+  { folder: 1,      label: 'Личные',       icon: '✉️' },
+  { folder: 2,      label: 'Бой',          icon: '⚔️' },
+  { folder: 3,      label: 'Шпионаж',      icon: '🔭' },
+  { folder: 4,      label: 'Экспедиции',   icon: '🌌' },
+  { folder: 11,     label: 'Фаланга',      icon: '📡' },
+  { folder: 6,      label: 'Альянс',       icon: '🤝' },
+  { folder: 7,      label: 'Артефакты',    icon: '💎' },
+  { folder: 8,      label: 'Кредиты',      icon: '💳' },
+  { folder: 13,     label: 'Система',      icon: '⚙️' },
+  { folder: 'sent', label: 'Отправленные', icon: '📤' },
 ];
 
 type FleetMissionCb = (g: number, s: number, pos: number, isMoon: boolean, mission: number) => void;
@@ -124,13 +130,21 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
   const [selectedID, setSelectedID] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
   const [replyInit, setReplyInit] = useState<ReplyInit | undefined>(undefined);
-  const [activeFolder, setActiveFolder] = useState<number | null>(null);
+  const [activeFolder, setActiveFolder] = useState<FolderKey>(null);
   const [confirmDelAll, setConfirmDelAll] = useState(false);
 
   const list = useQuery({
     queryKey: ['messages'],
     queryFn: () => api.get<{ messages: Message[] | null }>('/api/messages'),
     refetchInterval: 10000,
+    enabled: activeFolder !== 'sent',
+  });
+
+  const sentList = useQuery({
+    queryKey: ['messages', 'sent'],
+    queryFn: () => api.get<{ messages: Message[] | null }>('/api/messages/sent'),
+    refetchInterval: 30000,
+    enabled: activeFolder === 'sent',
   });
 
   const markRead = useMutation({
@@ -150,7 +164,7 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
 
   const delAll = useMutation({
     mutationFn: () => {
-      const qs = activeFolder != null ? `?folder=${activeFolder}` : '';
+      const qs = typeof activeFolder === 'number' ? `?folder=${activeFolder}` : '';
       return api.delete<void>(`/api/messages${qs}`);
     },
     onSuccess: () => {
@@ -162,7 +176,12 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
   });
 
   const allMsgs = list.data?.messages ?? [];
-  const msgs = activeFolder === null ? allMsgs : allMsgs.filter((m) => m.folder === activeFolder);
+  const sentMsgs = sentList.data?.messages ?? [];
+  const msgs = activeFolder === 'sent'
+    ? sentMsgs
+    : activeFolder === null
+    ? allMsgs
+    : allMsgs.filter((m) => m.folder === activeFolder);
   const selected = msgs.find((m) => m.id === selectedID) ?? null;
   const unreadCount = allMsgs.filter((m) => !m.read_at).length;
 
@@ -210,17 +229,21 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {FOLDERS.map(({ folder, label, icon }) => {
           const isActive = activeFolder === folder;
-          const count = folder === null ? allMsgs.length : allMsgs.filter((m) => m.folder === folder).length;
+          const count = folder === null
+            ? allMsgs.length
+            : folder === 'sent'
+            ? (sentMsgs.length || undefined)
+            : allMsgs.filter((m) => m.folder === folder).length;
           return (
             <button
-              key={folder ?? 'all'}
+              key={folder === null ? 'all' : String(folder)}
               type="button"
               className={`btn-ghost btn-sm${isActive ? ' btn-active' : ''}`}
               style={{ fontWeight: isActive ? 700 : 400, opacity: isActive ? 1 : 0.7, borderColor: isActive ? 'var(--ox-accent)' : 'transparent' }}
               onClick={() => { setActiveFolder(folder); setSelectedID(null); }}
             >
               {icon} {label}
-              {count > 0 && <span style={{ marginLeft: 4, fontSize: 11, color: 'var(--ox-fg-muted)' }}>({count})</span>}
+              {typeof count === 'number' && count > 0 && <span style={{ marginLeft: 4, fontSize: 11, color: 'var(--ox-fg-muted)' }}>({count})</span>}
             </button>
           );
         })}

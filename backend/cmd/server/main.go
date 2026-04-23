@@ -26,14 +26,17 @@ import (
 	"github.com/oxsar/nova/backend/internal/auth"
 	"github.com/oxsar/nova/backend/internal/automsg"
 	"github.com/oxsar/nova/backend/internal/battle"
+	"github.com/oxsar/nova/backend/internal/battlestats"
 	"github.com/oxsar/nova/backend/internal/building"
 	"github.com/oxsar/nova/backend/internal/config"
+	"github.com/oxsar/nova/backend/internal/empire"
 	"github.com/oxsar/nova/backend/internal/fleet"
 	"github.com/oxsar/nova/backend/internal/galaxy"
 	"github.com/oxsar/nova/backend/internal/httpx"
 	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/market"
 	"github.com/oxsar/nova/backend/internal/message"
+	"github.com/oxsar/nova/backend/internal/notepad"
 	"github.com/oxsar/nova/backend/internal/officer"
 	"github.com/oxsar/nova/backend/internal/payment"
 	"github.com/oxsar/nova/backend/internal/planet"
@@ -45,7 +48,10 @@ import (
 	"github.com/oxsar/nova/backend/internal/research"
 	"github.com/oxsar/nova/backend/internal/rocket"
 	"github.com/oxsar/nova/backend/internal/score"
+	"github.com/oxsar/nova/backend/internal/search"
+	"github.com/oxsar/nova/backend/internal/settings"
 	"github.com/oxsar/nova/backend/internal/shipyard"
+	"github.com/oxsar/nova/backend/internal/techtree"
 	"github.com/oxsar/nova/backend/internal/storage"
 )
 
@@ -167,6 +173,14 @@ func run() error {
 	paymentSvc := payment.NewService(db, cfg.Payment).WithReferral(referralSvc)
 	paymentH := payment.NewHandler(paymentSvc)
 
+	empireH := empire.NewHandler(pool)
+	settingsH := settings.NewHandler(pool)
+	referralH := referral.NewHandler(pool)
+	notepadH := notepad.NewHandler(pool)
+	searchH := search.NewHandler(pool)
+	techtreeH := techtree.NewHandler(pool, cat)
+	battlestatsH := battlestats.NewHandler(pool)
+
 	adminH := admin.NewHandler(db)
 
 	chatHub := chat.NewHub()
@@ -209,6 +223,16 @@ func run() error {
 	r.Route("/api", func(pr chi.Router) {
 		pr.Use(auth.Middleware(jwt))
 		pr.Use(auth.LastSeenMiddleware(pool))
+		pr.Get("/empire", empireH.GetAll)
+		pr.Get("/settings", settingsH.Get)
+		pr.Put("/settings", settingsH.Update)
+		pr.Post("/settings/password", settingsH.ChangePassword)
+		pr.Get("/referrals", referralH.Mine)
+		pr.Get("/notepad", notepadH.Get)
+		pr.Put("/notepad", notepadH.Save)
+		pr.Get("/search", searchH.Search)
+		pr.Get("/techtree", techtreeH.Get)
+		pr.Get("/battlestats", battlestatsH.List)
 		pr.Get("/planets", planetH.List)
 		pr.Get("/planets/{id}", planetH.Get)
 		pr.Patch("/planets/{id}", planetH.Rename)
@@ -270,6 +294,7 @@ func run() error {
 
 		pr.Get("/market/rates", marketH.Rates)
 		pr.Post("/planets/{id}/market/exchange", marketH.Exchange)
+		pr.Post("/planets/{id}/market/credit", marketH.ExchangeCredit)
 		pr.Get("/market/lots", marketH.ListLots)
 		pr.Post("/market/lots", marketH.CreateLot)
 		pr.Delete("/market/lots/{id}", marketH.CancelLot)
@@ -280,6 +305,8 @@ func run() error {
 
 		pr.Get("/highscore", scoreH.Highscore)
 		pr.Get("/highscore/me", scoreH.MyRank)
+		pr.Get("/highscore/alliances", scoreH.Alliances)
+		pr.Get("/highscore/vacation", scoreH.Vacation)
 
 		pr.Get("/alliances", allianceH.List)
 		pr.Get("/alliances/me", allianceH.My)
@@ -305,6 +332,7 @@ func run() error {
 		pr.Delete("/chat/messages/{id}", chatH.DeleteMessage)
 
 		pr.Get("/messages", messageH.Inbox)
+		pr.Get("/messages/sent", messageH.Sent)
 		pr.Post("/messages", messageH.Compose)
 		pr.Delete("/messages", messageH.DeleteAll)
 		pr.Delete("/messages/{id}", messageH.Delete)

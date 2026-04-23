@@ -132,6 +132,87 @@ func (s *Service) Top(ctx context.Context, scoreType string, limit int) ([]Entry
 	return out, rows.Err()
 }
 
+// AllianceEntry — строка рейтинга альянсов.
+type AllianceEntry struct {
+	Rank   int     `json:"rank"`
+	Tag    string  `json:"tag"`
+	Name   string  `json:"name"`
+	Points float64 `json:"points"`
+	Count  int     `json:"count"`
+}
+
+// VacationEntry — запись игрока в режиме отпуска.
+type VacationEntry struct {
+	Rank          int     `json:"rank"`
+	UserID        string  `json:"user_id"`
+	Username      string  `json:"username"`
+	AllianceTag   *string `json:"alliance_tag,omitempty"`
+	Points        float64 `json:"points"`
+	VacationSince string  `json:"vacation_since"`
+}
+
+// TopAlliances возвращает топ альянсов по суммарным очкам членов.
+func (s *Service) TopAlliances(ctx context.Context, limit int) ([]AllianceEntry, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT a.tag, a.name, COUNT(u.id), SUM(u.points)
+		FROM alliances a
+		JOIN users u ON u.alliance_id = a.id AND u.umode = false
+		GROUP BY a.id, a.tag, a.name
+		ORDER BY SUM(u.points) DESC
+		LIMIT $1
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("score.top_alliances: %w", err)
+	}
+	defer rows.Close()
+
+	var out []AllianceEntry
+	rank := 1
+	for rows.Next() {
+		var e AllianceEntry
+		if err := rows.Scan(&e.Tag, &e.Name, &e.Count, &e.Points); err != nil {
+			return nil, fmt.Errorf("score.alliance_scan: %w", err)
+		}
+		e.Rank = rank
+		rank++
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+// VacationPlayers возвращает список игроков в режиме отпуска.
+func (s *Service) VacationPlayers(ctx context.Context) ([]VacationEntry, error) {
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT u.id, u.username, a.tag, u.points,
+		       ROW_NUMBER() OVER (ORDER BY u.points DESC) AS rank,
+		       u.vacation_since
+		FROM users u
+		LEFT JOIN alliances a ON a.id = u.alliance_id
+		WHERE u.vacation_since IS NOT NULL
+		ORDER BY u.points DESC
+		LIMIT 200
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("score.vacation_players: %w", err)
+	}
+	defer rows.Close()
+
+	var out []VacationEntry
+	for rows.Next() {
+		var e VacationEntry
+		var vs string
+		if err := rows.Scan(&e.UserID, &e.Username, &e.AllianceTag, &e.Points, &e.Rank, &vs); err != nil {
+			return nil, fmt.Errorf("score.vacation_scan: %w", err)
+		}
+		e.VacationSince = vs
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
 // PlayerRank возвращает позицию userID в рейтинге.
 func (s *Service) PlayerRank(ctx context.Context, userID, scoreType string) (int, error) {
 	col := columnFor(scoreType)

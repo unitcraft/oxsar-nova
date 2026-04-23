@@ -178,6 +178,46 @@ func (h *Handler) Exchange(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type creditExchangeRequest struct {
+	Direction string  `json:"direction"` // to_credit | from_credit
+	Resource  string  `json:"resource"`
+	Amount    float64 `json:"amount"`
+}
+
+// ExchangeCredit POST /api/planets/{id}/market/credit — обмен ресурсов на кредиты и обратно.
+func (h *Handler) ExchangeCredit(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	if planetID == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing planet id"))
+		return
+	}
+	var req creditExchangeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	res, err := h.svc.ExchangeCredit(r.Context(), uid, planetID, req.Direction, req.Resource, req.Amount)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, res)
+	case errors.Is(err, ErrInvalidResource),
+		errors.Is(err, ErrInvalidAmount),
+		errors.Is(err, ErrNotEnough):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrPlanetNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 // Rates GET /api/market/rates
 func (h *Handler) Rates(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())

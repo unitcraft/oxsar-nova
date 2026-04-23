@@ -11,6 +11,7 @@ import { ResourceTicker } from './ui/ResourceTicker';
 import { Countdown } from './ui/Countdown';
 import { ScreenSkeleton } from './ui/Skeleton';
 import { useKeyboardShortcuts } from './lib/useKeyboardShortcuts';
+import { GlobalSearch } from './features/search/GlobalSearch';
 
 const BuildingsScreen    = lazy(() => import('./features/buildings/BuildingsScreen').then(m => ({ default: m.BuildingsScreen })));
 const ResearchScreen     = lazy(() => import('./features/research/ResearchScreen').then(m => ({ default: m.ResearchScreen })));
@@ -34,20 +35,28 @@ const ResourceScreen     = lazy(() => import('./features/resource/ResourceScreen
 const AdminScreen        = lazy(() => import('./features/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const UnitInfoScreen     = lazy(() => import('./features/unit-info/UnitInfoScreen').then(m => ({ default: m.UnitInfoScreen })));
 const CreditsScreen      = lazy(() => import('./features/payment/CreditsScreen').then(m => ({ default: m.CreditsScreen })));
+const ProfessionScreen   = lazy(() => import('./features/profession/ProfessionScreen').then(m => ({ default: m.ProfessionScreen })));
+const EmpireScreen       = lazy(() => import('./features/empire/EmpireScreen').then(m => ({ default: m.EmpireScreen })));
+const SettingsScreen     = lazy(() => import('./features/settings/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
+const ReferralScreen     = lazy(() => import('./features/referral/ReferralScreen').then(m => ({ default: m.ReferralScreen })));
+const NotepadScreen      = lazy(() => import('./features/notepad/NotepadScreen').then(m => ({ default: m.NotepadScreen })));
+const TechtreeScreen     = lazy(() => import('./features/techtree/TechtreeScreen').then(m => ({ default: m.TechtreeScreen })));
+const BattlestatsScreen  = lazy(() => import('./features/battlestats/BattlestatsScreen').then(m => ({ default: m.BattlestatsScreen })));
 
 type Tab =
   | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
   | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
   | 'art-market' | 'officers' | 'achievements' | 'score'
   | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource'
-  | 'credits' | 'unit-info';
+  | 'credits' | 'unit-info' | 'profession' | 'empire' | 'settings' | 'referral' | 'notepad' | 'techtree' | 'battlestats';
 
 const VALID_TABS = new Set<string>([
   'overview', 'buildings', 'research', 'shipyard', 'repair',
   'artefacts', 'galaxy', 'fleet', 'market', 'rockets',
   'art-market', 'officers', 'achievements', 'score',
   'messages', 'alliance', 'chat', 'sim', 'admin', 'planet-options', 'resource',
-  'credits', 'unit-info',
+  'credits', 'unit-info', 'profession', 'empire', 'settings',
+  'referral', 'notepad', 'techtree', 'battlestats',
 ]);
 
 type InfoUnit = { kind: 'building' | 'research' | 'ship' | 'defense'; id: number; level: number; fromTab: Tab };
@@ -174,6 +183,18 @@ function AuthenticatedApp() {
   const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
   const [fleetDst, setFleetDst] = useState<{ g: number; s: number; pos: number; isMoon: boolean; mission: number } | undefined>();
   const [infoUnit, setInfoUnit] = useState<InfoUnit | null>(() => parseHash().infoUnit);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   function openInfo(kind: InfoUnit['kind'], id: number, level: number) {
     const unit: InfoUnit = { kind, id, level, fromTab: tab };
@@ -209,6 +230,7 @@ function AuthenticatedApp() {
         homePlanetId={list[0]?.id}
         onPlanetChange={setCurrentPlanetId}
         onLogout={logout}
+        onSearch={() => setSearchOpen(true)}
         username={me.data?.username ?? ''}
         {...(me.data?.credit !== undefined ? { credit: me.data.credit } : {})}
       />
@@ -292,6 +314,13 @@ function AuthenticatedApp() {
             {tab === 'planet-options' && <PlanetOptionsScreen planet={planet} planets={list} homePlanetId={list[0]?.id ?? null} onBack={() => navigateTo('overview')} />}
             {tab === 'resource'   && <ResourceScreen planetId={planet.id} />}
             {tab === 'credits'    && <CreditsScreen />}
+            {tab === 'profession' && <ProfessionScreen />}
+            {tab === 'empire'    && <EmpireScreen />}
+            {tab === 'settings'  && <SettingsScreen />}
+            {tab === 'referral'  && <ReferralScreen />}
+            {tab === 'notepad'   && <NotepadScreen />}
+            {tab === 'techtree'  && <TechtreeScreen />}
+            {tab === 'battlestats' && <BattlestatsScreen />}
           </Suspense>
         </main>
       </div>
@@ -302,6 +331,23 @@ function AuthenticatedApp() {
       <footer className="ox-footer">
         <small>oxsar-nova v0.1.0 — dev preview</small>
       </footer>
+
+      <GlobalSearch
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        onNavigate={(target) => {
+          if (target.kind === 'planet') {
+            const d = target.data as { galaxy: number; system: number };
+            navigateTo('galaxy');
+            // установим координаты в URL, GalaxyScreen прочитает при следующем шаге
+            // (упрощение: пользователь переходит на экран, дальше — сам)
+            void d;
+          } else if (target.kind === 'player' || target.kind === 'alliance') {
+            // пока просто переводим в рейтинг — позже можно сделать профили
+            navigateTo('score');
+          }
+        }}
+      />
     </div>
   );
 }
@@ -318,13 +364,14 @@ function useServerClock() {
 
 /* ── Header ── */
 function Header({
-  planet, planets, homePlanetId, onPlanetChange, onLogout, username, credit,
+  planet, planets, homePlanetId, onPlanetChange, onLogout, onSearch, username, credit,
 }: {
   planet: Planet;
   planets: Planet[];
   homePlanetId: string | undefined;
   onPlanetChange: (id: string) => void;
   onLogout: () => void;
+  onSearch: () => void;
   username: string;
   credit?: number | undefined;
 }) {
@@ -410,6 +457,15 @@ function Header({
         <span style={{ fontSize: 12, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', letterSpacing: '0.04em' }}>
           {timeStr}
         </span>
+        <button
+          type="button"
+          className="btn-ghost btn-sm"
+          onClick={onSearch}
+          title="Поиск (Ctrl+K)"
+          style={{ fontFamily: 'var(--ox-mono)', fontSize: 12 }}
+        >
+          🔍 <span style={{ fontSize: 10, opacity: 0.6 }}>Ctrl+K</span>
+        </button>
         <PlanetSwitcher planet={planet} planets={planets} homePlanetId={homePlanetId} onChange={onPlanetChange} />
         {username && (
           <span style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginLeft: 4 }}>
@@ -541,6 +597,10 @@ const ALL_NAV: Array<{ key: Tab; icon: string; label: string }> = [
   { key: 'research',    icon: '🔬', label: 'Исследования' },
   { key: 'shipyard',    icon: '🚀', label: 'Верфь' },
   { key: 'repair',      icon: '🔧', label: 'Ремонт' },
+  { key: 'profession',  icon: '🎖', label: 'Профессия' },
+  { key: 'empire',      icon: '🌐', label: 'Империя' },
+  { key: 'techtree',    icon: '🌳', label: 'Техдерево' },
+  { key: 'settings',    icon: '⚙️', label: 'Настройки' },
   { key: 'galaxy',      icon: '🌌', label: 'Галактика' },
   { key: 'fleet',       icon: '🛸', label: 'Флот' },
   { key: 'rockets',     icon: '💥', label: 'Ракеты' },
@@ -553,7 +613,10 @@ const ALL_NAV: Array<{ key: Tab; icon: string; label: string }> = [
   { key: 'officers',    icon: '⭐', label: 'Офицеры' },
   { key: 'score',       icon: '🏆', label: 'Рейтинг' },
   { key: 'achievements',icon: '🥇', label: 'Достижения' },
+  { key: 'battlestats', icon: '⚔', label: 'История боёв' },
   { key: 'sim',         icon: '⚔️', label: 'Симулятор' },
+  { key: 'notepad',     icon: '📝', label: 'Блокнот' },
+  { key: 'referral',    icon: '🎁', label: 'Рефералы' },
 ];
 
 function MoreSheet({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
@@ -592,6 +655,10 @@ function buildNavItems(t: (ns: string, key: string, fb?: string) => string, unre
     { key: 'research',   icon: '🔬', label: t('global','MENU_RESEARCH') },
     { key: 'shipyard',   icon: '🚀', label: t('global','MENU_SHIPYARD') },
     { key: 'repair',     icon: '🔧', label: t('global','MENU_REPAIR') },
+    { key: 'profession', icon: '🎖', label: 'Профессия' },
+    { key: 'empire',     icon: '🌐', label: 'Империя' },
+    { key: 'techtree',   icon: '🌳', label: 'Техдерево' },
+    { key: 'settings',   icon: '⚙️', label: 'Настройки' },
     { key: 's1', sep: true },
     { key: 'space', groupLabel: 'Космос' },
     { key: 'galaxy',     icon: '🌌', label: t('global','MENU_GALAXY') },
@@ -602,6 +669,8 @@ function buildNavItems(t: (ns: string, key: string, fb?: string) => string, unre
     { key: 'messages',   icon: '📨', label: t('global','MENU_MESSAGES'), badge: unreadCount || undefined },
     { key: 'chat',       icon: '💬', label: 'Чат' },
     { key: 'alliance',   icon: '🤝', label: t('global','MENU_ALLIANCE') || 'Альянс' },
+    { key: 'notepad',    icon: '📝', label: 'Блокнот' },
+    { key: 'referral',   icon: '🎁', label: 'Рефералы' },
     { key: 's3', sep: true },
     { key: 'trade', groupLabel: 'Торговля' },
     { key: 'market',     icon: '💱', label: t('global','MENU_MARKET') },
@@ -612,6 +681,7 @@ function buildNavItems(t: (ns: string, key: string, fb?: string) => string, unre
     { key: 'stats', groupLabel: 'Статистика' },
     { key: 'score',      icon: '🏆', label: t('global','MENU_HIGHSCORE') || 'Рейтинг' },
     { key: 'achievements',icon:'🥇', label: t('global','MENU_ACHIEVEMENTS') || 'Достижения' },
+    { key: 'battlestats',icon: '⚔', label: 'История боёв' },
     { key: 'sim',        icon: '⚔️', label: t('global','MENU_SIMULATOR') },
     ...(isAdmin ? [
       { key: 's5', sep: true },
