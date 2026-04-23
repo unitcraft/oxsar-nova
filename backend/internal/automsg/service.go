@@ -83,6 +83,21 @@ func (s *Service) Send(ctx context.Context, tx pgx.Tx, userID, key string, vars 
 	return nil
 }
 
+// SendDirect вставляет сообщение без шаблона и без идемпотентности.
+// Используется для многоразовых событий (сканы, транзакции, события
+// альянса). folder — номер папки из legacy consts.php.
+// tx опционален (при nil используется пул).
+func (s *Service) SendDirect(ctx context.Context, tx pgx.Tx, userID string, folder int, title, body string) error {
+	exec := txOrPool(s, tx)
+	if _, err := exec.Exec(ctx, `
+		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
+		VALUES ($1, $2, NULL, $3, $4, $5)
+	`, ids.New(), userID, folder, title, body); err != nil {
+		return fmt.Errorf("automsg direct: %w", err)
+	}
+	return nil
+}
+
 // SendInactivityReminders отправляет INACTIVITY_REMINDER всем игрокам,
 // которые не заходили более inactiveDays дней. Использует week-суффикс
 // в ключе idempotency (INACTIVITY_REMINDER_<year>W<week>), чтобы при

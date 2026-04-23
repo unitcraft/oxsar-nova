@@ -44,14 +44,26 @@ type Record struct {
 	ExpireAt    *time.Time `json:"expire_at,omitempty"`
 }
 
+// AutoMsgSender — узкий интерфейс к automsg.SendDirect.
+type AutoMsgSender interface {
+	SendDirect(ctx context.Context, tx pgx.Tx, userID string, folder int, title, body string) error
+}
+
 // Service — доменный фасад над артефактами.
 type Service struct {
 	db      repo.Exec
 	catalog *config.Catalog
+	automsg AutoMsgSender
 }
 
 func NewService(db repo.Exec, cat *config.Catalog) *Service {
 	return &Service{db: db, catalog: cat}
+}
+
+// WithAutoMsg подключает сервис системных сообщений (опционально).
+func (s *Service) WithAutoMsg(a AutoMsgSender) *Service {
+	s.automsg = a
+	return s
 }
 
 // Grant кладёт артефакт в инвентарь пользователя.

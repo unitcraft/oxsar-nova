@@ -60,6 +60,12 @@ func (s *Service) ExpireEvent() event.Handler {
 			StateExpired, rec.ID); err != nil {
 			return fmt.Errorf("expire update: %w", err)
 		}
+		// Системное сообщение об истечении (folder=7 ARTEFACTS).
+		if s.automsg != nil {
+			title := "Артефакт истёк"
+			body := fmt.Sprintf("Действие артефакта «%s» завершилось. Эффекты отменены.", spec.Name)
+			_ = s.automsg.SendDirect(ctx, tx, rec.UserID, 7, title, body)
+		}
 		return nil
 	}
 }

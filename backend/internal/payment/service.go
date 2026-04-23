@@ -19,6 +19,12 @@ type ReferralProcessor interface {
 	ProcessPurchase(ctx context.Context, buyerID string, amount float64) error
 }
 
+// AutoMsgSender — узкий интерфейс к automsg.SendDirect, чтобы не
+// плодить зависимости. folder=8 (MSG_FOLDER_CREDIT в legacy).
+type AutoMsgSender interface {
+	SendDirect(ctx context.Context, tx pgx.Tx, userID string, folder int, title, body string) error
+}
+
 // Purchase — одна запись из истории покупок.
 type Purchase struct {
 	ID           string
@@ -37,6 +43,7 @@ type Service struct {
 	cfg      config.PaymentConfig
 	gateway  Gateway
 	referral ReferralProcessor
+	automsg  AutoMsgSender
 }
 
 // NewService создаёт Service. Если PAYMENT_PROVIDER не задан — gateway равен nil,
@@ -53,6 +60,12 @@ func NewService(db repo.Exec, cfg config.PaymentConfig) *Service {
 // WithReferral подключает реферальный сервис (опционально).
 func (s *Service) WithReferral(r ReferralProcessor) *Service {
 	s.referral = r
+	return s
+}
+
+// WithAutoMsg подключает сервис системных сообщений (опционально).
+func (s *Service) WithAutoMsg(a AutoMsgSender) *Service {
+	s.automsg = a
 	return s
 }
 
@@ -119,6 +132,15 @@ func (s *Service) ConfirmPayment(ctx context.Context, orderID, providerID string
 			UPDATE users SET credit = credit + $1 WHERE id=$2
 		`, credits, userID); err != nil {
 			return fmt.Errorf("payment: credit user: %w", err)
+		}
+
+		// Системное сообщение о зачислении (folder=8 CREDIT).
+		if s.automsg != nil {
+			title := "Кредиты зачислены"
+			body := fmt.Sprintf("На ваш счёт зачислено %d кредитов (заказ #%s). Спасибо за поддержку!", credits, orderID)
+			if err := s.automsg.SendDirect(ctx, tx, userID, 8, title, body); err != nil {
+				slog.Warn("payment: credit msg failed", "order_id", orderID, "err", err.Error())
+			}
 		}
 
 		// Реферальный бонус — после транзакции (ошибки не критичны).
