@@ -7,50 +7,28 @@ import (
 	"github.com/oxsar/nova/backend/internal/config"
 )
 
-// Тест проверяет, что productionRatesDSL даёт тот же результат, что и
-// ручное вычисление легаси-формулы METALMINE
-// (см. sql/table_dump/na_construction.sql, buildingid=1).
-func TestProductionRatesDSL_MetalMine(t *testing.T) {
+// TestProductionRatesMetal проверяет, что productionRatesDSL возвращает
+// правильное производство металла по статической формуле metalmine
+// (§5.2.1 ТЗ, buildingid=1).
+func TestProductionRatesMetal(t *testing.T) {
 	t.Parallel()
 
-	// Минимальный Catalog с одной construction-записью и здоровыми
-	// дефолтами для buildings.yml (service читает и то, и то).
 	cat := &config.Catalog{
 		Buildings: config.BuildingCatalog{Buildings: map[string]config.BuildingSpec{
-			"metal_mine":      {ID: 1},
-			"silicon_lab":     {ID: 2},
-			"hydrogen_lab":    {ID: 3},
-			"solar_plant":     {ID: 4},
-			"metal_storage":   {ID: 9},
-			"silicon_storage": {ID: 10},
+			"metal_mine":       {ID: 1},
+			"silicon_lab":      {ID: 2},
+			"hydrogen_lab":     {ID: 3},
+			"solar_plant":      {ID: 4},
+			"metal_storage":    {ID: 9},
+			"silicon_storage":  {ID: 10},
 			"hydrogen_storage": {ID: 11},
 		}},
+		// ConstructionCatalog нужен непустым, чтобы productionRates выбрал DSL-ветку.
 		Construction: config.ConstructionCatalog{Buildings: map[string]config.ConstructionSpec{
-			"metalmine": {
-				ID:         1,
-				LegacyName: "METALMINE",
-				Prod:       config.ConstructionFormulas{Metal: "floor(30 * {level} * pow(1.1+{tech=23}*0.0006, {level}))"},
-				Cons:       config.ConstructionFormulas{Energy: "floor(10 * {level} * pow(1.1-{tech=18}*0.0005, {level}))"},
-			},
-			"solar_plant": {
-				ID:         4,
-				LegacyName: "SOLAR_PLANT",
-				Prod:       config.ConstructionFormulas{Energy: "floor(20 * {level} * pow(1.1+{tech=18}*0.0005, {level}))"},
-			},
+			"metalmine":   {ID: 1, LegacyName: "METALMINE"},
+			"solar_plant": {ID: 4, LegacyName: "SOLAR_PLANT"},
 		}},
 	}
-
-	// ВАЖНО: ConstructionCatalog ожидает ключи совпадающими с теми,
-	// что возвращает evalProd — т.е. "metal_mine", "silicon_lab" и
-	// т.д. В legacy na_construction имена в UPPER (METALMINE), мы их
-	// нормализуем в snake_case. Но METALMINE → "metalmine" (без _),
-	// так что для теста оставляем именно "metalmine" для metal_mine
-	// ID=1, а кого-то еще (solar_plant, у кого в legacy
-	// "SOLAR_PLANT") → "solar_plant". evalProd обращается по ключу
-	// "metal_mine" — см. ниже мини-helpers. Для простоты теста
-	// выровняем ключи вручную: evalProd уже ждёт "metal_mine",
-	// добавим алиасы:
-	cat.Construction.Buildings["metal_mine"] = cat.Construction.Buildings["metalmine"]
 
 	svc := NewService(nil, nil, cat)
 
