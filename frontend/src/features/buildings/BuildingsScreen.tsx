@@ -303,7 +303,19 @@ function fmtSecs(sec: number): string {
 
 function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem; isActive: boolean; onCancel: () => void; cancelPending: boolean }) {
   const { pct, secsLeft } = useBuildProgress(item.start_at, item.end_at);
+  const [confirming, setConfirming] = useState(false);
   const name = ([...BUILDINGS, ...MOON_BUILDINGS]).find((b) => b.id === item.unit_id)?.name ?? `#${item.unit_id}`;
+
+  function handleCancelClick() {
+    if (secsLeft === 0) return; // уже завершилось пока думал
+    setConfirming(true);
+  }
+
+  function handleConfirm() {
+    setConfirming(false);
+    if (secsLeft === 0) return; // завершилось пока думал
+    onCancel();
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -318,16 +330,39 @@ function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem
               {new Date(item.end_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
             </span>
         }
-        <button
-          type="button"
-          className="btn-ghost btn-sm"
-          disabled={cancelPending}
-          onClick={onCancel}
-          title="Отменить (ресурсы вернутся)"
-          style={{ fontSize: 11, padding: '2px 8px', flexShrink: 0 }}
-        >
-          ✕
-        </button>
+        {confirming ? (
+          <>
+            <span style={{ fontSize: 11, color: 'var(--ox-danger)', flexShrink: 0 }}>Отменить?</span>
+            <button
+              type="button"
+              className="btn-sm"
+              style={{ fontSize: 11, padding: '2px 8px', flexShrink: 0, background: 'var(--ox-danger)', color: '#fff', border: 'none', borderRadius: 4 }}
+              disabled={cancelPending}
+              onClick={handleConfirm}
+            >
+              Да
+            </button>
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              style={{ fontSize: 11, padding: '2px 8px', flexShrink: 0 }}
+              onClick={() => setConfirming(false)}
+            >
+              Нет
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="btn-ghost btn-sm"
+            disabled={cancelPending || secsLeft === 0}
+            onClick={handleCancelClick}
+            title="Отменить (ресурсы вернутся)"
+            style={{ fontSize: 11, padding: '2px 8px', flexShrink: 0 }}
+          >
+            ✕
+          </button>
+        )}
       </div>
       {isActive && <ProgressBar pct={pct} height={4} />}
     </div>
