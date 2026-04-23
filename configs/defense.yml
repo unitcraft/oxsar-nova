@@ -22,6 +22,13 @@ defense:
     shield: 100
     shell: 8000
 
+  ion_gun:
+    id: 46
+    cost: { metal: 8000, silicon: 2000, hydrogen: 500 }
+    attack: 150
+    shield: 500
+    shell: 8000
+
   gauss_gun:
     id: 47
     cost: { metal: 20000, silicon: 15000, hydrogen: 2000 }

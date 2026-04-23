@@ -509,3 +509,120 @@ func TestClampPercent(t *testing.T) {
 		t.Error("over 100 should clamp to 100")
 	}
 }
+
+// --- Tech modifier tests (A.1) ---
+
+// TestGunTech_IncreasesAttack: gun_tech=5 → effectiveAttack ×1.5 → больше урона.
+func TestGunTech_IncreasesAttack(t *testing.T) {
+	t.Parallel()
+	// Сценарий: щит=0, shell защитника БОЛЬШЕ чем attack стрелка.
+	// Тогда cap per shot = shell, но attack < shell → cap не срабатывает.
+	// 1 атакующий (attack=50, shell=huge) vs 10 защитников (shell=500, attack=0).
+	// Без tech: pool=50×1=50, totalShell=5000 → turnShell=4950 → 9 выживают, 1 damaged.
+	// С gun_tech=5: attack=75, pool=75 → turnShell=4925 → снова 9 выживают...
+	// Нужна большая разница: используем много атакующих.
+	//
+	// 20 атакующих (attack=50) vs 10 защитников (shell=500):
+	// Без tech: pool=1000, totalShell=5000 → 2 убито.
+	// С gun_tech=5: attack=75, pool=1500 → 3 убито.
+	// Важно: attack(50 или 75) < shell(500) → cap не срабатывает.
+	noTech := Input{
+		Seed:   42,
+		Rounds: 1,
+		Attackers: []Side{simpleAttacker(20, 50, 1000000)},
+		Defenders: []Side{simpleDefender(10, 0, 500)},
+	}
+	withTech := Input{
+		Seed:   42,
+		Rounds: 1,
+		Attackers: []Side{{
+			UserID: "att",
+			Tech:   Tech{Gun: 5},
+			Units:  noTech.Attackers[0].Units,
+		}},
+		Defenders: noTech.Defenders,
+	}
+	rep0, err := Calculate(noTech)
+	if err != nil {
+		t.Fatalf("noTech: %v", err)
+	}
+	rep5, err := Calculate(withTech)
+	if err != nil {
+		t.Fatalf("withTech: %v", err)
+	}
+	kills0 := int64(10) - rep0.Defenders[0].Units[0].QuantityEnd
+	kills5 := int64(10) - rep5.Defenders[0].Units[0].QuantityEnd
+	// gun_tech=5 → +50% атаки → больше убитых.
+	if kills5 <= kills0 {
+		t.Fatalf("gun_tech=5 should kill more: kills0=%d kills5=%d", kills0, kills5)
+	}
+}
+
+// TestShellTech_IncreasesArmor: shell_tech=5 → броня ×1.5 → нужно в 1.5× больше урона для убийства.
+func TestShellTech_IncreasesArmor(t *testing.T) {
+	t.Parallel()
+	// 10 атакующих (attack=100) vs 10 защитников (shell=100, totalShell=1000).
+	// Без tech: pool=1000, всё точно убивает всех за 1 раунд.
+	// С shell_tech=5: shell становится 150, totalShell=1500 → pool=1000 убивает 6.
+	noTech := Input{
+		Seed:   1,
+		Rounds: 1,
+		Attackers: []Side{simpleAttacker(10, 100, 1000000)},
+		Defenders: []Side{simpleDefender(10, 0, 100)},
+	}
+	withTech := Input{
+		Seed:      1,
+		Rounds:    1,
+		Attackers: noTech.Attackers,
+		Defenders: []Side{{
+			UserID: "def",
+			Tech:   Tech{Shell: 5},
+			Units:  noTech.Defenders[0].Units,
+		}},
+	}
+	rep0, err := Calculate(noTech)
+	if err != nil {
+		t.Fatalf("noTech: %v", err)
+	}
+	rep5, err := Calculate(withTech)
+	if err != nil {
+		t.Fatalf("withTech: %v", err)
+	}
+	end0 := rep0.Defenders[0].Units[0].QuantityEnd
+	end5 := rep5.Defenders[0].Units[0].QuantityEnd
+	// С более высокой бронёй должно выживать больше.
+	if end5 <= end0 {
+		t.Fatalf("shell_tech=5 should leave more survivors: end0=%d end5=%d", end0, end5)
+	}
+}
+
+// TestTechZero_Regression: tech=0 совпадает с отсутствием Tech (обратная совместимость).
+func TestTechZero_Regression(t *testing.T) {
+	t.Parallel()
+	base := Input{
+		Seed:      99,
+		Attackers: []Side{simpleAttacker(10, 300, 5000)},
+		Defenders: []Side{simpleDefender(10, 50, 1000)},
+	}
+	withZeroTech := Input{
+		Seed: 99,
+		Attackers: []Side{{
+			UserID: "att",
+			Tech:   Tech{Gun: 0, Shield: 0, Shell: 0},
+			Units:  base.Attackers[0].Units,
+		}},
+		Defenders: []Side{{
+			UserID: "def",
+			Tech:   Tech{Gun: 0, Shield: 0, Shell: 0},
+			Units:  base.Defenders[0].Units,
+		}},
+	}
+	rep1, _ := Calculate(base)
+	rep2, _ := Calculate(withZeroTech)
+	if rep1.Winner != rep2.Winner {
+		t.Fatalf("tech=0 regression: winner differs: %s vs %s", rep1.Winner, rep2.Winner)
+	}
+	if rep1.Rounds != rep2.Rounds {
+		t.Fatalf("tech=0 regression: rounds differ: %d vs %d", rep1.Rounds, rep2.Rounds)
+	}
+}

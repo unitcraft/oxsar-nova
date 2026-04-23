@@ -116,6 +116,10 @@ type unitState struct {
 	// primaryChannel — канал с max Attack; выбираем один раз, не
 	// пересчитываем каждый выстрел.
 	primaryChannel int
+	// effectiveAttack — attack[primaryChannel] с применённым gun tech (+10%/уровень).
+	effectiveAttack float64
+	// effectiveShield — Shield[primaryChannel] с применённым shield tech.
+	effectiveShell float64 // shell на юнит с применённым shell tech
 }
 
 type sideState struct {
@@ -138,22 +142,30 @@ func newState(input []Side, rf map[int]map[int]int) *battleState {
 	bs := &battleState{sides: make([]*sideState, len(input)), rapidfire: rf}
 	for si, s := range input {
 		ss := &sideState{userID: s.UserID, username: s.Username, tech: s.Tech}
+		gunFactor := 1.0 + float64(s.Tech.Gun)*0.10
+		shieldFactor := 1.0 + float64(s.Tech.Shield)*0.10
+		shellFactor := 1.0 + float64(s.Tech.Shell)*0.10
 		for ui, u := range s.Units {
+			pch := primaryChannel(u.Attack)
 			us := &unitState{
-				tmpl:           u,
-				idx:            ui,
-				quantity:       u.Quantity,
-				damaged:        clampDamaged(u.Damaged, u.Quantity),
-				shellPercent:   clampPercent(u.ShellPercent),
-				primaryChannel: primaryChannel(u.Attack),
+				tmpl:            u,
+				idx:             ui,
+				quantity:        u.Quantity,
+				damaged:         clampDamaged(u.Damaged, u.Quantity),
+				shellPercent:    clampPercent(u.ShellPercent),
+				primaryChannel:  pch,
+				effectiveAttack: u.Attack[pch] * gunFactor,
+				effectiveShell:  u.Shell * shellFactor,
 			}
-			// turnShell учитывает поражённых юнитов на входе (в
-			// большинстве случаев — 0, но пригодится, когда Fleet
-			// ATTACK начнёт приносить флоты с damaged после предыдущего
-			// боя).
-			us.turnShell = totalShell(u.Shell, us.quantity, us.damaged, us.shellPercent)
-			us.turnShield = float64(u.Quantity) * u.Shield[us.primaryChannel]
+			// effectiveShield хранится прямо в turnShield/regen через
+			// scaledShield — считаем один раз.
+			scaledShield := u.Shield[pch] * shieldFactor
+			us.turnShell = totalShell(us.effectiveShell, us.quantity, us.damaged, us.shellPercent)
+			us.turnShield = float64(u.Quantity) * scaledShield
 			us.startTurnShield = us.turnShield
+			// Сохраняем масштабированный shield обратно в tmpl для regen и applyShots.
+			us.tmpl.Shield[pch] = scaledShield
+			us.tmpl.Shell = us.effectiveShell
 			ss.units = append(ss.units, us)
 		}
 		bs.sides[si] = ss
@@ -365,7 +377,7 @@ func shootAtSides(r *rng.R, shooters, targets *battleState) {
 			if shooter.quantity <= 0 {
 				continue
 			}
-			attack := shooter.tmpl.Attack[shooter.primaryChannel]
+			attack := shooter.effectiveAttack
 			if attack <= 0 {
 				continue
 			}
