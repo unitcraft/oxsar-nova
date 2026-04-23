@@ -368,6 +368,10 @@ func run() error {
 			ar.Post("/users/{id}/role", adminH.SetRole)
 			ar.Get("/automsgs", adminH.ListAutomsgs)
 			ar.Put("/automsgs/{key}", adminH.UpdateAutomsg)
+			ar.Get("/events", adminH.EventsList)
+			ar.Get("/events/stats", adminH.EventsStats)
+			ar.Post("/events/{id}/retry", adminH.EventRetry)
+			ar.Post("/events/{id}/cancel", adminH.EventCancel)
 		})
 	})
 

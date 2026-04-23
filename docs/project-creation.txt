@@ -5910,3 +5910,25 @@ cmd/worker/main.go: RunPruner запущен в `go func()` рядом с `w.Run
 
 events теперь не пухнет от накопленных error-events; анализ тихих сбоев
 доступен через `events_dead`.
+
+**Ф.1.4 — Admin replay/cancel endpoint'ы**
+
+admin/handler.go:
+- EventsList GET /api/admin/events?state=&kind=&limit=&offset= — таблица
+  event'ов с фильтром по state/kind, paging.
+- EventsStats GET /api/admin/events/stats — agregate by state,
+  top-10 kinds с ошибками за 24h, oldest_wait_lag_s (EXTRACT EPOCH).
+- EventRetry POST /api/admin/events/{id}/retry — reset state='wait',
+  attempt=0, fire_at=now(), last_error=NULL.
+- EventCancel POST /api/admin/events/{id}/cancel — state='ok' с пометкой
+  [cancelled by admin] в last_error (soft-delete, чтобы worker не взял).
+
+Роуты под AdminOnly middleware. Rate-limit пока через общий auth-RL
+(не выделенный, как описано в плане — в последующей итерации можно
+вынести в Redis sliding-window, пока не критично для оператора).
+
+DoD Ф.1 выполнен полностью:
+- per-event tx: ✓
+- retry с backoff: ✓
+- events_dead + cron: ✓
+- Admin replay/cancel: ✓
