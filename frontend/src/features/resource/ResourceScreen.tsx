@@ -72,9 +72,12 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
   if (!report) return <div style={{ color: 'var(--ox-danger)', padding: 24 }}>Ошибка загрузки</div>;
 
   const buildings = report.buildings.filter((b) => b.level > 0);
-  const ph = report.metal_per_hour;
-  const sh = report.silicon_per_hour;
-  const hh = report.hydrogen_per_hour;
+
+  // Пересчитываем итоги из текущих факторов (обновляются при движении слайдера).
+  const ph = report.basic_metal   + buildings.reduce((s, b) => s + b.prod_metal    * (factors[b.unit_id] ?? b.factor) / 100, 0);
+  const sh = report.basic_silicon + buildings.reduce((s, b) => s + b.prod_silicon  * (factors[b.unit_id] ?? b.factor) / 100, 0);
+  const hh =                        buildings.reduce((s, b) => s + b.prod_hydrogen * (factors[b.unit_id] ?? b.factor) / 100, 0);
+  const te =                        buildings.reduce((s, b) => s + b.cons_energy   * (factors[b.unit_id] ?? b.factor) / 100, 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -149,7 +152,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
               metal={ph}
               silicon={sh}
               hydrogen={hh}
-              energy={report.total_energy}
+              energy={te}
               topBorder
             />
 
