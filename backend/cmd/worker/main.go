@@ -226,6 +226,13 @@ func run() error {
 		}
 	}()
 
+	// Pruner: ежедневно переносит error-events старше 7 дней в events_dead.
+	go func() {
+		if err := w.RunPruner(ctx); err != nil && err != context.Canceled {
+			log.ErrorContext(ctx, "event_pruner_exit", slog.String("err", err.Error()))
+		}
+	}()
+
 	log.InfoContext(ctx, "worker started")
 	if err := w.Run(ctx); err != nil && err != context.Canceled {
 		return err
