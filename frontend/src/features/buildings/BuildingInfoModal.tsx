@@ -19,8 +19,6 @@ function fmtSecs(secs: number): string {
 }
 
 function buildTimeSecs(b: BuildingEntry, level: number): number {
-  // Формула: time_base * factor^(level-1) / (1+robo) / 2^nano
-  // Здесь robo=0, nano=0 — базовое время без ускорений
   const timeBase: Record<string, number> = {
     metal_mine: 60, silicon_lab: 75, hydrogen_lab: 90, solar_plant: 60,
     hydrogen_plant: 90, robotic_factory: 180, nano_factory: 600, shipyard: 180,
@@ -30,6 +28,21 @@ function buildTimeSecs(b: BuildingEntry, level: number): number {
   };
   const base = timeBase[b.key] ?? 120;
   return Math.round(base * b.costFactor ** (level - 1));
+}
+
+// Производство в час по уровню (формулы из legacy economy/production.go)
+const PRODUCTION_RATES: Record<string, { base: number; label: string }> = {
+  metal_mine:      { base: 30,   label: '🟠/ч' },
+  silicon_lab:     { base: 20,   label: '💎/ч' },
+  hydrogen_lab:    { base: 10,   label: '💧/ч' },
+  solar_plant:     { base: 20,   label: '⚡/ч' },
+  hydrogen_plant:  { base: 22.5, label: '⚡/ч' },
+};
+
+function productionAtLevel(key: string, level: number): number | null {
+  const r = PRODUCTION_RATES[key];
+  if (!r) return null;
+  return Math.floor(r.base * level * 1.1 ** level);
 }
 
 const LEVELS_RANGE = 10;
@@ -48,6 +61,7 @@ export function BuildingInfoModal({ unitId, currentLevel, onClose }: Props) {
   const startLevel = Math.max(1, currentLevel - 2);
   const endLevel = startLevel + LEVELS_RANGE - 1;
   const rows = Array.from({ length: endLevel - startLevel + 1 }, (_, i) => startLevel + i);
+  const prodRate = PRODUCTION_RATES[b.key];
 
   return (
     <div
@@ -101,12 +115,14 @@ export function BuildingInfoModal({ unitId, currentLevel, onClose }: Props) {
                 {b.costBase.silicon > 0  && <th style={{ padding: '4px 8px' }}>💎</th>}
                 {b.costBase.hydrogen > 0 && <th style={{ padding: '4px 8px' }}>💧</th>}
                 <th style={{ padding: '4px 8px' }}>⏱</th>
+                {prodRate && <th style={{ padding: '4px 8px' }}>{prodRate.label}</th>}
               </tr>
             </thead>
             <tbody>
               {rows.map((lvl) => {
                 const cost = costForLevel(b.costBase, b.costFactor, lvl);
                 const secs = buildTimeSecs(b, lvl);
+                const prod = productionAtLevel(b.key, lvl);
                 const isCurrent = lvl === currentLevel;
                 const isNext = lvl === currentLevel + 1;
                 return (
@@ -125,6 +141,7 @@ export function BuildingInfoModal({ unitId, currentLevel, onClose }: Props) {
                     {b.costBase.silicon > 0  && <td style={{ padding: '4px 8px', textAlign: 'right' }}>{formatNum(cost.silicon)}</td>}
                     {b.costBase.hydrogen > 0 && <td style={{ padding: '4px 8px', textAlign: 'right' }}>{formatNum(cost.hydrogen)}</td>}
                     <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmtSecs(secs)}</td>
+                    {prod !== null && <td style={{ padding: '4px 8px', textAlign: 'right' }}>{formatNum(prod)}</td>}
                   </tr>
                 );
               })}
@@ -135,6 +152,14 @@ export function BuildingInfoModal({ unitId, currentLevel, onClose }: Props) {
         <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>
           Время указано без учёта фабрики роботов и нано-фабрики.
         </div>
+
+        {/* Полное описание */}
+        {b.fullDesc && (
+          <details style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>
+            <summary style={{ cursor: 'pointer', color: 'var(--ox-fg-muted)', userSelect: 'none', marginBottom: 6 }}>Подробнее</summary>
+            <div style={{ lineHeight: 1.6, paddingTop: 4 }}>{b.fullDesc}</div>
+          </details>
+        )}
       </div>
     </div>
   );

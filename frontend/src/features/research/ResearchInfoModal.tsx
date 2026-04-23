@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { RESEARCH, costForLevel, imageOf, formatNum } from '@/api/catalog';
+import { RESEARCH, costForLevel, imageOf, formatNum, fmtReqs } from '@/api/catalog';
 import type { ResearchEntry } from '@/api/catalog';
 
 interface Props {
@@ -82,6 +82,12 @@ export function ResearchInfoModal({ unitId, currentLevel, onClose }: Props) {
           <button type="button" className="btn-ghost btn-sm" onClick={onClose} style={{ fontSize: 16, padding: '2px 8px', flexShrink: 0 }}>✕</button>
         </div>
 
+        {r.requires && r.requires.length > 0 && (
+          <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+            🔒 Требуется: {fmtReqs(r.requires)}
+          </div>
+        )}
+
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--ox-mono)' }}>
             <thead>
@@ -125,6 +131,13 @@ export function ResearchInfoModal({ unitId, currentLevel, onClose }: Props) {
         <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>
           Время указано без учёта уровня исследовательской лаборатории.
         </div>
+
+        {r.fullDesc && (
+          <details style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>
+            <summary style={{ cursor: 'pointer', color: 'var(--ox-fg-muted)', userSelect: 'none', marginBottom: 6 }}>Подробнее</summary>
+            <div style={{ lineHeight: 1.6, paddingTop: 4 }}>{r.fullDesc}</div>
+          </details>
+        )}
       </div>
     </div>
   );
