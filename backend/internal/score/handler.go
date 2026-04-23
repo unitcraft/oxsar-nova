@@ -104,6 +104,72 @@ func (h *Handler) Vacation(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"players": entries})
 }
 
+type transferRow struct {
+	UserID   string  `json:"user_id"`
+	Username string  `json:"username"`
+	Total    float64 `json:"total"`
+	Metal    float64 `json:"metal"`
+	Silicon  float64 `json:"silicon"`
+	Hydrogen float64 `json:"hydrogen"`
+}
+
+// ResourceTransfers GET /api/stats/resource-transfers?direction=sent|received&period=week|month|all
+func (h *Handler) ResourceTransfers(w http.ResponseWriter, r *http.Request) {
+	if _, ok := auth.UserID(r.Context()); !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	if h.db == nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, "db unavailable"))
+		return
+	}
+	direction := r.URL.Query().Get("direction")
+	if direction != "sent" && direction != "received" {
+		direction = "received"
+	}
+	period := r.URL.Query().Get("period")
+	var periodClause string
+	switch period {
+	case "week":
+		periodClause = "AND at > now() - interval '7 days'"
+	case "month":
+		periodClause = "AND at > now() - interval '30 days'"
+	default:
+		periodClause = ""
+	}
+	col := "to_user_id"
+	if direction == "sent" {
+		col = "from_user_id"
+	}
+	query := `
+		SELECT u.id, u.username,
+		       SUM(rt.metal)::float + 2*SUM(rt.silicon)::float + 4*SUM(rt.hydrogen)::float AS total,
+		       SUM(rt.metal)::float, SUM(rt.silicon)::float, SUM(rt.hydrogen)::float
+		FROM resource_transfers rt
+		JOIN users u ON u.id = rt.` + col + ` AND u.deleted_at IS NULL
+		WHERE rt.` + col + ` IS NOT NULL ` + periodClause + `
+		GROUP BY u.id, u.username
+		ORDER BY total DESC
+		LIMIT 20
+	`
+	rows, err := h.db.Pool().Query(r.Context(), query)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	defer rows.Close()
+	out := []transferRow{}
+	for rows.Next() {
+		var row transferRow
+		if err := rows.Scan(&row.UserID, &row.Username, &row.Total, &row.Metal, &row.Silicon, &row.Hydrogen); err != nil {
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+			return
+		}
+		out = append(out, row)
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"transfers": out, "direction": direction, "period": period})
+}
+
 // Stats GET /api/stats — счётчик онлайна.
 //
 // Возвращает количество игроков, игравших за последние 24 часа и прямо сейчас.

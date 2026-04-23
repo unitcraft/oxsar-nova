@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 
 type ScoreType = 'total' | 'b' | 'r' | 'u' | 'a' | 'e';
-type MainTab = 'players' | 'alliances' | 'vacation';
+type MainTab = 'players' | 'alliances' | 'vacation' | 'transfers';
 
 interface Entry {
   rank: number;
@@ -323,6 +323,83 @@ function VacationTab() {
   );
 }
 
+interface TransferRow {
+  user_id: string;
+  username: string;
+  total: number;
+  metal: number;
+  silicon: number;
+  hydrogen: number;
+}
+
+function TransfersTab() {
+  const [direction, setDirection] = useState<'received' | 'sent'>('received');
+  const [period, setPeriod] = useState<'all' | 'week' | 'month'>('all');
+
+  const q = useQuery({
+    queryKey: ['transfers', direction, period],
+    queryFn: () => api.get<{ transfers: TransferRow[] }>(`/api/stats/resource-transfers?direction=${direction}&period=${period}`),
+    refetchInterval: 60000,
+  });
+
+  const list = q.data?.transfers ?? [];
+
+  return (
+    <>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button type="button" className={direction === 'received' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setDirection('received')}>📥 Получатели</button>
+          <button type="button" className={direction === 'sent' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setDirection('sent')}>📤 Отправители</button>
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button type="button" className={period === 'all' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setPeriod('all')}>Всё время</button>
+          <button type="button" className={period === 'month' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setPeriod('month')}>Месяц</button>
+          <button type="button" className={period === 'week' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setPeriod('week')}>Неделя</button>
+        </div>
+      </div>
+
+      <div className="ox-panel" style={{ overflow: 'hidden' }}>
+        {q.isLoading && <Skeleton />}
+        {!q.isLoading && list.length === 0 && (
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-muted)' }}>
+            Нет данных
+          </div>
+        )}
+        {list.length > 0 && (
+          <div className="ox-table-responsive">
+            <table className="ox-table" style={{ margin: 0 }}>
+              <thead>
+                <tr>
+                  <th style={{ width: 48 }}>#</th>
+                  <th>{direction === 'received' ? 'Получатель' : 'Отправитель'}</th>
+                  <th className="num">Металл</th>
+                  <th className="num">Кремний</th>
+                  <th className="num">Водород</th>
+                  <th className="num">Всего (у.е.)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {list.map((t, i) => (
+                  <tr key={t.user_id}>
+                    <td className="num">{MEDAL[i] ?? i + 1}</td>
+                    <td style={{ fontWeight: i < 3 ? 700 : 400 }}>{t.username}</td>
+                    <td className="num">{Math.round(t.metal).toLocaleString('ru-RU')}</td>
+                    <td className="num">{Math.round(t.silicon).toLocaleString('ru-RU')}</td>
+                    <td className="num">{Math.round(t.hydrogen).toLocaleString('ru-RU')}</td>
+                    <td className="num" style={{ color: 'var(--ox-accent)', fontWeight: 600 }}>
+                      {Math.round(t.total).toLocaleString('ru-RU')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 export function ScoreScreen({ initialQuery, onPlanetClick }: {
   initialQuery?: string;
   onPlanetClick?: (g: number, s: number) => void;
@@ -346,11 +423,13 @@ export function ScoreScreen({ initialQuery, onPlanetClick }: {
         <button type="button" aria-pressed={mainTab === 'players'} onClick={() => setMainTab('players')}>👤 Игроки</button>
         <button type="button" aria-pressed={mainTab === 'alliances'} onClick={() => setMainTab('alliances')}>🤝 Альянсы</button>
         <button type="button" aria-pressed={mainTab === 'vacation'} onClick={() => setMainTab('vacation')}>✈ В отпуске</button>
+        <button type="button" aria-pressed={mainTab === 'transfers'} onClick={() => setMainTab('transfers')}>📦 Торговля</button>
       </div>
 
       {mainTab === 'players'   && <PlayersTab scoreType={scoreType} setScoreType={setScoreType} initialQuery={initialQuery} onPlanetClick={onPlanetClick} />}
       {mainTab === 'alliances' && <AlliancesTab />}
       {mainTab === 'vacation'  && <VacationTab />}
+      {mainTab === 'transfers' && <TransfersTab />}
     </div>
   );
 }

@@ -215,6 +215,7 @@ func run() error {
 	r.With(auth.Middleware(jwt)).Delete("/api/me/vacation", authH.UnsetVacation)
 	r.Post("/api/battle-sim", battleSimHandler)
 	r.Get("/api/stats", scoreH.Stats)
+	r.With(auth.Middleware(jwt)).Get("/api/stats/resource-transfers", scoreH.ResourceTransfers)
 	r.Get("/api/payment/packages", paymentH.Packages)
 	r.Post("/api/payment/webhook", paymentH.Webhook)
 
