@@ -13,7 +13,7 @@ export function ShipyardScreen({ planet }: { planet: Planet }) {
   const toast = useToast();
   const [tab, setTab] = useState<'ships' | 'defense'>('ships');
   const [showLocked, setShowLocked] = useState<boolean>(
-    () => localStorage.getItem('shipyard-show-locked') === 'true'
+    () => localStorage.getItem('shipyard-show-locked') !== 'false'
   );
 
   const queue = useQuery({
@@ -101,7 +101,7 @@ export function ShipyardScreen({ planet }: { planet: Planet }) {
             localStorage.setItem('shipyard-show-locked', String(next));
           }}
         >
-          {showLocked ? '✅ Все' : '🔒 Скрыть недоступные'}
+          {showLocked ? '🔒 Скрыть недоступные' : '👁 Показать все'}
         </button>
       </div>
 
