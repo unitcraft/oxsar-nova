@@ -1,4 +1,4 @@
-# План 12: Детальные модалы зданий и исследований (ConstructionInfo)
+# План 12: Детальная страница здания/исследования (ConstructionInfo)
 
 ## Статус: В РАБОТЕ
 
@@ -108,18 +108,63 @@ hydrogen_plant: энергия = floor(22.5 * level * 1.1^level)
 
 ---
 
-## Файлы для изменения
+## Задача 5 — Переход на отдельный экран вместо модального окна [P1]
+
+### Проблема
+`BuildingInfoModal` и `ResearchInfoModal` реализованы как модальные окна поверх страницы.
+Из-за особенностей CSS (`display: flex` + `overflowY: auto` на flex-контейнере) текст
+«Подробнее» при раскрытии вываливается за пределы белой панели и рендерится на тёмном
+фоне оверлея. Несколько попыток исправить через `max-height`, `grid-template-rows`,
+`overflow: hidden` — не дали результата.
+
+### Решение — отдельный экран (как в legacy)
+Legacy `ConstructionInfo/{id}` — это **отдельная страница**, не попап.
+Делаем аналогично: новый таб `'unit-info'` в навигации nova.
+
+### Реализация
+
+**App.tsx:**
+- Добавить `'unit-info'` в тип `Tab`
+- Добавить state `infoUnit: { kind: 'building' | 'research'; id: number } | null`
+- Рендерить `<UnitInfoScreen>` вместо модала
+
+**UnitInfoScreen** (`frontend/src/features/unit-info/UnitInfoScreen.tsx`):
+- Принимает `kind`, `unitId`, `currentLevel`, `onBack`
+- Кнопка «← Назад» возвращает на предыдущий таб
+- Обычная страница с нормальным скроллом, без фиксированных высот
+- Секции: заголовок с иконкой, таблица уровней (+ колонка производства для шахт),
+  пресреквизиты, полное описание (просто текст, без анимации)
+
+**BuildingsScreen / ResearchScreen:**
+- Клик на карточку/иконку вместо `setInfoUnitId` вызывает `onOpenInfo(kind, id)`
+- Проп `onOpenInfo` пробрасывается из `App.tsx`
+
+**Удалить:**
+- `BuildingInfoModal.tsx`
+- `ResearchInfoModal.tsx`
+
+### Файлы для изменения
 
 | Файл | Изменение |
 |------|-----------|
-| `frontend/src/api/catalog.ts` | +`fullDesc` в BuildingEntry/ResearchEntry, заполнить для всех юнитов |
-| `frontend/src/features/buildings/BuildingInfoModal.tsx` | +fullDesc секция, +production колонка, +requires |
-| `frontend/src/features/research/ResearchInfoModal.tsx` | +fullDesc секция, +requires |
+| `frontend/src/App.tsx` | + Tab `'unit-info'`, state `infoUnit`, рендер `UnitInfoScreen` |
+| `frontend/src/features/unit-info/UnitInfoScreen.tsx` | **новый файл** — единый экран для зданий и исследований |
+| `frontend/src/features/buildings/BuildingsScreen.tsx` | проп `onOpenInfo`, убрать `infoUnitId` state и `BuildingInfoModal` |
+| `frontend/src/features/research/ResearchScreen.tsx` | проп `onOpenInfo`, убрать `infoUnitId` state и `ResearchInfoModal` |
+| `frontend/src/features/buildings/BuildingInfoModal.tsx` | удалить |
+| `frontend/src/features/research/ResearchInfoModal.tsx` | удалить |
+
+---
+
+## Файлы уже изменены (задачи 1–4)
+
+| Файл | Изменение |
+|------|-----------|
+| `frontend/src/api/catalog.ts` | +`fullDesc` в BuildingEntry/ResearchEntry для всех юнитов |
 
 ---
 
 ## Намеренно не реализуем
 
-- Снос через модал (P3, отдельная задача 9 плана 09)
 - VIP-ускорение за кредиты
 - Chart с графиком (достаточно таблицы)
