@@ -33,6 +33,7 @@ type Service struct {
 	jwt      *JWTIssuer
 	starter  StarterPlanetAssigner
 	automsg  AutoMsgSender
+	referral ReferralProcessor
 }
 
 // AutoMsgSender — опциональная зависимость для приветственных
@@ -41,17 +42,30 @@ type AutoMsgSender interface {
 	Send(ctx context.Context, tx pgx.Tx, userID, key string, vars map[string]string) error
 }
 
-// NewService. starter/automsg могут быть nil — тогда соответствующая
+// ReferralProcessor — опциональная зависимость; обрабатывает реферальную
+// регистрацию. Если nil — реф. бонусы не начисляются.
+type ReferralProcessor interface {
+	ProcessRegistration(ctx context.Context, newUserID, referrerID string) error
+}
+
+// NewService. starter/automsg/referral могут быть nil — тогда соответствующая
 // подфункциональность не выполняется (полезно для unit-тестов auth).
 func NewService(db repo.Exec, jwt *JWTIssuer, starter StarterPlanetAssigner, automsg AutoMsgSender) *Service {
 	return &Service{db: db, jwt: jwt, starter: starter, automsg: automsg}
 }
 
+// WithReferral подключает реферальный процессор.
+func (s *Service) WithReferral(r ReferralProcessor) *Service {
+	s.referral = r
+	return s
+}
+
 // RegisterInput — вход регистрации.
 type RegisterInput struct {
-	Username string
-	Email    string
-	Password string
+	Username   string
+	Email      string
+	Password   string
+	ReferredBy string // userID реферера (опционально)
 }
 
 // User — минимальная проекция для auth-слоя; полноценная модель живёт в
@@ -119,6 +133,11 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (User, Tokens,
 			SELECT name, galaxy || ':' || system || ':' || position
 			FROM planets WHERE id = $1
 		`, planetID).Scan(&planetName, &planetCoords)
+	}
+
+	// Реферальная регистрация. Сбой не должен блокировать регистрацию.
+	if s.referral != nil && in.ReferredBy != "" {
+		_ = s.referral.ProcessRegistration(ctx, userID, in.ReferredBy)
 	}
 
 	// Автомесседжи (WELCOME + STARTER_GUIDE). Отправка вне транзакции

@@ -33,14 +33,20 @@ type authResponse struct {
 	Tokens Tokens `json:"tokens"`
 }
 
-// Register POST /api/auth/register
+// Register POST /api/auth/register?ref=<userID>
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
 		return
 	}
-	u, t, err := h.svc.Register(r.Context(), RegisterInput(req))
+	in := RegisterInput{
+		Username:   req.Username,
+		Email:      req.Email,
+		Password:   req.Password,
+		ReferredBy: r.URL.Query().Get("ref"),
+	}
+	u, t, err := h.svc.Register(r.Context(), in)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrUserExists):
