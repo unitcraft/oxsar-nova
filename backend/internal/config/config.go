@@ -44,12 +44,19 @@ type AuthConfig struct {
 }
 
 type GameConfig struct {
-	Speed       float64
-	Universe    string
-	Deathmatch  bool
-	NumGalaxies int
-	NumSystems  int
-	Points      PointsCoefficients
+	Speed                  float64
+	Universe               string
+	Deathmatch             bool
+	NumGalaxies            int
+	NumSystems             int
+	Points                 PointsCoefficients
+	StorageFactor          float64 // STORAGE_FACTOR (Dominator=5)
+	ResearchSpeedFactor    float64 // RESEARCH_SPEED_FACTOR (Dominator=2)
+	EnergyProductionFactor float64 // ENEGRY_PRODUCTION_FACTOR (Dominator=0.8)
+	MaxPlanets             int     // MAX_PLANETS per player, 0 = computer_tech+1
+	BashingPeriod          int     // seconds, 0 = disabled
+	BashingMaxAttacks      int     // max attacks per BashingPeriod
+	ProtectionPeriod       int     // seconds new player is protected from attacks
 }
 
 // PointsCoefficients — коэффициенты начисления очков.
@@ -84,11 +91,18 @@ func Load() (Config, error) {
 			OAuthGoogleSc: env("OAUTH_GOOGLE_CLIENT_SECRET", ""),
 		},
 		Game: GameConfig{
-			Speed:       envFloat("GAMESPEED", 0.75),
-			Universe:    env("UNIVERSE_NAME", "Nova"),
-			Deathmatch:  envBool("DEATHMATCH", false),
-			NumGalaxies: envInt("NUM_GALAXIES", 8),
-			NumSystems:  envInt("NUM_SYSTEMS", 600),
+			Speed:                  envFloat("GAMESPEED", 0.75),
+			Universe:               env("UNIVERSE_NAME", "Nova"),
+			Deathmatch:             envBool("DEATHMATCH", false),
+			NumGalaxies:            envInt("NUM_GALAXIES", 8),
+			NumSystems:             envInt("NUM_SYSTEMS", 600),
+			StorageFactor:          envFloat("STORAGE_FACTOR", 5),
+			ResearchSpeedFactor:    envFloat("RESEARCH_SPEED_FACTOR", 2),
+			EnergyProductionFactor: envFloat("ENERGY_PRODUCTION_FACTOR", 0.8),
+			MaxPlanets:             envInt("MAX_PLANETS", 0),
+			BashingPeriod:          envInt("BASHING_PERIOD", 18000),
+			BashingMaxAttacks:      envInt("BASHING_MAX_ATTACKS", 4),
+			ProtectionPeriod:       envInt("PROTECTION_PERIOD", 86400),
 			Points: PointsCoefficients{
 				Building: envFloat("POINTS_K_BUILDING", 0.00005),
 				Research: envFloat("POINTS_K_RESEARCH", 0.0005),

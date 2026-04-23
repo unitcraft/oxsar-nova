@@ -96,7 +96,7 @@ func run() error {
 	jwt := auth.NewJWTIssuer(cfg.Auth.JWTSecret, cfg.Auth.AccessTTL, cfg.Auth.RefreshTTL)
 
 	planetRepo := planet.NewRepository(pool)
-	planetSvc := planet.NewService(db, planetRepo, cat)
+	planetSvc := planet.NewServiceWithFactors(db, planetRepo, cat, cfg.Game.StorageFactor, cfg.Game.EnergyProductionFactor)
 	planetH := planet.NewHandler(planetSvc)
 	starter := planet.NewStarter(db)
 
@@ -112,7 +112,7 @@ func run() error {
 	buildingSvc := building.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
 	buildingH := building.NewHandler(buildingSvc)
 
-	researchSvc := research.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
+	researchSvc := research.NewServiceWithFactors(db, planetSvc, cat, reqs, cfg.Game.Speed, cfg.Game.ResearchSpeedFactor)
 	researchH := research.NewHandler(researchSvc)
 
 	shipyardSvc := shipyard.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
@@ -126,7 +126,7 @@ func run() error {
 
 	galaxyH := galaxy.NewHandler(galaxy.NewRepository(pool))
 
-	transportSvc := fleet.NewTransportService(db, cat, cfg.Game.Speed, artefactSvc)
+	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod)
 	fleetH := fleet.NewHandler(transportSvc, rdb)
 
 	messageSvc := message.NewService(db)

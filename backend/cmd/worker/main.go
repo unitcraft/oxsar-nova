@@ -69,13 +69,13 @@ func run() error {
 	db := repo.New(pool)
 	w := event.NewWorker(db, log)
 	artefactSvc := artefact.NewService(db, cat)
-	transportSvc := fleet.NewTransportService(db, cat, cfg.Game.Speed, artefactSvc)
+	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod)
 
 	// repair.Service нужен только ради DisassembleHandler; сами
 	// enqueue-операции идут через server. Конструктор требует полный
 	// набор зависимостей — даём их тем же способом, что и в server/main.
 	planetRepo := planet.NewRepository(pool)
-	planetSvc := planet.NewService(db, planetRepo, cat)
+	planetSvc := planet.NewServiceWithFactors(db, planetRepo, cat, cfg.Game.StorageFactor, cfg.Game.EnergyProductionFactor)
 	reqs := requirements.New(cat)
 	repairSvc := repair.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
 	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed)

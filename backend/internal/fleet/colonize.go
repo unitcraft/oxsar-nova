@@ -103,6 +103,9 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 		// Лимит планет.
 		computerLvl := readComputerLevel(ctx, tx, ownerUserID)
 		maxPlanets := computerLvl + 1
+		if s.maxPlanets > 0 && s.maxPlanets > maxPlanets {
+			maxPlanets = s.maxPlanets
+		}
 		var curPlanets int
 		if err := tx.QueryRow(ctx,
 			`SELECT COUNT(*) FROM planets WHERE user_id=$1 AND destroyed_at IS NULL AND is_moon=false`,
