@@ -12,19 +12,58 @@ import (
 	"github.com/oxsar/nova/backend/pkg/rng"
 )
 
-// StartingResources — ресурсы на старте (как у OGame classic).
-// Храним в int64 (integer-резерв на старте, чтобы в Postgres ушло точное
-// число без плавающей точки). В runtime-расчётах экономики ресурсы —
-// float64 (см. model.go Resources), здесь нам нужны только целые числа
-// для единичного INSERT.
+// StartingResources — ресурсы на старте (Dominator params.php).
 var StartingResources = struct {
 	Metal    int64
 	Silicon  int64
 	Hydrogen int64
 }{
-	Metal:    500,
+	Metal:    1000,
 	Silicon:  500,
 	Hydrogen: 0,
+}
+
+// HomePlanetSize — число полей домашней планеты (HOME_PLANET_SIZE из legacy).
+const HomePlanetSize = 18800
+
+// starterBuildings — начальные уровни зданий (INITIAL_BUILDINGS, Dominator params.php).
+// unit_id из configs/buildings.yml.
+var starterBuildings = []struct {
+	unitID int
+	level  int
+}{
+	{1, 2},   // metal_mine
+	{2, 2},   // silicon_lab
+	{3, 2},   // hydrogen_lab
+	{4, 4},   // solar_plant
+	{6, 2},   // robotic_factory
+	{8, 2},   // shipyard
+	{12, 2},  // research_lab
+	{101, 1}, // defense_factory
+	{100, 1}, // repair_factory
+}
+
+// starterResearch — начальные уровни исследований (INITIAL_RESEARCHES).
+var starterResearch = []struct {
+	unitID int
+	level  int
+}{
+	{14, 1}, // computer_tech
+	{18, 1}, // energy_tech
+	{20, 2}, // combustion_engine
+}
+
+// starterFleet — начальный флот (INITIAL_UNITS).
+// unit_id из configs/ships.yml.
+var starterFleet = []struct {
+	unitID int
+	count  int
+}{
+	{30, 20}, // small_transporter
+	{31, 10}, // light_fighter
+	{35, 10}, // recycler
+	{36, 3},  // colony_ship
+	{37, 10}, // espionage_probe
 }
 
 // Starter создаёт первую планету игрока сразу после регистрации
@@ -51,9 +90,9 @@ func (s *Starter) Assign(ctx context.Context, userID string) (string, error) {
 
 	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		for attempt := 0; attempt < 100; attempt++ {
-			g := r.IntN(8) + 1         // 1..8
-			sys := r.IntN(500) + 1     // 1..500
-			pos := r.IntN(13) + 2      // 2..14 (1 и 15 — «крайности», оставим на колонизацию)
+			g := r.IntN(8) + 1     // 1..8
+			sys := r.IntN(500) + 1 // 1..500
+			pos := r.IntN(13) + 2  // 2..14 (1 и 15 — «крайности», оставим на колонизацию)
 
 			taken, err := coordTaken(ctx, tx, g, sys, pos, false)
 			if err != nil {
@@ -65,7 +104,6 @@ func (s *Starter) Assign(ctx context.Context, userID string) (string, error) {
 
 			id := ids.New()
 			rCoord := rng.New(starterCoordsSeed(g, sys, pos))
-			diameter := starterPositionDiameter(pos, rCoord)
 			pType := starterPlanetTypeOf(pos, rCoord)
 			tempMin, tempMax := starterPositionTemp(pos, rCoord)
 
@@ -74,7 +112,7 @@ func (s *Starter) Assign(ctx context.Context, userID string) (string, error) {
 				                     diameter, used_fields, planet_type, temperature_min, temperature_max,
 				                     metal, silicon, hydrogen)
 				VALUES ($1, $2, false, $3, $4, $5, $6, $7, 0, $8, $9, $10, $11, $12, $13)
-			`, id, userID, "Homeworld", g, sys, pos, diameter, pType, tempMin, tempMax,
+			`, id, userID, "Homeworld", g, sys, pos, HomePlanetSize, pType, tempMin, tempMax,
 				StartingResources.Metal, StartingResources.Silicon, StartingResources.Hydrogen)
 			if err != nil {
 				return fmt.Errorf("insert starter planet: %w", err)
@@ -85,26 +123,40 @@ func (s *Starter) Assign(ctx context.Context, userID string) (string, error) {
 				return fmt.Errorf("set cur_planet: %w", err)
 			}
 
-			// Стартовый набор зданий: по одному уровню mines + solar.
-			// Без solar_plant экономический тик сразу уходит в минус по
-			// энергии (storage-капа уже добавляет потребление, а
-			// шахты тоже хотят энергию). Это мешает новичку и не
-			// соответствует OGame-поведению, где старт — baseline 1/1/1/1.
-			//
-			// unit_id из configs/buildings.yml:
-			//   1 = metal_mine, 2 = silicon_lab, 3 = hydrogen_lab, 4 = solar_plant.
-			// hydrogen_lab оставляем на 0 (OGame classic: он стартует с 0).
-			for _, unit := range []int{1, 2, 4} {
+			// Начальные здания (INITIAL_BUILDINGS из legacy params.php).
+			for _, b := range starterBuildings {
 				if _, err := tx.Exec(ctx, `
 					INSERT INTO buildings (planet_id, unit_id, level)
-					VALUES ($1, $2, 1)
-				`, id, unit); err != nil {
-					return fmt.Errorf("starter building %d: %w", unit, err)
+					VALUES ($1, $2, $3)
+					ON CONFLICT (planet_id, unit_id) DO UPDATE SET level = EXCLUDED.level
+				`, id, b.unitID, b.level); err != nil {
+					return fmt.Errorf("starter building %d: %w", b.unitID, err)
 				}
 			}
 
-			// Базовый journal entry — чтобы первая запись в res_log была
-			// «стартовый грант».
+			// Начальные исследования (INITIAL_RESEARCHES).
+			for _, res := range starterResearch {
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO research (user_id, unit_id, level)
+					VALUES ($1, $2, $3)
+					ON CONFLICT (user_id, unit_id) DO UPDATE SET level = EXCLUDED.level
+				`, userID, res.unitID, res.level); err != nil {
+					return fmt.Errorf("starter research %d: %w", res.unitID, err)
+				}
+			}
+
+			// Начальный флот (INITIAL_UNITS).
+			for _, f := range starterFleet {
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO ships (planet_id, unit_id, count)
+					VALUES ($1, $2, $3)
+					ON CONFLICT (planet_id, unit_id) DO UPDATE SET count = EXCLUDED.count
+				`, id, f.unitID, f.count); err != nil {
+					return fmt.Errorf("starter fleet %d: %w", f.unitID, err)
+				}
+			}
+
+			// Базовый journal entry — чтобы первая запись в res_log была «стартовый грант».
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO res_log (user_id, planet_id, reason, delta_metal, delta_silicon, delta_hydrogen)
 				VALUES ($1, $2, 'admin_gift', $3, $4, $5)
@@ -153,17 +205,6 @@ func starterCoordsSeed(g, sys, pos int) uint64 {
 		}
 	}
 	return h
-}
-
-func starterPositionDiameter(pos int, r *rng.R) int {
-	switch {
-	case pos <= 3:
-		return 6000 + r.IntN(4000)
-	case pos >= 13:
-		return 12000 + r.IntN(5000)
-	default:
-		return 10000 + r.IntN(5000)
-	}
 }
 
 func starterPlanetTypeOf(pos int, r *rng.R) string {
