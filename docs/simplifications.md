@@ -134,6 +134,37 @@
 - **Как чинить**: не нужно.
 - **Приоритет**: —
 
+### [EXPEDITION] black_hole (4) и unknown (13) не реализованы
+- **Где**: `fleet/expedition.go`.
+- **Что**: исходы black_hole и unknown никогда не выбираются.
+- **Почему**: black_hole не реализован даже в legacy; unknown — зарезервирован.
+- **Как чинить**: black_hole потребует механики «флот безвозвратно пропадает» — отдельная задача.
+- **Приоритет**: L.
+
+### [EXPEDITION] Battlefield — упрощённая генерация врага
+- **Где**: `fleet/expedition.go::expBattlefield`.
+- **Что**: вместо случайного подмножества кораблей × random(0.3–0.8) от exp_power
+  генерируем fleet из LF с shell_percent=0.5 по expPower.
+- **Почему**: упрощение bookkeeping; суть (бой с повреждённым флотом) сохранена.
+- **Как чинить**: добавить cruiser/bs в состав врага пропорционально expPower.
+- **Приоритет**: L.
+
+### [EXPEDITION] credit_purchases таблица отсутствует
+- **Где**: `fleet/expedition.go::expCredit`.
+- **Что**: `buy_credit` из покупок за 3 дня — запрос к `credit_purchases` таблице.
+  Таблица не существует, buyCredit всегда = 0. Формула всё равно работает без неё.
+- **Почему**: таблица покупок — часть платёжной системы, которая ещё не реализована.
+- **Как чинить**: создать `credit_purchases(user_id, amount, created_at)`, подключить к payment flow.
+- **Приоритет**: M — нужно при монетизации.
+
+### [EXPEDITION] expExtraPlanet — временные планеты не чистятся воркером
+- **Где**: `fleet/expedition.go::expExtraPlanet`, `migrations/0044_planets_expires_at.sql`.
+- **Что**: поле `planets.expires_at` добавлено, значение выставляется, но воркер ещё не удаляет
+  планеты с истёкшим `expires_at`.
+- **Почему**: воркер-задача требует отдельного event-kind или cron-handler.
+- **Как чинить**: добавить `KindExpirePlanet` event или cron-job `DELETE FROM planets WHERE expires_at < now()`.
+- **Приоритет**: M.
+
 ---
 
 ## Market
