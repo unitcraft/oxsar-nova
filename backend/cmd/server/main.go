@@ -174,7 +174,7 @@ func run() error {
 	paymentH := payment.NewHandler(paymentSvc)
 
 	empireH := empire.NewHandler(pool)
-	settingsH := settings.NewHandler(pool)
+	settingsH := settings.NewHandler(pool).WithAutoMsg(automsgSvc)
 	referralH := referral.NewHandler(pool)
 	notepadH := notepad.NewHandler(pool)
 	searchH := search.NewHandler(pool)
@@ -227,6 +227,8 @@ func run() error {
 		pr.Get("/settings", settingsH.Get)
 		pr.Put("/settings", settingsH.Update)
 		pr.Post("/settings/password", settingsH.ChangePassword)
+		pr.Post("/me/deletion/code", settingsH.RequestDeletionCode)
+		pr.Delete("/me", settingsH.ConfirmDeletion)
 		pr.Get("/referrals", referralH.Mine)
 		pr.Get("/notepad", notepadH.Get)
 		pr.Put("/notepad", notepadH.Save)

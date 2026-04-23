@@ -164,16 +164,19 @@ func (s *Service) Login(ctx context.Context, email, password string) (User, Toke
 	login := strings.ToLower(strings.TrimSpace(email))
 
 	var id, username, emailRead, hash string
-	var bannedAt *time.Time
+	var bannedAt, deletedAt *time.Time
 	err := s.db.Pool().QueryRow(ctx, `
-		SELECT id, username, email, password_hash, banned_at FROM users
+		SELECT id, username, email, password_hash, banned_at, deleted_at FROM users
 		WHERE email = $1 OR lower(username) = $1
-	`, login).Scan(&id, &username, &emailRead, &hash, &bannedAt)
+	`, login).Scan(&id, &username, &emailRead, &hash, &bannedAt, &deletedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return User{}, Tokens{}, ErrInvalidCredential
 		}
 		return User{}, Tokens{}, fmt.Errorf("select user: %w", err)
+	}
+	if deletedAt != nil {
+		return User{}, Tokens{}, ErrInvalidCredential
 	}
 	if bannedAt != nil {
 		return User{}, Tokens{}, errors.New("auth: account banned")
