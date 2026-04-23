@@ -21,11 +21,11 @@ function numColor(v: number): string {
 }
 
 const TD_NUM: React.CSSProperties = {
-  width: 48,
+  width: 56,
   textAlign: 'right',
   fontFamily: 'var(--ox-mono)',
-  fontSize: 12,
-  paddingRight: 8,
+  fontSize: 13,
+  paddingRight: 10,
   whiteSpace: 'nowrap',
 };
 
@@ -112,10 +112,10 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: 'auto' }} />
-            <col style={{ width: 48 }} />
-            <col style={{ width: 48 }} />
-            <col style={{ width: 48 }} />
-            <col style={{ width: 48 }} />
+            <col style={{ width: 56 }} />
+            <col style={{ width: 56 }} />
+            <col style={{ width: 56 }} />
+            <col style={{ width: 56 }} />
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--ox-border)' }}>
