@@ -192,7 +192,7 @@ t = (metal + silicon) / (1 000 × (1 + research_lab_level)) / gameSpeed
 - Атака 200 000 при стоимости 10M — это 20 за 1000 рес.
 - Rapidfire против почти всех юнитов: против проб ×1250, транспортников ×250, лёгких истребителей ×200.
 - Скорость 100 — крайне медленный: при дистанции 1 системы → ~8+ часов реального времени, что даёт жертве время на эвакуацию.
-- Frigate (id=35) и Star Destroyer (id=41) имеют rapidfire против Deathstar (×5) — добавлено в `rapidfire.yml` (план 17). ✅
+- **Слабость DS**: Lancer (102) ×3 и Plasma Turret (48) ×2 имеют RF против DS — добавлено в `rapidfire.yml` (план 17). ✅
 
 ### 6.4 Корабли в ships.yml ~~(пробел)~~ — закрыто планом 17 ✅
 
@@ -200,23 +200,19 @@ t = (metal + silicon) / (1 000 × (1 + research_lab_level)) / gameSpeed
 Frigate (35), Recycler (37), Solar Satellite (39), Bomber (40), Star Destroyer (41),
 Lancer Ship (102), Shadow Ship (325), Alien ships (200–204).
 
-### 6.5 Rapidfire — неполная таблица
+### 6.5 Rapidfire — таблица синхронизирована с na_rapidfire ✅
 
-Текущий `rapidfire.yml` (после плана 17):
-- Cruiser → Light Fighter (×6), Rocket Launcher (×10)
-- Battleship → Espionage Probe (×5), Solar Satellite (×5)
-- Frigate → Small/Large Transporter (×3), Heavy Fighter (×7), Cruiser (×4), Battleship (×7) ✅
-- Bomber → Rocket Launcher (×20), Light Laser (×20), Heavy Laser (×10), Ion Cannon (×10) ✅
-- Star Destroyer → Frigate (×2), Light/Heavy Laser (×2), Lancer (×2) ✅
-- Deathstar → большинство юнитов (×25–1250)
+Текущий `rapidfire.yml` (полный, после плана 17):
+- Cruiser (33) → Light Fighter (×6), Rocket Launcher (×10)
+- Battleship (34) → Espionage Probe (×5), Solar Satellite (×5)
+- Frigate (35) → Small/Large Transporter (×3), Heavy Fighter (×7), Cruiser (×4), Battleship (×7)
+- Bomber (40) → Rocket Launcher (×20), Light Laser (×20), Heavy Laser (×10), Ion Cannon (×10), Lancer (×5)
+- Star Destroyer (41) → Frigate (×2), Light/Heavy Laser (×2), Lancer (×2)
+- Lancer (102) → Deathstar (×3)
+- Plasma Turret (48) → Deathstar (×2)
+- Deathstar (42) → большинство юнитов (×25–1250)
 
-- Lancer (102) → Deathstar (×3) ✅
-- Plasma Turret (48) → Deathstar (×2) ✅
-
-**Чего нет в `na_rapidfire` (не добавлять без подтверждения из legacy DB):**
-- Bomber → Shield Dome (49, 50) — предположение, не из na_rapidfire
-- Heavy Fighter → Rocket Launcher, Light Laser — предположение
-- Cruiser → Light Laser — предположение
+**Не добавлять без подтверждения из na_rapidfire:** Bomber→ShieldDome, HeavyFighter→Rocket/Laser, Cruiser→LightLaser — предположения из старого анализа, в legacy DB не найдены.
 
 ---
 
@@ -420,7 +416,7 @@ Gun/Shield/Shell tech прокачиваются за ресурсы и врем
 ### Проблемы, требующие решения
 
 1. **[КРИТИЧНО] Боевые технологии не работают** — Gun/Shield/Armor tech не модифицируют статы
-2. **[СРЕДНИЙ] Неполная таблица rapidfire** — Bomber→ShieldDome, HeavyFighter→Rocket/Laser, Cruiser→LightLaser ещё отсутствуют (основные добавлены планом 17 ✅)
+2. ~~**[СРЕДНИЙ] Неполная таблица rapidfire**~~ — закрыто планом 17 ✅ (оставшиеся Bomber→ShieldDome и др. не подтверждены в na_rapidfire)
 3. **[ВЫСОКИЙ] expo_tech не реализован** — технология существует, но ничего не делает
 4. ~~**[ВЫСОКИЙ] Отсутствующие статы кораблей**~~ — закрыто планом 17 ✅
 5. **[СРЕДНИЙ] Пираты в экспедиции фиксированные** — 5 light_fighter для любого флота
