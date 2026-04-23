@@ -33,6 +33,7 @@ var (
 	ErrNoShipyard        = errors.New("shipyard: shipyard required")
 	ErrInvalidCount      = errors.New("shipyard: invalid count")
 	ErrQueueItemNotFound = errors.New("shipyard: queue item not found")
+	ErrAlreadyDone       = errors.New("shipyard: queue item already completed")
 )
 
 type Service struct {
@@ -222,6 +223,66 @@ func (s *Service) Inventory(ctx context.Context, planetID string) (ships, defens
 		defense[id] = c
 	}
 	return ships, defense, rows.Err()
+}
+
+// Cancel отменяет задание очереди верфи и возвращает ресурсы на планету.
+func (s *Service) Cancel(ctx context.Context, userID, planetID, queueID string) error {
+	p, err := s.planets.Get(ctx, planetID)
+	if err != nil {
+		return err
+	}
+	if p.UserID != userID {
+		return ErrPlanetOwnership
+	}
+
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var unitID int
+		var count int64
+		var status string
+		err := tx.QueryRow(ctx,
+			`SELECT unit_id, count, status FROM shipyard_queue WHERE id=$1 AND planet_id=$2`,
+			queueID, planetID,
+		).Scan(&unitID, &count, &status)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrQueueItemNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("select queue: %w", err)
+		}
+		if status == "done" {
+			return ErrAlreadyDone
+		}
+
+		_, costPerUnit, _, ok := s.lookupShipOrDefense(unitID)
+		if !ok {
+			return ErrUnknownUnit
+		}
+
+		// Вернуть ресурсы (100%).
+		refundMetal := costPerUnit.Metal * count
+		refundSilicon := costPerUnit.Silicon * count
+		refundHydrogen := costPerUnit.Hydrogen * count
+		if _, err := tx.Exec(ctx, `
+			UPDATE planets SET metal = metal + $1, silicon = silicon + $2, hydrogen = hydrogen + $3
+			WHERE id = $4
+		`, refundMetal, refundSilicon, refundHydrogen, planetID); err != nil {
+			return fmt.Errorf("refund: %w", err)
+		}
+
+		// Удалить задание и связанное событие.
+		if _, err := tx.Exec(ctx,
+			`DELETE FROM shipyard_queue WHERE id=$1`, queueID,
+		); err != nil {
+			return fmt.Errorf("delete queue: %w", err)
+		}
+		if _, err := tx.Exec(ctx,
+			`DELETE FROM events WHERE planet_id=$1 AND state='wait' AND payload::jsonb->>'queue_id'=$2`,
+			planetID, queueID,
+		); err != nil {
+			return fmt.Errorf("delete event: %w", err)
+		}
+		return nil
+	})
 }
 
 func (s *Service) lookupShipOrDefense(unitID int) (key string, cost config.ResCost, isDefense bool, ok bool) {
