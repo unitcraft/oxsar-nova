@@ -181,10 +181,8 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
           return (
             <div key={b.id} className="ox-unit-card">
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <div className="ox-unit-card-img" style={{ flexShrink: 0 }}>
-                  <img src={imageOf(b.key)} alt={b.name} width={64} height={64} style={{ imageRendering: 'pixelated' }} />
-                </div>
-              <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1 }}>
+                <img src={imageOf(b.key)} alt={b.name} width={64} height={64} style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4 }} />
+              <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                 <div className="ox-unit-card-name">{b.name}</div>
                 {b.description && (
                   <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
