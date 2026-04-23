@@ -105,13 +105,20 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
       {/* Production table */}
       <div className="ox-panel" style={{ overflow: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <colgroup>
+            <col style={{ width: '99%' }} />
+            <col style={{ width: 70, minWidth: 70 }} />
+            <col style={{ width: 70, minWidth: 70 }} />
+            <col style={{ width: 70, minWidth: 70 }} />
+            <col style={{ width: 70, minWidth: 70 }} />
+          </colgroup>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--ox-border)' }}>
               <th style={TH}>Здание</th>
-              <th style={{ ...TH, textAlign: 'right' }}>🟠 Мет</th>
-              <th style={{ ...TH, textAlign: 'right' }}>💎 Крем</th>
-              <th style={{ ...TH, textAlign: 'right' }}>💧 Вод</th>
-              <th style={{ ...TH, textAlign: 'right' }}>⚡ Энерг</th>
+              <th style={{ ...TH, textAlign: 'right' }}>🟠</th>
+              <th style={{ ...TH, textAlign: 'right' }}>💎</th>
+              <th style={{ ...TH, textAlign: 'right' }}>💧</th>
+              <th style={{ ...TH, textAlign: 'right' }}>⚡</th>
             </tr>
           </thead>
           <tbody>
