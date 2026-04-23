@@ -35,8 +35,8 @@ type ConstructionCatalog struct {
 }
 
 // ConstructionSpec — одна запись na_construction в виде YAML.
-// Поля prod/cons/charge хранят формулы как строки — вычисляются
-// через pkg/formula.
+// Поля prod/cons/charge хранят формулы как строки — только для документации;
+// runtime-расчёт идёт через статические функции economy (план 16).
 type ConstructionSpec struct {
 	ID           int64          `yaml:"id"`
 	Mode         int64          `yaml:"mode"`

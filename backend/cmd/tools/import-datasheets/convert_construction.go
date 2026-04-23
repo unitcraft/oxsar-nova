@@ -9,7 +9,6 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/oxsar/nova/backend/pkg/formula"
 	"github.com/oxsar/nova/backend/pkg/sqldump"
 )
 
@@ -86,8 +85,7 @@ type formulasY struct {
 }
 
 // convertConstruction читает na_construction.sql и пишет
-// configs/construction.yml. Параллельно валидирует каждую формулу
-// через pkg/formula — если хотя бы одна не парсится, падаем.
+// configs/construction.yml. Валидирует каждую формулу на допустимые символы.
 func convertConstruction(inputDir, outputDir string) error {
 	src, err := readInputSQL(inputDir, "na_construction.sql")
 	if err != nil {
@@ -228,29 +226,29 @@ func parseConstructionRow(col map[string]int, row []sqldump.Value) (construction
 	return r, nil
 }
 
-// validateFormulas прогоняет каждую формулу через formula.Parse — это
-// золотой тест «SQL-дамп не испортился, DSL его понимает».
+// validateFormulas проверяет что формульные поля не содержат неожиданных символов.
+// DSL-парсер удалён (план 16) — формулы теперь реализованы как статические Go-функции.
 func validateFormulas(r constructionRow) error {
-	all := []struct {
-		name, src string
-	}{
-		{"prod_metal", r.ProdMetal},
-		{"prod_silicon", r.ProdSilicon},
-		{"prod_hydrogen", r.ProdHydrogen},
-		{"prod_energy", r.ProdEnergy},
-		{"cons_metal", r.ConsMetal},
-		{"cons_silicon", r.ConsSilicon},
-		{"cons_hydrogen", r.ConsHydrogen},
-		{"cons_energy", r.ConsEnergy},
-		{"charge_metal", r.ChargeMetal},
-		{"charge_silicon", r.ChargeSilicon},
-		{"charge_hydrogen", r.ChargeHydro},
-		{"charge_energy", r.ChargeEnergy},
-		{"charge_credit", r.ChargeCredit},
+	// Допустимые символы: цифры, буквы, пробелы, скобки, операторы, {}
+	allowed := func(s string) bool {
+		for _, c := range s {
+			if !strings.ContainsRune("0123456789abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ .+-*/^(),{}", c) {
+				return false
+			}
+		}
+		return true
 	}
-	for _, f := range all {
-		if _, err := formula.Parse(f.src); err != nil {
-			return fmt.Errorf("formula %s=%q: %w", f.name, f.src, err)
+	for _, f := range []struct{ name, src string }{
+		{"prod_metal", r.ProdMetal}, {"prod_silicon", r.ProdSilicon},
+		{"prod_hydrogen", r.ProdHydrogen}, {"prod_energy", r.ProdEnergy},
+		{"cons_metal", r.ConsMetal}, {"cons_silicon", r.ConsSilicon},
+		{"cons_hydrogen", r.ConsHydrogen}, {"cons_energy", r.ConsEnergy},
+		{"charge_metal", r.ChargeMetal}, {"charge_silicon", r.ChargeSilicon},
+		{"charge_hydrogen", r.ChargeHydro}, {"charge_energy", r.ChargeEnergy},
+		{"charge_credit", r.ChargeCredit},
+	} {
+		if f.src != "" && !allowed(f.src) {
+			return fmt.Errorf("formula %s=%q: unexpected characters", f.name, f.src)
 		}
 	}
 	return nil

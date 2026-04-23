@@ -3,7 +3,6 @@ package planet
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -11,7 +10,6 @@ import (
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/economy"
 	"github.com/oxsar/nova/backend/internal/repo"
-	"github.com/oxsar/nova/backend/pkg/formula"
 )
 
 // Service — бизнес-логика планет. Содержит ApplyTick — расчёт добычи
@@ -21,52 +19,10 @@ type Service struct {
 	db      repo.Exec
 	repo    *Repository
 	catalog *config.Catalog
-
-	// formulaCache — кеш разобранных Expr по строковому исходнику.
-	// Парсим формулы один раз при первом запросе; на горячем пути
-	// economy tick'а работаем только с готовым AST. Мьютекс даёт
-	// безопасный конкурентный доступ — тик читается параллельно
-	// несколькими горутинами.
-	formulaCache struct {
-		sync.RWMutex
-		m map[string]*formula.Expr
-	}
 }
 
 func NewService(db repo.Exec, r *Repository, cat *config.Catalog) *Service {
-	s := &Service{db: db, repo: r, catalog: cat}
-	s.formulaCache.m = map[string]*formula.Expr{}
-	return s
-}
-
-// compile парсит формулу, кеширует и возвращает готовое AST.
-// Пустая/невалидная формула → nil без ошибки: в economy tick это
-// означает «ресурс не производится этим зданием».
-func (s *Service) compile(src string) *formula.Expr {
-	if src == "" {
-		return nil
-	}
-	s.formulaCache.RLock()
-	if e, ok := s.formulaCache.m[src]; ok {
-		s.formulaCache.RUnlock()
-		return e
-	}
-	s.formulaCache.RUnlock()
-
-	e, err := formula.Parse(src)
-	if err != nil {
-		// Логично было бы прокинуть ошибку наружу, но тогда тик
-		// падал бы из-за одной некорректной формулы, и никто бы
-		// её не заметил сразу. Вместо этого: null-handler плюс
-		// предупреждение через slog (добавим при интеграции
-		// наблюдаемости в M8). Сейчас просто нулим — ожидается,
-		// что все формулы проходят валидацию в import-datasheets.
-		return nil
-	}
-	s.formulaCache.Lock()
-	s.formulaCache.m[src] = e
-	s.formulaCache.Unlock()
-	return e
+	return &Service{db: db, repo: r, catalog: cat}
 }
 
 // Get возвращает планету с уже применённым тиком.
@@ -172,9 +128,8 @@ type caps struct {
 // уровней зданий и множителей планеты.
 //
 // Ветка 1 (предпочтительная): если загружен configs/construction.yml
-// (ConstructionCatalog), формулы берутся из legacy-парадигмы
-// na_construction через pkg/formula — это бит-в-бит паритет с
-// oxsar2 (§5.2.1 ТЗ).
+// (ConstructionCatalog), используются статические формулы из economy —
+// бит-в-бит паритет с oxsar2 (§5.2.1 ТЗ).
 //
 // Ветка 2 (fallback): старое приближение base_rate_per_hour из
 // configs/buildings.yml. Оставлено для режима «мы ещё не прогнали
@@ -191,16 +146,18 @@ func (s *Service) productionRates(p *Planet, levels map[int]int, tech map[int]in
 // productionRatesDSL — основной путь с legacy-формулами.
 func (s *Service) productionRatesDSL(p *Planet, levels map[int]int, tech map[int]int) rates {
 	ratio := s.energyRatio(p, levels, tech)
-	ctxBase := formula.Context{
-		Temperature: (p.TempMin + p.TempMax) / 2,
-		Tech:        tech,
-	}
 
-	metalPerHour := s.evalProd("metal_mine", "metal", levels, ctxBase)
-	silPerHour := s.evalProd("silicon_lab", "silicon", levels, ctxBase)
-	hydPerHour := s.evalProd("hydrogen_lab", "hydrogen", levels, ctxBase)
+	temp := (p.TempMin + p.TempMax) / 2
+	techE := tech[economy.IDTechEnergy]
+
+	metalPerHour := economy.MetalmineProdMetal(levels[economy.IDMetalmine], tech[economy.IDTechLaser])
+	silPerHour := economy.SiliconLabProdSilicon(levels[economy.IDSiliconLab], tech[economy.IDTechSilicon])
+	hydPerHour := economy.HydrogenLabProdHydrogen(levels[economy.IDHydrogenLab], tech[economy.IDTechHydrogen], temp)
+	// Лунный синтезатор — если есть на планете.
+	hydPerHour += economy.MoonHydrogenLabProdHydrogen(levels[economy.IDMoonHydrogenLab], tech[economy.IDTechHydrogen], temp)
 
 	factor := float64(p.ProduceFactor) * ratio
+	_ = techE // используется ниже в energyStats
 	return rates{
 		metalPerSec:    metalPerHour * factor / 3600.0,
 		siliconPerSec:  silPerHour * factor / 3600.0,
@@ -208,114 +165,55 @@ func (s *Service) productionRatesDSL(p *Planet, levels map[int]int, tech map[int
 	}
 }
 
-// evalProd вычисляет prod-формулу одного здания для конкретного уровня.
-// key — ключ в ConstructionCatalog (lowercase legacy-имя, см.
-// import-datasheets::snakeCase). resource — metal|silicon|hydrogen|energy.
-func (s *Service) evalProd(key, resource string, levels map[int]int, base formula.Context) float64 {
-	spec, ok := s.catalog.Construction.Buildings[key]
-	if !ok {
-		return 0
-	}
-	var src string
-	switch resource {
-	case "metal":
-		src = spec.Prod.Metal
-	case "silicon":
-		src = spec.Prod.Silicon
-	case "hydrogen":
-		src = spec.Prod.Hydrogen
-	case "energy":
-		src = spec.Prod.Energy
-	}
-	expr := s.compile(src)
-	if expr == nil {
-		return 0
-	}
-	ctx := base
-	ctx.Level = levels[int(spec.ID)]
-	// basic-field для prod не используется в legacy-формулах, но
-	// выставляем: разные поля могут понадобиться в будущих
-	// (hydrogen_plant prod зависит от basic_energy).
-	ctx.Basic = spec.Basic.Metal // arbitrary, not used in prod formulas
-	v, err := expr.Eval(ctx)
-	if err != nil {
-		return 0
-	}
-	return v
+// energyDemand считает суммарное потребление энергии шахтами.
+func energyDemand(levels map[int]int, tech map[int]int) float64 {
+	techE := tech[economy.IDTechEnergy]
+	return economy.MineConsEnergy(10, levels[economy.IDMetalmine], techE) +
+		economy.MineConsEnergy(10, levels[economy.IDSiliconLab], techE) +
+		economy.MineConsEnergy(20, levels[economy.IDHydrogenLab], techE) +
+		economy.MineConsEnergy(200, levels[economy.IDMoonHydrogenLab], techE)
 }
 
 // energyStats возвращает (prod, cons) энергии в абсолютных единицах.
 func (s *Service) energyStats(p *Planet, levels map[int]int, tech map[int]int) (prod, cons float64) {
-	base := formula.Context{
-		Temperature: (p.TempMin + p.TempMax) / 2,
-		Tech:        tech,
+	temp := (p.TempMin + p.TempMax) / 2
+	techE := tech[economy.IDTechEnergy]
+	cons = energyDemand(levels, tech)
+	prod = economy.SolarPlantProdEnergy(levels[economy.IDSolarPlant], techE)
+	// Вклад солнечных спутников: per-unit * count.
+	satCount := levels[economy.IDSolarSatellite]
+	if satCount > 0 {
+		prod += economy.SolarSatelliteProdEnergy(temp, techE) * float64(satCount)
 	}
-	cons = s.evalCons("metal_mine", "energy", levels, base) +
-		s.evalCons("silicon_lab", "energy", levels, base) +
-		s.evalCons("hydrogen_lab", "energy", levels, base)
-	prod = s.evalProd("solar_plant", "energy", levels, base)
-	// satellite contribution
-	if satSpec, ok := s.catalog.Construction.Buildings["solar_satellite"]; ok {
-		satCtx := base
-		satCtx.Level = levels[int(satSpec.ID)]
-		if v, err := s.compile(satSpec.Prod.Energy).Eval(satCtx); err == nil {
-			prod += v
-		}
+	// Гравитрон.
+	if graviLvl := levels[economy.IDGravi]; graviLvl > 0 {
+		prod += economy.GraviProdEnergy(graviLvl, 300000)
 	}
+	// Синтезатор водорода (если есть).
+	prod += economy.HydrogenPlantProdEnergy(levels[economy.IDHydrogenPlant], techE)
 	prod *= float64(p.EnergyFactor)
 	return prod, cons
 }
 
-// energyRatio считает долю удовлетворённой энергии (0..1) через
-// cons_energy формулы шахт + prod_energy солнечной станции.
+// energyRatio считает долю удовлетворённой энергии (0..1).
 func (s *Service) energyRatio(p *Planet, levels map[int]int, tech map[int]int) float64 {
-	base := formula.Context{
-		Temperature: (p.TempMin + p.TempMax) / 2,
-		Tech:        tech,
+	temp := (p.TempMin + p.TempMax) / 2
+	techE := tech[economy.IDTechEnergy]
+	demand := energyDemand(levels, tech)
+	output := economy.SolarPlantProdEnergy(levels[economy.IDSolarPlant], techE)
+	satCount := levels[economy.IDSolarSatellite]
+	if satCount > 0 {
+		output += economy.SolarSatelliteProdEnergy(temp, techE) * float64(satCount)
 	}
-	demand := s.evalCons("metal_mine", "energy", levels, base) +
-		s.evalCons("silicon_lab", "energy", levels, base) +
-		s.evalCons("hydrogen_lab", "energy", levels, base)
-	output := s.evalProd("solar_plant", "energy", levels, base)
+	if graviLvl := levels[economy.IDGravi]; graviLvl > 0 {
+		output += economy.GraviProdEnergy(graviLvl, 300000)
+	}
+	output += economy.HydrogenPlantProdEnergy(levels[economy.IDHydrogenPlant], techE)
 	ratio := economy.EnergyRatio(output, demand) * float64(p.EnergyFactor)
 	if ratio > 1 {
 		ratio = 1
 	}
 	return ratio
-}
-
-// evalCons вычисляет cons-формулу одного здания.
-// resource поддерживает "energy" (для шахт), остальные (metal/silicon/
-// hydrogen) доступны, но в прод-формулах шахт не встречаются.
-func (s *Service) evalCons(key, resource string, levels map[int]int, base formula.Context) float64 {
-	spec, ok := s.catalog.Construction.Buildings[key]
-	if !ok {
-		return 0
-	}
-	var src string
-	switch resource {
-	case "energy":
-		src = spec.Cons.Energy
-	case "metal":
-		src = spec.Cons.Metal
-	case "silicon":
-		src = spec.Cons.Silicon
-	case "hydrogen":
-		src = spec.Cons.Hydrogen
-	}
-	expr := s.compile(src)
-	if expr == nil {
-		return 0
-	}
-	// hack: evalProd пишет неиспользуемый Basic; cons тоже basic не
-	// использует в legacy-формулах.
-	ctx := base
-	ctx.Level = levels[int(spec.ID)]
-	v, err := expr.Eval(ctx)
-	if err != nil {
-		return 0
-	}
-	return v
 }
 
 // productionRatesApprox — fallback-путь на приближённых формулах
@@ -351,11 +249,29 @@ func (s *Service) productionRatesApprox(p *Planet, levels map[int]int) rates {
 	}
 }
 
-// researchLevels читает уровни всех исследований игрока.
-// Результат — unit_id → level; отсутствие записи означает уровень 0.
-// Передаётся в formula.Context как {tech=N}.
+// researchLevels читает уровни всех исследований игрока внутри транзакции.
 func researchLevels(ctx context.Context, tx pgx.Tx, userID string) (map[int]int, error) {
 	rows, err := tx.Query(ctx, `SELECT unit_id, level FROM research WHERE user_id = $1`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("read research levels: %w", err)
+	}
+	defer rows.Close()
+	out := map[int]int{}
+	for rows.Next() {
+		var id, lvl int
+		if err := rows.Scan(&id, &lvl); err != nil {
+			return nil, err
+		}
+		out[id] = lvl
+	}
+	return out, rows.Err()
+}
+
+// researchLevelsDirect читает уровни исследований без транзакции (для read-only запросов).
+func researchLevelsDirect(ctx context.Context, pool interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+}, userID string) (map[int]int, error) {
+	rows, err := pool.Query(ctx, `SELECT unit_id, level FROM research WHERE user_id = $1`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("read research levels: %w", err)
 	}
@@ -577,6 +493,12 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 		return nil, fmt.Errorf("get buildings: %w", err)
 	}
 
+	// Уровни исследований игрока — нужны для статических формул производства.
+	tech, err := researchLevelsDirect(ctx, s.db.Pool(), p.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("get research levels: %w", err)
+	}
+
 	report := &ResourceReportDTO{
 		PlanetID:   p.ID,
 		PlanetName: p.Name,
@@ -600,45 +522,30 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 	report.StorageSilicon = caps.silicon
 	report.StorageHydrogen = caps.hydrogen
 
+	tempC := (p.TempMin + p.TempMax) / 2
+
 	// Расчёт производства по зданиям.
 	totalMetal, totalSilicon, totalHydrogen := 0.0, 0.0, 0.0
 	totalEnergy := 0.0
 
 	for _, b := range buildings {
-		// Find the building spec by ID from Construction catalog
-		var buildingKey string
-		for key, spec := range s.catalog.Construction.Buildings {
-			if int(spec.ID) == b.UnitID {
-				buildingKey = key
-				break
-			}
-		}
-		if buildingKey == "" {
-			continue
-		}
+		bp := buildingProdStatic(b.UnitID, b.Level, tech, tempC)
 
-		spec := s.catalog.Construction.Buildings[buildingKey]
-
-		// Расчёт почасового производства по формулам.
-		metalHour := s.calcBuildingProduction(spec.Prod.Metal, b.Level, p.ProduceFactor)
-		silHour := s.calcBuildingProduction(spec.Prod.Silicon, b.Level, p.ProduceFactor)
-		hydHour := s.calcBuildingProduction(spec.Prod.Hydrogen, b.Level, p.ProduceFactor)
-		energyProd := s.calcBuildingProduction(spec.Prod.Energy, b.Level, 1.0)
-		energyCons := s.calcBuildingConsumption(spec.Cons.Energy, b.Level)
-
-		// net энергия при factor=100 (базовые значения, фронт применяет factor сам).
-		baseNetEnergy := energyProd - energyCons
+		// apply produce_factor для ресурсных шахт.
+		metalHour := bp.metal * p.ProduceFactor
+		silHour := bp.silicon * p.ProduceFactor
+		hydHour := bp.hydrogen * p.ProduceFactor
+		netEnergy := bp.energy
 
 		// Применить factor для итоговых сумм.
 		factor := float64(b.Factor) / 100.0
 		totalMetal += metalHour * factor
 		totalSilicon += silHour * factor
 		totalHydrogen += hydHour * factor
-		totalEnergy += baseNetEnergy * factor
+		totalEnergy += netEnergy * factor
 
-		// allow_factor: ресурсные шахты и энергостанции.
-		allowFactor := spec.Prod.Metal != "" || spec.Prod.Silicon != "" ||
-			spec.Prod.Hydrogen != "" || spec.Prod.Energy != ""
+		// allow_factor: здания с ненулевым производством ресурсов или энергии.
+		allowFactor := bp.metal != 0 || bp.silicon != 0 || bp.hydrogen != 0 || bp.energy != 0
 
 		buildingName := s.getBuildingName(b.UnitID)
 
@@ -646,10 +553,10 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 			UnitID:       b.UnitID,
 			Name:         buildingName,
 			Level:        b.Level,
-			ProdMetal:    metalHour,    // при factor=100
-			ProdSilicon:  silHour,      // при factor=100
-			ProdHydrogen: hydHour,      // при factor=100
-			ConsEnergy:   baseNetEnergy, // при factor=100
+			ProdMetal:    metalHour,
+			ProdSilicon:  silHour,
+			ProdHydrogen: hydHour,
+			ConsEnergy:   netEnergy,
 			Factor:       b.Factor,
 			AllowFactor:  allowFactor,
 		})
@@ -720,36 +627,47 @@ func (s *Service) getBuildingName(unitID int) string {
 	return ""
 }
 
-// calcBuildingProduction парсит и вычисляет производство здания по формуле.
-func (s *Service) calcBuildingProduction(formulaSrc string, level int, factor float64) float64 {
-	if formulaSrc == "" {
-		return 0
-	}
-	expr := s.compile(formulaSrc)
-	if expr == nil {
-		return 0
-	}
-	ctx := formula.Context{Level: level}
-	val, err := expr.Eval(ctx)
-	if err != nil {
-		return 0
-	}
-	return val * factor
+type buildingProd struct {
+	metal    float64
+	silicon  float64
+	hydrogen float64
+	energy   float64 // net = prod - cons
 }
 
-// calcBuildingConsumption парсит и вычисляет потребление здания по формуле.
-func (s *Service) calcBuildingConsumption(formulaSrc string, level int) float64 {
-	if formulaSrc == "" {
-		return 0
+// buildingProdStatic возвращает почасовое производство и потребление здания
+// через статические формулы economy (без DSL).
+func buildingProdStatic(unitID, level int, tech map[int]int, tempC int) buildingProd {
+	techE := tech[economy.IDTechEnergy]
+	switch unitID {
+	case economy.IDMetalmine:
+		prod := economy.MetalmineProdMetal(level, tech[economy.IDTechLaser])
+		cons := economy.MineConsEnergy(10, level, techE)
+		return buildingProd{metal: prod, energy: -cons}
+	case economy.IDSiliconLab:
+		prod := economy.SiliconLabProdSilicon(level, tech[economy.IDTechSilicon])
+		cons := economy.MineConsEnergy(10, level, techE)
+		return buildingProd{silicon: prod, energy: -cons}
+	case economy.IDHydrogenLab:
+		prod := economy.HydrogenLabProdHydrogen(level, tech[economy.IDTechHydrogen], tempC)
+		cons := economy.MineConsEnergy(20, level, techE)
+		return buildingProd{hydrogen: prod, energy: -cons}
+	case economy.IDMoonHydrogenLab:
+		prod := economy.MoonHydrogenLabProdHydrogen(level, tech[economy.IDTechHydrogen], tempC)
+		cons := economy.MineConsEnergy(200, level, techE)
+		return buildingProd{hydrogen: prod, energy: -cons}
+	case economy.IDSolarPlant:
+		prod := economy.SolarPlantProdEnergy(level, techE)
+		return buildingProd{energy: prod}
+	case economy.IDHydrogenPlant:
+		prod := economy.HydrogenPlantProdEnergy(level, techE)
+		cons := economy.HydrogenPlantConsHydrogen(level, techE)
+		return buildingProd{hydrogen: -cons, energy: prod}
+	case economy.IDSolarSatellite:
+		prod := economy.SolarSatelliteProdEnergy(tempC, techE) * float64(level)
+		return buildingProd{energy: prod}
+	case economy.IDGravi:
+		prod := economy.GraviProdEnergy(level, 300000)
+		return buildingProd{energy: prod}
 	}
-	expr := s.compile(formulaSrc)
-	if expr == nil {
-		return 0
-	}
-	ctx := formula.Context{Level: level}
-	val, err := expr.Eval(ctx)
-	if err != nil {
-		return 0
-	}
-	return val
+	return buildingProd{}
 }
