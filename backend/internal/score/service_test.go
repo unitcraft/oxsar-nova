@@ -42,16 +42,17 @@ func TestRoundPts(t *testing.T) {
 	}
 }
 
-func TestScoreConstants(t *testing.T) {
+func TestScoreCoefficients_Defaults(t *testing.T) {
 	t.Parallel()
-	// Legacy oxsar2 coefficients — must not change without ADR.
-	if kBuild != 0.0005 {
-		t.Errorf("kBuild = %v, want 0.0005", kBuild)
+	// Dominator defaults — must not change without ADR.
+	svc := NewService(nil, nil)
+	if svc.kBld != 0.00005 {
+		t.Errorf("kBld = %v, want 0.00005", svc.kBld)
 	}
-	if kResearch != 0.001 {
-		t.Errorf("kResearch = %v, want 0.001", kResearch)
+	if svc.kRes != 0.0005 {
+		t.Errorf("kRes = %v, want 0.0005", svc.kRes)
 	}
-	if kUnit != 0.002 {
-		t.Errorf("kUnit = %v, want 0.002", kUnit)
+	if svc.kUnt != 0.002 {
+		t.Errorf("kUnt = %v, want 0.002", svc.kUnt)
 	}
 }

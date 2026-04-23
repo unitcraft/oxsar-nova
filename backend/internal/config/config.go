@@ -49,6 +49,15 @@ type GameConfig struct {
 	Deathmatch  bool
 	NumGalaxies int
 	NumSystems  int
+	Points      PointsCoefficients
+}
+
+// PointsCoefficients — коэффициенты начисления очков.
+// Значения по умолчанию соответствуют Dominator (consts.php).
+type PointsCoefficients struct {
+	Building float64 // очки = cost × k (за постройки)
+	Research float64 // очки = cost × k (за исследования)
+	Unit     float64 // очки = cost × k (за корабли/оборону)
 }
 
 // Load читает переменные окружения и возвращает валидированный Config.
@@ -80,6 +89,11 @@ func Load() (Config, error) {
 			Deathmatch:  envBool("DEATHMATCH", false),
 			NumGalaxies: envInt("NUM_GALAXIES", 8),
 			NumSystems:  envInt("NUM_SYSTEMS", 600),
+			Points: PointsCoefficients{
+				Building: envFloat("POINTS_K_BUILDING", 0.00005),
+				Research: envFloat("POINTS_K_RESEARCH", 0.0005),
+				Unit:     envFloat("POINTS_K_UNIT", 0.002),
+			},
 		},
 	}
 

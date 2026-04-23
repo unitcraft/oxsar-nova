@@ -26,22 +26,27 @@ import (
 	"github.com/oxsar/nova/backend/internal/repo"
 )
 
-const (
-	// Коэффициенты из consts.php oxsar2.
-	kBuild    = 0.0005
-	kResearch = 0.001
-	kUnit     = 0.002
-)
-
 // Service — пересчёт очков.
 type Service struct {
-	db  repo.Exec
-	cat *config.Catalog
+	db   repo.Exec
+	cat  *config.Catalog
+	kBld float64 // коэффициент за постройки
+	kRes float64 // коэффициент за исследования
+	kUnt float64 // коэффициент за флот/оборону
 }
 
-// NewService создаёт Service.
+// NewService создаёт Service с коэффициентами из конфига.
 func NewService(db repo.Exec, cat *config.Catalog) *Service {
-	return &Service{db: db, cat: cat}
+	return NewServiceWithCoeffs(db, cat, config.PointsCoefficients{
+		Building: 0.00005,
+		Research: 0.0005,
+		Unit:     0.002,
+	})
+}
+
+// NewServiceWithCoeffs создаёт Service с явными коэффициентами из конфига.
+func NewServiceWithCoeffs(db repo.Exec, cat *config.Catalog, k config.PointsCoefficients) *Service {
+	return &Service{db: db, cat: cat, kBld: k.Building, kRes: k.Research, kUnt: k.Unit}
 }
 
 // Entry — строка лидерборда.
@@ -198,7 +203,7 @@ func (s *Service) calcBuildings(ctx context.Context, userID string) (float64, er
 			m := float64(spec.CostBase.Metal) * scale
 			si := float64(spec.CostBase.Silicon) * scale
 			h := float64(spec.CostBase.Hydrogen) * scale
-			total += kBuild * (m + si + h)
+			total += s.kBld * (m + si + h)
 		}
 	}
 	return total, rows.Err()
@@ -233,7 +238,7 @@ func (s *Service) calcResearch(ctx context.Context, userID string) (float64, err
 			m := float64(spec.CostBase.Metal) * scale
 			si := float64(spec.CostBase.Silicon) * scale
 			h := float64(spec.CostBase.Hydrogen) * scale
-			total += kResearch * (m + si + h)
+			total += s.kRes * (m + si + h)
 		}
 	}
 	return total, rows.Err()
@@ -268,7 +273,7 @@ func (s *Service) calcUnits(ctx context.Context, userID string) (float64, error)
 			return 0, err
 		}
 		if sp, ok := shipByID[unitID]; ok {
-			total += kUnit * float64(sp.Cost.Metal+sp.Cost.Silicon+sp.Cost.Hydrogen) * float64(count)
+			total += s.kUnt * float64(sp.Cost.Metal+sp.Cost.Silicon+sp.Cost.Hydrogen) * float64(count)
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -293,7 +298,7 @@ func (s *Service) calcUnits(ctx context.Context, userID string) (float64, error)
 			return 0, err
 		}
 		if sp, ok := defByID[unitID]; ok {
-			total += kUnit * float64(sp.Cost.Metal+sp.Cost.Silicon+sp.Cost.Hydrogen) * float64(count)
+			total += s.kUnt * float64(sp.Cost.Metal+sp.Cost.Silicon+sp.Cost.Hydrogen) * float64(count)
 		}
 	}
 	return total, rows2.Err()
