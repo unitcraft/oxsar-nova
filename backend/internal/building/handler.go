@@ -51,6 +51,8 @@ func (h *Handler) Enqueue(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "moon-only building"))
 	case errors.Is(err, ErrPlanetOnly):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "not available on moon"))
+	case errors.Is(err, ErrMaxLevelReached):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "max level reached"))
 	case requirements.IsNotMet(err):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	default:
