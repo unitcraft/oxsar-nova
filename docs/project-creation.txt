@@ -5043,3 +5043,20 @@ MEDIUM Priority:
 - frontend/vite.config.ts (usePolling для HMR в Docker на Windows)
 
 Статус: ✅ ЗАВЕРШЕНА
+
+
+================================================================================
+Итерация (сессия 2026-04-23g) — план 08: Optimistic Updates
+================================================================================
+
+- ArtefactsScreen: activate/deactivate/sell мутации получили onMutate с optimistic
+  state change (held→delayed, active→held, held→listed) и onError rollback
+- OfficersScreen: activate мутация оптимистично выставляет expires_at и списывает
+  кредиты; onError возвращает прежнее состояние
+- ErrorBoundary уже был реализован в main.tsx — не трогали
+- Sentry и Storybook — не реализуем (нет аккаунта / нецелесообразно)
+
+Файлы: frontend/src/features/artefacts/ArtefactsScreen.tsx,
+       frontend/src/features/officers/OfficersScreen.tsx
+
+Статус: ✅ ЗАВЕРШЕНА (план 08 закрыт)
