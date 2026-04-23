@@ -5235,3 +5235,35 @@ MEDIUM Priority:
        backend/cmd/tools/import-datasheets/convert_construction.go
 
 Статус: ✅ ЗАВЕРШЕНА (план 16 полностью закрыт)
+
+================================================================================
+
+## Задача 17 — Планы 09/10/11: Buildings статус, Idempotency Key, Credits
+
+### План 09 (Buildings) — статус обновлён до ЗАВЕРШЁН
+Все задачи оказались уже реализованы: enqueue, cancel (с возвратом %),
+requirements_unmet на frontend, фильтр «Показать недоступные», nano_factory,
+missile_silo (id=53), описания зданий. Статус обновлён.
+
+### План 10 (API Quality) — Idempotency Key
+- pkg/idempotency/ — новый пакет: FromRequest, Replay, Record (Redis, TTL 24h)
+- fleet/handler.go: Send проверяет Idempotency-Key → кэширует ответ 201 + Fleet JSON
+- market/handler.go: AcceptLot → кэширует 204
+- artmarket/handler.go: Buy → кэширует 204
+- httpx: добавлены MarshalJSON, WriteJSONBytes
+- Если Redis недоступен — idempotency молча отключается (graceful degradation)
+
+### План 11 (Credits Economy)
+- economy/credits.go: константы (CreditDailyLogin=10, CreditBattleWinMin/Max=5-50,
+  CreditAchievement=50) + BattleWinCredits(defPower)
+- migrations/0042_daily_credit.sql: колонка last_daily_credit_at
+- auth/middleware.go: LastSeenMiddleware начисляет 10 кр/день (≥24ч)
+- fleet/attack.go: finalizeAttack начисляет кредиты победителю по мощи врага
+- achievement/service.go: UnlockIfNew начисляет 50 кр + упоминает в сообщении
+- Платёжная система — отдельный план (не реализовывали)
+
+Файлы: backend/pkg/idempotency/, backend/internal/economy/credits.go,
+       backend/internal/auth/middleware.go, backend/internal/fleet/attack.go,
+       backend/internal/achievement/service.go, migrations/0042_daily_credit.sql
+
+Статус: ✅ ЗАВЕРШЕНА

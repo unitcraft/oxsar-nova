@@ -6,16 +6,19 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/oxsar/nova/backend/internal/auth"
 	"github.com/oxsar/nova/backend/internal/httpx"
+	"github.com/oxsar/nova/backend/pkg/idempotency"
 )
 
 type Handler struct {
 	svc *Service
+	rdb *redis.Client
 }
 
-func NewHandler(s *Service) *Handler { return &Handler{svc: s} }
+func NewHandler(s *Service, rdb *redis.Client) *Handler { return &Handler{svc: s, rdb: rdb} }
 
 // Offers GET /api/artefact-market/offers
 func (h *Handler) Offers(w http.ResponseWriter, r *http.Request) {
@@ -90,6 +93,12 @@ func (h *Handler) Buy(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
+
+	idem := idempotency.FromRequest(r, h.rdb)
+	if idem.Replay(w) {
+		return
+	}
+
 	offerID := chi.URLParam(r, "id")
 	if offerID == "" {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing offer id"))
@@ -98,6 +107,7 @@ func (h *Handler) Buy(w http.ResponseWriter, r *http.Request) {
 	err := h.svc.Buy(r.Context(), uid, offerID)
 	switch {
 	case err == nil:
+		idem.Record(http.StatusNoContent, nil)
 		w.WriteHeader(http.StatusNoContent)
 	case errors.Is(err, ErrNotEnoughCredit),
 		errors.Is(err, ErrOwnOffer):

@@ -6,10 +6,12 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/oxsar/nova/backend/internal/auth"
 	"github.com/oxsar/nova/backend/internal/galaxy"
 	"github.com/oxsar/nova/backend/internal/httpx"
+	"github.com/oxsar/nova/backend/pkg/idempotency"
 )
 
 // Handler — HTTP-адаптер к TransportService.
@@ -22,9 +24,12 @@ import (
 // по полю mission.
 type Handler struct {
 	transport *TransportService
+	rdb       *redis.Client // может быть nil — тогда idempotency отключена
 }
 
-func NewHandler(t *TransportService) *Handler { return &Handler{transport: t} }
+func NewHandler(t *TransportService, rdb *redis.Client) *Handler {
+	return &Handler{transport: t, rdb: rdb}
+}
 
 type sendRequest struct {
 	SrcPlanetID  string        `json:"src_planet_id"`
@@ -46,6 +51,12 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
+
+	idem := idempotency.FromRequest(r, h.rdb)
+	if idem.Replay(w) {
+		return
+	}
+
 	var req sendRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
@@ -73,7 +84,9 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	f, err := h.transport.Send(r.Context(), in)
 	switch {
 	case err == nil:
-		httpx.WriteJSON(w, r, http.StatusCreated, f)
+		body := httpx.MarshalJSON(f)
+		idem.Record(http.StatusCreated, body)
+		httpx.WriteJSONBytes(w, r, http.StatusCreated, body)
 	case errors.Is(err, ErrInvalidDispatch),
 		errors.Is(err, ErrNotEnoughShips),
 		errors.Is(err, ErrNotEnoughCarry),
