@@ -42,6 +42,8 @@ const (
 	KindOfficerExpire              Kind = 62
 	KindArtefactDelay              Kind = 63
 	KindRaidWarning                Kind = 64 // уведомление защитнику за 10 мин до атаки
+	KindExpirePlanet               Kind = 65 // soft-удаление временной планеты при expires_at
+	KindScoreRecalcAll             Kind = 70 // ежедневный batch-пересчёт очков всех игроков
 	KindBatchProcessIntervalSecond      = 10
 )
 
