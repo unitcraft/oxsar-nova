@@ -35,6 +35,9 @@ type CellView struct {
 	OwnerVacation bool    `json:"owner_vacation,omitempty"`
 	OwnerBanned   bool    `json:"owner_banned,omitempty"`
 	AllianceTag   *string `json:"alliance_tag,omitempty"`
+	// Отношение альянса владельца клетки к альянсу viewer'а: nap | war | ally.
+	// pending-отношения не показываются (не active).
+	Relation      *string `json:"relation,omitempty"`
 	DebrisMetal   int64   `json:"debris_metal"`
 	DebrisSilicon int64   `json:"debris_silicon"`
 }
@@ -46,9 +49,16 @@ type Repository struct {
 
 func NewRepository(pool *pgxpool.Pool) *Repository { return &Repository{pool: pool} }
 
-// ReadSystem возвращает все 15 позиций указанной системы.
-func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (SystemView, error) {
+// ReadSystem возвращает все 16 позиций указанной системы. viewerUserID —
+// текущий пользователь, для вычисления отношения альянсов.
+func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int, viewerUserID string) (SystemView, error) {
 	out := SystemView{Galaxy: galaxyNum, System: systemNum}
+
+	// Находим alliance_id viewer'а (если он в альянсе).
+	var viewerAllianceID *string
+	if viewerUserID != "" {
+		_ = r.pool.QueryRow(ctx, `SELECT alliance_id FROM users WHERE id = $1`, viewerUserID).Scan(&viewerAllianceID)
+	}
 
 	type planetRow struct {
 		Position      int
@@ -66,6 +76,7 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 		OwnerVacation bool
 		OwnerBanned   bool
 		AllianceTag   *string
+		AllianceID    *string
 	}
 	planetRows := map[int]planetRow{}
 	moonRows := map[int]planetRow{}
@@ -81,7 +92,8 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 			u.last_seen,
 			COALESCE(u.umode, false) AS vacation,
 			(u.banned_at IS NOT NULL) AS banned,
-			al.tag AS alliance_tag
+			al.tag AS alliance_tag,
+			al.id  AS alliance_id
 		FROM planets p
 		LEFT JOIN users u ON u.id = p.user_id
 		LEFT JOIN alliances al ON al.id = u.alliance_id
@@ -97,7 +109,7 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 			&pr.PlanetType, &pr.OwnerID,
 			&pr.OwnerName, &pr.OwnerRank,
 			&pr.OwnerLastSeen, &pr.OwnerVacation, &pr.OwnerBanned,
-			&pr.AllianceTag,
+			&pr.AllianceTag, &pr.AllianceID,
 		); err != nil {
 			rows.Close()
 			return out, fmt.Errorf("scan planet: %w", err)
@@ -137,8 +149,26 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 		return out, fmt.Errorf("debris rows: %w", err)
 	}
 
-	out.Cells = make([]CellView, 0, 15)
-	for pos := 1; pos <= 15; pos++ {
+	// Отношения альянсов: map[targetAllianceID]relation (active only).
+	relations := map[string]string{}
+	if viewerAllianceID != nil {
+		rRows, err := r.pool.Query(ctx, `
+			SELECT target_alliance_id, relation FROM alliance_relationships
+			WHERE alliance_id = $1 AND status = 'active'
+		`, *viewerAllianceID)
+		if err == nil {
+			for rRows.Next() {
+				var tgt, rel string
+				if err := rRows.Scan(&tgt, &rel); err == nil {
+					relations[tgt] = rel
+				}
+			}
+			rRows.Close()
+		}
+	}
+
+	out.Cells = make([]CellView, 0, 16)
+	for pos := 1; pos <= 16; pos++ {
 		cell := CellView{Position: pos}
 		if p, ok := planetRows[pos]; ok {
 			name := p.Name
@@ -152,6 +182,12 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 			cell.OwnerVacation = p.OwnerVacation
 			cell.OwnerBanned = p.OwnerBanned
 			cell.AllianceTag = p.AllianceTag
+			if p.AllianceID != nil {
+				if rel, ok := relations[*p.AllianceID]; ok {
+					r := rel
+					cell.Relation = &r
+				}
+			}
 			if p.OwnerLastSeen != nil {
 				s := p.OwnerLastSeen.UTC().Format(time.RFC3339)
 				cell.OwnerLastSeen = &s

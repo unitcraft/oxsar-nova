@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/oxsar/nova/backend/internal/auth"
 	"github.com/oxsar/nova/backend/internal/httpx"
 )
 
@@ -29,7 +30,8 @@ func (h *Handler) System(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 		return
 	}
-	view, err := h.repo.ReadSystem(r.Context(), g, s)
+	uid, _ := auth.UserID(r.Context())
+	view, err := h.repo.ReadSystem(r.Context(), g, s, uid)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
