@@ -20,13 +20,15 @@ function ExpandableText({ text }: { text: string }) {
       </button>
       <div
         style={{
-          overflow: 'hidden',
-          maxHeight: open ? '600px' : '0px',
-          transition: 'max-height 0.3s ease',
+          display: 'grid',
+          gridTemplateRows: open ? '1fr' : '0fr',
+          transition: 'grid-template-rows 0.3s ease',
         }}
       >
-        <div style={{ paddingTop: 8, fontSize: 12, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
-          {text}
+        <div style={{ overflow: 'hidden' }}>
+          <div style={{ paddingTop: 8, fontSize: 12, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
+            {text}
+          </div>
         </div>
       </div>
     </div>
@@ -99,8 +101,8 @@ export function BuildingInfoModal({ unitId, currentLevel, onClose }: Props) {
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
         background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-        padding: 16, overflowY: 'auto',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16,
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
@@ -111,8 +113,8 @@ export function BuildingInfoModal({ unitId, currentLevel, onClose }: Props) {
         padding: 20,
         maxWidth: 600,
         width: '100%',
-        marginTop: 'auto',
-        marginBottom: 'auto',
+        maxHeight: '90vh',
+        overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
         gap: 16,
