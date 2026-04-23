@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
+import { useAuthStore } from '../../stores/auth';
 
 interface SettingsData {
   email: string;
@@ -64,6 +65,25 @@ export function SettingsScreen() {
   const [pwError, setPwError] = useState('');
 
   const [vacationConfirm, setVacationConfirm] = useState(false);
+
+  const [dangerOpen, setDangerOpen] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [codeExpires, setCodeExpires] = useState<string>('');
+  const [code, setCode] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const logout = useAuthStore((s) => s.logout);
+
+  const requestCodeMutation = useMutation({
+    mutationFn: () => api.post<{ expires_at: string }>('/api/me/deletion/code'),
+    onSuccess: (r) => { setCodeSent(true); setCodeExpires(r.expires_at); setDeleteError(''); },
+    onError: (e) => setDeleteError(e instanceof Error ? e.message : 'Ошибка запроса кода'),
+  });
+
+  const confirmDeleteMutation = useMutation({
+    mutationFn: (c: string) => api.delete<void>('/api/me', { code: c }),
+    onSuccess: () => { logout(); },
+    onError: (e) => setDeleteError(e instanceof Error ? e.message : 'Неверный код'),
+  });
 
   if (isLoading || !data) {
     return (
@@ -272,6 +292,95 @@ export function SettingsScreen() {
                   </span>
                 )}
               </div>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* Опасная зона */}
+      <section style={{
+        padding: 20,
+        border: '1px solid var(--ox-danger)',
+        borderRadius: 6,
+        display: 'flex', flexDirection: 'column', gap: 12,
+        background: 'rgba(239,68,68,0.03)',
+      }}>
+        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-danger)' }}>
+          ⚠ Опасная зона
+        </h3>
+
+        {!dangerOpen ? (
+          <button
+            type="button"
+            className="btn-ghost"
+            style={{ alignSelf: 'flex-start', color: 'var(--ox-danger)' }}
+            onClick={() => setDangerOpen(true)}
+          >
+            🗑 Удалить аккаунт…
+          </button>
+        ) : (
+          <>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
+              Аккаунт будет удалён навсегда: планеты, флоты, сообщения и участие в альянсе
+              исчезнут. Восстановление невозможно. Для подтверждения требуется одноразовый
+              код, который будет отправлен вам в системные сообщения.
+            </p>
+
+            {!codeSent ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  disabled={requestCodeMutation.isPending}
+                  onClick={() => requestCodeMutation.mutate()}
+                >
+                  {requestCodeMutation.isPending ? '…' : 'Получить код подтверждения'}
+                </button>
+                <button type="button" className="btn-ghost" onClick={() => setDangerOpen(false)}>
+                  Отмена
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>
+                  Код отправлен в сообщения (папка «Система»). Действителен до{' '}
+                  <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg)' }}>
+                    {codeExpires ? new Date(codeExpires).toLocaleTimeString('ru-RU') : '—'}
+                  </span>.
+                </div>
+                <input
+                  type="text"
+                  placeholder="XXXXXXXX"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 8))}
+                  style={{
+                    fontFamily: 'var(--ox-mono)', fontSize: 18, letterSpacing: '0.15em',
+                    padding: '10px 12px', maxWidth: 200, textTransform: 'uppercase',
+                  }}
+                  maxLength={8}
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    disabled={code.length !== 8 || confirmDeleteMutation.isPending}
+                    onClick={() => confirmDeleteMutation.mutate(code)}
+                  >
+                    {confirmDeleteMutation.isPending ? '…' : '🗑 Удалить аккаунт навсегда'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => { setDangerOpen(false); setCodeSent(false); setCode(''); setDeleteError(''); }}
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {deleteError && (
+              <span style={{ fontSize: 12, color: 'var(--ox-danger)' }}>{deleteError}</span>
             )}
           </>
         )}

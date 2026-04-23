@@ -23,7 +23,8 @@ var validTimezones = map[string]bool{
 }
 
 type Handler struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	automsg AutoMsgSender
 }
 
 func NewHandler(pool *pgxpool.Pool) *Handler { return &Handler{pool: pool} }
