@@ -16,6 +16,29 @@ rapidfire:
     38: 5
     39: 5
 
+  # Frigate (35) — na_rapidfire legacy
+  35:
+    29: 3
+    30: 3
+    32: 7
+    33: 4
+    34: 7
+
+  # Bomber (40) — na_rapidfire legacy
+  40:
+    43: 20
+    44: 20
+    45: 10
+    46: 10
+    102: 5
+
+  # Star Destroyer (41) — na_rapidfire legacy
+  41:
+    35: 2
+    44: 2
+    45: 2
+    102: 2
+
   # Deathstar (42) — раскидывает всех подряд
   42:
     29: 250
