@@ -5,6 +5,8 @@
 # cost_base: базовая стоимость уровня 1 (metal, silicon, hydrogen, energy)
 # cost_factor: множитель стоимости на каждый следующий уровень
 # time_base_seconds: базовое время постройки уровня 1 на robotic_factory=0
+# max_level: максимальный допустимый уровень (из legacy consts.php MAX_BUILDING_LEVEL=40
+#            и $GLOBALS["MAX_UNIT_LEVELS"] для исключений)
 #
 # Формула времени:
 #   time_seconds = time_base * cost_factor^(level-1) /
@@ -25,6 +27,7 @@ buildings:
     time_base_seconds: 60
     base_rate_per_hour: 30   # при level=1
     energy_per_level: 10
+    max_level: 40
 
   silicon_lab:
     id: 2
@@ -33,6 +36,7 @@ buildings:
     time_base_seconds: 75
     base_rate_per_hour: 20
     energy_per_level: 10
+    max_level: 40
 
   hydrogen_lab:
     id: 3
@@ -41,6 +45,7 @@ buildings:
     time_base_seconds: 90
     base_rate_per_hour: 10
     energy_per_level: 20
+    max_level: 40
 
   solar_plant:
     id: 4
@@ -48,30 +53,35 @@ buildings:
     cost_factor: 1.5
     time_base_seconds: 60
     energy_output_per_level: 20
+    max_level: 40
 
   hydrogen_plant:
     id: 5
     cost_base:   { metal: 900, silicon: 360, hydrogen: 180 }
     cost_factor: 1.8
     time_base_seconds: 90
+    max_level: 40
 
   robotic_factory:
     id: 6
     cost_base:   { metal: 400, silicon: 120, hydrogen: 200 }
     cost_factor: 2.0
     time_base_seconds: 180
+    max_level: 40
 
   nano_factory:
     id: 7
     cost_base:   { metal: 1000000, silicon: 500000, hydrogen: 100000 }
     cost_factor: 2.0
     time_base_seconds: 600
+    max_level: 12
 
   shipyard:
     id: 8
     cost_base:   { metal: 400, silicon: 200, hydrogen: 100 }
     cost_factor: 2.0
     time_base_seconds: 180
+    max_level: 40
 
   metal_storage:
     id: 9
@@ -79,6 +89,7 @@ buildings:
     cost_factor: 2.0
     time_base_seconds: 120
     capacity_base: 5_000
+    max_level: 40
 
   silicon_storage:
     id: 10
@@ -86,6 +97,7 @@ buildings:
     cost_factor: 2.0
     time_base_seconds: 120
     capacity_base: 5_000
+    max_level: 40
 
   hydrogen_storage:
     id: 11
@@ -93,12 +105,14 @@ buildings:
     cost_factor: 2.0
     time_base_seconds: 120
     capacity_base: 5_000
+    max_level: 40
 
   research_lab:
     id: 12
     cost_base:   { metal: 200, silicon: 400, hydrogen: 200 }
     cost_factor: 2.0
     time_base_seconds: 180
+    max_level: 40
 
   # Ракетная шахта (legacy UNIT_ROCKET_STATION=53).
   # max_rockets = level × rocket_capacity_per_level (legacy: level × 10).
@@ -109,15 +123,15 @@ buildings:
     cost_factor: 2.0
     time_base_seconds: 360
     rocket_capacity_per_level: 10
+    max_level: 40
 
   # Ремонтная фабрика (legacy UNIT_REPAIR_FACTORY=100, na_construction id=100).
-  # Стоимость 800/400/200 с удвоением уровня, время ~30 * 1.6^level.
-  # Используется disassemble/repair-очередью (backend/internal/repair).
   repair_factory:
     id: 100
     cost_base:   { metal: 800, silicon: 400, hydrogen: 200 }
     cost_factor: 2.0
     time_base_seconds: 30
+    max_level: 40
 
   # Лунные здания (legacy mode=5). Только на луне (is_moon=true).
   moon_base:
@@ -126,6 +140,7 @@ buildings:
     cost_base:   { metal: 50000, silicon: 20000, hydrogen: 10000 }
     cost_factor: 2.0
     time_base_seconds: 300
+    max_level: 40
 
   star_surveillance:
     id: 55
@@ -133,6 +148,7 @@ buildings:
     cost_base:   { metal: 100000, silicon: 20000, hydrogen: 50000 }
     cost_factor: 2.0
     time_base_seconds: 600
+    max_level: 40
 
   star_gate:
     id: 56
@@ -140,6 +156,7 @@ buildings:
     cost_base:   { metal: 4000000, silicon: 2000000, hydrogen: 1000000 }
     cost_factor: 2.0
     time_base_seconds: 1800
+    max_level: 15
 
   moon_robotic_factory:
     id: 57
@@ -147,3 +164,4 @@ buildings:
     cost_base:   { metal: 10000, silicon: 6000, hydrogen: 4000 }
     cost_factor: 2.0
     time_base_seconds: 240
+    max_level: 40

@@ -97,6 +97,7 @@ type BuildingSpec struct {
 	CapacityBase            *int64   `yaml:"capacity_base,omitempty"`
 	RocketCapacityPerLevel  *int64   `yaml:"rocket_capacity_per_level,omitempty"`
 	MoonOnly                bool     `yaml:"moon_only,omitempty"`
+	MaxLevel                int      `yaml:"max_level,omitempty"`
 }
 
 type ResCost struct {

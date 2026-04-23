@@ -29,6 +29,7 @@ var (
 	ErrQueueItemNotFound = errors.New("building: queue item not found")
 	ErrMoonOnly          = errors.New("building: this building is only available on moons")
 	ErrPlanetOnly        = errors.New("building: this building is not available on moons")
+	ErrMaxLevelReached   = errors.New("building: max level reached")
 )
 
 type Service struct {
@@ -107,6 +108,9 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 			return err
 		}
 		targetLevel := curLevel + 1
+		if spec.MaxLevel > 0 && targetLevel > spec.MaxLevel {
+			return ErrMaxLevelReached
+		}
 		cost := economy.CostForLevel(economy.Cost{
 			Metal:    spec.CostBase.Metal,
 			Silicon:  spec.CostBase.Silicon,
