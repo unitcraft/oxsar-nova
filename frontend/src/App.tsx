@@ -32,18 +32,21 @@ const ChatScreen         = lazy(() => import('./features/chat/ChatScreen').then(
 const PlanetOptionsScreen = lazy(() => import('./features/planet-options/PlanetOptionsScreen').then(m => ({ default: m.PlanetOptionsScreen })));
 const ResourceScreen     = lazy(() => import('./features/resource/ResourceScreen').then(m => ({ default: m.ResourceScreen })));
 const AdminScreen        = lazy(() => import('./features/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
+const UnitInfoScreen     = lazy(() => import('./features/unit-info/UnitInfoScreen').then(m => ({ default: m.UnitInfoScreen })));
 
 type Tab =
   | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
   | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
   | 'art-market' | 'officers' | 'achievements' | 'score'
-  | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource' | 'tutorial';
+  | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource' | 'tutorial'
+  | 'unit-info';
 
 const VALID_TABS = new Set<string>([
   'overview', 'buildings', 'research', 'shipyard', 'repair',
   'artefacts', 'galaxy', 'fleet', 'market', 'rockets',
   'art-market', 'officers', 'achievements', 'score',
   'messages', 'alliance', 'chat', 'sim', 'admin', 'planet-options', 'resource', 'tutorial',
+  'unit-info',
 ]);
 
 function tabFromHash(): Tab {
@@ -133,6 +136,12 @@ function AuthenticatedApp() {
   const isAdmin = me.data?.role === 'admin' || me.data?.role === 'superadmin';
   const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
   const [fleetDst, setFleetDst] = useState<{ g: number; s: number; pos: number; isMoon: boolean; mission: number } | undefined>();
+  const [infoUnit, setInfoUnit] = useState<{ kind: 'building' | 'research'; id: number; level: number; fromTab: Tab } | null>(null);
+
+  function openInfo(kind: 'building' | 'research', id: number, level: number) {
+    setInfoUnit({ kind, id, level, fromTab: tab });
+    navigateTo('unit-info');
+  }
 
   const list = planets.data?.planets ?? [];
   const planet = list.find((p) => p.id === currentPlanetId) ?? list[0];
@@ -215,8 +224,16 @@ function AuthenticatedApp() {
         <main className="ox-content">
           <Suspense fallback={<ScreenSkeleton />}>
             {tab === 'overview'   && <OverviewScreen onShowPlanetOptions={() => navigateTo('planet-options')} />}
-            {tab === 'buildings'  && <BuildingsScreen planet={planet} />}
-            {tab === 'research'   && <ResearchScreen planet={planet} />}
+            {tab === 'buildings'  && <BuildingsScreen planet={planet} onOpenInfo={(id, lvl) => openInfo('building', id, lvl)} />}
+            {tab === 'research'   && <ResearchScreen planet={planet} onOpenInfo={(id, lvl) => openInfo('research', id, lvl)} />}
+            {tab === 'unit-info'  && infoUnit && (
+              <UnitInfoScreen
+                kind={infoUnit.kind}
+                unitId={infoUnit.id}
+                currentLevel={infoUnit.level}
+                onBack={() => { setInfoUnit(null); navigateTo(infoUnit.fromTab); }}
+              />
+            )}
             {tab === 'shipyard'   && <ShipyardScreen planet={planet} />}
             {tab === 'repair'     && <RepairScreen planet={planet} />}
             {tab === 'galaxy'     && <GalaxyScreen homePlanet={planet} userId={me.data?.user_id ?? ''} onFleetMission={(fg, fs, fpos, fMoon, fMission) => { setFleetDst({ g: fg, s: fs, pos: fpos, isMoon: fMoon, mission: fMission }); navigateTo('fleet'); }} />}

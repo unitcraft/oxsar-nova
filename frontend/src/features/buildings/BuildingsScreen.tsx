@@ -14,7 +14,6 @@ function fmtDuration(secs: number): string {
 import { api } from '@/api/client';
 import { BUILDINGS, MOON_BUILDINGS, imageOf, costForLevel } from '@/api/catalog';
 import type { Planet, QueueItem, UnmetRequirement } from '@/api/types';
-import { BuildingInfoModal } from './BuildingInfoModal';
 
 import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
@@ -44,13 +43,12 @@ const PROD_STAT: Record<string, ProdStat> = {
   hydrogen_plant: { icon: '⚡', label: 'Энергия', field: 'energy_prod', isEnergy: true },
 };
 
-export function BuildingsScreen({ planet }: { planet: Planet }) {
+export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo: (id: number, level: number) => void }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [showLocked, setShowLocked] = useState<boolean>(
     () => localStorage.getItem('buildings-show-locked') === 'true'
   );
-  const [infoUnitId, setInfoUnitId] = useState<number | null>(null);
 
   const queue = useQuery({
     queryKey: ['buildings-queue', planet.id],
@@ -186,11 +184,11 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
                 <img
                   src={imageOf(b.key)} alt={b.name} width={64} height={64}
                   style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4, cursor: 'pointer' }}
-                  onClick={() => setInfoUnitId(b.id)}
+                  onClick={() => onOpenInfo(b.id, level)}
                   title="Подробнее"
                 />
               <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => setInfoUnitId(b.id)}>{b.name}</div>
+                <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => onOpenInfo(b.id, level)}>{b.name}</div>
                 {b.description && (
                   <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
                     {b.description}
@@ -278,13 +276,6 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
         })}
       </div>
 
-      {infoUnitId !== null && (
-        <BuildingInfoModal
-          unitId={infoUnitId}
-          currentLevel={levels[infoUnitId.toString()] ?? 0}
-          onClose={() => setInfoUnitId(null)}
-        />
-      )}
     </div>
   );
 }

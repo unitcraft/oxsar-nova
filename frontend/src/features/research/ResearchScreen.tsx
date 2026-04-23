@@ -5,7 +5,6 @@ import { RESEARCH, imageOf, costForLevel, fmtReqs } from '@/api/catalog';
 import type { Planet, QueueItem, ResearchState } from '@/api/types';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
-import { ResearchInfoModal } from './ResearchInfoModal';
 
 function fmtDuration(secs: number): string {
   if (secs < 60) return `${secs}с`;
@@ -44,10 +43,9 @@ function useLiveProgress(startAt: string, endAt: string): { pct: number; secsLef
   return state;
 }
 
-export function ResearchScreen({ planet }: { planet: Planet }) {
+export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo: (id: number, level: number) => void }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const [infoUnitId, setInfoUnitId] = useState<number | null>(null);
 
   const state = useQuery({
     queryKey: ['research'],
@@ -116,11 +114,11 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
                 <img
                   src={imageOf(r.key)} alt={r.name} width={64} height={64}
                   style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4, cursor: 'pointer' }}
-                  onClick={() => setInfoUnitId(r.id)}
+                  onClick={() => onOpenInfo(r.id, level)}
                   title="Подробнее"
                 />
                 <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                  <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => setInfoUnitId(r.id)}>{r.name}</div>
+                  <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => onOpenInfo(r.id, level)}>{r.name}</div>
                   <div style={{ fontSize: 12, color: level > 0 ? 'var(--ox-fg-dim)' : 'var(--ox-fg-muted)', marginBottom: 2 }}>
                     {level > 0 ? `Уровень ${level}` : 'Не изучено'}
                   </div>
@@ -185,13 +183,6 @@ export function ResearchScreen({ planet }: { planet: Planet }) {
         })}
       </div>
 
-      {infoUnitId !== null && (
-        <ResearchInfoModal
-          unitId={infoUnitId}
-          currentLevel={levels[infoUnitId.toString()] ?? 0}
-          onClose={() => setInfoUnitId(null)}
-        />
-      )}
     </div>
   );
 }
