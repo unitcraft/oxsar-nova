@@ -23,6 +23,7 @@ interface CellView {
   owner_vacation?: boolean;
   owner_banned?: boolean;
   alliance_tag?: string | null;
+  relation?: 'nap' | 'war' | 'ally' | null;
   debris_metal: number;
   debris_silicon: number;
 }
@@ -475,6 +476,12 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
                           ? { opacity: 0.4 }
                           : isOwn
                           ? { background: 'rgba(99,217,255,0.07)' }
+                          : c.relation === 'ally'
+                          ? { background: 'rgba(34,197,94,0.08)' }
+                          : c.relation === 'war'
+                          ? { background: 'rgba(239,68,68,0.10)' }
+                          : c.relation === 'nap'
+                          ? { background: 'rgba(245,158,11,0.08)' }
                           : undefined
                       }
                     >
@@ -590,6 +597,10 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
                     <b>🚀</b> ракетный удар&nbsp;&nbsp;
                     <b>🌌</b> экспедиция&nbsp;&nbsp;
                     <b>👁</b> наблюдение
+                    <br />
+                    <span style={{ display: 'inline-block', width: 10, height: 10, background: 'rgba(34,197,94,0.8)', marginRight: 4, verticalAlign: 'middle' }} />союзник&nbsp;&nbsp;
+                    <span style={{ display: 'inline-block', width: 10, height: 10, background: 'rgba(245,158,11,0.8)', marginRight: 4, verticalAlign: 'middle' }} />НЕН&nbsp;&nbsp;
+                    <span style={{ display: 'inline-block', width: 10, height: 10, background: 'rgba(239,68,68,0.8)', marginRight: 4, verticalAlign: 'middle' }} />война
                   </td>
                 </tr>
               </tfoot>
