@@ -5195,3 +5195,22 @@ MEDIUM Priority:
        frontend/src/features/repair/RepairScreen.tsx, docs/plans/14-repair.md
 
 Статус: ✅ ЗАВЕРШЕНА (план 14 полностью закрыт)
+
+================================================================================
+
+## Задача 15.1-4 — GalaxyScreen: альянс, активность, статусы, tooltips
+- Backend (задача 1): CellView расширен полями owner_last_seen (RFC3339), owner_vacation,
+  owner_banned, alliance_tag, moon_diameter, moon_temp_min, moon_temp_max.
+  SQL: добавлен LEFT JOIN alliances + u.last_seen, umode, banned_at, moon fields.
+- Альянс (задача 2): новая колонка «Альянс» с тегом в accent-цвете
+- Активность (задача 2): форматируется как (*) / (N min) / (N h) под именем
+- Статусы (задача 3): PlayerStatuses компонент с abbr-тегами (b/v/i/I), tfoot-легенда
+  Реализованы: b=забанен, v=отпуск, i=7+ дн неактивность, I=21+ дн
+  Пропущены: n/s (требуют viewer.points vs target.points сравнения)
+- Tooltips (задача 4): луна — name | diameter км | tempMin..tempMax°C,
+  обломки — детальный breakdown
+
+Файлы: backend/internal/galaxy/repository.go, 
+       frontend/src/features/galaxy/GalaxyScreen.tsx, docs/plans/15-galaxy.md
+
+Статус: ✅ ЗАВЕРШЕНА (задачи 5-8 — P2/P3, не реализовывались)
