@@ -142,8 +142,8 @@ stats := shipsCfg.Ships[shipKey]
 
 ## Проверка готовности
 
-- [ ] `configs/ships.yml` не содержит поля `cost`
-- [ ] `configs/ships.yml` содержит все корабли из `construction.yml` (mode=3, ids: 29-42, 52, 102, 325)
-- [ ] Код читает стоимость строго из `construction.yml`
-- [ ] `make test` зелёный
-- [ ] `make lint` зелёный
+- [x] `configs/ships.yml` не содержит поля `cost`
+- [x] `configs/ships.yml` содержит все корабли из `construction.yml` (mode=3, ids: 29-42, 52, 102, 325; unit_exch_support_range id=105 — не боевой, пропущен намеренно)
+- [x] Код читает стоимость строго из `construction.yml`
+- [x] `make test` зелёный
+- [x] `make lint` зелёный
