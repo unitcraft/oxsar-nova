@@ -30,6 +30,7 @@ export default defineConfig(({ command }) => ({
   },
   server: {
     port: 5173,
+    watch: { usePolling: true, interval: 500 },
     // В docker'е backend живёт по имени сервиса (backend:8080), а
     // локально — на localhost:8080. Читаем из env, чтобы один и тот
     // же код работал в обоих режимах.

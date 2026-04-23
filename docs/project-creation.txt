@@ -4997,3 +4997,24 @@ MEDIUM Priority:
 Файлы: backend/internal/planet/service.go, frontend/src/features/resource/ResourceScreen.tsx
 
 Статус: ✅ ЗАВЕРШЕНА
+
+
+================================================================================
+Итерация (сессия 2026-04-23e) — ResourceScreen: grid-layout + HMR polling
+================================================================================
+
+## Проблема
+На узком экране числовые колонки (🟠💎💧⚡) не были видны — таблица обрезалась.
+Попытки с flex (flexBasis 13%) не работали т.к. flex не ограничивает min-content.
+
+## Решение
+- Переключён с flex на CSS Grid: `gridTemplateColumns: 'minmax(0,1fr) 48px 48px 48px 48px'`
+- `minmax(0,1fr)` позволяет колонке названий сжаться до нуля, все 4 числа всегда видны
+- Добавлен `server.watch: { usePolling: true, interval: 500 }` в vite.config.ts —
+  HMR теперь работает через Windows bind-mount в Docker
+
+## Файлы изменены
+- frontend/src/features/resource/ResourceScreen.tsx (grid layout)
+- frontend/vite.config.ts (usePolling)
+
+Статус: ✅ ЗАВЕРШЕНА
