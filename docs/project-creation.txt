@@ -5349,3 +5349,54 @@ D-artefacts.md, E-ui-features.md, F-credits-ai-advisor.md.
        docs/plans/A-F (новые), docs/simplifications.md
 
 Статус: ✅ ЗАВЕРШЕНА
+
+
+================================================================================
+ИТЕРАЦИЯ 18 (2026-04-23): ПЛАНЫ C.1.3/C.1.4, B.1, A.2, E.1, E.2, E.4, F.2
+================================================================================
+
+Продолжение автоматической работы по сводным планам (A-F).
+
+### Выполненные задачи
+
+**C.1.3 — research.yml синхронизация с construction.yml:**
+- ResearchSpec.CostBase помечен yaml:"-"; LoadCatalog заполняет из construction.yml (mode=2)
+- research.yml: убраны cost_base-поля (источник истины — construction.yml)
+- Паттерн тот же что и для кораблей (план 17)
+
+**C.1.4 — exchange/exch_office в building/service.go:**
+- buildings.yml: добавлены exch_office (id=108) и exchange (id=107)
+- Без них enqueue возвращал ErrUnknownUnit (были в units.yml, но не в buildings.yml)
+
+**C.4 — pkg/formula:** пакет не существует, задача закрыта.
+
+**B.1 — Воркер: удаление временных планет:**
+- cmd/worker/main.go: горутина с Ticker(time.Hour), DELETE WHERE expires_at < now()
+
+**A.2 — Артефакт battle_bonus:**
+- artefacts.yml: заменены war_machine/energy_shield/titanium_hull (ID 310-312, несуществующие)
+  на battle_attack/shield/shell_power (ID 316-318) из oxsar2/sql/data.sql
+- Добавлены _10 версии (ID 359-361)
+- Тесты ComputeBattleModifier (4 кейса)
+
+**E.1 — Tutorial → Achievement объединение:**
+- App.tsx: удалён мёртвый 'tutorial' таб
+- AchievementsScreen: добавлен фильтр starter/passive/все
+
+**E.2 — Начальный старт игрока:**
+- starter.go: HomePlanetSize=18800, ресурсы Metal=1000/Silicon=500
+- Начальные здания (9 позиций из INITIAL_BUILDINGS), исследования (3), флот (5 типов)
+
+**E.4 — Реальное время постройки в UnitInfo:**
+- UnitInfoScreen: принимает planetId, берёт build_seconds из /api/planets/{id}/buildings
+- Для следующего уровня здания — реальное время (с учётом robotic/nano factory)
+
+**F.2 — Очки игрока:**
+- config.go: PointsCoefficients (Building/Research/Unit), читаются из ENV
+- score/service.go: убраны глобальные константы → поля структуры + NewServiceWithCoeffs
+- Дефолты Dominator: kBld=0.00005, kRes=0.0005, kUnt=0.002
+- server/worker: передают cfg.Game.Points
+
+**Все тесты зелёные** (go test ./...)
+
+Статус: ✅ ЗАВЕРШЕНА
