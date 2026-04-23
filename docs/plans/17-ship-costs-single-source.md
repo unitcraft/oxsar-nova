@@ -130,22 +130,19 @@ stats := shipsCfg.Ships[shipKey]
 
 Проверить тесты на предмет захардкоженных стоимостей кораблей. Обновить при необходимости.
 
-### Шаг 6 — Проверить rapidfire для новых кораблей ✅ (частично)
+### Шаг 6 — Проверить rapidfire для новых кораблей ✅
 
-Добавлены записи для `frigate` (35), `bomber` (40), `star_destroyer` (41) из `na_rapidfire`.
+Добавлены все записи из `na_rapidfire` для новых кораблей:
 
-**Остаток по legacy DB — не реализован:**
+| Стрелок | Цель | ×RF |
+|---------|------|-----|
+| Frigate (35) | Small/Large Transporter, Heavy Fighter, Cruiser, Battleship | 3–7 |
+| Bomber (40) | Rocket Launcher, Light Laser, Heavy Laser, Ion Cannon, Lancer | 5–20 |
+| Star Destroyer (41) | Frigate, Light/Heavy Laser, Lancer | 2 |
+| Lancer (102) | Deathstar (42) | 3 |
+| Plasma Turret (48) | Deathstar (42) | 2 |
 
-| Стрелок | Цель | ×RF | Источник |
-|---------|------|-----|---------|
-| Bomber (40) | Lancer (102) | 5 | na_rapidfire |
-| Lancer (102) | Deathstar (42) | 3 | na_rapidfire |
-| Plasma Turret (48) | Deathstar (42) | 2 | na_rapidfire |
-
-Bomber→Lancer пропущен при добавлении в плане 17 (добавили только оборону).
-Lancer→DS и Plasma→DS полностью отсутствуют.
-
-`balance-analysis.md` также упоминает Bomber→ShieldDome, HeavyFighter→Rocket/Laser, Cruiser→LightLaser — но это предположения автора анализа, **не из na_rapidfire**. Не добавлять без подтверждения из legacy DB.
+`balance-analysis.md` упоминает Bomber→ShieldDome, HeavyFighter→Rocket/Laser, Cruiser→LightLaser — предположения автора анализа, **не из na_rapidfire**. Не добавлять без подтверждения из legacy DB.
 
 ## Что НЕ меняется
 
