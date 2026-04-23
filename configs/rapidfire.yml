@@ -32,6 +32,14 @@ rapidfire:
     46: 10
     102: 5
 
+  # Lancer Ship (102) — na_rapidfire legacy
+  102:
+    42: 3
+
+  # Plasma Turret (48) — na_rapidfire legacy (оборона тоже имеет RF против DS)
+  48:
+    42: 2
+
   # Star Destroyer (41) — na_rapidfire legacy
   41:
     35: 2

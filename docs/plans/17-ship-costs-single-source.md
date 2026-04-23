@@ -130,9 +130,22 @@ stats := shipsCfg.Ships[shipKey]
 
 Проверить тесты на предмет захардкоженных стоимостей кораблей. Обновить при необходимости.
 
-### Шаг 6 — Проверить rapidfire для новых кораблей
+### Шаг 6 — Проверить rapidfire для новых кораблей ✅ (частично)
 
-`frigate`, `bomber`, `star_destroyer` имеют rapidfire в legacy (см. `docs/legacy-game-reference.md`, раздел `na_rapidfire`). Убедиться что `configs/rapidfire.yml` содержит их записи или создать задачу на отдельный план.
+Добавлены записи для `frigate` (35), `bomber` (40), `star_destroyer` (41) из `na_rapidfire`.
+
+**Остаток по legacy DB — не реализован:**
+
+| Стрелок | Цель | ×RF | Источник |
+|---------|------|-----|---------|
+| Bomber (40) | Lancer (102) | 5 | na_rapidfire |
+| Lancer (102) | Deathstar (42) | 3 | na_rapidfire |
+| Plasma Turret (48) | Deathstar (42) | 2 | na_rapidfire |
+
+Bomber→Lancer пропущен при добавлении в плане 17 (добавили только оборону).
+Lancer→DS и Plasma→DS полностью отсутствуют.
+
+`balance-analysis.md` также упоминает Bomber→ShieldDome, HeavyFighter→Rocket/Laser, Cruiser→LightLaser — но это предположения автора анализа, **не из na_rapidfire**. Не добавлять без подтверждения из legacy DB.
 
 ## Что НЕ меняется
 
@@ -143,7 +156,8 @@ stats := shipsCfg.Ships[shipKey]
 ## Проверка готовности
 
 - [x] `configs/ships.yml` не содержит поля `cost`
-- [x] `configs/ships.yml` содержит все корабли из `construction.yml` (mode=3, ids: 29-42, 52, 102, 325; unit_exch_support_range id=105 — не боевой, пропущен намеренно)
+- [x] `configs/ships.yml` содержит все боевые корабли из `construction.yml` (mode=3; unit_exch_support_range id=105 — не боевой, пропущен намеренно)
 - [x] Код читает стоимость строго из `construction.yml`
+- [x] `configs/rapidfire.yml` содержит все записи из `na_rapidfire` для новых кораблей (включая Lancer→DS ×3, Plasma→DS ×2)
 - [x] `make test` зелёный
 - [x] `make lint` зелёный
