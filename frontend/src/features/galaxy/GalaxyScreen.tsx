@@ -12,9 +12,16 @@ interface CellView {
   planet_type?: string | null;
   has_moon: boolean;
   moon_name?: string;
+  moon_diameter?: number;
+  moon_temp_min?: number;
+  moon_temp_max?: number;
   owner_username?: string;
   owner_id?: string;
   owner_rank?: number;
+  owner_last_seen?: string | null;
+  owner_vacation?: boolean;
+  owner_banned?: boolean;
+  alliance_tag?: string | null;
   debris_metal: number;
   debris_silicon: number;
 }
@@ -28,6 +35,42 @@ interface SystemView {
 function clamp(v: number, lo: number, hi: number): number {
   if (Number.isNaN(v)) return lo;
   return Math.max(lo, Math.min(hi, v));
+}
+
+function formatActivity(lastSeen?: string | null): string {
+  if (!lastSeen) return '';
+  const mins = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 60000);
+  if (mins < 15) return '(*)';
+  if (mins < 60) return `(${mins} min)`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `(${hrs} h)`;
+  return '';
+}
+
+function isInactiveDays(lastSeen: string | null | undefined, days: number): boolean {
+  if (!lastSeen) return false;
+  return Date.now() - new Date(lastSeen).getTime() >= days * 86400000;
+}
+
+function PlayerStatuses({ cell }: { cell: CellView }) {
+  if (!cell.owner_id) return null;
+  const parts: React.ReactNode[] = [];
+  if (cell.owner_banned) {
+    parts.push(<abbr key="b" title="Забанен" style={{ color: 'var(--ox-danger)', cursor: 'help' }}>b</abbr>);
+  } else if (cell.owner_vacation) {
+    parts.push(<abbr key="v" title="Режим отпуска" style={{ color: 'var(--ox-accent)', cursor: 'help' }}>v</abbr>);
+  }
+  if (isInactiveDays(cell.owner_last_seen, 21)) {
+    parts.push(<abbr key="I" title="Очень неактивный (21+ дн)" style={{ cursor: 'help' }}>I</abbr>);
+  } else if (isInactiveDays(cell.owner_last_seen, 7)) {
+    parts.push(<abbr key="i" title="Неактивный (7+ дн)" style={{ cursor: 'help' }}>i</abbr>);
+  }
+  if (parts.length === 0) return null;
+  return (
+    <span style={{ fontSize: 10, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-muted)', marginLeft: 4, letterSpacing: '0.05em' }}>
+      ({parts})
+    </span>
+  );
 }
 
 function MissionButtons({ cell, onMission }: {
@@ -160,6 +203,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
                   <th style={{ width: 36 }}>#</th>
                   <th>Планета</th>
                   <th>Игрок</th>
+                  <th>Альянс</th>
                   <th>Обломки</th>
                   <th style={{ width: 120 }}>Миссии</th>
                 </tr>
@@ -167,6 +211,19 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
               <tbody>
                 {(sys.data.cells ?? []).map((c) => {
                   const isOwn = !!c.owner_id && c.owner_id === userId;
+                  const moonTitle = c.has_moon
+                    ? [
+                        c.moon_name ?? 'Луна',
+                        c.moon_diameter ? `${c.moon_diameter} км` : '',
+                        c.moon_temp_min != null && c.moon_temp_max != null
+                          ? `${c.moon_temp_min}..${c.moon_temp_max}°C`
+                          : '',
+                      ].filter(Boolean).join(' | ')
+                    : '';
+                  const debrisTitle = (c.debris_metal > 0 || c.debris_silicon > 0)
+                    ? `Обломки\nМеталл: ${c.debris_metal.toLocaleString('ru-RU')}\nКремний: ${c.debris_silicon.toLocaleString('ru-RU')}`
+                    : '';
+                  const activity = formatActivity(c.owner_last_seen);
                   return (
                     <tr
                       key={c.position}
@@ -194,7 +251,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
                             {isOwn && <span style={{ fontSize: 11 }}>🏠</span>}
                             <span style={{ fontWeight: isOwn ? 700 : 400 }}>{c.planet_name}</span>
                             {c.has_moon && (
-                              <span title={c.moon_name ?? 'Луна'} style={{ fontSize: 13 }}>🌑</span>
+                              <span title={moonTitle} style={{ fontSize: 13, cursor: moonTitle ? 'help' : undefined }}>🌑</span>
                             )}
                           </span>
                         ) : (
@@ -205,9 +262,15 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
                         {c.owner_username ? (
                           <span>
                             <span style={{ fontWeight: 600 }}>{c.owner_username}</span>
+                            <PlayerStatuses cell={c} />
                             {c.owner_rank !== undefined && c.owner_rank !== null && (
                               <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
                                 #{c.owner_rank}
+                              </span>
+                            )}
+                            {activity && (
+                              <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+                                {activity}
                               </span>
                             )}
                           </span>
@@ -215,9 +278,18 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
                           <span style={{ color: 'var(--ox-fg-muted)' }}>—</span>
                         )}
                       </td>
+                      <td data-label="Альянс">
+                        {c.alliance_tag
+                          ? <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 12, color: 'var(--ox-accent)' }}>[{c.alliance_tag}]</span>
+                          : <span style={{ color: 'var(--ox-fg-muted)' }}>—</span>
+                        }
+                      </td>
                       <td data-label="Обломки" className="num">
                         {c.debris_metal > 0 || c.debris_silicon > 0 ? (
-                          <span style={{ color: 'var(--ox-warning)', fontFamily: 'var(--ox-mono)', fontSize: 12 }}>
+                          <span
+                            title={debrisTitle}
+                            style={{ color: 'var(--ox-warning)', fontFamily: 'var(--ox-mono)', fontSize: 12, cursor: 'help' }}
+                          >
                             🟠{formatNum(c.debris_metal)} / 💎{formatNum(c.debris_silicon)}
                           </span>
                         ) : '—'}
@@ -231,6 +303,17 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
                   );
                 })}
               </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={6} style={{ fontSize: 10, color: 'var(--ox-fg-muted)', padding: '8px 12px', fontFamily: 'var(--ox-mono)', borderTop: '1px solid var(--ox-border)' }}>
+                    <b>(*)</b> только что&nbsp;&nbsp;
+                    <b>i</b> неактивный (7+ дн)&nbsp;&nbsp;
+                    <b>I</b> очень неактивный (21+ дн)&nbsp;&nbsp;
+                    <b style={{ color: 'var(--ox-danger)' }}>b</b> забанен&nbsp;&nbsp;
+                    <b style={{ color: 'var(--ox-accent)' }}>v</b> отпуск
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}

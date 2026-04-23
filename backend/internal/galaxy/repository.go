@@ -9,16 +9,14 @@ import (
 )
 
 // SystemView — что видит игрок при открытии экрана галактики.
-// Pos 1..15; если клетка пуста, в PlanetName=nil, Moon=false, Owner=nil.
 type SystemView struct {
-	Galaxy  int        `json:"galaxy"`
-	System  int        `json:"system"`
-	Cells   []CellView `json:"cells"`
+	Galaxy int        `json:"galaxy"`
+	System int        `json:"system"`
+	Cells  []CellView `json:"cells"`
 }
 
 // CellView — одна клетка (позиция). Объединяет планету (если есть),
-// признаки луны и обломков. Это «денормализованное» представление
-// для UI — под капотом читается join'ом planets × galaxy_cells.
+// признаки луны и обломков.
 type CellView struct {
 	Position      int     `json:"position"`
 	PlanetName    *string `json:"planet_name,omitempty"`
@@ -27,9 +25,16 @@ type CellView struct {
 	HasPlanet     bool    `json:"has_planet"`
 	HasMoon       bool    `json:"has_moon"`
 	MoonName      *string `json:"moon_name,omitempty"`
+	MoonDiameter  *int    `json:"moon_diameter,omitempty"`
+	MoonTempMin   *int    `json:"moon_temp_min,omitempty"`
+	MoonTempMax   *int    `json:"moon_temp_max,omitempty"`
 	OwnerUsername *string `json:"owner_username,omitempty"`
 	OwnerID       *string `json:"owner_id,omitempty"`
 	OwnerRank     *int    `json:"owner_rank,omitempty"`
+	OwnerLastSeen *string `json:"owner_last_seen,omitempty"` // ISO-8601
+	OwnerVacation bool    `json:"owner_vacation,omitempty"`
+	OwnerBanned   bool    `json:"owner_banned,omitempty"`
+	AllianceTag   *string `json:"alliance_tag,omitempty"`
 	DebrisMetal   int64   `json:"debris_metal"`
 	DebrisSilicon int64   `json:"debris_silicon"`
 }
@@ -42,38 +47,44 @@ type Repository struct {
 func NewRepository(pool *pgxpool.Pool) *Repository { return &Repository{pool: pool} }
 
 // ReadSystem возвращает все 15 позиций указанной системы.
-//
-// Читает planets (по is_moon=false и =true) + galaxy_cells в одном
-// запросе, формирует пустые клетки для отсутствующих позиций. Если
-// таблица galaxy_cells для этой системы пуста — это не ошибка, просто
-// debris = 0.
-//
-// Координаты валидируются ВЫЗЫВАЮЩИМ (service-слой) — репо ожидает
-// уже валидный вход.
 func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (SystemView, error) {
 	out := SystemView{Galaxy: galaxyNum, System: systemNum}
 
-	// Собираем планеты и луны на позициях.
 	type planetRow struct {
-		Position    int
-		IsMoon      bool
-		ID          string
-		Name        string
-		PlanetType  *string
-		OwnerID     *string
-		OwnerName   *string
-		OwnerRank   *int
+		Position      int
+		IsMoon        bool
+		ID            string
+		Name          string
+		Diameter      int
+		TempMin       int
+		TempMax       int
+		PlanetType    *string
+		OwnerID       *string
+		OwnerName     *string
+		OwnerRank     *int
+		OwnerLastSeen *time.Time
+		OwnerVacation bool
+		OwnerBanned   bool
+		AllianceTag   *string
 	}
-	planetRows := map[int]planetRow{} // планеты (is_moon=false)
-	moonRows := map[int]planetRow{}   // луны на тех же координатах
+	planetRows := map[int]planetRow{}
+	moonRows := map[int]planetRow{}
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT p.position, p.is_moon, p.id, p.name, p.planet_type, p.user_id, u.username,
-		       CASE WHEN u.id IS NULL THEN NULL
-		            ELSE (SELECT COUNT(*)+1 FROM users u2 WHERE u2.points > u.points AND u2.umode=false)::int
-		       END AS rank
+		SELECT
+			p.position, p.is_moon, p.id, p.name, p.diameter, p.temperature_min, p.temperature_max,
+			p.planet_type, p.user_id,
+			u.username,
+			CASE WHEN u.id IS NULL THEN NULL
+			     ELSE (SELECT COUNT(*)+1 FROM users u2 WHERE u2.points > u.points AND u2.umode=false)::int
+			END AS rank,
+			u.last_seen,
+			COALESCE(u.umode, false) AS vacation,
+			(u.banned_at IS NOT NULL) AS banned,
+			al.tag AS alliance_tag
 		FROM planets p
 		LEFT JOIN users u ON u.id = p.user_id
+		LEFT JOIN alliances al ON al.id = u.alliance_id
 		WHERE p.galaxy = $1 AND p.system = $2 AND p.destroyed_at IS NULL
 	`, galaxyNum, systemNum)
 	if err != nil {
@@ -81,8 +92,13 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 	}
 	for rows.Next() {
 		var pr planetRow
-		if err := rows.Scan(&pr.Position, &pr.IsMoon, &pr.ID, &pr.Name, &pr.PlanetType,
-			&pr.OwnerID, &pr.OwnerName, &pr.OwnerRank); err != nil {
+		if err := rows.Scan(
+			&pr.Position, &pr.IsMoon, &pr.ID, &pr.Name, &pr.Diameter, &pr.TempMin, &pr.TempMax,
+			&pr.PlanetType, &pr.OwnerID,
+			&pr.OwnerName, &pr.OwnerRank,
+			&pr.OwnerLastSeen, &pr.OwnerVacation, &pr.OwnerBanned,
+			&pr.AllianceTag,
+		); err != nil {
 			rows.Close()
 			return out, fmt.Errorf("scan planet: %w", err)
 		}
@@ -121,7 +137,6 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 		return out, fmt.Errorf("debris rows: %w", err)
 	}
 
-	// Заполняем все 15 позиций (пусть пустых).
 	out.Cells = make([]CellView, 0, 15)
 	for pos := 1; pos <= 15; pos++ {
 		cell := CellView{Position: pos}
@@ -134,11 +149,21 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 			cell.OwnerID = p.OwnerID
 			cell.OwnerUsername = p.OwnerName
 			cell.OwnerRank = p.OwnerRank
+			cell.OwnerVacation = p.OwnerVacation
+			cell.OwnerBanned = p.OwnerBanned
+			cell.AllianceTag = p.AllianceTag
+			if p.OwnerLastSeen != nil {
+				s := p.OwnerLastSeen.UTC().Format(time.RFC3339)
+				cell.OwnerLastSeen = &s
+			}
 		}
 		if m, ok := moonRows[pos]; ok {
 			name := m.Name
 			cell.MoonName = &name
 			cell.HasMoon = true
+			cell.MoonDiameter = &m.Diameter
+			cell.MoonTempMin = &m.TempMin
+			cell.MoonTempMax = &m.TempMax
 		}
 		if d, ok := debris[pos]; ok {
 			cell.DebrisMetal = d.m
@@ -147,7 +172,5 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int) (
 		out.Cells = append(out.Cells, cell)
 	}
 
-	_ = time.Now // оставлено на будущее (cache TTL в редисе, когда
-	// экран галактики начнёт читать миллион раз в минуту).
 	return out, nil
 }
