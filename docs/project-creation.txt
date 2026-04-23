@@ -6064,3 +6064,28 @@ cmd/worker/main.go:
 Эффект: SIGTERM больше не обрывает handler в середине (если успевает
 в 30s). Безопасно для длинных операций (battle / expedition завершают
 транзакцию до SIGKILL).
+
+**Ф.4.1 — worker_test.go интеграционные тесты**
+
+backend/internal/event/worker_test.go + helpers_test.go:
+- TestWorker_HandlerError_Retries: transient error → retry planned
+  (state='wait', attempt=1, last_error заполнен).
+- TestWorker_UnknownKind_Error: неизвестный kind → сразу state='error'.
+- TestWorker_Ok: happy path → state='ok'.
+- TestWorker_TieBreaker: 3 события с одинаковым fire_at → обработка
+  строго по ORDER BY id ASC (tie-breaker из миграции 0056).
+
+Все тесты требуют `TEST_DATABASE_URL` (реальный PG с migrations).
+Без переменной — аккуратно skip'ятся, чтобы `go test ./...` в CI
+без БД оставался зелёным.
+
+Tests сейчас компилируются и skip'ятся (go test → ok, 4 SKIP).
+При запуске `make dev-up` и повторном прогоне будут падать в БД и
+проверяться.
+
+Не реализовано (из фазы 4 плана 09):
+- Property-тест идемпотентности (требует rapid и более сложной
+  модели handler-ов — отложен).
+- Deadlock-тест ACS (требует 2 воркеров в параллели, отложен до 3.3
+  шардирования).
+- Snapshot-тест декораторов (отложен).
