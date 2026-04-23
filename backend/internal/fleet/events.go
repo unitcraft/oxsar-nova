@@ -70,6 +70,19 @@ func (s *TransportService) ArriveHandler() event.Handler {
 			`, cm, csil, ch, planetID); err != nil {
 				return fmt.Errorf("credit target: %w", err)
 			}
+			// Лог перевода ресурсов (для stats/resource-transfers).
+			// from = владелец src_planet_id fleet'а, to = владелец planetID.
+			if cm > 0 || csil > 0 || ch > 0 {
+				_, _ = tx.Exec(ctx, `
+					INSERT INTO resource_transfers (from_user_id, to_user_id, metal, silicon, hydrogen)
+					SELECT ps.user_id, pt.user_id, $1, $2, $3
+					FROM fleets f
+					JOIN planets ps ON ps.id = f.src_planet_id
+					JOIN planets pt ON pt.id = $4
+					WHERE f.id = $5
+					  AND ps.user_id <> pt.user_id
+				`, cm, csil, ch, planetID, pl.FleetID)
+			}
 			if _, err := tx.Exec(ctx, `
 				UPDATE fleets SET carried_metal = 0, carried_silicon = 0, carried_hydrogen = 0,
 				                  state = 'returning'
