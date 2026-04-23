@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { planetImageOf, formatNum } from '@/api/catalog';
+import { planetImageOf, formatNum, SHIPS } from '@/api/catalog';
 import type { Planet } from '@/api/types';
+import { useToast } from '@/ui/Toast';
 
 interface CellView {
   position: number;
@@ -31,6 +32,37 @@ interface SystemView {
   system: number;
   cells: CellView[];
 }
+
+const GAME_SPEED = 0.75;
+
+// Расстояние между двумя точками галактики
+function galaxyDistance(
+  src: { galaxy: number; system: number; position: number },
+  dst: { galaxy: number; system: number; position: number },
+): number {
+  if (src.galaxy !== dst.galaxy) return 20000 * Math.abs(src.galaxy - dst.galaxy);
+  if (src.system !== dst.system) return 2700 + 95 * Math.abs(src.system - dst.system);
+  if (src.position !== dst.position) return 1000 + 5 * Math.abs(src.position - dst.position);
+  return 5;
+}
+
+// Время полёта в секундах
+function flightSecs(dist: number, minSpeed: number, speedPct: number): number {
+  if (minSpeed <= 0) return 60;
+  const raw = 10 + (3500 / speedPct) * Math.sqrt((10 * dist) / minSpeed);
+  return Math.max(1, raw / GAME_SPEED);
+}
+
+function fmtDuration(secs: number): string {
+  if (secs < 60) return `${Math.ceil(secs)}с`;
+  const m = Math.floor(secs / 60) % 60;
+  const h = Math.floor(secs / 3600) % 24;
+  const d = Math.floor(secs / 86400);
+  if (d > 0) return `${d}д ${h}ч ${m}м`;
+  if (h > 0) return `${h}ч ${m}м`;
+  return `${m}м`;
+}
+
 
 function clamp(v: number, lo: number, hi: number): number {
   if (Number.isNaN(v)) return lo;
@@ -73,63 +105,219 @@ function PlayerStatuses({ cell }: { cell: CellView }) {
   );
 }
 
-function MissionButtons({ cell, onMission }: {
+// ---- Rocket launch inline panel ----
+function RocketPanel({
+  g, s, pos,
+  srcPlanets,
+  onClose,
+}: {
+  g: number;
+  s: number;
+  pos: number;
+  srcPlanets: Planet[];
+  onClose: () => void;
+}) {
+  const toast = useToast();
+  const [srcPlanetId, setSrcPlanetId] = useState(srcPlanets[0]?.id ?? '');
+  const [count, setCount] = useState(1);
+
+  const srcPlanet = srcPlanets.find((p) => p.id === srcPlanetId);
+
+  // Запрос количества ракет на выбранной планете
+  const rockets = useQuery({
+    queryKey: ['rockets', srcPlanetId],
+    queryFn: () => api.get<{ count: number }>(`/api/planets/${srcPlanetId}/rockets`),
+    enabled: !!srcPlanetId,
+  });
+
+  const launch = useMutation({
+    mutationFn: () =>
+      api.post<unknown>(`/api/planets/${srcPlanetId}/rockets/launch`, {
+        dst: { galaxy: g, system: s, position: pos, is_moon: false },
+        count,
+        target_unit_id: 0,
+      }),
+    onSuccess: () => {
+      toast.show('Ракеты запущены', 'success');
+      onClose();
+    },
+    onError: (e: Error) => toast.show(e.message, 'error'),
+  });
+
+  const maxRockets = rockets.data?.count ?? 0;
+
+  // Расстояние и время полёта ракеты (скорость ракеты ≈ 1, но прилетает мгновенно)
+  const dist = srcPlanet ? galaxyDistance(
+    { galaxy: srcPlanet.galaxy, system: srcPlanet.system, position: srcPlanet.position },
+    { galaxy: g, system: s, position: pos },
+  ) : 0;
+  const flightTime = dist > 0 ? fmtDuration(flightSecs(dist, 1000, 100)) : '—';
+
+  return (
+    <div style={{ marginTop: 6, padding: '8px 10px', background: 'var(--ox-bg-panel)', border: '1px solid var(--ox-border)', borderRadius: 6, fontSize: 12 }}>
+      <div style={{ fontWeight: 600, marginBottom: 6 }}>🚀 Ракетный удар [{g}:{s}:{pos}]</div>
+
+      {srcPlanets.length > 1 && (
+        <div style={{ marginBottom: 6 }}>
+          <label style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>Источник</label>
+          <select value={srcPlanetId} onChange={(e) => setSrcPlanetId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2 }}>
+            {srcPlanets.map((p) => (
+              <option key={p.id} value={p.id}>{p.name} [{p.galaxy}:{p.system}:{p.position}]</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+        <div>
+          <label style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>Количество</label>
+          <input
+            type="number" min={1} max={maxRockets || 1} value={count}
+            onChange={(e) => setCount(clamp(Number(e.target.value), 1, maxRockets || 1))}
+            style={{ display: 'block', width: 72, marginTop: 2 }}
+          />
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>
+          <div>Доступно: {rockets.isLoading ? '...' : maxRockets}</div>
+          <div>Время: {flightTime}</div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button
+          type="button"
+          className="btn-primary btn-sm"
+          disabled={launch.isPending || count < 1 || count > maxRockets}
+          onClick={() => launch.mutate()}
+        >Запустить</button>
+        <button type="button" className="btn-ghost btn-sm" onClick={onClose}>Отмена</button>
+      </div>
+    </div>
+  );
+}
+
+// ---- Mission buttons ----
+function MissionButtons({
+  cell, g, s,
+  srcPlanet,
+  srcPlanets,
+  onMission,
+}: {
   cell: CellView;
+  g: number;
+  s: number;
+  srcPlanet: Planet;
+  srcPlanets: Planet[];
   onMission: (mission: number, position: number, isMoon: boolean) => void;
 }) {
+  const [showRockets, setShowRockets] = useState(false);
+
   if (!cell.has_planet) return null;
+
+  // Рассчитать время полёта/расход водорода для подсказок (берём самый медленный корабль)
+  const dist = galaxyDistance(
+    { galaxy: srcPlanet.galaxy, system: srcPlanet.system, position: srcPlanet.position },
+    { galaxy: g, system: s, position: cell.position },
+  );
+  const minSpeed = Math.min(...SHIPS.filter((s) => s.fuel !== undefined).map((s) => s.speed ?? Infinity).filter(isFinite));
+  const flightTime = minSpeed > 0 ? fmtDuration(flightSecs(dist, minSpeed, 100)) : '—';
+  const fuelHint = `Расстояние: ${dist}\nВремя (мин. скорость): ${flightTime}`;
+
   return (
-    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-      <button
-        type="button"
-        className="btn-ghost btn-sm"
-        style={{ fontSize: 11, padding: '2px 7px' }}
-        title="Шпионаж"
-        onClick={() => onMission(11, cell.position, false)}
-      >🔭</button>
-      <button
-        type="button"
-        className="btn-ghost btn-sm"
-        style={{ fontSize: 11, padding: '2px 7px' }}
-        title="Атака"
-        onClick={() => onMission(10, cell.position, false)}
-      >⚔️</button>
-      <button
-        type="button"
-        className="btn-ghost btn-sm"
-        style={{ fontSize: 11, padding: '2px 7px' }}
-        title="Транспорт"
-        onClick={() => onMission(7, cell.position, false)}
-      >📦</button>
-      {(cell.debris_metal > 0 || cell.debris_silicon > 0) && (
+    <div>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         <button
           type="button"
           className="btn-ghost btn-sm"
           style={{ fontSize: 11, padding: '2px 7px' }}
-          title="Переработка обломков"
-          onClick={() => onMission(9, cell.position, false)}
-        >♻️</button>
-      )}
-      {cell.has_moon && (
+          title={`Шпионаж\n${fuelHint}`}
+          onClick={() => onMission(11, cell.position, false)}
+        >🔭</button>
         <button
           type="button"
           className="btn-ghost btn-sm"
           style={{ fontSize: 11, padding: '2px 7px' }}
-          title="Шпионаж на луну"
-          onClick={() => onMission(11, cell.position, true)}
-        >🌑🔭</button>
+          title={`Атака\n${fuelHint}`}
+          onClick={() => onMission(10, cell.position, false)}
+        >⚔️</button>
+        <button
+          type="button"
+          className="btn-ghost btn-sm"
+          style={{ fontSize: 11, padding: '2px 7px' }}
+          title={`Транспорт\n${fuelHint}`}
+          onClick={() => onMission(7, cell.position, false)}
+        >📦</button>
+        {(cell.debris_metal > 0 || cell.debris_silicon > 0) && (
+          <button
+            type="button"
+            className="btn-ghost btn-sm"
+            style={{ fontSize: 11, padding: '2px 7px' }}
+            title={`Переработка обломков\n${fuelHint}`}
+            onClick={() => onMission(9, cell.position, false)}
+          >♻️</button>
+        )}
+        {cell.has_moon && (
+          <button
+            type="button"
+            className="btn-ghost btn-sm"
+            style={{ fontSize: 11, padding: '2px 7px' }}
+            title={`Шпионаж на луну\n${fuelHint}`}
+            onClick={() => onMission(11, cell.position, true)}
+          >🌑🔭</button>
+        )}
+        <button
+          type="button"
+          className="btn-ghost btn-sm"
+          style={{ fontSize: 11, padding: '2px 7px', color: showRockets ? 'var(--ox-danger)' : undefined }}
+          title="Ракетный удар"
+          onClick={() => setShowRockets((v) => !v)}
+        >🚀</button>
+      </div>
+      {showRockets && (
+        <RocketPanel
+          g={g} s={s} pos={cell.position}
+          srcPlanets={srcPlanets}
+          onClose={() => setShowRockets(false)}
+        />
       )}
     </div>
   );
 }
 
-export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
+// ---- Star Surveillance — закладки систем в localStorage ----
+function useSurveillance() {
+  const key = 'galaxy_watch';
+  const load = (): string[] => {
+    try { return JSON.parse(localStorage.getItem(key) ?? '[]') as string[]; }
+    catch { return []; }
+  };
+  const save = (list: string[]) => localStorage.setItem(key, JSON.stringify(list));
+
+  const isWatching = useCallback((g: number, s: number): boolean => load().includes(`${g}:${s}`), []);
+  const toggle = useCallback((g: number, s: number) => {
+    const coord = `${g}:${s}`;
+    const list = load();
+    const next = list.includes(coord) ? list.filter((x) => x !== coord) : [...list, coord];
+    save(next);
+    return next.includes(coord);
+  }, []);
+  const watched = useCallback((): Array<{ g: number; s: number }> =>
+    load().map((x) => { const [a, b] = x.split(':'); return { g: Number(a), s: Number(b) }; }),
+  []);
+
+  return { isWatching, toggle, watched };
+}
+
+export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets }: {
   homePlanet: Planet;
   userId: string;
+  planets?: Planet[];
   onFleetMission?: (g: number, s: number, pos: number, isMoon: boolean, mission: number) => void;
 }) {
   const [g, setG] = useState(homePlanet.galaxy);
   const [s, setS] = useState(homePlanet.system);
+  const [watchLabel, setWatchLabel] = useState<string | null>(null);
+  const surveillance = useSurveillance();
 
   const sys = useQuery({
     queryKey: ['galaxy', g, s],
@@ -140,6 +328,19 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
   function handleMission(mission: number, pos: number, isMoon: boolean) {
     onFleetMission?.(g, s, pos, isMoon, mission);
   }
+
+  function handleWatch() {
+    const watching = surveillance.toggle(g, s);
+    setWatchLabel(watching ? 'Система добавлена в наблюдение' : 'Система удалена из наблюдения');
+    setTimeout(() => setWatchLabel(null), 2000);
+  }
+
+  const isWatching = surveillance.isWatching(g, s);
+  const watched = surveillance.watched();
+
+  // Текущая планета игрока как источник для расчётов (первая в списке planets или homePlanet)
+  const srcPlanets = planets ?? [homePlanet];
+  const srcPlanet = srcPlanets.find((p) => !p.is_moon) ?? homePlanet;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -174,8 +375,40 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
             />
             <button type="button" className="btn-ghost btn-sm btn-icon" onClick={() => setS((v) => Math.min(999, v + 1))}>→</button>
           </div>
+
+          {/* Star Surveillance toggle */}
+          <button
+            type="button"
+            className="btn-ghost btn-sm"
+            title={isWatching ? 'Убрать из наблюдения' : 'Добавить в наблюдение'}
+            style={{ fontSize: 13, color: isWatching ? 'var(--ox-accent)' : 'var(--ox-fg-muted)' }}
+            onClick={handleWatch}
+          >{isWatching ? '👁‍🗨' : '👁'}</button>
         </div>
       </div>
+
+      {/* Surveillance feedback */}
+      {watchLabel && (
+        <div style={{ fontSize: 12, color: 'var(--ox-accent)', fontFamily: 'var(--ox-mono)' }}>
+          {watchLabel}
+        </div>
+      )}
+
+      {/* Watched systems */}
+      {watched.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>Наблюдение:</span>
+          {watched.map(({ g: wg, s: ws }) => (
+            <button
+              key={`${wg}:${ws}`}
+              type="button"
+              className="btn-ghost btn-sm"
+              style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', padding: '2px 7px', color: wg === g && ws === s ? 'var(--ox-accent)' : undefined }}
+              onClick={() => { setG(wg); setS(ws); }}
+            >[{wg}:{ws}]</button>
+          ))}
+        </div>
+      )}
 
       {/* Galaxy table */}
       <div className="ox-panel" style={{ overflow: 'hidden' }}>
@@ -205,7 +438,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
                   <th>Игрок</th>
                   <th>Альянс</th>
                   <th>Обломки</th>
-                  <th style={{ width: 120 }}>Миссии</th>
+                  <th style={{ width: 160 }}>Миссии</th>
                 </tr>
               </thead>
               <tbody>
@@ -275,7 +508,14 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
                             )}
                           </span>
                         ) : (
-                          <span style={{ color: 'var(--ox-fg-muted)' }}>—</span>
+                          // Пустая позиция — кнопка "Отправить экспедицию"
+                          <button
+                            type="button"
+                            className="btn-ghost btn-sm"
+                            style={{ fontSize: 11, padding: '2px 7px', color: 'var(--ox-fg-muted)' }}
+                            title="Отправить экспедицию"
+                            onClick={() => onFleetMission?.(g, s, c.position, false, 15)}
+                          >🌌 Экспедиция</button>
                         )}
                       </td>
                       <td data-label="Альянс">
@@ -295,8 +535,24 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
                         ) : '—'}
                       </td>
                       <td data-label="Миссии">
-                        {!isOwn && (
-                          <MissionButtons cell={c} onMission={handleMission} />
+                        {!isOwn && c.has_planet && (
+                          <MissionButtons
+                            cell={c}
+                            g={g}
+                            s={s}
+                            srcPlanet={srcPlanet}
+                            srcPlanets={srcPlanets.filter((p) => !p.is_moon)}
+                            onMission={handleMission}
+                          />
+                        )}
+                        {isOwn && c.has_planet && (
+                          <button
+                            type="button"
+                            className="btn-ghost btn-sm"
+                            style={{ fontSize: 11, padding: '2px 7px', color: 'var(--ox-fg-muted)' }}
+                            title="Отправить экспедицию с этой планеты"
+                            onClick={() => onFleetMission?.(g, s, c.position, false, 15)}
+                          >🌌</button>
                         )}
                       </td>
                     </tr>
@@ -310,7 +566,10 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission }: {
                     <b>i</b> неактивный (7+ дн)&nbsp;&nbsp;
                     <b>I</b> очень неактивный (21+ дн)&nbsp;&nbsp;
                     <b style={{ color: 'var(--ox-danger)' }}>b</b> забанен&nbsp;&nbsp;
-                    <b style={{ color: 'var(--ox-accent)' }}>v</b> отпуск
+                    <b style={{ color: 'var(--ox-accent)' }}>v</b> отпуск&nbsp;&nbsp;
+                    <b>🚀</b> ракетный удар&nbsp;&nbsp;
+                    <b>🌌</b> экспедиция&nbsp;&nbsp;
+                    <b>👁</b> наблюдение
                   </td>
                 </tr>
               </tfoot>
