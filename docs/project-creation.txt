@@ -5844,3 +5844,49 @@ Backend: go build ./... — чистый билд.
 - Backend: go build ./... чистый.
 
 Статус: ✅ ЗАВЕРШЕНА
+
+## Итерация: План 09 фаза 1 — надёжность event-системы (2026-04-23)
+
+**Ф.1.1 + Ф.1.2 — Per-event транзакция + retry с backoff**
+
+Фаза 1 плана 09 начата. Цель — ошибка одного event не должна откатывать
+соседей (C1) + transient-ошибки не должны убивать event навсегда (C2).
+
+**Миграция 0056_events_retry.sql:**
+- `events.attempt int DEFAULT 0` — счётчик попыток.
+- `events.last_error text` — текст последней ошибки handler'а.
+- `events.next_retry_at timestamptz` — диагностика (fire_at и так двигается).
+- Индекс `ix_events_fire_at_id (fire_at, id) WHERE state='wait'` —
+  tie-breaker для ORDER BY (шаг Ф.3.0 сделан досрочно, дешёвый).
+
+**event/worker.go переписан:**
+- `tick` теперь двухфазный:
+  1. `fetchBatchIDs`: короткий read-only SELECT в пуле.
+  2. `processOne(id)` на каждый ID в отдельной транзакции с
+     `SELECT ... FOR UPDATE SKIP LOCKED WHERE id=$1 AND state='wait' AND fire_at <= now()`.
+- Ошибка handler'а:
+  - `ErrSkip` — сдвигает `fire_at = now() + backoff(attempt+1)`, не
+    инкрементирует attempt.
+  - любая другая — инкремент attempt, если `<maxAttempts (=3)` → retry
+    с `fire_at = now() + backoff(attempt)` (10s → 60s → 300s), иначе
+    `state='error'` с `last_error`.
+- Неизвестный kind → сразу `state='error'` без retry (конфиг-ошибка).
+- ctx.Err() проверяется между events — для graceful shutdown (Ф.3.5
+  закроется полностью позже).
+
+**Результат:**
+- Ошибка батча теперь изолирована per-event. Ошибка `UPDATE state=ok`
+  одного event не откатывает обработку соседей.
+- Transient ошибки (БД deadlock, timeout) автоматически ретраятся,
+  не превращаются мгновенно в мёртвые event'ы.
+- Декораторы `withScore` / `withAchievement` работают без изменений
+  (они просто обёртка handler'а).
+
+**DoD Фазы 1 (части):**
+- [x] Транзиентная ошибка одного event не откатывает batch.
+- [x] Transient error → retry через backoff, attempt инкрементится.
+- [x] После maxAttempts → state='error', last_error заполнен.
+- [ ] events_dead таблица (Ф.1.3) — следующая итерация.
+- [ ] Admin endpoints replay/cancel (Ф.1.4).
+
+Backend `go build ./...` чистый.
