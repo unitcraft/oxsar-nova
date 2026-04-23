@@ -18,6 +18,7 @@ import (
 
 	"github.com/oxsar/nova/backend/internal/achievement"
 	"github.com/oxsar/nova/backend/internal/admin"
+	"github.com/oxsar/nova/backend/internal/aiadvisor"
 	"github.com/oxsar/nova/backend/internal/alliance"
 	"github.com/oxsar/nova/backend/internal/chat"
 	"github.com/oxsar/nova/backend/internal/artefact"
@@ -159,6 +160,9 @@ func run() error {
 	professionSvc := profession.NewService(db, cat)
 	professionH := profession.NewHandler(professionSvc)
 
+	aiAdvisorSvc := aiadvisor.NewService(db, cfg.AIAdvisor)
+	aiAdvisorH := aiadvisor.NewHandler(aiAdvisorSvc)
+
 	adminH := admin.NewHandler(db)
 
 	chatHub := chat.NewHub()
@@ -244,6 +248,9 @@ func run() error {
 		pr.Get("/professions", professionH.List)
 		pr.Get("/professions/me", professionH.Get)
 		pr.Post("/professions/me", professionH.Change)
+
+		pr.Post("/ai-advisor/ask", aiAdvisorH.Ask)
+		pr.Get("/ai-advisor/estimate", aiAdvisorH.Estimate)
 
 		pr.Get("/galaxy/{g}/{s}", galaxyH.System)
 

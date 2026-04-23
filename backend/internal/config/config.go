@@ -14,11 +14,12 @@ import (
 
 // Config агрегирует все настройки, необходимые приложению на старте.
 type Config struct {
-	Server ServerConfig
-	DB     DBConfig
-	Redis  RedisConfig
-	Auth   AuthConfig
-	Game   GameConfig
+	Server    ServerConfig
+	DB        DBConfig
+	Redis     RedisConfig
+	Auth      AuthConfig
+	Game      GameConfig
+	AIAdvisor AIAdvisorConfig
 }
 
 type ServerConfig struct {
@@ -57,6 +58,15 @@ type GameConfig struct {
 	BashingPeriod          int     // seconds, 0 = disabled
 	BashingMaxAttacks      int     // max attacks per BashingPeriod
 	ProtectionPeriod       int     // seconds new player is protected from attacks
+}
+
+type AIAdvisorConfig struct {
+	APIKey      string // ANTHROPIC_API_KEY
+	ProxyURL    string // ANTHROPIC_PROXY_URL (опционально)
+	OllamaURL   string // OLLAMA_URL (если задан — использовать Ollama вместо Claude)
+	OllamaModel string // OLLAMA_MODEL, default "qwen2.5:3b"
+	MaxPerDay   int    // AI_ADVISOR_MAX_PER_DAY, default 20
+	MaxTokens   int    // AI_ADVISOR_MAX_TOKENS, default 1024
 }
 
 // PointsCoefficients — коэффициенты начисления очков.
@@ -109,6 +119,15 @@ func Load() (Config, error) {
 				Unit:     envFloat("POINTS_K_UNIT", 0.002),
 			},
 		},
+	}
+
+	cfg.AIAdvisor = AIAdvisorConfig{
+		APIKey:      env("ANTHROPIC_API_KEY", ""),
+		ProxyURL:    env("ANTHROPIC_PROXY_URL", ""),
+		OllamaURL:   env("OLLAMA_URL", ""),
+		OllamaModel: env("OLLAMA_MODEL", "qwen2.5:3b"),
+		MaxPerDay:   envInt("AI_ADVISOR_MAX_PER_DAY", 20),
+		MaxTokens:   envInt("AI_ADVISOR_MAX_TOKENS", 1024),
 	}
 
 	if cfg.DB.URL == "" {
