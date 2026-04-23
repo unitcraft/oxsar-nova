@@ -245,11 +245,15 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		if colonyName == "" {
 			colonyName = "Colony"
 		}
+		returnEventID := ids.New()
+		flightSeconds := int64(duration.Seconds())
 		payload, _ := json.Marshal(map[string]any{
-			"fleet_id":     fleetID,
-			"carried":      map[string]int64{"metal": in.CarryMetal, "silicon": in.CarrySilicon, "hydrogen": in.CarryHydro},
-			"acs_group_id": acsGroupID,
-			"colony_name":  colonyName,
+			"fleet_id":        fleetID,
+			"carried":         map[string]int64{"metal": in.CarryMetal, "silicon": in.CarrySilicon, "hydrogen": in.CarryHydro},
+			"acs_group_id":    acsGroupID,
+			"colony_name":     colonyName,
+			"return_event_id": returnEventID,
+			"flight_seconds":  flightSeconds,
 		})
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
@@ -260,7 +264,7 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
 			VALUES ($1, $2, 20, 'wait', $3, $4)
-		`, ids.New(), in.UserID, returnAt, payload); err != nil {
+		`, returnEventID, in.UserID, returnAt, payload); err != nil {
 			return fmt.Errorf("insert return event: %w", err)
 		}
 

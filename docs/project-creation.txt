@@ -5295,3 +5295,57 @@ construction.yml (= na_construction) — единственный источни
        docs/plans/17-ship-costs-single-source.md
 
 Статус: ✅ ЗАВЕРШЕНА
+
+---
+
+## Итерация 22 — Полный порт экспедиций с legacy
+
+### Дата: 2026-04-23
+
+### Задача
+Полный порт механики экспедиций с legacy Expedition.class.php — 12 исходов
+вместо 6, формулы exp_power/visited_scale, weighted random, таблица посещений,
+временные планеты, задержки/ускорения возврата, трофейные корабли, кредиты.
+
+### Что сделано
+
+**Новые исходы (было 6, стало 12):**
+resources → формула res_k; asteroid — без водорода; artefact — вес от exp_power;
+xSkirmish — масштаб пиратов по силе флота; battlefield — повреждённый флот,
+победа = захват кораблей; credit — начисление кредитов; delay/fast — сдвиг
+fire_at события возврата; ship — трофейные LF/recycler; loss — 5-20% потери;
+nothing; extra_planet — временная (expires_at = 12-24ч).
+
+**Формулы:**
+exp_power = expo_tech + hours×2 + spy_tech/10 × pow(spy_probes, 0.4)
+visited_scale = pow(visits, -0.2...-0.7) × hours_scale
+res_k = random(500k,1M) × base × jitter × 2 (2% шанс ×100)
+Weighted random с jitter ±5% и 0.01% шанс усиления/обнуления.
+
+**Инфраструктура:**
+- transportPayload: +return_event_id, +flight_seconds
+- migration 0043: expedition_visits(user_id, galaxy, system, visits)
+- migration 0044: planets.expires_at TIMESTAMPTZ
+- expedition_test.go: 8 unit-тестов для pure-функций
+
+**Упрощения (записаны в simplifications.md):**
+- black_hole/unknown не реализованы
+- battlefield: только LF, shell_percent=0.5 (не точная генерация флота)
+- credit_purchases таблица не существует → buyCredit=0
+- временные планеты не чистятся воркером (expires_at выставлен, удаление — B.1)
+
+### Рефакторинг планов
+22 старых плана (01–22) → 6 сводных файлов по типу работ:
+A-backend-combat.md, B-expedition.md, C-economy-config.md,
+D-artefacts.md, E-ui-features.md, F-credits-ai-advisor.md.
+Каждый файл содержит историю выполненного + открытые задачи.
+
+Файлы: backend/internal/fleet/expedition.go (перезаписан),
+       backend/internal/fleet/expedition_test.go,
+       backend/internal/fleet/events.go,
+       backend/internal/fleet/transport.go,
+       migrations/0043_expedition_visits.sql,
+       migrations/0044_planets_expires_at.sql,
+       docs/plans/A-F (новые), docs/simplifications.md
+
+Статус: ✅ ЗАВЕРШЕНА
