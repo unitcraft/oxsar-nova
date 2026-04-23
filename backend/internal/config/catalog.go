@@ -148,7 +148,7 @@ type ResearchCatalog struct {
 
 type ResearchSpec struct {
 	ID         int     `yaml:"id"`
-	CostBase   ResCost `yaml:"cost_base"`
+	CostBase   ResCost `yaml:"-"`
 	CostFactor float64 `yaml:"cost_factor"`
 }
 
@@ -265,6 +265,18 @@ func LoadCatalog(dir string) (*Catalog, error) {
 				Hydrogen: cs.Basic.Hydrogen,
 			}
 			cat.Ships.Ships[key] = spec
+		}
+	}
+
+	// Заполнить ResearchSpec.CostBase из construction.yml (na_construction, mode=2).
+	for key, spec := range cat.Research.Research {
+		if cs, ok := cat.Construction.Buildings[key]; ok {
+			spec.CostBase = ResCost{
+				Metal:    cs.Basic.Metal,
+				Silicon:  cs.Basic.Silicon,
+				Hydrogen: cs.Basic.Hydrogen,
+			}
+			cat.Research.Research[key] = spec
 		}
 	}
 
