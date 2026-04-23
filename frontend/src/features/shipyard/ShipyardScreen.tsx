@@ -227,12 +227,13 @@ function UnitCards({
                 value={count}
                 onChange={(e) => setDrafts({ ...drafts, [u.id]: Math.max(1, Number(e.target.value)) })}
                 style={{ width: 64, flexShrink: 0 }}
+                disabled={!canAfford || !!(u.requires?.length)}
               />
               <button
                 type="button"
-                className={`btn${canAfford ? '' : ' btn-ghost'} btn-sm`}
+                className={`btn${canAfford && !u.requires?.length ? '' : ' btn-danger'} btn-sm`}
                 style={{ flex: 1 }}
-                disabled={pending}
+                disabled={pending || !canAfford || !!(u.requires?.length)}
                 onClick={() => onBuild(u.id, count)}
               >
                 Строить
