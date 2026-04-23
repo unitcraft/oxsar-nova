@@ -117,15 +117,41 @@ func (w *Worker) Register(kind Kind, h Handler) {
 // Адаптивное поведение: если batch заполнен — не ждать Ticker, а
 // тикать подряд до пустого или до maxBatch событий за цикл.
 func (w *Worker) Run(ctx context.Context) error {
+	return w.RunWithGrace(ctx, 0)
+}
+
+// RunWithGrace — как Run, но при отмене signalCtx даёт текущему
+// handler'у grace времени завершиться. Внутри используются два контекста:
+// signalCtx — сигнал «надо останавливаться» (проверяется между events);
+// workCtx — контекст handler'а (не отменяется до grace-таймаута).
+//
+// Если grace == 0 → поведение как Run: отмена мгновенная.
+func (w *Worker) RunWithGrace(signalCtx context.Context, grace time.Duration) error {
+	workCtx := signalCtx
+	var graceCancel context.CancelFunc
+	if grace > 0 {
+		workCtx = context.Background()
+	}
+
 	t := time.NewTicker(w.interval)
 	defer t.Stop()
 	for {
 		select {
-		case <-ctx.Done():
-			return ctx.Err()
+		case <-signalCtx.Done():
+			if grace > 0 {
+				// Даём текущему tick доработать в пределах grace.
+				var cctx context.Context
+				cctx, graceCancel = context.WithTimeout(workCtx, grace)
+				defer graceCancel()
+				w.log.InfoContext(workCtx, "event_worker_graceful_stop",
+					slog.Duration("grace", grace))
+				// Последний тик — чтобы дренажировать почти-готовые events.
+				_ = w.tickLoop(cctx)
+			}
+			return signalCtx.Err()
 		case <-t.C:
-			if err := w.tickLoop(ctx); err != nil {
-				w.log.ErrorContext(ctx, "event_tick_error", slog.String("err", err.Error()))
+			if err := w.tickLoop(workCtx); err != nil {
+				w.log.ErrorContext(workCtx, "event_tick_error", slog.String("err", err.Error()))
 			}
 		}
 	}
