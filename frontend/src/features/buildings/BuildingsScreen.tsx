@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { ScreenSkeleton } from '@/ui/Skeleton';
 
 function fmtDuration(secs: number): string {
@@ -45,6 +46,9 @@ const PROD_STAT: Record<string, ProdStat> = {
 export function BuildingsScreen({ planet }: { planet: Planet }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const [showLocked, setShowLocked] = useState<boolean>(
+    () => localStorage.getItem('buildings-show-locked') === 'true'
+  );
 
   const queue = useQuery({
     queryKey: ['buildings-queue', planet.id],
@@ -120,6 +124,18 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
               В очереди: {queueItems.length}
             </span>
           )}
+          <button
+            type="button"
+            className="btn-ghost btn-sm"
+            style={{ fontSize: 12 }}
+            onClick={() => {
+              const next = !showLocked;
+              setShowLocked(next);
+              localStorage.setItem('buildings-show-locked', String(next));
+            }}
+          >
+            {showLocked ? '👁 Все здания' : '🔒 Только доступные'}
+          </button>
         </div>
       </div>
 
@@ -137,7 +153,12 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
 
       {/* Building cards */}
       <div className="ox-cards-grid">
-        {BUILDINGS.map((b) => {
+        {BUILDINGS.filter((b) => {
+          if (showLocked) return true;
+          const lvl = levels[b.id] ?? 0;
+          const unmetArr = requirementsUnmet[b.key] ?? [];
+          return lvl > 0 || unmetArr.length === 0;
+        }).map((b) => {
           const level = levels[b.id] ?? 0;
           const maxLevel = b.maxLevel ?? 50;
           const isMax = level >= maxLevel;
