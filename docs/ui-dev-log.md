@@ -712,3 +712,41 @@ FleetScreen показывал активные флоты без состава
 ### ArtefactMarketScreen
 - Новая колонка «Дата» с `listed_at` в формате ДД.ММ.
 - Поле уже было в интерфейсе `Offer` но не отображалось.
+
+---
+
+## Итерация UI-18: BuildingsScreen — план 09 (2026-04-23)
+
+### Задача
+Сравнение с legacy `/game.php/Constructions` и устранение расхождений.
+
+### Критический баг: missile_silo id
+- Nova использовала id=13 для ракетной шахты. В legacy id=13 = `UNIT_SPYWARE` (research).
+- Правильный id = 53 (`UNIT_ROCKET_STATION`). Исправлено в configs, catalog, rocket/service.go.
+
+### Нано-фабрика (id=7)
+- Здание отсутствовало в nova. Добавлено в buildings.yml и BUILDINGS.
+- Backend: `BuildSecondsMap` и `Enqueue` теперь читают nanoLevel из БД и передают в `BuildDuration`.
+- `economy.BuildDuration` уже поддерживал параметр — просто всегда получал 0.
+
+### Описания и MAX badge
+- Добавлен `description?` в `BuildingEntry`, все 14 зданий получили описания.
+- При `level >= maxLevel` кнопка заменяется на текст «MAX».
+
+### Пререквизиты на карточке
+- Backend: новый метод `UnmetForTarget` в requirements.Checker (читает без транзакции).
+- `RequirementsUnmet` в building.Service собирает unmet для всех зданий планеты.
+- `GET /api/planets/{id}/buildings` теперь возвращает `requirements_unmet`.
+- Frontend: карточка показывает `🔒 key ур.N (у вас: M)` и кнопку «Заблокировано».
+
+### Фильтр «Только доступные / Все здания»
+- `useState` + `localStorage('buildings-show-locked')`.
+- По умолчанию скрываются здания с level=0 и невыполненными требованиями.
+
+### Лунные здания
+- Добавлены moon_base(54), star_surveillance(55), star_gate(56), moon_robotic_factory(57).
+- `BuildingSpec.MoonOnly bool` в config; валидация в `Enqueue` — ErrMoonOnly/ErrPlanetOnly.
+- Frontend: `MOON_BUILDINGS[]`, выбор по `planet.is_moon`.
+
+### Не реализовано (P3)
+- Задача 9 (снос здания) и Задача 10 (детальный модал) — оставлены как P3.
