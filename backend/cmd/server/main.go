@@ -42,6 +42,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/payment"
 	"github.com/oxsar/nova/backend/internal/planet"
 	"github.com/oxsar/nova/backend/internal/profession"
+	"github.com/oxsar/nova/backend/internal/records"
 	"github.com/oxsar/nova/backend/internal/referral"
 	"github.com/oxsar/nova/backend/internal/repair"
 	"github.com/oxsar/nova/backend/internal/repo"
@@ -182,6 +183,7 @@ func run() error {
 	techtreeH := techtree.NewHandler(pool, cat)
 	battlestatsH := battlestats.NewHandler(pool)
 	friendsH := friends.NewHandler(pool)
+	recordsH := records.NewHandler(pool, cat)
 
 	adminH := admin.NewHandler(db)
 
@@ -237,6 +239,7 @@ func run() error {
 		pr.Get("/search", searchH.Search)
 		pr.Get("/techtree", techtreeH.Get)
 		pr.Get("/battlestats", battlestatsH.List)
+		pr.Get("/records", recordsH.List)
 		pr.Get("/friends", friendsH.List)
 		pr.Post("/friends/{userId}", friendsH.Add)
 		pr.Delete("/friends/{userId}", friendsH.Remove)

@@ -43,13 +43,14 @@ const NotepadScreen      = lazy(() => import('./features/notepad/NotepadScreen')
 const TechtreeScreen     = lazy(() => import('./features/techtree/TechtreeScreen').then(m => ({ default: m.TechtreeScreen })));
 const BattlestatsScreen  = lazy(() => import('./features/battlestats/BattlestatsScreen').then(m => ({ default: m.BattlestatsScreen })));
 const FriendsScreen      = lazy(() => import('./features/friends/FriendsScreen').then(m => ({ default: m.FriendsScreen })));
+const RecordsScreen      = lazy(() => import('./features/records/RecordsScreen').then(m => ({ default: m.RecordsScreen })));
 
 type Tab =
   | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
   | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
   | 'art-market' | 'officers' | 'achievements' | 'score'
   | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource'
-  | 'credits' | 'unit-info' | 'profession' | 'empire' | 'settings' | 'referral' | 'notepad' | 'techtree' | 'battlestats' | 'friends';
+  | 'credits' | 'unit-info' | 'profession' | 'empire' | 'settings' | 'referral' | 'notepad' | 'techtree' | 'battlestats' | 'friends' | 'records';
 
 const VALID_TABS = new Set<string>([
   'overview', 'buildings', 'research', 'shipyard', 'repair',
@@ -57,7 +58,7 @@ const VALID_TABS = new Set<string>([
   'art-market', 'officers', 'achievements', 'score',
   'messages', 'alliance', 'chat', 'sim', 'admin', 'planet-options', 'resource',
   'credits', 'unit-info', 'profession', 'empire', 'settings',
-  'referral', 'notepad', 'techtree', 'battlestats', 'friends',
+  'referral', 'notepad', 'techtree', 'battlestats', 'friends', 'records',
 ]);
 
 type InfoUnit = { kind: 'building' | 'research' | 'ship' | 'defense'; id: number; level: number; fromTab: Tab };
@@ -325,6 +326,7 @@ function AuthenticatedApp() {
             {tab === 'techtree'  && <TechtreeScreen />}
             {tab === 'battlestats' && <BattlestatsScreen />}
             {tab === 'friends'   && <FriendsScreen />}
+            {tab === 'records'   && <RecordsScreen />}
           </Suspense>
         </main>
       </div>
@@ -621,6 +623,7 @@ const ALL_NAV: Array<{ key: Tab; icon: string; label: string }> = [
   { key: 'score',       icon: '🏆', label: 'Рейтинг' },
   { key: 'achievements',icon: '🥇', label: 'Достижения' },
   { key: 'battlestats', icon: '⚔', label: 'История боёв' },
+  { key: 'records',     icon: '🏅', label: 'Рекорды' },
   { key: 'sim',         icon: '⚔️', label: 'Симулятор' },
   { key: 'notepad',     icon: '📝', label: 'Блокнот' },
   { key: 'referral',    icon: '🎁', label: 'Рефералы' },
@@ -691,6 +694,7 @@ function buildNavItems(t: (ns: string, key: string, fb?: string) => string, unre
     { key: 'score',      icon: '🏆', label: t('global','MENU_HIGHSCORE') || 'Рейтинг' },
     { key: 'achievements',icon:'🥇', label: t('global','MENU_ACHIEVEMENTS') || 'Достижения' },
     { key: 'battlestats',icon: '⚔', label: 'История боёв' },
+    { key: 'records',    icon: '🏅', label: 'Рекорды' },
     { key: 'sim',        icon: '⚔️', label: t('global','MENU_SIMULATOR') },
     ...(isAdmin ? [
       { key: 's5', sep: true },
