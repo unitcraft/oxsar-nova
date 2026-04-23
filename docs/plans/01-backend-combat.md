@@ -131,49 +131,17 @@ war_machine:
 
 ---
 
-### A.3 Alien AI — полная state machine (приоритет: LOW)
+### ✅ A.3 Alien AI — масштабирование флота (план 19, итерация 19)
 
-**Проблема:** Текущий alien AI использует фиксированный флот (5 LF) и нет масштабирования.
-В legacy (AlienAI.class.php) — полная state machine с holding, грабёж кредитов, подарки.
+Реализовано:
+- `calcDefPower` — суммарная боевая мощь обороняющейся планеты (attack × quantity)
+- `scaledAlienFleet(defPower, rng, cat)` — флот из UNIT_A_* (id 200–204), итеративно
+  набирается до targetPower = defPower × random(0.9, 1.1); fallback если каталог пуст
+- `ALIEN_ATTACK_INTERVAL = 6 дней` — фильтр в SQL Spawn (NOT EXISTS events за 6 дней)
+- Исправлен баг: ID техов 109/110/111 → 15/16/17 (gun/shield/shell из economy.IDTech*)
+- Применение профессии в `readUserTech` (alien/helpers.go)
 
-**Что не реализовано (из legacy-game-reference.md):**
-
-| Функция | Статус в nova |
-|---------|---------------|
-| Флот масштабируется по силе игрока (90–110%) | ❌ фиксированные 5 LF |
-| Корабли пришельцев (UNIT_A_*, id 200–204) в боях | ❌ |
-| День усиленных атак (четверг, ×5 флотов, 150–200% силы) | ❌ |
-| Смена миссии в полёте (EVENT_ALIEN_CHANGE_MISSION_AI) | ❌ |
-| Режим удержания планеты (HOLDING, 12–24ч) | ❌ |
-| Грабёж кредитов (0.0008–0.001% от кредитов игрока) | частично |
-| Подарки ресурсов (5%) и кредитов (5%) при прилёте | ❌ |
-
-**Формулы масштабирования (legacy):**
-```
-target_power = суммарная боевая сила планеты (sum attack × quantity)
-fleet_power  = target_power × random(0.9, 1.1)  [обычный день]
-fleet_power  = target_power × random(1.5, 2.0)  [четверг]
-```
-
-Корабли пришельцев итеративно добавляются от UNIT_A_CORVETTE до UNIT_A_TORPEDOCARIER
-пока fleet_power не достигнут. Максимум обломков: `ALIEN_FLEET_MAX_DERBIS = 1 млрд`.
-
-**Разумное упрощение для первой итерации:**
-Реализовать только масштабирование мощи (шаг 1–2), остальное оставить на потом.
-
-**Шаг 1** — `backend/internal/alien/helpers.go`: `calcAlienFleetPower(targetPlanetShips map[string]int64)`.
-**Шаг 2** — `generateMission` в `alien/`: использовать unit_a_corvette..unit_a_torpedocarier
-вместо light_fighter. Добавить проверку `ALIEN_ATTACK_INTERVAL = 6 days`.
-**Шаг 3** — `backend/internal/alien/holding.go`: реализовать HOLDING event (min viable).
-
-**Параметры из legacy-game-reference.md:**
-- `ALIEN_ATTACK_INTERVAL`: 6 дней (мин. интервал между атаками одного игрока)
-- `ALIEN_NORMAL_FLEETS_NUMBER`: 50 флотов одновременно в мире
-- `BASHING_MAX_ATTACKS = 4` атаки за 5ч (защита от башинга)
-- `PROTECTION_PERIOD = 24ч` — новый игрок защищён от атак
-
-**Проверка готовности:**
-- [ ] Alien fleet масштабируется по силе игрока (90–110%)
-- [ ] Используются корабли UNIT_A_* вместо light_fighter
-- [ ] `ALIEN_ATTACK_INTERVAL` = 6 дней соблюдается
-- [ ] `make test` зелёный
+Остаётся за рамками (сложно, нет требований):
+- День четверга (×5 флотов, 150–200%)
+- HOLDING event (удержание планеты)
+- EVENT_ALIEN_CHANGE_MISSION_AI
