@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/oxsar/nova/backend/internal/economy"
 	"github.com/oxsar/nova/backend/internal/httpx"
 )
 
@@ -50,9 +51,9 @@ func UserID(ctx context.Context) (string, bool) {
 }
 
 // LastSeenMiddleware обновляет users.last_seen_at = now() при каждом
-// аутентифицированном запросе. Выполняется асинхронно (fire-and-forget),
-// чтобы не добавлять задержку к ответу. Требует Middleware (userIDKey)
-// выше в цепочке.
+// аутентифицированном запросе и начисляет ежедневный бонус кредитов
+// (economy.CreditDailyLogin) если прошло ≥24 часа с последнего начисления.
+// Выполняется асинхронно (fire-and-forget), чтобы не добавлять задержку.
 func LastSeenMiddleware(pool *pgxpool.Pool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -62,8 +63,19 @@ func LastSeenMiddleware(pool *pgxpool.Pool) func(http.Handler) http.Handler {
 				return
 			}
 			go func() {
-				_, _ = pool.Exec(context.Background(),
+				ctx := context.Background()
+				_, _ = pool.Exec(ctx,
 					`UPDATE users SET last_seen_at = now() WHERE id = $1`, uid)
+				// Ежедневный бонус: начислять если last_daily_credit_at IS NULL
+				// или прошло ≥24 часа.
+				_, _ = pool.Exec(ctx, `
+					UPDATE users
+					SET credit = credit + $1,
+					    last_daily_credit_at = now()
+					WHERE id = $2
+					  AND (last_daily_credit_at IS NULL
+					       OR last_daily_credit_at < now() - interval '24 hours')
+				`, economy.CreditDailyLogin, uid)
 			}()
 		})
 	}

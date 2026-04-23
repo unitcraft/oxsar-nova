@@ -40,6 +40,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/battle"
 	"github.com/oxsar/nova/backend/internal/config"
+	"github.com/oxsar/nova/backend/internal/economy"
 	"github.com/oxsar/nova/backend/internal/event"
 	"github.com/oxsar/nova/backend/pkg/ids"
 	"github.com/oxsar/nova/backend/pkg/rng"
@@ -640,6 +641,27 @@ func finalizeAttack(ctx context.Context, tx pgx.Tx,
 			defExp, defUID,
 		); err != nil {
 			return fmt.Errorf("finalize: defender e_points: %w", err)
+		}
+	}
+
+	// Начисление кредитов победителю пропорционально мощи противника.
+	if rep.Winner == "attackers" && attUID != "" {
+		cr := economy.BattleWinCredits(defPower)
+		if cr > 0 {
+			if _, err := tx.Exec(ctx,
+				`UPDATE users SET credit=credit+$1 WHERE id=$2`, cr, attUID,
+			); err != nil {
+				return fmt.Errorf("finalize: attacker credit: %w", err)
+			}
+		}
+	} else if rep.Winner == "defenders" && defUID != "" {
+		cr := economy.BattleWinCredits(atkPower)
+		if cr > 0 {
+			if _, err := tx.Exec(ctx,
+				`UPDATE users SET credit=credit+$1 WHERE id=$2`, cr, defUID,
+			); err != nil {
+				return fmt.Errorf("finalize: defender credit: %w", err)
+			}
 		}
 	}
 

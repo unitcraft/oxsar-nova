@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/oxsar/nova/backend/internal/economy"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/pkg/ids"
 )
@@ -46,6 +47,13 @@ func (s *Service) UnlockIfNew(ctx context.Context, tx pgx.Tx, userID, key string
 	if tag.RowsAffected() == 0 {
 		return nil // уже было
 	}
+	// Начислить кредиты за достижение.
+	if _, err := exec.Exec(ctx,
+		`UPDATE users SET credit=credit+$1 WHERE id=$2`,
+		economy.CreditAchievement, userID,
+	); err != nil {
+		return fmt.Errorf("unlock credit: %w", err)
+	}
 	// Title для body — читать из defs не обязательно, положим в
 	// тело сам key; UI рисует через i18n.
 	if _, err := exec.Exec(ctx, `
@@ -53,7 +61,7 @@ func (s *Service) UnlockIfNew(ctx context.Context, tx pgx.Tx, userID, key string
 		VALUES ($1, $2, NULL, 2, $3, $4)
 	`, ids.New(), userID,
 		fmt.Sprintf("Достижение: %s", key),
-		fmt.Sprintf("Открыто новое достижение: %s.", key),
+		fmt.Sprintf("Открыто новое достижение: %s. Начислено %d кредитов.", key, economy.CreditAchievement),
 	); err != nil {
 		return fmt.Errorf("unlock message: %w", err)
 	}

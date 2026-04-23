@@ -61,3 +61,21 @@ func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 func Wrap(base *Error, message string) *Error {
 	return &Error{Status: base.Status, Code: base.Code, Message: message}
 }
+
+// MarshalJSON сериализует value в []byte. При ошибке возвращает nil.
+func MarshalJSON(value any) []byte {
+	b, err := json.Marshal(value)
+	if err != nil {
+		return nil
+	}
+	return b
+}
+
+// WriteJSONBytes пишет уже сериализованный JSON-ответ.
+func WriteJSONBytes(w http.ResponseWriter, _ *http.Request, status int, body []byte) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	if len(body) > 0 {
+		_, _ = w.Write(body)
+	}
+}

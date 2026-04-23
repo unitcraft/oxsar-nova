@@ -127,19 +127,19 @@ func run() error {
 	galaxyH := galaxy.NewHandler(galaxy.NewRepository(pool))
 
 	transportSvc := fleet.NewTransportService(db, cat, cfg.Game.Speed, artefactSvc)
-	fleetH := fleet.NewHandler(transportSvc)
+	fleetH := fleet.NewHandler(transportSvc, rdb)
 
 	messageSvc := message.NewService(db)
 	messageH := message.NewHandler(messageSvc)
 
 	marketSvc := market.NewService(db)
-	marketH := market.NewHandler(marketSvc)
+	marketH := market.NewHandler(marketSvc, rdb)
 
 	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed)
 	rocketH := rocket.NewHandler(rocketSvc)
 
 	artMarketSvc := artmarket.NewService(db)
-	artMarketH := artmarket.NewHandler(artMarketSvc)
+	artMarketH := artmarket.NewHandler(artMarketSvc, rdb)
 
 	achSvc := achievement.NewService(db)
 	achH := achievement.NewHandler(achSvc)

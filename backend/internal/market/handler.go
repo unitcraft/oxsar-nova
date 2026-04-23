@@ -6,9 +6,11 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/oxsar/nova/backend/internal/auth"
 	"github.com/oxsar/nova/backend/internal/httpx"
+	"github.com/oxsar/nova/backend/pkg/idempotency"
 )
 
 // ListLots GET /api/market/lots?sell=metal&limit=50
@@ -95,6 +97,12 @@ func (h *Handler) AcceptLot(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
+
+	idem := idempotency.FromRequest(r, h.rdb)
+	if idem.Replay(w) {
+		return
+	}
+
 	lotID := chi.URLParam(r, "id")
 	var req struct {
 		PlanetID string `json:"planet_id"`
@@ -106,6 +114,7 @@ func (h *Handler) AcceptLot(w http.ResponseWriter, r *http.Request) {
 	err := h.svc.AcceptLot(r.Context(), uid, req.PlanetID, lotID)
 	switch {
 	case err == nil:
+		idem.Record(http.StatusNoContent, nil)
 		w.WriteHeader(http.StatusNoContent)
 	case errors.Is(err, ErrLotNotFound):
 		httpx.WriteError(w, r, httpx.ErrNotFound)
@@ -123,9 +132,10 @@ func (h *Handler) AcceptLot(w http.ResponseWriter, r *http.Request) {
 
 type Handler struct {
 	svc *Service
+	rdb *redis.Client
 }
 
-func NewHandler(s *Service) *Handler { return &Handler{svc: s} }
+func NewHandler(s *Service, rdb *redis.Client) *Handler { return &Handler{svc: s, rdb: rdb} }
 
 type exchangeRequest struct {
 	From   string `json:"from"`
