@@ -78,13 +78,19 @@ func TestComputeChanges_UnsupportedType(t *testing.T) {
 	}
 }
 
+// battle_bonus не меняет планетарные факторы — computeChanges возвращает (nil, nil).
+// Боевые модификаторы читаются отдельно через ComputeBattleModifier.
 func TestComputeChanges_BattleBonus(t *testing.T) {
 	t.Parallel()
 	spec := config.ArtefactSpec{
 		Effect: config.ArtefactEffect{Type: "battle_bonus"},
 	}
-	if _, err := computeChanges(spec, dirApply); err != ErrUnsupported {
-		t.Fatalf("expected ErrUnsupported for battle_bonus, got %v", err)
+	fc, err := computeChanges(spec, dirApply)
+	if err != nil {
+		t.Fatalf("unexpected error for battle_bonus: %v", err)
+	}
+	if fc != nil {
+		t.Fatalf("expected nil FactorChange for battle_bonus, got %+v", fc)
 	}
 }
 
