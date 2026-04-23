@@ -1,6 +1,6 @@
 # План 13: Экран верфи — доработка ShipyardScreen
 
-## Статус: В РАБОТЕ (задачи 0–4 + 6 выполнены + hotfix, задача 5 — P3)
+## Статус: В РАБОТЕ (задачи 0–4 + 6 выполнены + hotfix; задачи 5, 7 — P2/P3)
 
 ## Контекст
 
@@ -234,6 +234,58 @@ DELETE /api/planets/{planetId}/shipyard/{queueId}
 
 ---
 
+### Задача 7 — Полное соответствие UnitInfoScreen legacy UnitInfo [P2]
+
+**Источник:** `d:\Sources\oxsar2\www\templates\standard\unitinfo.tpl` + `UnitInfo.class.php`
+
+**Сравнение legacy vs nova для кораблей/обороны:**
+
+| Поле | Legacy | Nova |
+|------|--------|------|
+| attack/shield/shell | ✅ | ✅ |
+| cargo (capacity) | ✅ | ✅ |
+| speed (базовая) | ✅ | ✅ |
+| fuel (consumption) | ✅ | ✅ |
+| rapidfire (обе стороны) | ✅ | ✅ |
+| **front** (приоритет цели) | ✅ | ❌ |
+| **battle_weight** (2^front) | ✅ | ❌ |
+| **ballistics** (точность) | ✅ | ❌ |
+| **masking** (маскировка) | ✅ | ❌ |
+| **attacker_** версии характеристик | ✅ | ❌ |
+| **engines** — какой двигатель активен + скорость с учётом исследований | ✅ | ❌ |
+| **structure** = metal + silicon (прочность корпуса) | ✅ | ❌ |
+| **Время постройки** | ✅ | ❌ |
+
+**Откуда брать данные:**
+- `front`, `battle_weight`, `ballistics`, `masking`, `attacker_*` — в backend есть в `ship_datasheet`
+  (таблица `construction` + `ship_datasheet`). Нужно добавить endpoint или включить в каталог.
+- `engines` — логика `NS::getUnitEngines()` учитывает уровень исследований пользователя:
+  реактивный/импульсный/гипер двигатель. Без серверного контекста не вычислить на фронте.
+- `structure` = `basic_metal + basic_silicon` — вычисляется из cost, уже есть в catalog.ts.
+- `productiontime` — `NS::getBuildingTime(metal, silicon, mode)` — формула из legacy.
+
+**Подзадачи:**
+
+**7a — structure + время постройки [S]**
+- `structure` = cost.metal + cost.silicon — вычислить на фронте из catalog.ts
+- Время постройки для кораблей: формула `NS::getBuildingTime` из legacy =
+  `(metal + silicon) / (2500 * (1 + shipyard_level) * 2^nano_level)` (упрощение без уровней зданий)
+- Показать в таблице характеристик как отдельные строки
+
+**7b — front, battle_weight, ballistics, masking [M]**
+- Добавить поля в `CombatEntry` в catalog.ts (данные из legacy `ship_datasheet`)
+- Для кораблей: показать attacker_ и defender_ версии в двух колонках
+- Для обороны: одна колонка
+
+**Намеренные упрощения (не реализуем):**
+- `engines` (скорость с учётом уровней исследований пользователя) — требует серверного запроса
+  с контекстом конкретного игрока; слишком сложно, нет очевидной ценности для UI
+- `gravi_name_link` (множитель гравитационной технологии) — не реализовано в nova вообще
+
+**Файлы:** `frontend/src/api/catalog.ts`, `frontend/src/features/unit-info/UnitInfoScreen.tsx`
+
+---
+
 ### Задача 5 — Rapidfire (быстрый огонь) [P3]
 
 **Описание:** В legacy каждый корабль имеет таблицу rapidfire — сколько раз он может
@@ -264,6 +316,8 @@ DELETE /api/planets/{planetId}/shipyard/{queueId}
 | 4 | Фильтр «Доступные / Все» | P2 | ✅ |
 | 5 | Rapidfire в UnitInfoScreen (расширить) | P3 | — |
 | 6 | UnitInfoScreen для кораблей и обороны | P1 | ✅ |
+| 7a | structure + время постройки в UnitInfoScreen | P2 | — |
+| 7b | front/battle_weight/ballistics/masking | P2 | — |
 
 ---
 
