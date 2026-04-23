@@ -8,7 +8,7 @@ import { Countdown } from '@/ui/Countdown';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
 
-export function ShipyardScreen({ planet }: { planet: Planet }) {
+export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo?: (kind: 'ship' | 'defense', id: number) => void }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState<'ships' | 'defense'>('ships');
@@ -113,17 +113,19 @@ export function ShipyardScreen({ planet }: { planet: Planet }) {
         onBuild={(unitId, count) => enqueue.mutate({ unitId, count })}
         pending={enqueue.isPending}
         showLocked={showLocked}
+        unitKind={tab === 'ships' ? 'ship' : 'defense'}
         onShowAll={() => {
           setShowLocked(true);
           localStorage.setItem('shipyard-show-locked', 'true');
         }}
+        onOpenInfo={onOpenInfo}
       />
     </div>
   );
 }
 
 function UnitCards({
-  units, stock, planet, onBuild, pending, showLocked, onShowAll,
+  units, stock, planet, onBuild, pending, showLocked, unitKind, onShowAll, onOpenInfo,
 }: {
   units: CombatEntry[];
   stock: Record<string, number>;
@@ -131,7 +133,9 @@ function UnitCards({
   onBuild: (unitId: number, count: number) => void;
   pending: boolean;
   showLocked: boolean;
+  unitKind: 'ship' | 'defense';
   onShowAll: () => void;
+  onOpenInfo?: (kind: 'ship' | 'defense', id: number) => void;
 }) {
   const [drafts, setDrafts] = useState<Record<number, number>>({});
 
@@ -169,7 +173,9 @@ function UnitCards({
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
               <img
                 src={imageOf(u.key)} alt={u.name} width={64} height={64}
-                style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4 }}
+                style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4, cursor: onOpenInfo ? 'pointer' : undefined }}
+                onClick={onOpenInfo ? () => onOpenInfo(unitKind, u.id) : undefined}
+                title={onOpenInfo ? `Подробнее о ${u.name}` : undefined}
               />
               <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                 <div className="ox-unit-card-name">{u.name}</div>

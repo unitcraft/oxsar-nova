@@ -5112,3 +5112,28 @@ MEDIUM Priority:
        frontend/src/api/catalog.ts, docs/plans/13-shipyard.md
 
 Статус: ✅ ЗАВЕРШЕНА (задача 5 Rapidfire — отложена P3)
+
+
+================================================================================
+Итерация (сессия 2026-04-23j) — план 13 задача 6: UnitInfoScreen для кораблей
+================================================================================
+
+## Задача 6 — UnitInfoScreen для кораблей и обороны
+
+Аналог game.php/UnitInfo/29 — полный экран информации о корабле/обороне.
+
+- CombatEntry расширен: rapidfire?: Record<number, number>
+- Rapidfire из configs/rapidfire.yml добавлен в catalog.ts:
+  крейсер (×6 лёгкий истребитель, ×10 ракетная установка),
+  линкор (×5 зонд, ×5 спутник), звезда смерти (по всем юнитам)
+- UnitInfoScreen расширен CombatUnitInfo для kind='ship'/'defense':
+  таблица характеристик, таблица «быстрый огонь» (кого атакует быстро),
+  таблица «уязвим» (кто атакует этот юнит быстро)
+- App.tsx: InfoUnit.kind расширен до 'ship'|'defense', parseHash и openInfo обновлены
+- ShipyardScreen: prop onOpenInfo, клик по иконке → #unit-info/ship/29
+
+Файлы: frontend/src/api/catalog.ts, frontend/src/features/unit-info/UnitInfoScreen.tsx,
+       frontend/src/features/shipyard/ShipyardScreen.tsx, frontend/src/App.tsx,
+       docs/plans/13-shipyard.md
+
+Статус: ✅ ЗАВЕРШЕНА
