@@ -133,6 +133,22 @@ buildings:
     time_base_seconds: 30
     max_level: 40
 
+  # Биржа ресурсов (legacy EXCH_OFFICE=108, EXCHANGE=107, mode=1).
+  # time_base_seconds — оценочное (legacy не хранит явно).
+  exch_office:
+    id: 108
+    cost_base:   { metal: 0, silicon: 1000, hydrogen: 500 }
+    cost_factor: 1.5
+    time_base_seconds: 300
+    max_level: 40
+
+  exchange:
+    id: 107
+    cost_base:   { metal: 0, silicon: 500000, hydrogen: 500000 }
+    cost_factor: 1.2
+    time_base_seconds: 600
+    max_level: 40
+
   # Лунные здания (legacy mode=5). Только на луне (is_moon=true).
   moon_base:
     id: 54
