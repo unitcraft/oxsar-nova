@@ -22,11 +22,13 @@ import (
 )
 
 var (
-	ErrQueueBusy        = errors.New("building: queue busy")
-	ErrNotEnoughRes     = errors.New("building: not enough resources")
-	ErrUnknownUnit      = errors.New("building: unknown unit")
-	ErrPlanetOwnership  = errors.New("building: planet does not belong to user")
+	ErrQueueBusy         = errors.New("building: queue busy")
+	ErrNotEnoughRes      = errors.New("building: not enough resources")
+	ErrUnknownUnit       = errors.New("building: unknown unit")
+	ErrPlanetOwnership   = errors.New("building: planet does not belong to user")
 	ErrQueueItemNotFound = errors.New("building: queue item not found")
+	ErrMoonOnly          = errors.New("building: this building is only available on moons")
+	ErrPlanetOnly        = errors.New("building: this building is not available on moons")
 )
 
 type Service struct {
@@ -71,6 +73,12 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 	}
 	if p.UserID != userID {
 		return QueueItem{}, ErrPlanetOwnership
+	}
+	if spec.MoonOnly && !p.IsMoon {
+		return QueueItem{}, ErrMoonOnly
+	}
+	if !spec.MoonOnly && p.IsMoon {
+		return QueueItem{}, ErrPlanetOnly
 	}
 
 	var item QueueItem

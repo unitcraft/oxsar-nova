@@ -47,6 +47,10 @@ func (h *Handler) Enqueue(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "unknown unit"))
 	case errors.Is(err, ErrPlanetOwnership):
 		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrMoonOnly):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "moon-only building"))
+	case errors.Is(err, ErrPlanetOnly):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "not available on moon"))
 	case requirements.IsNotMet(err):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	default:

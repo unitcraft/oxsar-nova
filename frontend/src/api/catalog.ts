@@ -64,6 +64,13 @@ export const BUILDINGS: BuildingEntry[] = [
   { id: 100, key: 'repair_factory',   name: 'Ремонтный ангар',               description: 'Восстанавливает повреждённые корабли после боя',      costBase: { metal: 800,     silicon: 400,    hydrogen: 200    }, costFactor: 2.0 },
 ];
 
+export const MOON_BUILDINGS: BuildingEntry[] = [
+  { id: 54, key: 'moon_base',            name: 'Лунная база',           description: 'Основная постройка луны, даёт возможность строить другие здания',  costBase: { metal: 50000,    silicon: 20000,   hydrogen: 10000  }, costFactor: 2.0 },
+  { id: 55, key: 'star_surveillance',   name: 'Звёздные сенсоры',      description: 'Следит за флотами противника в системе',                           costBase: { metal: 100000,   silicon: 20000,   hydrogen: 50000  }, costFactor: 2.0 },
+  { id: 56, key: 'star_gate',           name: 'Звёздные врата',        description: 'Позволяет мгновенно переместить флот между лунами',                 costBase: { metal: 4000000,  silicon: 2000000, hydrogen: 1000000 }, costFactor: 2.0 },
+  { id: 57, key: 'moon_robotic_factory', name: 'Лунная фабрика роботов', description: 'Ускоряет строительство зданий на луне',                           costBase: { metal: 10000,    silicon: 6000,    hydrogen: 4000   }, costFactor: 2.0 },
+];
+
 export interface ResearchEntry extends UnitEntry {
   costBase: Cost;
   costFactor: number;
