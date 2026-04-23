@@ -5725,3 +5725,122 @@ Backend: go build ./... — чистый билд.
 Миграции: 0050_notepad.sql применяется при make dev-up.
 
 Статус: ✅ ЗАВЕРШЕНА
+
+## Итерация: План 11 — закрытие упрощений H-плана (2026-04-23)
+
+**Контекст:** после H-плана в simplifications.md накопилось 11
+упрощений. План 11 (docs/plans/11-ui-porting-followup.md) описал
+12 шагов закрытия с оценкой оправданности/стоимости/ценности.
+Пользователь распорядился реализовать все шаги без откладывания.
+
+**Реализовано (12 шагов, 11 закрытых упрощений, 5 миграций):**
+
+**Шаг 1 — Search навигация** (commit 4e0b035):
+- GalaxyScreen.initialCoords + useEffect-синхронизация (g,s).
+- ScoreScreen.initialQuery + инпут фильтра по нику + autoscroll
+  highlightRef к совпадению.
+- App.tsx: state для galaxy/score цели, onNavigate заполняет.
+
+**Шаг 8 — Score координаты главной планеты** (commit 4e0b035):
+- score.Entry + HomeGalaxy/System/Position.
+- Score.Top: LATERAL JOIN по planets (первая не-луна).
+- UI: колонка «Координаты» кликабельна → navigateTo('galaxy') с
+  заполнением initialCoords.
+
+**Шаг 2 — Messages producers** (commit 6641ba8):
+- Добавлен `automsg.SendDirect(ctx, tx, userID, folder, title, body)` —
+  прямая вставка без идемпотентности для многоразовых событий.
+- Интегрирован через WithAutoMsg в payment, referral, artefact, alliance:
+  - payment.ConfirmPayment → folder=8 (CREDIT).
+  - referral.ProcessPurchase → folder=8 рефереру.
+  - alliance.Join/Approve/Reject → folder=6 (ALLIANCE).
+  - artefact.ExpireEvent → folder=7 (ARTEFACTS).
+- Phalanx-producer отложен (сам сканер не реализован).
+
+**Шаг 3 — Alliance relations в galaxy** (commit 9547437):
+- galaxy.CellView: поле Relation (nap/war/ally), active-only.
+- ReadSystem теперь принимает viewerUserID → читает alliance_id
+  viewer'а и map alliance_relationships (active).
+- handler пробрасывает auth.UserID.
+- UI: подсветка строк (ally=зелёный/war=красный/nap=жёлтый) + легенда.
+- Попутно: исправлен цикл клеток 1→15 на 1→16 (позиция «Бесконечные дали»
+  теперь в выдаче).
+
+**Шаг 6 — Delete account с кодом** (commit выше):
+- migration 0051 account_deletion_codes (user_id PK, code_hash, expires_at, attempts).
+- settings/delete.go: 8-символьный безопасный алфавит, argon2id-хэш,
+  TTL 10 мин, 3 запроса/час, lockout после 5 ошибок.
+- Код → системное сообщение (folder=13).
+- Soft-delete: deleted_at, анонимизация username/email, alliance_id=NULL,
+  market_lots → cancelled.
+- auth.Login проверяет deleted_at.
+- UI: секция «⚠ Опасная зона», 2-шаговый поток (получить код → ввести).
+
+**Шаг 7 — Planets sort_order** (commit d8e3628):
+- migration 0052 planets.sort_order + индекс + инициализация через
+  ROW_NUMBER по created_at.
+- ListByUser: ORDER BY sort_order.
+- planet.Reorder: транзакция с ownership check через ANY($2).
+- UI: PlanetOrderSection в Settings с HTML5 draggable (без библиотек).
+
+**Шаг 5 — Friends** (commit после):
+- migration 0053 friends(user_id, friend_id) PK.
+- internal/friends: List / Add / Remove с check deleted_at.
+- galaxy.CellView.IsFriend + map в ReadSystem.
+- FriendsScreen: таблица с onlinе/мин/часы/дни-назад, удаление.
+- UI: ⭐ рядом с ником друга в галактике, nav-пункт в «Общение».
+
+**Шаг 10 — Records** (commit после):
+- internal/records: GET /api/records — топ-1 по buildings
+  (MAX(level)), research (level), ships/defense (SUM(count)), score
+  (points). Плюс текущий показатель viewer'а.
+- UI RecordsScreen: вкладки по категориям, поиск, таблица с %
+  соотношением к рекорду.
+
+**Шаг 11 — ResourceTransfers** (commit 99bf0db):
+- migration 0054 resource_transfers(id, from_user_id, to_user_id,
+  metal, silicon, hydrogen, at) + индексы.
+- fleet.ArriveHandler: при успешном transport → INSERT в лог (если
+  from_user != to_user).
+- score.ResourceTransfers: GET /api/stats/resource-transfers
+  ?direction=sent|received&period=week|month|all, топ-20 по total
+  (m + 2*si + 4*h).
+- UI: вкладка «📦 Торговля» в Score, подразделы Получатели/Отправители
+  + фильтр периода.
+
+**Шаг 4 — Fleet market lots** (commit после):
+- migration 0055 market_lots.kind/sell_fleet jsonb; ослаблены NOT NULL
+  на sell_resource/sell_amount; CHECK согласованности shape'а.
+- market.fleet_lots.go:
+  - ListFleetLots — открытые.
+  - CreateFleetLot: FOR UPDATE на ships, списывает, вставляет лот.
+  - AcceptFleetLot: FOR UPDATE lot, проверка buy_resource на планете
+    покупателя, зачисление продавцу (на первую не-луну), ON CONFLICT
+    на ships.
+  - CancelFleetLot: возврат ships.
+- UI: под-вкладки «Ресурсы/Флот» в LotsPanel + FleetLotsPanel с сеткой
+  SHIPS.
+
+**Шаг 9 — Techtree SVG-граф** (commit 58ea12a):
+- TechtreeGraph.tsx: чистый SVG, layered layout (depth =
+  max(requirements depth)+1), hover-подсветка.
+- Тумблер «🗂 Карточки / 🌐 Граф» в TechtreeScreen.
+- Без react-flow (избыточная зависимость для ~50 узлов на kind).
+
+**Шаг 12 — Payment presets** (commit 5ddd7e0):
+- CreditsScreen: packageHint() — подсказка под карточкой пакета по
+  размеру.
+- Сворачиваемый details «💡 На что потратить» с ценами офицеров,
+  смены профессии, артефактов.
+
+**Итог:**
+- 11 упрощений из UI Porting → перемещены в «Закрытые» в simplifications.md.
+- Осталось 1 открытое (phalanx-producer, отдельная фича).
+- Миграции: 0051 (account_deletion_codes), 0052 (planets.sort_order),
+  0053 (friends), 0054 (resource_transfers), 0055 (market_lots.fleet).
+- Новые backend-пакеты: friends, records.
+- Новые frontend-экраны: FriendsScreen, RecordsScreen, TechtreeGraph +
+  PlanetOrderSection/DangerZone в Settings.
+- Backend: go build ./... чистый.
+
+Статус: ✅ ЗАВЕРШЕНА

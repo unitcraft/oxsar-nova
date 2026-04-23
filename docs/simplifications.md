@@ -453,90 +453,24 @@
 
 ## UI Porting (H-план, 2026-04-23)
 
-### [H.1.7] Messages: новые папки без producer'ов в backend
-- **Где**: `frontend/src/features/messages/MessagesScreen.tsx`, FOLDERS.
-- **Что**: добавлены UI-вкладки Фаланга (11), Альянс (6), Артефакты (7),
-  Кредиты (8) с ID из legacy consts.php, но backend пока не пишет
-  сообщения в эти папки — они будут пустыми.
-- **Почему**: UI готов для будущих producer'ов, чтобы не править MessagesScreen
-  повторно. Без AutoMsg-продюсеров под эти типы лучше показать пустую
-  вкладку, чем вовсе скрыть.
-- **Как чинить**: расширить `backend/internal/automsg/service.go` новыми
-  типами сообщений (phalanx_scan, alliance_event, artefact_expired,
-  credit_transaction) и писать в соответствующие folder-ID.
+### [H.1.7] Messages: фаланга-producer отсутствует
+- **Где**: `backend/internal/fleet` — сканы фаланги не реализованы.
+- **Что**: папка «Фаланга» (folder=11) видима в UI, но не наполняется —
+  сам сканер фаланги ещё не реализован в nova-backend.
+- **Почему**: это отдельная большая фича, не входит в план 11.
+- **Как чинить**: реализовать `KindPhalanxScan` event + UI-триггер в
+  galaxy + automsg.SendDirect(folder=11) в обработчике.
 - **Приоритет**: M.
 
-### [H.1.5] Galaxy: цветовая легенда отношений альянсов
-- **Где**: `frontend/src/features/galaxy/GalaxyScreen.tsx`.
-- **Что**: не реализована цветовая подсветка строк по отношениям
-  (союзник / враг / НЕН / торговый договор). Только позиция 16
-  «Бесконечные дали» для экспедиций.
-- **Почему**: backend не хранит alliance_relations (таблица не создана,
-  API для управления отсутствует).
-- **Как чинить**: миграция `alliance_relations(a_id, b_id, kind)`,
-  CRUD-handlers, CSS-классы `.galaxy-row-ally` / `.galaxy-row-enemy`.
-- **Приоритет**: M.
-
-### [H.1.6] Score: координаты главной планеты в рейтинге
-- **Где**: `backend/internal/score/service.go::Top`.
-- **Что**: добавлены вкладки «Альянсы» и «В отпуске», но колонка
-  координат главной планеты игрока в основной таблице не добавлена.
-- **Почему**: требует JOIN с `planets` по cur_planet_id или по MIN(created_at),
-  увеличивает сложность SQL без большой ценности — координаты можно
-  посмотреть через поиск или галактику.
-- **Как чинить**: JOIN в `Top` с фильтром по первой планете игрока.
-- **Приоритет**: L.
-
-### [H.2.10] Search: переход из результатов
-- **Где**: `frontend/src/App.tsx::onNavigate`.
-- **Что**: клик по результату поиска переводит на экран галактики
-  (для планет) или рейтинга (для игроков/альянсов), но без
-  пред-заполнения координат / фильтра по нику.
-- **Почему**: GalaxyScreen/ScoreScreen не имеют внешнего API для
-  управления состоянием из родителя.
-- **Как чинить**: добавить prop `initialTarget` у GalaxyScreen и
-  `initialQuery` у ScoreScreen.
-- **Приоритет**: L.
-
-### [H.2.2] Techtree: без визуализации графа
-- **Где**: `frontend/src/features/techtree/TechtreeScreen.tsx`.
-- **Что**: показывается сетка карточек с requirements, но без SVG-графа
-  зависимостей (как в классических tech-tree визуализациях).
-- **Почему**: простая сетка с «✓/✗ req» информативна и легче читается,
-  чем граф; построение SVG-дерева требует дополнительных библиотек.
-- **Как чинить**: интегрировать react-flow или собственный force-layout
-  при необходимости.
-- **Приоритет**: L.
-
-### [H.1.9] Market: торговля флотом через лоты
-- **Где**: `backend/internal/market`, frontend LotsPanel.
-- **Что**: добавлен обмен ресурсов ↔ кредиты (tab «💳 Кредиты»), но
-  ордерная книга пока только для ресурсов (флот через лоты не
-  добавлен).
-- **Почему**: требует новых колонок в `market_lots` (sell_ships_json)
-  и значительного CRUD backend'а.
-- **Как чинить**: миграция для market_lots с поддержкой флота,
-  отдельный handler CreateFleetLot / AcceptFleetLot.
-- **Приоритет**: M.
-
-### [H.3] Settings: опасная зона (удаление аккаунта), drag&drop планет
-- **Где**: `frontend/src/features/settings/SettingsScreen.tsx`.
-- **Что**: реализованы email, пароль, язык, часовой пояс, vacation;
-  но удаление аккаунта и drag-and-drop сортировки планет не реализованы.
-- **Почему**: удаление требует soft-delete cascade через все домены;
-  сортировка планет требует колонки `sort_order` в planets.
-- **Как чинить**: отдельная dangerous-зона DELETE /api/me с подтверждением
-  через ввод ника; миграция planets.sort_order + UI dnd.
-- **Приоритет**: L.
-
-### [H.2.6 / H.2.7 / H.2.9 / H.2.11] Records, ResTransferStats, Friends, Payment UI
-- **Что не сделано**: Records (рекорды сервера), ResTransferStats (топ
-  получателей), Friends (список друзей), Payment UI (выбор пакета
-  кредитов в спец. экране).
-- **Почему**: P3-приоритет, охват существующим UI — Payment работает
-  через план G (07-payments.md), Records/ResTransferStats имеют
-  ограниченную ценность.
-- **Как чинить**: см. `docs/plans/08-ui-porting.md` разделы H.2.6–H.2.11.
+### [H.2.11] Payment: custom-сумма пополнения
+- **Где**: `frontend/src/features/payment/CreditsScreen.tsx`.
+- **Что**: только фиксированные пакеты из `cfg.Payment.Packages`, нет
+  поля «своя сумма». Подсказки по пользе пакетов добавлены.
+- **Почему**: backend требует `package_key` для валидации через
+  RobokassaGateway; произвольная сумма потребует нового flow с
+  dynamic-package (с генерацией signature на лету).
+- **Как чинить**: расширить payment.Service.CreateOrder дополнительной
+  веткой с CustomAmountRub, отдельный PaymentFixedGateway для custom.
 - **Приоритет**: L.
 
 ---
@@ -569,3 +503,36 @@
 
 ### [UI] ResourceScreen: FactorInput — ЗАКРЫТО (2026-04-23)
 - Заменено на `<input type="range">` + пресеты 0/25/50/75/100, автосохранение по `onMouseUp`/`onTouchEnd`, убраны кнопки «Сохранить» и «Назад».
+
+### План 11 UI Porting Follow-up — 11 упрощений ЗАКРЫТО (2026-04-23)
+Все упрощения из H-плана закрыты параллельными итерациями 11.1–11.12:
+
+- **H.2.10 Search навигация с контекстом** (шаг 1, commit 4e0b035).
+  GalaxyScreen.initialCoords + ScoreScreen.initialQuery + фильтр по нику.
+- **H.1.6 Score координаты гл. планеты** (шаг 8, commit 4e0b035).
+  LATERAL JOIN + кликабельные координаты → galaxy.
+- **H.1.7 Messages producers** (шаг 2, commit 6641ba8). Добавлен
+  `automsg.SendDirect`; интегрирован в payment, referral, alliance,
+  artefact. Остался только phalanx-producer (сканер не реализован).
+- **H.1.5 Galaxy alliance relations** (шаг 3, commit 9547437). CellView.relation,
+  ReadSystem с viewerUserID, цвета rows (ally=зелёный/war=красный/nap=жёлтый).
+- **H.3 Delete account через код** (шаг 6, commit недавний). migration 0051
+  account_deletion_codes, argon2id, TTL 10 мин, 3/час rate-limit, soft-delete.
+- **H.3 Planet sort drag&drop** (шаг 7). migration 0052 planets.sort_order,
+  PATCH /api/planets/order, HTML5 draggable без библиотек.
+- **H.2.9 Friends** (шаг 5). migration 0053 friends, CRUD endpoints,
+  FriendsScreen с онлайн-статусом, ⭐ подсветка в галактике.
+- **H.2.6 Records** (шаг 10). `GET /api/records` — топ-1 по зданиям,
+  исследованиям, флоту, обороне, очкам + мой % от рекорда.
+- **H.2.7 ResTransferStats** (шаг 11). migration 0054 resource_transfers,
+  логирование в fleet.ArriveHandler, `GET /api/stats/resource-transfers`,
+  вкладка «Торговля» в Score.
+- **H.1.9 Fleet market** (шаг 4). migration 0055 market_lots.kind/sell_fleet,
+  CreateFleetLot/AcceptFleetLot/CancelFleetLot, UI под-вкладки в LotsPanel.
+- **H.2.2 Techtree SVG** (шаг 9). Чистый SVG с layered layout, тумблер
+  «🗂 Карточки / 🌐 Граф».
+- **H.2.11 Payment подсказки** (шаг 12). packageHint по размеру пакета +
+  раздел «На что потратить» с ценами.
+
+Все миграции 0051–0055, go build чистый. Осталась одна незакрытая
+запись в UI Porting — phalanx-producer, ждёт реализации самого сканера.
