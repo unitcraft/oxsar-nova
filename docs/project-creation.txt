@@ -5060,3 +5060,26 @@ MEDIUM Priority:
        frontend/src/features/officers/OfficersScreen.tsx
 
 Статус: ✅ ЗАВЕРШЕНА (план 08 закрыт)
+
+
+================================================================================
+Итерация (сессия 2026-04-23h) — план 12: UnitInfoScreen улучшения
+================================================================================
+
+## Задача 6 — Улучшение заголовка
+- Убрана кнопка «← Назад» из UnitInfoScreen (навигация через таб-бар браузера)
+- Убран блок «Описание» снизу
+- Вместо короткого описания (description/benefit) в заголовке показывается полное (fullDesc)
+- Иконка увеличена с 64×64 до 128×128
+
+## Задача 7 — Идентификатор юнита в URL
+- Хэш изменён с `#unit-info` на `#unit-info/building/1` или `#unit-info/research/13`
+- При перезагрузке страницы `parseHash()` восстанавливает tab='unit-info' и infoUnit из URL
+- `openInfo()` пишет полный хэш через `history.pushState`
+- `popstate` обновляет infoUnit при навигации кнопкой «назад» браузера
+- Удалён неиспользуемый проп `onBack` из UnitInfoScreen и его передача из App.tsx
+
+Файлы: frontend/src/features/unit-info/UnitInfoScreen.tsx, frontend/src/App.tsx,
+       docs/plans/12-unit-info.md (задачи 6 и 7)
+
+Статус: ✅ ЗАВЕРШЕНА
