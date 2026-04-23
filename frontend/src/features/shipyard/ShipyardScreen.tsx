@@ -178,7 +178,11 @@ function UnitCards({
                 title={onOpenInfo ? `Подробнее о ${u.name}` : undefined}
               />
               <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                <div className="ox-unit-card-name">{u.name}</div>
+                <div
+                  className="ox-unit-card-name"
+                  style={onOpenInfo ? { cursor: 'pointer', color: 'var(--ox-accent)' } : undefined}
+                  onClick={onOpenInfo ? () => onOpenInfo(unitKind, u.id) : undefined}
+                >{u.name}</div>
                 {u.description && (
                   <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 2 }}>
                     {u.description}

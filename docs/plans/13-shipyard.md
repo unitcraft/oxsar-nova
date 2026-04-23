@@ -229,6 +229,9 @@ DELETE /api/planets/{planetId}/shipyard/{queueId}
 **Файлы:** `frontend/src/api/catalog.ts`, `frontend/src/features/unit-info/UnitInfoScreen.tsx`,
 `frontend/src/features/shipyard/ShipyardScreen.tsx`, `frontend/src/App.tsx`
 
+**Hotfix 6.1 — название юнита кликабельно:** клик по названию (подсвечен акцентом)
+также открывает UnitInfoScreen, аналогично иконке.
+
 ---
 
 ### Задача 5 — Rapidfire (быстрый огонь) [P3]
