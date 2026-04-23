@@ -49,15 +49,17 @@ const VALID_TABS = new Set<string>([
   'unit-info',
 ]);
 
-type InfoUnit = { kind: 'building' | 'research'; id: number; level: number; fromTab: Tab };
+type InfoUnit = { kind: 'building' | 'research' | 'ship' | 'defense'; id: number; level: number; fromTab: Tab };
+
+const INFO_KINDS = new Set(['building', 'research', 'ship', 'defense']);
 
 function parseHash(): { tab: Tab; infoUnit: InfoUnit | null } {
   const hash = window.location.hash.replace('#', '');
   const parts = hash.split('/');
-  if (parts[0] === 'unit-info' && (parts[1] === 'building' || parts[1] === 'research') && parts[2]) {
+  if (parts[0] === 'unit-info' && parts[1] && INFO_KINDS.has(parts[1]) && parts[2]) {
     const id = parseInt(parts[2], 10);
     if (!isNaN(id)) {
-      return { tab: 'unit-info', infoUnit: { kind: parts[1], id, level: 0, fromTab: 'overview' } };
+      return { tab: 'unit-info', infoUnit: { kind: parts[1] as InfoUnit['kind'], id, level: 0, fromTab: 'overview' } };
     }
   }
   const tab = VALID_TABS.has(parts[0] ?? '') ? (parts[0] as Tab) : 'overview';
@@ -152,7 +154,7 @@ function AuthenticatedApp() {
   const [fleetDst, setFleetDst] = useState<{ g: number; s: number; pos: number; isMoon: boolean; mission: number } | undefined>();
   const [infoUnit, setInfoUnit] = useState<InfoUnit | null>(() => parseHash().infoUnit);
 
-  function openInfo(kind: 'building' | 'research', id: number, level: number) {
+  function openInfo(kind: InfoUnit['kind'], id: number, level: number) {
     const unit: InfoUnit = { kind, id, level, fromTab: tab };
     setInfoUnit(unit);
     setTab('unit-info');
@@ -249,7 +251,7 @@ function AuthenticatedApp() {
                 currentLevel={infoUnit.level}
               />
             )}
-            {tab === 'shipyard'   && <ShipyardScreen planet={planet} />}
+            {tab === 'shipyard'   && <ShipyardScreen planet={planet} onOpenInfo={(kind, id) => openInfo(kind, id, 0)} />}
             {tab === 'repair'     && <RepairScreen planet={planet} />}
             {tab === 'galaxy'     && <GalaxyScreen homePlanet={planet} userId={me.data?.user_id ?? ''} onFleetMission={(fg, fs, fpos, fMoon, fMission) => { setFleetDst({ g: fg, s: fs, pos: fpos, isMoon: fMoon, mission: fMission }); navigateTo('fleet'); }} />}
             {tab === 'fleet'      && <FleetScreen planet={planet} {...(fleetDst ? { initialDst: fleetDst } : {})} />}

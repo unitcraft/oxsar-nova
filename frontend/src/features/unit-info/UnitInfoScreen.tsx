@@ -1,7 +1,7 @@
-import { BUILDINGS, MOON_BUILDINGS, RESEARCH, costForLevel, imageOf, formatNum, fmtReqs } from '@/api/catalog';
+import { BUILDINGS, MOON_BUILDINGS, RESEARCH, SHIPS, DEFENSE, costForLevel, imageOf, formatNum, fmtReqs, nameOf } from '@/api/catalog';
 
 interface Props {
-  kind: 'building' | 'research';
+  kind: 'building' | 'research' | 'ship' | 'defense';
   unitId: number;
   currentLevel: number;
 }
@@ -58,6 +58,10 @@ const cell: React.CSSProperties = { padding: '6px 12px', textAlign: 'right', fon
 const cellLeft: React.CSSProperties = { ...cell, textAlign: 'left' };
 
 export function UnitInfoScreen({ kind, unitId, currentLevel }: Props) {
+  if (kind === 'ship' || kind === 'defense') {
+    return <CombatUnitInfo kind={kind} unitId={unitId} />;
+  }
+
   const entry = kind === 'building'
     ? [...BUILDINGS, ...MOON_BUILDINGS].find((x) => x.id === unitId)
     : RESEARCH.find((x) => x.id === unitId);
@@ -149,5 +153,136 @@ export function UnitInfoScreen({ kind, unitId, currentLevel }: Props) {
       </div>
 
     </div>
+  );
+}
+
+function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: number }) {
+  const catalog = kind === 'ship' ? SHIPS : DEFENSE;
+  const allUnits = [...SHIPS, ...DEFENSE];
+  const entry = catalog.find((x) => x.id === unitId);
+  if (!entry) return null;
+
+  const c = entry.cost;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Заголовок */}
+      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+        <img
+          src={imageOf(entry.key)} alt={entry.name} width={128} height={128}
+          style={{ imageRendering: 'pixelated', borderRadius: 8, background: 'rgba(0,0,0,0.3)', padding: 4, flexShrink: 0 }}
+        />
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>{entry.name}</h2>
+          {entry.description && (
+            <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 4 }}>{entry.description}</div>
+          )}
+        </div>
+      </div>
+
+      {/* Требования */}
+      {entry.requires && entry.requires.length > 0 && (
+        <div className="ox-panel" style={{ padding: '10px 14px', fontSize: 13, color: 'var(--ox-fg-muted)' }}>
+          🔒 Требуется: {fmtReqs(entry.requires)}
+        </div>
+      )}
+
+      {/* Боевые характеристики */}
+      <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
+        <div style={{ padding: '10px 14px 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
+          Характеристики
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <tbody>
+            <StatRow label="⚔ Атака"           value={entry.attack.toLocaleString('ru-RU')} />
+            <StatRow label="🛡 Щит"             value={entry.shield.toLocaleString('ru-RU')} />
+            <StatRow label="❤ Броня"            value={entry.shell.toLocaleString('ru-RU')} />
+            {entry.cargo != null && entry.cargo > 0 && (
+              <StatRow label="📦 Грузоподъёмность" value={entry.cargo.toLocaleString('ru-RU')} />
+            )}
+            {entry.speed != null && (
+              <StatRow label="🚀 Скорость"       value={entry.speed.toLocaleString('ru-RU')} />
+            )}
+            {entry.fuel != null && entry.fuel > 0 && (
+              <StatRow label="⛽ Расход топлива"  value={`${entry.fuel}/ед.`} />
+            )}
+            {c && c.metal > 0 && (
+              <StatRow label="🟠 Стоимость (металл)"   value={c.metal.toLocaleString('ru-RU')} />
+            )}
+            {c && c.silicon > 0 && (
+              <StatRow label="💎 Стоимость (кремний)"  value={c.silicon.toLocaleString('ru-RU')} />
+            )}
+            {c && c.hydrogen > 0 && (
+              <StatRow label="💧 Стоимость (водород)"  value={c.hydrogen.toLocaleString('ru-RU')} />
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Быстрый огонь */}
+      {entry.rapidfire && Object.keys(entry.rapidfire).length > 0 && (
+        <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
+          <div style={{ padding: '10px 14px 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
+            Быстрый огонь (rapidfire)
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 12 }}>
+                <th style={cellLeft}>Цель</th>
+                <th style={cell}>Выстрелов за раунд</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(entry.rapidfire).map(([targetId, shots]) => (
+                <tr key={targetId} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <td style={{ ...cellLeft, color: 'var(--ox-fg)' }}>
+                    {nameOf(Number(targetId))}
+                  </td>
+                  <td style={{ ...cell, color: 'var(--ox-accent)', fontWeight: 600 }}>{shots}×</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Кто стреляет быстро по этому юниту */}
+      {(() => {
+        const shooters = allUnits.filter((u) => u.rapidfire && u.rapidfire[entry.id]);
+        if (shooters.length === 0) return null;
+        return (
+          <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
+            <div style={{ padding: '10px 14px 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
+              Уязвим к быстрому огню
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 12 }}>
+                  <th style={cellLeft}>Атакующий</th>
+                  <th style={cell}>Выстрелов за раунд</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shooters.map((shooter) => (
+                  <tr key={shooter.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ ...cellLeft, color: 'var(--ox-fg)' }}>{shooter.name}</td>
+                    <td style={{ ...cell, color: 'var(--ox-danger)', fontWeight: 600 }}>{shooter.rapidfire![entry.id]}×</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+function StatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <td style={{ ...cellLeft, color: 'var(--ox-fg-muted)', fontSize: 13 }}>{label}</td>
+      <td style={{ ...cell, color: 'var(--ox-fg)', fontSize: 13 }}>{value}</td>
+    </tr>
   );
 }
