@@ -8,6 +8,8 @@ import (
 
 	"github.com/oxsar/nova/backend/internal/battle"
 	"github.com/oxsar/nova/backend/internal/config"
+	"github.com/oxsar/nova/backend/internal/economy"
+	"github.com/oxsar/nova/backend/pkg/rng"
 )
 
 type unitStack struct {
@@ -57,32 +59,52 @@ func readPlanetDefense(ctx context.Context, tx pgx.Tx, planetID string) ([]unitS
 	return out, rows.Err()
 }
 
-func readUserTech(ctx context.Context, tx pgx.Tx, userID string) (battle.Tech, error) {
+func readUserTech(ctx context.Context, tx pgx.Tx, userID string, cat *config.Catalog) (battle.Tech, error) {
 	rows, err := tx.Query(ctx, `SELECT unit_id, level FROM research WHERE user_id = $1`, userID)
 	if err != nil {
 		return battle.Tech{}, fmt.Errorf("alien: read tech: %w", err)
 	}
 	defer rows.Close()
-	var tech battle.Tech
+	levels := map[int]int{}
 	for rows.Next() {
 		var uid, lvl int
 		if err := rows.Scan(&uid, &lvl); err != nil {
-			return tech, err
+			return battle.Tech{}, err
 		}
-		switch uid {
-		case 109:
-			tech.Gun = lvl
-		case 110:
-			tech.Shield = lvl
-		case 111:
-			tech.Shell = lvl
-		case 113:
-			tech.Ballistics = lvl
-		case 104:
-			tech.Masking = lvl
+		levels[uid] = lvl
+	}
+	if err := rows.Err(); err != nil {
+		return battle.Tech{}, err
+	}
+
+	// Применить бонусы профессии.
+	var prof string
+	_ = tx.QueryRow(ctx, `SELECT profession FROM users WHERE id=$1`, userID).Scan(&prof)
+	if prof != "" && prof != "none" {
+		if spec, ok := cat.Professions.Professions[prof]; ok {
+			for k, v := range spec.Bonus {
+				if id, ok2 := economy.ProfessionKeyToID[k]; ok2 {
+					levels[id] += v
+				}
+			}
+			for k, v := range spec.Malus {
+				if id, ok2 := economy.ProfessionKeyToID[k]; ok2 {
+					levels[id] += v
+				}
+			}
 		}
 	}
-	return tech, rows.Err()
+
+	return battle.Tech{
+		Gun:        levels[economy.IDTechGun],
+		Shield:     levels[economy.IDTechShield],
+		Shell:      levels[economy.IDTechShell],
+		Laser:      levels[economy.IDTechLaser],
+		Ion:        levels[economy.IDTechSilicon],
+		Plasma:     levels[economy.IDTechHydrogen],
+		Ballistics: levels[economy.IDTechBallistics],
+		Masking:    levels[economy.IDTechMasking],
+	}, nil
 }
 
 func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense bool) []battle.Unit {
@@ -124,6 +146,129 @@ func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense bool
 		})
 	}
 	return out
+}
+
+// calcDefPower — суммарная боевая мощь обороняющихся (attack × quantity).
+// Используется для масштабирования флота пришельцев.
+func calcDefPower(units []battle.Unit) float64 {
+	var total float64
+	for _, u := range units {
+		maxAtk := u.Attack[0]
+		for _, a := range u.Attack[1:] {
+			if a > maxAtk {
+				maxAtk = a
+			}
+		}
+		total += maxAtk * float64(u.Quantity)
+	}
+	return total
+}
+
+// alienShipOrder — порядок добавления кораблей пришельцев от слабых к сильным.
+// ID совпадают с configs/ships.yml (unit_a_corvette=200 .. unit_a_torpedocarier=204).
+var alienShipOrder = []struct {
+	unitID int
+	name   string
+}{
+	{200, "Alien Corvette"},
+	{201, "Alien Screen"},
+	{202, "Alien Paladin"},
+	{203, "Alien Frigate"},
+	{204, "Alien Torpedocarrier"},
+}
+
+// scaledAlienFleet создаёт флот пришельцев с суммарной мощью 90–110% от defPower.
+// Использует корабли UNIT_A_* из каталога. Если defPower = 0 (планета пуста)
+// или каталог не содержит alien-кораблей — возвращает fallback из 5 alien corvette.
+func scaledAlienFleet(defPower float64, r *rng.R, cat *config.Catalog) []battle.Unit {
+	// Целевая мощь: defPower × random(0.9, 1.1).
+	scale := 0.9 + float64(r.IntN(21))/100.0
+	targetPower := defPower * scale
+	if targetPower < 100 {
+		targetPower = 100 // минимальная сила атаки даже для пустой планеты
+	}
+
+	// Найти характеристики кораблей пришельцев в каталоге.
+	type alienUnit struct {
+		unitID  int
+		name    string
+		attack  float64
+		shell   float64
+		shield  float64
+		front   int
+	}
+	var shipDefs []alienUnit
+	for _, entry := range alienShipOrder {
+		for _, spec := range cat.Ships.Ships {
+			if spec.ID == entry.unitID {
+				shipDefs = append(shipDefs, alienUnit{
+					unitID: entry.unitID,
+					name:   entry.name,
+					attack: float64(spec.Attack),
+					shell:  float64(spec.Shell),
+					shield: float64(spec.Shield),
+					front:  0, // Ships каталог не хранит Front для пришельцев
+				})
+				break
+			}
+		}
+	}
+	if len(shipDefs) == 0 {
+		// Каталог не загружен или alien ships отсутствуют — fallback.
+		return []battle.Unit{{
+			UnitID: 200, Quantity: 5, Name: "Alien Corvette",
+			Attack: [3]float64{150, 0, 0}, Shell: 2000,
+		}}
+	}
+
+	// Итеративно добавляем корабли от слабых к сильным, пока не достигнем targetPower.
+	var result []battle.Unit
+	var currentPower float64
+	for currentPower < targetPower {
+		remaining := targetPower - currentPower
+		// Выбираем самый сильный корабль, который не превышает remaining × 1.5.
+		chosen := shipDefs[0]
+		for _, sd := range shipDefs {
+			if sd.attack <= remaining*1.5 && sd.attack > chosen.attack {
+				chosen = sd
+			}
+		}
+		// Сколько таких кораблей добавить (от 1 до 20).
+		maxAdd := int(remaining/chosen.attack) + 1
+		if maxAdd > 20 {
+			maxAdd = 20
+		}
+		if maxAdd < 1 {
+			maxAdd = 1
+		}
+
+		// Найти или создать запись для этого unit_id.
+		found := false
+		for i := range result {
+			if result[i].UnitID == chosen.unitID {
+				result[i].Quantity += int64(maxAdd)
+				found = true
+				break
+			}
+		}
+		if !found {
+			result = append(result, battle.Unit{
+				UnitID:   chosen.unitID,
+				Quantity: int64(maxAdd),
+				Name:     chosen.name,
+				Attack:   [3]float64{chosen.attack, 0, 0},
+				Shell:    chosen.shell,
+				Shield:   [3]float64{chosen.shield, 0, 0},
+			})
+		}
+		currentPower += chosen.attack * float64(maxAdd)
+
+		// Защита от бесконечного цикла при очень малом attack.
+		if chosen.attack <= 0 {
+			break
+		}
+	}
+	return result
 }
 
 func fnvHash(s string) uint64 {

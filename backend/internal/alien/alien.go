@@ -63,12 +63,20 @@ func NewService(db repo.Exec, cat *config.Catalog) *Service {
 //   - С вероятностью 30% для каждого создаём событие атаки.
 //   - Тир зависит от суммы очков (score): <1000 → 1, 1000..50000 → 2, >50000 → 3.
 func (s *Service) Spawn(ctx context.Context) error {
+	// ALIEN_ATTACK_INTERVAL = 6 дней: исключаем игроков у которых уже есть
+	// запланированная или недавно сработавшая атака пришельцев.
 	rows, err := s.db.Pool().Query(ctx, `
 		SELECT u.id, u.score, p.id, p.galaxy, p.system, p.position
 		FROM users u
 		JOIN planets p ON p.user_id = u.id AND p.destroyed_at IS NULL AND p.is_moon = false
 		WHERE u.last_seen_at > now() - interval '7 days'
 		  AND u.banned_at IS NULL
+		  AND NOT EXISTS (
+		    SELECT 1 FROM events e
+		    WHERE e.planet_id = p.id
+		      AND e.kind = 35
+		      AND e.fire_at > now() - interval '6 days'
+		  )
 		ORDER BY random()
 		LIMIT 5
 	`)
@@ -186,7 +194,7 @@ func (s *Service) AttackHandler() event.Handler {
 		if err != nil {
 			return fmt.Errorf("alien attack: def defense: %w", err)
 		}
-		defTech, err := readUserTech(ctx, tx, defUserID)
+		defTech, err := readUserTech(ctx, tx, defUserID, s.cat)
 		if err != nil {
 			return fmt.Errorf("alien attack: def tech: %w", err)
 		}
@@ -195,14 +203,14 @@ func (s *Service) AttackHandler() event.Handler {
 		defUnits = append(defUnits, stacksToBattleUnits(defDefense, s.cat, true)...)
 		defSide := battle.Side{UserID: defUserID, Tech: defTech, Units: defUnits}
 
+		seed := rng.New(fnvHash(e.ID))
+		defPower := calcDefPower(defUnits)
 		atkSide := battle.Side{
 			UserID:   "aliens",
 			Username: "Инопланетяне",
 			IsAliens: true,
-			Units:    alienFleet(pl.Tier),
+			Units:    scaledAlienFleet(defPower, seed, s.cat),
 		}
-
-		seed := rng.New(fnvHash(e.ID))
 
 		var report battle.Report
 		if len(defSide.Units) == 0 {

@@ -5447,3 +5447,30 @@ D-artefacts.md, E-ui-features.md, F-credits-ai-advisor.md.
 **Все тесты зелёные** (go test ./...)
 
 Статус: ✅ ЗАВЕРШЕНА
+
+================================================================================
+ИТЕРАЦИЯ 20 — Alien AI: масштабирование флота (план A.3)
+================================================================================
+
+Задача: флот пришельцев масштабируется под боевую мощь обороняющейся планеты
+(90–110%), используя корабли UNIT_A_* (id 200–204) из каталога.
+Интервал атак — не чаще 1 раза в 6 дней.
+
+**alien/helpers.go:**
+- calcDefPower(units []battle.Unit) float64 — суммарный attack × quantity
+- alienShipOrder — порядок кораблей от слабых к сильным (200..204)
+- scaledAlienFleet(defPower, rng, cat) — итеративно набирает флот до
+  targetPower = defPower × random(0.9, 1.1); fallback 5 Alien Corvette
+- readUserTech: исправлен баг (ID техов 109/110/111 → 15/16/17 через economy.IDTech*);
+  теперь принимает *config.Catalog и применяет бонусы профессии
+
+**alien/alien.go:**
+- AttackHandler: defPower = calcDefPower(defShips ∪ defDefense);
+  alienFleet = scaledAlienFleet(defPower, seed, cat)
+- readUserTech вызывается с s.cat
+- Spawn SQL: добавлен NOT EXISTS (events за 6 дней, kind=35) —
+  интервал ALIEN_ATTACK_INTERVAL
+
+**Все тесты зелёные** (go test ./...)
+
+Статус: ✅ ЗАВЕРШЕНА
