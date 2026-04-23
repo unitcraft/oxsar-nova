@@ -144,3 +144,72 @@ ships:
     cargo: 0
     speed: 12000
     fuel: 1
+
+  # Lancer Ship (id=102). Premium-корабль, front=8 (атакует раньше обычных).
+  # Rapidfire × 3 против Deathstar. Стоимость — из construction.yml.
+  lancer_ship:
+    id: 102
+    attack: 5500
+    shield: 200
+    shell: 10000
+    cargo: 200
+    speed: 8000
+    fuel: 100
+
+  # Shadow Ship (id=325). Stealth-корабль: masking=4, ballistics=3, front=9.
+  # Низкая стоимость, слабый в бою — используется для разведки.
+  shadow_ship:
+    id: 325
+    attack: 30
+    shield: 30
+    shell: 4000
+    cargo: 75
+    speed: 13000
+    fuel: 35
+
+  # Alien ships (id 200–204). Корабли пришельцев — не строятся игроком,
+  # используются в AI-атаках. Стоимость — из construction.yml (для расчёта обломков).
+  unit_a_corvette:
+    id: 200
+    attack: 200
+    shield: 75
+    shell: 25500
+    cargo: 300
+    speed: 20000
+    fuel: 150
+
+  unit_a_screen:
+    id: 201
+    attack: 22
+    shield: 5000
+    shell: 30000
+    cargo: 800
+    speed: 10000
+    fuel: 75
+
+  unit_a_paladin:
+    id: 202
+    attack: 75
+    shield: 50
+    shell: 4200
+    cargo: 50
+    speed: 8000
+    fuel: 20
+
+  unit_a_frigate:
+    id: 203
+    attack: 1250
+    shield: 150
+    shell: 70000
+    cargo: 2000
+    speed: 10000
+    fuel: 300
+
+  unit_a_torpedocarier:
+    id: 204
+    attack: 350
+    shield: 100
+    shell: 11000
+    cargo: 200
+    speed: 13000
+    fuel: 100
