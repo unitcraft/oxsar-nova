@@ -79,45 +79,11 @@ HTTP-handler возвращает 400 при этой ошибке.
 
 ---
 
-### D.2 Battle bonus артефакты — верификация ID (приоритет: MEDIUM)
-
-**Контекст:** plan A.2 требует ID и множители боевых артефактов (war_machine/energy_shield/titanium_hull).
-Эти ID должны быть верифицированы по `d:\Sources\oxsar2\consts.php`.
-
-**Шаг:** Найти в consts.php константы вида `ARTEFACT_WAR_MACHINE`, `ARTEFACT_ENERGY_SHIELD`,
-`ARTEFACT_TITANIUM_HULL` и выписать ID + multiplier.
-
-Пример ожидаемого формата для `artefacts.yml`:
-```yaml
-war_machine:
-  id: 310          # верифицировать!
-  stackable: false
-  lifetime_seconds: 604800
-  effect:
-    type: battle_bonus
-    battle_attack: 1.10
-
-energy_shield:
-  id: 311          # верифицировать!
-  stackable: false
-  lifetime_seconds: 604800
-  effect:
-    type: battle_bonus
-    battle_shield: 1.10
-
-titanium_hull:
-  id: 312          # верифицировать!
-  stackable: false
-  lifetime_seconds: 604800
-  effect:
-    type: battle_bonus
-    battle_shell: 1.10
-```
-
-**Проверка готовности:**
-- [ ] ID верифицированы по `oxsar2/consts.php`
-- [ ] `artefacts.yml` обновлён
-- [ ] (зависит от A.2 для применения в бою)
+### ✅ D.2 Battle bonus артефакты — верификация ID (план 01, итерация ~48)
+ID верифицированы по `oxsar2/sql/data.sql` (не consts.php — в нём этих констант нет):
+- battle_attack_power: id=318, battle_shell_power: id=316, battle_shield_power: id=317
+- _10 версии: id=359-361
+- artefacts.yml обновлён, A.2 реализована
 
 ---
 
