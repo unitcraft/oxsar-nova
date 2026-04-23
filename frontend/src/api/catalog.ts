@@ -26,6 +26,8 @@ export interface Req { kind: 'building' | 'research'; key: string; level: number
 export interface BuildingEntry extends UnitEntry {
   costBase: Cost;
   costFactor: number;
+  description?: string;
+  maxLevel?: number;
 }
 
 // costForLevel: cost_base * cost_factor^(level-1), округление вниз.
@@ -46,19 +48,20 @@ export function formatNum(v: number): string {
 }
 
 export const BUILDINGS: BuildingEntry[] = [
-  { id: 1,   key: 'metal_mine',       name: 'Рудник металла',                costBase: { metal: 60,    silicon: 15,   hydrogen: 0   }, costFactor: 1.5 },
-  { id: 2,   key: 'silicon_lab',      name: 'Рудник по добыче кремния',      costBase: { metal: 48,    silicon: 24,   hydrogen: 0   }, costFactor: 1.6 },
-  { id: 3,   key: 'hydrogen_lab',     name: 'Синтезатор водорода',            costBase: { metal: 225,   silicon: 75,   hydrogen: 0   }, costFactor: 1.5 },
-  { id: 4,   key: 'solar_plant',      name: 'Солнечная электростанция',       costBase: { metal: 75,    silicon: 30,   hydrogen: 0   }, costFactor: 1.5 },
-  { id: 5,   key: 'hydrogen_plant',   name: 'Термоядерная электростанция',    costBase: { metal: 900,   silicon: 360,  hydrogen: 180 }, costFactor: 1.8 },
-  { id: 6,   key: 'robotic_factory',  name: 'Фабрика роботов',               costBase: { metal: 400,   silicon: 120,  hydrogen: 200 }, costFactor: 2.0 },
-  { id: 8,   key: 'shipyard',         name: 'Верфь',                         costBase: { metal: 400,   silicon: 200,  hydrogen: 100 }, costFactor: 2.0 },
-  { id: 9,   key: 'metal_storage',    name: 'Хранилище металла',             costBase: { metal: 1000,  silicon: 0,    hydrogen: 0   }, costFactor: 2.0 },
-  { id: 10,  key: 'silicon_storage',  name: 'Хранилище кремния',             costBase: { metal: 1000,  silicon: 500,  hydrogen: 0   }, costFactor: 2.0 },
-  { id: 11,  key: 'hydrogen_storage', name: 'Емкость для водорода',           costBase: { metal: 1000,  silicon: 1000, hydrogen: 0   }, costFactor: 2.0 },
-  { id: 12,  key: 'research_lab',     name: 'Исследовательская лаборатория', costBase: { metal: 200,   silicon: 400,  hydrogen: 200 }, costFactor: 2.0 },
-  { id: 13,  key: 'missile_silo',     name: 'Ракетная шахта',                costBase: { metal: 20000, silicon: 20000,hydrogen: 1000}, costFactor: 2.0 },
-  { id: 100, key: 'repair_factory',   name: 'Ремонтный ангар',               costBase: { metal: 800,   silicon: 400,  hydrogen: 200 }, costFactor: 2.0 },
+  { id: 1,   key: 'metal_mine',       name: 'Рудник металла',                description: 'Добывает металл из недр планеты',                    costBase: { metal: 60,      silicon: 15,     hydrogen: 0      }, costFactor: 1.5 },
+  { id: 2,   key: 'silicon_lab',      name: 'Рудник по добыче кремния',      description: 'Добывает кремний для строительства и исследований',   costBase: { metal: 48,      silicon: 24,     hydrogen: 0      }, costFactor: 1.6 },
+  { id: 3,   key: 'hydrogen_lab',     name: 'Синтезатор водорода',            description: 'Синтезирует водород — топливо для флота',             costBase: { metal: 225,     silicon: 75,     hydrogen: 0      }, costFactor: 1.5 },
+  { id: 4,   key: 'solar_plant',      name: 'Солнечная электростанция',       description: 'Вырабатывает энергию из солнечного излучения',        costBase: { metal: 75,      silicon: 30,     hydrogen: 0      }, costFactor: 1.5 },
+  { id: 5,   key: 'hydrogen_plant',   name: 'Термоядерная электростанция',    description: 'Мощная электростанция на термоядерном синтезе',       costBase: { metal: 900,     silicon: 360,    hydrogen: 180    }, costFactor: 1.8 },
+  { id: 6,   key: 'robotic_factory',  name: 'Фабрика роботов',               description: 'Ускоряет строительство зданий',                       costBase: { metal: 400,     silicon: 120,    hydrogen: 200    }, costFactor: 2.0 },
+  { id: 7,   key: 'nano_factory',     name: 'Нано-фабрика',                  description: 'Вдвое ускоряет строительство за каждый уровень',      costBase: { metal: 1000000, silicon: 500000, hydrogen: 100000 }, costFactor: 2.0 },
+  { id: 8,   key: 'shipyard',         name: 'Верфь',                         description: 'Производит корабли и оборонительные системы',         costBase: { metal: 400,     silicon: 200,    hydrogen: 100    }, costFactor: 2.0 },
+  { id: 9,   key: 'metal_storage',    name: 'Хранилище металла',             description: 'Увеличивает максимальный запас металла',              costBase: { metal: 1000,    silicon: 0,      hydrogen: 0      }, costFactor: 2.0 },
+  { id: 10,  key: 'silicon_storage',  name: 'Хранилище кремния',             description: 'Увеличивает максимальный запас кремния',              costBase: { metal: 1000,    silicon: 500,    hydrogen: 0      }, costFactor: 2.0 },
+  { id: 11,  key: 'hydrogen_storage', name: 'Емкость для водорода',           description: 'Увеличивает максимальный запас водорода',             costBase: { metal: 1000,    silicon: 1000,   hydrogen: 0      }, costFactor: 2.0 },
+  { id: 12,  key: 'research_lab',     name: 'Исследовательская лаборатория', description: 'Позволяет проводить научные исследования',            costBase: { metal: 200,     silicon: 400,    hydrogen: 200    }, costFactor: 2.0 },
+  { id: 53,  key: 'missile_silo',     name: 'Ракетная шахта',                description: 'Хранит межпланетные ракеты для атаки',                costBase: { metal: 20000,   silicon: 20000,  hydrogen: 1000   }, costFactor: 2.0 },
+  { id: 100, key: 'repair_factory',   name: 'Ремонтный ангар',               description: 'Восстанавливает повреждённые корабли после боя',      costBase: { metal: 800,     silicon: 400,    hydrogen: 200    }, costFactor: 2.0 },
 ];
 
 export interface ResearchEntry extends UnitEntry {

@@ -128,9 +128,13 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		if err != nil {
 			return err
 		}
+		var nano int
+		if nanoSpec, ok := s.catalog.Buildings.Buildings["nano_factory"]; ok {
+			nano, _ = currentLevel(ctx, tx, p.ID, nanoSpec.ID)
+		}
 
 		start := time.Now().UTC()
-		dur := economy.BuildDuration(spec.TimeBaseSeconds, cost, robo, 0, s.gameSpd)
+		dur := economy.BuildDuration(spec.TimeBaseSeconds, cost, robo, nano, s.gameSpd)
 		end := start.Add(dur)
 
 		id := ids.New()
@@ -264,7 +268,7 @@ func (s *Service) Levels(ctx context.Context, planetID string) (map[int]int, err
 }
 
 // BuildSecondsMap возвращает время постройки следующего уровня каждого здания
-// в секундах, с учётом robotic_factory на планете и скорости игры.
+// в секундах, с учётом robotic_factory, nano_factory на планете и скорости игры.
 func (s *Service) BuildSecondsMap(ctx context.Context, planetID string, levels map[int]int) (map[int]int, error) {
 	roboSpec, ok := s.catalog.Buildings.Buildings["robotic_factory"]
 	if !ok {
@@ -276,6 +280,14 @@ func (s *Service) BuildSecondsMap(ctx context.Context, planetID string, levels m
 		planetID, roboSpec.ID,
 	).Scan(&roboLevel)
 
+	var nanoLevel int
+	if nanoSpec, ok := s.catalog.Buildings.Buildings["nano_factory"]; ok {
+		_ = s.db.Pool().QueryRow(ctx,
+			`SELECT level FROM buildings WHERE planet_id=$1 AND unit_id=$2`,
+			planetID, nanoSpec.ID,
+		).Scan(&nanoLevel)
+	}
+
 	out := make(map[int]int, len(s.catalog.Buildings.Buildings))
 	for _, spec := range s.catalog.Buildings.Buildings {
 		curLvl := levels[spec.ID]
@@ -284,7 +296,7 @@ func (s *Service) BuildSecondsMap(ctx context.Context, planetID string, levels m
 			Metal:   spec.CostBase.Metal,
 			Silicon: spec.CostBase.Silicon,
 		}, spec.CostFactor, nextLvl)
-		dur := economy.BuildDuration(spec.TimeBaseSeconds, cost, roboLevel, 0, s.gameSpd)
+		dur := economy.BuildDuration(spec.TimeBaseSeconds, cost, roboLevel, nanoLevel, s.gameSpd)
 		out[spec.ID] = int(dur.Seconds())
 	}
 	return out, nil
