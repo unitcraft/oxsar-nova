@@ -851,3 +851,39 @@ legacy `game.php/UnitInfo/29`), (2) возможность отменить за
 **Frontend (`RepairScreen.tsx`):**
 - Мутация `cancel` (DELETE + invalidate repair-queue/repair-damaged/inventory/planets)
 - Кнопка ✕ в каждой строке очереди (стиль `btn-ghost btn-sm`, как в ShipyardScreen)
+
+## Итерация UI-38: RepairScreen задачи 2–4 — план 14 (2026-04-23)
+
+### Хранилище ремонта (задача 2)
+`List` response расширен типом `ListResponse{Queue, Storage}`. `Storage.Total` вычисляется
+по legacy-формуле `(-1 + ceil(pow(1.61, level))) * 30` — из поля `special` в `units_data`
+legacy базы. Frontend: progress-bar в шапке с тремя состояниями цвета (success/warning/danger).
+
+### Скорость и топливо (задача 3)
+`DisassembleList` props изменены с анонимного типа на `CombatEntry[]`. Показывается
+🚀 speed и ⛽ fuel/ед. только если значения присутствуют.
+
+### Требования на карточке ремонта (задача 4)
+Frontend-only: `unitMeta.requires` из catalog, `fmtReqs()` для форматирования текста.
+Кнопка «Починить все» дизейблится при невыполненных requires. Backend этих данных не передаёт
+(упрощение: requirements для ремонта теоретические, в реальности все damaged юниты
+уже были построены, значит требования когда-то были выполнены).
+
+## Итерация UI-39: GalaxyScreen задачи 1–4 — план 15 (2026-04-23)
+
+### Расширение данных (задача 1)
+`CellView` расширен 8 новыми полями: `owner_last_seen`, `owner_vacation`, `owner_banned`,
+`alliance_tag`, `moon_diameter`, `moon_temp_min`, `moon_temp_max`. SQL в `repository.go`:
+добавлен `LEFT JOIN alliances al ON al.id = u.alliance_id` и полный набор полей из users.
+
+### Альянс и активность (задача 2)
+Отдельная колонка «Альянс» с тегом `[TAG]` в accent-цвете. Активность под именем:
+`(*) < 15 мин`, `(N min) < 1 ч`, `(N h) < 24 ч`, пусто после 24 ч.
+
+### Статусы и легенда (задача 3)
+Компонент `PlayerStatuses`: иконки `b` (забан), `v` (отпуск), `I` (21+ дн), `i` (7+ дн).
+Статусы `n`/`s` (newbie/strong protection) пропущены — требуют сравнения очков двух игроков,
+что недоступно на фронте без backend-расчёта. Добавлен `<tfoot>` с легендой.
+
+### Tooltip'ы (задача 4)
+Луна: `title="{name} | {diameter} км | {min}..{max}°C"`. Обломки: `title="Обломки\nМеталл: N\nКремний: N"`.
