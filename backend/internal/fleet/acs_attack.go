@@ -136,7 +136,7 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 				return fmt.Errorf("acs attack: def defense: %w", err)
 			}
 		}
-		defTech, err := readUserTech(ctx, tx, defenderUserID)
+		defTech, err := readUserTech(ctx, tx, defenderUserID, s.catalog)
 		if err != nil {
 			return fmt.Errorf("acs attack: def tech: %w", err)
 		}
@@ -156,7 +156,7 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 			if err != nil {
 				return fmt.Errorf("acs attack: read fleet_ships %s: %w", f.id, err)
 			}
-			tech, err := readUserTech(ctx, tx, f.ownerUserID)
+			tech, err := readUserTech(ctx, tx, f.ownerUserID, s.catalog)
 			if err != nil {
 				return fmt.Errorf("acs attack: read tech %s: %w", f.ownerUserID, err)
 			}

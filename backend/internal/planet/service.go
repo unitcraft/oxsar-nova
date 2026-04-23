@@ -299,6 +299,44 @@ func researchLevelsDirect(ctx context.Context, pool interface {
 	return out, rows.Err()
 }
 
+// profBonusForUser читает профессию пользователя и возвращает карту
+// смещений уровней (ключ профессии → ID из economy.ProfessionKeyToID).
+// При ошибке чтения возвращает nil (не блокирует производство).
+func profBonusForUser(ctx context.Context, pool interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}, userID string, cat *config.Catalog) map[int]int {
+	var prof string
+	if err := pool.QueryRow(ctx, `SELECT profession FROM users WHERE id=$1`, userID).Scan(&prof); err != nil {
+		return nil
+	}
+	if prof == "" || prof == "none" {
+		return nil
+	}
+	spec, ok := cat.Professions.Professions[prof]
+	if !ok {
+		return nil
+	}
+	out := make(map[int]int)
+	for k, v := range spec.Bonus {
+		if id, ok := economy.ProfessionKeyToID[k]; ok {
+			out[id] += v
+		}
+	}
+	for k, v := range spec.Malus {
+		if id, ok := economy.ProfessionKeyToID[k]; ok {
+			out[id] += v
+		}
+	}
+	return out
+}
+
+// applyProfessionBonus добавляет смещения профессии к карте tech-уровней.
+func applyProfessionBonus(tech map[int]int, bonus map[int]int) {
+	for id, delta := range bonus {
+		tech[id] += delta
+	}
+}
+
 // storageCap возвращает ёмкость трёх хранилищ на основе уровней
 // складов и множителя storage_factor (§5.10.1 — может быть > 1 от
 // активного артефакта ATOMIC_DENSIFIER).
@@ -510,6 +548,8 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 	if err != nil {
 		return nil, fmt.Errorf("get research levels: %w", err)
 	}
+	// Применяем виртуальные уровни профессии к tech-карте.
+	applyProfessionBonus(tech, profBonusForUser(ctx, s.db.Pool(), p.UserID, s.catalog))
 
 	report := &ResourceReportDTO{
 		PlanetID:   p.ID,

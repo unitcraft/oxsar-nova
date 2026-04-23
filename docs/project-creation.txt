@@ -5400,3 +5400,50 @@ D-artefacts.md, E-ui-features.md, F-credits-ai-advisor.md.
 **Все тесты зелёные** (go test ./...)
 
 Статус: ✅ ЗАВЕРШЕНА
+
+================================================================================
+ИТЕРАЦИЯ 19 — Система профессий (план C.3)
+================================================================================
+
+Задача: реализовать 4 профессии игрока с бонусами/штрафами к виртуальным
+уровням зданий/исследований. Смена профессии: 1000 кр, интервал 14 дней.
+
+**Миграция 0046_profession.sql:**
+- ALTER TABLE users ADD COLUMN profession TEXT NOT NULL DEFAULT 'none'
+- ALTER TABLE users ADD COLUMN profession_changed_at TIMESTAMPTZ
+
+**configs/professions.yml** — 4 профессии (miner/attacker/defender/tank)
+с бонусами и штрафами по ключам зданий и боевых техов.
+
+**config/catalog.go:**
+- ProfessionCatalog / ProfessionSpec (Label, Bonus map[string]int, Malus map[string]int)
+- Загрузка из professions.yml в LoadCatalog (обязательный файл)
+
+**economy/ids.go:**
+- IDTechGun/Shield/Shell/Ballistics/Masking, IDShipyard, IDDefenseFactory, IDResearchLab
+- ProfessionKeyToID map[string]int — строковые ключи → unit/tech ID
+
+**profession/service.go:**
+- Change(ctx, userID, key) — проверка кредитов (1000 кр), интервала (14 дней),
+  валидация ключа; в транзакции UPDATE users SET profession, profession_changed_at, credit
+- Get(ctx, userID) → CurrentInfo (profession, label, next_change_allowed)
+- List() → []ProfessionDTO (из каталога)
+- BonusFromKey(cat, key) → map[int]int — мержит bonus+malus по ProfessionKeyToID
+
+**planet/service.go:**
+- profBonusForUser() — читает профессию пользователя → map[int]int смещений
+- applyProfessionBonus(tech, bonus) — прибавляет к tech-карте
+- ResourceReport: применяет бонусы профессии к tech перед buildingProdStatic
+
+**fleet/attack.go и acs_attack.go:**
+- readUserTech принимает *config.Catalog; читает профессию пользователя
+  и применяет бонусы к levels до заполнения battle.Tech
+
+**profession/handler.go:**
+- GET /api/professions — список всех профессий
+- GET /api/professions/me — текущая профессия, next_change_allowed
+- POST /api/professions/me — смена профессии (тело: {"profession": "miner"})
+
+**Все тесты зелёные** (go test ./...)
+
+Статус: ✅ ЗАВЕРШЕНА
