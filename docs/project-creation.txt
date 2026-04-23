@@ -6044,3 +6044,23 @@ maxBatch=1000 событий за цикл) вместо ожидания сле
 
 Безопасно при 1 воркере; при N воркерах с SKIP LOCKED — тоже ок,
 каждый дренирует свою подмножество без конкуренции.
+
+**Ф.3.5 — Graceful shutdown**
+
+event/worker.go:
+- Новый метод `RunWithGrace(signalCtx, grace)`:
+  - При grace=0 → ведёт себя как Run (мгновенная отмена).
+  - При grace>0 → handler'ы получают отдельный workCtx
+    (context.Background), не связанный с signalCtx. При signalCtx.Done()
+    создаётся последний контекст с таймаутом grace и запускается
+    финальный tickLoop — чтобы дренировать почти-готовые events.
+- Run остался для обратной совместимости (зовёт RunWithGrace с grace=0).
+
+cmd/worker/main.go:
+- WORKER_SHUTDOWN_GRACE (default 30s).
+- Вызов `w.RunWithGrace(ctx, grace)` вместо Run.
+- Лог «worker_stopped» при корректном выходе.
+
+Эффект: SIGTERM больше не обрывает handler в середине (если успевает
+в 30s). Безопасно для длинных операций (battle / expedition завершают
+транзакцию до SIGKILL).

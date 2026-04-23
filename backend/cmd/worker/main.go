@@ -44,6 +44,11 @@ func main() {
 }
 
 func run() error {
+	// Signal-контекст отменяется сразу при получении SIGINT/SIGTERM —
+	// это сигнал "начать shutdown". Воркер получает его как ctx.Err(),
+	// tickLoop останавливается между events. В main() ждём текущий
+	// tick до GRACE_PERIOD_SEC (default 30s), потом принудительно
+	// закрываем.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -268,10 +273,13 @@ func run() error {
 		_ = metricsSrv.Shutdown(shutdownCtx)
 	}()
 
-	log.InfoContext(ctx, "worker started")
-	if err := w.Run(ctx); err != nil && err != context.Canceled {
+	grace := parseDurEnv("WORKER_SHUTDOWN_GRACE", 30*time.Second)
+	log.InfoContext(ctx, "worker started",
+		slog.Duration("shutdown_grace", grace))
+	if err := w.RunWithGrace(ctx, grace); err != nil && err != context.Canceled {
 		return err
 	}
+	log.InfoContext(context.Background(), "worker stopped")
 	return nil
 }
 
