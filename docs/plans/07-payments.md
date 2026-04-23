@@ -4,19 +4,21 @@
 
 ## Выбор платёжного шлюза
 
-### Сравнение для физлица/ИП (Россия, 2025)
+### Сравнение для самозанятого/физлица (без ИП, Россия, 2025)
 
-| Шлюз | Физлицо | Комиссия | Выплаты | API | Особенности |
-|------|---------|----------|---------|-----|-------------|
-| **Робокасса** | ✅ ИП, самозанятый | ~3% | Мгновенно | REST + webhook | 130+ методов оплаты, специализация на цифровых товарах, СБП |
-| **ЮКасса** | ✅ ИП | 2–3% | На счёт/СБП | REST SDK (Go, Python, PHP) | Самая известная, хорошая документация |
-| **Enot.io** | ✅ ИП, физлицо | 2–4% | Авто-выплаты | REST + webhook | Простая регистрация, быстрый старт |
-| **CloudPayments** | ✅ ИП | 2–3% | По расписанию | REST | Хорош для подписок, рекуррентные платежи |
-| **Unitpay** | ✅ ИП | 2–4% | Ежедневно | REST | Агрегатор, много методов оплаты |
+| Шлюз | Самозанятый/физлицо | Комиссия | Выплаты | API | Особенности |
+|------|---------------------|----------|---------|-----|-------------|
+| **Робокасса** | ✅ Самозанятый (НПД) | ~3% | Мгновенно | REST + webhook | 130+ методов оплаты, специализация на цифровых товарах, СБП |
+| **Enot.io** | ✅ Самозанятый, физлицо | 2–4% | Авто-выплаты | REST + webhook | Простая регистрация, быстрый старт, рекомендован для самозанятых |
+| **Prodamus** | ✅ Самозанятый (НПД) | 3–5% | По расписанию | REST + webhook | Заточен под самозанятых, встроенный чек ОФД |
 
-**Рекомендация: Робокасса** — прямая поддержка самозанятых, мгновенные выплаты, специализация на цифровых товарах (игровые кредиты), подробная документация на русском.
+> ⚠️ Лимит НПД: 2.4 млн руб/год. При превышении нужна смена налогового режима.
 
-**Запасной вариант: ЮКасса** — Go SDK, более строгая проверка документов, но надёжнее.
+**Рекомендация: Робокасса** — прямая поддержка самозанятых (НПД), мгновенные выплаты,
+специализация на цифровых товарах (игровые кредиты), подробная документация на русском.
+
+**Запасной вариант: Enot.io** — явно позиционируется для самозанятых без ИП,
+быстрая регистрация, простой API.
 
 ---
 
@@ -44,7 +46,7 @@ CREATE TABLE credit_purchases (
     package_key  TEXT NOT NULL,        -- "trial", "starter", "medium", "big", "max"
     amount_credits INT  NOT NULL,      -- кредиты с бонусом
     price_rub    NUMERIC(10,2) NOT NULL,
-    provider     TEXT NOT NULL,        -- "robokassa" | "yookassa"
+    provider     TEXT NOT NULL,        -- "robokassa" | "enot"
     provider_id  TEXT,                 -- ID транзакции от шлюза
     status       TEXT NOT NULL DEFAULT 'pending',  -- pending | paid | failed | refunded
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -65,12 +67,12 @@ CREATE INDEX idx_credit_purchases_provider ON credit_purchases(provider, provide
 **Шаг 1** — `backend/internal/config/config.go`, добавить `PaymentConfig`:
 ```go
 type PaymentConfig struct {
-    Provider      string  // PAYMENT_PROVIDER: "robokassa" | "yookassa" | ""
+    Provider        string  // PAYMENT_PROVIDER: "robokassa" | "enot" | ""
     RobokassaLogin  string  // ROBOKASSA_LOGIN
     RobokassaPass1  string  // ROBOKASSA_PASS1 (для создания платежей)
     RobokassaPass2  string  // ROBOKASSA_PASS2 (для верификации webhook)
-    YookassaShopID  string  // YOOKASSA_SHOP_ID
-    YookassaKey     string  // YOOKASSA_SECRET_KEY
+    EnotApiKey      string  // ENOT_API_KEY
+    EnotShopID      string  // ENOT_SHOP_ID
     ReturnURL       string  // PAYMENT_RETURN_URL (куда вернуть игрока после оплаты)
     WebhookSecret   string  // PAYMENT_WEBHOOK_SECRET (для HMAC-верификации)
 }
@@ -114,8 +116,8 @@ var Packages = []CreditPackage{
 payment/
   packages.go     — пакеты кредитов (G.3)
   service.go      — CreateOrder, ConfirmPayment, ListPurchases
-  robokassa.go    — реализация для Робокассы
-  yookassa.go     — реализация для ЮКассы
+  robokassa.go    — реализация для Робокассы (основной)
+  enot.go         — реализация для Enot.io (запасной)
   handler.go      — HTTP endpoints
 ```
 
@@ -130,7 +132,7 @@ type Service struct {
 
 type Gateway interface {
     BuildPayURL(orderID, description string, amountKop int, returnURL string) (string, error)
-    VerifyWebhook(r *http.Request, pass2 string) (orderID string, amountKop int, ok bool)
+    VerifyWebhook(r *http.Request) (orderID string, amountKop int, ok bool)
 }
 
 // CreateOrder — создаёт pending-запись и возвращает URL оплаты.
@@ -145,7 +147,7 @@ func (s *Service) ListPurchases(ctx, userID string) ([]Purchase, error)
 
 **`payment/robokassa.go`:** подпись через MD5(login:amount:inv_id:pass1).
 
-**`payment/yookassa.go`:** Basic Auth (shopID:secretKey), JSON API.
+**`payment/enot.go`:** HMAC-SHA256 подпись, JSON API.
 
 **`payment/handler.go`:**
 ```
@@ -157,11 +159,11 @@ GET  /api/payment/history     — история покупок игрока
 
 **Webhook-безопасность:**
 - Робокасса: MD5(amount:inv_id:pass2) — verifyWebhook
-- ЮКасса: заголовок `X-YooMoney-Signature` (HMAC-SHA256)
+- Enot.io: заголовок `x-api-key` (HMAC-SHA256)
 - Идемпотентность: повторный webhook с тем же `provider_id` → ранний выход
 
 **Проверка готовности:**
-- [ ] `Gateway` интерфейс + RobokassaGateway + YookassaGateway
+- [ ] `Gateway` интерфейс + RobokassaGateway + EnotGateway
 - [ ] `CreateOrder`: создаёт pending в БД, возвращает pay_url
 - [ ] `ConfirmPayment`: идемпотентен, зачисляет кредиты, вызывает referral.ProcessPurchase
 - [ ] Webhook верифицируется перед обработкой
@@ -227,12 +229,13 @@ Webhook срабатывает раньше, чем игрок вернётся 
 4. **G.5** — frontend экран
 5. **G.6** — обработка возврата
 
-**Общая оценка:** ~2–3 итерации. Начать с Робокассой (быстрее подключить для ИП/самозанятого).
+**Общая оценка:** ~2–3 итерации. Начать с Робокассой (самозанятый, мгновенные выплаты).
 
 ---
 
 ## Что нужно до начала
 
-- [ ] Зарегистрироваться на robokassa.com (или yookassa.ru) как ИП/самозанятый
-- [ ] Получить: `login`, `pass1`, `pass2` (Робокасса) или `shop_id` + `secret_key` (ЮКасса)
+- [ ] Зарегистрироваться на robokassa.com как самозанятый (НПД)
+- [ ] Получить: `login`, `pass1`, `pass2`
 - [ ] Задать `PAYMENT_RETURN_URL` (домен игры должен быть готов)
+- [ ] (Опционально) Зарегистрироваться на enot.io как самозанятый для резервного шлюза
