@@ -5932,3 +5932,30 @@ DoD Ф.1 выполнен полностью:
 - retry с backoff: ✓
 - events_dead + cron: ✓
 - Admin replay/cancel: ✓
+
+**Ф.2.1 — trace_id в events**
+
+Инфраструктура:
+- migration 0058_events_trace_id.sql: `events.trace_id uuid` + индекс,
+  зеркально в `events_dead`.
+- pkg/trace (новый): `WithTraceID(ctx, id)` / `FromContext(ctx)` — helper
+  для context-based передачи.
+- httpx/trace.go (новый): `TraceIDMiddleware` читает `X-Trace-Id` из
+  запроса или генерирует новый uuid, кладёт в context, возвращает в
+  response header. Подключён до Logger в `NewRouter`.
+- event/insert.go (новый): `event.Insert(ctx, tx, InsertOpts)` — хелпер
+  с автоматическим заполнением trace_id из context. Рекомендован как
+  единый entry point для вставки event'ов.
+- event/worker.go: `Event.TraceID` читается при SELECT, прокидывается
+  через `trace.WithTraceID(ctx, ...)` в handler-context.
+
+Остающееся упрощение (записано в simplifications.md):
+- 11 существующих `INSERT INTO events (...)` в сервисах
+  (building/research/shipyard/fleet/rocket/repair/alien/artefact/officer)
+  продолжают писать trace_id=NULL. Замена на `event.Insert(...)` —
+  отдельная итерация при касании каждого сервиса.
+
+Плюсы текущего минимума:
+- trace_id доступен в БД сразу, можно запрашивать по WHERE trace_id=...
+- future writes через helper получают трассу бесплатно.
+- worker уже готов читать и прокидывать trace_id.

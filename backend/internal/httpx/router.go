@@ -22,6 +22,7 @@ func NewRouter(deps RouterDeps) chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
+	r.Use(TraceIDMiddleware)
 	r.Use(Logger(deps.Log))
 	r.Use(Recoverer(deps.Log))
 	r.Use(middleware.Timeout(15 * 1e9)) // 15s
