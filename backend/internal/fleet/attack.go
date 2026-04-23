@@ -91,7 +91,7 @@ func (s *TransportService) AttackHandler() event.Handler {
 		if err != nil {
 			return fmt.Errorf("attack: read fleet_ships: %w", err)
 		}
-		attackerTech, err := readUserTech(ctx, tx, attackerUserID)
+		attackerTech, err := readUserTech(ctx, tx, attackerUserID, s.catalog)
 		if err != nil {
 			return fmt.Errorf("attack: read attacker tech: %w", err)
 		}
@@ -153,7 +153,7 @@ func (s *TransportService) AttackHandler() event.Handler {
 				return fmt.Errorf("attack: defender defense: %w", err)
 			}
 		}
-		defenderTech, err := readUserTech(ctx, tx, defenderUserID)
+		defenderTech, err := readUserTech(ctx, tx, defenderUserID, s.catalog)
 		if err != nil {
 			return fmt.Errorf("attack: defender tech: %w", err)
 		}
@@ -348,7 +348,7 @@ func readPlanetDefense(ctx context.Context, tx pgx.Tx, planetID string) ([]unitS
 	return out, rows.Err()
 }
 
-func readUserTech(ctx context.Context, tx pgx.Tx, userID string) (battle.Tech, error) {
+func readUserTech(ctx context.Context, tx pgx.Tx, userID string, cat *config.Catalog) (battle.Tech, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT unit_id, level FROM research WHERE user_id=$1`, userID)
 	if err != nil {
@@ -363,16 +363,38 @@ func readUserTech(ctx context.Context, tx pgx.Tx, userID string) (battle.Tech, e
 		}
 		levels[id] = lvl
 	}
+	if err := rows.Err(); err != nil {
+		return battle.Tech{}, err
+	}
+
+	// Применить бонусы профессии (виртуальные уровни).
+	var prof string
+	_ = tx.QueryRow(ctx, `SELECT profession FROM users WHERE id=$1`, userID).Scan(&prof)
+	if prof != "" && prof != "none" {
+		if spec, ok := cat.Professions.Professions[prof]; ok {
+			for k, v := range spec.Bonus {
+				if id, ok := economy.ProfessionKeyToID[k]; ok {
+					levels[id] += v
+				}
+			}
+			for k, v := range spec.Malus {
+				if id, ok := economy.ProfessionKeyToID[k]; ok {
+					levels[id] += v
+				}
+			}
+		}
+	}
+
 	return battle.Tech{
-		Gun:        levels[15],
-		Shield:     levels[16],
-		Shell:      levels[17],
-		Laser:      levels[23],
-		Ion:        levels[24],
-		Plasma:     levels[25],
-		Ballistics: levels[103],
-		Masking:    levels[104],
-	}, rows.Err()
+		Gun:        levels[economy.IDTechGun],
+		Shield:     levels[economy.IDTechShield],
+		Shell:      levels[economy.IDTechShell],
+		Laser:      levels[economy.IDTechLaser],
+		Ion:        levels[economy.IDTechSilicon],
+		Plasma:     levels[economy.IDTechHydrogen],
+		Ballistics: levels[economy.IDTechBallistics],
+		Masking:    levels[economy.IDTechMasking],
+	}, nil
 }
 
 // stacksToBattleUnits — unitStack[] → battle.Unit[] через каталог.

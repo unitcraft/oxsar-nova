@@ -20,6 +20,7 @@ type Catalog struct {
 	Requirements RequirementsCatalog `yaml:"-"`
 	Artefacts    ArtefactCatalog     `yaml:"-"`
 	Construction ConstructionCatalog `yaml:"-"`
+	Professions  ProfessionCatalog   `yaml:"-"`
 }
 
 // ConstructionCatalog — данные из legacy-таблицы na_construction,
@@ -174,6 +175,24 @@ type ArtefactCatalog struct {
 	Artefacts map[string]ArtefactSpec `yaml:"artefacts"`
 }
 
+// ProfessionCatalog — описания профессий и их бонусов/штрафов.
+type ProfessionCatalog struct {
+	Professions map[string]ProfessionSpec `yaml:"professions"`
+}
+
+// ProfessionSpec — одна профессия. Bonus/Malus — виртуальные уровни к
+// зданиям/исследованиям/боевым техам. Применяются как смещение при расчёте
+// производства и боя (не записываются в БД).
+//
+// Ключи bonus/malus совпадают с ключами в buildings.yml / research.yml,
+// плюс специальные: "gun", "shield_weapon", "shell_weapon" (боевые техи),
+// "ballistics", "masking" (fleet техи), "computer_tech".
+type ProfessionSpec struct {
+	Label string         `yaml:"label"`
+	Bonus map[string]int `yaml:"bonus"`
+	Malus map[string]int `yaml:"malus"`
+}
+
 // ArtefactSpec — один артефакт. Содержит идентификатор, эффект и
 // метаданные жизненного цикла.
 type ArtefactSpec struct {
@@ -225,6 +244,7 @@ func LoadCatalog(dir string) (*Catalog, error) {
 		{"rapidfire.yml", &cat.Rapidfire},
 		{"requirements.yml", &cat.Requirements},
 		{"artefacts.yml", &cat.Artefacts},
+		{"professions.yml", &cat.Professions},
 	} {
 		path := filepath.Join(dir, p.file)
 		data, err := os.ReadFile(path)

@@ -1,0 +1,53 @@
+# Профессии игрока. bonus/malus — виртуальные уровни при расчёте производства и боя.
+# Смена профессии: 1000 cr, мин. интервал 14 дней.
+
+professions:
+  miner:
+    label: "Шахтёр"
+    bonus:
+      metalmine: 1
+      silicon_lab: 1
+      solar_plant: 2
+    malus:
+      shipyard: -2
+      gun: -2
+      shield_weapon: -2
+      shell_weapon: -2
+
+  attacker:
+    label: "Атакующий"
+    bonus:
+      gun: 1
+      shield_weapon: 1
+      shell_weapon: 1
+      ballistics: 1
+      shipyard: 1
+    malus:
+      metalmine: -1
+      silicon_lab: -1
+      defense_factory: -3
+
+  defender:
+    label: "Защитник"
+    bonus:
+      masking: 1
+      shield_weapon: 1
+      shell_weapon: 1
+      defense_factory: 1
+      rocket_station: 1
+    malus:
+      computer_tech: -1
+      gun: -1
+      shipyard: -3
+
+  tank:
+    label: "Танк"
+    bonus:
+      gun: 2
+      shield_weapon: 2
+      shell_weapon: 2
+    malus:
+      gravi: -2
+      combustion_drive: -2
+      impulse_drive: -2
+      hyperspace_drive: -2

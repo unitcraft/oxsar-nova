@@ -35,6 +35,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/message"
 	"github.com/oxsar/nova/backend/internal/officer"
 	"github.com/oxsar/nova/backend/internal/planet"
+	"github.com/oxsar/nova/backend/internal/profession"
 	"github.com/oxsar/nova/backend/internal/repair"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/internal/requirements"
@@ -153,6 +154,9 @@ func run() error {
 	allianceSvc := alliance.NewService(db)
 	allianceH := alliance.NewHandler(allianceSvc)
 
+	professionSvc := profession.NewService(db, cat)
+	professionH := profession.NewHandler(professionSvc)
+
 	adminH := admin.NewHandler(db)
 
 	chatHub := chat.NewHub()
@@ -234,6 +238,10 @@ func run() error {
 
 		pr.Get("/officers", officerH.List)
 		pr.Post("/officers/{key}/activate", officerH.Activate)
+
+		pr.Get("/professions", professionH.List)
+		pr.Get("/professions/me", professionH.Get)
+		pr.Post("/professions/me", professionH.Change)
 
 		pr.Get("/galaxy/{g}/{s}", galaxyH.System)
 
