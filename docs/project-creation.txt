@@ -5018,3 +5018,28 @@ MEDIUM Priority:
 - frontend/vite.config.ts (usePolling)
 
 Статус: ✅ ЗАВЕРШЕНА
+
+
+================================================================================
+Итерация (сессия 2026-04-23f) — fix: ox-header растягивал layout шире viewport
+================================================================================
+
+## Проблема
+Таблица сырья не показывала все 4 числовые колонки — они уходили за правый край.
+Диагностика через javascript:alert() в браузере показала:
+- viewport = 866px, но ox-content.offsetWidth = 953px
+- ox-header.scrollWidth = 1009px — header растягивал весь ox-layout
+
+## Решение
+Добавили `overflow: hidden; min-width: 0` на `.ox-header` в app.css.
+Это остановило растяжение grid-layout шире viewport.
+
+Параллельно переписали ResourceScreen с flex/grid на <table tableLayout:fixed>
+с явными col width — более надёжный способ контролировать ширину колонок.
+
+## Файлы изменены
+- frontend/src/styles/app.css (ox-header, ox-layout, ox-body, ox-content, ox-panel)
+- frontend/src/features/resource/ResourceScreen.tsx (table layout)
+- frontend/vite.config.ts (usePolling для HMR в Docker на Windows)
+
+Статус: ✅ ЗАВЕРШЕНА
