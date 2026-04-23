@@ -210,12 +210,13 @@ Lancer Ship (102), Shadow Ship (325), Alien ships (200–204).
 - Star Destroyer → Frigate (×2), Light/Heavy Laser (×2), Lancer (×2) ✅
 - Deathstar → большинство юнитов (×25–1250)
 
-**Чего ещё нет:**
-- Bomber → Shield Dome (49, 50)
-- Heavy Fighter → Rocket Launcher, Light Laser
-- Cruiser → Light Laser
+- Lancer (102) → Deathstar (×3) ✅
+- Plasma Turret (48) → Deathstar (×2) ✅
 
-Без этих RF оборона всё ещё чуть сильнее, чем должна быть в mid-game.
+**Чего нет в `na_rapidfire` (не добавлять без подтверждения из legacy DB):**
+- Bomber → Shield Dome (49, 50) — предположение, не из na_rapidfire
+- Heavy Fighter → Rocket Launcher, Light Laser — предположение
+- Cruiser → Light Laser — предположение
 
 ---
 
