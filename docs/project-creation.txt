@@ -5991,3 +5991,28 @@ cmd/worker/main.go:
 
 Grafana dashboard JSON — не реализован (оставлен как доку-task в плане 09,
 нет необходимости без запущенной prometheus-инстанции).
+
+**Ф.2.5 — Admin Events monitor UI**
+
+frontend/src/features/admin/AdminScreen.tsx:
+- Новый компонент `AdminEventsMonitor` вставлен перед секцией
+  «Действия».
+- StatCard'ы по состояниям (wait/ok/error) + lag_sec.
+- Строка «Топ ошибок за 24ч» с kind:count.
+- Фильтр state (error/wait/ok/all, по умолчанию error — чтобы сразу
+  видеть проблемы).
+- Таблица 50 последних событий: id, kind, state, attempt, fire_at,
+  last_error, кнопки retry (↻) и cancel (✕).
+- Оба запроса с refetchInterval 15s.
+
+Интеграция без изменений маршрутов — использует /api/admin/events,
+/events/stats, /events/{id}/retry|cancel, добавленные в Ф.1.4.
+
+DoD Фазы 2 (Наблюдаемость) — выполнен (4 из 6 подпунктов):
+- ✓ Ф.2.1 trace_id инфраструктура.
+- ✓ Ф.2.2 Prometheus метрики.
+- ✓ Ф.2.5 Admin UI.
+- — Ф.2.3 structured slog-поля (частично — kind/event_id/attempt уже
+  в логах, user/planet/trace — отложено до event.Insert-рефакторинга).
+- — Ф.2.4 Grafana dashboard JSON (отложено, без prom-инстанции).
+- — Ф.2.6 Rate-limit на admin replay (L, отложен).
