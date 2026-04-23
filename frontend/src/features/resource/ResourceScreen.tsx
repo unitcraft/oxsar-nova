@@ -16,9 +16,36 @@ function fmt(v: number): string {
   return n.toLocaleString('ru-RU');
 }
 
-function numStyle(v: number): React.CSSProperties {
-  return { color: v > 0 ? 'var(--ox-success)' : v < 0 ? 'var(--ox-danger)' : 'var(--ox-fg-dim)' };
+function numColor(v: number): string {
+  return v > 0 ? 'var(--ox-success)' : v < 0 ? 'var(--ox-danger)' : 'var(--ox-fg-dim)';
 }
+
+/* Одна строка данных: [название-flex] [число] [число] [число] [число] */
+const ROW: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  borderBottom: '1px solid var(--ox-border)',
+  minHeight: 36,
+  gap: 0,
+};
+const NUM: React.CSSProperties = {
+  width: '15%',
+  textAlign: 'right',
+  fontFamily: 'var(--ox-mono)',
+  fontSize: 13,
+  flexShrink: 0,
+  paddingRight: 8,
+};
+const LABEL: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  paddingLeft: 12,
+  paddingRight: 6,
+  fontSize: 13,
+  overflow: 'hidden',
+  whiteSpace: 'nowrap',
+  textOverflow: 'ellipsis',
+};
 
 export function ResourceScreen({ planetId }: { planetId: string }) {
   const qc = useQueryClient();
@@ -47,9 +74,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
           Object.entries(fs).map(([k, v]) => [k, Math.max(0, Math.min(100, v))]),
         ),
       }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['resource-report', planetId] });
-    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['resource-report', planetId] }); },
     onError: (err) => {
       toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось сохранить');
     },
@@ -90,56 +115,68 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
           Производство — {report.planet_name}
         </h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {save.isPending && (
-            <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>сохраняю…</span>
-          )}
-          <button type="button" className="btn btn-sm btn-ghost" disabled={save.isPending} onClick={() => setAll(0)}>
-            Выключить всё
-          </button>
-          <button type="button" className="btn btn-sm btn-ghost" disabled={save.isPending} onClick={() => setAll(100)}>
-            Включить всё
-          </button>
+          {save.isPending && <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>сохраняю…</span>}
+          <button type="button" className="btn btn-sm btn-ghost" disabled={save.isPending} onClick={() => setAll(0)}>Выключить всё</button>
+          <button type="button" className="btn btn-sm btn-ghost" disabled={save.isPending} onClick={() => setAll(100)}>Включить всё</button>
         </div>
       </div>
 
-      {/* Production table */}
-      <div className="ox-panel" style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid var(--ox-border)' }}>
-              <th style={TH}>Здание</th>
-              <th style={{ ...TH, textAlign: 'right', width: 72 }}>🟠</th>
-              <th style={{ ...TH, textAlign: 'right', width: 72 }}>💎</th>
-              <th style={{ ...TH, textAlign: 'right', width: 72 }}>💧</th>
-              <th style={{ ...TH, textAlign: 'right', width: 72 }}>⚡</th>
-            </tr>
-          </thead>
-          <tbody>
+      {/* List */}
+      <div className="ox-panel">
 
-            <tr style={{ borderBottom: '1px solid var(--ox-border)', background: 'var(--ox-bg-2)' }}>
-              <td style={{ ...TD, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>Естественное</td>
-              <td style={{ ...TD, textAlign: 'right', ...numStyle(report.basic_metal) }}>{fmt(report.basic_metal)}</td>
-              <td style={{ ...TD, textAlign: 'right', ...numStyle(report.basic_silicon) }}>{fmt(report.basic_silicon)}</td>
-              <td style={{ ...TD, textAlign: 'right', color: 'var(--ox-fg-dim)' }}>—</td>
-              <td style={{ ...TD, textAlign: 'right', color: 'var(--ox-fg-dim)' }}>—</td>
-            </tr>
+        {/* Header row */}
+        <div style={{ ...ROW, borderBottom: '2px solid var(--ox-border)', minHeight: 32 }}>
+          <div style={{ ...LABEL, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>Здание</div>
+          <div style={{ ...NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)' }}>🟠</div>
+          <div style={{ ...NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)' }}>💎</div>
+          <div style={{ ...NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)' }}>💧</div>
+          <div style={{ ...NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)' }}>⚡</div>
+        </div>
 
-            {buildings.map((b) => (
-              <BuildingRow
-                key={b.unit_id}
-                building={b}
-                factor={factors[b.unit_id] ?? b.factor}
-                onOpen={() => setModalBuilding(b)}
-              />
-            ))}
+        {/* Natural */}
+        <div style={{ ...ROW, background: 'var(--ox-bg-2)' }}>
+          <div style={{ ...LABEL, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>Естественное</div>
+          <div style={{ ...NUM, color: numColor(report.basic_metal) }}>{fmt(report.basic_metal)}</div>
+          <div style={{ ...NUM, color: numColor(report.basic_silicon) }}>{fmt(report.basic_silicon)}</div>
+          <div style={{ ...NUM, color: 'var(--ox-fg-dim)' }}>—</div>
+          <div style={{ ...NUM, color: 'var(--ox-fg-dim)' }}>—</div>
+        </div>
 
-            <SummaryRow label="Вместимость хранилищ" metal={report.storage_metal} silicon={report.storage_silicon} hydrogen={report.storage_hydrogen} energy={null} topBorder dim />
-            <SummaryRow label="За час"    metal={ph}          silicon={sh}          hydrogen={hh}          energy={te}   topBorder />
-            <SummaryRow label="За сутки"  metal={ph * 24}     silicon={sh * 24}     hydrogen={hh * 24}     energy={null} />
-            <SummaryRow label="За неделю" metal={ph * 24 * 7} silicon={sh * 24 * 7} hydrogen={hh * 24 * 7} energy={null} />
+        {/* Buildings */}
+        {buildings.map((b) => {
+          const factor = factors[b.unit_id] ?? b.factor;
+          const metal    = b.prod_metal    * factor / 100;
+          const silicon  = b.prod_silicon  * factor / 100;
+          const hydrogen = b.prod_hydrogen * factor / 100;
+          const energy   = b.cons_energy   * factor / 100;
+          return (
+            <div
+              key={b.unit_id}
+              style={{ ...ROW, cursor: b.allow_factor ? 'pointer' : 'default' }}
+              onClick={() => b.allow_factor && setModalBuilding(b)}
+            >
+              <div style={LABEL}>
+                <span style={{ fontWeight: 500 }}>{BUILDING_NAMES[b.unit_id] ?? b.name}</span>
+                <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginLeft: 4 }}>ур. {b.level}</span>
+                {b.allow_factor && (
+                  <span style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', marginLeft: 4, color: factor < 100 ? 'var(--ox-warn, #f59e0b)' : 'var(--ox-fg-dim)' }}>
+                    {factor}%
+                  </span>
+                )}
+              </div>
+              <div style={{ ...NUM, color: numColor(metal) }}>{metal !== 0 ? fmt(metal) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}</div>
+              <div style={{ ...NUM, color: numColor(silicon) }}>{silicon !== 0 ? fmt(silicon) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}</div>
+              <div style={{ ...NUM, color: numColor(hydrogen) }}>{hydrogen !== 0 ? fmt(hydrogen) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}</div>
+              <div style={{ ...NUM, color: numColor(energy) }}>{energy !== 0 ? fmt(energy) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}</div>
+            </div>
+          );
+        })}
 
-          </tbody>
-        </table>
+        {/* Storage */}
+        <SummaryRow label="Вместимость хранилищ" metal={report.storage_metal} silicon={report.storage_silicon} hydrogen={report.storage_hydrogen} energy={null} topBorder dim />
+        <SummaryRow label="За час"    metal={ph}          silicon={sh}          hydrogen={hh}          energy={te}   topBorder />
+        <SummaryRow label="За сутки"  metal={ph * 24}     silicon={sh * 24}     hydrogen={hh * 24}     energy={null} />
+        <SummaryRow label="За неделю" metal={ph * 24 * 7} silicon={sh * 24 * 7} hydrogen={hh * 24 * 7} energy={null} />
       </div>
 
       {/* Bottom sheet */}
@@ -154,9 +191,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>
-                {BUILDING_NAMES[modalBuilding.unit_id] ?? modalBuilding.name}
-              </span>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>{BUILDING_NAMES[modalBuilding.unit_id] ?? modalBuilding.name}</span>
               <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', marginLeft: 8 }}>ур. {modalBuilding.level}</span>
             </div>
             <button type="button" className="btn-ghost btn-sm" onClick={() => setModalBuilding(null)}>✕</button>
@@ -173,70 +208,24 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
   );
 }
 
-function BuildingRow({
-  building: b,
-  factor,
-  onOpen,
-}: {
-  building: ResourceBuilding;
-  factor: number;
-  onOpen: () => void;
-}) {
-  const metal    = b.prod_metal    * factor / 100;
-  const silicon  = b.prod_silicon  * factor / 100;
-  const hydrogen = b.prod_hydrogen * factor / 100;
-  const energy   = b.cons_energy   * factor / 100;
-
-  return (
-    <tr
-      style={{ borderBottom: '1px solid var(--ox-border)', cursor: b.allow_factor ? 'pointer' : 'default' }}
-      onClick={() => b.allow_factor && onOpen()}
-    >
-      <td style={{ ...TD, maxWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, overflow: 'hidden' }}>
-          <span style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {BUILDING_NAMES[b.unit_id] ?? b.name}
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>ур. {b.level}</span>
-          {b.allow_factor && (
-            <span style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', whiteSpace: 'nowrap', flexShrink: 0, color: factor < 100 ? 'var(--ox-warn, #f59e0b)' : 'var(--ox-fg-dim)' }}>
-              {factor}%
-            </span>
-          )}
-        </div>
-      </td>
-      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(metal) }}>
-        {metal !== 0 ? fmt(metal) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
-      </td>
-      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(silicon) }}>
-        {silicon !== 0 ? fmt(silicon) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
-      </td>
-      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(hydrogen) }}>
-        {hydrogen !== 0 ? fmt(hydrogen) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
-      </td>
-      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(energy) }}>
-        {energy !== 0 ? fmt(energy) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
-      </td>
-    </tr>
-  );
-}
-
 function SummaryRow({ label, metal, silicon, hydrogen, energy, topBorder, dim }: {
   label: string; metal: number; silicon: number; hydrogen: number;
   energy: number | null; topBorder?: boolean; dim?: boolean;
 }) {
-  const bt = topBorder ? '2px solid var(--ox-border)' : undefined;
-  const fg = dim ? 'var(--ox-fg-muted)' : undefined;
   return (
-    <tr style={{ borderBottom: '1px solid var(--ox-border)', background: dim ? 'var(--ox-bg-2)' : undefined }}>
-      <td style={{ ...TD, fontWeight: 700, borderTop: bt, color: fg, maxWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</td>
-      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', borderTop: bt, ...numStyle(metal) }}>{fmt(metal)}</td>
-      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', borderTop: bt, ...numStyle(silicon) }}>{fmt(silicon)}</td>
-      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', borderTop: bt, ...numStyle(hydrogen) }}>{fmt(hydrogen)}</td>
-      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', borderTop: bt, color: 'var(--ox-fg-dim)' }}>
-        {energy !== null ? <span style={numStyle(energy)}>{fmt(energy)}</span> : '—'}
-      </td>
-    </tr>
+    <div style={{
+      ...ROW,
+      borderTop: topBorder ? '2px solid var(--ox-border)' : undefined,
+      background: dim ? 'var(--ox-bg-2)' : undefined,
+    }}>
+      <div style={{ ...LABEL, fontWeight: 700, color: dim ? 'var(--ox-fg-muted)' : undefined }}>{label}</div>
+      <div style={{ ...NUM, color: numColor(metal) }}>{fmt(metal)}</div>
+      <div style={{ ...NUM, color: numColor(silicon) }}>{fmt(silicon)}</div>
+      <div style={{ ...NUM, color: numColor(hydrogen) }}>{fmt(hydrogen)}</div>
+      <div style={{ ...NUM, color: 'var(--ox-fg-dim)' }}>
+        {energy !== null ? <span style={{ color: numColor(energy) }}>{fmt(energy)}</span> : '—'}
+      </div>
+    </div>
   );
 }
 
@@ -257,13 +246,10 @@ function FactorInput({ value, onChange, onCommit, disabled }: {
             disabled={disabled}
             onClick={() => onCommit(p)}
             style={{
-              padding: '5px 10px',
-              fontSize: 13,
-              fontFamily: 'var(--ox-mono)',
+              padding: '5px 10px', fontSize: 13, fontFamily: 'var(--ox-mono)',
               background: value === p ? 'var(--ox-accent)' : 'var(--ox-bg-3)',
               color: value === p ? '#000' : 'var(--ox-fg-dim)',
-              border: '1px solid var(--ox-border)',
-              borderRadius: 4,
+              border: '1px solid var(--ox-border)', borderRadius: 4,
               cursor: disabled ? 'default' : 'pointer',
               fontWeight: value === p ? 700 : 400,
             }}
@@ -274,12 +260,7 @@ function FactorInput({ value, onChange, onCommit, disabled }: {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <input
-          type="range"
-          min={0}
-          max={100}
-          step={1}
-          value={value}
-          disabled={disabled}
+          type="range" min={0} max={100} step={1} value={value} disabled={disabled}
           onChange={(e) => onChange(clamp(Number(e.target.value)))}
           onMouseUp={(e) => onCommit(clamp(Number((e.target as HTMLInputElement).value)))}
           onTouchEnd={(e) => onCommit(clamp(Number((e.target as HTMLInputElement).value)))}
@@ -292,19 +273,3 @@ function FactorInput({ value, onChange, onCommit, disabled }: {
     </div>
   );
 }
-
-const TH: React.CSSProperties = {
-  padding: '8px 8px',
-  fontWeight: 700,
-  fontSize: 11,
-  letterSpacing: '0.05em',
-  textTransform: 'uppercase',
-  color: 'var(--ox-fg-muted)',
-  textAlign: 'left',
-  whiteSpace: 'nowrap',
-};
-
-const TD: React.CSSProperties = {
-  padding: '7px 8px',
-  fontSize: 13,
-};
