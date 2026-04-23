@@ -401,6 +401,35 @@ func (s *Service) Rename(ctx context.Context, userID, planetID, name string) err
 	return s.repo.Rename(ctx, planetID, name)
 }
 
+// Reorder устанавливает sort_order планет по указанному порядку ID.
+// Все ID должны принадлежать userID, иначе вся операция откатится.
+func (s *Service) Reorder(ctx context.Context, userID string, planetIDs []string) error {
+	if len(planetIDs) == 0 {
+		return nil
+	}
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// Verify ownership.
+		var count int
+		if err := tx.QueryRow(ctx, `
+			SELECT COUNT(*) FROM planets
+			WHERE user_id = $1 AND id = ANY($2) AND destroyed_at IS NULL
+		`, userID, planetIDs).Scan(&count); err != nil {
+			return fmt.Errorf("verify ownership: %w", err)
+		}
+		if count != len(planetIDs) {
+			return fmt.Errorf("planet: reorder ownership mismatch: %w", ErrNotFound)
+		}
+		for i, id := range planetIDs {
+			if _, err := tx.Exec(ctx,
+				`UPDATE planets SET sort_order = $1 WHERE id = $2 AND user_id = $3`,
+				i, id, userID); err != nil {
+				return fmt.Errorf("update sort_order: %w", err)
+			}
+		}
+		return nil
+	})
+}
+
 // SetHome устанавливает планету домашней. Проверка: не луна, принадлежит юзеру.
 func (s *Service) SetHome(ctx context.Context, userID, planetID string) error {
 	p, err := s.repo.GetByID(ctx, planetID)

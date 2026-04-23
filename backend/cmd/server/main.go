@@ -236,6 +236,7 @@ func run() error {
 		pr.Get("/techtree", techtreeH.Get)
 		pr.Get("/battlestats", battlestatsH.List)
 		pr.Get("/planets", planetH.List)
+		pr.Patch("/planets/order", planetH.Reorder)
 		pr.Get("/planets/{id}", planetH.Get)
 		pr.Patch("/planets/{id}", planetH.Rename)
 		pr.Post("/planets/{id}/set-home", planetH.SetHome)

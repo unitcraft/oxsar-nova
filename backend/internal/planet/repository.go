@@ -50,7 +50,7 @@ func (r *Repository) ListByUser(ctx context.Context, userID string) ([]Planet, e
 		       solar_satellite_prod, build_factor, research_factor,
 		       produce_factor, energy_factor, storage_factor
 		FROM planets WHERE user_id = $1 AND destroyed_at IS NULL
-		ORDER BY is_moon, galaxy, system, position
+		ORDER BY is_moon, sort_order, galaxy, system, position
 	`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list planets: %w", err)
