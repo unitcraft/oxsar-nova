@@ -5479,33 +5479,61 @@ D-artefacts.md, E-ui-features.md, F-credits-ai-advisor.md.
 ИТЕРАЦИЯ 21 — Реферальная система (план D.3)
 ================================================================================
 
-Задача: игрок регистрируется по реферальной ссылке ?ref=<userID>;
-реферер получает 3000 очков + 20% кредитов от покупок реферала.
+Задача: реферальная система — пользователь регистрируется по ?ref=<userID>,
+реферер получает бонусы.
 
 **migrations/0047_referral.sql:**
-- ALTER TABLE users ADD COLUMN referred_by TEXT REFERENCES users(id) ON DELETE SET NULL
-- CREATE INDEX idx_users_referred_by ON users(referred_by)
+- users.referred_by TEXT REFERENCES users(id) + индекс
 
 **referral/service.go:**
-- ProcessRegistration(ctx, newUserID, referrerID):
-  1) Проверка существования реферера
-  2) UPDATE users SET referred_by
-  3) Начисление стартовых ресурсов новому игроку (+10 металла, +5 кремния, +2 водорода)
-  4) Начисление 3000 очков рефереру (LEAST с MaxBonusPoints=500000)
-- ProcessPurchase(ctx, buyerID, amount): 20% кредитов рефереру
-- ErrReferrerNotFound — sentinel для несуществующего реферера
+- ProcessRegistration: проверка реферера, referred_by, +10/5/2 ресурсов новому,
+  +3000 очков (LEAST MaxBonusPoints=500000) рефереру
+- ProcessPurchase: 20% кредитов рефереру за каждую покупку
 
 **auth/service.go:**
-- ReferralProcessor интерфейс + WithReferral() метод
-- RegisterInput.ReferredBy string
-- Register() вызывает ProcessRegistration если referral != nil && ReferredBy != ""
+- ReferralProcessor интерфейс + WithReferral()
+- RegisterInput.ReferredBy; Register() вызывает ProcessRegistration
 
 **auth/handler.go:**
-- POST /api/auth/register?ref=<userID> — передаёт ReferredBy
+- POST /api/auth/register?ref=<userID>
 
 **cmd/server/main.go:**
-- referral.NewService(db) подключён через authSvc.WithReferral(referralSvc)
+- referral.NewService(db) → authSvc.WithReferral(referralSvc)
 
 **Все тесты зелёные** (go test ./...)
 
 Статус: ✅ ЗАВЕРШЕНА
+
+================================================================================
+ИТЕРАЦИЯ 22 — AI-советник backend (план F.3)
+================================================================================
+
+Задача: AI-советник для игроков — отвечает на вопросы об игре с учётом
+состояния игрока. Два режима: Anthropic API (за кредиты) или Ollama (бесплатно).
+
+**config/config.go:**
+- AIAdvisorConfig: APIKey, ProxyURL, OllamaURL, OllamaModel, MaxPerDay, MaxTokens
+
+**aiadvisor/llm.go:**
+- LLMClient интерфейс
+- AnthropicClient: POST /v1/messages, поддержка прокси (без внешних SDK)
+- OllamaClient: POST /api/generate
+- KnownModels: Haiku=5кр, Sonnet=20кр, Opus=80кр
+
+**aiadvisor/service.go:**
+- NewService: если OllamaURL → OllamaClient, иначе если APIKey → AnthropicClient
+- Ask: rate limit (MaxPerDay), проверка баланса, buildPlayerContext +
+  buildStaticGameKnowledge, вызов LLM, списание кредитов + лог в транзакции
+- Estimate: стоимость/лимиты без реального запроса
+
+**migrations/0048_ai_advisor_log.sql:**
+- ai_advisor_log(id, user_id, model, question, answer, credits, created_at)
+
+**POST /api/ai-advisor/ask, GET /api/ai-advisor/estimate**
+
+Остаётся: AIAdvisorWidget.tsx (frontend)
+
+**Все тесты зелёные** (go test ./...)
+
+Статус: ✅ ЗАВЕРШЕНА
+
