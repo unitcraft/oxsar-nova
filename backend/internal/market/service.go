@@ -335,6 +335,8 @@ func validResource(r string) bool {
 }
 
 // ListLots возвращает открытые лоты, опционально фильтруя по sell_resource.
+// Фильтр kind='resource' добавлен после миграции 0055, чтобы флотовые
+// лоты выдавались отдельным API.
 func (s *Service) ListLots(ctx context.Context, sellResource string, limit int) ([]Lot, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
@@ -346,7 +348,7 @@ func (s *Service) ListLots(ctx context.Context, sellResource string, limit int) 
 		       ml.created_at
 		FROM market_lots ml
 		LEFT JOIN users u ON u.id = ml.seller_id
-		WHERE ml.state = 'open'`
+		WHERE ml.state = 'open' AND ml.kind = 'resource'`
 	args := []any{limit}
 	if sellResource != "" && validResource(sellResource) {
 		query += ` AND ml.sell_resource = $2`

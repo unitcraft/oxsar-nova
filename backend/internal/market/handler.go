@@ -218,6 +218,114 @@ func (h *Handler) ExchangeCredit(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ListFleetLots GET /api/market/fleet-lots
+func (h *Handler) ListFleetLots(w http.ResponseWriter, r *http.Request) {
+	if _, ok := auth.UserID(r.Context()); !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	lots, err := h.svc.ListFleetLots(r.Context(), 100)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	if lots == nil {
+		lots = []FleetLot{}
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"lots": lots})
+}
+
+type createFleetLotRequest struct {
+	Fleet       map[int]int64 `json:"fleet"`
+	BuyResource string        `json:"buy_resource"`
+	BuyAmount   int64         `json:"buy_amount"`
+}
+
+// CreateFleetLot POST /api/planets/{id}/market/fleet-lots
+func (h *Handler) CreateFleetLot(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	var req createFleetLotRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	lot, err := h.svc.CreateFleetLot(r.Context(), uid, planetID, req.Fleet, req.BuyResource, req.BuyAmount)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusCreated, lot)
+	case errors.Is(err, ErrInvalidAmount), errors.Is(err, ErrInvalidResource), errors.Is(err, ErrNotEnough):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrPlanetNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+type acceptFleetLotRequest struct {
+	PlanetID string `json:"planet_id"`
+}
+
+// AcceptFleetLot POST /api/market/fleet-lots/{lotId}/accept
+func (h *Handler) AcceptFleetLot(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	lotID := chi.URLParam(r, "lotId")
+	var req acceptFleetLotRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	err := h.svc.AcceptFleetLot(r.Context(), uid, req.PlanetID, lotID)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrNotEnough):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrLotNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrLotNotOpen), errors.Is(err, ErrOwnLot):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrPlanetNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// CancelFleetLot DELETE /api/market/fleet-lots/{lotId}
+func (h *Handler) CancelFleetLot(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	lotID := chi.URLParam(r, "lotId")
+	err := h.svc.CancelFleetLot(r.Context(), uid, lotID)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrLotNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrLotNotOpen), errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 // Rates GET /api/market/rates
 func (h *Handler) Rates(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
