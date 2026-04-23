@@ -107,7 +107,6 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
               <th style={{ ...TH, textAlign: 'right' }}>💎 Кремний</th>
               <th style={{ ...TH, textAlign: 'right' }}>💧 Водород</th>
               <th style={{ ...TH, textAlign: 'right' }}>⚡ Энергия</th>
-              <th style={{ ...TH, textAlign: 'center', whiteSpace: 'nowrap' }}>% работы</th>
             </tr>
           </thead>
           <tbody>
@@ -119,7 +118,6 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
               <td style={{ ...TD, textAlign: 'right', ...numStyle(report.basic_silicon) }}>{fmt(report.basic_silicon)}</td>
               <td style={{ ...TD, textAlign: 'right', color: 'var(--ox-fg-dim)' }}>—</td>
               <td style={{ ...TD, textAlign: 'right', color: 'var(--ox-fg-dim)' }}>—</td>
-              <td style={TD}></td>
             </tr>
 
             {/* Buildings */}
@@ -193,43 +191,60 @@ function BuildingRow({
   onFactorCommit: (v: number) => void;
   disabled: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const metal    = b.prod_metal    * factor / 100;
   const silicon  = b.prod_silicon  * factor / 100;
   const hydrogen = b.prod_hydrogen * factor / 100;
-  const energy   = b.cons_energy; // net: >0 производит, <0 потребляет
+  const energy   = b.cons_energy;
 
   return (
-    <tr style={{ borderBottom: '1px solid var(--ox-border)' }}>
-      <td style={TD}>
-        <span style={{ fontWeight: 500 }}>{BUILDING_NAMES[b.unit_id] ?? b.name}</span>
-        {' '}
-        <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>ур. {b.level}</span>
-      </td>
-      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(metal) }}>
-        {metal !== 0 ? fmt(metal) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
-      </td>
-      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(silicon) }}>
-        {silicon !== 0 ? fmt(silicon) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
-      </td>
-      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(hydrogen) }}>
-        {hydrogen !== 0 ? fmt(hydrogen) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
-      </td>
-      <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(energy) }}>
-        {energy !== 0 ? fmt(energy) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
-      </td>
-      <td style={{ ...TD, textAlign: 'center' }}>
-        {b.allow_factor ? (
-          <FactorInput
-            value={factor}
-            onChange={onFactorChange}
-            onCommit={onFactorCommit}
-            disabled={disabled}
-          />
-        ) : (
-          <span style={{ fontSize: 11, color: 'var(--ox-fg-dim)' }}>—</span>
-        )}
-      </td>
-    </tr>
+    <>
+      <tr
+        style={{
+          borderBottom: expanded ? 'none' : '1px solid var(--ox-border)',
+          cursor: b.allow_factor ? 'pointer' : 'default',
+          background: expanded ? 'var(--ox-bg-2)' : undefined,
+        }}
+        onClick={() => b.allow_factor && setExpanded((v) => !v)}
+      >
+        <td style={TD}>
+          <span style={{ fontWeight: 500 }}>{BUILDING_NAMES[b.unit_id] ?? b.name}</span>
+          {' '}
+          <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>ур. {b.level}</span>
+          {b.allow_factor && (
+            <span style={{ fontSize: 11, color: factor < 100 ? 'var(--ox-warn, #f59e0b)' : 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)', marginLeft: 6 }}>
+              {factor}%{' '}
+              <span style={{ fontSize: 10 }}>{expanded ? '▲' : '▼'}</span>
+            </span>
+          )}
+        </td>
+        <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(metal) }}>
+          {metal !== 0 ? fmt(metal) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
+        </td>
+        <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(silicon) }}>
+          {silicon !== 0 ? fmt(silicon) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
+        </td>
+        <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(hydrogen) }}>
+          {hydrogen !== 0 ? fmt(hydrogen) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
+        </td>
+        <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', ...numStyle(energy) }}>
+          {energy !== 0 ? fmt(energy) : <span style={{ color: 'var(--ox-fg-dim)' }}>—</span>}
+        </td>
+      </tr>
+
+      {expanded && (
+        <tr style={{ borderBottom: '1px solid var(--ox-border)', background: 'var(--ox-bg-2)' }}>
+          <td colSpan={5} style={{ padding: '8px 16px 12px' }}>
+            <FactorInput
+              value={factor}
+              onChange={onFactorChange}
+              onCommit={onFactorCommit}
+              disabled={disabled}
+            />
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -255,7 +270,6 @@ function SummaryRow({
       <td style={{ ...TD, textAlign: 'right', fontFamily: 'var(--ox-mono)', borderTop: bt, color: 'var(--ox-fg-dim)' }}>
         {energy !== null ? <span style={numStyle(energy)}>{fmt(energy)}</span> : '—'}
       </td>
-      <td style={{ ...TD, borderTop: bt }}></td>
     </tr>
   );
 }
@@ -275,33 +289,30 @@ function FactorInput({
 }) {
   const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 140 }}>
-      {/* Presets */}
-      <div style={{ display: 'flex', gap: 3 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: 360 }}>
+      <div style={{ display: 'flex', gap: 4 }}>
         {PRESETS.map((p) => (
           <button
             key={p}
             type="button"
             disabled={disabled}
-            onClick={() => onCommit(p)}
+            onClick={(e) => { e.stopPropagation(); onCommit(p); }}
             style={{
-              padding: '2px 5px',
-              fontSize: 11,
+              padding: '3px 8px',
+              fontSize: 12,
               fontFamily: 'var(--ox-mono)',
               background: value === p ? 'var(--ox-accent)' : 'var(--ox-bg-3)',
               color: value === p ? '#000' : 'var(--ox-fg-dim)',
               border: '1px solid var(--ox-border)',
-              borderRadius: 3,
+              borderRadius: 4,
               cursor: disabled ? 'default' : 'pointer',
-              lineHeight: 1.4,
             }}
           >
-            {p}
+            {p}%
           </button>
         ))}
       </div>
-      {/* Slider + value */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <input
           type="range"
           min={0}
@@ -309,12 +320,13 @@ function FactorInput({
           step={1}
           value={value}
           disabled={disabled}
-          onChange={(e) => onChange(clamp(Number(e.target.value)))}
-          onMouseUp={(e) => onCommit(clamp(Number((e.target as HTMLInputElement).value)))}
-          onTouchEnd={(e) => onCommit(clamp(Number((e.target as HTMLInputElement).value)))}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => { e.stopPropagation(); onChange(clamp(Number(e.target.value))); }}
+          onMouseUp={(e) => { e.stopPropagation(); onCommit(clamp(Number((e.target as HTMLInputElement).value))); }}
+          onTouchEnd={(e) => { e.stopPropagation(); onCommit(clamp(Number((e.target as HTMLInputElement).value))); }}
           style={{ flex: 1, accentColor: 'var(--ox-accent)', cursor: disabled ? 'default' : 'pointer' }}
         />
-        <span style={{ fontSize: 12, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', minWidth: 30, textAlign: 'right' }}>
+        <span style={{ fontSize: 13, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg)', minWidth: 36, textAlign: 'right', fontWeight: 600 }}>
           {value}%
         </span>
       </div>
