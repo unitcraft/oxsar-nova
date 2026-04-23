@@ -61,6 +61,10 @@ type Entry struct {
 	UPoints     float64 `json:"u_points"`
 	APoints     float64 `json:"a_points"`
 	EPoints     float64 `json:"e_points"`
+	// Координаты главной (первой созданной) планеты игрока — для клика из рейтинга.
+	HomeGalaxy   *int `json:"home_galaxy,omitempty"`
+	HomeSystem   *int `json:"home_system,omitempty"`
+	HomePosition *int `json:"home_position,omitempty"`
 }
 
 // RecalcUser пересчитывает все компоненты очков userID и атомарно
@@ -105,9 +109,15 @@ func (s *Service) Top(ctx context.Context, scoreType string, limit int) ([]Entry
 	col := columnFor(scoreType)
 	rows, err := s.db.Pool().Query(ctx, fmt.Sprintf(`
 		SELECT u.id, u.username, a.tag,
-		       u.points, u.b_points, u.r_points, u.u_points, u.a_points, u.e_points
+		       u.points, u.b_points, u.r_points, u.u_points, u.a_points, u.e_points,
+		       hp.galaxy, hp.system, hp.position
 		FROM users u
 		LEFT JOIN alliances a ON a.id = u.alliance_id
+		LEFT JOIN LATERAL (
+			SELECT galaxy, system, position FROM planets
+			WHERE user_id = u.id AND destroyed_at IS NULL AND is_moon = false
+			ORDER BY created_at ASC LIMIT 1
+		) hp ON true
 		WHERE u.umode = false
 		ORDER BY u.%s DESC
 		LIMIT $1
@@ -122,7 +132,8 @@ func (s *Service) Top(ctx context.Context, scoreType string, limit int) ([]Entry
 	for rows.Next() {
 		var e Entry
 		if err := rows.Scan(&e.UserID, &e.Username, &e.AllianceTag,
-			&e.Points, &e.BPoints, &e.RPoints, &e.UPoints, &e.APoints, &e.EPoints); err != nil {
+			&e.Points, &e.BPoints, &e.RPoints, &e.UPoints, &e.APoints, &e.EPoints,
+			&e.HomeGalaxy, &e.HomeSystem, &e.HomePosition); err != nil {
 			return nil, fmt.Errorf("score.scan: %w", err)
 		}
 		e.Rank = rank

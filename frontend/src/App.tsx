@@ -184,6 +184,8 @@ function AuthenticatedApp() {
   const [fleetDst, setFleetDst] = useState<{ g: number; s: number; pos: number; isMoon: boolean; mission: number } | undefined>();
   const [infoUnit, setInfoUnit] = useState<InfoUnit | null>(() => parseHash().infoUnit);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [galaxyInitialCoords, setGalaxyInitialCoords] = useState<{ galaxy: number; system: number } | null>(null);
+  const [scoreInitialQuery, setScoreInitialQuery] = useState<string>('');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -297,7 +299,7 @@ function AuthenticatedApp() {
             )}
             {tab === 'shipyard'   && <ShipyardScreen planet={planet} onOpenInfo={(kind, id) => openInfo(kind, id, 0)} />}
             {tab === 'repair'     && <RepairScreen planet={planet} />}
-            {tab === 'galaxy'     && <GalaxyScreen homePlanet={planet} userId={me.data?.user_id ?? ''} planets={list} onFleetMission={(fg, fs, fpos, fMoon, fMission) => { setFleetDst({ g: fg, s: fs, pos: fpos, isMoon: fMoon, mission: fMission }); navigateTo('fleet'); }} />}
+            {tab === 'galaxy'     && <GalaxyScreen homePlanet={planet} userId={me.data?.user_id ?? ''} planets={list} initialCoords={galaxyInitialCoords} onFleetMission={(fg, fs, fpos, fMoon, fMission) => { setFleetDst({ g: fg, s: fs, pos: fpos, isMoon: fMoon, mission: fMission }); navigateTo('fleet'); }} />}
             {tab === 'fleet'      && <FleetScreen planet={planet} {...(fleetDst ? { initialDst: fleetDst } : {})} />}
             {tab === 'market'     && <MarketScreen planet={planet} />}
             {tab === 'rockets'    && <RocketsScreen planet={planet} />}
@@ -306,7 +308,7 @@ function AuthenticatedApp() {
             {tab === 'art-market' && <ArtefactMarketScreen />}
             {tab === 'officers'   && <OfficersScreen />}
             {tab === 'achievements' && <AchievementsScreen />}
-            {tab === 'score'      && <ScoreScreen />}
+            {tab === 'score'      && <ScoreScreen initialQuery={scoreInitialQuery} onPlanetClick={(g, s) => { setGalaxyInitialCoords({ galaxy: g, system: s }); navigateTo('galaxy'); }} />}
             {tab === 'alliance'   && <AllianceScreen />}
             {tab === 'chat'       && <ChatScreen />}
             {tab === 'sim'        && <BattleSimScreen />}
@@ -338,12 +340,15 @@ function AuthenticatedApp() {
         onNavigate={(target) => {
           if (target.kind === 'planet') {
             const d = target.data as { galaxy: number; system: number };
+            setGalaxyInitialCoords({ galaxy: d.galaxy, system: d.system });
             navigateTo('galaxy');
-            // установим координаты в URL, GalaxyScreen прочитает при следующем шаге
-            // (упрощение: пользователь переходит на экран, дальше — сам)
-            void d;
-          } else if (target.kind === 'player' || target.kind === 'alliance') {
-            // пока просто переводим в рейтинг — позже можно сделать профили
+          } else if (target.kind === 'player') {
+            const d = target.data as { username: string };
+            setScoreInitialQuery(d.username);
+            navigateTo('score');
+          } else if (target.kind === 'alliance') {
+            const d = target.data as { tag: string };
+            setScoreInitialQuery(d.tag);
             navigateTo('score');
           }
         }}

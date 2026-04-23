@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 
@@ -16,6 +16,9 @@ interface Entry {
   u_points: number;
   a_points: number;
   e_points?: number;
+  home_galaxy?: number | null;
+  home_system?: number | null;
+  home_position?: number | null;
 }
 
 interface AllianceEntry {
@@ -70,7 +73,25 @@ function Skeleton() {
   );
 }
 
-function PlayersTab({ scoreType, setScoreType }: { scoreType: ScoreType; setScoreType: (t: ScoreType) => void }) {
+function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
+  scoreType: ScoreType;
+  setScoreType: (t: ScoreType) => void;
+  initialQuery?: string;
+  onPlanetClick?: (g: number, s: number) => void;
+}) {
+  const [filter, setFilter] = useState(initialQuery ?? '');
+  const highlightRef = useRef<HTMLTableRowElement | null>(null);
+
+  useEffect(() => {
+    if (initialQuery !== undefined) setFilter(initialQuery);
+  }, [initialQuery]);
+
+  useEffect(() => {
+    if (highlightRef.current && filter.trim().length >= 2) {
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [filter]);
+
   const q = useQuery({
     queryKey: ['highscore', scoreType],
     queryFn: () => api.get<{ highscore: Entry[] | null }>(`/api/highscore?type=${scoreType}`),
@@ -83,7 +104,11 @@ function PlayersTab({ scoreType, setScoreType }: { scoreType: ScoreType; setScor
     refetchInterval: 60000,
   });
 
-  const list = q.data?.highscore ?? [];
+  const fullList = q.data?.highscore ?? [];
+  const filterTrim = filter.trim().toLowerCase();
+  const list = filterTrim.length > 0
+    ? fullList.filter((e) => e.username.toLowerCase().includes(filterTrim))
+    : fullList;
   const typeMeta = SCORE_TYPES.find((s) => s.value === scoreType)!;
 
   return (
@@ -113,6 +138,14 @@ function PlayersTab({ scoreType, setScoreType }: { scoreType: ScoreType; setScor
         ))}
       </div>
 
+      <input
+        type="text"
+        placeholder="🔍 Фильтр по нику…"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        style={{ padding: '6px 10px', maxWidth: 300 }}
+      />
+
       <div className="ox-panel" style={{ overflow: 'hidden' }}>
         {q.isLoading && <Skeleton />}
         {!q.isLoading && list.length === 0 && (
@@ -128,6 +161,7 @@ function PlayersTab({ scoreType, setScoreType }: { scoreType: ScoreType; setScor
                   <th style={{ width: 48 }}>#</th>
                   <th>Игрок</th>
                   <th style={{ width: 60 }}>Альянс</th>
+                  <th style={{ width: 100 }}>Координаты</th>
                   <th>{typeMeta.label}</th>
                   {scoreType === 'total' && (
                     <>
@@ -139,12 +173,30 @@ function PlayersTab({ scoreType, setScoreType }: { scoreType: ScoreType; setScor
                 </tr>
               </thead>
               <tbody>
-                {list.map((e) => (
-                  <tr key={e.user_id}>
+                {list.map((e) => {
+                  const isMatch = filterTrim.length > 0 && e.username.toLowerCase().includes(filterTrim);
+                  return (
+                  <tr
+                    key={e.user_id}
+                    ref={isMatch && !highlightRef.current ? highlightRef : undefined}
+                    style={isMatch ? { background: 'rgba(99,217,255,0.08)' } : undefined}
+                  >
                     <td data-label="#" className="num">{MEDAL[e.rank - 1] ?? e.rank}</td>
                     <td data-label="Игрок" style={{ fontWeight: e.rank <= 3 ? 700 : 400 }}>{e.username}</td>
                     <td data-label="Альянс" style={{ fontSize: 11, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
                       {e.alliance_tag ? `[${e.alliance_tag}]` : '—'}
+                    </td>
+                    <td data-label="Координаты" style={{ fontFamily: 'var(--ox-mono)', fontSize: 12 }}>
+                      {e.home_galaxy != null && e.home_system != null && e.home_position != null ? (
+                        <button
+                          type="button"
+                          onClick={() => onPlanetClick?.(e.home_galaxy!, e.home_system!)}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--ox-accent)', cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontSize: 'inherit' }}
+                          title="Перейти в галактику"
+                        >
+                          [{e.home_galaxy}:{e.home_system}:{e.home_position}]
+                        </button>
+                      ) : <span style={{ color: 'var(--ox-fg-muted)' }}>—</span>}
                     </td>
                     <td data-label={typeMeta.label} className="num" style={{ color: 'var(--ox-accent)', fontWeight: 600 }}>
                       {Math.round(getPoints(e, scoreType)).toLocaleString('ru-RU')}
@@ -157,7 +209,8 @@ function PlayersTab({ scoreType, setScoreType }: { scoreType: ScoreType; setScor
                       </>
                     )}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -270,9 +323,18 @@ function VacationTab() {
   );
 }
 
-export function ScoreScreen() {
+export function ScoreScreen({ initialQuery, onPlanetClick }: {
+  initialQuery?: string;
+  onPlanetClick?: (g: number, s: number) => void;
+} = {}) {
   const [mainTab, setMainTab] = useState<MainTab>('players');
   const [scoreType, setScoreType] = useState<ScoreType>('total');
+
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim().length > 0) {
+      setMainTab('players');
+    }
+  }, [initialQuery]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -286,7 +348,7 @@ export function ScoreScreen() {
         <button type="button" aria-pressed={mainTab === 'vacation'} onClick={() => setMainTab('vacation')}>✈ В отпуске</button>
       </div>
 
-      {mainTab === 'players'   && <PlayersTab scoreType={scoreType} setScoreType={setScoreType} />}
+      {mainTab === 'players'   && <PlayersTab scoreType={scoreType} setScoreType={setScoreType} initialQuery={initialQuery} onPlanetClick={onPlanetClick} />}
       {mainTab === 'alliances' && <AlliancesTab />}
       {mainTab === 'vacation'  && <VacationTab />}
     </div>
