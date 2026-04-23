@@ -254,7 +254,7 @@ function AuthenticatedApp() {
             )}
             {tab === 'shipyard'   && <ShipyardScreen planet={planet} onOpenInfo={(kind, id) => openInfo(kind, id, 0)} />}
             {tab === 'repair'     && <RepairScreen planet={planet} />}
-            {tab === 'galaxy'     && <GalaxyScreen homePlanet={planet} userId={me.data?.user_id ?? ''} onFleetMission={(fg, fs, fpos, fMoon, fMission) => { setFleetDst({ g: fg, s: fs, pos: fpos, isMoon: fMoon, mission: fMission }); navigateTo('fleet'); }} />}
+            {tab === 'galaxy'     && <GalaxyScreen homePlanet={planet} userId={me.data?.user_id ?? ''} planets={list} onFleetMission={(fg, fs, fpos, fMoon, fMission) => { setFleetDst({ g: fg, s: fs, pos: fpos, isMoon: fMoon, mission: fMission }); navigateTo('fleet'); }} />}
             {tab === 'fleet'      && <FleetScreen planet={planet} {...(fleetDst ? { initialDst: fleetDst } : {})} />}
             {tab === 'market'     && <MarketScreen planet={planet} />}
             {tab === 'rockets'    && <RocketsScreen planet={planet} />}
