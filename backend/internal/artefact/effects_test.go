@@ -168,3 +168,46 @@ func TestErrMaxStacksReached_IsSentinel(t *testing.T) {
 		t.Fatal("ErrMaxStacksReached must not be nil")
 	}
 }
+
+func TestComputeBattleModifier_NoArtefacts(t *testing.T) {
+	t.Parallel()
+	m := ComputeBattleModifier(nil)
+	if m.AttackMul != 1 || m.ShieldMul != 1 || m.ShellMul != 1 {
+		t.Fatalf("empty specs must yield all 1.0, got %+v", m)
+	}
+}
+
+func TestComputeBattleModifier_SingleAttack(t *testing.T) {
+	t.Parallel()
+	specs := []config.ArtefactSpec{{
+		Effect: config.ArtefactEffect{Type: "battle_bonus", BattleAttack: 1.1},
+	}}
+	m := ComputeBattleModifier(specs)
+	if m.AttackMul != 1.1 || m.ShieldMul != 1 || m.ShellMul != 1 {
+		t.Fatalf("expected attack=1.1, got %+v", m)
+	}
+}
+
+func TestComputeBattleModifier_StacksMultiply(t *testing.T) {
+	t.Parallel()
+	specs := []config.ArtefactSpec{
+		{Effect: config.ArtefactEffect{Type: "battle_bonus", BattleAttack: 1.1}},
+		{Effect: config.ArtefactEffect{Type: "battle_bonus", BattleAttack: 1.1}},
+	}
+	m := ComputeBattleModifier(specs)
+	want := 1.1 * 1.1
+	if m.AttackMul < want-1e-9 || m.AttackMul > want+1e-9 {
+		t.Fatalf("two stacks: expected attack≈%v, got %v", want, m.AttackMul)
+	}
+}
+
+func TestComputeBattleModifier_SkipsNonBattleBonus(t *testing.T) {
+	t.Parallel()
+	specs := []config.ArtefactSpec{
+		{Effect: config.ArtefactEffect{Type: "factor_user", Field: "exchange_rate", BattleAttack: 1.5}},
+	}
+	m := ComputeBattleModifier(specs)
+	if m.AttackMul != 1 {
+		t.Fatalf("non-battle_bonus must be ignored, got attack=%v", m.AttackMul)
+	}
+}
