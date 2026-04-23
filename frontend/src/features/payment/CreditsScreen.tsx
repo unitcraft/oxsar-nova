@@ -33,6 +33,24 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+// Подсказки под карточкой пакета: что даёт примерный номинал.
+// Значения зашиты локально (на основе текущего game config).
+function packageHint(total: number): string | null {
+  if (total >= 5000) return '💼 Все 4 офицера на месяц + запас на артефакты';
+  if (total >= 2000) return '⭐ Все 4 офицера на 2 недели';
+  if (total >= 1000) return '👔 Пара офицеров на месяц или смена профессии';
+  if (total >= 500) return '🎖 Офицер на 2 недели';
+  if (total >= 100) return '🔧 Мелкие покупки (смена имени, артефакт)';
+  return null;
+}
+
+const CREDIT_PRICING_HINTS = [
+  { icon: '⭐', label: 'Адмирал / Инженер / Геолог / Меркуре', value: '50 кр/день (1500 кр / месяц)' },
+  { icon: '🎖', label: 'Смена профессии (после 7 дней)', value: '1000 кр' },
+  { icon: '🏷', label: 'Переименование планеты', value: 'бесплатно' },
+  { icon: '💎', label: 'Покупка артефактов на бирже', value: 'зависит от лота' },
+];
+
 export function CreditsScreen() {
   const qc = useQueryClient();
   const { show: showToast } = useToast();
@@ -80,27 +98,51 @@ export function CreditsScreen() {
 
       {packages.data && (
         <div className="credit-packages">
-          {packages.data.map((pkg) => (
-            <div key={pkg.key} className="credit-package-card">
-              <div className="credit-package-label">{pkg.label}</div>
-              <div className="credit-package-credits">
-                {pkg.total_credits.toLocaleString('ru-RU')} кр
-                {pkg.bonus_credits > 0 && (
-                  <span className="credit-package-bonus"> (+{pkg.bonus_credits.toLocaleString('ru-RU')} бонус)</span>
+          {packages.data.map((pkg) => {
+            const hint = packageHint(pkg.total_credits);
+            return (
+              <div key={pkg.key} className="credit-package-card">
+                <div className="credit-package-label">{pkg.label}</div>
+                <div className="credit-package-credits">
+                  {pkg.total_credits.toLocaleString('ru-RU')} кр
+                  {pkg.bonus_credits > 0 && (
+                    <span className="credit-package-bonus"> (+{pkg.bonus_credits.toLocaleString('ru-RU')} бонус)</span>
+                  )}
+                </div>
+                <div className="credit-package-price">{pkg.price_rub.toLocaleString('ru-RU')} ₽</div>
+                {hint && (
+                  <div style={{ fontSize: 11, color: 'var(--ox-fg-dim)', marginBottom: 8, lineHeight: 1.4 }}>
+                    {hint}
+                  </div>
                 )}
+                <button
+                  className="btn-primary"
+                  disabled={buyMutation.isPending}
+                  onClick={() => buyMutation.mutate(pkg.key)}
+                >
+                  Купить
+                </button>
               </div>
-              <div className="credit-package-price">{pkg.price_rub.toLocaleString('ru-RU')} ₽</div>
-              <button
-                className="btn-primary"
-                disabled={buyMutation.isPending}
-                onClick={() => buyMutation.mutate(pkg.key)}
-              >
-                Купить
-              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Что можно купить на кредиты */}
+      <details style={{ marginTop: 16, marginBottom: 16 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 14, padding: '8px 0' }}>
+          💡 На что потратить кредиты?
+        </summary>
+        <div style={{ padding: 12, background: 'var(--ox-bg-panel)', borderRadius: 6, marginTop: 6 }}>
+          {CREDIT_PRICING_HINTS.map((h) => (
+            <div key={h.label} style={{ display: 'flex', gap: 8, padding: '4px 0', fontSize: 13 }}>
+              <span>{h.icon}</span>
+              <span style={{ flex: 1, color: 'var(--ox-fg)' }}>{h.label}</span>
+              <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>{h.value}</span>
             </div>
           ))}
         </div>
-      )}
+      </details>
 
       <h3>История покупок</h3>
 
