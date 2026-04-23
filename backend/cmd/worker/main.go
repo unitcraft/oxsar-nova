@@ -182,21 +182,14 @@ func run() error {
 		}
 	}()
 
-	// Периодический пересчёт очков всех игроков (раз в 5 минут).
-	go func() {
-		t := time.NewTicker(5 * time.Minute)
-		defer t.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-				if err := scoreSvc.RecalcAll(ctx, log); err != nil {
-					log.ErrorContext(ctx, "score_recalc_all_failed", slog.String("err", err.Error()))
-				}
-			}
-		}
-	}()
+	// Пересчёт очков всех игроков — через событие KindScoreRecalcAll
+	// (раз в сутки). Бывший 5-минутный ticker удалён в пользу
+	// event-based подхода (план 09 Ф.5.2).
+	w.Register(event.KindScoreRecalcAll, scoreSvc.RecalcAllEvent())
+	if err := scoreSvc.BootstrapRecalcAllEvent(ctx); err != nil {
+		log.WarnContext(ctx, "score_bootstrap_recalc_failed",
+			slog.String("err", err.Error()))
+	}
 
 	// Ежедневная рассылка уведомлений о неактивности.
 	go func() {
