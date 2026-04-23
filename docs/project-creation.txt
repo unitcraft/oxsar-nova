@@ -5214,3 +5214,24 @@ MEDIUM Priority:
        frontend/src/features/galaxy/GalaxyScreen.tsx, docs/plans/15-galaxy.md
 
 Статус: ✅ ЗАВЕРШЕНА (задачи 5-8 — P2/P3, не реализовывались)
+
+================================================================================
+
+## Задача 16 — Статические формулы вместо DSL (план 16)
+- Удалён pkg/formula/ (context, lexer, parser, nodes, тесты) — 5 файлов, ~600 строк
+- economy/formulas.go: добавлены 11 статических функций (MetalmineProdMetal,
+  SiliconLabProdSilicon, HydrogenLabProdHydrogen, MoonHydrogenLabProdHydrogen,
+  SolarPlantProdEnergy, HydrogenPlantProdEnergy, SolarSatelliteProdEnergy,
+  GraviProdEnergy, MineConsEnergy, HydrogenPlantConsHydrogen, CostForLevelFloor)
+- economy/ids.go: константы ID зданий и технологий (IDMetalmine=1, IDTechEnergy=18, ...)
+- planet/service.go: убраны formulaCache, evalProd, evalCons, compile;
+  productionRatesDSL → прямые вызовы economy.*;
+  ResourceReport → buildingProdStatic (dispatch по unitID) + researchLevelsDirect
+- convert_construction.go: validateFormulas без DSL, простая regexp-проверка символов
+- Тесты: 9 новых тестов в formulas_test.go; TestProductionRatesMetal (переименован)
+
+Файлы: backend/internal/economy/formulas.go, ids.go, formulas_test.go,
+       backend/internal/planet/service.go, production_test.go,
+       backend/cmd/tools/import-datasheets/convert_construction.go
+
+Статус: ✅ ЗАВЕРШЕНА (план 16 полностью закрыт)
