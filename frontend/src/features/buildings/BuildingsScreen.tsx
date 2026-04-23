@@ -75,7 +75,13 @@ export function BuildingsScreen({ planet }: { planet: Planet }) {
       toast.show('success', 'В очередь', `${name} добавлена в очередь строительства`);
     },
     onError: (err) => {
-      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось добавить в очередь');
+      const msg = err instanceof Error ? err.message : '';
+      const text = msg.includes('queue busy') ? 'Очередь занята, дождитесь завершения постройки'
+        : msg.includes('not enough') ? 'Недостаточно ресурсов'
+        : msg.includes('moon-only') ? 'Это здание доступно только на луне'
+        : msg.includes('not available on moon') ? 'Это здание недоступно на луне'
+        : msg || 'Не удалось добавить в очередь';
+      toast.show('danger', 'Ошибка', text);
     },
   });
 
