@@ -35,6 +35,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/market"
 	"github.com/oxsar/nova/backend/internal/message"
 	"github.com/oxsar/nova/backend/internal/officer"
+	"github.com/oxsar/nova/backend/internal/payment"
 	"github.com/oxsar/nova/backend/internal/planet"
 	"github.com/oxsar/nova/backend/internal/profession"
 	"github.com/oxsar/nova/backend/internal/referral"
@@ -163,6 +164,9 @@ func run() error {
 	aiAdvisorSvc := aiadvisor.NewService(db, cfg.AIAdvisor)
 	aiAdvisorH := aiadvisor.NewHandler(aiAdvisorSvc)
 
+	paymentSvc := payment.NewService(db, cfg.Payment).WithReferral(referralSvc)
+	paymentH := payment.NewHandler(paymentSvc)
+
 	adminH := admin.NewHandler(db)
 
 	chatHub := chat.NewHub()
@@ -193,6 +197,8 @@ func run() error {
 	r.With(auth.Middleware(jwt)).Delete("/api/me/vacation", authH.UnsetVacation)
 	r.Post("/api/battle-sim", battleSimHandler)
 	r.Get("/api/stats", scoreH.Stats)
+	r.Get("/api/payment/packages", paymentH.Packages)
+	r.Post("/api/payment/webhook", paymentH.Webhook)
 
 	// i18n доступна без авторизации (логин-экран тоже использует).
 	if i18nH != nil {
@@ -251,6 +257,9 @@ func run() error {
 
 		pr.Post("/ai-advisor/ask", aiAdvisorH.Ask)
 		pr.Get("/ai-advisor/estimate", aiAdvisorH.Estimate)
+
+		pr.Post("/payment/order", paymentH.CreateOrder)
+		pr.Get("/payment/history", paymentH.History)
 
 		pr.Get("/galaxy/{g}/{s}", galaxyH.System)
 

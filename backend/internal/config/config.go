@@ -20,6 +20,7 @@ type Config struct {
 	Auth      AuthConfig
 	Game      GameConfig
 	AIAdvisor AIAdvisorConfig
+	Payment   PaymentConfig
 }
 
 type ServerConfig struct {
@@ -58,6 +59,16 @@ type GameConfig struct {
 	BashingPeriod          int     // seconds, 0 = disabled
 	BashingMaxAttacks      int     // max attacks per BashingPeriod
 	ProtectionPeriod       int     // seconds new player is protected from attacks
+}
+
+type PaymentConfig struct {
+	Provider       string // PAYMENT_PROVIDER: "robokassa" | "enot" | ""
+	RobokassaLogin string // ROBOKASSA_LOGIN
+	RobokassaPass1 string // ROBOKASSA_PASS1 — подпись при создании платежа
+	RobokassaPass2 string // ROBOKASSA_PASS2 — подпись при верификации webhook
+	EnotApiKey     string // ENOT_API_KEY
+	EnotShopID     string // ENOT_SHOP_ID
+	ReturnURL      string // PAYMENT_RETURN_URL
 }
 
 type AIAdvisorConfig struct {
@@ -128,6 +139,16 @@ func Load() (Config, error) {
 		OllamaModel: env("OLLAMA_MODEL", "qwen2.5:3b"),
 		MaxPerDay:   envInt("AI_ADVISOR_MAX_PER_DAY", 20),
 		MaxTokens:   envInt("AI_ADVISOR_MAX_TOKENS", 1024),
+	}
+
+	cfg.Payment = PaymentConfig{
+		Provider:       env("PAYMENT_PROVIDER", ""),
+		RobokassaLogin: env("ROBOKASSA_LOGIN", ""),
+		RobokassaPass1: env("ROBOKASSA_PASS1", ""),
+		RobokassaPass2: env("ROBOKASSA_PASS2", ""),
+		EnotApiKey:     env("ENOT_API_KEY", ""),
+		EnotShopID:     env("ENOT_SHOP_ID", ""),
+		ReturnURL:      env("PAYMENT_RETURN_URL", ""),
 	}
 
 	if cfg.DB.URL == "" {
