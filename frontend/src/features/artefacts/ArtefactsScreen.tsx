@@ -30,32 +30,65 @@ export function ArtefactsScreen() {
 
   const activate = useMutation({
     mutationFn: (id: string) => api.post<Artefact>(`/api/artefacts/${id}/activate`),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['artefacts'] });
+      const prev = qc.getQueryData<{ artefacts: Artefact[] | null }>(['artefacts']);
+      qc.setQueryData<{ artefacts: Artefact[] | null }>(['artefacts'], (old) => ({
+        artefacts: old?.artefacts?.map((a) => a.id === id ? { ...a, state: 'delayed' as const } : a) ?? null,
+      }));
+      return { prev };
+    },
     onSuccess: (a) => {
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
       toast.show('success', 'Артефакт', `${nameOf(a.unit_id)} активирован`);
     },
-    onError: (err) => { toast.show('danger', 'Ошибка активации', err instanceof Error ? err.message : ''); },
+    onError: (err, _id, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['artefacts'], ctx.prev);
+      toast.show('danger', 'Ошибка активации', err instanceof Error ? err.message : '');
+    },
   });
   const deactivate = useMutation({
     mutationFn: (id: string) => api.post<void>(`/api/artefacts/${id}/deactivate`),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['artefacts'] });
+      const prev = qc.getQueryData<{ artefacts: Artefact[] | null }>(['artefacts']);
+      qc.setQueryData<{ artefacts: Artefact[] | null }>(['artefacts'], (old) => ({
+        artefacts: old?.artefacts?.map((a) => a.id === id ? { ...a, state: 'held' as const } : a) ?? null,
+      }));
+      return { prev };
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
       toast.show('info', 'Артефакт деактивирован');
     },
-    onError: (err) => { toast.show('danger', 'Ошибка', err instanceof Error ? err.message : ''); },
+    onError: (err, _id, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['artefacts'], ctx.prev);
+      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : '');
+    },
   });
   const sell = useMutation({
     mutationFn: (p: { id: string; price: number }) =>
       api.post<void>(`/api/artefacts/${p.id}/sell`, { price: p.price }),
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: ['artefacts'] });
+      const prev = qc.getQueryData<{ artefacts: Artefact[] | null }>(['artefacts']);
+      qc.setQueryData<{ artefacts: Artefact[] | null }>(['artefacts'], (old) => ({
+        artefacts: old?.artefacts?.map((a) => a.id === id ? { ...a, state: 'listed' as const } : a) ?? null,
+      }));
+      return { prev };
+    },
     onSuccess: () => {
       setSellingID(null);
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
       void qc.invalidateQueries({ queryKey: ['artefact-market'] });
       toast.show('success', 'Артефакт выставлен на продажу');
     },
-    onError: (err) => { toast.show('danger', 'Ошибка продажи', err instanceof Error ? err.message : ''); },
+    onError: (err, _p, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['artefacts'], ctx.prev);
+      toast.show('danger', 'Ошибка продажи', err instanceof Error ? err.message : '');
+    },
   });
 
   const items = list.data?.artefacts ?? [];
