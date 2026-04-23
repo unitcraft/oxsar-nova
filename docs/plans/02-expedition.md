@@ -60,22 +60,9 @@ xSkirmish штраф: >10000 кораблей → ×0.5, >100 Deathstar → ×0.
 
 ## Открытые задачи (упрощения, принятые сознательно)
 
-### B.1 Воркер: удаление временных планет (приоритет: MEDIUM)
+### ✅ B.1 Воркер: удаление временных планет
 
-**Проблема:** `planets.expires_at` выставляется, но воркер не удаляет истёкшие планеты.
-Временные планеты накапливаются в БД. По legacy: `EXPED_PLANET_LIFETIME_MIN = 12ч`,
-`TEMP_PLANET_LIFETIME = 21 day` (постоянная временная планета).
-
-**Решение:** Добавить cron-handler или отдельный KindExpirePlanet event в `cmd/worker/main.go`:
-```sql
-DELETE FROM planets WHERE expires_at IS NOT NULL AND expires_at < now()
-```
-Запускать раз в час (не нужен точный тайминг).
-
-**Проверка готовности:**
-- [ ] Воркер удаляет планеты с `expires_at < now()`
-- [ ] Тест или интеграционный тест
-- [ ] `make test` зелёный
+- `cmd/worker/main.go`: cron раз в час — `DELETE FROM planets WHERE expires_at IS NOT NULL AND expires_at < now()`
 
 ---
 

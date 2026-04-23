@@ -43,33 +43,11 @@
 
 ---
 
-### F.2 Очки игрока (points scoring) (приоритет: LOW)
+### ✅ F.2 Очки игрока (points scoring)
 
-**Контекст:** В legacy (consts.php — Dominator) нестандартные коэффициенты очков:
-
-| Параметр | Значение Dominator | Дефолт |
-|----------|-------------------|--------|
-| Очки за юниты (флот/оборону) | `2.0/1000` | `2.0/1000` |
-| Очки за исследования | `0.5/1000` | `1.0/1000` |
-| Очки за постройки | `0.05/1000` | `0.5/1000` |
-
-Формула: `points += resource_cost × coefficient`.
-
-В nova очки или не считаются, или не конфигурируемые. Нужно:
-- Добавить `PointsCoefficients` в `config.go`
-- Пересчитывать очки при постройке/исследовании/победе в бою
-- Хранить в `users.points`, индексировать для рейтинга
-
-**Шаг 1** — Миграция: `ALTER TABLE users ADD COLUMN points BIGINT DEFAULT 0`
-**Шаг 2** — `scoring/service.go`: `AddBuildingPoints / AddResearchPoints / AddFleetPoints`
-**Шаг 3** — Вызовы из `building/service.go`, `research/service.go`, `fleet/attack.go`
-**Шаг 4** — `GET /api/leaderboard` — топ по очкам
-
-**Проверка готовности:**
-- [ ] `users.points` в БД
-- [ ] Очки начисляются за постройки/исследования/флот
-- [ ] `/api/leaderboard` endpoint
-- [ ] `make test` зелёный
+- `PointsCoefficients` в config.go (kBld=0.00005, kRes=0.0005, kUnt=0.002)
+- `score/service.go`: `NewServiceWithCoeffs`, `Top`, `PlayerRank`, `PlayerScore`
+- `GET /api/highscore`, `GET /api/highscore/me` эндпоинты
 
 ---
 

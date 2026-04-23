@@ -36,6 +36,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/officer"
 	"github.com/oxsar/nova/backend/internal/planet"
 	"github.com/oxsar/nova/backend/internal/profession"
+	"github.com/oxsar/nova/backend/internal/referral"
 	"github.com/oxsar/nova/backend/internal/repair"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/internal/requirements"
@@ -105,7 +106,8 @@ func run() error {
 	// поэтому инициализируем до auth.NewService.
 	automsgSvc := automsg.NewService(db)
 
-	authSvc := auth.NewService(db, jwt, starter, automsgSvc)
+	referralSvc := referral.NewService(db)
+	authSvc := auth.NewService(db, jwt, starter, automsgSvc).WithReferral(referralSvc)
 	authH := auth.NewHandler(authSvc, pool)
 
 	reqs := requirements.New(cat)
