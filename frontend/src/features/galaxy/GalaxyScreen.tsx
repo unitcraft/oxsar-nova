@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { planetImageOf, formatNum, SHIPS } from '@/api/catalog';
@@ -308,14 +308,22 @@ function useSurveillance() {
   return { isWatching, toggle, watched };
 }
 
-export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets }: {
+export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, initialCoords }: {
   homePlanet: Planet;
   userId: string;
   planets?: Planet[];
   onFleetMission?: (g: number, s: number, pos: number, isMoon: boolean, mission: number) => void;
+  initialCoords?: { galaxy: number; system: number } | null;
 }) {
-  const [g, setG] = useState(homePlanet.galaxy);
-  const [s, setS] = useState(homePlanet.system);
+  const [g, setG] = useState(initialCoords?.galaxy ?? homePlanet.galaxy);
+  const [s, setS] = useState(initialCoords?.system ?? homePlanet.system);
+
+  useEffect(() => {
+    if (initialCoords) {
+      setG(initialCoords.galaxy);
+      setS(initialCoords.system);
+    }
+  }, [initialCoords?.galaxy, initialCoords?.system]);
   const [watchLabel, setWatchLabel] = useState<string | null>(null);
   const surveillance = useSurveillance();
 
