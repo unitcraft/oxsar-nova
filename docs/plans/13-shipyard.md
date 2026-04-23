@@ -1,6 +1,6 @@
 # План 13: Экран верфи — доработка ShipyardScreen
 
-## Статус: В РАБОТЕ (задачи 0–4 + 6 + 7 выполнены + hotfix; задача 5 — P3)
+## Статус: ЗАВЕРШЁН (все задачи 0–7 выполнены; задача 5 поглощена задачей 6)
 
 ## Контекст
 
@@ -286,22 +286,11 @@ DELETE /api/planets/{planetId}/shipyard/{queueId}
 
 ---
 
-### Задача 5 — Rapidfire (быстрый огонь) [P3]
+### Задача 5 — Rapidfire (быстрый огонь) [P3] ✅ (поглощена задачей 6)
 
-**Описание:** В legacy каждый корабль имеет таблицу rapidfire — сколько раз он может
-выстрелить по конкретным целям за один раунд боя. Данные есть в backend catalog, но
-не передаются на frontend.
-
-**Источник данных:** `backend/internal/catalog/catalog.go` → `RapidfireCatalog.Rapidfire`
-
-**Варианты реализации:**
-1. Встроить rapidfire прямо в `SHIPS`/`DEFENSE` в `catalog.ts` как `rapidfire?: Record<number, number>`
-2. Или показывать в `UnitInfoScreen` (отдельная задача)
-
-**Отображение:** раздел «Быстрый огонь» в `UnitInfoScreen` (план 12), не на карточке верфи
-(карточка и так насыщена).
-
-**Файлы:** `frontend/src/api/catalog.ts`, `frontend/src/features/unit-info/UnitInfoScreen.tsx`
+Реализована в рамках задачи 6: `CombatEntry` расширен полем `rapidfire?: Record<number, number>`,
+данные из `configs/rapidfire.yml` добавлены в `catalog.ts`, `UnitInfoScreen` показывает
+таблицы «Быстрый огонь» и «Уязвим к быстрому огню». Отдельной реализации не требуется.
 
 ---
 
