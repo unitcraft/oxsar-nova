@@ -13,11 +13,14 @@ import (
 
 // Handler — HTTP-адаптер к auth.Service.
 type Handler struct {
-	svc *Service
-	db  *pgxpool.Pool
+	svc     *Service
+	db      *pgxpool.Pool
+	vacation *VacationService
 }
 
-func NewHandler(svc *Service, db *pgxpool.Pool) *Handler { return &Handler{svc: svc, db: db} }
+func NewHandler(svc *Service, db *pgxpool.Pool) *Handler {
+	return &Handler{svc: svc, db: db, vacation: NewVacationService(db)}
+}
 
 type registerRequest struct {
 	Username string `json:"username"`
@@ -95,6 +98,46 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		"role":     role,
 		"credit":   credit,
 	})
+}
+
+// SetVacation POST /api/me/vacation — включить режим отпуска.
+func (h *Handler) SetVacation(w http.ResponseWriter, r *http.Request) {
+	uid, ok := UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	if err := h.vacation.SetVacation(r.Context(), uid); err != nil {
+		switch {
+		case errors.Is(err, ErrVacationAlreadyActive):
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "vacation already active"))
+		case errors.Is(err, ErrVacationIntervalNotMet):
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "vacation interval not met (20 days)"))
+		default:
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// UnsetVacation DELETE /api/me/vacation — выйти из режима отпуска.
+func (h *Handler) UnsetVacation(w http.ResponseWriter, r *http.Request) {
+	uid, ok := UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	if err := h.vacation.UnsetVacation(r.Context(), uid); err != nil {
+		switch {
+		case errors.Is(err, ErrVacationNotActive):
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "vacation not active"))
+		default:
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Refresh POST /api/auth/refresh

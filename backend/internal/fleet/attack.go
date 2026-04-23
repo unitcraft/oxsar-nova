@@ -118,6 +118,17 @@ func (s *TransportService) AttackHandler() event.Handler {
 			return fmt.Errorf("attack: find target: %w", err)
 		}
 
+		// Если защитник в режиме отпуска — флот возвращается без боя.
+		var vacSince *int64 // просто проверяем IS NOT NULL
+		_ = tx.QueryRow(ctx,
+			`SELECT 1 FROM users WHERE id=$1 AND vacation_since IS NOT NULL`,
+			defenderUserID).Scan(&vacSince)
+		if vacSince != nil {
+			_, uerr := tx.Exec(ctx,
+				`UPDATE fleets SET state='returning' WHERE id=$1`, pl.FleetID)
+			return uerr
+		}
+
 		defenderShips, err := readPlanetShips(ctx, tx, planetID)
 		if err != nil {
 			return fmt.Errorf("attack: defender ships: %w", err)

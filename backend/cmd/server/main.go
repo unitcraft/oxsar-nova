@@ -179,6 +179,8 @@ func run() error {
 	r.With(authRL.Middleware).Post("/api/auth/login", authH.Login)
 	r.With(authRL.Middleware).Post("/api/auth/refresh", authH.Refresh)
 	r.With(auth.Middleware(jwt)).Get("/api/me", authH.Me)
+	r.With(auth.Middleware(jwt)).Post("/api/me/vacation", authH.SetVacation)
+	r.With(auth.Middleware(jwt)).Delete("/api/me/vacation", authH.UnsetVacation)
 	r.Post("/api/battle-sim", battleSimHandler)
 	r.Get("/api/stats", scoreH.Stats)
 
