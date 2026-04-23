@@ -83,7 +83,7 @@ type refreshRequest struct {
 	Refresh string `json:"refresh"`
 }
 
-// Me GET /api/me — возвращает user_id и username текущего пользователя.
+// Me GET /api/me — возвращает user_id, username, role, credit, profession текущего пользователя.
 // Требует Middleware (Bearer / ?token=).
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	uid, ok := UserID(r.Context())
@@ -91,18 +91,21 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
-	var username, role string
+	var username, role, profession string
 	var credit float64
 	if err := h.db.QueryRow(context.Background(),
-		`SELECT username, COALESCE(role::text, ''), credit FROM users WHERE id=$1`, uid).Scan(&username, &role, &credit); err != nil {
+		`SELECT username, COALESCE(role::text, ''), credit, COALESCE(profession, 'none') FROM users WHERE id=$1`,
+		uid,
+	).Scan(&username, &role, &credit, &profession); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
-		"user_id":  uid,
-		"username": username,
-		"role":     role,
-		"credit":   credit,
+		"user_id":    uid,
+		"username":   username,
+		"role":       role,
+		"credit":     credit,
+		"profession": profession,
 	})
 }
 

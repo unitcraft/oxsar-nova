@@ -87,6 +87,18 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
     refetchInterval: 60000,
   });
 
+  const meInfo = useQuery({
+    queryKey: ['me'],
+    queryFn: () => api.get<{ user_id: string; username: string; profession: string }>('/api/me'),
+    staleTime: 30000,
+  });
+
+  const profession = useQuery({
+    queryKey: ['professions', 'me'],
+    queryFn: () => api.get<{ profession: string; label: string; next_change_allowed?: string | null }>('/api/professions/me'),
+    staleTime: 30000,
+  });
+
   const list = planets.data?.planets ?? [];
   const [selectedPlanetId, setSelectedPlanetId] = useState<string | null>(null);
   const incomingFleets = (incoming.data?.fleets ?? []).filter(
@@ -146,6 +158,9 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
           {(me.data.e_points ?? 0) > 0 && (
             <StatItem label="Боевой опыт" value={Math.floor(me.data.e_points!).toLocaleString('ru-RU')} />
           )}
+          {profession.data?.label && profession.data.profession !== 'none' && (
+            <StatItem label="Профессия" value={profession.data.label} />
+          )}
           {stats.data && (
             <>
               <div style={{ width: 1, height: 40, background: 'var(--ox-border)' }} />
@@ -154,6 +169,11 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
             </>
           )}
         </div>
+      )}
+
+      {/* Реферальная ссылка */}
+      {meInfo.data?.user_id && (
+        <RefLinkBanner userId={meInfo.data.user_id} />
       )}
 
       {/* Входящие атаки */}
@@ -552,6 +572,30 @@ function ResourceCell({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function RefLinkBanner({ userId }: { userId: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}/?ref=${userId}`;
+
+  function copy() {
+    void navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div className="ox-panel" style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <span style={{ fontSize: 13, color: 'var(--ox-fg-dim)', flexShrink: 0 }}>🔗 Реферальная ссылка:</span>
+      <code style={{ fontSize: 12, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {url}
+      </code>
+      <button type="button" className="btn btn-sm" onClick={copy} style={{ flexShrink: 0 }}>
+        {copied ? '✅ Скопировано' : 'Скопировать'}
+      </button>
     </div>
   );
 }

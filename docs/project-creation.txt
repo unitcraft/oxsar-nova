@@ -5625,3 +5625,103 @@ Star Surveillance (localStorage):
 - Все тесты зелёные (go test ./...)
 
 Статус: ✅ ЗАВЕРШЕНА
+
+## Итерация: План H — полное портирование UI легаси (2026-04-23)
+
+**Цель:** довести UI oxsar-nova до функционального паритета с oxsar2,
+не копируя слепо — где легаси неудобен, делать лучше.
+Составлен docs/plans/08-ui-porting.md на основе curl-анализа всех
+страниц легаси (http://localhost:8080, логин test/quoYaMe1wHo4xaci).
+
+**Реализовано:**
+
+**H.2.3 Profession** — экран выбора профессии
+- `frontend/src/features/profession/ProfessionScreen.tsx` — сетка карточек
+  (miner/attacker/defender/tank/none) с бонусами/штрафами, confirm-диалог,
+  1000 credit за смену, таймер бесплатной смены. Backend был готов.
+
+**H.1.1 Overview** — дополнения
+- /api/me расширен: добавлено поле profession из users.profession.
+- OverviewScreen: профессия в панели статистики + RefLinkBanner —
+  баннер с копированием реферальной ссылки.
+
+**H.2.1 Empire** — сводная таблица планет
+- backend internal/empire/handler.go: GET /api/empire — 4 SQL-запроса
+  (planets + buildings + ships + defense), O(1) индекс по ID.
+- frontend features/empire/EmpireScreen.tsx: горизонтальная scrollable
+  таблица, sticky первый столбец, сворачиваемые группы зданий,
+  MAX-подсветка на ур. 40, суммарная строка по ресурсам.
+
+**H.3 Settings** — настройки аккаунта
+- backend internal/settings/handler.go: GET/PUT /api/settings (email,
+  language, timezone), POST /api/settings/password (argon2).
+- frontend features/settings/SettingsScreen.tsx: секции Профиль /
+  Безопасность / Режим отпуска (с warning + confirm).
+
+**H.1.5 Galaxy** — позиция 16
+- GalaxyScreen: позиция 16 = «Бесконечные дали» (только экспедиция).
+- Цветовая легенда отношений альянсов — отложена (см. simplifications).
+
+**H.1.6 Score** — вкладки
+- backend: Score.TopAlliances (GROUP BY alliance_id), Score.VacationPlayers.
+  Endpoints: /api/highscore/alliances, /api/highscore/vacation.
+- frontend: три основных вкладки — Игроки / Альянсы / В отпуске.
+
+**H.1.7 Messages** — папки
+- FOLDERS: Фаланга (11), Альянс (6), Артефакты (7), Кредиты (8),
+  Отправленные (pseudo-folder='sent').
+- backend: Message.Sent + GET /api/messages/sent.
+- Номера папок из legacy consts.php; AutoMsg-producer'ы под них
+  пока не реализованы (simplifications).
+
+**H.2.4 Referral** — реферальная программа
+- backend internal/referral/handler.go: GET /api/referrals.
+- frontend features/referral/ReferralScreen.tsx: копирование ссылки,
+  Web Share API fallback, таблица приглашённых.
+
+**H.2.8 Notepad** — личный блокнот
+- migration 0050_notepad.sql: user_notepad(user_id PK, content, updated_at).
+- backend internal/notepad/handler.go: GET/PUT /api/notepad, UPSERT.
+- frontend features/notepad/NotepadScreen.tsx: textarea + debounce 500ms,
+  badge состояния, счётчик до 50 000 символов.
+
+**H.2.10 Search** — глобальный поиск Ctrl+K
+- backend internal/search/handler.go: GET /api/search?q=&type=... —
+  LIKE по username / alliance.tag+name / planet.name; LIMIT 20 на тип.
+- frontend features/search/GlobalSearch.tsx — overlay по Ctrl+K.
+- App.tsx: global listener Ctrl+K, кнопка 🔍 в header.
+
+**H.1.9 Market** — обмен на кредиты
+- backend Market.ExchangeCredit: направление to_credit/from_credit,
+  курс 1 credit = 100 condition units.
+- frontend MarketScreen: 3-я вкладка 💳 Кредиты с preview расчёта,
+  показан глобальный курс M:Si:H.
+
+**H.2.2 Techtree** — дерево технологий
+- backend internal/techtree/handler.go: GET /api/techtree.
+- frontend features/techtree/TechtreeScreen.tsx: вкладки по kind,
+  поиск, фильтры Все/Доступно/Закрыто, карточки с req-списком.
+
+**H.2.5 Battlestats** — история боёв
+- backend internal/battlestats/handler.go: GET /api/battlestats с
+  фильтрами role, result, from, to.
+- frontend features/battlestats/BattlestatsScreen.tsx: 4 StatCell,
+  фильтры в панели, таблица с цветовой индикацией результата.
+
+**App.tsx:**
+- 7 новых Tab'ов + VALID_TABS: profession, empire, settings, referral,
+  notepad, techtree, battlestats. Search — overlay.
+- buildNavItems + ALL_NAV — пункты в соответствующих группах.
+- Header: кнопка 🔍 + Ctrl+K подсказка.
+
+**Отложено** (simplifications.md, секция "UI Porting"):
+- H.2.6 Records, H.2.7 ResTransferStats, H.2.9 Friends (P3).
+- alliance_relations backend для цветов галактики.
+- Market: торговля флотом через лоты.
+- Settings: удаление аккаунта, drag&drop планет.
+- AutoMsg-producer'ы под новые папки messages.
+
+Backend: go build ./... — чистый билд.
+Миграции: 0050_notepad.sql применяется при make dev-up.
+
+Статус: ✅ ЗАВЕРШЕНА

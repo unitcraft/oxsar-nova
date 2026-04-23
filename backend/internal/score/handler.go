@@ -76,6 +76,34 @@ func (h *Handler) MyRank(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Alliances GET /api/highscore/alliances — рейтинг альянсов по суммарным очкам.
+func (h *Handler) Alliances(w http.ResponseWriter, r *http.Request) {
+	if _, ok := auth.UserID(r.Context()); !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	entries, err := h.svc.TopAlliances(r.Context(), 100)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"alliances": entries})
+}
+
+// Vacation GET /api/highscore/vacation — список игроков в режиме отпуска.
+func (h *Handler) Vacation(w http.ResponseWriter, r *http.Request) {
+	if _, ok := auth.UserID(r.Context()); !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	entries, err := h.svc.VacationPlayers(r.Context())
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"players": entries})
+}
+
 // Stats GET /api/stats — счётчик онлайна.
 //
 // Возвращает количество игроков, игравших за последние 24 часа и прямо сейчас.

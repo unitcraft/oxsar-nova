@@ -4,6 +4,33 @@
 - **Логин**: test (или любой другой пользователь)
 - **Пароль**: quoYaMe1wHo4xaci (универсальный, подходит для любого пользователя)
 
+## Доступ через curl (для анализа без браузера)
+
+Логин делается через `/login.php` (не через Yii-роут `/game.php/Login`):
+
+```bash
+# 1. Логин — сохраняет сессионные куки в файл
+curl -s -c /tmp/oxsar_cookies.txt -b /tmp/oxsar_cookies.txt \
+  -X POST "http://localhost:8080/login.php" \
+  -d "username=test&password=quoYaMe1wHo4xaci&login=OK" \
+  -L -o /dev/null -w "HTTP %{http_code}\n"
+
+# 2. Любой последующий запрос — передаём куки
+curl -s -c /tmp/oxsar_cookies.txt -b /tmp/oxsar_cookies.txt \
+  "http://localhost:8080/game.php/Main" -L
+
+# Примеры других страниц:
+# /game.php/Constructions  — здания
+# /game.php/Research       — исследования
+# /game.php/Shipyard       — верфь
+# /game.php/Defense        — оборона
+# /game.php/Fleet          — флот
+# /game.php/Galaxy         — галактика
+# /game.php/Ranking        — рейтинг
+```
+
+После успешного логина сервер вернёт редирект на `/game.php` и установит два куки: `PHPSESSID` и хэш-куку с данными пользователя.
+
 **Легаси код**: `d:\Sources\oxsar2` — PHP/Yii 1.1. UI строится на шаблонизаторе, шаблоны в файлах с расширением `.tpl`.
 
 **Расширение игры**: `d:\Sources\oxsar2\www\ext` — обязательно смотреть при изучении логики легаси. Содержит расширения/переопределения базовой игры. Без него картина неполная — часть UI и бизнес-логики реализована именно здесь.

@@ -461,18 +461,22 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets }: {
                     <tr
                       key={c.position}
                       style={
-                        !c.has_planet
+                        c.position === 16
+                          ? { background: 'rgba(139,92,246,0.07)' }
+                          : !c.has_planet
                           ? { opacity: 0.4 }
                           : isOwn
                           ? { background: 'rgba(99,217,255,0.07)' }
                           : undefined
                       }
                     >
-                      <td data-label="#" className="num" style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-muted)' }}>
+                      <td data-label="#" className="num" style={{ fontFamily: 'var(--ox-mono)', color: c.position === 16 ? 'var(--ox-accent)' : 'var(--ox-fg-muted)' }}>
                         {c.position}
                       </td>
                       <td data-label="Планета">
-                        {c.has_planet ? (
+                        {c.position === 16 ? (
+                          <span style={{ color: 'var(--ox-accent)', fontStyle: 'italic', fontSize: 13 }}>🌌 Бесконечные дали</span>
+                        ) : c.has_planet ? (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                             {c.planet_id && (
                               <img
@@ -507,8 +511,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets }: {
                               </span>
                             )}
                           </span>
-                        ) : (
-                          // Пустая позиция — кнопка "Отправить экспедицию"
+                        ) : c.position !== 16 ? (
                           <button
                             type="button"
                             className="btn-ghost btn-sm"
@@ -516,7 +519,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets }: {
                             title="Отправить экспедицию"
                             onClick={() => onFleetMission?.(g, s, c.position, false, 15)}
                           >🌌 Экспедиция</button>
-                        )}
+                        ) : null}
                       </td>
                       <td data-label="Альянс">
                         {c.alliance_tag
@@ -535,7 +538,16 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets }: {
                         ) : '—'}
                       </td>
                       <td data-label="Миссии">
-                        {!isOwn && c.has_planet && (
+                        {c.position === 16 && (
+                          <button
+                            type="button"
+                            className="btn-ghost btn-sm"
+                            style={{ fontSize: 11, padding: '2px 7px', color: 'var(--ox-accent)' }}
+                            title="Отправить экспедицию в Бесконечные дали"
+                            onClick={() => onFleetMission?.(g, s, 16, false, 15)}
+                          >🌌 Экспедиция</button>
+                        )}
+                        {c.position !== 16 && !isOwn && c.has_planet && (
                           <MissionButtons
                             cell={c}
                             g={g}
@@ -545,7 +557,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets }: {
                             onMission={handleMission}
                           />
                         )}
-                        {isOwn && c.has_planet && (
+                        {c.position !== 16 && isOwn && c.has_planet && (
                           <button
                             type="button"
                             className="btn-ghost btn-sm"

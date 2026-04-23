@@ -180,6 +180,113 @@ func (s *Service) Exchange(ctx context.Context, userID, planetID string,
 	return out, err
 }
 
+// CreditRates — стоимость 1 кредита в ресурсах (condition unit).
+// 1 credit = 100 condition units (т.е. 100 metal / 50 silicon / 25 hydrogen).
+const CreditRatePerUnit = 100.0
+
+// ExchangeCredit обменивает ресурсы на кредиты или наоборот.
+// direction: "to_credit" — продать ресурс за кредиты.
+//            "from_credit" — купить ресурс за кредиты.
+// resource: metal|silicon|hydrogen
+// amount при "to_credit" — количество ресурса; при "from_credit" — количество кредитов.
+type CreditExchangeResult struct {
+	Direction     string  `json:"direction"`
+	Resource      string  `json:"resource"`
+	ResourceDelta int64   `json:"resource_delta"`
+	CreditDelta   float64 `json:"credit_delta"`
+}
+
+func (s *Service) ExchangeCredit(ctx context.Context, userID, planetID, direction, resource string, amount float64) (CreditExchangeResult, error) {
+	cost, ok := resourceCost[resource]
+	if !ok {
+		return CreditExchangeResult{}, ErrInvalidResource
+	}
+	if amount <= 0 {
+		return CreditExchangeResult{}, ErrInvalidAmount
+	}
+	if direction != "to_credit" && direction != "from_credit" {
+		return CreditExchangeResult{}, ErrInvalidResource
+	}
+
+	var out CreditExchangeResult
+	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// Проверка владельца.
+		var ownerID string
+		var balance float64
+		err := tx.QueryRow(ctx,
+			`SELECT user_id, `+resource+` FROM planets WHERE id = $1 FOR UPDATE`,
+			planetID).Scan(&ownerID, &balance)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrPlanetNotFound
+			}
+			return fmt.Errorf("market: read planet: %w", err)
+		}
+		if ownerID != userID {
+			return ErrPlanetOwnership
+		}
+
+		var userRate, credit float64
+		if err := tx.QueryRow(ctx,
+			`SELECT COALESCE(exchange_rate, 1.2), credit FROM users WHERE id = $1`, userID).Scan(&userRate, &credit); err != nil {
+			return fmt.Errorf("market: read user: %w", err)
+		}
+		if userRate <= 0 {
+			userRate = 1.2
+		}
+
+		if direction == "to_credit" {
+			resAmount := int64(math.Floor(amount))
+			if resAmount <= 0 {
+				return ErrInvalidAmount
+			}
+			if int64(balance) < resAmount {
+				return ErrNotEnough
+			}
+			// condition units = resAmount × cost.
+			// credits = condition / CreditRatePerUnit / userRate.
+			credits := float64(resAmount) * cost / CreditRatePerUnit / userRate
+			if credits <= 0 {
+				return ErrInvalidAmount
+			}
+			if _, err := tx.Exec(ctx,
+				`UPDATE planets SET `+resource+` = `+resource+` - $1 WHERE id = $2`,
+				resAmount, planetID); err != nil {
+				return fmt.Errorf("market: debit planet: %w", err)
+			}
+			if _, err := tx.Exec(ctx,
+				`UPDATE users SET credit = credit + $1 WHERE id = $2`,
+				credits, userID); err != nil {
+				return fmt.Errorf("market: credit user: %w", err)
+			}
+			out = CreditExchangeResult{Direction: "to_credit", Resource: resource, ResourceDelta: -resAmount, CreditDelta: credits}
+			return nil
+		}
+
+		// from_credit: amount — количество кредитов, покупаем ресурс.
+		if credit < amount {
+			return ErrNotEnough
+		}
+		resAmount := int64(math.Floor(amount * CreditRatePerUnit / cost / userRate))
+		if resAmount <= 0 {
+			return ErrInvalidAmount
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE users SET credit = credit - $1 WHERE id = $2`,
+			amount, userID); err != nil {
+			return fmt.Errorf("market: debit user: %w", err)
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE planets SET `+resource+` = `+resource+` + $1 WHERE id = $2`,
+			resAmount, planetID); err != nil {
+			return fmt.Errorf("market: credit planet: %w", err)
+		}
+		out = CreditExchangeResult{Direction: "from_credit", Resource: resource, ResourceDelta: resAmount, CreditDelta: -amount}
+		return nil
+	})
+	return out, err
+}
+
 // Rates возвращает текущий набор курсов (для UI — «1 M = N Si = M H»).
 type Rates struct {
 	Metal    float64 `json:"metal"`

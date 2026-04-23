@@ -33,6 +33,21 @@ func (h *Handler) Inbox(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"messages": list})
 }
 
+// Sent GET /api/messages/sent
+func (h *Handler) Sent(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	list, err := h.svc.Sent(r.Context(), uid, 100)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"messages": list})
+}
+
 // UnreadCount GET /api/messages/unread-count
 func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())

@@ -74,6 +74,39 @@ func (s *Service) Inbox(ctx context.Context, userID string, limit int) ([]Messag
 	return out, rows.Err()
 }
 
+// Sent возвращает последние N отправленных сообщений текущего пользователя.
+func (s *Service) Sent(ctx context.Context, userID string, limit int) ([]Message, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT m.id, m.to_user_id, COALESCE(u.username, ''),
+		       m.subject, m.body, m.folder, m.created_at, m.read_at,
+		       m.battle_report_id, m.espionage_report_id, m.expedition_report_id
+		FROM messages m
+		LEFT JOIN users u ON u.id = m.to_user_id
+		WHERE m.from_user_id = $1 AND m.deleted_at IS NULL
+		ORDER BY m.created_at DESC
+		LIMIT $2
+	`, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("sent query: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Message
+	for rows.Next() {
+		var m Message
+		if err := rows.Scan(&m.ID, &m.FromUserID, &m.FromUsername,
+			&m.Subject, &m.Body, &m.Folder, &m.CreatedAt, &m.ReadAt,
+			&m.BattleReportID, &m.EspionageReportID, &m.ExpeditionReportID); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
 // UnreadCount — сколько у пользователя непрочитанных сообщений.
 // Используется для бейджа в header'е UI.
 func (s *Service) UnreadCount(ctx context.Context, userID string) (int, error) {
