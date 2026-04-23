@@ -89,6 +89,8 @@ export function AdminScreen() {
         </div>
       )}
 
+      <AdminEventsMonitor />
+
       <h3>Действия</h3>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
         <div style={{ border: '1px solid #444', padding: 12, borderRadius: 4 }}>
@@ -300,6 +302,149 @@ function AutomsgsPanel() {
         </div>
       )}
     </div>
+  );
+}
+
+interface EventRow {
+  id: string;
+  user_id?: string;
+  planet_id?: string;
+  kind: number;
+  state: string;
+  fire_at: string;
+  created_at: string;
+  processed_at?: string;
+  attempt: number;
+  last_error?: string;
+}
+
+interface EventsStats {
+  by_state: { state: string; count: number }[];
+  top_errors_24h: { kind: number; count: number }[];
+  oldest_wait_lag_s: number | null;
+}
+
+function AdminEventsMonitor() {
+  const qc = useQueryClient();
+  const [stateFilter, setStateFilter] = useState<'all' | 'wait' | 'error' | 'ok'>('error');
+
+  const stats = useQuery({
+    queryKey: ['admin-events-stats'],
+    queryFn: () => api.get<EventsStats>('/api/admin/events/stats'),
+    refetchInterval: 15000,
+  });
+
+  const events = useQuery({
+    queryKey: ['admin-events', stateFilter],
+    queryFn: () => {
+      const q = stateFilter === 'all' ? '' : `?state=${stateFilter}&limit=50`;
+      return api.get<{ events: EventRow[] }>(`/api/admin/events${q}`);
+    },
+    refetchInterval: 15000,
+  });
+
+  const retry = useMutation({
+    mutationFn: (id: string) => api.post(`/api/admin/events/${id}/retry`, {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin-events'] });
+      void qc.invalidateQueries({ queryKey: ['admin-events-stats'] });
+    },
+  });
+  const cancel = useMutation({
+    mutationFn: (id: string) => api.post(`/api/admin/events/${id}/cancel`, {}),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin-events'] }),
+  });
+
+  return (
+    <section style={{ marginBottom: 16 }}>
+      <h3>Монитор событий</h3>
+
+      {stats.data && (
+        <div style={{ display: 'flex', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+          {stats.data.by_state?.map((s) => (
+            <StatCard key={s.state} label={`${s.state}`} value={s.count} />
+          ))}
+          <StatCard
+            label="lag wait (sec)"
+            value={Math.round(stats.data.oldest_wait_lag_s ?? 0)}
+          />
+        </div>
+      )}
+
+      {stats.data && stats.data.top_errors_24h?.length > 0 && (
+        <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--ox-fg-dim)' }}>
+          Топ ошибок за 24ч:
+          {' '}
+          {stats.data.top_errors_24h.map((e) => (
+            <span key={e.kind} style={{ marginRight: 8, fontFamily: 'var(--ox-mono)' }}>
+              kind={e.kind}:{e.count}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+        {(['error', 'wait', 'ok', 'all'] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            className={stateFilter === s ? 'btn btn-sm' : 'btn-ghost btn-sm'}
+            onClick={() => setStateFilter(s)}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+
+      {events.isLoading && <div>Загрузка…</div>}
+      {events.data && events.data.events.length === 0 && (
+        <div style={{ color: 'var(--ox-fg-muted)', fontSize: 12 }}>нет событий</div>
+      )}
+      {events.data && events.data.events.length > 0 && (
+        <div style={{ overflowX: 'auto' }}>
+          <table className="ox-table" style={{ fontSize: 12 }}>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Kind</th>
+                <th>State</th>
+                <th>Att</th>
+                <th>Fire</th>
+                <th>Last error</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.data.events.map((e) => (
+                <tr key={e.id}>
+                  <td style={{ fontFamily: 'var(--ox-mono)', fontSize: 10 }}>{e.id.slice(0, 8)}</td>
+                  <td className="num">{e.kind}</td>
+                  <td>
+                    <span style={{
+                      color: e.state === 'error' ? 'var(--ox-danger)'
+                           : e.state === 'wait' ? 'var(--ox-warning, #f59e0b)'
+                           : 'var(--ox-fg-dim)',
+                      fontFamily: 'var(--ox-mono)',
+                    }}>{e.state}</span>
+                  </td>
+                  <td className="num">{e.attempt}</td>
+                  <td style={{ fontSize: 10, fontFamily: 'var(--ox-mono)' }}>
+                    {new Date(e.fire_at).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}
+                  </td>
+                  <td style={{ fontSize: 11, color: 'var(--ox-fg-dim)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.last_error ?? ''}>
+                    {e.last_error ?? '—'}
+                  </td>
+                  <td>
+                    <button type="button" className="btn-ghost btn-sm" disabled={retry.isPending} onClick={() => retry.mutate(e.id)}>↻</button>
+                    <button type="button" className="btn-ghost btn-sm" disabled={cancel.isPending} onClick={() => cancel.mutate(e.id)} style={{ color: 'var(--ox-danger)' }}>✕</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
