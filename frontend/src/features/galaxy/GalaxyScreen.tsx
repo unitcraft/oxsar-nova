@@ -24,6 +24,7 @@ interface CellView {
   owner_banned?: boolean;
   alliance_tag?: string | null;
   relation?: 'nap' | 'war' | 'ally' | null;
+  is_friend?: boolean;
   debris_metal: number;
   debris_silicon: number;
 }
@@ -513,6 +514,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
                       <td data-label="Игрок">
                         {c.owner_username ? (
                           <span>
+                            {c.is_friend && <span style={{ marginRight: 4, color: 'var(--ox-accent)' }} title="В друзьях">⭐</span>}
                             <span style={{ fontWeight: 600 }}>{c.owner_username}</span>
                             <PlayerStatuses cell={c} />
                             {c.owner_rank !== undefined && c.owner_rank !== null && (
