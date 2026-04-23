@@ -29,7 +29,8 @@ const ROW: React.CSSProperties = {
   gap: 0,
 };
 const NUM: React.CSSProperties = {
-  width: '15%',
+  width: 60,
+  minWidth: 60,
   textAlign: 'right',
   fontFamily: 'var(--ox-mono)',
   fontSize: 13,
@@ -39,7 +40,7 @@ const NUM: React.CSSProperties = {
 const LABEL: React.CSSProperties = {
   flex: 1,
   minWidth: 0,
-  paddingLeft: 12,
+  paddingLeft: 16,
   paddingRight: 6,
   fontSize: 13,
   overflow: 'hidden',
@@ -122,7 +123,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
       </div>
 
       {/* List */}
-      <div className="ox-panel">
+      <div className="ox-panel" style={{ padding: 0 }}>
 
         {/* Header row */}
         <div style={{ ...ROW, borderBottom: '2px solid var(--ox-border)', minHeight: 32 }}>
