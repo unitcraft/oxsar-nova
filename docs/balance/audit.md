@@ -66,56 +66,67 @@
 ### BA-001: Death Star доминирует в эндгейме
 
 - **Дата находки**: 2026-04-24
-- **Серьёзность**: P0
-- **Статус**: planned → [план 18 §2.8](../plans/18-unit-rebalance.md)
+- **Update 2026-04-24** (переисследование): пересмотрена диагностика.
+  Серьёзность понижена до P1, основная причина — недостающий rapidfire-граф,
+  а не shield/attack DS сами по себе.
+- **Серьёзность**: P1 (было P0)
+- **Статус**: planned → [план 18](../plans/18-unit-rebalance.md) Фаза 1
 
 **Файлы**: [configs/ships.yml:126-133](../../configs/ships.yml), [configs/rapidfire.yml](../../configs/rapidfire.yml)
 
-**Числа**:
-- Death Star (id=42): attack=200,000, shell=9,000,000, shield=50,000
-- Стоимость: 5M metal + 4M silicon + 1M hydrogen = **14M metal-eq**
-- Rapidfire: x30 BS, x33 Cruiser, x100 Strong Fighter, x250 транспортёры
-- Единственная контра — Lancer (id=102) с rapidfire x3 vs DS
-- Чтобы убить 1 DS (14M) нужно ~1636× Lancer — **~41M ресурсов**
-- BS vs DS: rapidfire **x0** → нет контры тяжёлыми кораблями
+**Фактические числа (проверено в `configs/`)**:
+- Death Star (id=42): attack=200 000, shell=9 000 000, shield=50 000
+- Стоимость: 5M metal + 4M silicon + 1M hydrogen = **10M metal-eq** (было ошибочно написано 14M)
+- `ignoreAttack = shield/100 = 500`
+- **В legacy, но НЕ в nova**: DS → Frigate ×15, DS → Colony ×250, **DS → Lancer ×100**, DS → Shadow ×300
+- **В nova, но НЕ в legacy**: DS → Plasma ×50 (изобретение, восстановить паритет)
 
-**Почему это дыра**: ассиметрия 1:3 не в пользу атакующего DS. Единственный
-эндгейм-сценарий — DS vs DS. Нет интересного контрплея.
+**Корректная картина** (после переисследования):
+- BS (attack=1000) **уже пробивает** DS (1000 > ignoreAttack=500). Прежнее утверждение «нет контры тяжёлыми кораблями» — ошибочно.
+- Пробивают DS: Bomber (900), BS (1000), SD (2000), Lancer (5500), Frigate (700).
+- Реальная проблема: DS в nova не убивает Lancer пачками (отсутствует DS→Lancer ×100). В legacy это было главным анти-Lancer инструментом, который уравновешивал Lancer-spam против DS.
 
-**Фикс** (план 18): shield 50k→30k (снижает порог игнора с 500 до 300 →
-Battleship attack=1000 теперь пробивает броню), добавить rapidfire BS×2,
-SD×3 vs DS.
+**Фикс** ([план 18 Фаза 1](../plans/18-unit-rebalance.md)): портировать 38 недостающих rapidfire-записей из legacy (включая DS→Lancer ×100, DS→Frigate ×15, DS→Colony ×250), удалить 2 записи-изобретения. Доп. изменения (shield 50k→30k, новые rapidfire vs DS) — только после симуляции и ADR.
 
 ---
 
 ### BA-002: Lancer Ship — аномальное attack-per-resource
 
 - **Дата находки**: 2026-04-24
+- **Update 2026-04-24** (переисследование): исходные числа оказались на порядок
+  неверны. Фактическая стоимость — 2.5k/7.5k/15k = 25k metal-eq (не 47.5k),
+  что делает attack/1k ещё хуже: 220 (не 115). Главная причина эксплойта —
+  отсутствующие в nova rapidfire-записи против Lancer. См. [план 18](../plans/18-unit-rebalance.md).
 - **Серьёзность**: P0
-- **Статус**: planned → [план 21 Блок A](../plans/21-gameplay-hardening.md)
+- **Статус**: planned → [план 18 Фаза 1](../plans/18-unit-rebalance.md) (rapidfire-порт) + [план 21 Блок A](../plans/21-gameplay-hardening.md) (цена, если после 18 не хватит)
 
-**Файлы**: [configs/ships.yml:150-157](../../configs/ships.yml)
+**Файлы**: [configs/ships.yml:150-157](../../configs/ships.yml), [configs/construction.yml:521](../../configs/construction.yml), [configs/rapidfire.yml](../../configs/rapidfire.yml)
 
-**Числа (attack per 1k metal-equiv)**:
-| Юнит | Attack | Cost (metal-eq) | Attack/1k |
+**Фактические числа** (attack per 1k metal-equiv, проверено):
+
+| Юнит | Attack | Cost (M+Si+H) | Attack/1k |
 |---|---|---|---|
-| Light Fighter | 50 | 4k | 12.5 |
-| Cruiser | 400 | ~30k | 13.3 |
-| Battleship | 1000 | ~50k | 20.0 |
-| **Lancer** | **5500** | **47.5k** | **115.8** |
+| Light Fighter | 50 | 4 000 | 12.5 |
+| Cruiser | 400 | 29 000 | 13.8 |
+| Battleship | 1 000 | 60 000 | 16.7 |
+| **Lancer** | **5 500** | **25 000** | **220** ⚠️ |
 
-Нормализованно с учётом shell: Lancer ≈ 61.1 attack/1k — **в 3-5× эффективнее** любого другого юнита.
+Lancer в **13–15× эффективнее** любого базового юнита — главная аномалия.
 
-**Почему это дыра**: оптимальная мета = строить только Lancer (+DS endgame).
-Frigate, HF, Cruiser, Bomber экономически бессмысленны. План 18 удешевляет
-альтернативы, но Lancer сам остаётся супер-юнитом.
+**Контры Lancer в legacy (отсутствуют в nova)**:
+- LF → Lancer ×20 (НЕТ)
+- SF → Lancer ×20 (НЕТ)
+- Cruiser → Lancer ×35 (НЕТ)
+- DS → Lancer ×100 (НЕТ)
+- Bomber → Lancer ×5 (есть в nova)
 
-**Фикс** (план 21 A1): повысить стоимость Lancer до 50k/10k/20k
-(attack/1k падает до ~30 — уровень Cruiser/Frigate). Lancer остаётся
-сильным, но элитным, а не spam-юнитом.
+Пять недостающих записей делают Lancer бессмертным для обычного флота. В legacy 1 Cruiser за ход убивает 35 Lancer'ов — поэтому там Lancer не доминировал несмотря на высокий attack/1k.
 
-**Альтернатива A2** (не выбрана): снизить attack 5500→3500. Ломает
-golden-тесты паритета с Java JAR.
+**Фикс — двухступенчатый**:
+1. **План 18 Фаза 1**: портировать недостающие rapidfire → Lancer (LF×20, SF×20, Cru×35, DS×100). Возможно этого одного достаточно.
+2. **План 21 Блок A** (если 18 не хватит): повысить стоимость Lancer. Решение по результатам симуляции.
+
+**Альтернатива** (не выбрана): снизить attack 5500→3500. Ломает golden-тесты паритета с Java JAR сильнее, чем изменение rapidfire.
 
 ---
 
@@ -154,25 +165,22 @@ golden-тесты паритета с Java JAR.
 
 ---
 
-### BA-004: Rapidfire-граф — нет контры DS тяжёлыми кораблями
+### BA-004: Rapidfire-граф — переформулировано
 
 - **Дата находки**: 2026-04-24
-- **Серьёзность**: P1
-- **Статус**: planned → [план 18 §2.8](../plans/18-unit-rebalance.md)
+- **Update 2026-04-24** (переисследование): изначальная формулировка была
+  неверной. BS пробивает DS по атаке (1000 > ignoreAttack=500) — rapidfire
+  не обязателен. Реальная проблема — **не нехватка anti-DS rapidfire**,
+  а **массовый недопорт rapidfire-графа в целом**: 38 записей legacy
+  отсутствуют в nova. См. план 18 §3.1.
+- **Серьёзность**: P1 → **замена на BA-007** (общий порт rapidfire)
+- **Статус**: superseded → планово закрывается [планом 18 Фаза 1](../plans/18-unit-rebalance.md)
 
-**Файлы**: [configs/rapidfire.yml:50-68](../../configs/rapidfire.yml)
+**Почему переформулировано**: прежнее утверждение «Star Destroyer vs DS: x5»
+неверно — в nova этой записи нет (только в legacy её тоже нет). «Bomber vs DS
+×0» — у нас есть ×25 (как в legacy). Таблица в старой версии — фантазия.
 
-**Числа**:
-- Battleship vs DS: rapidfire **x0**
-- Star Destroyer vs DS: x5 (мало для корабля стоимостью 150k)
-- Bomber vs DS: x0
-- Только Lancer x3 и Plasma Turret x2
-
-**Почему это дыра**: связана с BA-001. Игрок с DS неуязвим для любого
-флота кроме Lancer-роя.
-
-**Фикс** (план 18): BS→DS x2, SD→DS x3 (вместо x5). Battleship-флот
-становится жизнеспособной анти-DS-стратегией.
+Все реальные пробелы rapidfire-графа перечислены в [плане 18 §3.1](../plans/18-unit-rebalance.md).
 
 ---
 
