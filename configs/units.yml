@@ -70,6 +70,7 @@ fleet:
   - { id: 41,  key: star_destroyer,      name: "Star Destroyer" }
   - { id: 42,  key: death_star,          name: "Deathstar" }
   - { id: 102, key: lancer_ship,         name: "Lancer" }
+  - { id: 325, key: shadow_ship,         name: "Shadow Ship" }
 
 defense:
   - { id: 43,  key: rocket_launcher,     name: "Rocket Launcher" }
