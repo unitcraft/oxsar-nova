@@ -124,9 +124,15 @@ Power Scale Thursday             = randFloatRange(1.5, 2.0)
   `is_aliens=true`). Если alien-флот погибает в бою — `HOLDING`
   закрывается (state=done), планета освобождается.
 
-- [ ] **Блокировка новых alien-атак на планету в HOLDING**. В
-  `scaledAlienFleet` / выборе цели — SQL-фильтр `NOT EXISTS` по
-  активным `KindAlienHolding` для этой планеты.
+- [ ] **Расширить анти-спам в `Spawn`**. Сейчас
+  `backend/internal/alien/alien.go` фильтрует события по `planet_id`
+  и только `kind=35`. В легаси (`AlienAI::findTarget`, строка 358)
+  фильтр работает **по `user_id`** и учитывает **все 4 типа**:
+  `FLY_UNKNOWN | ATTACK | HOLDING | HALT`. Перевести на тот же
+  принцип: пока у игрока есть любое активное alien-событие на
+  любой его планете за последние 6 дней — новой атаки не спавним.
+  Отдельной «блокировки HOLDING-планет» не требуется — это
+  естественно получается из этого фильтра.
 
 - [ ] **API платежа**: `POST /api/alien/holding/{event_id}/pay`
   body `{ "credit": N }`.

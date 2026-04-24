@@ -34,7 +34,13 @@ const (
 	KindDeliveryUnits              Kind = 21
 	KindDeliveryResources          Kind = 22
 	KindStargateTransport          Kind = 28
+	KindAlienFlyUnknown            Kind = 33 // миссия пришельцев без явной цели (план 15, этап 3)
+	KindAlienHolding               Kind = 34 // пришельцы удерживают планету игрока
 	KindAlienAttack                Kind = 35 // инопланетяне атакуют планету игрока
+	KindAlienHalt                  Kind = 36 // переходное состояние 12–24ч перед HOLDING
+	KindAlienGrabCredit            Kind = 37 // отдельный сценарий — кража кредитов (план 15, этап 3)
+	KindAlienHoldingAI             Kind = 80 // AI-тик внутри HOLDING (выгрузка ресурсов и др.)
+	KindAlienChangeMissionAI       Kind = 81 // смена миссии в полёте (план 15, этап 3)
 	KindRepair                     Kind = 50
 	KindDisassemble                Kind = 51
 	KindArtefactExpire             Kind = 60

@@ -58,13 +58,22 @@ func NewService(db repo.Exec, cat *config.Catalog) *Service {
 // Spawn выбирает случайных активных игроков и создаёт события
 // KindAlienAttack. Вызывается из воркера раз в N часов.
 //
-// Логика выбора (упрощена vs оригинала):
-//   - Берём до 5 случайных активных игроков (last_seen_at < 7 дней).
+// Логика выбора (приближена к AlienAI::findTarget из legacy):
+//   - Берём до N случайных активных игроков (last_seen_at < 7 дней).
 //   - С вероятностью 30% для каждого создаём событие атаки.
 //   - Тир зависит от суммы очков (score): <1000 → 1, 1000..50000 → 2, >50000 → 3.
+//   - Исключаем игроков с любым активным alien-событием за последние 6 дней
+//     (FLY_UNKNOWN/HOLDING/ATTACK/HALT) — фильтр по user_id, не по planet.
+//     Это автоматически защищает планеты в HOLDING от повторной атаки,
+//     даже на других планетах того же игрока.
+//   - По четвергам (UTC): ×5 кандидатов (ThursdayCandidateMultiplier).
+//     Усиление силы флота идёт отдельно в calcDefPower / scaledAlienFleet
+//     через ThursdayPowerMin/Max.
 func (s *Service) Spawn(ctx context.Context) error {
-	// ALIEN_ATTACK_INTERVAL = 6 дней: исключаем игроков у которых уже есть
-	// запланированная или недавно сработавшая атака пришельцев.
+	limit := 5
+	if time.Now().UTC().Weekday() == time.Thursday {
+		limit *= ThursdayCandidateMultiplier
+	}
 	rows, err := s.db.Pool().Query(ctx, `
 		SELECT u.id, u.score, p.id, p.galaxy, p.system, p.position
 		FROM users u
@@ -73,13 +82,13 @@ func (s *Service) Spawn(ctx context.Context) error {
 		  AND u.banned_at IS NULL
 		  AND NOT EXISTS (
 		    SELECT 1 FROM events e
-		    WHERE e.planet_id = p.id
-		      AND e.kind = 35
+		    JOIN planets p2 ON p2.id = e.planet_id AND p2.user_id = u.id
+		    WHERE e.kind IN (33, 34, 35, 36)
 		      AND e.fire_at > now() - interval '6 days'
 		  )
 		ORDER BY random()
-		LIMIT 5
-	`)
+		LIMIT $1
+	`, limit)
 	if err != nil {
 		return fmt.Errorf("alien spawn: query: %w", err)
 	}
@@ -205,11 +214,16 @@ func (s *Service) AttackHandler() event.Handler {
 
 		seed := rng.New(fnvHash(e.ID))
 		defPower := calcDefPower(defUnits)
+		bonusScale := 1.0
+		if time.Now().UTC().Weekday() == time.Thursday {
+			// ThursdayPowerMin..Max, детерминированно от seed.
+			bonusScale = ThursdayPowerMin + seed.Float64()*(ThursdayPowerMax-ThursdayPowerMin)
+		}
 		atkSide := battle.Side{
 			UserID:   "aliens",
 			Username: "Инопланетяне",
 			IsAliens: true,
-			Units:    scaledAlienFleet(defPower, seed, s.cat),
+			Units:    scaledAlienFleet(defPower, seed, s.cat, bonusScale),
 		}
 
 		var report battle.Report

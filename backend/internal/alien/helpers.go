@@ -177,13 +177,17 @@ var alienShipOrder = []struct {
 	{204, "Alien Torpedocarrier"},
 }
 
-// scaledAlienFleet создаёт флот пришельцев с суммарной мощью 90–110% от defPower.
+// scaledAlienFleet создаёт флот пришельцев с суммарной мощью 90–110% от defPower,
+// умноженной на bonusScale (для четверга передаётся 1.5–2.0, обычно 1.0).
 // Использует корабли UNIT_A_* из каталога. Если defPower = 0 (планета пуста)
 // или каталог не содержит alien-кораблей — возвращает fallback из 5 alien corvette.
-func scaledAlienFleet(defPower float64, r *rng.R, cat *config.Catalog) []battle.Unit {
-	// Целевая мощь: defPower × random(0.9, 1.1).
+func scaledAlienFleet(defPower float64, r *rng.R, cat *config.Catalog, bonusScale float64) []battle.Unit {
+	if bonusScale <= 0 {
+		bonusScale = 1.0
+	}
+	// Целевая мощь: defPower × random(0.9, 1.1) × bonusScale.
 	scale := 0.9 + float64(r.IntN(21))/100.0
-	targetPower := defPower * scale
+	targetPower := defPower * scale * bonusScale
 	if targetPower < 100 {
 		targetPower = 100 // минимальная сила атаки даже для пустой планеты
 	}
