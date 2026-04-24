@@ -333,9 +333,15 @@ func (s *Service) HoldingHandler() event.Handler {
 // HoldingAIHandler — event.Handler для KindAlienHoldingAI (80).
 //
 // Триггерится каждые 12–24ч внутри HOLDING. Выполняет одно случайное
-// действие (в Этапе 1 — только onUnloadAlienResoursesAI: 7–10% от
-// захваченных ресурсов переходит на склад игрока). Затем планирует
-// следующий тик, если HOLDING ещё активен.
+// действие из двух реально реализованных в legacy (остальные 6 —
+// пустые тела в AlienAI.class.php:1086–1126, см. docs/simplifications.md):
+//
+//  1. onUnloadAlienResoursesAI — 7–10% от ресурсов переходит на склад
+//     игрока.
+//  2. onExtractAlientShipsAI — часть alien-флота отделяется и улетает,
+//     ослабляя HOLDING. Когда флот уходит полностью — HOLDING закрывается.
+//
+// После действия планирует следующий тик, если HOLDING ещё активен.
 func (s *Service) HoldingAIHandler() event.Handler {
 	return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
 		var hp holdingPayload
@@ -358,43 +364,20 @@ func (s *Service) HoldingAIHandler() event.Handler {
 			return nil // HOLDING закрыт
 		}
 
-		// Действие: onUnloadAlienResoursesAI.
-		// В legacy: 7–10% от ranee-захваченных пришельцами ресурсов
-		// возвращаются на склад игрока. У нас этих данных нет —
-		// используем упрощение: 7–10% от ТЕКУЩИХ ресурсов планеты
-		// как «бонус от пришельцев», но не больше 1/3 capacity,
-		// чтобы не переполнить склад.
-		var curMetal, curSil, curHydro float64
-		if err := tx.QueryRow(ctx, `
-			SELECT metal, silicon, hydrogen FROM planets WHERE id = $1 AND destroyed_at IS NULL FOR UPDATE
-		`, hp.PlanetID).Scan(&curMetal, &curSil, &curHydro); err != nil {
-			if err == pgx.ErrNoRows {
-				return nil
+		// Выбор действия 50/50. В legacy — 2 из 8 вариантов реально
+		// что-то делают, остальные 6 — заглушки, поэтому вероятность
+		// 2×(1/8) ≈ 0.25 на каждое, итого ~50/50 между активными.
+		if rand.IntN(2) == 0 {
+			if err := unloadAlienResources(ctx, tx, hp); err != nil {
+				return fmt.Errorf("alien holding_ai: unload: %w", err)
 			}
-			return fmt.Errorf("alien holding_ai: read planet: %w", err)
-		}
-		pct := 0.07 + rand.Float64()*0.03
-		giftM := int64(curMetal * pct)
-		giftS := int64(curSil * pct)
-		giftH := int64(curHydro * pct)
-		if giftM > 0 || giftS > 0 || giftH > 0 {
-			if _, err := tx.Exec(ctx, `
-				UPDATE planets
-				SET metal = metal + $1, silicon = silicon + $2, hydrogen = hydrogen + $3
-				WHERE id = $4
-			`, giftM, giftS, giftH, hp.PlanetID); err != nil {
-				return fmt.Errorf("alien holding_ai: gift: %w", err)
+		} else {
+			closed, err := extractAlienShips(ctx, tx, hp)
+			if err != nil {
+				return fmt.Errorf("alien holding_ai: extract: %w", err)
 			}
-			body := fmt.Sprintf(
-				"Инопланетяне выгрузили на вашу планету ресурсы: "+
-					"металл +%d, кремний +%d, водород +%d.",
-				giftM, giftS, giftH,
-			)
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
-				VALUES ($1, $2, NULL, 1, 'Подарок пришельцев', $3)
-			`, ids.New(), hp.UserID, body); err != nil {
-				return fmt.Errorf("alien holding_ai: message: %w", err)
+			if closed {
+				return nil // HOLDING закрыт — не планируем следующий тик
 			}
 		}
 
@@ -414,4 +397,136 @@ func (s *Service) HoldingAIHandler() event.Handler {
 		}
 		return nil
 	}
+}
+
+// unloadAlienResources — onUnloadAlienResoursesAI: 7–10% ресурсов планеты
+// добавляется на склад (упрощение — в legacy возвращаются РАНЕЕ
+// захваченные, но эта история в payload не хранится; см. simplifications).
+func unloadAlienResources(ctx context.Context, tx pgx.Tx, hp holdingPayload) error {
+	var curMetal, curSil, curHydro float64
+	if err := tx.QueryRow(ctx, `
+		SELECT metal, silicon, hydrogen FROM planets
+		WHERE id = $1 AND destroyed_at IS NULL FOR UPDATE
+	`, hp.PlanetID).Scan(&curMetal, &curSil, &curHydro); err != nil {
+		if err == pgx.ErrNoRows {
+			return nil
+		}
+		return fmt.Errorf("read planet: %w", err)
+	}
+	pct := 0.07 + rand.Float64()*0.03
+	giftM := int64(curMetal * pct)
+	giftS := int64(curSil * pct)
+	giftH := int64(curHydro * pct)
+	if giftM == 0 && giftS == 0 && giftH == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE planets
+		SET metal = metal + $1, silicon = silicon + $2, hydrogen = hydrogen + $3
+		WHERE id = $4
+	`, giftM, giftS, giftH, hp.PlanetID); err != nil {
+		return fmt.Errorf("gift: %w", err)
+	}
+	body := fmt.Sprintf(
+		"Инопланетяне выгрузили на вашу планету ресурсы: "+
+			"металл +%d, кремний +%d, водород +%d.",
+		giftM, giftS, giftH,
+	)
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
+		VALUES ($1, $2, NULL, 1, 'Подарок пришельцев', $3)
+	`, ids.New(), hp.UserID, body); err != nil {
+		return fmt.Errorf("message: %w", err)
+	}
+	return nil
+}
+
+// extractAlienShips — onExtractAlientShipsAI (legacy строки 1025–1079):
+// от случайного типа alien-корабля «отпочковывается» часть флота и улетает.
+// Убывание: quantity = min(q-1, ceil(q × 0.01 × times²)) — где times = 1
+// (у нас control_times не продвигается, упрощение). Если после
+// уменьшения флот пуст — HOLDING закрывается, возвращаем closed=true.
+func extractAlienShips(ctx context.Context, tx pgx.Tx, hp holdingPayload) (bool, error) {
+	// Загружаем актуальный payload HOLDING (может быть обновлён после
+	// боя со сторонним атакующим через CloseHoldingIfWiped).
+	var holdingPayloadBytes []byte
+	if err := tx.QueryRow(ctx,
+		`SELECT payload FROM events WHERE id = $1 FOR UPDATE`,
+		hp.HoldingEventID).Scan(&holdingPayloadBytes); err != nil {
+		if err == pgx.ErrNoRows {
+			return true, nil
+		}
+		return false, fmt.Errorf("load holding: %w", err)
+	}
+	var hold holdingPayload
+	if err := json.Unmarshal(holdingPayloadBytes, &hold); err != nil {
+		return false, fmt.Errorf("parse holding: %w", err)
+	}
+	if len(hold.AlienFleet) == 0 {
+		return true, nil
+	}
+
+	// Выбираем случайный стек с quantity >= 2 (один всегда остаётся).
+	extractable := make([]int, 0, len(hold.AlienFleet))
+	for i, s := range hold.AlienFleet {
+		if s.Quantity >= 2 {
+			extractable = append(extractable, i)
+		}
+	}
+	if len(extractable) == 0 {
+		// Все стеки по 1 — уходят целиком.
+		for i := range hold.AlienFleet {
+			hold.AlienFleet[i].Quantity = 0
+		}
+	} else {
+		idx := extractable[rand.IntN(len(extractable))]
+		stack := &hold.AlienFleet[idx]
+		// quantity = ceil(q × 0.01) как минимум 1, максимум q-1.
+		extract := int64(float64(stack.Quantity)*0.01 + 0.999)
+		if extract < 1 {
+			extract = 1
+		}
+		if extract > stack.Quantity-1 {
+			extract = stack.Quantity - 1
+		}
+		stack.Quantity -= extract
+	}
+
+	// Отфильтровываем нулевые стеки.
+	newFleet := make([]fleetStack, 0, len(hold.AlienFleet))
+	for _, s := range hold.AlienFleet {
+		if s.Quantity > 0 {
+			newFleet = append(newFleet, s)
+		}
+	}
+	hold.AlienFleet = newFleet
+
+	if len(hold.AlienFleet) == 0 {
+		// Флот разошёлся целиком — закрываем HOLDING.
+		if _, err := tx.Exec(ctx, `
+			UPDATE events SET state = 'ok', processed_at = now() WHERE id = $1
+		`, hp.HoldingEventID); err != nil {
+			return false, fmt.Errorf("close holding: %w", err)
+		}
+		body := "Инопланетяне постепенно покинули вашу планету — их флот рассеялся."
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
+			VALUES ($1, $2, NULL, 1, 'Пришельцы рассеялись', $3)
+		`, ids.New(), hp.UserID, body); err != nil {
+			return false, fmt.Errorf("message: %w", err)
+		}
+		return true, nil
+	}
+
+	// Сохраняем уменьшенный флот в HOLDING-payload.
+	newBytes, err := json.Marshal(hold)
+	if err != nil {
+		return false, fmt.Errorf("marshal holding: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE events SET payload = $1 WHERE id = $2`,
+		newBytes, hp.HoldingEventID); err != nil {
+		return false, fmt.Errorf("save holding: %w", err)
+	}
+	return false, nil
 }

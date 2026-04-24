@@ -447,13 +447,43 @@
   при отражении — дарится 5–10% (max 500). Логика в `applyGrabCredit` /
   `applyGiftCredit` внутри AttackHandler. Сообщение дополнено суммой.
 
-### [Alien AI] Без HALT/multi-step state machine (остаток)
-- **Где**: `internal/alien/alien.go`.
-- **Что**: нет multi-step cycle: ALIEN_FLY=33 → HOLDING=34 → ATTACK=35 → HALT=36 → RETURN.
-  Атака материализуется через один event fire_at без промежуточных состояний.
-- **Почему**: alien_fleets state machine = сложный конечный автомат (~300 LOC PHP).
-- **Как чинить**: добавить `alien_fleets` таблицу с координатами и конечным автоматом.
-- **Приоритет**: L — текущая механика атаки уже работает и передаёт суть.
+### [Alien AI] HALT/HOLDING/HOLDING_AI — ЗАКРЫТО (план 15, этапы 1–2)
+- Закрыто: цикл ATTACK=35 → HALT=36 → HOLDING=34 → HOLDING_AI=80.
+  HALT (12–24ч) переходит в HOLDING (до 15 дней), внутри HOLDING каждые
+  12–24ч тикает HOLDING_AI с одним из 2 действий (unload/extract).
+  Alien-флот участвует в обороне планеты против сторонних атакующих.
+  API платежа `/api/alien/holding/{id}/pay` продлевает HOLDING по
+  формуле 2ч/50 кредитов. Остатки: FLY_UNKNOWN=33, GRAB_CREDIT=37,
+  CHANGE_MISSION_AI=81 — Этап 3 плана 15.
+
+### [Alien AI] HOLDING_AI — 6 из 8 действий пустые (как в legacy)
+- **Где**: `internal/alien/holding.go::HoldingAIHandler`.
+- **Что**: реализованы 2 из 8 действий тика HOLDING_AI:
+  `onUnloadAlienResoursesAI` (выгрузка ресурсов) и
+  `onExtractAlientShipsAI` (убывание alien-флота). Остальные 6
+  (`onRepairUserUnitsAI`, `onAddUserUnitsAI`, `onAddCreditsAI`,
+  `onAddArtefactAI`, `onGenerateAsteroidAI`,
+  `onFindPlanetAfterBattleAI`) — no-op.
+- **Почему**: в legacy (`AlienAI.class.php:1086–1126`) эти 6 —
+  тоже **пустые тела**. Портировать нечего; в игре они никогда
+  ничего не делали.
+- **Как чинить**: дизайн-вопрос. Если решим давать игрокам подарки
+  (артефакты, кредиты, астероиды) в HOLDING — это отдельная фича,
+  не «порт».
+- **Приоритет**: — (решение геймдизайна).
+
+### [Alien AI] unloadAlienResources — процент от текущих, не от захваченных
+- **Где**: `internal/alien/holding.go::unloadAlienResources`.
+- **Что**: подарок 7–10% от ТЕКУЩИХ ресурсов планеты. В legacy
+  (`AlienAI.class.php:1053–1061`) возвращается процент от РАНЕЕ
+  захваченных пришельцами ресурсов (`parent_event["data"][$res]`).
+- **Почему**: у нас в payload HALT/HOLDING нет поля `captured_*` —
+  loot забирает AttackHandler на этапе боя и пишет только в res_log.
+  Хранить отдельно «захваченное пришельцами» = доп. поле payload.
+- **Как чинить**: добавить `CapturedMetal/Silicon/Hydrogen` в
+  `holdingPayload`, проставлять в spawnHalt из лоута атаки,
+  использовать тут.
+- **Приоритет**: L — текущая формула даёт похожий по масштабу эффект.
 
 ### [Tutorial] Тексты шагов хардкод на русском — ЗАКРЫТО
 - Закрыто: ключи `TUTORIAL_STEP_N_TITLE` / `TUTORIAL_STEP_N_DESC` добавлены
