@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
-import { I18nProvider, type Lang } from './i18n/i18n';
+import { I18nProvider, type Lang } from '@/i18n/i18n';
 import { reportWebVitals, logWebVitals } from './lib/web-vitals';
 import './styles/app.css';
 
