@@ -1,7 +1,7 @@
 # План 21: Gameplay hardening — закрытие эксплойтов
 
 **Дата**: 2026-04-24
-**Статус**: Блок A — ✅ ЗАКРЫТО ([ADR-0004](../adr/0004-lancer-cost.md), commit пока будет). Блоки B (экспедиции) и C (щиты) — ждут пересмотра после плана 17 B1 и golden-тестов.
+**Статус**: Блок A — ✅ ([ADR-0004](../adr/0004-lancer-cost.md)). Блок B — ✅ применён 2026-04-24 (B1 min_fleet + B2 lost scaling + B4 reward cap; B3 покрыт планом 17 B1). Блок C (щиты) — ждёт golden-тестов.
 **Затрагивает**: `configs/ships.yml`, `backend/internal/fleet/expedition.go`, `backend/internal/battle/engine.go` (только проверка), тесты
 
 > **ВАЖНО (2026-04-24, перепроверка)**: числа в этом плане опираются на

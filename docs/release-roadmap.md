@@ -14,7 +14,7 @@
 | # | Что | Почему блокер | Объём |
 |---|---|---|---|
 | ~~[18 Фаза 1](plans/18-unit-rebalance.md)~~ | ~~Порт недостающих rapidfire из legacy (38 записей)~~ | ✅ **done 2026-04-24** — BA-004 patched, BA-001/002 частично patched (ждёт симуляции). | — |
-| [21 B](plans/21-gameplay-hardening.md) | Экспедиции: min_fleet + reward cap | BA-003 — новичок фармит экспедициями 770k ресурсов на 5k флота. | M, ADR + 1–2 дня |
+| ~~[21 B](plans/21-gameplay-hardening.md)~~ | ~~Экспедиции: min_fleet + reward cap~~ | ✅ **done 2026-04-24** — BA-003 patched (лимит 50k fleet + reward cap ×3 + lost scaling + полное уничтожение при lost из плана 17 B1). | — |
 | [21 C](plans/21-gameplay-hardening.md) | Щиты: golden-тест high-tech | BA-005 — turtle-стратегия с Small Shield + Shield Tech 10+ может оказаться too strong. Сначала симуляция. | S |
 | [20 Ф.1](plans/20-legacy-port.md) | Vacation mode | Без него отпускник теряет флот целиком — классика OGame-жалоб. | S, 1 день |
 | [20 Ф.2](plans/20-legacy-port.md) | Fleet slots через computer_tech | Сейчас можно слать бесконечно флотов — ломает бой и экономику. | S, полдня |

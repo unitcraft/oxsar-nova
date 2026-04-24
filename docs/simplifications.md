@@ -174,13 +174,11 @@
 - **Как чинить**: не нужно.
 - **Приоритет**: —
 
-### [EXPEDITION] expeditionLost — частичные потери вместо полного исчезновения
-- **Где**: `fleet/expedition.go::expLoss`.
-- **Что**: в legacy `expeditionLost` уничтожает весь флот (`sendBack=false`, флот не возвращается).
-  В nova `expLoss` удаляет только 5–20% юнитов, флот возвращается.
-- **Почему**: упрощение при порте; полное исчезновение требует дополнительной логики отмены возврата.
-- **Как чинить**: если `outcome == "lost"` — не создавать `KindFleetReturn` событие, удалить все `fleet_ships`.
-- **Приоритет**: M.
+### [EXPEDITION] expeditionLost — ЗАКРЫТО
+- **Статус**: закрыто 2026-04-24 (план 17 B1). `expLoss` теперь удаляет
+  все `fleet_ships`, удаляет return-event (через `pl.ReturnEventID`) и
+  выставляет `state='done'`. Паритет с legacy `Expedition::expeditionLost`
+  (`sendBack=false`).
 
 ### [EXPEDITION] black_hole (4) и unknown (13) не реализованы
 - **Где**: `fleet/expedition.go`.

@@ -37,6 +37,18 @@ const (
 	unitDeathstar = 42 // Deathstar
 )
 
+// Балансовые константы экспедиций (план 21 блок B).
+const (
+	// expeditionMinFleetValue — минимум metal-eq флота для экспедиции.
+	// 50 000 ≈ 10 Small Transporter'ов или ~1.5 Cruiser. Закрывает
+	// фарм-эксплойт BA-003 (отправка 1 LF ради 5M ресурсов).
+	expeditionMinFleetValue int64 = 50_000
+
+	// expeditionRewardCapMult — множитель фарм-порога. Суммарная
+	// ресурсная награда не может превышать fleet_value × N. План 21 B4.
+	expeditionRewardCapMult int64 = 3
+)
+
 // ExpeditionHandler — event.Handler для KindExpedition=15.
 func (s *TransportService) ExpeditionHandler() event.Handler {
 	return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
@@ -207,8 +219,15 @@ func (s *TransportService) ExpeditionHandler() event.Handler {
 			return fmt.Errorf("expedition: insert message: %w", err)
 		}
 
+		// outcome=lost → флот уничтожен полностью, возврата нет.
+		// Для остальных исходов — помечаем как returning, return-event
+		// уже создан при отправке.
+		newState := "returning"
+		if outcome == "lost" {
+			newState = "done"
+		}
 		if _, err := tx.Exec(ctx,
-			`UPDATE fleets SET state='returning' WHERE id=$1`, pl.FleetID); err != nil {
+			`UPDATE fleets SET state=$1 WHERE id=$2`, newState, pl.FleetID); err != nil {
 			return fmt.Errorf("expedition: update state: %w", err)
 		}
 		return nil
@@ -275,7 +294,11 @@ func calcExpWeights(expPower float64, hours, visits int,
 	w["delay"] = math.Ceil(30 * math.Pow(1.25, visitPower))
 	w["fast"] = math.Ceil(60 * math.Pow(1.25, visitPower))
 	w["nothing"] = math.Ceil(40 * math.Pow(1.25, visitPower))
-	w["lost"] = 10
+	// B2 (план 21): lost_weight растёт с exp_power, чтобы крупные
+	// экспедиции имели пропорционально больший риск. При power=11
+	// (новичок) вес 21, при power=20 (хайтек) вес 30. Вероятности:
+	// 0.42% → ~1.0% (grows with power). Раньше было фиксированное 10.
+	w["lost"] = math.Ceil(10 * (1 + expPower*0.1))
 
 	if totalShips > 10000 {
 		w["xSkirmish"] *= 0.5
@@ -367,8 +390,19 @@ func expResources(ctx context.Context, tx pgx.Tx, r *rng.R,
 	silicon := int64(math.Ceil(float64(resK) / 2 * (0.90 + r.Float64()*0.20)))
 	hydrogen := int64(math.Ceil(float64(resK) / 3 * (0.90 + r.Float64()*0.20)))
 
-	// Зажимаем свободным cargo пропорционально.
+	// B4 (план 21): reward cap ≤ fleet_value × 3. Защита от эксплойта
+	// транспортов (много cargo, малая cost). Пропорциональное срезание.
+	rewardCap := fleetValueMetalEq(ships, cat) * expeditionRewardCapMult
 	total := metal + silicon + hydrogen
+	if rewardCap > 0 && total > rewardCap {
+		k := float64(rewardCap) / float64(total)
+		metal = int64(float64(metal) * k)
+		silicon = int64(float64(silicon) * k)
+		hydrogen = int64(float64(hydrogen) * k)
+		total = metal + silicon + hydrogen
+	}
+
+	// Зажимаем свободным cargo пропорционально.
 	if total > free && total > 0 {
 		k := float64(free) / float64(total)
 		metal = int64(float64(metal) * k)
@@ -401,7 +435,16 @@ func expAsteroid(ctx context.Context, tx pgx.Tx, r *rng.R,
 	metal := resK
 	silicon := int64(math.Ceil(float64(resK) / 2 * (0.90 + r.Float64()*0.20)))
 
+	// B4 (план 21): reward cap ≤ fleet_value × 3.
+	rewardCap := fleetValueMetalEq(ships, cat) * expeditionRewardCapMult
 	total := metal + silicon
+	if rewardCap > 0 && total > rewardCap {
+		k := float64(rewardCap) / float64(total)
+		metal = int64(float64(metal) * k)
+		silicon = int64(float64(silicon) * k)
+		total = metal + silicon
+	}
+
 	if total > free && total > 0 {
 		k := float64(free) / float64(total)
 		metal = int64(float64(metal) * k)
@@ -692,36 +735,31 @@ func expShip(ctx context.Context, tx pgx.Tx, r *rng.R,
 	return map[string]any{"unit_id": unitID, "count": count}, nil
 }
 
-// expLoss — теряем 5..20% каждого ship-stack'а.
+// expLoss — полное уничтожение флота (legacy Expedition::expeditionLost,
+// sendBack=false). Удаляет все fleet_ships и полагается на то, что
+// вызывающий выставит fleets.state='done' — тогда return-event, когда
+// сработает, просто молча завершится (ReturnHandler имеет ранний
+// выход на state='done', см. events.go:223).
+//
+// Мы сознательно НЕ удаляем return-event, чтобы в таблице events
+// осталась полная история жизни флота: запись с kind=20, state
+// которого пройдёт путь wait→ok. Это нужно для будущего аудита
+// проблемных ситуаций.
+//
+// До 2026-04-24 здесь снималось 5..20% — частичные потери. Это было
+// упрощением (см. simplifications.md). План 17 B1 портировал legacy.
 func expLoss(ctx context.Context, tx pgx.Tx, r *rng.R, fleetID string,
 	ships []unitStack) (map[string]any, error) {
-	frac := 0.05 + r.Float64()*0.15
+	_ = r // rng больше не нужен (раньше использовался для frac)
 	losses := map[int]int64{}
 	for _, sh := range ships {
-		lost := int64(math.Ceil(float64(sh.Count) * frac))
-		if lost <= 0 {
-			continue
-		}
-		if lost > sh.Count {
-			lost = sh.Count
-		}
-		newCount := sh.Count - lost
-		if newCount <= 0 {
-			if _, err := tx.Exec(ctx,
-				`DELETE FROM fleet_ships WHERE fleet_id=$1 AND unit_id=$2`,
-				fleetID, sh.UnitID); err != nil {
-				return nil, err
-			}
-		} else {
-			if _, err := tx.Exec(ctx,
-				`UPDATE fleet_ships SET count=$1 WHERE fleet_id=$2 AND unit_id=$3`,
-				newCount, fleetID, sh.UnitID); err != nil {
-				return nil, err
-			}
-		}
-		losses[sh.UnitID] = lost
+		losses[sh.UnitID] = sh.Count
 	}
-	return map[string]any{"lost": losses, "fraction": frac}, nil
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM fleet_ships WHERE fleet_id=$1`, fleetID); err != nil {
+		return nil, fmt.Errorf("expLoss: delete fleet_ships: %w", err)
+	}
+	return map[string]any{"lost": losses, "total_destroyed": true}, nil
 }
 
 // --- helpers ---
@@ -747,6 +785,17 @@ func fleetCargoCap(ships []unitStack, cat *config.Catalog) int64 {
 		}
 	}
 	return cap
+}
+
+// fleetValueMetalEq — суммарная стоимость флота в metal-eq (M+Si+H).
+// Используется как нижняя планка награды экспедиции (план 21 B4).
+func fleetValueMetalEq(ships []unitStack, cat *config.Catalog) int64 {
+	var sum int64
+	for _, s := range ships {
+		spec := findShipSpec(cat, s.UnitID)
+		sum += (spec.Cost.Metal + spec.Cost.Silicon + spec.Cost.Hydrogen) * s.Count
+	}
+	return sum
 }
 
 // findShipSpec возвращает spec корабля по unit_id, или пустой spec.

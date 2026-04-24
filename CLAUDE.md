@@ -101,6 +101,7 @@ make lint          # все линтеры
 - [docs/plans/](docs/plans/) — планы итераций (нумерованные).
 - [docs/adr/](docs/adr/) — архитектурные решения.
 - [docs/ui/](docs/ui/) — UI-спеки, сравнение с OGame, матрица e2e, dev-log.
-- [docs/ops/](docs/ops/) — эксплуатация: VPS-sizing, платежи, runbooks.
+- [docs/ops/](docs/ops/) — эксплуатация: VPS-sizing, платежи, runbooks, паттерны.
+- [docs/ops/event-audit-pattern.md](docs/ops/event-audit-pattern.md) — почему не удалять записи events при отменах.
 - [docs/legacy/](docs/legacy/) — доступ к oxsar2 для сверки.
 - [api/openapi.yaml](api/openapi.yaml) — контракт REST API.
