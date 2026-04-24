@@ -180,7 +180,7 @@ function UnitCards({
               <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                 <div
                   className="ox-unit-card-name"
-                  style={onOpenInfo ? { cursor: 'pointer', color: 'var(--ox-accent)' } : undefined}
+                  style={onOpenInfo ? { cursor: 'pointer' } : undefined}
                   onClick={onOpenInfo ? () => onOpenInfo(unitKind, u.id) : undefined}
                 >{u.name}</div>
                 {u.description && (

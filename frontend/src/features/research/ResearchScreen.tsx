@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { RESEARCH, imageOf, costForLevel, fmtReqs } from '@/api/catalog';
+import { BUILDINGS, MOON_BUILDINGS, RESEARCH, imageOf, costForLevel, fmtReqs } from '@/api/catalog';
 import type { Planet, QueueItem, ResearchState } from '@/api/types';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
@@ -53,6 +53,12 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
     refetchInterval: 2000,
   });
 
+  const buildingsLevelsQ = useQuery({
+    queryKey: ['buildings-levels', planet.id],
+    queryFn: () => api.get<{ levels: Record<string, number> }>(`/api/planets/${planet.id}/buildings`),
+    staleTime: 10_000,
+  });
+
   const enqueue = useMutation({
     mutationFn: (unitId: number) =>
       api.post<QueueItem>(`/api/planets/${planet.id}/research`, { unit_id: unitId }),
@@ -73,9 +79,22 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
 
   const levels = state.data?.levels ?? {};
   const resSeconds = state.data?.research_seconds ?? {};
+  const buildingLevels = buildingsLevelsQ.data?.levels ?? {};
   const queue = (state.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
   const active = queue[0];
   const isBusy = !!active;
+
+  const allBuildings = [...BUILDINGS, ...MOON_BUILDINGS];
+  const isReqMet = (req: { kind: 'building' | 'research'; key: string; level: number }) => {
+    if (req.kind === 'building') {
+      const b = allBuildings.find((x) => x.key === req.key);
+      if (!b) return true;
+      return (buildingLevels[b.id.toString()] ?? 0) >= req.level;
+    }
+    const r = RESEARCH.find((x) => x.key === req.key);
+    if (!r) return true;
+    return (levels[r.id.toString()] ?? 0) >= req.level;
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -108,6 +127,7 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
             planet.metal    >= nextCost.metal &&
             planet.silicon  >= nextCost.silicon &&
             planet.hydrogen >= nextCost.hydrogen;
+          const isLocked = level === 0 && (r.requires ?? []).some((req) => !isReqMet(req));
           return (
             <div key={r.id} className="ox-unit-card" style={isActive ? { borderColor: 'var(--ox-accent)', boxShadow: '0 0 0 1px var(--ox-accent)' } : undefined}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -170,9 +190,9 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
               <div className="ox-unit-card-footer">
                 <button
                   type="button"
-                  className={`btn${isBusy || isActive || !canAfford ? ' btn-ghost' : ''} btn-sm`}
+                  className={`btn${isActive || isBusy ? ' btn-ghost' : (!canAfford || isLocked) ? ' btn-danger' : ''} btn-sm`}
                   style={{ width: '100%' }}
-                  disabled={enqueue.isPending || isBusy}
+                  disabled={enqueue.isPending || isBusy || isActive || !canAfford || isLocked}
                   onClick={() => enqueue.mutate(r.id)}
                 >
                   {isActive ? '🔬 Изучается' : isBusy ? '⏳ Занято' : level === 0 ? 'Изучить' : `→ ур. ${level + 1}`}
