@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { AdminUserProfilePanel } from './AdminUserProfilePanel';
 
 interface AdminStats {
   users: number;
@@ -36,6 +37,8 @@ export function AdminScreen() {
   const [creditAmount, setCreditAmount] = useState(0);
   const [roleUserID, setRoleUserID] = useState('');
   const [roleValue, setRoleValue] = useState('');
+  // План 14 Ф.2: drawer с карточкой игрока, открывается по кнопке в строке.
+  const [profileUserID, setProfileUserID] = useState<string | null>(null);
 
   const stats = useQuery({
     queryKey: ['admin-stats'],
@@ -188,6 +191,14 @@ export function AdminScreen() {
                 <td>{u.score}</td>
                 <td>{new Date(u.created_at).toLocaleDateString('ru-RU')}</td>
                 <td style={{ display: 'flex', gap: 4 }}>
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm"
+                    onClick={() => setProfileUserID(u.id)}
+                    title="Открыть полный профиль игрока"
+                  >
+                    🔍 Профиль
+                  </button>
                   {u.banned_at ? (
                     <button
                       type="button"
@@ -212,6 +223,13 @@ export function AdminScreen() {
         </table>
       )}
       </>)}
+
+      {profileUserID && (
+        <AdminUserProfilePanel
+          userID={profileUserID}
+          onClose={() => setProfileUserID(null)}
+        />
+      )}
     </section>
   );
 }
