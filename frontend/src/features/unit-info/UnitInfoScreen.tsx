@@ -57,7 +57,7 @@ function productionAtLevel(key: string, level: number): number | null {
 
 const LEVELS_RANGE = 10;
 
-const cell: React.CSSProperties = { padding: '6px 12px', textAlign: 'right', fontFamily: 'var(--ox-mono)', fontSize: 13 };
+const cell: React.CSSProperties = { padding: '6px 12px', textAlign: 'right', fontFamily: 'var(--ox-mono)', fontSize: 15 };
 const cellLeft: React.CSSProperties = { ...cell, textAlign: 'left' };
 
 export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) {
@@ -98,17 +98,17 @@ export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) 
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>{entry.name}</h2>
           {entry.fullDesc && (
-            <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 4 }}>{entry.fullDesc}</div>
+            <div style={{ fontSize: 15, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 4 }}>{entry.fullDesc}</div>
           )}
           {currentLevel > 0 && (
-            <div style={{ fontSize: 13, color: 'var(--ox-accent)', marginTop: 4, fontFamily: 'var(--ox-mono)' }}>Уровень {currentLevel}</div>
+            <div style={{ fontSize: 15, color: 'var(--ox-accent)', marginTop: 4, fontFamily: 'var(--ox-mono)' }}>Уровень {currentLevel}</div>
           )}
         </div>
       </div>
 
       {/* Пререквизиты */}
       {requires && requires.length > 0 && (
-        <div className="ox-panel" style={{ padding: '10px 14px', fontSize: 13, color: 'var(--ox-fg-muted)' }}>
+        <div className="ox-panel" style={{ padding: '10px 14px', fontSize: 15, color: 'var(--ox-fg-muted)' }}>
           🔒 Требуется: {fmtReqs(requires)}
         </div>
       )}
@@ -117,7 +117,7 @@ export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) 
       <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 12 }}>
+            <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 14 }}>
               <th style={cellLeft}>Ур.</th>
               {entry.costBase.metal > 0    && <th style={cell}>🟠</th>}
               {entry.costBase.silicon > 0  && <th style={cell}>💎</th>}
@@ -162,7 +162,7 @@ export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) 
         </table>
       </div>
 
-      <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>
+      <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>
         {isBuilding
           ? (realBuildSeconds ? 'Время следующего уровня с учётом фабрики роботов и нано-фабрики.' : 'Время указано без учёта фабрики роботов и нано-фабрики.')
           : 'Время указано без учёта уровня исследовательской лаборатории.'}
@@ -206,26 +206,26 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>{entry.name}</h2>
           {entry.description && (
-            <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 4 }}>{entry.description}</div>
+            <div style={{ fontSize: 15, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 4 }}>{entry.description}</div>
           )}
         </div>
       </div>
 
       {/* Требования */}
       {entry.requires && entry.requires.length > 0 && (
-        <div className="ox-panel" style={{ padding: '10px 14px', fontSize: 13, color: 'var(--ox-fg-muted)' }}>
+        <div className="ox-panel" style={{ padding: '10px 14px', fontSize: 15, color: 'var(--ox-fg-muted)' }}>
           🔒 Требуется: {fmtReqs(entry.requires)}
         </div>
       )}
 
       {/* Боевые характеристики */}
       <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
-        <div style={{ padding: '10px 14px 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
+        <div style={{ padding: '10px 14px 6px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
           Боевые характеристики
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 12 }}>
+            <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 14 }}>
               <th style={cellLeft}>Параметр</th>
               {hasDualMode ? <th style={cell}>В атаке</th> : null}
               <th style={cell}>{hasDualMode ? 'В обороне' : 'Значение'}</th>
@@ -257,7 +257,7 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
 
       {/* Другие характеристики */}
       <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
-        <div style={{ padding: '10px 14px 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
+        <div style={{ padding: '10px 14px 6px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
           Другие характеристики
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -293,12 +293,12 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
       {/* Быстрый огонь */}
       {entry.rapidfire && Object.keys(entry.rapidfire).length > 0 && (
         <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
-          <div style={{ padding: '10px 14px 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
+          <div style={{ padding: '10px 14px 6px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
             Быстрый огонь (rapidfire)
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 12 }}>
+              <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 14 }}>
                 <th style={cellLeft}>Цель</th>
                 <th style={cell}>Выстрелов за раунд</th>
               </tr>
@@ -323,12 +323,12 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
         if (shooters.length === 0) return null;
         return (
           <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
-            <div style={{ padding: '10px 14px 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
+            <div style={{ padding: '10px 14px 6px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
               Уязвим к быстрому огню
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 12 }}>
+                <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 14 }}>
                   <th style={cellLeft}>Атакующий</th>
                   <th style={cell}>Выстрелов за раунд</th>
                 </tr>
@@ -352,8 +352,8 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
     <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-      <td style={{ ...cellLeft, color: 'var(--ox-fg-muted)', fontSize: 13 }}>{label}</td>
-      <td style={{ ...cell, color: 'var(--ox-fg)', fontSize: 13 }}>{value}</td>
+      <td style={{ ...cellLeft, color: 'var(--ox-fg-muted)', fontSize: 15 }}>{label}</td>
+      <td style={{ ...cell, color: 'var(--ox-fg)', fontSize: 15 }}>{value}</td>
     </tr>
   );
 }
@@ -361,9 +361,9 @@ function StatRow({ label, value }: { label: string; value: string }) {
 function DualRow({ label, atk, def }: { label: string; atk: string; def: string }) {
   return (
     <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-      <td style={{ ...cellLeft, color: 'var(--ox-fg-muted)', fontSize: 13 }}>{label}</td>
-      <td style={{ ...cell, color: 'var(--ox-fg)', fontSize: 13 }}>{atk}</td>
-      <td style={{ ...cell, color: 'var(--ox-fg)', fontSize: 13 }}>{def}</td>
+      <td style={{ ...cellLeft, color: 'var(--ox-fg-muted)', fontSize: 15 }}>{label}</td>
+      <td style={{ ...cell, color: 'var(--ox-fg)', fontSize: 15 }}>{atk}</td>
+      <td style={{ ...cell, color: 'var(--ox-fg)', fontSize: 15 }}>{def}</td>
     </tr>
   );
 }

@@ -24,7 +24,7 @@ const TD_NUM: React.CSSProperties = {
   width: '12%',
   textAlign: 'right',
   fontFamily: 'var(--ox-mono)',
-  fontSize: 13,
+  fontSize: 15,
   paddingRight: 10,
   whiteSpace: 'nowrap',
 };
@@ -101,7 +101,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
           Производство — {report.planet_name}
         </h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {save.isPending && <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>сохраняю…</span>}
+          {save.isPending && <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>сохраняю…</span>}
           <button type="button" className="btn btn-sm btn-ghost" disabled={save.isPending} onClick={() => setAll(0)}>Выключить всё</button>
           <button type="button" className="btn btn-sm btn-ghost" disabled={save.isPending} onClick={() => setAll(100)}>Включить всё</button>
         </div>
@@ -119,17 +119,17 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--ox-border)' }}>
-              <th style={{ textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', paddingLeft: 12, paddingTop: 8, paddingBottom: 8 }}>Здание</th>
-              <th style={{ ...TD_NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>🟠</th>
-              <th style={{ ...TD_NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>💎</th>
-              <th style={{ ...TD_NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>💧</th>
-              <th style={{ ...TD_NUM, fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>⚡</th>
+              <th style={{ textAlign: 'left', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', paddingLeft: 12, paddingTop: 8, paddingBottom: 8 }}>Здание</th>
+              <th style={{ ...TD_NUM, fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>🟠</th>
+              <th style={{ ...TD_NUM, fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>💎</th>
+              <th style={{ ...TD_NUM, fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>💧</th>
+              <th style={{ ...TD_NUM, fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>⚡</th>
             </tr>
           </thead>
           <tbody>
             {/* Natural */}
             <tr style={{ ...TR_BASE, background: 'var(--ox-bg-2)' }}>
-              <td style={{ paddingLeft: 12, fontSize: 13, paddingTop: 8, paddingBottom: 8, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>Естественное</td>
+              <td style={{ paddingLeft: 12, fontSize: 15, paddingTop: 8, paddingBottom: 8, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>Естественное</td>
               <td style={{ ...TD_NUM, color: numColor(report.basic_metal) }}>{fmt(report.basic_metal)}</td>
               <td style={{ ...TD_NUM, color: numColor(report.basic_silicon) }}>{fmt(report.basic_silicon)}</td>
               <td style={{ ...TD_NUM, color: 'var(--ox-fg-dim)' }}>—</td>
@@ -150,11 +150,11 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
                   onClick={() => b.allow_factor && setModalBuilding(b)}
                 >
                   <td style={{ paddingLeft: 12, paddingTop: 8, paddingBottom: 8, overflow: 'hidden' }}>
-                    <span style={{ fontWeight: 500, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                    <span style={{ fontWeight: 500, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                       {BUILDING_NAMES[b.unit_id] ?? b.name}
-                      <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginLeft: 4 }}>ур. {b.level}</span>
+                      <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginLeft: 4 }}>ур. {b.level}</span>
                       {b.allow_factor && (
-                        <span style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', marginLeft: 4, color: factor < 100 ? 'var(--ox-warn, #f59e0b)' : 'var(--ox-fg-dim)' }}>
+                        <span style={{ fontSize: 13, fontFamily: 'var(--ox-mono)', marginLeft: 4, color: factor < 100 ? 'var(--ox-warn, #f59e0b)' : 'var(--ox-fg-dim)' }}>
                           {factor}%
                         </span>
                       )}
@@ -189,8 +189,8 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>{BUILDING_NAMES[modalBuilding.unit_id] ?? modalBuilding.name}</span>
-              <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', marginLeft: 8 }}>ур. {modalBuilding.level}</span>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>{BUILDING_NAMES[modalBuilding.unit_id] ?? modalBuilding.name}</span>
+              <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', marginLeft: 8 }}>ур. {modalBuilding.level}</span>
             </div>
             <button type="button" className="btn-ghost btn-sm" onClick={() => setModalBuilding(null)}>✕</button>
           </div>
@@ -216,7 +216,7 @@ function SummaryRow({ label, metal, silicon, hydrogen, energy, topBorder, dim }:
       borderBottom: '1px solid var(--ox-border)',
       background: dim ? 'var(--ox-bg-2)' : undefined,
     }}>
-      <td style={{ paddingLeft: 12, paddingTop: 8, paddingBottom: 8, fontSize: 13, fontWeight: 700, color: dim ? 'var(--ox-fg-muted)' : undefined }}>{label}</td>
+      <td style={{ paddingLeft: 12, paddingTop: 8, paddingBottom: 8, fontSize: 15, fontWeight: 700, color: dim ? 'var(--ox-fg-muted)' : undefined }}>{label}</td>
       <td style={{ ...TD_NUM, color: numColor(metal) }}>{fmt(metal)}</td>
       <td style={{ ...TD_NUM, color: numColor(silicon) }}>{fmt(silicon)}</td>
       <td style={{ ...TD_NUM, color: numColor(hydrogen) }}>{fmt(hydrogen)}</td>
@@ -244,7 +244,7 @@ function FactorInput({ value, onChange, onCommit, disabled }: {
             disabled={disabled}
             onClick={() => onCommit(p)}
             style={{
-              padding: '5px 10px', fontSize: 13, fontFamily: 'var(--ox-mono)',
+              padding: '5px 10px', fontSize: 15, fontFamily: 'var(--ox-mono)',
               background: value === p ? 'var(--ox-accent)' : 'var(--ox-bg-3)',
               color: value === p ? '#000' : 'var(--ox-fg-dim)',
               border: '1px solid var(--ox-border)', borderRadius: 4,

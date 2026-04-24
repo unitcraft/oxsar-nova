@@ -248,13 +248,13 @@ function MyAlliancePanel({
           </span>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700 }}>{alliance.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>
+            <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>
               Основатель: {alliance.owner_name} · {alliance.member_count} игроков · {alliance.is_open ? '🔓 Открытый' : '🔒 Закрытый'}
             </div>
           </div>
         </div>
         {alliance.description && (
-          <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', borderTop: '1px solid var(--ox-border)', paddingTop: 8, marginTop: 4 }}>
+          <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', borderTop: '1px solid var(--ox-border)', paddingTop: 8, marginTop: 4 }}>
             {alliance.description}
           </div>
         )}
@@ -291,16 +291,16 @@ function MyAlliancePanel({
       {/* Applications */}
       {isOwner && !alliance.is_open && (
         <div className="ox-panel" style={{ padding: '12px 16px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 8 }}>
             Заявки на вступление
           </div>
           {apps.isLoading && <div className="ox-skeleton" style={{ height: 40 }} />}
           {!apps.isLoading && (apps.data?.applications ?? []).length === 0 && (
-            <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>Нет заявок.</div>
+            <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Нет заявок.</div>
           )}
           {(apps.data?.applications ?? []).map((ap) => (
             <div key={ap.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--ox-border)' }}>
-              <span style={{ flex: 1, fontSize: 13 }}>
+              <span style={{ flex: 1, fontSize: 15 }}>
                 <b>{ap.username}</b>
                 {ap.message && <span style={{ color: 'var(--ox-fg-dim)', marginLeft: 8 }}>{ap.message}</span>}
               </span>
@@ -342,15 +342,15 @@ function AllianceDetail({
           <span style={{ color: 'var(--ox-accent)', fontFamily: 'var(--ox-mono)' }}>[{alliance.tag}]</span>{' '}
           {alliance.name}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
+        <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
           Основатель: {alliance.owner_name} · {alliance.member_count} игроков · {alliance.is_open ? '🔓 Открытый' : '🔒 Закрытый'}
         </div>
         {alliance.description && (
-          <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', marginTop: 6 }}>{alliance.description}</div>
+          <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', marginTop: 6 }}>{alliance.description}</div>
         )}
       </div>
 
-      <table className="ox-table" style={{ margin: 0, fontSize: 12 }}>
+      <table className="ox-table" style={{ margin: 0, fontSize: 14 }}>
         <thead>
           <tr><th>Игрок</th><th>Ранг</th></tr>
         </thead>
@@ -398,10 +398,10 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
 
   return (
     <div className="ox-panel" style={{ padding: 20, maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ fontSize: 14, fontWeight: 700 }}>Создать альянс</div>
+      <div style={{ fontSize: 16, fontWeight: 700 }}>Создать альянс</div>
 
       <div>
-        <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Тег (3–5 символов)</label>
+        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Тег (3–5 символов)</label>
         <input
           value={tag}
           onChange={(e) => setTag(e.target.value.toUpperCase())}
@@ -411,11 +411,11 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
         />
       </div>
       <div>
-        <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Название</label>
+        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Название</label>
         <input value={name} onChange={(e) => setName(e.target.value)} maxLength={64} style={{ width: '100%' }} />
       </div>
       <div>
-        <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Описание</label>
+        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Описание</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -478,16 +478,16 @@ function RelationsPanel({ allianceID }: { allianceID: string }) {
 
   return (
     <div className="ox-panel" style={{ padding: '12px 16px' }}>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 8 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 8 }}>
         Отношения с альянсами
       </div>
 
       {list.length === 0 && !rels.isLoading && (
-        <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', marginBottom: 10 }}>Нет установленных отношений.</div>
+        <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', marginBottom: 10 }}>Нет установленных отношений.</div>
       )}
 
       {list.length > 0 && (
-        <table className="ox-table" style={{ margin: '0 0 12px', fontSize: 12 }}>
+        <table className="ox-table" style={{ margin: '0 0 12px', fontSize: 14 }}>
           <thead>
             <tr><th>Альянс</th><th>Отношение</th><th>Статус</th><th /></tr>
           </thead>
@@ -560,7 +560,7 @@ function MembersTable({
 
   return (
     <div className="ox-panel" style={{ overflow: 'hidden' }}>
-      <div style={{ padding: '10px 16px 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', borderBottom: '1px solid var(--ox-border)' }}>
+      <div style={{ padding: '10px 16px 8px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', borderBottom: '1px solid var(--ox-border)' }}>
         Состав ({members.length})
       </div>
       <table className="ox-table" style={{ margin: 0 }}>
@@ -576,7 +576,7 @@ function MembersTable({
           {members.map((m) => (
             <tr key={m.user_id}>
               <td style={{ fontWeight: m.rank === 'owner' ? 700 : 400 }}>{m.username}</td>
-              <td style={{ color: 'var(--ox-fg-dim)', fontSize: 12 }}>
+              <td style={{ color: 'var(--ox-fg-dim)', fontSize: 14 }}>
                 {editingUID === m.user_id ? (
                   <span style={{ display: 'flex', gap: 4 }}>
                     <input
@@ -593,7 +593,7 @@ function MembersTable({
                   m.rank_name || m.rank
                 )}
               </td>
-              <td style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+              <td style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
                 {new Date(m.joined_at).toLocaleDateString('ru-RU')}
               </td>
               {isOwner && (

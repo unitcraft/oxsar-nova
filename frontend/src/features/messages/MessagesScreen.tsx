@@ -205,7 +205,7 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-          Сообщения {unreadCount > 0 && <span style={{ fontSize: 14, color: 'var(--ox-accent)' }}>({unreadCount} новых)</span>}
+          Сообщения {unreadCount > 0 && <span style={{ fontSize: 16, color: 'var(--ox-accent)' }}>({unreadCount} новых)</span>}
         </h2>
         <div style={{ display: 'flex', gap: 8 }}>
           {msgs.length > 0 && (
@@ -243,7 +243,7 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
               onClick={() => { setActiveFolder(folder); setSelectedID(null); }}
             >
               {icon} {label}
-              {typeof count === 'number' && count > 0 && <span style={{ marginLeft: 4, fontSize: 11, color: 'var(--ox-fg-muted)' }}>({count})</span>}
+              {typeof count === 'number' && count > 0 && <span style={{ marginLeft: 4, fontSize: 13, color: 'var(--ox-fg-muted)' }}>({count})</span>}
             </button>
           );
         })}
@@ -263,7 +263,7 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
       )}
 
       {!composing && msgs.length === 0 && (
-        <div style={{ color: 'var(--ox-fg-dim)', fontSize: 14, padding: '16px 0' }}>📭 Нет сообщений</div>
+        <div style={{ color: 'var(--ox-fg-dim)', fontSize: 16, padding: '16px 0' }}>📭 Нет сообщений</div>
       )}
 
       {!composing && msgs.length > 0 && (
@@ -287,10 +287,10 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: unread ? 700 : 400, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: unread ? 700 : 400, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {m.subject}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
+                    <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
                       {m.from_username || 'Система'} · {new Date(m.created_at).toLocaleString('ru-RU')}
                     </div>
                   </div>
@@ -347,13 +347,13 @@ function ComposeForm({ init, onSent, onCancel }: { init?: ReplyInit | undefined;
 
   return (
     <div className="ox-panel" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ fontSize: 13, fontWeight: 700 }}>Написать сообщение</div>
+      <div style={{ fontSize: 15, fontWeight: 700 }}>Написать сообщение</div>
       <div>
-        <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Кому</label>
+        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Кому</label>
         <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="имя игрока" style={{ width: '100%' }} />
       </div>
       <div>
-        <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Тема</label>
+        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Тема</label>
         <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="тема сообщения" style={{ width: '100%' }} />
       </div>
       <div>
@@ -390,12 +390,12 @@ function MessageDetail({ message, onReply, onFleetMission }: { message: Message;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <h3 style={{ margin: 0, fontSize: 15 }}>{message.subject}</h3>
-      <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>
+      <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>
         От: <span style={{ color: 'var(--ox-fg-dim)' }}>{message.from_username || 'Система'}</span>
         {' · '}
         {new Date(message.created_at).toLocaleString('ru-RU')}
       </div>
-      <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{message.body}</div>
+      <div style={{ fontSize: 16, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{message.body}</div>
       {message.from_user_id && (
         <div>
           <button type="button" className="btn-ghost btn-sm" onClick={() => onReply(message)}>
@@ -436,7 +436,7 @@ function ExpeditionReportView({ data }: { data: ExpeditionReportFull }) {
     <div>
       <div style={{ fontWeight: 700, marginBottom: 8 }}>🌌 Отчёт экспедиции</div>
       <div style={{ marginBottom: 8 }}>Результат: <b>{outcomeText[data.outcome] ?? data.outcome}</b></div>
-      <pre style={{ background: 'var(--ox-bg-hover)', padding: 10, borderRadius: 6, fontSize: 12, overflow: 'auto' }}>
+      <pre style={{ background: 'var(--ox-bg-hover)', padding: 10, borderRadius: 6, fontSize: 14, overflow: 'auto' }}>
         {JSON.stringify(data.report, null, 2)}
       </pre>
     </div>
@@ -448,8 +448,8 @@ function EspionageReportView({ data }: { data: EspionageReportFull }) {
   return (
     <div>
       <div style={{ fontWeight: 700, marginBottom: 8 }}>🔭 Шпионский отчёт</div>
-      <div style={{ fontSize: 13, marginBottom: 4 }}>Соотношение: {r.ratio} · Зонды: {r.probes}</div>
-      <div style={{ fontSize: 13, marginBottom: 8 }}>
+      <div style={{ fontSize: 15, marginBottom: 4 }}>Соотношение: {r.ratio} · Зонды: {r.probes}</div>
+      <div style={{ fontSize: 15, marginBottom: 8 }}>
         🟠 {r.metal.toLocaleString('ru-RU')} · 💎 {r.silicon.toLocaleString('ru-RU')} · 💧 {r.hydrogen.toLocaleString('ru-RU')}
       </div>
       {r.ships && <UnitMapBlock title="Корабли" data={r.ships} />}
@@ -464,10 +464,10 @@ function UnitMapBlock({ title, data }: { title: string; data: Record<string, num
   if (entries.length === 0) return null;
   return (
     <div style={{ marginBottom: 8 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ox-fg-dim)', marginBottom: 4 }}>{title}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ox-fg-dim)', marginBottom: 4 }}>{title}</div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {entries.map(([id, n]) => (
-          <span key={id} style={{ fontSize: 12, background: 'var(--ox-bg-hover)', padding: '2px 8px', borderRadius: 4 }}>
+          <span key={id} style={{ fontSize: 14, background: 'var(--ox-bg-hover)', padding: '2px 8px', borderRadius: 4 }}>
             {nameOf(Number(id))}: {n.toLocaleString('ru-RU')}
           </span>
         ))}
@@ -493,9 +493,9 @@ function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; on
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: winnerColor }}>{winnerText}</div>
-        <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>Раундов: {r.rounds}</span>
+        <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>Раундов: {r.rounds}</span>
         {hasDst && (
-          <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+          <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
             [{data.dst_galaxy}:{data.dst_system}:{data.dst_position}]
           </span>
         )}
@@ -503,7 +503,7 @@ function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; on
           <button
             type="button"
             className="btn btn-sm"
-            style={{ fontSize: 11 }}
+            style={{ fontSize: 13 }}
             onClick={() => onFleetMission(data.dst_galaxy!, data.dst_system!, data.dst_position!, false, 10)}
           >
             ⚔️ Атаковать
@@ -514,22 +514,22 @@ function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; on
       {/* Participants */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--ox-accent)', background: 'rgba(99,217,255,0.05)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ox-accent)', letterSpacing: '0.08em', marginBottom: 4 }}>АТАКУЮЩИЙ</div>
-          <div style={{ fontSize: 13 }}>{data.attacker_username || '—'}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ox-accent)', letterSpacing: '0.08em', marginBottom: 4 }}>АТАКУЮЩИЙ</div>
+          <div style={{ fontSize: 15 }}>{data.attacker_username || '—'}</div>
         </div>
         <div style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--ox-success)', background: 'rgba(80,200,120,0.05)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ox-success)', letterSpacing: '0.08em', marginBottom: 4 }}>ЗАЩИТНИК</div>
-          <div style={{ fontSize: 13 }}>{data.defender_username || '—'}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ox-success)', letterSpacing: '0.08em', marginBottom: 4 }}>ЗАЩИТНИК</div>
+          <div style={{ fontSize: 15 }}>{data.defender_username || '—'}</div>
         </div>
       </div>
 
       {/* Loot */}
       {hasLoot && (
         <div style={{ padding: '8px 14px', background: 'var(--ox-surface)', borderRadius: 6, border: '1px solid var(--ox-border)' }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ox-fg-muted)', marginRight: 12 }}>ДОБЫЧА</span>
-          {data.loot_metal > 0 && <span style={{ marginRight: 10, fontSize: 13 }}>🟠 {data.loot_metal.toLocaleString('ru-RU')}</span>}
-          {data.loot_silicon > 0 && <span style={{ marginRight: 10, fontSize: 13 }}>💎 {data.loot_silicon.toLocaleString('ru-RU')}</span>}
-          {data.loot_hydrogen > 0 && <span style={{ fontSize: 13 }}>💧 {data.loot_hydrogen.toLocaleString('ru-RU')}</span>}
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', marginRight: 12 }}>ДОБЫЧА</span>
+          {data.loot_metal > 0 && <span style={{ marginRight: 10, fontSize: 15 }}>🟠 {data.loot_metal.toLocaleString('ru-RU')}</span>}
+          {data.loot_silicon > 0 && <span style={{ marginRight: 10, fontSize: 15 }}>💎 {data.loot_silicon.toLocaleString('ru-RU')}</span>}
+          {data.loot_hydrogen > 0 && <span style={{ fontSize: 15 }}>💧 {data.loot_hydrogen.toLocaleString('ru-RU')}</span>}
         </div>
       )}
 
@@ -541,7 +541,7 @@ function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; on
 
       {/* Rounds trace */}
       {r.rounds_trace && r.rounds_trace.length > 0 && (
-        <details style={{ fontSize: 12 }}>
+        <details style={{ fontSize: 14 }}>
           <summary style={{ cursor: 'pointer', color: 'var(--ox-fg-muted)', marginBottom: 6 }}>Раунды по раундам</summary>
           <div style={{ overflowX: 'auto' }}>
             <table className="ox-table" style={{ margin: 0 }}>
@@ -567,9 +567,9 @@ function SideLosses({ title, side, accentColor }: { title: string; side: SideRes
   const lost = side.lost_metal + side.lost_silicon + side.lost_hydrogen;
   return (
     <div style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${accentColor}`, background: `${accentColor}0d` }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: accentColor, letterSpacing: '0.08em', marginBottom: 6 }}>{title.toUpperCase()}</div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: accentColor, letterSpacing: '0.08em', marginBottom: 6 }}>{title.toUpperCase()}</div>
       {lost > 0 && (
-        <div style={{ fontSize: 11, color: 'var(--ox-danger)', marginBottom: 6, fontFamily: 'var(--ox-mono)' }}>
+        <div style={{ fontSize: 13, color: 'var(--ox-danger)', marginBottom: 6, fontFamily: 'var(--ox-mono)' }}>
           Потери: {side.lost_metal > 0 && `🟠${side.lost_metal.toLocaleString('ru-RU')} `}
           {side.lost_silicon > 0 && `💎${side.lost_silicon.toLocaleString('ru-RU')} `}
           {side.lost_hydrogen > 0 && `💧${side.lost_hydrogen.toLocaleString('ru-RU')}`}
@@ -579,7 +579,7 @@ function SideLosses({ title, side, accentColor }: { title: string; side: SideRes
         {side.units.map((u) => {
           const lost_ = u.quantity_start - u.quantity_end;
           return (
-            <div key={u.unit_id} style={{ display: 'flex', gap: 6, fontSize: 11, fontFamily: 'var(--ox-mono)', alignItems: 'center' }}>
+            <div key={u.unit_id} style={{ display: 'flex', gap: 6, fontSize: 13, fontFamily: 'var(--ox-mono)', alignItems: 'center' }}>
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--ox-fg-dim)' }}>
                 {nameOf(u.unit_id)}
               </span>

@@ -71,7 +71,7 @@ export function ReferralScreen() {
       <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>🎁 Реферальная программа</h2>
 
       <section className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Ваша ссылка</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Ваша ссылка</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input
             type="text"
@@ -79,7 +79,7 @@ export function ReferralScreen() {
             readOnly
             value={url}
             onFocus={(e) => e.currentTarget.select()}
-            style={{ flex: 1, minWidth: 240, fontFamily: 'var(--ox-mono)', fontSize: 12 }}
+            style={{ flex: 1, minWidth: 240, fontFamily: 'var(--ox-mono)', fontSize: 14 }}
           />
           <button type="button" className="btn" onClick={() => void handleCopy()}>
             {copied ? '✓ Скопировано' : '📋 Копировать'}
@@ -88,8 +88,8 @@ export function ReferralScreen() {
             📤 Поделиться
           </button>
         </div>
-        {shareError && <span style={{ fontSize: 12, color: 'var(--ox-danger)' }}>{shareError}</span>}
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
+        {shareError && <span style={{ fontSize: 14, color: 'var(--ox-danger)' }}>{shareError}</span>}
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
           Отправьте эту ссылку друзьям. Когда они зарегистрируются и начнут играть —
           вы получите {Math.round((d?.credit_percent ?? 0) * 100)}% от всех их покупок кредитов
           и очки за каждого активного реферала.
@@ -113,7 +113,7 @@ export function ReferralScreen() {
       </section>
 
       <section className="ox-panel" style={{ padding: 20 }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Приглашённые игроки</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Приглашённые игроки</h3>
         {(!d || d.referred.length === 0) ? (
           <div style={{ textAlign: 'center', padding: 24, color: 'var(--ox-fg-muted)' }}>
             Пока никого. Поделитесь ссылкой — бонусы приходят сразу после регистрации.
@@ -133,7 +133,7 @@ export function ReferralScreen() {
                   <tr key={u.user_id}>
                     <td>{u.username}</td>
                     <td className="num" style={{ color: 'var(--ox-accent)' }}>{Math.round(u.points).toLocaleString('ru-RU')}</td>
-                    <td style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+                    <td style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
                       {u.reg_time ? new Date(u.reg_time).toLocaleDateString('ru-RU') : '—'}
                     </td>
                   </tr>
@@ -150,11 +150,11 @@ export function ReferralScreen() {
 function StatCard({ label, value, icon, hint }: { label: string; value: string; icon: string; hint?: string }) {
   return (
     <div className="ox-panel" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+      <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
         {icon} {label}
       </div>
       <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>{value}</div>
-      {hint && <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>{hint}</div>}
+      {hint && <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>{hint}</div>}
     </div>
   );
 }

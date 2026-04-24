@@ -161,7 +161,7 @@ function ArtefactGroup({
 }) {
   return (
     <div>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 8 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 8 }}>
         {title}
       </div>
       <div className="ox-cards-grid">
@@ -181,19 +181,19 @@ function ArtefactGroup({
             </div>
             <div className="ox-unit-card-body">
               <div className="ox-unit-card-name">{nameOf(a.unit_id)}</div>
-              <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
+              <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
                 {STATE_LABEL[a.state] ?? a.state}
               </div>
               {(() => {
                 const meta = ARTEFACTS.find((x) => x.id === a.unit_id);
                 return meta && (
-                  <div style={{ fontSize: 11, color: 'var(--ox-success)', fontStyle: 'italic', marginBottom: 2 }}>
+                  <div style={{ fontSize: 13, color: 'var(--ox-success)', fontStyle: 'italic', marginBottom: 2 }}>
                     {meta.benefit}
                   </div>
                 );
               })()}
               {a.expire_at && a.state === 'active' && (
-                <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>
+                <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>
                   Истекает: <Countdown finishAt={a.expire_at} />
                 </div>
               )}
@@ -228,7 +228,7 @@ function ArtefactGroup({
                 </button>
               )}
               {a.state === 'expired' && (
-                <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)', textAlign: 'center' }}>💀 Истёк</div>
+                <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', textAlign: 'center' }}>💀 Истёк</div>
               )}
             </div>
           </div>

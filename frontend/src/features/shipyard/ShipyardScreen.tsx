@@ -72,7 +72,7 @@ export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
       {/* Queue */}
       {queueItems.length > 0 && (
         <div className="ox-panel" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 2 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 2 }}>
             Очередь верфи
           </div>
           {queueItems.map((item, i) => (
@@ -94,7 +94,7 @@ export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
         <button
           type="button"
           className="btn-ghost btn-sm"
-          style={{ fontSize: 12, whiteSpace: 'nowrap' }}
+          style={{ fontSize: 14, whiteSpace: 'nowrap' }}
           onClick={() => {
             const next = !showLocked;
             setShowLocked(next);
@@ -143,9 +143,9 @@ function UnitCards({
 
   if (visibleUnits.length === 0) {
     return (
-      <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--ox-fg-muted)', fontSize: 13 }}>
+      <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--ox-fg-muted)', fontSize: 15 }}>
         Все юниты требуют выполнения условий.{' '}
-        <button type="button" className="btn-ghost btn-sm" style={{ fontSize: 13 }} onClick={onShowAll}>
+        <button type="button" className="btn-ghost btn-sm" style={{ fontSize: 15 }} onClick={onShowAll}>
           Показать все
         </button>
       </div>
@@ -184,18 +184,18 @@ function UnitCards({
                   onClick={onOpenInfo ? () => onOpenInfo(unitKind, u.id) : undefined}
                 >{u.name}</div>
                 {u.description && (
-                  <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 2 }}>
+                  <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 2 }}>
                     {u.description}
                   </div>
                 )}
-                <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
                   <span>⚔ {u.attack.toLocaleString('ru-RU')}</span>
                   <span>🛡 {u.shield.toLocaleString('ru-RU')}</span>
                   <span>❤ {u.shell.toLocaleString('ru-RU')}</span>
                   {u.cargo != null && u.cargo > 0 && <span title="Грузоподъёмность">📦 {u.cargo.toLocaleString('ru-RU')}</span>}
                 </div>
                 {(u.speed != null || u.fuel != null) && (
-                  <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
+                  <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
                     {u.speed != null && <span>🚀 {u.speed.toLocaleString('ru-RU')}</span>}
                     {u.fuel != null && u.fuel > 0 && <span>⛽ {u.fuel}/ед.</span>}
                   </div>
@@ -206,13 +206,13 @@ function UnitCards({
                   </div>
                 )}
                 {inStock > 0 && (
-                  <div style={{ fontSize: 11, color: 'var(--ox-fg-dim)', marginTop: 4 }}>
+                  <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', marginTop: 4 }}>
                     В наличии: {inStock.toLocaleString('ru-RU')}
                   </div>
                 )}
                 {c && (
                   <>
-                    <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6, marginTop: 4 }}>
+                    <div style={{ fontSize: 13, fontFamily: 'var(--ox-mono)', lineHeight: 1.6, marginTop: 4 }}>
                       {c.metal > 0 && <span style={{ marginRight: 6, color: planet.metal >= c.metal * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>🟠{(c.metal * count).toLocaleString('ru-RU')}</span>}
                       {c.silicon > 0 && <span style={{ marginRight: 6, color: planet.silicon >= c.silicon * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>💎{(c.silicon * count).toLocaleString('ru-RU')}</span>}
                       {c.hydrogen > 0 && <span style={{ color: planet.hydrogen >= c.hydrogen * count ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>💧{(c.hydrogen * count).toLocaleString('ru-RU')}</span>}
@@ -263,21 +263,21 @@ function ShipQueueRow({ item, isActive, onCancel }: { item: ShipyardQueueItem; i
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15 }}>
         <span style={{ fontSize: 16 }}>{isActive ? '🚀' : '⏳'}</span>
         <span style={{ flex: 1, fontWeight: isActive ? 600 : 400 }}>
           {nameOf(item.unit_id)} × {item.count}
         </span>
         {isActive
           ? <Countdown finishAt={item.end_at} />
-          : <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+          : <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
               {new Date(item.end_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
             </span>
         }
         <button
           type="button"
           className="btn-ghost btn-sm"
-          style={{ fontSize: 11, padding: '2px 6px', color: 'var(--ox-fg-muted)' }}
+          style={{ fontSize: 13, padding: '2px 6px', color: 'var(--ox-fg-muted)' }}
           onClick={onCancel}
           title="Отменить"
         >

@@ -100,7 +100,7 @@ export function MarketScreen({ planet }: { planet: Planet }) {
           Рынок — {planet.name}
         </h2>
         {rates.data && (
-          <span style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>
+          <span style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>
             Ваш курс: <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>{rates.data.user_rate.toFixed(2)}</span>
           </span>
         )}
@@ -119,21 +119,21 @@ export function MarketScreen({ planet }: { planet: Planet }) {
       </div>
 
       {rates.data && tab === 'exchange' && (
-        <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+        <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
           🌐 Глобальный курс: 1 металл = {(rates.data.metal / rates.data.silicon).toFixed(2)} кремния = {(rates.data.metal / rates.data.hydrogen).toFixed(2)} водорода
         </div>
       )}
 
       {tab === 'exchange' && (
         <div className="ox-panel" style={{ padding: 20 }}>
-          <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 16 }}>
+          <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 16 }}>
             Курс M:Si:H = 1:2:4. Чем выше ваш personal rate, тем меньше получаете при обмене.
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div>
-                <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Отдать</label>
+                <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Отдать</label>
                 <select value={from} onChange={(e) => setFrom(e.target.value as Res)}>
                   {(Object.entries(RES_LABEL) as [Res, string][]).map(([k, v]) => (
                     <option key={k} value={k}>{v}</option>
@@ -141,7 +141,7 @@ export function MarketScreen({ planet }: { planet: Planet }) {
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Получить</label>
+                <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Получить</label>
                 <select value={to} onChange={(e) => setTo(e.target.value as Res)}>
                   {(Object.entries(RES_LABEL) as [Res, string][]).map(([k, v]) => (
                     <option key={k} value={k}>{v}</option>
@@ -149,7 +149,7 @@ export function MarketScreen({ planet }: { planet: Planet }) {
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Количество</label>
+                <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Количество</label>
                 <input
                   type="number" min={1} value={amount}
                   onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
@@ -159,7 +159,7 @@ export function MarketScreen({ planet }: { planet: Planet }) {
             </div>
 
             {preview !== null && from !== to && (
-              <div style={{ fontSize: 14 }}>
+              <div style={{ fontSize: 16 }}>
                 Вы получите:{' '}
                 <span style={{ fontWeight: 700, color: 'var(--ox-accent)', fontFamily: 'var(--ox-mono)' }}>
                   {preview.toLocaleString('ru-RU')}
@@ -180,7 +180,7 @@ export function MarketScreen({ planet }: { planet: Planet }) {
             </div>
 
             {last && (
-              <div className="ox-alert" style={{ fontSize: 13 }}>
+              <div className="ox-alert" style={{ fontSize: 15 }}>
                 Последний обмен: {last.from_amount} {last.from} → {last.to_amount} {last.to} (курс {last.rate.toFixed(4)})
               </div>
             )}
@@ -247,12 +247,12 @@ function LotsPanel({ planet, userId }: { planet: Planet; userId: string }) {
       </div>
       {/* Create lot */}
       <div className="ox-panel" style={{ padding: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 12 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 12 }}>
           Выставить лот
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div>
-            <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Продать</label>
+            <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Продать</label>
             <div style={{ display: 'flex', gap: 6 }}>
               <input type="number" min={1} value={sellAmt} onChange={(e) => setSellAmt(Math.max(1, Number(e.target.value)))} style={{ width: 100 }} />
               <select value={sellRes} onChange={(e) => setSellRes(e.target.value as Res)}>
@@ -262,7 +262,7 @@ function LotsPanel({ planet, userId }: { planet: Planet; userId: string }) {
           </div>
           <div style={{ fontSize: 16, color: 'var(--ox-fg-muted)', paddingBottom: 6 }}>→</div>
           <div>
-            <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Получить</label>
+            <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Получить</label>
             <div style={{ display: 'flex', gap: 6 }}>
               <input type="number" min={1} value={buyAmt} onChange={(e) => setBuyAmt(Math.max(1, Number(e.target.value)))} style={{ width: 100 }} />
               <select value={buyRes} onChange={(e) => setBuyRes(e.target.value as Res)}>
@@ -352,21 +352,21 @@ function CreditPanel({ planet, userRate }: { planet: Planet; userRate: number })
 
   return (
     <div className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>
+      <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>
         Обмен ресурсов на кредиты и обратно. 1 кредит = {CREDIT_RATE_PER_UNIT} единиц металла.
         Курс учитывает ваш personal rate ({userRate.toFixed(2)}).
       </div>
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div>
-          <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Направление</label>
+          <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Направление</label>
           <select value={direction} onChange={(e) => setDirection(e.target.value as 'to_credit' | 'from_credit')}>
             <option value="to_credit">Ресурс → Кредиты</option>
             <option value="from_credit">Кредиты → Ресурс</option>
           </select>
         </div>
         <div>
-          <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Ресурс</label>
+          <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Ресурс</label>
           <select value={resource} onChange={(e) => setResource(e.target.value as Res)}>
             {(Object.entries(RES_LABEL) as [Res, string][]).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
@@ -374,7 +374,7 @@ function CreditPanel({ planet, userRate }: { planet: Planet; userRate: number })
           </select>
         </div>
         <div>
-          <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>
             {direction === 'to_credit' ? 'Количество ресурса' : 'Количество кредитов'}
           </label>
           <input
@@ -385,7 +385,7 @@ function CreditPanel({ planet, userRate }: { planet: Planet; userRate: number })
         </div>
       </div>
 
-      <div style={{ fontSize: 14 }}>
+      <div style={{ fontSize: 16 }}>
         {direction === 'to_credit' ? (
           <>Вы получите: <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)', fontWeight: 700 }}>{preview.toFixed(2)}</span> кредитов</>
         ) : (
@@ -467,13 +467,13 @@ function FleetLotsPanel({ planet, userId }: { planet: Planet; userId: string }) 
     <>
       {/* Создание лота */}
       <div className="ox-panel" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
           Выставить флот на продажу
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
           {SHIPS.map((s) => (
             <div key={s.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <span style={{ flex: 1, fontSize: 12 }}>🛸 {s.name}</span>
+              <span style={{ flex: 1, fontSize: 14 }}>🛸 {s.name}</span>
               <input
                 type="number"
                 min={0}
@@ -489,7 +489,7 @@ function FleetLotsPanel({ planet, userId }: { planet: Planet; userId: string }) 
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div>
-            <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Хочу получить</label>
+            <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Хочу получить</label>
             <div style={{ display: 'flex', gap: 6 }}>
               <input type="number" min={1} value={buyAmt} onChange={(e) => setBuyAmt(Math.max(1, Number(e.target.value)))} style={{ width: 120 }} />
               <select value={buyRes} onChange={(e) => setBuyRes(e.target.value as Res)}>
@@ -534,7 +534,7 @@ function FleetLotsPanel({ planet, userId }: { planet: Planet; userId: string }) 
                 return (
                   <tr key={l.id}>
                     <td style={{ fontWeight: 600 }}>{isOwn ? '(вы)' : l.seller_name}</td>
-                    <td style={{ fontSize: 12 }}>
+                    <td style={{ fontSize: 14 }}>
                       {Object.entries(l.sell_fleet).map(([idStr, cnt]) => (
                         <div key={idStr}>🛸 {nameOf(Number(idStr))} × {cnt}</div>
                       ))}

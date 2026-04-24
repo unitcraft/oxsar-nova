@@ -103,7 +103,7 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
           Исследования
         </h2>
         {planet.research_factor != null && planet.research_factor > 1 && (
-          <span style={{ fontSize: 12, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
+          <span style={{ fontSize: 14, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
             🔬 +{Math.round((planet.research_factor - 1) * 100)}% исследование
           </span>
         )}
@@ -112,7 +112,7 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
       {active ? (
         <ActiveResearchBanner item={active} />
       ) : (
-        <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', padding: '8px 0' }}>
+        <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', padding: '8px 0' }}>
           🔬 Лаборатория свободна — выберите технологию для исследования
         </div>
       )}
@@ -139,10 +139,10 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
                 />
                 <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                   <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => onOpenInfo(r.id, level)}>{r.name}</div>
-                  <div style={{ fontSize: 12, color: level > 0 ? 'var(--ox-fg-dim)' : 'var(--ox-fg-muted)', marginBottom: 2 }}>
+                  <div style={{ fontSize: 14, color: level > 0 ? 'var(--ox-fg-dim)' : 'var(--ox-fg-muted)', marginBottom: 2 }}>
                     {level > 0 ? `Уровень ${level}` : 'Не изучено'}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
+                  <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
                     {r.benefit}
                   </div>
                   {level === 0 && r.requires && r.requires.length > 0 && (
@@ -152,7 +152,7 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
                   )}
                   {!isActive && (
                     <>
-                      <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
+                      <div style={{ fontSize: 13, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
                         {nextCost.metal > 0 && (
                           <span style={{ marginRight: 6, color: planet.metal >= nextCost.metal ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
                             🟠{nextCost.metal.toLocaleString('ru-RU')}
@@ -179,7 +179,7 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
                         </div>
                       )}
                       {secs > 0 && (
-                        <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
+                        <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
                           ⏱ {fmtDuration(secs)}
                         </div>
                       )}
@@ -213,7 +213,7 @@ function ActiveResearchBanner({ item }: { item: QueueItem }) {
 
   return (
     <div className="ox-panel" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15 }}>
         <span style={{ fontSize: 20 }}>🔬</span>
         <span style={{ flex: 1, fontWeight: 600 }}>{name} → ур. {item.target_level}</span>
         <span className={`ox-timer${secsLeft < 60 ? ' urgent' : ''}`}>{fmtSecs(secsLeft)}</span>

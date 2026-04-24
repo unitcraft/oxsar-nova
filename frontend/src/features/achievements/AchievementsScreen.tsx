@@ -39,8 +39,8 @@ function AchievementCard({ e }: { e: Entry }) {
         {done ? '✅' : '🔒'}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{e.title}</div>
-        <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: hasProg ? 6 : 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 2 }}>{e.title}</div>
+        <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: hasProg ? 6 : 0 }}>
           {e.description}
           {hasProg && (
             <span style={{ marginLeft: 8, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-muted)' }}>
@@ -50,12 +50,12 @@ function AchievementCard({ e }: { e: Entry }) {
         </div>
         {hasProg && <ProgressBar pct={pct} height={3} />}
         {done && e.unlocked_at && (
-          <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginTop: 4 }}>
+          <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginTop: 4 }}>
             Получено {new Date(e.unlocked_at).toLocaleString('ru-RU')}
           </div>
         )}
       </div>
-      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)', flexShrink: 0 }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)', flexShrink: 0 }}>
         +{e.points}
       </div>
     </div>
@@ -85,7 +85,7 @@ export function AchievementsScreen() {
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
           🎖 Достижения
         </h2>
-        <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>
+        <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>
           Открыто:{' '}
           <span style={{ fontWeight: 700, color: 'var(--ox-accent)', fontFamily: 'var(--ox-mono)' }}>
             {unlocked.length}/{list.length}
@@ -115,7 +115,7 @@ export function AchievementsScreen() {
               borderColor: filter === cat ? 'var(--ox-accent)' : 'var(--ox-border)',
               background: filter === cat ? 'var(--ox-bg-active)' : 'transparent',
               color: filter === cat ? 'var(--ox-accent)' : 'var(--ox-fg-dim)',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              fontSize: 15, fontWeight: 600, cursor: 'pointer',
             }}
           >
             {cat === 'all' ? '📋 Все' : (CATEGORY_LABELS[cat] ?? cat)}

@@ -117,24 +117,24 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
         </h2>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           {planet.build_factor != null && planet.build_factor > 1 && (
-            <span style={{ fontSize: 12, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
+            <span style={{ fontSize: 14, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
               🏗 +{Math.round((planet.build_factor - 1) * 100)}% строительство
             </span>
           )}
           {planet.produce_factor != null && planet.produce_factor > 1 && (
-            <span style={{ fontSize: 12, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
+            <span style={{ fontSize: 14, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
               🟠 +{Math.round((planet.produce_factor - 1) * 100)}% добыча
             </span>
           )}
           {queueItems.length > 0 && (
-            <span style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>
+            <span style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>
               В очереди: {queueItems.length}
             </span>
           )}
           <button
             type="button"
             className="btn-ghost btn-sm"
-            style={{ fontSize: 12 }}
+            style={{ fontSize: 14 }}
             onClick={() => {
               const next = !showLocked;
               setShowLocked(next);
@@ -149,7 +149,7 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
       {/* Active queue */}
       {queueItems.length > 0 && (
         <div className="ox-panel" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 2 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 2 }}>
             Активная очередь
           </div>
           {queueItems.map((item, i) => (
@@ -190,15 +190,15 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
               <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                 <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => onOpenInfo(b.id, level)}>{b.name}</div>
                 {b.description && (
-                  <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
+                  <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
                     {b.description}
                   </div>
                 )}
-                <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
+                <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
                   {level > 0 ? `Уровень ${level}` : 'Не построено'}
                 </div>
                 {isLocked && (
-                  <div style={{ fontSize: 11, color: 'var(--ox-danger)', marginBottom: 4 }}>
+                  <div style={{ fontSize: 13, color: 'var(--ox-danger)', marginBottom: 4 }}>
                     {unmet.map((r) => (
                       <div key={`${r.kind}-${r.key}`}>
                         🔒 {r.key} ур.{r.required} (у вас: {r.current})
@@ -214,14 +214,14 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
                     ? `${Math.round(raw as number)}`
                     : fmtPerHour(raw as number);
                   return (
-                    <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginBottom: 2, fontFamily: 'var(--ox-mono)' }}>
+                    <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginBottom: 2, fontFamily: 'var(--ox-mono)' }}>
                       {stat.icon} {display}
                     </div>
                   );
                 })()}
                 {!inQueue && (
                   <>
-                    <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
+                    <div style={{ fontSize: 13, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
                       {nextCost.metal > 0 && (
                         <span style={{ marginRight: 6, color: planet.metal >= nextCost.metal ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
                           🟠{nextCost.metal.toLocaleString('ru-RU')}
@@ -248,7 +248,7 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
                       </div>
                     )}
                     {secs > 0 && (
-                      <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
+                      <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
                         ⏱ {fmtDuration(secs)}
                       </div>
                     )}
@@ -258,7 +258,7 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
               </div>
               <div className="ox-unit-card-footer">
                 {isMax ? (
-                  <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ox-fg-muted)', fontWeight: 700, padding: '4px 0' }}>MAX</div>
+                  <div style={{ textAlign: 'center', fontSize: 14, color: 'var(--ox-fg-muted)', fontWeight: 700, padding: '4px 0' }}>MAX</div>
                 ) : (
                   <button
                     type="button"
@@ -325,24 +325,24 @@ function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15 }}>
         <span style={{ fontSize: 16 }}>{isActive ? '🏗' : '⏳'}</span>
         <span style={{ flex: 1, fontWeight: isActive ? 600 : 400 }}>
           {name} → ур. {item.target_level}
         </span>
         {isActive
           ? <span className={`ox-timer${secsLeft < 60 ? ' urgent' : ''}`}>{fmtSecs(secsLeft)}</span>
-          : <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+          : <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
               {new Date(item.end_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
             </span>
         }
         {confirming ? (
           <>
-            <span style={{ fontSize: 11, color: 'var(--ox-danger)', flexShrink: 0 }}>Отменить?</span>
+            <span style={{ fontSize: 13, color: 'var(--ox-danger)', flexShrink: 0 }}>Отменить?</span>
             <button
               type="button"
               className="btn-sm"
-              style={{ fontSize: 11, padding: '2px 8px', flexShrink: 0, background: 'var(--ox-danger)', color: '#fff', border: 'none', borderRadius: 4 }}
+              style={{ fontSize: 13, padding: '2px 8px', flexShrink: 0, background: 'var(--ox-danger)', color: '#fff', border: 'none', borderRadius: 4 }}
               disabled={cancelPending}
               onClick={handleConfirm}
             >
@@ -351,7 +351,7 @@ function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem
             <button
               type="button"
               className="btn-ghost btn-sm"
-              style={{ fontSize: 11, padding: '2px 8px', flexShrink: 0 }}
+              style={{ fontSize: 13, padding: '2px 8px', flexShrink: 0 }}
               onClick={() => setConfirming(false)}
             >
               Нет
@@ -364,7 +364,7 @@ function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem
             disabled={cancelPending || secsLeft === 0}
             onClick={handleCancelClick}
             title="Отменить (ресурсы вернутся)"
-            style={{ fontSize: 11, padding: '2px 8px', flexShrink: 0 }}
+            style={{ fontSize: 13, padding: '2px 8px', flexShrink: 0 }}
           >
             ✕
           </button>

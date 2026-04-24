@@ -112,7 +112,7 @@ export function CreditsScreen() {
             background: 'rgba(245,158,11,0.12)',
             border: '1px solid rgba(245,158,11,0.6)',
             color: 'var(--ox-warn, #f59e0b)',
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: 600,
           }}
         >
@@ -142,7 +142,7 @@ export function CreditsScreen() {
                 </div>
                 <div className="credit-package-price">{pkg.price_rub.toLocaleString('ru-RU')} ₽</div>
                 {hint && (
-                  <div style={{ fontSize: 11, color: 'var(--ox-fg-dim)', marginBottom: 8, lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', marginBottom: 8, lineHeight: 1.4 }}>
                     {hint}
                   </div>
                 )}
@@ -161,12 +161,12 @@ export function CreditsScreen() {
 
       {/* Что можно купить на кредиты */}
       <details style={{ marginTop: 16, marginBottom: 16 }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 14, padding: '8px 0' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 16, padding: '8px 0' }}>
           💡 На что потратить кредиты?
         </summary>
         <div style={{ padding: 12, background: 'var(--ox-bg-panel)', borderRadius: 6, marginTop: 6 }}>
           {CREDIT_PRICING_HINTS.map((h) => (
-            <div key={h.label} style={{ display: 'flex', gap: 8, padding: '4px 0', fontSize: 13 }}>
+            <div key={h.label} style={{ display: 'flex', gap: 8, padding: '4px 0', fontSize: 15 }}>
               <span>{h.icon}</span>
               <span style={{ flex: 1, color: 'var(--ox-fg)' }}>{h.label}</span>
               <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>{h.value}</span>

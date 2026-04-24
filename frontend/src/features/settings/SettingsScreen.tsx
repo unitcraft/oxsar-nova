@@ -137,10 +137,10 @@ export function SettingsScreen() {
 
       {/* Профиль */}
       <section className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Профиль</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Профиль</h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>Email</label>
+          <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Email</label>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               type="email"
@@ -159,12 +159,12 @@ export function SettingsScreen() {
               Сохранить
             </button>
           </div>
-          {emailSaved && <span style={{ fontSize: 12, color: 'var(--ox-success)' }}>✓ Email обновлён</span>}
-          {emailError && <span style={{ fontSize: 12, color: 'var(--ox-danger)' }}>{emailError}</span>}
+          {emailSaved && <span style={{ fontSize: 14, color: 'var(--ox-success)' }}>✓ Email обновлён</span>}
+          {emailError && <span style={{ fontSize: 14, color: 'var(--ox-danger)' }}>{emailError}</span>}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>Язык</label>
+          <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Язык</label>
           <select
             className="ox-input"
             value={data.language}
@@ -176,7 +176,7 @@ export function SettingsScreen() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>Часовой пояс</label>
+          <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Часовой пояс</label>
           <select
             className="ox-input"
             value={data.timezone}
@@ -191,11 +191,11 @@ export function SettingsScreen() {
 
       {/* Безопасность */}
       <section className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Безопасность</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Безопасность</h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>Текущий пароль</label>
+            <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Текущий пароль</label>
             <input
               type="password"
               className="ox-input"
@@ -205,7 +205,7 @@ export function SettingsScreen() {
             />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>Новый пароль</label>
+            <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Новый пароль</label>
             <input
               type="password"
               className="ox-input"
@@ -215,7 +215,7 @@ export function SettingsScreen() {
             />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 13, color: 'var(--ox-fg-dim)' }}>Повторите новый пароль</label>
+            <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Повторите новый пароль</label>
             <input
               type="password"
               className="ox-input"
@@ -233,23 +233,23 @@ export function SettingsScreen() {
           >
             Сменить пароль
           </button>
-          {pwSaved && <span style={{ fontSize: 12, color: 'var(--ox-success)' }}>✓ Пароль изменён</span>}
-          {pwError && <span style={{ fontSize: 12, color: 'var(--ox-danger)' }}>{pwError}</span>}
+          {pwSaved && <span style={{ fontSize: 14, color: 'var(--ox-success)' }}>✓ Пароль изменён</span>}
+          {pwError && <span style={{ fontSize: 14, color: 'var(--ox-danger)' }}>{pwError}</span>}
         </div>
       </section>
 
       {/* Режим отпуска */}
       <section className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Режим отпуска</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Режим отпуска</h3>
 
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
+        <p style={{ margin: 0, fontSize: 15, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
           В режиме отпуска вы защищены от атак, но не можете строить, исследовать, отправлять флот или торговать.
           Минимальный интервал между отпусками — 20 дней.
         </p>
 
         {isOnVacation ? (
           <>
-            <div style={{ fontSize: 13, color: 'var(--ox-accent)' }}>
+            <div style={{ fontSize: 15, color: 'var(--ox-accent)' }}>
               ✈ Отпуск активен с {new Date(data.vacation_since!).toLocaleDateString('ru-RU')}
             </div>
             <button
@@ -275,7 +275,7 @@ export function SettingsScreen() {
               </button>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <p style={{ margin: 0, fontSize: 13, color: 'var(--ox-warn, #f59e0b)', fontWeight: 600 }}>
+                <p style={{ margin: 0, fontSize: 15, color: 'var(--ox-warn, #f59e0b)', fontWeight: 600 }}>
                   ⚠ Вы уверены? Вся активность будет заморожена.
                 </p>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -296,7 +296,7 @@ export function SettingsScreen() {
                   </button>
                 </div>
                 {vacationSetMutation.isError && (
-                  <span style={{ fontSize: 12, color: 'var(--ox-danger)' }}>
+                  <span style={{ fontSize: 14, color: 'var(--ox-danger)' }}>
                     {vacationSetMutation.error instanceof Error ? vacationSetMutation.error.message : 'Ошибка'}
                   </span>
                 )}
@@ -317,7 +317,7 @@ export function SettingsScreen() {
         display: 'flex', flexDirection: 'column', gap: 12,
         background: 'rgba(239,68,68,0.03)',
       }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-danger)' }}>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-danger)' }}>
           ⚠ Опасная зона
         </h3>
 
@@ -332,7 +332,7 @@ export function SettingsScreen() {
           </button>
         ) : (
           <>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: 15, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
               Аккаунт будет удалён навсегда: планеты, флоты, сообщения и участие в альянсе
               исчезнут. Восстановление невозможно. Для подтверждения требуется одноразовый
               код, который будет отправлен вам в системные сообщения.
@@ -354,7 +354,7 @@ export function SettingsScreen() {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>
+                <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>
                   Код отправлен в сообщения (папка «Система»). Действителен до{' '}
                   <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg)' }}>
                     {codeExpires ? new Date(codeExpires).toLocaleTimeString('ru-RU') : '—'}
@@ -392,7 +392,7 @@ export function SettingsScreen() {
             )}
 
             {deleteError && (
-              <span style={{ fontSize: 12, color: 'var(--ox-danger)' }}>{deleteError}</span>
+              <span style={{ fontSize: 14, color: 'var(--ox-danger)' }}>{deleteError}</span>
             )}
           </>
         )}
@@ -438,10 +438,10 @@ function PlanetOrderSection() {
 
   return (
     <section className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>
+      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>
         Порядок планет
       </h3>
-      <p style={{ margin: 0, fontSize: 12, color: 'var(--ox-fg-dim)' }}>
+      <p style={{ margin: 0, fontSize: 14, color: 'var(--ox-fg-dim)' }}>
         Перетащите, чтобы изменить порядок. Этот порядок используется в переключателе планет.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -462,13 +462,13 @@ function PlanetOrderSection() {
           >
             <span style={{ color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>⋮⋮</span>
             <span style={{ flex: 1 }}>🪐 {p.name}</span>
-            <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 11, color: 'var(--ox-fg-muted)' }}>
+            <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 13, color: 'var(--ox-fg-muted)' }}>
               [{p.galaxy}:{p.system}:{p.position}]
             </span>
           </div>
         ))}
       </div>
-      {reorder.isPending && <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>💾 Сохранение…</span>}
+      {reorder.isPending && <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>💾 Сохранение…</span>}
     </section>
   );
 }

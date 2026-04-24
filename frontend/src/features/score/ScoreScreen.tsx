@@ -117,7 +117,7 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
         <div className="ox-panel" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 28 }}>{MEDAL[myRank.data.rank - 1] ?? '🎯'}</span>
           <div>
-            <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>Ваше место в рейтинге «{typeMeta.label}»</div>
+            <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>Ваше место в рейтинге «{typeMeta.label}»</div>
             <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>
               #{myRank.data.rank}
             </div>
@@ -183,10 +183,10 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
                   >
                     <td data-label="#" className="num">{MEDAL[e.rank - 1] ?? e.rank}</td>
                     <td data-label="Игрок" style={{ fontWeight: e.rank <= 3 ? 700 : 400 }}>{e.username}</td>
-                    <td data-label="Альянс" style={{ fontSize: 11, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
+                    <td data-label="Альянс" style={{ fontSize: 13, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
                       {e.alliance_tag ? `[${e.alliance_tag}]` : '—'}
                     </td>
-                    <td data-label="Координаты" style={{ fontFamily: 'var(--ox-mono)', fontSize: 12 }}>
+                    <td data-label="Координаты" style={{ fontFamily: 'var(--ox-mono)', fontSize: 14 }}>
                       {e.home_galaxy != null && e.home_system != null && e.home_position != null ? (
                         <button
                           type="button"
@@ -304,13 +304,13 @@ function VacationTab() {
                 <tr key={e.user_id}>
                   <td className="num">{e.rank}</td>
                   <td>{e.username}</td>
-                  <td style={{ fontSize: 11, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
+                  <td style={{ fontSize: 13, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
                     {e.alliance_tag ? `[${e.alliance_tag}]` : '—'}
                   </td>
                   <td className="num" style={{ color: 'var(--ox-accent)' }}>
                     {Math.round(e.points).toLocaleString('ru-RU')}
                   </td>
-                  <td style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+                  <td style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
                     ✈ {new Date(e.vacation_since).toLocaleDateString('ru-RU')}
                   </td>
                 </tr>

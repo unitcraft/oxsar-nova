@@ -77,7 +77,7 @@ export function PlanetOptionsScreen({
           type="button"
           className="btn btn-ghost btn-sm"
           onClick={onBack}
-          style={{ padding: '4px 8px', fontSize: 14 }}
+          style={{ padding: '4px 8px', fontSize: 16 }}
         >
           ← Назад
         </button>
@@ -88,7 +88,7 @@ export function PlanetOptionsScreen({
 
       {/* Переименование */}
       <div className="ox-panel" style={{ padding: 20 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 12 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 12 }}>
           Переименовать
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
@@ -116,10 +116,10 @@ export function PlanetOptionsScreen({
       {/* Установить главной */}
       {canSetHome && (
         <div className="ox-panel" style={{ padding: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 12 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 12 }}>
             Главная планета
           </div>
-          <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', marginBottom: 12 }}>
+          <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', marginBottom: 12 }}>
             Текущая главная: {planets.find((p) => p.id === homePlanetId)?.name || '—'}
           </div>
           <button
@@ -135,7 +135,7 @@ export function PlanetOptionsScreen({
 
       {isHome && (
         <div className="ox-panel" style={{ padding: 20, background: 'rgba(76, 175, 80, 0.05)', border: '1px solid rgba(76, 175, 80, 0.2)' }}>
-          <div style={{ fontSize: 13, color: 'var(--ox-success)', fontWeight: 500 }}>
+          <div style={{ fontSize: 15, color: 'var(--ox-success)', fontWeight: 500 }}>
             ✓ Это ваша главная планета
           </div>
         </div>
@@ -143,7 +143,7 @@ export function PlanetOptionsScreen({
 
       {planet.is_moon && !canSetHome && (
         <div className="ox-panel" style={{ padding: 20, background: 'rgba(158, 158, 158, 0.05)', border: '1px solid rgba(158, 158, 158, 0.2)' }}>
-          <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', fontWeight: 500 }}>
+          <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', fontWeight: 500 }}>
             ℹ Луны не могут быть главной планетой
           </div>
         </div>
@@ -152,13 +152,13 @@ export function PlanetOptionsScreen({
       {/* Покинуть планету */}
       {canAbandon && (
         <div className="ox-panel" style={{ padding: 20, background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-danger)', marginBottom: 12 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-danger)', marginBottom: 12 }}>
             Покинуть планету
           </div>
-          <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', marginBottom: 12 }}>
+          <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', marginBottom: 12 }}>
             Это действие необратимо. Введите код подтверждения для удаления.
           </div>
-          <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)', marginBottom: 12, padding: '8px 12px', background: 'var(--ox-bg)', borderRadius: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)', marginBottom: 12, padding: '8px 12px', background: 'var(--ox-bg)', borderRadius: 4 }}>
             Код: <span style={{ fontWeight: 700 }}>{expectedCode}</span>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
@@ -185,7 +185,7 @@ export function PlanetOptionsScreen({
 
       {!canAbandon && planet.is_moon && (
         <div className="ox-panel" style={{ padding: 20, background: 'rgba(158, 158, 158, 0.05)', border: '1px solid rgba(158, 158, 158, 0.2)' }}>
-          <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', fontWeight: 500 }}>
+          <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', fontWeight: 500 }}>
             ℹ Луны удаляются автоматически при уничтожении планеты
           </div>
         </div>

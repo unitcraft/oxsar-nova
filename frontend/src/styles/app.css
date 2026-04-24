@@ -62,7 +62,10 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-  font-size: 15px;
+  /* Базовый размер подняли с 15px → 17px, ближе к стандарту веба
+     (Habr, Medium, обычные статьи — 16-18px). Все остальные
+     размеры в px внутри UI рассчитаны от этого, см. ниже группы. */
+  font-size: 17px;
   scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
 }
@@ -108,7 +111,7 @@ a:hover { opacity: 0.8; }
 
 button {
   font-family: var(--ox-font);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   border: none;
@@ -174,7 +177,7 @@ button {
 }
 
 /* Sm */
-.btn-sm { padding: 4px 10px; font-size: 12px; min-height: 28px; border-radius: 6px; }
+.btn-sm { padding: 4px 10px; font-size: 14px; min-height: 28px; border-radius: 6px; }
 
 /* Icon-only */
 .btn-icon {
@@ -213,7 +216,7 @@ button:disabled, .btn:disabled {
 
 input, textarea, select {
   font-family: var(--ox-font);
-  font-size: 14px;
+  font-size: 16px;
   color: var(--ox-fg);
   background: rgba(5, 13, 24, 0.7);
   border: 1px solid var(--ox-border);
@@ -260,7 +263,7 @@ label {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--ox-fg-dim);
   letter-spacing: 0.04em;
@@ -300,7 +303,7 @@ label {
 }
 
 .ox-section-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -317,12 +320,12 @@ label {
 .ox-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 16px;
 }
 .ox-table th {
   text-align: left;
   padding: 10px 12px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -340,7 +343,7 @@ label {
 .ox-table td.num {
   font-family: var(--ox-mono);
   text-align: right;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ox-accent);
 }
 
@@ -361,11 +364,11 @@ label {
     align-items: center;
     padding: 4px 0;
     border: none;
-    font-size: 13px;
+    font-size: 15px;
   }
   .ox-table-responsive td::before {
     content: attr(data-label);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -432,7 +435,7 @@ label {
   gap: 4px;
   padding: 2px 8px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -450,7 +453,7 @@ label {
 .ox-num {
   font-family: var(--ox-mono);
   font-weight: 500;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ox-accent);
 }
 .ox-num-lg { font-size: 20px; font-weight: 700; }
@@ -464,9 +467,9 @@ label {
   align-items: center;
   gap: 4px;
   font-family: var(--ox-mono);
-  font-size: 13px;
+  font-size: 15px;
 }
-.ox-res-icon { font-size: 14px; }
+.ox-res-icon { font-size: 16px; }
 
 /* ============================================================
    ТАЙМЕР
@@ -474,7 +477,7 @@ label {
 
 .ox-timer {
   font-family: var(--ox-mono);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--ox-fg-dim);
   letter-spacing: 0.05em;
@@ -500,7 +503,7 @@ label {
   border-bottom: 2px solid transparent;
   border-radius: 0;
   padding: 8px 16px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.04em;
   transition: all var(--ox-tr);
@@ -620,8 +623,8 @@ label {
 .ox-toast:hover { border-color: var(--ox-border-hover); }
 .ox-toast-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
 .ox-toast-body { flex: 1; }
-.ox-toast-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
-.ox-toast-msg { font-size: 12px; color: var(--ox-fg-dim); line-height: 1.4; }
+.ox-toast-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.ox-toast-msg { font-size: 14px; color: var(--ox-fg-dim); line-height: 1.4; }
 
 .ox-toast.success { border-left: 3px solid var(--ox-success); }
 .ox-toast.warning { border-left: 3px solid var(--ox-warning); }
@@ -706,7 +709,7 @@ label {
 .ox-res-item .icon { font-size: 15px; }
 .ox-res-item .val {
   font-family: var(--ox-mono);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--ox-fg);
   transition: color var(--ox-tr);
@@ -743,14 +746,14 @@ label {
   border-radius: var(--ox-r);
   cursor: pointer;
   transition: all var(--ox-tr);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--ox-fg);
   position: relative;
 }
 .ox-planet-switcher:hover { border-color: var(--ox-accent-border); background: var(--ox-bg-active); }
 .ox-planet-switcher-icon { font-size: 16px; }
-.ox-planet-switcher-coords { font-family: var(--ox-mono); font-size: 11px; color: var(--ox-fg-dim); }
+.ox-planet-switcher-coords { font-family: var(--ox-mono); font-size: 13px; color: var(--ox-fg-dim); }
 
 .ox-planet-dropdown {
   min-width: 240px;
@@ -770,7 +773,7 @@ label {
   padding: 10px 14px;
   cursor: pointer;
   transition: background var(--ox-tr);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ox-fg);
 }
 .ox-planet-option:hover { background: var(--ox-bg-hover); }
@@ -822,7 +825,7 @@ label {
   border-radius: 0;
   border-left: 3px solid transparent;
   color: var(--ox-fg-dim);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -865,7 +868,7 @@ label {
 /* ── Футер ── */
 .ox-footer {
   padding: 12px 20px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--ox-fg-muted);
   border-top: 1px solid var(--ox-border);
   text-align: center;
@@ -913,7 +916,7 @@ label {
 }
 .ox-unit-card-info { flex: 1; min-width: 0; }
 .ox-unit-card-name {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--ox-fg);
   white-space: nowrap;
@@ -921,7 +924,7 @@ label {
   text-overflow: ellipsis;
 }
 .ox-unit-card-level {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ox-fg-dim);
   font-family: var(--ox-mono);
 }
@@ -957,10 +960,10 @@ label {
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--ox-fg-dim);
 }
-.ox-stat .val { font-family: var(--ox-mono); color: var(--ox-fg); font-size: 12px; }
+.ox-stat .val { font-family: var(--ox-mono); color: var(--ox-fg); font-size: 14px; }
 
 /* ============================================================
    ОЧЕРЕДЬ СТРОИТЕЛЬСТВА
@@ -982,8 +985,8 @@ label {
   border-radius: var(--ox-r);
 }
 .ox-queue-item-info { flex: 1; min-width: 0; }
-.ox-queue-item-name { font-size: 13px; font-weight: 600; color: var(--ox-fg); }
-.ox-queue-item-timer { font-family: var(--ox-mono); font-size: 12px; color: var(--ox-warning); }
+.ox-queue-item-name { font-size: 15px; font-weight: 600; color: var(--ox-fg); }
+.ox-queue-item-timer { font-family: var(--ox-mono); font-size: 14px; color: var(--ox-warning); }
 .ox-queue-item-progress { margin-top: 6px; }
 
 /* ============================================================
@@ -1018,7 +1021,7 @@ label {
 }
 .ox-login-sub {
   text-align: center;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ox-fg-muted);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1035,10 +1038,10 @@ label {
   color: var(--ox-fg-muted);
 }
 .ox-empty-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.4; }
-.ox-empty-text { font-size: 14px; }
+.ox-empty-text { font-size: 16px; }
 
-.ox-error-text { color: var(--ox-danger); font-size: 13px; }
-.ox-success-text { color: var(--ox-success); font-size: 13px; }
+.ox-error-text { color: var(--ox-danger); font-size: 15px; }
+.ox-success-text { color: var(--ox-success); font-size: 15px; }
 
 /* ============================================================
    СТРАНИЦА АТАКИ / БАННЕР
@@ -1051,7 +1054,7 @@ label {
   padding: 12px 16px;
   border-radius: var(--ox-r);
   margin-bottom: 16px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
 }
 .ox-alert-banner.danger {
@@ -1205,8 +1208,8 @@ label {
 .ox-text-center { text-align: center; }
 .ox-text-right  { text-align: right; }
 .ox-fw-bold { font-weight: 700; }
-.ox-fz-sm   { font-size: 12px; }
-.ox-fz-xs   { font-size: 11px; }
+.ox-fz-sm   { font-size: 14px; }
+.ox-fz-xs   { font-size: 13px; }
 .ox-muted   { color: var(--ox-fg-muted); }
 .ox-dim     { color: var(--ox-fg-dim); }
 .ox-accent  { color: var(--ox-accent); }

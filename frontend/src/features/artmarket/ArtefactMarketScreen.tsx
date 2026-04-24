@@ -65,7 +65,7 @@ export function ArtefactMarketScreen() {
           🏷 Рынок артефактов
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>Баланс:</span>
+          <span style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>Баланс:</span>
           <span style={{ fontFamily: 'var(--ox-mono)', fontWeight: 700, color: 'var(--ox-accent)', fontSize: 15 }}>
             {creditVal} cr
           </span>
@@ -82,7 +82,7 @@ export function ArtefactMarketScreen() {
       </div>
 
       {shown.length === 0 ? (
-        <div style={{ color: 'var(--ox-fg-dim)', fontSize: 14, padding: '8px 0' }}>
+        <div style={{ color: 'var(--ox-fg-dim)', fontSize: 16, padding: '8px 0' }}>
           Нет офферов.
         </div>
       ) : (
@@ -113,7 +113,7 @@ export function ArtefactMarketScreen() {
                       <td data-label="Цена" className="num" style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>
                         {o.price_credit} cr
                       </td>
-                      <td data-label="Дата" style={{ fontSize: 11, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+                      <td data-label="Дата" style={{ fontSize: 13, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
                         {listedDate}
                       </td>
                       <td>

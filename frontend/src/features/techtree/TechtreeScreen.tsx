@@ -131,17 +131,17 @@ function TechCard({ node }: { node: TechNode }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <div style={{ fontWeight: 600 }}>{name}</div>
         {showLevel && node.current_level > 0 && (
-          <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 12, color: 'var(--ox-accent)' }}>
+          <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 14, color: 'var(--ox-accent)' }}>
             Ур. {node.current_level}
           </span>
         )}
         {!showLevel && node.unlocked && (
-          <span style={{ fontSize: 11, color: 'var(--ox-success)' }}>✓ доступно</span>
+          <span style={{ fontSize: 13, color: 'var(--ox-success)' }}>✓ доступно</span>
         )}
       </div>
 
       {node.requirements.length === 0 ? (
-        <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>
+        <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>
           Без предусловий
         </div>
       ) : (
@@ -150,7 +150,7 @@ function TechCard({ node }: { node: TechNode }) {
             <div
               key={`${req.kind}-${req.key}-${i}`}
               style={{
-                fontSize: 11,
+                fontSize: 13,
                 color: req.met ? 'var(--ox-fg-dim)' : 'var(--ox-danger)',
                 fontFamily: 'var(--ox-mono)',
                 display: 'flex',

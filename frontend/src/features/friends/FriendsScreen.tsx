@@ -38,7 +38,7 @@ export function FriendsScreen() {
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
       <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>⭐ Друзья</h2>
-      <p style={{ margin: 0, fontSize: 12, color: 'var(--ox-fg-dim)' }}>
+      <p style={{ margin: 0, fontSize: 14, color: 'var(--ox-fg-dim)' }}>
         Друзья подсвечены в галактике звёздочкой. Добавить в друзья можно из результатов поиска (Ctrl+K).
       </p>
 
@@ -67,13 +67,13 @@ export function FriendsScreen() {
                   return (
                     <tr key={f.user_id}>
                       <td style={{ fontWeight: 600 }}>⭐ {f.username}</td>
-                      <td style={{ fontSize: 11, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
+                      <td style={{ fontSize: 13, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
                         {f.alliance_tag ? `[${f.alliance_tag}]` : '—'}
                       </td>
                       <td className="num" style={{ color: 'var(--ox-accent)' }}>
                         {Math.round(f.points).toLocaleString('ru-RU')}
                       </td>
-                      <td style={{ fontSize: 12, color: act.color }}>{act.label}</td>
+                      <td style={{ fontSize: 14, color: act.color }}>{act.label}</td>
                       <td>
                         <button
                           type="button"

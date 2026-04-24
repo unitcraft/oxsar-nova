@@ -163,7 +163,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
       {/* Active fleets */}
       {list.length > 0 && (
         <div className="ox-panel" style={{ overflow: 'hidden' }}>
-          <div style={{ padding: '10px 16px 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', borderBottom: '1px solid var(--ox-border)' }}>
+          <div style={{ padding: '10px 16px 8px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', borderBottom: '1px solid var(--ox-border)' }}>
             Активные флоты ({list.length})
           </div>
           <div style={{ overflowX: 'auto' }}>
@@ -182,7 +182,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
                 {list.map((f) => (
                   <tr key={f.id}>
                     <td>{MISSION_LABELS[f.mission] ?? `#${f.mission}`}</td>
-                    <td style={{ fontFamily: 'var(--ox-mono)', fontSize: 12 }}>
+                    <td style={{ fontFamily: 'var(--ox-mono)', fontSize: 14 }}>
                       [{f.dst_galaxy}:{f.dst_system}:{f.dst_position}{f.dst_is_moon ? '🌑' : ''}]
                     </td>
                     <td>
@@ -192,7 +192,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
                             const id = Number(unitId);
                             const img = imageOfId(id);
                             return (
-                              <span key={unitId} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
+                              <span key={unitId} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
                                 {img && <img src={img} alt="" width={14} height={14} style={{ imageRendering: 'pixelated', opacity: 0.85 }} />}
                                 {nameOf(id)} ×{count}
                               </span>
@@ -206,7 +206,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
                         {STATE_LABELS[f.state] ?? f.state}
                       </span>
                     </td>
-                    <td style={{ fontFamily: 'var(--ox-mono)', fontSize: 12 }}>
+                    <td style={{ fontFamily: 'var(--ox-mono)', fontSize: 14 }}>
                       <div><Countdown finishAt={f.state === 'outbound' ? f.arrive_at : (f.return_at ?? f.arrive_at)} /></div>
                     </td>
                     <td>
@@ -231,7 +231,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
 
       {/* Send form */}
       <div className="ox-panel" style={{ padding: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 16 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 16 }}>
           Новая миссия
         </div>
 
@@ -239,7 +239,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
           {/* Mission & destination */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Миссия</label>
+              <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Миссия</label>
               <select value={mission} onChange={(e) => setMission(Number(e.target.value))} style={{ width: '100%' }}>
                 {Object.entries(MISSION_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
@@ -248,15 +248,15 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
             </div>
 
             <div>
-              <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Координаты назначения</label>
+              <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Координаты назначения</label>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>G</span>
+                <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>G</span>
                 <input type="number" min={1} max={16} value={g} onChange={(e) => setG(Number(e.target.value))} style={{ width: 56 }} />
-                <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>S</span>
+                <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>S</span>
                 <input type="number" min={1} max={999} value={s} onChange={(e) => setS(Number(e.target.value))} style={{ width: 70 }} />
-                <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>P</span>
+                <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>P</span>
                 <input type="number" min={1} max={15} value={pos} onChange={(e) => setPos(Number(e.target.value))} style={{ width: 56 }} />
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14 }}>
                   <input type="checkbox" checked={isMoon} onChange={(e) => setIsMoon(e.target.checked)} />
                   🌑
                 </label>
@@ -265,14 +265,14 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
 
             {mission === 8 && (
               <div>
-                <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Название колонии</label>
+                <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Название колонии</label>
                 <input type="text" value={colonyName} onChange={(e) => setColonyName(e.target.value)} placeholder="Colony" maxLength={40} style={{ width: '100%' }} />
               </div>
             )}
 
             {(mission === 7 || mission === 8) && (
               <div>
-                <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>
                   Груз
                   {totalCargo > 0 && (
                     <span style={{ marginLeft: 8, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-muted)' }}>
@@ -289,7 +289,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
             )}
 
             <div>
-              <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>
                 Скорость: {speed}%
               </label>
               <input type="range" min={10} max={100} step={10} value={speed} onChange={(e) => setSpeed(Number(e.target.value))} style={{ width: '100%' }} />
@@ -298,14 +298,14 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
 
           {/* Ships selection */}
           <div>
-            <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 8 }}>
+            <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 8 }}>
               Корабли {totalShips > 0 && <span style={{ color: 'var(--ox-accent)', fontWeight: 700 }}>({totalShips} выбрано)</span>}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {SHIPS.map((ship) => (
                 <div key={ship.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <img src={imageOf(ship.key)} alt="" width={28} height={28} style={{ imageRendering: 'pixelated', flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 13 }}>{nameOf(ship.id)}</span>
+                  <span style={{ flex: 1, fontSize: 15 }}>{nameOf(ship.id)}</span>
                   <input
                     type="number"
                     min={0}
@@ -320,7 +320,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
         </div>
 
         {fleetPreview && (
-          <div style={{ marginTop: 16, padding: '10px 14px', background: 'var(--ox-surface)', borderRadius: 6, border: '1px solid var(--ox-border)', display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)' }}>
+          <div style={{ marginTop: 16, padding: '10px 14px', background: 'var(--ox-surface)', borderRadius: 6, border: '1px solid var(--ox-border)', display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 14, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)' }}>
             <span>⏱ {fmtDuration(fleetPreview.secs)}</span>
             <span>↩ {fmtDuration(fleetPreview.secs * 2)}</span>
             {fleetPreview.totalFuel > 0 && <span>💧 {fleetPreview.totalFuel.toLocaleString('ru-RU')} (туда)</span>}
