@@ -106,6 +106,7 @@ var (
 	ErrTargetOnVacation   = errors.New("fleet: target player is on vacation (protected)")
 	ErrSenderOnVacation   = errors.New("fleet: you are on vacation, cannot send fleets")
 	ErrBashingLimit       = errors.New("fleet: bashing limit reached (too many attacks on this player)")
+	ErrPositionNotAllowed = errors.New("fleet: POSITION only to own planets or ally/NAP targets")
 )
 
 // Send — запуск TRANSPORT или ATTACK_SINGLE в зависимости от
@@ -115,7 +116,7 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 	if in.Mission == 0 {
 		in.Mission = 7 // обратная совместимость
 	}
-	if in.Mission != 7 && in.Mission != 8 && in.Mission != 9 && in.Mission != 10 &&
+	if in.Mission != 6 && in.Mission != 7 && in.Mission != 8 && in.Mission != 9 && in.Mission != 10 &&
 		in.Mission != 11 && in.Mission != 12 && in.Mission != 15 {
 		return Fleet{}, fmt.Errorf("%w: mission %d not supported",
 			ErrInvalidDispatch, in.Mission)
@@ -205,6 +206,12 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		// летит в неисследованную зону.
 		if in.Mission != 8 && in.Mission != 15 {
 			if err := s.checkTargetExists(ctx, tx, in.Dst); err != nil {
+				return err
+			}
+		}
+		// POSITION (6): только на свои планеты/луны или планеты ally/nap.
+		if in.Mission == 6 {
+			if err := s.checkPositionTarget(ctx, tx, in.UserID, in.Dst); err != nil {
 				return err
 			}
 		}
@@ -677,6 +684,55 @@ func (s *TransportService) checkTargetExists(ctx context.Context, tx pgx.Tx, c g
 	}
 	if !exists {
 		return ErrTargetNotFound
+	}
+	return nil
+}
+
+// checkPositionTarget — план 20 Ф.3: POSITION (mission=6) разрешён
+// только на свои планеты/луны или на планеты игроков-союзников
+// (alliance_relationships.relation IN ('ally','nap') AND status='active').
+func (s *TransportService) checkPositionTarget(ctx context.Context, tx pgx.Tx,
+	attackerID string, dst galaxy.Coords) error {
+	var targetUserID *string
+	err := tx.QueryRow(ctx, `
+		SELECT user_id FROM planets
+		WHERE galaxy=$1 AND system=$2 AND position=$3 AND is_moon=$4
+		  AND destroyed_at IS NULL
+	`, dst.Galaxy, dst.System, dst.Position, dst.IsMoon).Scan(&targetUserID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrTargetNotFound
+		}
+		return fmt.Errorf("position: read target: %w", err)
+	}
+	if targetUserID == nil {
+		return ErrPositionNotAllowed // астероид/пустой слот
+	}
+	if *targetUserID == attackerID {
+		return nil // собственная планета/луна
+	}
+	// Проверка alliance relation.
+	var allied bool
+	err = tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM users ua
+			JOIN users ut ON ut.id = $2
+			JOIN alliance_relationships r
+			  ON (r.alliance_id = ua.alliance_id AND r.target_alliance_id = ut.alliance_id)
+			  OR (r.alliance_id = ut.alliance_id AND r.target_alliance_id = ua.alliance_id)
+			WHERE ua.id = $1
+			  AND ua.alliance_id IS NOT NULL
+			  AND ut.alliance_id IS NOT NULL
+			  AND r.relation IN ('ally', 'nap')
+			  AND r.status = 'active'
+		)
+	`, attackerID, *targetUserID).Scan(&allied)
+	if err != nil {
+		return fmt.Errorf("position: check relation: %w", err)
+	}
+	if !allied {
+		return ErrPositionNotAllowed
 	}
 	return nil
 }

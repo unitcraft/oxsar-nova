@@ -1995,7 +1995,7 @@ components:
         carry_silicon:  { type: integer, format: int64, minimum: 0 }
         carry_hydrogen: { type: integer, format: int64, minimum: 0 }
         speed_percent:  { type: integer, minimum: 10, maximum: 100 }
-        mission:        { type: integer, description: "7 = TRANSPORT, 9 = RECYCLING, 10 = ATTACK_SINGLE" }
+        mission:        { type: integer, description: "6 = POSITION (rebase), 7 = TRANSPORT, 8 = COLONIZE, 9 = RECYCLING, 10 = ATTACK_SINGLE, 11 = SPY, 12 = ACS_ATTACK, 15 = EXPEDITION" }
 
     Coords:
       type: object
