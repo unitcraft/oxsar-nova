@@ -6734,3 +6734,45 @@ Frontend:
 дешевле, чем вводить условный рендер «если support, скрыть кнопку
 Credit». Все кнопки показаны, у support они падают с понятным
 сообщением при попытке использовать.
+
+
+================================================================================
+ИТЕРАЦИЯ 2026-04-24 (plan 14 Ф.8.3): confirm-модалки
+================================================================================
+
+Ф.8.3 из плана 14: подтверждения перед destructive операциями в UI.
+
+Использовал существующий компонент @/ui/Confirm (frontend/src/ui/Confirm.tsx),
+который поверх Modal даёт универсальный паттерн подтверждений.
+
+В AdminScreen добавлено state pendingConfirm и helper ask(message, fn, danger?).
+Применено к:
+  - Ban / Unban (разные сообщения, Ban — danger=true, Unban — false)
+  - Начислить кредиты (danger=true если amount<0, иначе false — выдача
+    вверх не так страшна, но confirm всё равно есть)
+  - Установить роль (danger=true — privilege change)
+В list ролей добавлен вариант 'support' (раньше был пропущен в UI,
+но в БД был).
+
+confirm() в AdminEventsTab и AdminUserProfilePanel (ResurrectDead,
+DeleteArtefact) оставлены на browser confirm() — для низкорисковых
+операций дизайн-модалка избыточна.
+
+План 14 закрыт частями:
+  Ф.1 (audit log + табы): commit 60661b0
+  Ф.2 (глубокая карточка + ресурсы/артефакты): commit 15e27b8
+  Ф.3 (events + dead-letter): commit 1588019
+  Ф.8.1 (RBAC support/admin/superadmin): commit af59b64
+  Ф.8.3 (confirm destructive): этот коммит
+
+Осталось в плане 14 (отложено):
+  Ф.2.4 force-recall fleet
+  Ф.2.5 planet rename/transfer/delete
+  Ф.2.6 soft-delete user + restore
+  Ф.3.5 trace explorer
+  Ф.4 economy health dashboard
+  Ф.5 combat replay
+  Ф.6 CMS-improvements (preview, rollback, i18n editor)
+  Ф.7 monitoring (health-detailed, slow queries)
+  Ф.8.2 rate-limit админ-действий
+  Ф.8.4 2FA superadmin
