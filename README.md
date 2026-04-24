@@ -3,7 +3,7 @@
 Браузерная MMO-стратегия в стиле OGame. Современная реализация классического oxsar2
 на Go (backend) и TypeScript/React (frontend).
 
-Полное техническое задание: [oxsar-spec.txt](oxsar-spec.txt).
+Полное техническое задание: [docs/oxsar-spec.txt](docs/oxsar-spec.txt).
 
 ## Статус
 
@@ -44,7 +44,7 @@ deploy/        docker-образы, k8s-манифесты
 
 - [CLAUDE.md](CLAUDE.md) — как работать с репозиторием для разработчиков и AI-ассистентов.
 - [docs/adr/](docs/adr/) — принятые архитектурные решения.
-- [oxsar-spec.txt](oxsar-spec.txt) — полное ТЗ проекта.
+- [docs/oxsar-spec.txt](docs/oxsar-spec.txt) — полное ТЗ проекта.
 
 ## Лицензия
 

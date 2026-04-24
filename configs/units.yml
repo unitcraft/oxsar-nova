@@ -1,5 +1,5 @@
 # Единый реестр юнитов — источник истины для Go-констант и TS-типов
-# (см. §18.11 oxsar-spec.txt). ID совпадают с UNIT_* из oxsar2/consts.php,
+# (см. §18.11 docs/oxsar-spec.txt). ID совпадают с UNIT_* из oxsar2/consts.php,
 # чтобы сохранить совместимость с балансом и java-боем oxsar2-java.
 #
 # type: construction | moon_construction | research | fleet | defense

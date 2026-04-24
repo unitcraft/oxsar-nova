@@ -1,5 +1,5 @@
 # Каталог артефактов. ID и эффекты 1-в-1 из oxsar2/consts.php +
-# game/Artefact.class.php (см. §5.10.1 oxsar-spec.txt).
+# game/Artefact.class.php (см. §5.10.1 docs/oxsar-spec.txt).
 #
 # effect:
 #   type: factor_user | factor_planet | factor_all_planets |
