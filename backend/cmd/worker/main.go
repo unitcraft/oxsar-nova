@@ -163,6 +163,9 @@ func run() error {
 
 	alienSvc := alien.NewService(db, cat)
 	w.Register(event.KindAlienAttack, alienSvc.AttackHandler())
+	w.Register(event.KindAlienHalt, alienSvc.HaltHandler())
+	w.Register(event.KindAlienHolding, alienSvc.HoldingHandler())
+	w.Register(event.KindAlienHoldingAI, alienSvc.HoldingAIHandler())
 
 	automsgSvc := automsg.NewService(db)
 

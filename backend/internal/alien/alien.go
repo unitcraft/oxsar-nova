@@ -256,6 +256,7 @@ func (s *Service) AttackHandler() event.Handler {
 
 		// Лут: при победе инопланетян — 30% ресурсов планеты.
 		var grabCredit int64
+		var haltSpawned bool
 		if report.Winner == "attackers" {
 			lootM := int64(defMetal * 0.3)
 			lootS := int64(defSil * 0.3)
@@ -273,6 +274,17 @@ func (s *Service) AttackHandler() event.Handler {
 			grabCredit, err = applyGrabCredit(ctx, tx, defUserID, rng.New(fnvHash(e.ID)^0xcafebabe))
 			if err != nil {
 				return fmt.Errorf("alien attack: grab credit: %w", err)
+			}
+			// HALT: планета переходит в удержание пришельцами, если
+			// их флот выжил. Используем rand с seed от event.ID для
+			// детерминированности.
+			if len(report.Attackers) > 0 {
+				survivors := survivorsToStacks(report.Attackers[0].Units)
+				r := rand.New(rand.NewPCG(fnvHash(e.ID)^0xa11e50, fnvHash(e.ID)^0xa11e51))
+				if err := s.spawnHalt(ctx, tx, pl, survivors, r); err != nil {
+					return fmt.Errorf("alien attack: spawn halt: %w", err)
+				}
+				haltSpawned = len(survivors) > 0
 			}
 		}
 
@@ -305,6 +317,9 @@ func (s *Service) AttackHandler() event.Handler {
 		}
 		if giftCredit > 0 {
 			body += fmt.Sprintf(" Инопланетяне оставили %d кредитов в знак уважения.", giftCredit)
+		}
+		if haltSpawned {
+			body += " Их флот остался на орбите — ждите отдельного сообщения об удержании."
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
