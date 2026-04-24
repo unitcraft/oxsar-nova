@@ -6635,3 +6635,66 @@ UI:
     admin-namespace)
   - Ф.2.5 planet rename/transfer/delete
   - Ф.2.6 soft-delete user + restore
+
+
+================================================================================
+ИТЕРАЦИЯ 2026-04-24 (план 17): исследование геймплея и план улучшений
+================================================================================
+
+Задача: проанализировать текущий геймплей, существующие планы и упрощения,
+предложить улучшения без нарушения баланса legacy oxsar2.
+
+Анализ охватил:
+- docs/simplifications.md (все 60+ записей)
+- docs/plans/ (планы 01-16)
+- configs/ (buildings, ships, artefacts, rapidfire, requirements)
+- Статус alien AI (план 15), alliance (M6), expedition, market
+
+Главные болевые точки геймплея:
+1. Нет антибашинг-защиты (PvP abuse)
+2. black_hole/unknown expedition outcomes не реализованы
+3. HOLDING_AI 6/8 действий — пустые тела (дизайн-возможность)
+4. Нет ежедневных заданий (daily loop для новичков)
+5. Единственный рейтинг — суммарный score (нет category leaders)
+6. Вселенная статична (нет временных событий)
+
+Создан docs/plans/17-gameplay-improvements.md:
+  Блок A: Антибашинг — правило 6:1 + щит неактивности
+  Блок B: Expedition чёрная дыра + unknown
+  Блок C: HOLDING_AI подарки (после ADR)
+  Блок D: Daily quests (три задания в сутки)
+  Блок E: Категориальные рейтинги (5 лидербордов по score_*)
+  Блок F: Галактические события (раз в 3-7 дней)
+  Блок G: UX — прогноз ресурсов, WS push, fleet tracker в galaxy
+
+Все улучшения НЕ трогают балансовые формулы и боевой движок.
+Для C и F обязателен ADR до реализации.
+
+
+================================================================================
+ИТЕРАЦИЯ 2026-04-24 (plan 14 Ф.3): events + dead-letter
+================================================================================
+
+Третий шаг плана 14. Часть бэкенда уже была (EventsList/EventsStats/
+EventRetry/EventCancel), добавил два недостающих эндпоинта для
+dead-letter и собрал UI-таб.
+
+Backend:
+  backend/internal/admin/events_dead.go
+  - ListDeadEvents GET /api/admin/events/dead?kind=&user_id=&limit=&offset=
+  - ResurrectDeadEvent POST /api/admin/events/dead/{id}/resurrect —
+    в транзакции: INSERT в events (fire_at=now, attempt=0) +
+    DELETE из events_dead. ON CONFLICT DO UPDATE на случай race.
+  Оба эндпоинта подключены в main.go, описаны в openapi.yaml.
+
+UI:
+  Новый таб «⚡ События» в AdminScreen:
+  - AdminEventsMonitor (уже был) — активная очередь wait/error
+  - AdminEventsTab (новый) — компонует Monitor + dead-letter таблица
+    с колонками failed_at/kind/attempt/last_error/user-planet + кнопка
+    ♻ Retry (подтверждение через confirm()).
+  AdminEventsMonitor убран из users-таба (был дубль).
+
+Ф.3.1 (фильтры по trace_id) уже реализовано в EventsList на бэкенде;
+UI-контролов для trace_id нет, добавим при первой реальной потребности.
+Ф.3.5 (trace explorer кликом) — следующая итерация.

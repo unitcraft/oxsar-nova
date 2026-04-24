@@ -28,7 +28,7 @@ interface AutomsgDef {
   folder: number;
 }
 
-type AdminTab = 'users' | 'audit';
+type AdminTab = 'users' | 'events' | 'audit';
 
 export function AdminScreen() {
   const qc = useQueryClient();
@@ -90,13 +90,16 @@ export function AdminScreen() {
         <button type="button" aria-pressed={tab === 'users'} onClick={() => setTab('users')}>
           👥 Игроки
         </button>
+        <button type="button" aria-pressed={tab === 'events'} onClick={() => setTab('events')}>
+          ⚡ События
+        </button>
         <button type="button" aria-pressed={tab === 'audit'} onClick={() => setTab('audit')}>
           📜 Журнал действий
         </button>
       </div>
 
       {tab === 'audit' && <AdminAuditTab />}
-      {tab !== 'users' && tab !== 'audit' ? null : null}
+      {tab === 'events' && <AdminEventsTab />}
       {tab !== 'users' ? null : (<>
 
       {stats.data && (
@@ -107,8 +110,6 @@ export function AdminScreen() {
           <StatCard label="Событий в очереди" value={stats.data.events_pending} />
         </div>
       )}
-
-      <AdminEventsMonitor />
 
       <h3>Действия</h3>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -488,6 +489,102 @@ function StatCard({ label, value }: { label: string; value: number }) {
     <div style={{ border: '1px solid #444', padding: '8px 16px', borderRadius: 4, minWidth: 120 }}>
       <div style={{ fontSize: 13, color: 'var(--ox-muted, #888)' }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 700 }}>{value}</div>
+    </div>
+  );
+}
+
+// ── Events tab (план 14 Ф.3) ────────────────────────────────────────
+// Объединяет существующий AdminEventsMonitor (активная очередь wait/error)
+// с dead-letter explorer'ом.
+
+interface DeadEvent {
+  id: string;
+  user_id?: string | null;
+  planet_id?: string | null;
+  kind: number;
+  fire_at: string;
+  payload: Record<string, unknown>;
+  attempt: number;
+  last_error: string;
+  failed_at: string;
+}
+
+function AdminEventsTab() {
+  const qc = useQueryClient();
+  const dead = useQuery({
+    queryKey: ['admin-events-dead'],
+    queryFn: () => api.get<{ events: DeadEvent[] }>('/api/admin/events/dead?limit=200'),
+    refetchInterval: 30000,
+  });
+
+  const resurrect = useMutation({
+    mutationFn: (id: string) => api.post(`/api/admin/events/dead/${id}/resurrect`, {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin-events-dead'] });
+      void qc.invalidateQueries({ queryKey: ['admin-events'] });
+    },
+  });
+
+  const list = dead.data?.events ?? [];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <AdminEventsMonitor />
+
+      <div>
+        <h3 style={{ margin: '0 0 8px 0' }}>☠ Dead-letter ({list.length})</h3>
+        {dead.isLoading && <p>Загрузка…</p>}
+        {dead.isError && <p style={{ color: 'var(--ox-danger)' }}>Ошибка загрузки dead-letter</p>}
+        {list.length === 0 && !dead.isLoading && (
+          <p style={{ color: 'var(--ox-fg-muted)' }}>Пусто. События попадают сюда после N неудачных попыток.</p>
+        )}
+        {list.length > 0 && (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+            <thead>
+              <tr style={{ textAlign: 'left', borderBottom: '1px solid #444' }}>
+                <th style={{ padding: '6px 8px' }}>failed_at</th>
+                <th style={{ padding: '6px 8px' }}>kind</th>
+                <th style={{ padding: '6px 8px' }}>attempt</th>
+                <th style={{ padding: '6px 8px' }}>Ошибка</th>
+                <th style={{ padding: '6px 8px' }}>user/planet</th>
+                <th style={{ padding: '6px 8px' }} />
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((e) => (
+                <tr key={e.id} style={{ borderBottom: '1px solid #2a2a2a' }}>
+                  <td style={{ padding: '6px 8px', whiteSpace: 'nowrap', fontFamily: 'var(--ox-mono)', fontSize: 13 }}>
+                    {new Date(e.failed_at).toLocaleString('ru-RU')}
+                  </td>
+                  <td style={{ padding: '6px 8px' }}>{e.kind}</td>
+                  <td style={{ padding: '6px 8px' }}>{e.attempt}</td>
+                  <td style={{ padding: '6px 8px', color: 'var(--ox-danger)', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      title={e.last_error}>
+                    {e.last_error}
+                  </td>
+                  <td style={{ padding: '6px 8px', fontFamily: 'var(--ox-mono)', fontSize: 13 }}>
+                    {e.user_id ? e.user_id.slice(0, 8) : '—'} / {e.planet_id ? e.planet_id.slice(0, 8) : '—'}
+                  </td>
+                  <td style={{ padding: '6px 8px' }}>
+                    <button
+                      type="button"
+                      className="btn-sm"
+                      disabled={resurrect.isPending}
+                      onClick={() => {
+                        if (confirm(`Вернуть событие ${e.id.slice(0, 8)} в активную очередь?`)) {
+                          resurrect.mutate(e.id);
+                        }
+                      }}
+                    >
+                      ♻ Retry
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
