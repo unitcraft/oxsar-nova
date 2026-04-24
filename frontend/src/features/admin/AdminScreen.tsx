@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { Confirm } from '@/ui/Confirm';
 import { AdminUserProfilePanel } from './AdminUserProfilePanel';
 
 interface AdminStats {
@@ -39,6 +40,14 @@ export function AdminScreen() {
   const [roleValue, setRoleValue] = useState('');
   // План 14 Ф.2: drawer с карточкой игрока, открывается по кнопке в строке.
   const [profileUserID, setProfileUserID] = useState<string | null>(null);
+  // План 14 Ф.8.3: Confirm для destructive операций.
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    message: string;
+    danger: boolean;
+    action: () => void;
+  } | null>(null);
+  const ask = (message: string, action: () => void, danger = true) =>
+    setPendingConfirm({ message, action, danger });
 
   const stats = useQuery({
     queryKey: ['admin-stats'],
@@ -132,7 +141,13 @@ export function AdminScreen() {
             <button
               type="button"
               disabled={!creditUserID || credit.isPending}
-              onClick={() => credit.mutate({ id: creditUserID, amount: creditAmount })}
+              onClick={() =>
+                ask(
+                  `Начислить ${creditAmount} кредитов игроку ${creditUserID.slice(0, 8)}…?`,
+                  () => credit.mutate({ id: creditUserID, amount: creditAmount }),
+                  creditAmount < 0,
+                )
+              }
             >
               ОК
             </button>
@@ -150,13 +165,19 @@ export function AdminScreen() {
             />
             <select value={roleValue} onChange={(e) => setRoleValue(e.target.value)}>
               <option value="">user</option>
+              <option value="support">support</option>
               <option value="admin">admin</option>
               <option value="superadmin">superadmin</option>
             </select>
             <button
               type="button"
               disabled={!roleUserID || setRole.isPending}
-              onClick={() => setRole.mutate({ id: roleUserID, role: roleValue })}
+              onClick={() =>
+                ask(
+                  `Назначить роль "${roleValue || 'user'}" игроку ${roleUserID.slice(0, 8)}…? Смена роли меняет его возможности в игре.`,
+                  () => setRole.mutate({ id: roleUserID, role: roleValue }),
+                )
+              }
             >
               ОК
             </button>
@@ -204,7 +225,7 @@ export function AdminScreen() {
                     <button
                       type="button"
                       disabled={unban.isPending}
-                      onClick={() => unban.mutate(u.id)}
+                      onClick={() => ask(`Снять бан с игрока ${u.username}?`, () => unban.mutate(u.id), false)}
                     >
                       Разбан
                     </button>
@@ -212,7 +233,7 @@ export function AdminScreen() {
                     <button
                       type="button"
                       disabled={ban.isPending}
-                      onClick={() => ban.mutate(u.id)}
+                      onClick={() => ask(`Забанить игрока ${u.username}? Он не сможет войти в игру, пока бан не будет снят.`, () => ban.mutate(u.id))}
                     >
                       Бан
                     </button>
@@ -229,6 +250,20 @@ export function AdminScreen() {
         <AdminUserProfilePanel
           userID={profileUserID}
           onClose={() => setProfileUserID(null)}
+        />
+      )}
+
+      {pendingConfirm && (
+        <Confirm
+          title="Подтверждение админского действия"
+          message={pendingConfirm.message}
+          confirmLabel="Выполнить"
+          danger={pendingConfirm.danger}
+          onConfirm={() => {
+            pendingConfirm.action();
+            setPendingConfirm(null);
+          }}
+          onCancel={() => setPendingConfirm(null)}
         />
       )}
     </section>
