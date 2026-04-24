@@ -569,12 +569,13 @@
   PR; в идеале — скрипт-линтер, который проверяет совпадение.
   **Приоритет**: L.
 
-- **E2E в Docker без кеша docker buildx** — cold build всех образов в
-  CI ~4-6 минут. При росте числа PR → долгий feedback loop.
-  **План возврата**: настроить `docker buildx build --cache-from` через
-  GitHub Actions cache (type=gha) для backend, testseed, playwright,
-  frontend-dev образов.
-  **Приоритет**: M (пока PR-флоу терпимый).
+- **E2E в Docker без кеша docker buildx** — ЗАКРЫТО (2026-04-24).
+  План 16 реализован: `docker/bake-action@v5` + type=gha cache в три
+  scope'а (backend/frontend/playwright), разбивка билда на этапы для
+  видимости в Actions UI, cache-warm job на push в main. `.dockerignore`
+  добавлен (исключает .exe/node_modules/.git/docs — билд-контекст
+  1.3 ГБ → ≈10 МБ).
+  Ожидаемый профит: e2e cold ~10-12 мин → hit ~3-4 мин.
 
 - **Deep-сценарии Ф.1/Ф.2 отложены** — регистрация, полный Attack-флоу,
   alliance create/invite/leave, messages compose, officers activation,
