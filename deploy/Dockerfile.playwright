@@ -1,0 +1,32 @@
+# Playwright контейнер для E2E-тестов. Образ от MS уже содержит chromium
+# и все системные библиотеки, достаточно поставить npm-зависимости.
+#
+# Версия образа должна совпадать с версией @playwright/test в
+# frontend/package.json, иначе браузер может быть несовместим с
+# клиентом.
+
+FROM mcr.microsoft.com/playwright:v1.48.0-jammy
+
+WORKDIR /app
+
+# Сначала копируем манифесты — кеш слоя npm ci, если deps не менялись.
+COPY frontend/package.json frontend/package-lock.json* ./frontend/
+RUN cd frontend && \
+    if [ -f package-lock.json ]; then \
+      npm ci --no-audit --no-fund; \
+    else \
+      npm install --no-audit --no-fund; \
+    fi
+
+# Исходники фронта (включая e2e/, playwright.config.ts, scripts/).
+COPY frontend ./frontend
+# OpenAPI нужен для api-coverage, если будем его гонять в E2E-пайплайне.
+COPY api ./api
+
+WORKDIR /app/frontend
+
+# Браузеры скачаны в базовом образе — установка не нужна.
+ENV CI=1
+
+# Команда по умолчанию — прогон всех тестов. Compose может переопределить.
+CMD ["npx", "playwright", "test"]

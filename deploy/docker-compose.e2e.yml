@@ -1,0 +1,147 @@
+# E2E-стек для Playwright: полный backend + worker + frontend (dev) +
+# testseed (one-shot) + playwright (one-shot). Предназначен для CI, но
+# работает и локально.
+#
+# Запуск:
+#   docker compose -f deploy/docker-compose.e2e.yml up --build \
+#       --abort-on-container-exit --exit-code-from playwright
+#
+# Отличия от основного docker-compose.yml:
+#   - backend запущен в PAYMENT_PROVIDER=mock (E2E без живой Робокассы)
+#   - testseed сидит детерминированные данные до старта playwright
+#   - playwright получает BACKEND_URL=http://backend:8080 и
+#     FRONTEND_URL=http://frontend:5173 — internal docker-сеть
+#   - порты наружу не пробрасываем (не нужны для CI)
+#
+# Локально: если надо отлаживать в режиме UI — см. make test-e2e
+# (нативный node на хосте, без Docker).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: oxsar
+      POSTGRES_PASSWORD: oxsar
+      POSTGRES_DB: oxsar
+    tmpfs:
+      - /var/lib/postgresql/data  # не нужно персистить между прогонами
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oxsar"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
+    restart: "no"
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      SERVER_ADDR: ":8080"
+      SERVER_ENV: test
+      LOG_LEVEL: warn
+      DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: e2e-secret-not-for-prod
+      CATALOG_DIR: /app/configs
+      I18N_DIR: /app/configs/i18n
+      # Mock-режим платежей (план 13 Ф.0.1). Webhook и внешние редиректы
+      # остаются внутри docker-сети.
+      PAYMENT_PROVIDER: mock
+      PAYMENT_MOCK_BASE_URL: http://backend:8080
+      PAYMENT_RETURN_URL: http://frontend:5173/
+    healthcheck:
+      # /healthz возвращает 200 — проверяем через wget (есть в alpine).
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  worker:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    entrypoint: ["/app/worker"]
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: e2e-secret-not-for-prod
+      CATALOG_DIR: /app/configs
+
+  # One-shot: сидит 5 игроков, альянс, сообщения. Стартует параллельно с
+  # worker'ом — БД уже мигрирована. Playwright ждёт exit_success.
+  testseed:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.testseed
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
+    restart: "no"
+    command: ["--reset"]
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      VITE_PROXY_TARGET: http://backend:8080
+    healthcheck:
+      # vite dev server отдаёт index.html на корне
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5173/ | grep -q 'oxsar' || exit 1"]
+      interval: 3s
+      timeout: 2s
+      retries: 40  # vite холодный старт может быть до 2 минут
+
+  playwright:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.playwright
+    depends_on:
+      frontend:
+        condition: service_healthy
+      testseed:
+        condition: service_completed_successfully
+    environment:
+      BACKEND_URL: http://backend:8080
+      FRONTEND_URL: http://frontend:5173
+      CI: "true"
+    # Отчёты html-report сохраняем в volume, чтобы CI мог их аттачить.
+    volumes:
+      - ./../frontend/playwright-report:/app/frontend/playwright-report
+      - ./../frontend/test-results:/app/frontend/test-results
+    # `list` репортер достаточен для CI; html в артефактах.
+    command: ["npx", "playwright", "test"]

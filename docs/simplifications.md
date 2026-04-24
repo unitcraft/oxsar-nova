@@ -536,6 +536,21 @@
   ручной шаг.
   **Приоритет**: L.
 
+- **Playwright image pinned к версии 1.48.0** — расхождение с версией
+  `@playwright/test` в frontend/package.json даст ошибки «browser not
+  found». Нельзя просто обновить пакет без обновления image в
+  deploy/Dockerfile.playwright.
+  **План возврата**: при bump-е Playwright обновлять обе версии одним
+  PR; в идеале — скрипт-линтер, который проверяет совпадение.
+  **Приоритет**: L.
+
+- **E2E в Docker без кеша docker buildx** — cold build всех образов в
+  CI ~4-6 минут. При росте числа PR → долгий feedback loop.
+  **План возврата**: настроить `docker buildx build --cache-from` через
+  GitHub Actions cache (type=gha) для backend, testseed, playwright,
+  frontend-dev образов.
+  **Приоритет**: M (пока PR-флоу терпимый).
+
 - **api-coverage regex matcher грубый** — заменяет `{id}` → `[^\\s'"\`]+?`
   и грепает по литералам. Не отличит `/api/planets/{id}` от
   `/api/planets/foo/bar` в случайной строке. Для текущего репо
