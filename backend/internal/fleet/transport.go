@@ -37,12 +37,14 @@ import (
 // и чтобы не путать с Mission-интерфейсом, который используется для
 // будущих миссий (SPY/ATTACK/COLONIZE).
 type TransportService struct {
-	db               repo.Exec
-	catalog          *config.Catalog
-	speed            float64 // GAMESPEED
-	artefact         *artefact.Service
-	maxPlanets       int // MAX_PLANETS override (0 = computer_tech+1)
-	protectionPeriod int // seconds new player is protected
+	db                repo.Exec
+	catalog           *config.Catalog
+	speed             float64 // GAMESPEED
+	artefact          *artefact.Service
+	maxPlanets        int // MAX_PLANETS override (0 = computer_tech+1)
+	protectionPeriod  int // seconds new player is protected
+	bashingPeriod     int // seconds window for bashing count (legacy BASHING_PERIOD)
+	bashingMaxAttacks int // max attacks per attacker→defender in window (legacy BASHING_MAX_ATTACKS)
 }
 
 func NewTransportService(db repo.Exec, cat *config.Catalog, gameSpeed float64, artefactSvc *artefact.Service) *TransportService {
@@ -57,6 +59,14 @@ func NewTransportServiceWithConfig(db repo.Exec, cat *config.Catalog, gameSpeed 
 	svc.maxPlanets = maxPlanets
 	svc.protectionPeriod = protectionPeriod
 	return svc
+}
+
+// SetBashingLimits — настройки антибашинга (план 17 A1).
+// Legacy consts.dm.local.php: BASHING_PERIOD=18000 (5h), BASHING_MAX_ATTACKS=4.
+// 0/0 отключает проверку (для тестов).
+func (s *TransportService) SetBashingLimits(periodSec, maxAttacks int) {
+	s.bashingPeriod = periodSec
+	s.bashingMaxAttacks = maxAttacks
 }
 
 // TransportInput — запрос от UI на отправку флота.
@@ -95,6 +105,7 @@ var (
 	ErrFleetSlotsExceeded = errors.New("fleet: no free fleet slots (improve computer_tech)")
 	ErrTargetOnVacation   = errors.New("fleet: target player is on vacation (protected)")
 	ErrSenderOnVacation   = errors.New("fleet: you are on vacation, cannot send fleets")
+	ErrBashingLimit       = errors.New("fleet: bashing limit reached (too many attacks on this player)")
 )
 
 // Send — запуск TRANSPORT или ATTACK_SINGLE в зависимости от
@@ -202,6 +213,12 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		// ROCKET_ATTACK (kind=16) идёт через другой путь (rocket/service.go).
 		if in.Mission == 10 || in.Mission == 11 || in.Mission == 12 {
 			if err := s.checkTargetNotOnVacation(ctx, tx, in.Dst); err != nil {
+				return err
+			}
+		}
+		// План 17 A1: антибашинг для ATTACK/ACS (spy не считается).
+		if in.Mission == 10 || in.Mission == 12 {
+			if err := s.checkBashingLimit(ctx, tx, in.UserID, in.Dst); err != nil {
 				return err
 			}
 		}
@@ -660,6 +677,60 @@ func (s *TransportService) checkTargetExists(ctx context.Context, tx pgx.Tx, c g
 	}
 	if !exists {
 		return ErrTargetNotFound
+	}
+	return nil
+}
+
+// checkBashingLimit — план 17 A1. Легаси NS.class.php:2285,
+// consts.dm.local.php: BASHING_PERIOD=18000 (5h), BASHING_MAX_ATTACKS=4.
+// Считаем все атаки (mission=10 ATTACK_SINGLE, 12 ATTACK_ALLIANCE)
+// от attacker → любая планета defender за последние BASHING_PERIOD
+// секунд, включая pending (state='outbound') и finished (arrive_at > now-5h).
+// Если ≥ maxAttacks — отказ.
+func (s *TransportService) checkBashingLimit(ctx context.Context, tx pgx.Tx,
+	attackerID string, dst galaxy.Coords) error {
+	if s.bashingMaxAttacks <= 0 || s.bashingPeriod <= 0 {
+		return nil // проверка отключена
+	}
+	// Найдём user_id владельца целевой планеты.
+	var defenderID *string
+	err := tx.QueryRow(ctx, `
+		SELECT user_id FROM planets
+		WHERE galaxy=$1 AND system=$2 AND position=$3 AND is_moon=$4
+		  AND destroyed_at IS NULL
+	`, dst.Galaxy, dst.System, dst.Position, dst.IsMoon).Scan(&defenderID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil // цели нет — проверку другого слоя повторять не будем
+		}
+		return fmt.Errorf("bashing: read defender: %w", err)
+	}
+	if defenderID == nil || *defenderID == attackerID {
+		return nil // пусто (asteroid) или self-attack (обрабатывается отдельно)
+	}
+	// COUNT атак attacker → все планеты defender в окне.
+	var cnt int
+	err = tx.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM fleets f
+		JOIN planets p
+		  ON p.galaxy = f.dst_galaxy AND p.system = f.dst_system
+		 AND p.position = f.dst_position AND p.is_moon = f.dst_is_moon
+		 AND p.destroyed_at IS NULL
+		WHERE f.owner_user_id = $1
+		  AND p.user_id = $2
+		  AND f.mission IN (10, 12)
+		  AND (
+		    f.state = 'outbound'
+		    OR (f.arrive_at IS NOT NULL AND f.arrive_at > now() - ($3 * interval '1 second'))
+		  )
+	`, attackerID, *defenderID, s.bashingPeriod).Scan(&cnt)
+	if err != nil {
+		return fmt.Errorf("bashing: count: %w", err)
+	}
+	if cnt >= s.bashingMaxAttacks {
+		return fmt.Errorf("%w: %d/%d attacks in last %ds",
+			ErrBashingLimit, cnt, s.bashingMaxAttacks, s.bashingPeriod)
 	}
 	return nil
 }
