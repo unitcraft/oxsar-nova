@@ -6322,3 +6322,68 @@ docs/ui-test-matrix.md — живая матрица покрытия.
 `make test-e2e` / `make test-e2e-docker`.
 
 План 13 помечен «первичный проход завершён».
+
+
+================================================================================
+ИТЕРАЦИЯ 2026-04-24 (final): ПЛАН 13 — E2E РАБОТАЕТ В DOCKER
+================================================================================
+
+Пользователь попросил запустить стек самому и пофиксить ошибки.
+
+Запуск через `docker compose -f deploy/docker-compose.e2e.yml up --build`.
+Проблемы найдены и исправлены последовательно за 7 прогонов:
+
+1. npm ci падал — package-lock.json не содержал новых Playwright-deps.
+   Фикс: npm install вместо npm ci в Dockerfile.playwright + регенерация
+   lock-файла через docker-контейнер (host node недоступен).
+
+2. Docker embedded DNS misbehaved при пике нагрузки: backend падал на
+   `ping pg: lookup postgres on 127.0.0.11:53: server misbehaving`.
+   Фикс: ретрай с экспо-задержкой в storage.OpenPostgres/OpenRedis и
+   testseed (6 попыток, 0.5→16s, суммарно ~31s).
+
+3. `--exit-code-from` неявно включает `--abort-on-container-exit`,
+   из-за чего compose ронял весь стек при exit migrate/testseed.
+   Фикс: детач-режим + `docker wait deploy-playwright-1` для exit кода.
+
+4. frontend healthcheck `wget http://localhost:5173` → connection refused:
+   Vite слушает 0.0.0.0 (IPv4), busybox localhost резолвится в IPv6.
+   Фикс: `http://127.0.0.1:5173/`.
+
+5. Vite 5 блокирует запросы с произвольным Host (CORS-defense от DNS
+   rebinding). По умолчанию `allowedHosts: string[]`.
+   Фикс: `server.host=true` + `server.allowedHosts=true` в vite.config.ts.
+
+6. Playwright подтягивал более свежий chromium-headless-shell, чем был
+   в базовом образе playwright:v1.48.0-jammy.
+   Фикс: `npx playwright install chromium` после npm install в Dockerfile.
+
+7. 429 от backend auth rate-limit при 220 вызовах loginAs.
+   Фикс: кеш токенов в fetchTokens (workers=1, общий Map).
+
+8. admin без стартовой планеты → frontend застревал в LoadingSkeleton.
+   Фикс: добавлена Admin-Home в testseed (pid a1).
+
+9. ChatScreen: `setMessages(null)` при `{messages: null}` от сервера →
+   `null.map` throw. Фикс: `setMessages(list ?? [])`.
+
+10. Чрезмерно строгие селекторы в спеках:
+    - «Войти» неоднозначна (таб + submit) → `form button[type="submit"]`.
+    - `.ox-header-right bob` совпадал с Bob-Home → filter `hasText: /^bob$/`.
+    - i18n regex ловил «OXSAR»/«МЕТ» → сузил до префиксов `MENU_/BTN_/…`.
+    - `.ox-header-resources` скрыт на mobile → заменил на planet-switcher.
+
+11. expectNoLayoutIssues был строже реальности:
+    - считал скрытые CSS-медиа-query элементы как «zero size» →
+      `getComputedStyle + display/visibility` фильтр.
+    - `.ox-bottom-nav` и `.ox-header` перекрывают контент намеренно
+      (sticky/fixed) → добавил в OVERLAY_WHITELIST.
+
+12. playwright.config: `extraHTTPHeaders: {'x-e2e':'1'}` отсылался
+    и к fonts.gstatic.com, ломая CORS preflight → плодил console.error
+    → smoke-спек считал ошибкой. Фикс: убран, не нужен.
+
+13. Общий таймаут тестов 30s → 60s. goToTab: 10s → 20s.
+    Mobile + vite dev-transform первого lazy-chunk = 5-15s норма.
+
+Итоговый результат: **110/110 passed, ~7 минут**.

@@ -37,6 +37,7 @@ const (
 	uidEve     = "00000000-0000-0000-0000-000000000004"
 	uidCharlie = "00000000-0000-0000-0000-000000000005"
 
+	pidAdmin   = "00000000-0000-0000-0000-0000000000a1"
 	pidAlice   = "00000000-0000-0000-0000-0000000000a2"
 	pidBob     = "00000000-0000-0000-0000-0000000000a3"
 	pidEve     = "00000000-0000-0000-0000-0000000000a4"
@@ -57,7 +58,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
 	pool, err := pgxpool.New(ctx, dbURL)
@@ -66,6 +67,25 @@ func main() {
 		os.Exit(1)
 	}
 	defer pool.Close()
+
+	// Retry ping — Docker embedded DNS иногда misbehaved при пике нагрузки.
+	// Полная выдержка: 0.5+1+2+4+8+16 ≈ 31s.
+	{
+		delay := 500 * time.Millisecond
+		var pingErr error
+		for attempt := 1; attempt <= 6; attempt++ {
+			if pingErr = pool.Ping(ctx); pingErr == nil {
+				break
+			}
+			slog.Warn("testseed: pg ping failed, retrying", "attempt", attempt, "err", pingErr.Error())
+			time.Sleep(delay)
+			delay *= 2
+		}
+		if pingErr != nil {
+			fmt.Fprintln(os.Stderr, "testseed: ping:", pingErr)
+			os.Exit(1)
+		}
+	}
 
 	if *reset {
 		if err := truncateGameTables(ctx, pool); err != nil {
@@ -166,6 +186,7 @@ func seed(ctx context.Context, pool *pgxpool.Pool, pwHash string) error {
 		metal, si, hy     int64
 		diameter          int
 	}{
+		{pidAdmin, uidAdmin, "Admin-Home", 1, 1, 3, 1000000, 500000, 100000, 18800},
 		{pidAlice, uidAlice, "Alice-Home", 1, 1, 5, 1000, 500, 0, 18800},
 		{pidBob, uidBob, "Bob-Home", 1, 1, 7, 9000000, 5000000, 2000000, 18800},
 		{pidEve, uidEve, "Eve-Home", 1, 1, 9, 500, 200, 0, 12000},

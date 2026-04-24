@@ -35,3 +35,7 @@ node_modules/
 
 # PII экспорт пользователей легаси (email-ы)
 /docs/legacy-users.tsv
+
+# Playwright e2e output
+frontend/playwright-report/
+frontend/test-results/

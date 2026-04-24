@@ -26,7 +26,7 @@ test.describe('Ф.4.1 network errors', () => {
     );
     // Любой обновляющий запрос вызовет 401 → логаут
     await page.goto('/');
-    await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('form button[type="submit"]')).toBeVisible({ timeout: 10_000 });
   });
 });
 

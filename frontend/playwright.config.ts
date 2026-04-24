@@ -13,8 +13,9 @@ const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 //   backend-хосту или через отдельный шаг `make test-seed` в CI.
 export default defineConfig({
   testDir: './e2e',
-  timeout: 30_000,
-  expect: { timeout: 5_000 },
+  // 60s — mobile viewport + vite dev server + первый lazy-chunk = медленно.
+  timeout: 60_000,
+  expect: { timeout: 10_000 },
   fullyParallel: false, // общая БД — чтобы тесты не портили друг другу состояние
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -25,9 +26,9 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    extraHTTPHeaders: {
-      'x-e2e': '1',
-    },
+    // extraHTTPHeaders убран: Chromium шлёт их и на cross-origin запросы
+    // (например, fonts.gstatic.com), ломая CORS-preflight и плодя
+    // console.error'ы, которые ловит smoke-спек.
   },
   projects: [
     {
