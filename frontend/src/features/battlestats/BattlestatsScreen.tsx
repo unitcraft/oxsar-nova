@@ -64,7 +64,7 @@ export function BattlestatsScreen() {
       {/* Фильтры */}
       <section className="ox-panel" style={{ padding: 14, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div>
-          <label style={{ fontSize: 11, color: 'var(--ox-fg-muted)', display: 'block' }}>Роль</label>
+          <label style={{ fontSize: 13, color: 'var(--ox-fg-muted)', display: 'block' }}>Роль</label>
           <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
             <option value="any">Любая</option>
             <option value="attacker">Атакующий</option>
@@ -72,7 +72,7 @@ export function BattlestatsScreen() {
           </select>
         </div>
         <div>
-          <label style={{ fontSize: 11, color: 'var(--ox-fg-muted)', display: 'block' }}>Результат</label>
+          <label style={{ fontSize: 13, color: 'var(--ox-fg-muted)', display: 'block' }}>Результат</label>
           <select value={result} onChange={(e) => setResult(e.target.value as Result)}>
             <option value="any">Любой</option>
             <option value="win">Победа</option>
@@ -81,11 +81,11 @@ export function BattlestatsScreen() {
           </select>
         </div>
         <div>
-          <label style={{ fontSize: 11, color: 'var(--ox-fg-muted)', display: 'block' }}>С даты</label>
+          <label style={{ fontSize: 13, color: 'var(--ox-fg-muted)', display: 'block' }}>С даты</label>
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div>
-          <label style={{ fontSize: 11, color: 'var(--ox-fg-muted)', display: 'block' }}>По дату</label>
+          <label style={{ fontSize: 13, color: 'var(--ox-fg-muted)', display: 'block' }}>По дату</label>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
       </section>
@@ -125,18 +125,18 @@ export function BattlestatsScreen() {
                   const debris = b.debris_metal + b.debris_silicon;
                   return (
                     <tr key={b.id}>
-                      <td style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-muted)' }}>
+                      <td style={{ fontSize: 13, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-muted)' }}>
                         {new Date(b.at).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}
                       </td>
                       <td>{b.role === 'attacker' ? '⚔ Атака' : '🛡 Защита'}</td>
                       <td style={{ fontWeight: 600 }}>{b.opponent || '—'}</td>
-                      <td style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>{b.planet_name ?? '—'}</td>
+                      <td style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>{b.planet_name ?? '—'}</td>
                       <td className="num">{b.rounds}</td>
                       <td style={{ color, fontWeight: 600 }}>{label}</td>
-                      <td className="num" style={{ fontSize: 12 }}>
+                      <td className="num" style={{ fontSize: 14 }}>
                         {loot > 0 ? Math.round(loot).toLocaleString('ru-RU') : '—'}
                       </td>
-                      <td className="num" style={{ fontSize: 12, color: 'var(--ox-warning)' }}>
+                      <td className="num" style={{ fontSize: 14, color: 'var(--ox-warning)' }}>
                         {debris > 0 ? Math.round(debris).toLocaleString('ru-RU') : '—'}
                       </td>
                     </tr>
@@ -154,7 +154,7 @@ export function BattlestatsScreen() {
 function StatCell({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="ox-panel" style={{ padding: 12 }}>
-      <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+      <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
       <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--ox-mono)', color }}>{value}</div>
     </div>
   );

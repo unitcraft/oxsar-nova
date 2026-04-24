@@ -112,7 +112,7 @@ export function ProfessionScreen() {
             padding: '3px 10px', borderRadius: 20,
             background: currentKey === 'none' ? 'var(--ox-bg-card)' : 'rgba(56,189,248,0.12)',
             border: '1px solid var(--ox-border)',
-            fontSize: 13, color: 'var(--ox-fg-dim)',
+            fontSize: 15, color: 'var(--ox-fg-dim)',
           }}>
             {PROFESSION_ICONS[currentKey] ?? '⚪'} Сейчас: <b style={{ color: 'var(--ox-fg)' }}>{current.data.label || 'Нет профессии'}</b>
           </span>
@@ -120,7 +120,7 @@ export function ProfessionScreen() {
       </div>
 
       {/* Информация о смене */}
-      <div className="ox-panel" style={{ padding: '12px 16px', fontSize: 13, color: 'var(--ox-fg-dim)', display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
+      <div className="ox-panel" style={{ padding: '12px 16px', fontSize: 15, color: 'var(--ox-fg-dim)', display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
         <span>
           💳 Стоимость смены: <b style={{ color: 'var(--ox-accent)' }}>1 000 кредитов</b>
         </span>
@@ -168,14 +168,14 @@ export function ProfessionScreen() {
                 <div className="ox-unit-card-body" style={{ flex: 1 }}>
                   <div className="ox-unit-card-name" style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
                     {p.label}
-                    {isActive && <span style={{ fontSize: 11, marginLeft: 6, color: 'var(--ox-success, #22c55e)', fontWeight: 400 }}>● активна</span>}
+                    {isActive && <span style={{ fontSize: 13, marginLeft: 6, color: 'var(--ox-success, #22c55e)', fontWeight: 400 }}>● активна</span>}
                   </div>
 
                   {/* Бонусы */}
                   {p.bonus && Object.keys(p.bonus).length > 0 && (
                     <div style={{ marginBottom: 6 }}>
                       {Object.entries(p.bonus).map(([k, v]) => (
-                        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '2px 0' }}>
+                        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, padding: '2px 0' }}>
                           <span style={{ color: 'var(--ox-fg-dim)' }}>{BONUS_LABELS[k] ?? k}</span>
                           <span style={{ color: 'var(--ox-success, #22c55e)', fontWeight: 700, fontFamily: 'var(--ox-mono)', minWidth: 28, textAlign: 'right' }}>
                             {fmtDelta(v)}
@@ -189,7 +189,7 @@ export function ProfessionScreen() {
                   {p.malus && Object.keys(p.malus).length > 0 && (
                     <div>
                       {Object.entries(p.malus).map(([k, v]) => (
-                        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '2px 0' }}>
+                        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, padding: '2px 0' }}>
                           <span style={{ color: 'var(--ox-fg-muted)' }}>{BONUS_LABELS[k] ?? k}</span>
                           <span style={{ color: 'var(--ox-danger)', fontWeight: 700, fontFamily: 'var(--ox-mono)', minWidth: 28, textAlign: 'right' }}>
                             {fmtDelta(v)}
@@ -202,7 +202,7 @@ export function ProfessionScreen() {
 
                 <div className="ox-unit-card-footer" style={{ paddingTop: 10 }}>
                   {isActive ? (
-                    <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ox-success, #22c55e)', fontWeight: 600 }}>
+                    <div style={{ textAlign: 'center', fontSize: 14, color: 'var(--ox-success, #22c55e)', fontWeight: 600 }}>
                       ✅ Текущая профессия
                     </div>
                   ) : (

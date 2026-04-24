@@ -372,7 +372,7 @@ function AdminEventsMonitor() {
       )}
 
       {stats.data && stats.data.top_errors_24h?.length > 0 && (
-        <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--ox-fg-dim)' }}>
+        <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--ox-fg-dim)' }}>
           Топ ошибок за 24ч:
           {' '}
           {stats.data.top_errors_24h.map((e) => (
@@ -398,11 +398,11 @@ function AdminEventsMonitor() {
 
       {events.isLoading && <div>Загрузка…</div>}
       {events.data && events.data.events.length === 0 && (
-        <div style={{ color: 'var(--ox-fg-muted)', fontSize: 12 }}>нет событий</div>
+        <div style={{ color: 'var(--ox-fg-muted)', fontSize: 14 }}>нет событий</div>
       )}
       {events.data && events.data.events.length > 0 && (
         <div style={{ overflowX: 'auto' }}>
-          <table className="ox-table" style={{ fontSize: 12 }}>
+          <table className="ox-table" style={{ fontSize: 14 }}>
             <thead>
               <tr>
                 <th>ID</th>
@@ -431,7 +431,7 @@ function AdminEventsMonitor() {
                   <td style={{ fontSize: 10, fontFamily: 'var(--ox-mono)' }}>
                     {new Date(e.fire_at).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}
                   </td>
-                  <td style={{ fontSize: 11, color: 'var(--ox-fg-dim)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.last_error ?? ''}>
+                  <td style={{ fontSize: 13, color: 'var(--ox-fg-dim)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.last_error ?? ''}>
                     {e.last_error ?? '—'}
                   </td>
                   <td>
@@ -451,7 +451,7 @@ function AdminEventsMonitor() {
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <div style={{ border: '1px solid #444', padding: '8px 16px', borderRadius: 4, minWidth: 120 }}>
-      <div style={{ fontSize: 11, color: 'var(--ox-muted, #888)' }}>{label}</div>
+      <div style={{ fontSize: 13, color: 'var(--ox-muted, #888)' }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 700 }}>{value}</div>
     </div>
   );

@@ -202,7 +202,7 @@ export function ChatScreen() {
       </div>
 
       {wsError && (
-        <div style={{ fontSize: 12, color: 'var(--ox-warning)', marginBottom: 6, padding: '4px 8px', background: 'rgba(255,183,77,0.08)', borderRadius: 4 }}>
+        <div style={{ fontSize: 14, color: 'var(--ox-warning)', marginBottom: 6, padding: '4px 8px', background: 'rgba(255,183,77,0.08)', borderRadius: 4 }}>
           ⚡ {wsError}
         </div>
       )}
@@ -230,7 +230,7 @@ export function ChatScreen() {
               }}
             >
               {!isOwn && (
-                <span style={{ fontSize: 11, color: 'var(--ox-accent)', marginBottom: 2, paddingLeft: 4 }}>
+                <span style={{ fontSize: 13, color: 'var(--ox-accent)', marginBottom: 2, paddingLeft: 4 }}>
                   {m.author_name || '???'}
                 </span>
               )}
@@ -244,7 +244,7 @@ export function ChatScreen() {
                       onClick={() => startEdit(m)}
                       title="Редактировать"
                       style={{
-                        fontSize: 11, lineHeight: 1, padding: '3px 5px',
+                        fontSize: 13, lineHeight: 1, padding: '3px 5px',
                         background: 'rgba(99,217,255,0.12)', border: '1px solid rgba(99,217,255,0.25)',
                         borderRadius: 4, cursor: 'pointer', color: 'var(--ox-accent)',
                       }}
@@ -254,7 +254,7 @@ export function ChatScreen() {
                       onClick={() => deleteMsg(m.id)}
                       title="Удалить"
                       style={{
-                        fontSize: 11, lineHeight: 1, padding: '3px 5px',
+                        fontSize: 13, lineHeight: 1, padding: '3px 5px',
                         background: 'rgba(244,67,54,0.12)', border: '1px solid rgba(244,67,54,0.25)',
                         borderRadius: 4, cursor: 'pointer', color: 'var(--ox-danger)',
                       }}
@@ -271,7 +271,7 @@ export function ChatScreen() {
                     border: `1px solid ${isOwn ? 'rgba(99,217,255,0.35)' : 'rgba(255,255,255,0.1)'}`,
                     wordBreak: 'break-word',
                     lineHeight: 1.5,
-                    fontSize: 14,
+                    fontSize: 16,
                   }}
                 >
                   {isEditing ? (
@@ -280,19 +280,19 @@ export function ChatScreen() {
                         value={editBody}
                         onChange={(e) => setEditBody(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') submitEdit(m.id); if (e.key === 'Escape') cancelEdit(); }}
-                        style={{ flex: 1, minWidth: 120, fontSize: 13, background: 'rgba(0,0,0,0.3)', border: '1px solid var(--ox-accent)', color: 'inherit', padding: '3px 7px', borderRadius: 4 }}
+                        style={{ flex: 1, minWidth: 120, fontSize: 15, background: 'rgba(0,0,0,0.3)', border: '1px solid var(--ox-accent)', color: 'inherit', padding: '3px 7px', borderRadius: 4 }}
                         autoFocus
                         maxLength={500}
                       />
                       <button
                         type="button"
                         onClick={() => submitEdit(m.id)}
-                        style={{ padding: '3px 8px', fontSize: 13, background: 'var(--ox-accent)', color: '#000', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 700 }}
+                        style={{ padding: '3px 8px', fontSize: 15, background: 'var(--ox-accent)', color: '#000', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 700 }}
                       >✓</button>
                       <button
                         type="button"
                         onClick={cancelEdit}
-                        style={{ padding: '3px 8px', fontSize: 13, background: 'rgba(255,255,255,0.1)', color: 'inherit', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                        style={{ padding: '3px 8px', fontSize: 15, background: 'rgba(255,255,255,0.1)', color: 'inherit', border: 'none', borderRadius: 4, cursor: 'pointer' }}
                       >✕</button>
                     </div>
                   ) : (

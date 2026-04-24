@@ -45,11 +45,11 @@ class RootErrorBoundary extends React.Component<
           <div style={{ fontSize: 40 }}>⚠️</div>
           <div style={{ fontSize: 16, color: '#f66' }}>Ошибка приложения</div>
           {where && (
-            <div style={{ fontSize: 13, color: '#fa0', fontWeight: 700 }}>
+            <div style={{ fontSize: 15, color: '#fa0', fontWeight: 700 }}>
               Компонент: {where}
             </div>
           )}
-          <div style={{ fontSize: 12, color: '#aaa', maxWidth: 500, textAlign: 'center' }}>
+          <div style={{ fontSize: 14, color: '#aaa', maxWidth: 500, textAlign: 'center' }}>
             {this.state.error.message}
           </div>
           <pre style={{
@@ -65,7 +65,7 @@ class RootErrorBoundary extends React.Component<
             style={{
               marginTop: 8, padding: '8px 20px', background: '#63d9ff22',
               border: '1px solid #63d9ff55', borderRadius: 6,
-              color: '#63d9ff', cursor: 'pointer', fontSize: 14,
+              color: '#63d9ff', cursor: 'pointer', fontSize: 16,
             }}
           >
             Сбросить кэш и перезагрузить

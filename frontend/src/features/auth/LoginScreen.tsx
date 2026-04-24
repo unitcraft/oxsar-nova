@@ -57,7 +57,7 @@ export function LoginScreen() {
           }}>
             OXSAR
           </div>
-          <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', marginTop: 4 }}>
             космическая стратегия
           </div>
         </div>

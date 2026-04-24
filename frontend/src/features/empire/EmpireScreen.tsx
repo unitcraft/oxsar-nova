@@ -46,13 +46,13 @@ function fmtRes(v: number): string {
 }
 
 function LevelCell({ level, maxLevel = 40 }: { level: number; maxLevel?: number }) {
-  if (level === 0) return <td style={{ textAlign: 'center', color: 'var(--ox-fg-muted)', fontSize: 11 }}>—</td>;
+  if (level === 0) return <td style={{ textAlign: 'center', color: 'var(--ox-fg-muted)', fontSize: 13 }}>—</td>;
   const isMax = level >= maxLevel;
   return (
     <td style={{
       textAlign: 'center',
       fontFamily: 'var(--ox-mono)',
-      fontSize: 12,
+      fontSize: 14,
       fontWeight: 600,
       color: isMax ? 'var(--ox-success, #22c55e)' : 'var(--ox-fg)',
       background: isMax ? 'rgba(34,197,94,0.07)' : undefined,
@@ -63,9 +63,9 @@ function LevelCell({ level, maxLevel = 40 }: { level: number; maxLevel?: number 
 }
 
 function CountCell({ count }: { count: number }) {
-  if (count === 0) return <td style={{ textAlign: 'center', color: 'var(--ox-fg-muted)', fontSize: 11 }}>—</td>;
+  if (count === 0) return <td style={{ textAlign: 'center', color: 'var(--ox-fg-muted)', fontSize: 13 }}>—</td>;
   return (
-    <td style={{ textAlign: 'center', fontFamily: 'var(--ox-mono)', fontSize: 12 }}>
+    <td style={{ textAlign: 'center', fontFamily: 'var(--ox-mono)', fontSize: 14 }}>
       {fmtRes(count)}
     </td>
   );
@@ -83,7 +83,7 @@ function SectionHeader({
     >
       <td colSpan={colSpan} style={{
         padding: '6px 10px',
-        fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+        fontSize: 13, fontWeight: 700, letterSpacing: '0.08em',
         textTransform: 'uppercase', color: 'var(--ox-fg-dim)',
         borderTop: '1px solid var(--ox-border)',
       }}>
@@ -146,13 +146,13 @@ export function EmpireScreen() {
   }
 
   const thStyle: React.CSSProperties = {
-    padding: '8px 10px', fontFamily: 'var(--ox-mono)', fontSize: 11,
+    padding: '8px 10px', fontFamily: 'var(--ox-mono)', fontSize: 13,
     fontWeight: 700, color: 'var(--ox-fg-dim)', whiteSpace: 'nowrap',
     background: 'var(--ox-bg-card)', position: 'sticky', top: 0, zIndex: 1,
     borderBottom: '1px solid var(--ox-border)',
   };
   const rowLabelStyle: React.CSSProperties = {
-    padding: '4px 10px', fontSize: 12, color: 'var(--ox-fg-dim)',
+    padding: '4px 10px', fontSize: 14, color: 'var(--ox-fg-dim)',
     whiteSpace: 'nowrap', position: 'sticky', left: 0, zIndex: 1,
     background: 'var(--ox-bg)', borderRight: '1px solid var(--ox-border)',
     minWidth: 160,
@@ -176,7 +176,7 @@ export function EmpireScreen() {
       <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Империя</h2>
 
       {/* Суммарные ресурсы */}
-      <div className="ox-panel" style={{ padding: '10px 16px', display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 13 }}>
+      <div className="ox-panel" style={{ padding: '10px 16px', display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 15 }}>
         <span style={{ color: 'var(--ox-fg-dim)' }}>Всего ресурсов:</span>
         <span>🟠 <b style={{ fontFamily: 'var(--ox-mono)' }}>{fmtRes(totalMetal)}</b></span>
         <span>💎 <b style={{ fontFamily: 'var(--ox-mono)' }}>{fmtRes(totalSilicon)}</b></span>
@@ -208,7 +208,7 @@ export function EmpireScreen() {
               <tr>
                 <td style={rowLabelStyle}>📐 Диаметр</td>
                 {planets.map((p) => (
-                  <td key={p.id} style={{ textAlign: 'center', fontSize: 11, fontFamily: 'var(--ox-mono)' }}>
+                  <td key={p.id} style={{ textAlign: 'center', fontSize: 13, fontFamily: 'var(--ox-mono)' }}>
                     {p.diameter.toLocaleString('ru-RU')}
                   </td>
                 ))}
@@ -216,7 +216,7 @@ export function EmpireScreen() {
               <tr>
                 <td style={rowLabelStyle}>🔲 Поля</td>
                 {planets.map((p) => (
-                  <td key={p.id} style={{ textAlign: 'center', fontSize: 11, fontFamily: 'var(--ox-mono)' }}>
+                  <td key={p.id} style={{ textAlign: 'center', fontSize: 13, fontFamily: 'var(--ox-mono)' }}>
                     {p.used_fields}
                   </td>
                 ))}
@@ -224,7 +224,7 @@ export function EmpireScreen() {
               <tr>
                 <td style={rowLabelStyle}>🌡️ Температура</td>
                 {planets.map((p) => (
-                  <td key={p.id} style={{ textAlign: 'center', fontSize: 11 }}>
+                  <td key={p.id} style={{ textAlign: 'center', fontSize: 13 }}>
                     {p.temp_min}…{p.temp_max}°C
                   </td>
                 ))}
@@ -238,7 +238,7 @@ export function EmpireScreen() {
                 <tr key={label}>
                   <td style={rowLabelStyle}>{label}</td>
                   {planets.map((p) => (
-                    <td key={p.id} style={{ textAlign: 'center', fontSize: 11, fontFamily: 'var(--ox-mono)' }}>
+                    <td key={p.id} style={{ textAlign: 'center', fontSize: 13, fontFamily: 'var(--ox-mono)' }}>
                       {fmtRes([p.metal, p.silicon, p.hydrogen][i]!)}
                     </td>
                   ))}

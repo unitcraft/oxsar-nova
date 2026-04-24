@@ -69,13 +69,13 @@ export function RocketsScreen({ planet }: { planet: Planet }) {
         <img src="/images/units/interplanetary_rocket.gif" alt="" width={48} height={48} style={{ imageRendering: 'pixelated', flexShrink: 0 }} />
         <div>
           <div style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--ox-mono)' }}>{have}</div>
-          <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>межпланетарных ракет</div>
+          <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>межпланетарных ракет</div>
           {siloLevel > 0 ? (
-            <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
+            <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
               Шахта ур. {siloLevel} — макс. {siloMax} в загрузке
             </div>
           ) : (
-            <div style={{ fontSize: 12, color: 'var(--ox-warning)', marginTop: 2 }}>
+            <div style={{ fontSize: 14, color: 'var(--ox-warning)', marginTop: 2 }}>
               Постройте Ракетную шахту для активации лимита
             </div>
           )}
@@ -84,20 +84,20 @@ export function RocketsScreen({ planet }: { planet: Planet }) {
 
       {/* Launch form */}
       <div className="ox-panel" style={{ padding: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 16 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 16 }}>
           Запуск
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Координаты цели</label>
+            <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Координаты цели</label>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>G</span>
+              <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>G</span>
               <input type="number" min={1} max={16} value={g} onChange={(e) => setG(Number(e.target.value))} style={{ width: 56 }} />
-              <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>S</span>
+              <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>S</span>
               <input type="number" min={1} max={999} value={s} onChange={(e) => setS(Number(e.target.value))} style={{ width: 70 }} />
-              <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>P</span>
+              <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>P</span>
               <input type="number" min={1} max={15} value={pos} onChange={(e) => setPos(Number(e.target.value))} style={{ width: 56 }} />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14 }}>
                 <input type="checkbox" checked={isMoon} onChange={(e) => setIsMoon(e.target.checked)} />
                 🌑 Луна
               </label>
@@ -105,7 +105,7 @@ export function RocketsScreen({ planet }: { planet: Planet }) {
           </div>
 
           <div>
-            <label style={{ fontSize: 12, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Количество (макс. {maxLaunch})</label>
+            <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Количество (макс. {maxLaunch})</label>
             <input
               type="number" min={1} max={maxLaunch} value={count}
               onChange={(e) => setCount(Math.max(1, Math.min(maxLaunch, Number(e.target.value))))}
@@ -113,7 +113,7 @@ export function RocketsScreen({ planet }: { planet: Planet }) {
             />
           </div>
 
-          <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>
+          <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>
             Ракеты летят без возврата и уничтожают оборону цели. 1 ракета = 12 000 урона по pool(defense × shell).
           </div>
 

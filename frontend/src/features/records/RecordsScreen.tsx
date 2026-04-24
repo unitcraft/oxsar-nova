@@ -49,7 +49,7 @@ export function RecordsScreen() {
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
       <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>🏅 Рекорды сервера</h2>
-      <p style={{ margin: 0, fontSize: 12, color: 'var(--ox-fg-dim)' }}>
+      <p style={{ margin: 0, fontSize: 14, color: 'var(--ox-fg-dim)' }}>
         Топ-1 игрок по каждой категории + ваш текущий показатель.
       </p>
 
@@ -94,7 +94,7 @@ export function RecordsScreen() {
                   const ratio = r.value > 0 ? r.my_value / r.value : 0;
                   return (
                     <tr key={`${r.category}-${r.key}`}>
-                      <td style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>{meta?.icon} {meta?.label}</td>
+                      <td style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>{meta?.icon} {meta?.label}</td>
                       <td style={{ fontWeight: 500 }}>{name}</td>
                       <td style={{ fontWeight: 600 }}>🏆 {r.holder_name}</td>
                       <td className="num" style={{ color: 'var(--ox-accent)', fontWeight: 700 }}>

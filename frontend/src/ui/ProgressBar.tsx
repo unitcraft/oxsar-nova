@@ -14,7 +14,7 @@ export function ProgressBar({ pct, variant = 'default', height = 6, showLabel = 
         <div className={`ox-progress-bar ${cls}`} style={{ width: `${clamped}%` }} />
       </div>
       {showLabel && (
-        <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 11, color: 'var(--ox-fg-dim)', flexShrink: 0 }}>
+        <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 13, color: 'var(--ox-fg-dim)', flexShrink: 0 }}>
           {Math.round(clamped)}%
         </span>
       )}

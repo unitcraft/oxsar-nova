@@ -130,9 +130,9 @@ export function GlobalSearch({ open, onClose, onNavigate }: {
                 >
                   <span style={{ flex: 1 }}>
                     <span style={{ fontWeight: 600 }}>{p.username}</span>
-                    {p.alliance_tag && <span style={{ marginLeft: 8, fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)', fontSize: 12 }}>[{p.alliance_tag}]</span>}
+                    {p.alliance_tag && <span style={{ marginLeft: 8, fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)', fontSize: 14 }}>[{p.alliance_tag}]</span>}
                   </span>
-                  <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 12, color: 'var(--ox-fg-muted)' }}>
+                  <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 14, color: 'var(--ox-fg-muted)' }}>
                     {Math.round(p.points).toLocaleString('ru-RU')}
                   </span>
                 </button>
@@ -151,7 +151,7 @@ export function GlobalSearch({ open, onClose, onNavigate }: {
                     <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>[{a.tag}]</span>
                     <span style={{ marginLeft: 8 }}>{a.name}</span>
                   </span>
-                  <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 12, color: 'var(--ox-fg-muted)' }}>
+                  <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 14, color: 'var(--ox-fg-muted)' }}>
                     {a.members} чел. · {Math.round(a.points).toLocaleString('ru-RU')}
                   </span>
                 </button>
@@ -168,11 +168,11 @@ export function GlobalSearch({ open, onClose, onNavigate }: {
                 >
                   <span style={{ flex: 1 }}>
                     <span style={{ fontWeight: 600 }}>{p.name}</span>
-                    <span style={{ marginLeft: 8, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-muted)', fontSize: 12 }}>
+                    <span style={{ marginLeft: 8, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-muted)', fontSize: 14 }}>
                       [{p.galaxy}:{p.system}:{p.position}]
                     </span>
                   </span>
-                  <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>{p.owner || '—'}</span>
+                  <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>{p.owner || '—'}</span>
                 </button>
               ))}
             </Section>
@@ -195,7 +195,7 @@ function Section({ title, icon, children }: { title: string; icon: string; child
     <div>
       <div style={{
         padding: '8px 14px',
-        fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+        fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
         color: 'var(--ox-fg-muted)', background: 'rgba(255,255,255,0.02)',
       }}>
         {icon} {title}

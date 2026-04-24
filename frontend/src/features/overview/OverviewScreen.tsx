@@ -140,7 +140,7 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
           background: 'rgba(99,217,255,0.08)',
           border: '1px solid rgba(99,217,255,0.3)',
           borderRadius: 8,
-          fontSize: 13,
+          fontSize: 15,
           color: 'var(--ox-accent)',
           display: 'flex',
           alignItems: 'center',
@@ -187,10 +187,10 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
         }}>
           <span style={{ fontSize: 20, flexShrink: 0 }}>⚠️</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--ox-danger)' }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ox-danger)' }}>
               Входящая атака!
             </div>
-            <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
+            <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
               Цель: [{f.dst_galaxy}:{f.dst_system}:{f.dst_position}]{f.dst_is_moon ? ' 🌑' : ''}
             </div>
           </div>
@@ -201,7 +201,7 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
       {/* Флоты в движении */}
       {activeFleets.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-dim)', paddingLeft: 2 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-dim)', paddingLeft: 2 }}>
             Флоты в пути
           </div>
           {activeFleets.map((f) => (
@@ -264,7 +264,7 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
                       style={{ width: pSize, height: pSize, borderRadius: 5, objectFit: 'cover' }}
                     />
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: active ? 'var(--ox-accent)' : 'var(--ox-fg)', textAlign: 'center', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: active ? 'var(--ox-accent)' : 'var(--ox-fg)', textAlign: 'center', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>
                     {p.name}
                   </span>
                   <span style={{ fontSize: 10, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
@@ -330,17 +330,17 @@ function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
         <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>
             {label}
-            <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+            <span style={{ marginLeft: 8, fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
               {target}
             </span>
           </div>
-          <div style={{ fontSize: 11, color: isReturning ? 'var(--ox-success)' : 'var(--ox-accent)' }}>
+          <div style={{ fontSize: 13, color: isReturning ? 'var(--ox-success)' : 'var(--ox-accent)' }}>
             {stateLabel}
           </div>
         </div>
-        <span style={{ fontSize: 13, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', flexShrink: 0 }}>
+        <span style={{ fontSize: 15, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', flexShrink: 0 }}>
           <Countdown finishAt={finishAt} />
         </span>
         {isOutbound && (
@@ -349,7 +349,7 @@ function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
             className="btn"
             onClick={() => recall.mutate(f.id)}
             disabled={recall.isPending}
-            style={{ fontSize: 11, padding: '3px 10px', flexShrink: 0 }}
+            style={{ fontSize: 13, padding: '3px 10px', flexShrink: 0 }}
           >
             Отозвать
           </button>
@@ -362,14 +362,14 @@ function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
             const id = Number(unitId);
             const img = imageOfId(id);
             return (
-              <span key={unitId} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
+              <span key={unitId} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
                 {img && <img src={img} alt="" width={16} height={16} style={{ imageRendering: 'pixelated', opacity: 0.85 }} />}
                 {nameOf(id)} ×{count}
               </span>
             );
           })}
           {f.carry && (f.carry.metal > 0 || f.carry.silicon > 0 || f.carry.hydrogen > 0) && (
-            <span style={{ fontSize: 11, color: 'var(--ox-fg-muted)', marginLeft: 4 }}>
+            <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginLeft: 4 }}>
               [{f.carry.metal > 0 && `🟠${f.carry.metal.toLocaleString('ru-RU')}`}{f.carry.silicon > 0 && ` 💎${f.carry.silicon.toLocaleString('ru-RU')}`}{f.carry.hydrogen > 0 && ` 💧${f.carry.hydrogen.toLocaleString('ru-RU')}`}]
             </span>
           )}
@@ -439,9 +439,9 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 16, fontFamily: 'var(--ox-font)' }}>
             {planet.name}
-            {planet.is_moon && <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--ox-fg-dim)', fontWeight: 400 }}>луна</span>}
+            {planet.is_moon && <span style={{ marginLeft: 6, fontSize: 13, color: 'var(--ox-fg-dim)', fontWeight: 400 }}>луна</span>}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+          <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
             {formatCoords(planet)}
           </div>
         </div>
@@ -452,7 +452,7 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
           type="button"
           className="btn btn-ghost btn-sm"
           onClick={onOptions}
-          style={{ fontSize: 14, padding: '6px 10px', flexShrink: 0 }}
+          style={{ fontSize: 16, padding: '6px 10px', flexShrink: 0 }}
           title="Параметры планеты"
         >
           ⚙️
@@ -535,7 +535,7 @@ function PlanetStat({ icon, label, value }: { icon: string; label: string; value
     <div style={{
       padding: '7px 16px',
       display: 'flex', alignItems: 'center', gap: 6,
-      fontSize: 12, color: 'var(--ox-fg-dim)',
+      fontSize: 14, color: 'var(--ox-fg-dim)',
       borderRight: '1px solid var(--ox-border)',
     }}>
       <span>{icon}</span>
@@ -589,8 +589,8 @@ function RefLinkBanner({ userId }: { userId: string }) {
 
   return (
     <div className="ox-panel" style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 13, color: 'var(--ox-fg-dim)', flexShrink: 0 }}>🔗 Реферальная ссылка:</span>
-      <code style={{ fontSize: 12, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 15, color: 'var(--ox-fg-dim)', flexShrink: 0 }}>🔗 Реферальная ссылка:</span>
+      <code style={{ fontSize: 14, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {url}
       </code>
       <button type="button" className="btn btn-sm" onClick={copy} style={{ flexShrink: 0 }}>
@@ -615,7 +615,7 @@ function ActiveQueueItem({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15 }}>
         <span>{icon}</span>
         <span style={{ flex: 1, fontWeight: 600 }}>{label}</span>
         <Countdown finishAt={endAt} {...(onDone ? { onDone } : {})} />

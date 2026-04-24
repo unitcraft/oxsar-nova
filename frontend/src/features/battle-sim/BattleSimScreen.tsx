@@ -268,7 +268,7 @@ function UnitPicker({
         {units.map((u) => (
           <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <img src={imageOf(u.key)} alt="" width={32} height={32} style={{ imageRendering: 'pixelated', flexShrink: 0 }} />
-            <span style={{ flex: 1, fontSize: 13 }}>{nameOf(u.id)}</span>
+            <span style={{ flex: 1, fontSize: 15 }}>{nameOf(u.id)}</span>
             <input
               type="number"
               min={0}

@@ -58,7 +58,7 @@ export function NotepadScreen() {
         <StatusBadge status={status} />
       </div>
 
-      <p style={{ margin: 0, fontSize: 12, color: 'var(--ox-fg-dim)' }}>
+      <p style={{ margin: 0, fontSize: 14, color: 'var(--ox-fg-dim)' }}>
         Заметки видите только вы. Изменения сохраняются автоматически.
       </p>
 
@@ -71,7 +71,7 @@ export function NotepadScreen() {
           minHeight: 500,
           padding: 16,
           fontFamily: 'var(--ox-mono)',
-          fontSize: 13,
+          fontSize: 15,
           lineHeight: 1.6,
           color: 'var(--ox-fg)',
           background: 'var(--ox-bg-panel)',
@@ -82,7 +82,7 @@ export function NotepadScreen() {
         maxLength={maxChars}
       />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
         <span>{charCount.toLocaleString('ru-RU')} / {maxChars.toLocaleString('ru-RU')} символов</span>
         {q.data?.updated_at && (
           <span>Обновлено: {new Date(q.data.updated_at).toLocaleString('ru-RU')}</span>
@@ -93,8 +93,8 @@ export function NotepadScreen() {
 }
 
 function StatusBadge({ status }: { status: SaveStatus }) {
-  if (status === 'saving') return <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>💾 Сохраняется…</span>;
-  if (status === 'saved') return <span style={{ fontSize: 12, color: 'var(--ox-success)' }}>✓ Сохранено</span>;
-  if (status === 'error') return <span style={{ fontSize: 12, color: 'var(--ox-danger)' }}>⚠ Ошибка сохранения</span>;
+  if (status === 'saving') return <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>💾 Сохраняется…</span>;
+  if (status === 'saved') return <span style={{ fontSize: 14, color: 'var(--ox-success)' }}>✓ Сохранено</span>;
+  if (status === 'error') return <span style={{ fontSize: 14, color: 'var(--ox-danger)' }}>⚠ Ошибка сохранения</span>;
   return null;
 }

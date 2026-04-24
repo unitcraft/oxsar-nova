@@ -100,7 +100,7 @@ export function OfficersScreen() {
           🎖 Офицеры
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>Баланс:</span>
+          <span style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>Баланс:</span>
           <span style={{ fontFamily: 'var(--ox-mono)', fontWeight: 700, color: 'var(--ox-accent)', fontSize: 15 }}>
             {creditVal} cr
           </span>
@@ -108,7 +108,7 @@ export function OfficersScreen() {
       </div>
 
       {list.length === 0 ? (
-        <div style={{ color: 'var(--ox-fg-dim)', fontSize: 14 }}>Нет доступных офицеров.</div>
+        <div style={{ color: 'var(--ox-fg-dim)', fontSize: 16 }}>Нет доступных офицеров.</div>
       ) : (
         <div className="ox-cards-grid">
           {list.map((e) => {
@@ -126,29 +126,29 @@ export function OfficersScreen() {
                 </div>
                 <div className="ox-unit-card-body">
                   <div className="ox-unit-card-name">{e.title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginBottom: 4 }}>{e.description}</div>
-                  <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)' }}>
+                  <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 4 }}>{e.description}</div>
+                  <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>
                     {e.duration_days} дн. · {e.cost_credit} cr
                   </div>
                   {fmtEffect(e.effect) && (
-                    <div style={{ fontSize: 11, color: 'var(--ox-success, #22c55e)', marginTop: 3 }}>
+                    <div style={{ fontSize: 13, color: 'var(--ox-success, #22c55e)', marginTop: 3 }}>
                       ✦ {fmtEffect(e.effect)}
                     </div>
                   )}
                   {active && e.expires_at && (
-                    <div style={{ fontSize: 12, color: 'var(--ox-success)', marginTop: 4 }}>
+                    <div style={{ fontSize: 14, color: 'var(--ox-success)', marginTop: 4 }}>
                       Истекает: <Countdown finishAt={e.expires_at} />
                     </div>
                   )}
                 </div>
                 <div className="ox-unit-card-footer" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {active ? (
-                    <div style={{ fontSize: 12, color: 'var(--ox-success)', textAlign: 'center', fontWeight: 600 }}>
+                    <div style={{ fontSize: 14, color: 'var(--ox-success)', textAlign: 'center', fontWeight: 600 }}>
                       ✅ Активен
                     </div>
                   ) : (
                     <>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer' }}>
                         <input
                           type="checkbox"
                           checked={autoRenew}
