@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE credit_purchases (
     id             TEXT PRIMARY KEY,
-    user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id        uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     package_key    TEXT NOT NULL,
     amount_credits INT  NOT NULL,
     price_rub      NUMERIC(10,2) NOT NULL,
