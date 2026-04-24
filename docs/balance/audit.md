@@ -98,14 +98,15 @@
   что делает attack/1k ещё хуже: 220 (не 115). Главная причина эксплойта —
   отсутствующие в nova rapidfire-записи против Lancer. См. [план 18](../plans/18-unit-rebalance.md).
 - **Серьёзность**: P0
-- **Статус**: **open** (симуляция 2026-04-24 подтвердила — см. [simulation-2026-04-24.md](simulation-2026-04-24.md)). Rapidfire-порт помог (Lancer→Cruiser exchange упал с ожидаемых 13-15× до 5.11×), но эксплойт сохранился. Нужен план 21 блок A — нерф стоимости Lancer.
+- **Статус**: **patched** 2026-04-24. [ADR-0004](../adr/0004-lancer-cost.md): Lancer cost 2.5k/7.5k/15k → **15k/35k/60k** (metal-eq 25k → 110k). Симуляция подтверждает exchange упал с 5.11 до **1.16** (Lancer vs Cruiser), с 2.89 до **0.64** (Lancer vs mix).
 
-**Результаты симуляции**:
-- Lancer vs 1000 Cruiser (равная стоимость): exchange 5.11 — Lancer в 5× эффективнее.
-- Lancer vs mix LF+Cru+BS: exchange 2.89 — Lancer доминирует даже против смешанного флота.
-- Причина: rapidfire ×35 срабатывает только после kill, а Lancer убивает Cruiser быстрее (attack 5500 vs 400, разница ×13).
+**История фикса**:
+1. **Rapidfire-порт** (план 18 Фаза 1, commit `7f5ce71`): exchange 13-15× (теоретически по attack/1k) → 5.11× (по симуляции). Помог, но не закрыл.
+2. **Нерф стоимости** (ADR-0004, план 21 блок A): exchange 5.11× → 1.16×. Lancer-spam мёртв.
 
-**План фикса**: план 21 блок A — поднять стоимость Lancer до metal-eq ≈ 155k (×6 от текущих 25k) так, чтобы attack/1k упал с 220 до ~35 (уровень Battleship). После применения — повторная симуляция для финальных чисел.
+Причина, почему rapidfire не хватило: ×35 срабатывает только после kill, а Lancer убивает Cruiser быстрее (attack 5500 vs 400). К моменту, когда Cruiser получает rapidfire-bonus, у него уже критические потери.
+
+Симуляция подтверждает: DS×100 vs Lancer продолжает работать как контра (defender loss 67%, atk loss 0).
 
 **Файлы**: [configs/ships.yml:150-157](../../configs/ships.yml), [configs/construction.yml:521](../../configs/construction.yml), [configs/rapidfire.yml](../../configs/rapidfire.yml)
 

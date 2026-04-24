@@ -122,6 +122,32 @@ Frigate→Lancer ×20, Bomber→Lancer ×10. **Изобретение** (в lega
 
 ---
 
+## Update 2026-04-24: BA-002 закрыт
+
+Проведён sweep Lancer cost ×1..×6 от legacy (через флаг `--cost`):
+
+| Cost ×N | metal-eq | Exchange (Lancer vs 1000 Cruiser) |
+|---:|---:|---:|
+| ×1 (legacy) | 25 000 | 5.11 |
+| ×2 | 50 000 | 2.55 |
+| ×3 | 75 000 | 1.70 |
+| ×4 | 100 000 | 1.28 |
+| ×5 | 125 000 | 1.02 |
+| ×6 | 150 000 | 0.85 |
+
+**Финальный выбор**: `15 000 / 35 000 / 60 000` = **110 000 metal-eq**
+(между ×4 и ×5, округлые числа, водород-heavy как эндгейм).
+
+**Финальные exchange**:
+- Lancer vs Cruiser (равная metal-eq): **1.16** (цель ~1.2 достигнута)
+- Lancer vs mix LF+Cru+BS: **0.64** — Lancer-spam против микса мёртв
+- DS vs 300 Lancer: defender loss 67%, atk loss 0 — DS-контра сохранена
+
+**Зафиксировано в**: [ADR-0004](../adr/0004-lancer-cost.md), применено в
+`configs/construction.yml:521`.
+
+---
+
 ## Воспроизведение
 
 ```bash

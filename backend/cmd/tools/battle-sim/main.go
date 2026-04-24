@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/oxsar/nova/backend/internal/battle"
 	"github.com/oxsar/nova/backend/internal/config"
@@ -40,7 +42,9 @@ func run() error {
 		runs       = flag.Int("runs", 50, "число прогонов на сценарий")
 		rounds     = flag.Int("rounds", 6, "макс раундов в одном бою")
 		catalogDir = flag.String("configs", "../../../configs", "путь к configs/")
+		costOverride multiFlag
 	)
+	flag.Var(&costOverride, "cost", "переопределить стоимость юнита: ship_key=M/Si/H (можно несколько)")
 	flag.Parse()
 
 	if *scenario == "" && !*all {
@@ -50,6 +54,12 @@ func run() error {
 	cat, err := config.LoadCatalog(*catalogDir)
 	if err != nil {
 		return fmt.Errorf("load catalog: %w", err)
+	}
+
+	for _, s := range costOverride {
+		if err := applyCostOverride(cat, s); err != nil {
+			return fmt.Errorf("cost override %q: %w", s, err)
+		}
 	}
 
 	scenarios := buildScenarios(cat)
@@ -362,4 +372,49 @@ func pctF(n, total float64) float64 {
 		return 0
 	}
 	return n / total * 100
+}
+
+// multiFlag — flag.Value для повторяющихся --cost=... аргументов.
+type multiFlag []string
+
+func (m *multiFlag) String() string     { return strings.Join(*m, ",") }
+func (m *multiFlag) Set(v string) error { *m = append(*m, v); return nil }
+
+// applyCostOverride — разобрать "ship_key=M/Si/H" и переписать
+// Cost в cat.Ships.Ships[key] (для defense — cat.Defense.Defense[key]).
+func applyCostOverride(cat *config.Catalog, spec string) error {
+	eq := strings.IndexByte(spec, '=')
+	if eq < 0 {
+		return fmt.Errorf("нет '=' в %q", spec)
+	}
+	key := strings.TrimSpace(spec[:eq])
+	parts := strings.Split(spec[eq+1:], "/")
+	if len(parts) != 3 {
+		return fmt.Errorf("ожидалось M/Si/H, получено %q", spec[eq+1:])
+	}
+	vals := make([]int64, 3)
+	for i, p := range parts {
+		n, err := strconv.ParseInt(strings.TrimSpace(p), 10, 64)
+		if err != nil {
+			return fmt.Errorf("parse %q: %w", p, err)
+		}
+		vals[i] = n
+	}
+	newCost := config.ResCost{Metal: vals[0], Silicon: vals[1], Hydrogen: vals[2]}
+
+	if s, ok := cat.Ships.Ships[key]; ok {
+		s.Cost = newCost
+		cat.Ships.Ships[key] = s
+		fmt.Fprintf(os.Stderr, "cost override: ship %s = %d/%d/%d (metal-eq %d)\n",
+			key, vals[0], vals[1], vals[2], vals[0]+vals[1]+vals[2])
+		return nil
+	}
+	if d, ok := cat.Defense.Defense[key]; ok {
+		d.Cost = newCost
+		cat.Defense.Defense[key] = d
+		fmt.Fprintf(os.Stderr, "cost override: defense %s = %d/%d/%d\n",
+			key, vals[0], vals[1], vals[2])
+		return nil
+	}
+	return fmt.Errorf("юнит %q не найден в ships/defense", key)
 }

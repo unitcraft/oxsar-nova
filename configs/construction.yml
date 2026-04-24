@@ -525,9 +525,11 @@ buildings:
     front: 8
     ballistics: 3
     basic:
-      metal: 2500
-      silicon: 7500
-      hydrogen: 15000
+      # Отклонение от legacy: ADR-0004 (2026-04-24). Legacy: 2500/7500/15000.
+      # Подтверждено симуляцией — закрывает эксплойт BA-002 (Lancer-spam).
+      metal: 15000
+      silicon: 35000
+      hydrogen: 60000
     display_order: 420
   large_shield:
     id: 50
