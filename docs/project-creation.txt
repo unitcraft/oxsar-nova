@@ -6274,3 +6274,51 @@ Known trade-offs:
   через docker buildx --cache-from.
 - Локально pнативный node быстрее (нет cold build). Docker — для
   воспроизводимых прогонов + CI.
+
+
+================================================================================
+ИТЕРАЦИЯ 2026-04-24 (continued 2): ПЛАН 13 Ф.1–Ф.5 — ПОЛНЫЙ ПЕРВЫЙ ПРОХОД
+================================================================================
+
+Задача пользователя: «сделай все пункты плана автоматически».
+
+Подход: spec-файл на группу близких доменов (чтобы избежать 35 отдельных
+файлов по 15 LOC каждый). Глубина — smoke+happy-path; глубокие сценарии
+(например, полный Attack-флоу) требуют точных селекторов форм и
+подготовки событий в БД — вынесены в matrix как ⬜ follow-up.
+
+Создано:
+
+frontend/e2e/critical/
+  auth.spec.ts           Ф.1.1 login/logout/wrong-pass
+  planet-core.spec.ts    Ф.1.2–1.4+1.8 buildings/research/shipyard/overview
+  space.spec.ts          Ф.1.5–1.6 galaxy/fleet
+  messages.spec.ts       Ф.1.7 inbox/welcome/badge
+
+frontend/e2e/domains/
+  screens.spec.ts        Ф.2.1–2.13 смок по 12 доменным экранам через
+                         хелпер screenOpens(tab, user, regex)
+  credits.spec.ts        Ф.2.14 ПОЛНЫЙ happy-path mock-платежа +
+                         fail-сценарий + проверка роста баланса
+  secondary.spec.ts      Ф.3 10 второстепенных экранов + Ctrl+K
+                         + admin visible/hidden
+
+frontend/e2e/edges/
+  resilience.spec.ts     Ф.4.1–4.2 500/401/empty states
+  i18n-mobile.spec.ts    Ф.4.4–4.5 raw-key detector + mobile bottom-nav
+
+frontend/e2e/helpers/nav.ts — goToTab(page, tab)
+
+docs/ui-test-matrix.md — живая матрица покрытия.
+
+Сознательные упрощения (всё в simplifications.md в блоке UI Testing):
+- Регистрацию не тестируем (ratelimit + создание левых учёток в БД).
+- Глубокий Fleet/Alliance/Messages compose — отложены, требуют
+  стабильных селекторов форм.
+- Offline не тестируем (vite HMR websocket мешает context.setOffline).
+
+Все спеки не запускались в текущем окружении (node недоступен).
+Первый прогон ожидается в CI (job `e2e`) либо локально через
+`make test-e2e` / `make test-e2e-docker`.
+
+План 13 помечен «первичный проход завершён».
