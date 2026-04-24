@@ -6233,3 +6233,44 @@ frontend/scripts/api-coverage.ts (tsx) — парсит api/openapi.yaml,
   testseed idempotency, webServer off, grep api-coverage)
 
 Коммит: следующим шагом.
+
+
+================================================================================
+ИТЕРАЦИЯ 2026-04-24 (continued): ПЛАН 13 Ф.0.3a — DOCKER E2E
+================================================================================
+
+Пользователь спросил: «если запустишь в докере, это решит проблему?» —
+имея в виду отсутствие node в моём окружении. Частичное «да»:
+docker compose решает вопросы с окружением, но добавляет свои
+(docker-сеть, сервисы, healthcheck'и, таймауты на вите cold start).
+
+Сделал полный E2E-стек в Docker:
+
+- deploy/docker-compose.e2e.yml — pg (tmpfs) + redis + migrate +
+  testseed (одноразовый --reset) + backend (PAYMENT_PROVIDER=mock) +
+  worker + frontend + playwright.
+  Healthcheck'и: pg_isready, redis ping, wget /healthz,
+  wget http://localhost:5173 (с retries=40 потому что vite cold start
+  может быть до 2 минут).
+- deploy/Dockerfile.testseed — bиldит backend/cmd/tools/testseed.
+- deploy/Dockerfile.playwright — mcr.microsoft.com/playwright:v1.48.0-jammy,
+  npm ci, копирует frontend/ + api/.
+
+Makefile: `test-e2e-docker` (up --abort-on-container-exit --exit-code-from
+playwright), `test-e2e-docker-down`.
+
+.github/workflows/ci.yml:
+- Job `e2e` — nEEDS: [backend, frontend], поднимает стек, аттачит
+  playwright-report/test-results/docker-logs при падении, делает down.
+- Job `api-coverage` — npm ci + npm run api:coverage (без Docker, быстро).
+
+Verification:
+- docker compose config — valid (exit 0)
+- Backend build зелёный
+
+Known trade-offs:
+- Cold build всех образов в CI — 4-6 минут (Go deps + npm ci в playwright).
+  Принято: приемлемо для PR-флоу. Если CI забьётся — настроим кеш слоёв
+  через docker buildx --cache-from.
+- Локально pнативный node быстрее (нет cold build). Docker — для
+  воспроизводимых прогонов + CI.

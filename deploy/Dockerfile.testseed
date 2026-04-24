@@ -1,0 +1,23 @@
+# testseed — one-shot контейнер: наполняет БД детерминированными
+# данными для E2E (5 игроков, альянс [UT], сообщения). Ждёт успешной
+# миграции и работает до завершения сида.
+#
+# См. backend/cmd/tools/testseed/main.go — пароль и UUID фиксированные.
+
+FROM golang:1.23-alpine AS build
+WORKDIR /src
+
+COPY backend/go.mod backend/go.sum ./backend/
+RUN cd backend && go mod download
+
+COPY backend ./backend
+RUN cd backend && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/testseed ./cmd/tools/testseed
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates
+COPY --from=build /out/testseed /usr/local/bin/testseed
+
+# DB_URL приходит из compose-окружения. Флаги (например, --reset)
+# передаются как command в compose.
+ENTRYPOINT ["testseed"]

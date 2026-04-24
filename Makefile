@@ -68,6 +68,20 @@ test-seed:
 test-e2e:
 	cd $(FRONTEND) && npm run test:e2e
 
+# E2E в Docker — полный стек (pg+redis+migrate+backend+worker+testseed+frontend+playwright).
+# Используется в CI и локально, когда нужен воспроизводимый прогон без
+# ручного запуска терминалов.
+.PHONY: test-e2e-docker
+test-e2e-docker:
+	docker compose -f deploy/docker-compose.e2e.yml up --build \
+		--abort-on-container-exit --exit-code-from playwright
+
+# Очистка E2E-стека (останавливает все контейнеры, удаляет анонимные
+# volumes — TMPFS для pg всё равно не персистится).
+.PHONY: test-e2e-docker-down
+test-e2e-docker-down:
+	docker compose -f deploy/docker-compose.e2e.yml down -v --remove-orphans
+
 # Аудит покрытия API → UI (все эндпоинты OpenAPI должны вызываться из фронта).
 .PHONY: api-coverage
 api-coverage:
