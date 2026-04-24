@@ -11,6 +11,11 @@ interface CreditPackage {
   price_rub: number;
 }
 
+interface PackagesResponse {
+  packages: CreditPackage[];
+  test_mode: boolean;
+}
+
 interface Purchase {
   id: string;
   package_key: string;
@@ -62,9 +67,11 @@ export function CreditsScreen() {
 
   const packages = useQuery({
     queryKey: ['payment', 'packages'],
-    queryFn: () => api.get<CreditPackage[]>('/api/payment/packages'),
+    queryFn: () => api.get<PackagesResponse>('/api/payment/packages'),
     staleTime: Infinity,
   });
+
+  const testMode = packages.data?.test_mode ?? false;
 
   const history = useQuery({
     queryKey: ['payment', 'history'],
@@ -75,8 +82,14 @@ export function CreditsScreen() {
     mutationFn: (packageKey: string) =>
       api.post<{ order_id: string; pay_url: string }>('/api/payment/order', { package_key: packageKey }),
     onSuccess: (data) => {
-      window.open(data.pay_url, '_blank', 'noopener,noreferrer');
-      void qc.invalidateQueries({ queryKey: ['payment', 'history'] });
+      // В mock-режиме pay_url — локальный эндпоинт, который редиректит обратно
+      // с ?payment=success/fail. В prod — внешний сайт шлюза в новой вкладке.
+      if (testMode) {
+        window.location.href = data.pay_url;
+      } else {
+        window.open(data.pay_url, '_blank', 'noopener,noreferrer');
+        void qc.invalidateQueries({ queryKey: ['payment', 'history'] });
+      }
     },
     onError: () => {
       showToast('danger', 'Не удалось создать заказ. Попробуйте позже.');
@@ -89,6 +102,24 @@ export function CreditsScreen() {
     <div className="screen">
       <h2>Пополнение кредитов</h2>
 
+      {testMode && (
+        <div
+          role="alert"
+          style={{
+            padding: '10px 14px',
+            marginBottom: 12,
+            borderRadius: 6,
+            background: 'rgba(245,158,11,0.12)',
+            border: '1px solid rgba(245,158,11,0.6)',
+            color: 'var(--ox-warn, #f59e0b)',
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          ⚠️ Тестовый режим — реальных списаний нет, оплата симулируется локально.
+        </div>
+      )}
+
       <p className="credits-balance">
         Баланс: <strong>💳 {balance.toLocaleString('ru-RU')} кр</strong>
       </p>
@@ -98,7 +129,7 @@ export function CreditsScreen() {
 
       {packages.data && (
         <div className="credit-packages">
-          {packages.data.map((pkg) => {
+          {packages.data.packages.map((pkg) => {
             const hint = packageHint(pkg.total_credits);
             return (
               <div key={pkg.key} className="credit-package-card">

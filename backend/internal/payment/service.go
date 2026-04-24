@@ -53,8 +53,25 @@ func NewService(db repo.Exec, cfg config.PaymentConfig) *Service {
 	switch cfg.Provider {
 	case "robokassa":
 		svc.gateway = NewRobokassaGateway(cfg.RobokassaLogin, cfg.RobokassaPass1, cfg.RobokassaPass2)
+	case "mock":
+		svc.gateway = NewMockGateway(cfg.MockBaseURL)
 	}
 	return svc
+}
+
+// IsMock возвращает true, если активен mock-шлюз (для UI-баннера «тестовый режим»).
+func (s *Service) IsMock() bool {
+	if s.gateway == nil {
+		return false
+	}
+	_, ok := s.gateway.(*MockGateway)
+	return ok
+}
+
+// ConfirmPaymentDirect — прямой вызов подтверждения без прохождения через
+// VerifyWebhook. Используется mock pay-эндпоинтом, где подпись не нужна.
+func (s *Service) ConfirmPaymentDirect(ctx context.Context, orderID, providerID string) error {
+	return s.ConfirmPayment(ctx, orderID, providerID)
 }
 
 // WithReferral подключает реферальный сервис (опционально).

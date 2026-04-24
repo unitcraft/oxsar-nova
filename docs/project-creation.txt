@@ -6159,3 +6159,77 @@ cmd/worker/main.go:
 Все отложенные задачи — либо второстепенные оптимизации (>10k DAU),
 либо ops-прокачка, либо refactoring. Core надёжность/наблюдаемость
 закрыта.
+
+
+================================================================================
+ИТЕРАЦИЯ 2026-04-24: ПЛАН 13 — UI TESTING, Ф.0 (инфраструктура)
+================================================================================
+
+Задача: проверить, что UI покрывает всю функциональность игры, не падает,
+для всех API есть UI; для платежей — симуляция.
+
+Ф.0 — инфраструктура для всего плана тестирования:
+
+Ф.0.1 Mock-шлюз платежей
+------------------------
+Добавлен MockGateway в backend/internal/payment/mock.go — реализует
+Gateway без подписей. BuildPayURL возвращает URL на внутренний
+/api/payment/mock/pay, который вызывает ConfirmPayment и редиректит на
+PAYMENT_RETURN_URL?payment=success|fail. Активируется PAYMENT_PROVIDER=mock.
+
+Изменения:
+  - backend/internal/payment/mock.go (new)
+  - backend/internal/payment/service.go: case "mock" + IsMock() + ConfirmPaymentDirect
+  - backend/internal/payment/handler.go: MockPay, Packages теперь отдаёт
+    {packages, test_mode}
+  - backend/internal/config/config.go: PAYMENT_MOCK_BASE_URL
+  - backend/cmd/server/main.go: условная регистрация /api/payment/mock/pay
+  - frontend/src/features/payment/CreditsScreen.tsx: баннер «Тестовый
+    режим», same-tab редирект в mock-режиме
+  - backend/internal/payment/mock_test.go (new) — тесты
+
+Ф.0.2 CLI testseed
+------------------
+backend/cmd/tools/testseed/main.go сидит 5 игроков с фиксированными UUID:
+admin/alice/bob/eve/charlie. Alice — пустые состояния, bob — полный set
+(прокачанные здания, исследования, флот), eve — жертва рядом с bob,
+charlie — лидер альянса [UT] где bob — member. Флаг --reset сначала
+TRUNCATE игровых таблиц. Пароль у всех: test-password-123.
+
+Makefile: target `test-seed`.
+
+Ф.0.3 Playwright
+----------------
+frontend/playwright.config.ts: два project'а desktop (1440×900) +
+mobile (Pixel 5). webServer не поднимаем — backend/frontend запускаются
+вручную/в CI отдельным шагом (cold start 15-30s иначе даст таймауты).
+frontend/e2e/fixtures/auth.ts — loginAs(page, 'bob') через прямой
+POST /api/auth/login + localStorage.
+
+Ф.0.4 Smoke
+-----------
+frontend/e2e/smoke.spec.ts — обходит все 30 вкладок под bob и alice,
+на каждой: нет console.error, нет текста "Error boundary",
+expectNoLayoutIssues (Ф.4.6).
+
+frontend/e2e/helpers/layout.ts — проверяет горизонтальный скролл,
+landmark'и, пересечения кликабельных элементов (>25% площади,
+с whitelist для модалок/дропдаунов/badge), нулевые текстовые узлы.
+
+Ф.0.5 API coverage
+------------------
+frontend/scripts/api-coverage.ts (tsx) — парсит api/openapi.yaml,
+грепает frontend/src/ на использование эндпоинтов, падает если есть
+неиспользуемые (кроме whitelist). Whitelist: /api/payment/webhook,
+/api/payment/mock/pay. Makefile: `make api-coverage`.
+
+Результаты
+----------
+- Backend build + payment tests: зелёные
+- Смоук-спек не запускался (npm недоступен в окружении); будет проверен
+  локально при реализации Ф.1
+- План 13 расширен пунктом Ф.4.6 (layout integrity)
+- Добавлено 4 записи в simplifications.md (unit-тесты отложены,
+  testseed idempotency, webServer off, grep api-coverage)
+
+Коммит: следующим шагом.

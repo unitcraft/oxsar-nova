@@ -69,6 +69,7 @@ type PaymentConfig struct {
 	EnotApiKey     string // ENOT_API_KEY
 	EnotShopID     string // ENOT_SHOP_ID
 	ReturnURL      string // PAYMENT_RETURN_URL
+	MockBaseURL    string // PAYMENT_MOCK_BASE_URL — префикс для mock pay-url (только provider=mock)
 }
 
 type AIAdvisorConfig struct {
@@ -149,6 +150,7 @@ func Load() (Config, error) {
 		EnotApiKey:     env("ENOT_API_KEY", ""),
 		EnotShopID:     env("ENOT_SHOP_ID", ""),
 		ReturnURL:      env("PAYMENT_RETURN_URL", ""),
+		MockBaseURL:    env("PAYMENT_MOCK_BASE_URL", ""),
 	}
 
 	if cfg.DB.URL == "" {

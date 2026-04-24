@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/oxsar/nova/backend/internal/auth"
@@ -29,9 +30,13 @@ func (h *Handler) Packages(w http.ResponseWriter, r *http.Request) {
 		TotalCredits int     `json:"total_credits"`
 		PriceRub     float64 `json:"price_rub"`
 	}
-	result := make([]packageDTO, len(Packages))
+	type response struct {
+		Packages []packageDTO `json:"packages"`
+		TestMode bool         `json:"test_mode"`
+	}
+	packagesDTO := make([]packageDTO, len(Packages))
 	for i, p := range Packages {
-		result[i] = packageDTO{
+		packagesDTO[i] = packageDTO{
 			Key:          p.Key,
 			Label:        p.Label,
 			Credits:      p.Credits,
@@ -40,7 +45,10 @@ func (h *Handler) Packages(w http.ResponseWriter, r *http.Request) {
 			PriceRub:     p.PriceRub(),
 		}
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, result)
+	httpx.WriteJSON(w, r, http.StatusOK, response{
+		Packages: packagesDTO,
+		TestMode: h.svc.IsMock(),
+	})
 }
 
 type createOrderRequest struct {
@@ -125,6 +133,46 @@ type purchaseDTO struct {
 	Status       string     `json:"status"`
 	CreatedAt    time.Time  `json:"created_at"`
 	PaidAt       *time.Time `json:"paid_at,omitempty"`
+}
+
+// MockPay GET /api/payment/mock/pay — симулятор платёжной страницы (только provider=mock).
+// Принимает ?order=<id>&result=success|fail, подтверждает платёж и редиректит
+// игрока на ReturnURL с ?payment=success|fail.
+func (h *Handler) MockPay(w http.ResponseWriter, r *http.Request) {
+	if !h.svc.IsMock() {
+		http.Error(w, "mock gateway is not active", http.StatusNotFound)
+		return
+	}
+
+	orderID := r.URL.Query().Get("order")
+	result := r.URL.Query().Get("result")
+	if result == "" {
+		result = "success"
+	}
+	returnURL := r.URL.Query().Get("return")
+	if returnURL == "" {
+		returnURL = h.svc.cfg.ReturnURL
+	}
+	if returnURL == "" {
+		returnURL = "/"
+	}
+
+	paymentStatus := "fail"
+	if result == "success" && orderID != "" {
+		if err := h.svc.ConfirmPayment(r.Context(), orderID, "mock-"+orderID); err != nil {
+			if !errors.Is(err, ErrOrderNotFound) {
+				slog.Error("payment: mock confirm failed", "order_id", orderID, "err", err)
+			}
+		} else {
+			paymentStatus = "success"
+		}
+	}
+
+	sep := "?"
+	if strings.Contains(returnURL, "?") {
+		sep = "&"
+	}
+	http.Redirect(w, r, returnURL+sep+"payment="+paymentStatus, http.StatusFound)
 }
 
 // History GET /api/payment/history — история покупок игрока.
