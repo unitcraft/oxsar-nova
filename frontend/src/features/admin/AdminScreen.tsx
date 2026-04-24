@@ -27,8 +27,11 @@ interface AutomsgDef {
   folder: number;
 }
 
+type AdminTab = 'users' | 'audit';
+
 export function AdminScreen() {
   const qc = useQueryClient();
+  const [tab, setTab] = useState<AdminTab>('users');
   const [creditUserID, setCreditUserID] = useState('');
   const [creditAmount, setCreditAmount] = useState(0);
   const [roleUserID, setRoleUserID] = useState('');
@@ -79,6 +82,19 @@ export function AdminScreen() {
   return (
     <section>
       <h2>Панель администратора</h2>
+
+      <div className="ox-tabs" style={{ marginBottom: 16 }}>
+        <button type="button" aria-pressed={tab === 'users'} onClick={() => setTab('users')}>
+          👥 Игроки
+        </button>
+        <button type="button" aria-pressed={tab === 'audit'} onClick={() => setTab('audit')}>
+          📜 Журнал действий
+        </button>
+      </div>
+
+      {tab === 'audit' && <AdminAuditTab />}
+      {tab !== 'users' && tab !== 'audit' ? null : null}
+      {tab !== 'users' ? null : (<>
 
       {stats.data && (
         <div style={{ display: 'flex', gap: 24, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -195,6 +211,7 @@ export function AdminScreen() {
           </tbody>
         </table>
       )}
+      </>)}
     </section>
   );
 }
@@ -453,6 +470,112 @@ function StatCard({ label, value }: { label: string; value: number }) {
     <div style={{ border: '1px solid #444', padding: '8px 16px', borderRadius: 4, minWidth: 120 }}>
       <div style={{ fontSize: 13, color: 'var(--ox-muted, #888)' }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 700 }}>{value}</div>
+    </div>
+  );
+}
+
+// ── Audit log tab ───────────────────────────────────────────────────
+// План 14 Ф.1.2: журнал деструктивных действий в /api/admin/*.
+// Middleware в backend пишет записи после каждого успешного write-запроса.
+
+interface AuditEntry {
+  id: string;
+  admin_id: string;
+  admin_name: string;
+  action: string;
+  target_kind: string;
+  target_id: string;
+  payload: Record<string, unknown>;
+  status: number;
+  ip?: string;
+  user_agent?: string;
+  created_at: string;
+}
+
+interface AuditResponse {
+  entries: AuditEntry[];
+  limit: number;
+  offset: number;
+}
+
+function AdminAuditTab() {
+  const [actionFilter, setActionFilter] = useState('');
+  const [targetFilter, setTargetFilter] = useState('');
+
+  const q = useQuery({
+    queryKey: ['admin-audit', actionFilter, targetFilter],
+    queryFn: () => {
+      const qs = new URLSearchParams();
+      if (actionFilter) qs.set('action', actionFilter);
+      if (targetFilter) qs.set('target_id', targetFilter);
+      qs.set('limit', '100');
+      return api.get<AuditResponse>(`/api/admin/audit?${qs.toString()}`);
+    },
+    refetchInterval: 15000,
+  });
+
+  const entries = q.data?.entries ?? [];
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+        <input
+          placeholder="action (users.ban, events.retry, …)"
+          value={actionFilter}
+          onChange={(e) => setActionFilter(e.target.value)}
+          style={{ minWidth: 220 }}
+        />
+        <input
+          placeholder="target_id"
+          value={targetFilter}
+          onChange={(e) => setTargetFilter(e.target.value)}
+          style={{ minWidth: 220 }}
+        />
+        <button type="button" onClick={() => q.refetch()}>↻ Обновить</button>
+      </div>
+
+      {q.isLoading && <p>Загрузка…</p>}
+      {q.isError && <p style={{ color: 'var(--ox-danger)' }}>Ошибка загрузки журнала</p>}
+      {q.data && entries.length === 0 && (
+        <p style={{ color: 'var(--ox-fg-muted)' }}>Журнал пуст. Выполните любое write-действие в админке — запись появится здесь.</p>
+      )}
+
+      {entries.length > 0 && (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+          <thead>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid #444' }}>
+              <th style={{ padding: '6px 8px' }}>Дата</th>
+              <th style={{ padding: '6px 8px' }}>Админ</th>
+              <th style={{ padding: '6px 8px' }}>Действие</th>
+              <th style={{ padding: '6px 8px' }}>Цель</th>
+              <th style={{ padding: '6px 8px' }}>Payload</th>
+              <th style={{ padding: '6px 8px' }}>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((e) => (
+              <tr key={e.id} style={{ borderBottom: '1px solid #2a2a2a' }}>
+                <td style={{ padding: '6px 8px', fontFamily: 'var(--ox-mono)', fontSize: 13, whiteSpace: 'nowrap' }}>
+                  {new Date(e.created_at).toLocaleString('ru-RU')}
+                </td>
+                <td style={{ padding: '6px 8px' }}>{e.admin_name || e.admin_id.slice(0, 8)}</td>
+                <td style={{ padding: '6px 8px', fontFamily: 'var(--ox-mono)' }}>{e.action}</td>
+                <td style={{ padding: '6px 8px' }}>
+                  {e.target_kind && <span style={{ color: 'var(--ox-fg-muted)' }}>{e.target_kind}:</span>}
+                  {e.target_id && <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 13, marginLeft: 4 }}>{e.target_id.slice(0, 12)}</span>}
+                </td>
+                <td style={{ padding: '6px 8px', fontFamily: 'var(--ox-mono)', fontSize: 12, maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    title={JSON.stringify(e.payload)}>
+                  {JSON.stringify(e.payload)}
+                </td>
+                <td style={{ padding: '6px 8px', fontFamily: 'var(--ox-mono)', fontSize: 13 }}>
+                  {e.ip || '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

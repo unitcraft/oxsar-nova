@@ -6515,3 +6515,41 @@ Alien-флот автоматически подтягивается в defender
   - e2e частичный hit (только код): ~4-5 мин
 
 Реальные метрики — после первых 2-3 CI-прогонов.
+
+
+================================================================================
+ИТЕРАЦИЯ 2026-04-24 (plan 14 Ф.1): audit log + UI табы
+================================================================================
+
+Первый шаг плана 14. Параллельно другое окно пишет план 15 (alien),
+поэтому scope строго изолирован: backend/internal/admin/, миграция 0059,
+openapi.yaml (добавка в конец), frontend/src/features/admin/. Не
+трогаю backend/internal/{alien,fleet,event}.
+
+Ф.1.2 audit log
+  - migration 0059_admin_audit_log.sql — id, admin_id, action,
+    target_kind, target_id, payload jsonb, status, ip inet, user_agent,
+    created_at. 4 индекса (created_at DESC, admin_id, action, target).
+  - backend/internal/admin/audit.go — AuditMiddleware + ListAudit.
+    Middleware: читает тело с лимитом 4KB, wrap response writer для
+    статус-кода, после 2xx асинхронно INSERT (goroutine + 2s context).
+    sanitizePayload маскирует поля, содержащие password/token/secret.
+    actionFromRoute выводит ключ из method + chi route-pattern
+    (POST /users/{id}/ban → "users.ban", PUT /automsgs/{key} →
+    "automsgs.update").
+  - backend/cmd/server/main.go — подключён Use(AuditMiddleware) после
+    AdminOnly, новый роут GET /audit.
+  - api/openapi.yaml — путь /api/admin/audit + схема AdminAuditEntry.
+
+Ф.1.1 UI табы (частично)
+  - frontend/src/features/admin/AdminScreen.tsx — state `tab` со
+    значениями 'users'|'audit', блок табов наверху. Существующая
+    разметка (stats + действия + events + таблица) осталась под
+    'users'. Добавлен компонент AdminAuditTab — таблица с фильтрами
+    action/target_id, refetchInterval 15s, ссылка на target.
+
+Осталось в Ф.1 (на следующие итерации):
+  - Табы dashboard/economy/events/cms/combat — потребуют отдельных
+    компонентов, сейчас не нужны (соответствующие страницы не готовы).
+
+Ф.2–Ф.8 плана 14 — отдельными итерациями.
