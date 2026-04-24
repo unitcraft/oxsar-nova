@@ -6902,3 +6902,37 @@ release-roadmap.md обновлён:
 - Предусловия: 18 Фаза 1 не требует ADR (это порт legacy)
 
 Коммитов в сессии: 0 (только исследование и документы).
+
+
+================================================================
+2026-04-24 — итерация «план 18 Фаза 1 — порт rapidfire из legacy»
+================================================================
+
+После переисследования (предыдущая итерация) применена Фаза 1 плана 18.
+
+configs/rapidfire.yml переписан по legacy-таблице na_rapidfire:
+- +38 записей портированы (LF/SF/Cru/DS против Lancer ×20/20/35/100,
+  все юниты → Probe/SSat ×5, Shadow Ship как атакующий против 9 целей,
+  DS против Frigate/Colony/Shadow)
+- −2 удалены (наши «изобретения»: SD→StrongLaser ×2, DS→Plasma ×50)
+- 2 числа исправлены (SD→LL ×2→×10, SD→Lancer ×2→×3)
+- Alien-юниты (200–204, 348, 352, 353) намеренно не портированы —
+  AI-баланс отдельно (план 24). Debug-юнит 358 пропущен.
+
+configs/units.yml: добавлена строка Shadow Ship (id=325) в fleet:
+(catalog_validate_test раскрыл пропуск — Shadow использовался в ships.yml
+и construction.yml, но не был зарегистрирован в реестре units).
+
+Тесты: все зелёные (backend ./...). golden-файлов в testdata/battle/
+нет (только README), пересобирать нечего.
+
+Обновлено:
+- docs/plans/18-unit-rebalance.md — Фаза 1 статус done, добавлен 18.3a
+- docs/balance/audit.md — BA-004 patched, BA-001/002 partially patched
+  (ожидают симуляции перед окончательным patched)
+- docs/simplifications.md — добавлена закрытая запись [M4.x] Rapidfire
+- docs/release-roadmap.md — Фаза 1 roadmap помечена ✅
+
+Следующий шаг: симуляция (Lancer-spam vs Cruiser-fleet, DS-vs-fleet,
+Bomber-vs-defense) для проверки, нужны ли Фаза 2 плана 18 и блоки
+плана 21 (особенно блок A про Lancer cost).

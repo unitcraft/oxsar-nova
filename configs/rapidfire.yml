@@ -1,68 +1,130 @@
 # Rapidfire — ускоренная стрельба по определённым целям.
-# TODO (M4): перенести один-в-один из oxsar2-java/assault/Units.java.
-# Пока — минимальный набор для самотестов боевого движка.
+# Источник: legacy na_rapidfire (oxsar2/sql/new-for-dm/data.sql:9398).
+# Порт 2026-04-24 — план 18 Фаза 1.
 #
 # format:
 #   <shooter_unit_id>: { <target_unit_id>: <multiplier>, ... }
+#
+# Alien-юниты (200-204, 348, 352, 353) — их rapidfire-записи
+# не портированы в этой фазе (AI-баланс отдельно, план 24).
+# Записи 358 (debug-юнит ×900 ко всему) пропущены.
 
 rapidfire:
-  # Cruiser (33) быстро стреляет по Light Fighter (31) и Rocket Launcher (43)
-  33:
-    31: 6
-    43: 10
+  # Small Transporter (29)
+  29:
+    38: 5     # vs Probe
+    39: 5     # vs SolarSat
 
-  # Battleship (34) по Espionage Probe (38) и Solar Satellite (39)
-  34:
+  # Large Transporter (30)
+  30:
     38: 5
     39: 5
 
-  # Frigate (35) — na_rapidfire legacy
+  # Light Fighter (31)
+  31:
+    38: 5
+    39: 5
+    102: 20   # vs Lancer — критично для закрытия BA-002
+
+  # Strong Fighter (32)
+  32:
+    29: 3     # vs Small Transporter
+    38: 5
+    39: 5
+    102: 20   # vs Lancer
+    325: 25   # vs Shadow
+
+  # Cruiser (33)
+  33:
+    31: 6     # vs Light Fighter
+    38: 5
+    39: 5
+    43: 10    # vs Rocket Launcher
+    102: 35   # vs Lancer — критично для закрытия BA-002
+
+  # Battleship (34)
+  34:
+    38: 5
+    39: 5
+    325: 70   # vs Shadow
+
+  # Frigate (35)
   35:
     29: 3
     30: 3
-    32: 7
-    33: 4
-    34: 7
+    32: 7     # vs Strong Fighter
+    33: 4     # vs Cruiser
+    34: 7     # vs Battleship
+    38: 5
+    39: 5
 
-  # Bomber (40) — na_rapidfire legacy
+  # Colony Ship (36)
+  36:
+    38: 5
+    39: 5
+
+  # Recycler (37)
+  37:
+    38: 5
+    39: 5
+
+  # Bomber (40)
   40:
-    43: 20
-    44: 20
-    45: 10
-    46: 10
-    102: 5
+    38: 5
+    39: 5
+    43: 20    # vs Rocket Launcher — legacy, не нерфим
+    44: 20    # vs Light Laser — legacy
+    45: 10    # vs Strong Laser
+    46: 10    # vs Ion Cannon
+    102: 5    # vs Lancer
 
-  # Lancer Ship (102) — na_rapidfire legacy
+  # Star Destroyer (41)
+  41:
+    35: 2     # vs Frigate
+    38: 5
+    39: 5
+    44: 10    # vs Light Laser — было ×2, исправлено к legacy
+    102: 3    # vs Lancer — было ×2, исправлено к legacy
+
+  # Death Star (42) — полный legacy-набор
+  42:
+    29: 250   # vs Small Transporter
+    30: 250   # vs Large Transporter
+    31: 200   # vs Light Fighter
+    32: 100   # vs Strong Fighter
+    33: 33    # vs Cruiser
+    34: 30    # vs Battleship
+    35: 15    # vs Frigate — новое
+    36: 250   # vs Colony Ship — новое
+    37: 250   # vs Recycler
+    38: 1250  # vs Probe
+    39: 1250  # vs SolarSat
+    40: 25    # vs Bomber
+    41: 5     # vs Star Destroyer
+    43: 200   # vs Rocket Launcher
+    44: 200   # vs Light Laser
+    45: 100   # vs Strong Laser
+    46: 100   # vs Ion Cannon
+    47: 50    # vs Gauss Gun
+    102: 100  # vs Lancer — критично для закрытия BA-002
+    325: 300  # vs Shadow — новое
+    # Удалено: 48: 50 (vs Plasma Gun) — не в legacy, было изобретение
+
+  # Lancer Ship (102)
   102:
-    42: 3
+    42: 3     # vs Death Star
 
-  # Plasma Turret (48) — na_rapidfire legacy (оборона тоже имеет RF против DS)
+  # Plasma Gun (48) — defense имеет RF против DS
   48:
     42: 2
 
-  # Star Destroyer (41) — na_rapidfire legacy
-  41:
-    35: 2
-    44: 2
-    45: 2
-    102: 2
-
-  # Deathstar (42) — раскидывает всех подряд
-  42:
-    29: 250
-    30: 250
-    31: 200
-    32: 100
-    33: 33
-    34: 30
-    37: 250
-    38: 1250
-    39: 1250
-    40: 25
-    41: 5
-    43: 200
-    44: 200
-    45: 100
-    46: 100
-    47: 50
-    48: 50
+  # Shadow Ship (325) — полноценный anti-fleet raider
+  325:
+    30: 15    # vs Large Transporter
+    31: 5     # vs Light Fighter
+    35: 20    # vs Frigate
+    36: 20    # vs Colony Ship
+    37: 30    # vs Recycler
+    40: 25    # vs Bomber
+    41: 15    # vs Star Destroyer
+    42: 70    # vs Death Star
