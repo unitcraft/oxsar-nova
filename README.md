@@ -49,6 +49,7 @@ deploy/        docker-образы, k8s-манифесты
 - [CLAUDE.md](CLAUDE.md) — как работать с репозиторием (для разработчиков и AI-ассистентов).
 - [docs/oxsar-spec.txt](docs/oxsar-spec.txt) — полное ТЗ.
 - [docs/status.md](docs/status.md) — матрица готовности модулей.
+- [docs/release-roadmap.md](docs/release-roadmap.md) — приоритетный список задач до запуска в прод.
 - [docs/simplifications.md](docs/simplifications.md) — реестр всех принятых упрощений (trade-offs).
 
 ### Архитектура и планы
