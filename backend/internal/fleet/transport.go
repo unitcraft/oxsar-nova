@@ -132,18 +132,28 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 	totalCargo := int64(0)
 	minSpeed := math.MaxInt
 	totalConsume := 0
+	totalFleetValue := int64(0)
 	for _, sp := range specs {
 		totalCargo += sp.spec.Cargo * sp.count
 		if sp.spec.Speed > 0 && sp.spec.Speed < minSpeed {
 			minSpeed = sp.spec.Speed
 		}
 		totalConsume += sp.spec.Fuel * int(sp.count)
+		totalFleetValue += (sp.spec.Cost.Metal + sp.spec.Cost.Silicon + sp.spec.Cost.Hydrogen) * sp.count
 	}
 	if totalCargo < in.CarryMetal+in.CarrySilicon+in.CarryHydro {
 		return Fleet{}, ErrExceedCargoCap
 	}
 	if minSpeed == math.MaxInt {
 		return Fleet{}, fmt.Errorf("%w: fleet has no speed (empty specs?)", ErrInvalidDispatch)
+	}
+	// Экспедиция (mission=15): минимум 50k metal-eq флота. Это отсекает
+	// фарм-эксплойт BA-003 — отправку 1 LF (4k) ради 5M ресурсов.
+	// 50k ≈ 10 Small Transporter'ов или 1.5 Cruiser — разумный минимум.
+	// План 21 блок B1 + комментарий в 21-gameplay-hardening.md.
+	if in.Mission == 15 && totalFleetValue < expeditionMinFleetValue {
+		return Fleet{}, fmt.Errorf("%w: expedition requires min %d metal-eq fleet (have %d)",
+			ErrInvalidDispatch, expeditionMinFleetValue, totalFleetValue)
 	}
 
 	var out Fleet
