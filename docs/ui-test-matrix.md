@@ -5,7 +5,7 @@
 новых spec-файлов.
 
 **Текущий статус (2026-04-24): 110/110 passed, 0 failed** — полный прогон
-`make test-e2e-docker` зелёный (~7 минут). См. commit `<following commit>`.
+`make test-e2e-docker` зелёный (~7 минут). См. commit `b73ed88`.
 
 Легенда:
 - ✅ — спек написан, автопроверка в CI
