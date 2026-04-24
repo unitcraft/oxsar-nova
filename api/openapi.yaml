@@ -1553,6 +1553,19 @@ paths:
               schema: { $ref: "#/components/schemas/AdminUserProfile" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [admin]
+      summary: Soft-delete аккаунта (план 14 Ф.2.6). Отвязывает от альянса.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: deleted }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429":
+          description: admin rate limit exceeded
 
   /api/admin/users/{id}/resources:
     post:
@@ -1741,6 +1754,98 @@ paths:
                   limit:  { type: integer }
                   offset: { type: integer }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/admin/fleets/{fleet_id}/recall:
+    post:
+      tags: [admin]
+      summary: Принудительный возврат флота (план 14 Ф.2.4).
+      parameters:
+        - in: path
+          name: fleet_id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: флот переведён в returning
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fleet" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429":
+          description: admin rate limit exceeded
+
+  /api/admin/planets/{id}/rename:
+    post:
+      tags: [admin]
+      summary: Переименование планеты (план 14 Ф.2.5).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 1, maxLength: 40 }
+      responses:
+        "204": { description: renamed }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/admin/planets/{id}/transfer:
+    post:
+      tags: [admin]
+      summary: Смена владельца планеты (план 14 Ф.2.5).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                new_user_id: { type: string, format: uuid }
+      responses:
+        "204": { description: transferred }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/admin/planets/{id}:
+    delete:
+      tags: [admin]
+      summary: Soft-delete планеты (план 14 Ф.2.5). Не даёт удалить последнюю.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: deleted }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: last planet of user, transfer first
+
+  /api/admin/users/{id}/restore:
+    post:
+      tags: [admin]
+      summary: Восстановление soft-deleted аккаунта (план 14 Ф.2.6).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: restored }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/i18n/{lang}:
     get:

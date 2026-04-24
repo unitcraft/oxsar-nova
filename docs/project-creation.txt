@@ -7131,3 +7131,57 @@ Roadmap Фазы 1+2 полностью закрыт (блокеры и importan
 ops-бэкапов и второго платёжного шлюза, которые выходят за код-скоп).
 Nice-to-have (Astro, Stargate, Moon destruction, IGR, боты) —
 остаются на после-релизный этап.
+
+
+================================================================
+2026-04-25 — итерация «Фаза 3: admin Ф.2.4-2.6 + Ф.8.2 + Enot»
+================================================================
+
+Important пункты roadmap закрыты. Теперь код-скоп Фазы 3 завершён.
+
+1) План 14 Ф.2.4-2.6 — admin-управление игроками.
+   - POST /api/admin/fleets/{fleet_id}/recall — новый FleetAdminHandler.
+     Вычитывает owner_user_id, вызывает transport.Recall от его имени.
+   - POST /api/admin/planets/{id}/rename — UPDATE planets.name (1..40).
+   - POST /api/admin/planets/{id}/transfer — смена user_id, проверка
+     что new_user не soft-deleted.
+   - DELETE /api/admin/planets/{id} — soft-delete через destroyed_at=now.
+     Отказывает при last planet игрока (409 Conflict).
+   - DELETE /api/admin/users/{id} — soft-delete в транзакции:
+     users.deleted_at=now + alliance_id=NULL + DELETE FROM alliance_members.
+   - POST /api/admin/users/{id}/restore — снимает deleted_at.
+   Все под admin+ RBAC + автоматический audit-log + новый rate-limit.
+
+2) План 14 Ф.8.2 — rate-limit админ-действий.
+   internal/admin/rate_limit.go: RateLimitMiddleware() подключён к
+   /api/admin scope сразу после RBAC и Audit. Лимит: 100 write
+   (POST/PUT/PATCH/DELETE) за час на одного админа, in-memory
+   (sync.Mutex + map). 429 + Retry-After=3600. GET не считаются.
+   Перезапуск сервера обнуляет счётчики — достаточно для
+   soft-safeguard от human-error (не anti-DDoS).
+
+3) Второй платёжный шлюз — Enot.io.
+   internal/payment/enot.go: EnotGateway реализует интерфейс Gateway.
+   Протокол: GET enot.io/pay?m=SHOP&oa=AMOUNT&o=ORDER&s=SIG.
+   Подпись MD5(shop:amount:secret:order). Webhook: form-urlencoded
+   ИЛИ JSON — поддерживает оба формата. Верификация sign_2 и
+   проверка merchant==shop_id (защита от подмены). SuccessResponse=
+   "success". Service.NewService switch дополнен case "enot".
+   Конфиг ENOT_SHOP_ID + ENOT_API_KEY уже был в PaymentConfig.
+
+   5 unit-тестов: BuildPayURL, webhook valid form, webhook valid JSON,
+   webhook wrong sig, webhook wrong merchant. Все зелёные.
+
+   Переключение между Робокассой и Enot — одной env:
+     PAYMENT_PROVIDER=robokassa
+     PAYMENT_PROVIDER=enot
+   Без релиза.
+
+OpenAPI: добавлены 5 новых admin path + дополнены документации к
+уже существующим.
+
+Release-roadmap: все "Важные" пункты теперь ✅. Остались только:
+- ops (бэкапы + мониторинг — инфраструктура, не код)
+- Nice-to-have (20 Ф.5-8, 24 боты, 19 frontend-UI)
+
+Релиз в прод реально возможен.

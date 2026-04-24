@@ -80,20 +80,25 @@
 - `POST /api/admin/users/{id}/artefacts/grant {unit_id, count}`
 - `DELETE /api/admin/users/{id}/artefacts/{artefact_id}` — для жалоб
 
-### Ф.2.4 Флот — read-only + force-recall
-Показать все миссии игрока. Добавить:
-- `POST /api/admin/fleets/{fleet_id}/recall` — принудительный возврат
-- auditable
+### Ф.2.4 Флот — read-only + force-recall — ✅ ЗАКРЫТО 2026-04-25
+- `POST /api/admin/fleets/{fleet_id}/recall` — `admin.FleetAdminHandler`.
+  Вычитывает owner_user_id, затем `transport.Recall` от его имени.
+  Audit-мидлварь пишет лог автоматически. Только admin+.
 
-### Ф.2.5 Планеты
-- `POST /api/admin/planets/{id}/rename {name}`
-- `POST /api/admin/planets/{id}/transfer {new_user_id}` — в крайнем случае
-- `DELETE /api/admin/planets/{id}` — снос планеты (кроме home)
+### Ф.2.5 Планеты — ✅ ЗАКРЫТО 2026-04-25
+- `POST /api/admin/planets/{id}/rename {name}` — UPDATE planets.name
+  (validate 1..40 chars).
+- `POST /api/admin/planets/{id}/transfer {new_user_id}` — проверяет,
+  что target user не удалён. UPDATE planets.user_id.
+- `DELETE /api/admin/planets/{id}` — soft-delete через `destroyed_at=now`.
+  Отказ, если это последняя живая планета игрока (409 Conflict).
 
-### Ф.2.6 Merge/delete-account
-- `DELETE /api/admin/users/{id}` — soft-delete: ставит `deleted_at`,
-  отвязывает планеты (пусть уйдут в «inactive» список), удаляет из альянса
-- `POST /api/admin/users/{id}/restore` — до N дней отмена soft-delete
+### Ф.2.6 Merge/delete-account — ✅ ЗАКРЫТО 2026-04-25
+- `DELETE /api/admin/users/{id}` — soft-delete в транзакции:
+  users.deleted_at=now, alliance_id=NULL, DELETE FROM alliance_members.
+  Планеты не трогаем — они заброшены.
+- `POST /api/admin/users/{id}/restore` — снимает deleted_at. Восстановление
+  в альянс — ручное (join).
 
 ---
 
@@ -222,9 +227,12 @@ UI: карточки на Dashboard (Ф.1.1).
 Миграция: `ALTER TYPE user_role ADD VALUE 'moderator'`.
 Middleware `RequireRole(min)` вместо `AdminOnly`.
 
-### Ф.8.2 Rate-limit админских действий
-Нельзя разом забанить 1000 аккаунтов — человеческая ошибка.
-Лимит: 100 write-действий/час на админа. 429 + alert в audit.
+### Ф.8.2 Rate-limit админских действий — ✅ ЗАКРЫТО 2026-04-25
+- `admin.RateLimitMiddleware()` подключён к `/api/admin` scope (после RBAC
+  и Audit). 100 write-действий (POST/PUT/PATCH/DELETE) в час на админа.
+  429 + `Retry-After: 3600` секунд. GET не ограничивается.
+- Счётчик in-memory (`sync.Mutex` + map). Перезапуск сервера обнуляет;
+  этого достаточно, так как админов мало и это soft-safeguard.
 
 ### Ф.8.3 Подтверждения для деструктивных операций
 - delete user / planet → модалка с вводом `username` для подтверждения
