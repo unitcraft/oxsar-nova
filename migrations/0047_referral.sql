@@ -1,5 +1,5 @@
 -- +goose Up
-ALTER TABLE users ADD COLUMN referred_by TEXT REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE users ADD COLUMN referred_by uuid REFERENCES users(id) ON DELETE SET NULL;
 CREATE INDEX idx_users_referred_by ON users(referred_by) WHERE referred_by IS NOT NULL;
 
 -- +goose Down

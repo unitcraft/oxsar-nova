@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE ai_advisor_log (
     id          TEXT        PRIMARY KEY,
-    user_id     TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id     uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     model       TEXT        NOT NULL,
     question    TEXT        NOT NULL,
     answer      TEXT        NOT NULL DEFAULT '',
