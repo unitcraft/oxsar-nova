@@ -89,6 +89,7 @@ make lint          # все линтеры
 
 - [oxsar-spec.txt](docs/oxsar-spec.txt) — полное ТЗ.
 - [docs/status.md](docs/status.md) — матрица готовности модулей.
+- [docs/release-roadmap.md](docs/release-roadmap.md) — приоритеты до запуска в прод.
 - [docs/simplifications.md](docs/simplifications.md) — tracker всех
   принятых упрощений с планом возврата. **Любой новый trade-off
   записывается сюда в момент принятия, не "потом".**
