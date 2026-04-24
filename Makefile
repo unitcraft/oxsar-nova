@@ -91,6 +91,32 @@ test-e2e-docker:
 test-e2e-docker-down:
 	docker compose -f deploy/docker-compose.e2e.yml down -v --remove-orphans
 
+# ui-preview — ручной осмотр UI на e2e-стеке с пробросом портов.
+# Поднимает всё (kroмe playwright) с mock-платежами и детерминированными
+# seed-данными, UI доступен на http://localhost:5173, API на :8081.
+# Тестовые логины: admin/alice/bob/eve/charlie, пароль test-password-123.
+.PHONY: ui-preview
+ui-preview:
+	docker compose \
+		-f deploy/docker-compose.e2e.yml \
+		-f deploy/docker-compose.e2e.ports.yml \
+		up -d --build \
+		postgres redis migrate backend worker testseed frontend
+	@echo ""
+	@echo "  UI:      http://localhost:5173"
+	@echo "  API:     http://localhost:8081"
+	@echo "  логины:  admin / alice / bob / eve / charlie"
+	@echo "  пароль:  test-password-123"
+	@echo ""
+	@echo "  Остановить: make ui-preview-down"
+
+.PHONY: ui-preview-down
+ui-preview-down:
+	docker compose \
+		-f deploy/docker-compose.e2e.yml \
+		-f deploy/docker-compose.e2e.ports.yml \
+		down -v --remove-orphans
+
 # Аудит покрытия API → UI (все эндпоинты OpenAPI должны вызываться из фронта).
 .PHONY: api-coverage
 api-coverage:

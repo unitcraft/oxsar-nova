@@ -10,8 +10,8 @@
 | Разработка, HMR, ручная проверка | `make dev-up` |
 | Прогон E2E локально | `make test-e2e-docker` |
 | E2E в CI | автоматически, job `e2e` в `.github/workflows/ci.yml` |
-| Посмотреть UI с mock-оплатой и свежим seed | см. [«E2E + ports override»](#e2e--ports-override) ниже |
-| Всё потушить | `make dev-down` или `make test-e2e-docker-down` |
+| Посмотреть UI с mock-оплатой и свежим seed | `make ui-preview` |
+| Всё потушить | `make dev-down` / `make test-e2e-docker-down` / `make ui-preview-down` |
 
 ---
 
@@ -90,15 +90,15 @@ make test-e2e-docker-down
 **Запуск:**
 
 ```bash
-docker compose \
-  -f deploy/docker-compose.e2e.yml \
-  -f deploy/docker-compose.e2e.ports.yml \
-  up -d postgres redis migrate backend worker testseed frontend
-# БЕЗ playwright — он прогонит тесты и выйдет
+make ui-preview
 ```
 
-Открой <http://localhost:5173>, логин любого тестового игрока
-(пароль `test-password-123`):
+(Под капотом — `docker compose -f …e2e.yml -f …e2e.ports.yml up -d
+postgres redis migrate backend worker testseed frontend`. Playwright
+не стартует — он бы сразу прогнал тесты и вышел.)
+
+После запуска открой <http://localhost:5173>, логин любого тестового
+игрока (пароль `test-password-123`):
 - **bob** — superadmin с прокачанной планетой и флотом
 - **alice** — новичок, пустые состояния
 - **admin** — superadmin со средней планетой
@@ -108,10 +108,7 @@ docker compose \
 **Остановить:**
 
 ```bash
-docker compose \
-  -f deploy/docker-compose.e2e.yml \
-  -f deploy/docker-compose.e2e.ports.yml \
-  down -v
+make ui-preview-down
 ```
 
 ---
