@@ -1,7 +1,7 @@
 # ТЗ на дизайн UI oxsar-nova
 
 **Версия**: 1.3 · **Дата**: 2026-04-22  
-**Основание**: анализ OGame UI, `docs/ui-ogame-vs-oxsar.md`, специфика игры.
+**Основание**: анализ OGame UI, `docs/ui/ogame-comparison.md`, специфика игры.
 
 ---
 

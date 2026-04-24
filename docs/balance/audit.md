@@ -4,9 +4,9 @@
 серьёзностью, статусом и ссылкой на план исправления.
 
 **Связанные документы**:
-- [docs/balance-analysis.md](balance-analysis.md) — разбор балансных формул
-- [docs/simplifications.md](simplifications.md) — реестр упрощений при порте
-- [docs/plans/](plans/) — планы исправлений
+- [docs/balance/analysis.md](analysis.md) — разбор балансных формул
+- [docs/simplifications.md](../simplifications.md) — реестр упрощений при порте
+- [docs/plans/](../plans/) — планы исправлений
 
 ---
 
@@ -67,9 +67,9 @@
 
 - **Дата находки**: 2026-04-24
 - **Серьёзность**: P0
-- **Статус**: planned → [план 18 §2.8](plans/18-unit-rebalance.md)
+- **Статус**: planned → [план 18 §2.8](../plans/18-unit-rebalance.md)
 
-**Файлы**: [configs/ships.yml:126-133](../configs/ships.yml), [configs/rapidfire.yml](../configs/rapidfire.yml)
+**Файлы**: [configs/ships.yml:126-133](../../configs/ships.yml), [configs/rapidfire.yml](../../configs/rapidfire.yml)
 
 **Числа**:
 - Death Star (id=42): attack=200,000, shell=9,000,000, shield=50,000
@@ -92,9 +92,9 @@ SD×3 vs DS.
 
 - **Дата находки**: 2026-04-24
 - **Серьёзность**: P0
-- **Статус**: planned → [план 21 Блок A](plans/21-gameplay-hardening.md)
+- **Статус**: planned → [план 21 Блок A](../plans/21-gameplay-hardening.md)
 
-**Файлы**: [configs/ships.yml:150-157](../configs/ships.yml)
+**Файлы**: [configs/ships.yml:150-157](../../configs/ships.yml)
 
 **Числа (attack per 1k metal-equiv)**:
 | Юнит | Attack | Cost (metal-eq) | Attack/1k |
@@ -123,9 +123,9 @@ golden-тесты паритета с Java JAR.
 
 - **Дата находки**: 2026-04-24
 - **Серьёзность**: P0
-- **Статус**: planned → [план 17 B1](plans/17-gameplay-improvements.md) + [план 20 Ф.7](plans/20-legacy-port.md) + [план 21 Блок B](plans/21-gameplay-hardening.md)
+- **Статус**: planned → [план 17 B1](../plans/17-gameplay-improvements.md) + [план 20 Ф.7](../plans/20-legacy-port.md) + [план 21 Блок B](../plans/21-gameplay-hardening.md)
 
-**Файлы**: [backend/internal/fleet/expedition.go:676-725](../backend/internal/fleet/expedition.go)
+**Файлы**: [backend/internal/fleet/expedition.go:676-725](../../backend/internal/fleet/expedition.go)
 
 **Числа** для новичка (expo_tech=5, 3 часа):
 - `exp_power = 5 + 6 + 0 = 11`
@@ -158,9 +158,9 @@ golden-тесты паритета с Java JAR.
 
 - **Дата находки**: 2026-04-24
 - **Серьёзность**: P1
-- **Статус**: planned → [план 18 §2.8](plans/18-unit-rebalance.md)
+- **Статус**: planned → [план 18 §2.8](../plans/18-unit-rebalance.md)
 
-**Файлы**: [configs/rapidfire.yml:50-68](../configs/rapidfire.yml)
+**Файлы**: [configs/rapidfire.yml:50-68](../../configs/rapidfire.yml)
 
 **Числа**:
 - Battleship vs DS: rapidfire **x0**
@@ -180,9 +180,9 @@ golden-тесты паритета с Java JAR.
 
 - **Дата находки**: 2026-04-24
 - **Серьёзность**: P2 (не подтверждено симуляцией)
-- **Статус**: planned → [план 21 Блок C](plans/21-gameplay-hardening.md)
+- **Статус**: planned → [план 21 Блок C](../plans/21-gameplay-hardening.md)
 
-**Файлы**: [backend/internal/battle/engine.go:481-491](../backend/internal/battle/engine.go)
+**Файлы**: [backend/internal/battle/engine.go:481-491](../../backend/internal/battle/engine.go)
 
 **Механика**:
 ```go
@@ -216,9 +216,9 @@ if attack > 0 && attack <= ignoreAttack {
 
 - **Дата находки**: 2026-04-24
 - **Серьёзность**: P1
-- **Статус**: planned → [план 17 A1](plans/17-gameplay-improvements.md)
+- **Статус**: planned → [план 17 A1](../plans/17-gameplay-improvements.md)
 
-**Файлы**: [backend/internal/fleet/attack.go](../backend/internal/fleet/attack.go) — нет проверки
+**Файлы**: [backend/internal/fleet/attack.go](../../backend/internal/fleet/attack.go) — нет проверки
 
 **Механика в legacy**:
 - `consts.dm.local.php`: BASHING_PERIOD=18000 (5ч), BASHING_MAX_ATTACKS=4
@@ -240,7 +240,7 @@ if attack > 0 && attack <= ignoreAttack {
 ### NF-001: Рынок 1:2:4 — арбитраж невозможен
 
 - **Проверено**: 2026-04-24
-- **Файлы**: [backend/internal/market/service.go](../backend/internal/market/service.go)
+- **Файлы**: [backend/internal/market/service.go](../../backend/internal/market/service.go)
 - **Расчёт**: round-trip metal → silicon → hydrogen → metal теряет 30.5%
   (комиссии × 3 обмена). Арбитраж в любую сторону невыгоден.
 
@@ -253,7 +253,7 @@ if attack > 0 && attack <= ignoreAttack {
 ### NF-003: Боевой движок (ballistics/masking/ablation) — корректен
 
 - **Проверено**: 2026-04-24
-- **Файлы**: [backend/internal/battle/engine.go](../backend/internal/battle/engine.go)
+- **Файлы**: [backend/internal/battle/engine.go](../../backend/internal/battle/engine.go)
 - **Проверено**: формула ballistics vs masking распределяет выстрелы
   правильно. Multi-channel attack раздаёт урон по каналам корректно.
   Partial damage (ablation) применяется в правильном порядке.

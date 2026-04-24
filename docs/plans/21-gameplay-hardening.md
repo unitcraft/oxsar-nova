@@ -12,7 +12,7 @@
 
 ## Контекст
 
-Аудит 2026-04-24 зафиксирован в [docs/balance-audit.md](../balance-audit.md).
+Аудит 2026-04-24 зафиксирован в [docs/balance/audit.md](../balance/audit.md).
 Этот план закрывает дыры, не покрытые другими:
 
 - **BA-002 Lancer per-resource** (план 18 косвенно смягчает через
@@ -22,13 +22,13 @@
 - **BA-005 Щиты при high-tech** (не проверено симуляцией)
 
 Дыры BA-001, BA-004, BA-006 покрыты планами 18 и 17 соответственно.
-Подробная диагностика с числами — в [balance-audit.md](../balance-audit.md).
+Подробная диагностика с числами — в [docs/balance/audit.md](../balance/audit.md).
 
 ---
 
 ## Блок A: Lancer — прямой нерф стоимости (крит)
 
-Диагностика: см. [balance-audit.md BA-002](../balance-audit.md#ba-002-lancer-ship--аномальное-attack-per-resource).
+Диагностика: см. [balance-audit.md BA-002](../balance/audit.md#ba-002-lancer-ship--аномальное-attack-per-resource).
 
 ### Вариант A1 — повысить стоимость
 
@@ -62,7 +62,7 @@ shell: 8000         # -2000 (был 10000) — более хрупкий
 
 ## Блок B: Экспедиции — закрыть farm-эксплойт (крит)
 
-Диагностика: см. [balance-audit.md BA-003](../balance-audit.md#ba-003-экспедиции--фарм-ресурсов-минимальным-флотом).
+Диагностика: см. [balance-audit.md BA-003](../balance/audit.md#ba-003-экспедиции--фарм-ресурсов-минимальным-флотом).
 
 Этот блок дополняет **внутри одной экспедиции** то, что уже частично
 закрыто планом 17 B1 (полное уничтожение флота при `lost`) и планом 20 Ф.7
@@ -115,7 +115,7 @@ reward = math.Min(reward, fleetValue(ships) * 3)
 
 ## Блок C: Щиты — проверка и cap (средний приоритет)
 
-Диагностика: см. [balance-audit.md BA-005](../balance-audit.md#ba-005-щиты-близки-к-неуязвимости-при-high-tech).
+Диагностика: см. [balance-audit.md BA-005](../balance/audit.md#ba-005-щиты-близки-к-неуязвимости-при-high-tech).
 
 ### C1. Golden-тест: лёгкий флот vs high-tech Small Shield
 

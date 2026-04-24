@@ -27,6 +27,8 @@ make frontend-run            # vite dev-сервер
 
 API по умолчанию слушает `:8080`, фронт — `:5173`.
 
+Другие compose-стеки (e2e, preview) — [docs/ops/runbooks/docker-stacks.md](docs/ops/runbooks/docker-stacks.md).
+
 ## Структура репозитория
 
 ```
@@ -36,15 +38,49 @@ migrations/    goose SQL-миграции (append-only)
 configs/       YAML-справочники (здания, корабли, rapidfire, артефакты)
 api/           OpenAPI 3.1 спецификация (источник истины для REST)
 testdata/      фикстуры для тестов (бой, экономика)
-docs/          документация, ADR
+docs/          документация, ADR, планы
 deploy/        docker-образы, k8s-манифесты
 ```
 
-## Контакты и документация
+## Навигация по документации
 
-- [CLAUDE.md](CLAUDE.md) — как работать с репозиторием для разработчиков и AI-ассистентов.
+### Обязательное к чтению
+
+- [CLAUDE.md](CLAUDE.md) — как работать с репозиторием (для разработчиков и AI-ассистентов).
+- [docs/oxsar-spec.txt](docs/oxsar-spec.txt) — полное ТЗ.
+- [docs/status.md](docs/status.md) — матрица готовности модулей.
+- [docs/simplifications.md](docs/simplifications.md) — реестр всех принятых упрощений (trade-offs).
+
+### Архитектура и планы
+
 - [docs/adr/](docs/adr/) — принятые архитектурные решения.
-- [docs/oxsar-spec.txt](docs/oxsar-spec.txt) — полное ТЗ проекта.
+- [docs/plans/](docs/plans/) — планы итераций (нумерованные, 01–24).
+- [docs/project-creation.txt](docs/project-creation.txt) — дневник итераций.
+- [docs/design/](docs/design/) — мокапы UI.
+
+### Баланс
+
+- [docs/balance/analysis.md](docs/balance/analysis.md) — разбор формул (производство, стоимости, бой).
+- [docs/balance/audit.md](docs/balance/audit.md) — реестр игровых дыр и эксплойтов с расчётами.
+
+### UI
+
+- [docs/ui/design-spec.md](docs/ui/design-spec.md) — ТЗ на дизайн UI.
+- [docs/ui/ogame-comparison.md](docs/ui/ogame-comparison.md) — сравнение с OGame UI.
+- [docs/ui/test-matrix.md](docs/ui/test-matrix.md) — матрица e2e-тестов.
+- [docs/ui/dev-log.md](docs/ui/dev-log.md) — дневник UI-доработок.
+
+### Эксплуатация
+
+- [docs/ops/vps-sizing.md](docs/ops/vps-sizing.md) — VPS-конфигурации под разный DAU.
+- [docs/ops/payment-integration.md](docs/ops/payment-integration.md) — подключение платёжных шлюзов.
+- [docs/ops/runbooks/](docs/ops/runbooks/) — операционные runbooks.
+
+### Справочное
+
+- [api/openapi.yaml](api/openapi.yaml) — контракт REST API.
+- [docs/code-stats.md](docs/code-stats.md) — статистика кода.
+- [docs/legacy/game-reference.md](docs/legacy/game-reference.md) — доступ к legacy oxsar2 для сверки.
 
 ## Лицензия
 

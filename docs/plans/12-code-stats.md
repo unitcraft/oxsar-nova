@@ -2,7 +2,7 @@
 
 Сбор метрик по кодовой базе oxsar-nova. Цель — материал для статьи о создании
 игры ([docs/project-creation.txt](../project-creation.txt),
-[docs/ui-dev-log.md](../ui-dev-log.md)) и понимание техдолга/прогресса.
+[docs/ui/dev-log.md](../ui/dev-log.md)) и понимание техдолга/прогресса.
 
 ## Что считать
 

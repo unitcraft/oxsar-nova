@@ -33,9 +33,6 @@ node_modules/
 
 ../oxsar2/
 
-# PII экспорт пользователей легаси (email-ы)
-/docs/legacy-users.tsv
-
 # Playwright e2e output
 frontend/playwright-report/
 frontend/test-results/
@@ -43,3 +40,4 @@ frontend/test-results/
 # Одноразовый выхлоп cmd/tools/import-datasheets — не читается runtime'ом,
 # воспроизводим через `make import-datasheets` из legacy-дампа.
 configs/*_generated.yml
+helpful.txt
