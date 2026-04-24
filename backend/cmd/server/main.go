@@ -19,6 +19,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/achievement"
 	"github.com/oxsar/nova/backend/internal/admin"
 	"github.com/oxsar/nova/backend/internal/aiadvisor"
+	"github.com/oxsar/nova/backend/internal/alien"
 	"github.com/oxsar/nova/backend/internal/alliance"
 	"github.com/oxsar/nova/backend/internal/chat"
 	"github.com/oxsar/nova/backend/internal/artefact"
@@ -186,6 +187,7 @@ func run() error {
 	recordsH := records.NewHandler(pool, cat)
 
 	adminH := admin.NewHandler(db)
+	alienH := alien.NewHandler(db)
 
 	chatHub := chat.NewHub()
 	chatH := chat.NewHandler(chatHub, db)
@@ -299,6 +301,8 @@ func run() error {
 
 		pr.Post("/payment/order", paymentH.CreateOrder)
 		pr.Get("/payment/history", paymentH.History)
+
+		pr.Post("/alien/holding/{event_id}/pay", alienH.Pay)
 
 		pr.Get("/galaxy/{g}/{s}", galaxyH.System)
 
