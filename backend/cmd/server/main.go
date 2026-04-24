@@ -387,6 +387,9 @@ func run() error {
 			ar.Get("/events/stats", adminH.EventsStats)
 			ar.Post("/events/{id}/retry", adminH.EventRetry)
 			ar.Post("/events/{id}/cancel", adminH.EventCancel)
+			// Ф.3.2-3.3 dead-letter explorer
+			ar.Get("/events/dead", adminH.ListDeadEvents)
+			ar.Post("/events/dead/{id}/resurrect", adminH.ResurrectDeadEvent)
 			ar.Get("/audit", adminH.ListAudit)
 		})
 	})

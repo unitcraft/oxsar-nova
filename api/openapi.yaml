@@ -1502,6 +1502,68 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/admin/events/dead:
+    get:
+      tags: [admin]
+      summary: Dead-letter события (план 14 Ф.3.2)
+      description: |
+        События, которые после N неудачных попыток перенесены из events в
+        events_dead отдельным cron'ом.
+      parameters:
+        - in: query
+          name: kind
+          schema: { type: integer }
+        - in: query
+          name: user_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 100, maximum: 500 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:         { type: string, format: uuid }
+                        user_id:    { type: string, format: uuid, nullable: true }
+                        planet_id:  { type: string, format: uuid, nullable: true }
+                        kind:       { type: integer }
+                        fire_at:    { type: string, format: date-time }
+                        payload:    { type: object, additionalProperties: true }
+                        created_at: { type: string, format: date-time }
+                        processed_at: { type: string, format: date-time, nullable: true }
+                        attempt:    { type: integer }
+                        last_error: { type: string }
+                        failed_at:  { type: string, format: date-time }
+                  limit:  { type: integer }
+                  offset: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/admin/events/dead/{id}/resurrect:
+    post:
+      tags: [admin]
+      summary: Вернуть dead-letter событие в активные (план 14 Ф.3.3)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: resurrected }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/admin/audit:
     get:
       tags: [admin]
