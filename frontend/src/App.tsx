@@ -237,6 +237,7 @@ function AuthenticatedApp() {
         onLogout={logout}
         onSearch={() => setSearchOpen(true)}
         username={me.data?.username ?? ''}
+        isAdmin={isAdmin}
         {...(me.data?.credit !== undefined ? { credit: me.data.credit } : {})}
       />
 
@@ -249,11 +250,11 @@ function AuthenticatedApp() {
               border: '1px solid rgba(239,68,68,0.6)',
               display: 'flex', alignItems: 'center', gap: 10,
               animation: 'ox-pulse-border 1.5s ease-in-out infinite',
-              fontSize: 13,
+              fontSize: 15,
             }}>
               <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
               <span style={{ color: 'var(--ox-danger)', fontWeight: 600, flex: 1 }}>Атака на [{f.dst_galaxy}:{f.dst_system}:{f.dst_position}]{f.dst_is_moon ? ' 🌑' : ''}</span>
-              <span style={{ fontSize: 12, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', flexShrink: 0 }}>
+              <span style={{ fontSize: 14, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', flexShrink: 0 }}>
                 <Countdown finishAt={f.arrive_at} />
               </span>
             </div>
@@ -379,7 +380,7 @@ function useServerClock() {
 
 /* ── Header ── */
 function Header({
-  planet, planets, homePlanetId, onPlanetChange, onLogout, onSearch, username, credit,
+  planet, planets, homePlanetId, onPlanetChange, onLogout, onSearch, username, credit, isAdmin,
 }: {
   planet: Planet;
   planets: Planet[];
@@ -389,6 +390,7 @@ function Header({
   onSearch: () => void;
   username: string;
   credit?: number | undefined;
+  isAdmin: boolean;
 }) {
   const metal    = planet.metal    ?? 0;
   const silicon  = planet.silicon  ?? 0;
@@ -450,7 +452,7 @@ function Header({
         <div className="ox-res-item ox-energy-item" style={{ color: energyRemaining < 0 ? 'var(--ox-danger)' : 'var(--ox-fg-dim)' }}>
           <span className="icon">⚡</span>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
-            <span style={{ fontSize: 13, fontFamily: 'var(--ox-mono)', fontWeight: 600 }}>{Math.round(energyProd)}</span>
+            <span style={{ fontSize: 15, fontFamily: 'var(--ox-mono)', fontWeight: 600 }}>{Math.round(energyProd)}</span>
             {energyProd > 0 && (
               <span style={{ fontSize: 10, fontFamily: 'var(--ox-mono)', color: energyRemaining < 0 ? 'var(--ox-danger)' : 'var(--ox-success, #22c55e)' }}>
                 {energyRemaining >= 0 ? '+' : ''}{Math.round(energyRemaining)}
@@ -464,12 +466,12 @@ function Header({
         {credit !== undefined && (
           <div className="ox-res-item" title="Кредиты">
             <span className="icon">💳</span>
-            <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 13, fontWeight: 600, color: 'var(--ox-accent)' }}>
+            <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 15, fontWeight: 600, color: 'var(--ox-accent)' }}>
               {credit % 1 === 0 ? credit : credit.toFixed(2)}
             </span>
           </div>
         )}
-        <span style={{ fontSize: 12, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', letterSpacing: '0.04em' }}>
+        <span style={{ fontSize: 14, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', letterSpacing: '0.04em' }}>
           {timeStr}
         </span>
         <button
@@ -477,15 +479,37 @@ function Header({
           className="btn-ghost btn-sm"
           onClick={onSearch}
           title="Поиск (Ctrl+K)"
-          style={{ fontFamily: 'var(--ox-mono)', fontSize: 12 }}
+          style={{ fontFamily: 'var(--ox-mono)', fontSize: 14 }}
         >
           🔍 <span style={{ fontSize: 10, opacity: 0.6 }}>Ctrl+K</span>
         </button>
         <PlanetSwitcher planet={planet} planets={planets} homePlanetId={homePlanetId} onChange={onPlanetChange} />
         {username && (
-          <span style={{ fontSize: 12, color: 'var(--ox-fg-dim)', marginLeft: 4 }}>
-            {username}
-          </span>
+          <a
+            href="#settings"
+            title="Профиль / настройки"
+            style={{
+              fontSize: 14,
+              color: 'var(--ox-fg-dim)',
+              marginLeft: 4,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              textDecoration: 'none',
+            }}
+          >
+            👤 {username}
+          </a>
+        )}
+        {isAdmin && (
+          <a
+            href="#admin"
+            title="Панель администратора"
+            className="btn-ghost btn-sm"
+            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+          >
+            🛠 Админ
+          </a>
         )}
         <button type="button" className="btn-ghost btn-sm" onClick={onLogout}>Выйти</button>
       </div>
@@ -558,8 +582,8 @@ function PlanetSwitcher({
         style={hasMultiple ? undefined : { cursor: 'default' }}
       >
         <span className="ox-planet-switcher-icon">{planet.is_moon ? '🌑' : '🪐'}</span>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>{planet.name}</span>
-        {planet.id === homePlanetId && <span style={{ fontSize: 11 }}>🏠</span>}
+        <span style={{ fontSize: 15, fontWeight: 600 }}>{planet.name}</span>
+        {planet.id === homePlanetId && <span style={{ fontSize: 13 }}>🏠</span>}
         <span className="ox-planet-switcher-coords">
           [{planet.galaxy}:{planet.system}:{planet.position}]
         </span>
@@ -582,7 +606,7 @@ function PlanetSwitcher({
             >
               <span>{p.is_moon ? '🌑' : '🪐'}</span>
               <span style={{ flex: 1 }}>{p.name}{p.id === homePlanetId && ' 🏠'}</span>
-              <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 11, color: 'var(--ox-fg-muted)' }}>
+              <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 13, color: 'var(--ox-fg-muted)' }}>
                 [{p.galaxy}:{p.system}:{p.position}]
               </span>
             </div>
@@ -635,7 +659,7 @@ function BottomNav({ tab, setTab, unreadCount }: { tab: Tab; setTab: (t: Tab) =>
             style={{ maxWidth: '100%', borderRadius: '16px 16px 0 0', padding: '16px 0' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: '0 16px 12px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
+            <div style={{ padding: '0 16px 12px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
               Навигация
             </div>
             <MoreSheet tab={tab} setTab={(t) => { setTab(t); setSheetOpen(false); }} />
@@ -757,7 +781,7 @@ function LoadingSkeleton() {
       <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--ox-accent)', textShadow: '0 0 30px rgba(56,189,248,0.4)', animation: 'ox-float 2s ease-in-out infinite' }}>
         ✦ OXSAR
       </div>
-      <div style={{ color: 'var(--ox-fg-muted)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+      <div style={{ color: 'var(--ox-fg-muted)', fontSize: 15, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
         Загрузка вселенной…
       </div>
     </div>
