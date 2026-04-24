@@ -111,7 +111,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
         </h2>
         {storage.total > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 160 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ox-fg-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ox-fg-muted)' }}>
               <span>Хранилище</span>
               <span style={{ fontFamily: 'var(--ox-mono)' }}>{storage.used} / {storage.total}</span>
             </div>
@@ -123,7 +123,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
       {/* Queue */}
       {list.length > 0 && (
         <div className="ox-panel" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 2 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 2 }}>
             Очередь ангара
           </div>
           {list.map((q, i) => {
@@ -133,20 +133,20 @@ export function RepairScreen({ planet }: { planet: Planet }) {
             const icon = q.mode === 'repair' ? '🔧' : '♻️';
             return (
               <div key={q.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15 }}>
                   <span>{i === 0 ? icon : '⏳'}</span>
                   <span style={{ flex: 1, fontWeight: i === 0 ? 600 : 400 }}>
                     {q.mode === 'repair' ? 'Ремонт' : 'Разбор'}: {nameOf(q.unit_id)} × {q.count}
                   </span>
                   {i === 0 ? <Countdown finishAt={q.end_at} /> : (
-                    <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
+                    <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
                       {new Date(q.end_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
                   <button
                     type="button"
                     className="btn-ghost btn-sm"
-                    style={{ fontSize: 11, padding: '2px 6px', color: 'var(--ox-fg-muted)' }}
+                    style={{ fontSize: 13, padding: '2px 6px', color: 'var(--ox-fg-muted)' }}
                     onClick={() => cancel.mutate(q.id)}
                     title="Отменить"
                   >
@@ -172,7 +172,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
 
       {tab === 'repair' && (
         damagedList.length === 0 ? (
-          <div style={{ color: 'var(--ox-fg-dim)', fontSize: 14, padding: '8px 0' }}>
+          <div style={{ color: 'var(--ox-fg-dim)', fontSize: 16, padding: '8px 0' }}>
             🔧 Нет повреждённых кораблей
           </div>
         ) : (
@@ -182,21 +182,26 @@ export function RepairScreen({ planet }: { planet: Planet }) {
               const hasReqs = !!(unitMeta?.requires?.length);
               return (
                 <div key={d.unit_id} className="ox-unit-card">
-                  <div className="ox-unit-card-img">
-                    {unitMeta && <img src={imageOf(unitMeta.key)} alt={nameOf(d.unit_id)} width={64} height={64} style={{ imageRendering: 'pixelated' }} />}
-                  </div>
-                  <div className="ox-unit-card-body">
-                    <div className="ox-unit-card-name">{nameOf(d.unit_id)}</div>
-                    <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>В наличии: {d.count}</div>
-                    <div style={{ fontSize: 12, color: 'var(--ox-danger)' }}>Повреждено: {d.damaged}</div>
-                    <div style={{ marginTop: 4 }}>
-                      <ProgressBar pct={d.shell_percent} variant={d.shell_percent < 40 ? 'danger' : 'warning'} height={4} showLabel />
-                    </div>
-                    {hasReqs && unitMeta?.requires && (
-                      <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginTop: 4, fontFamily: 'var(--ox-mono)' }}>
-                        🔒 {fmtReqs(unitMeta.requires)}
-                      </div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    {unitMeta && (
+                      <img
+                        src={imageOf(unitMeta.key)} alt={nameOf(d.unit_id)} width={64} height={64}
+                        style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4 }}
+                      />
                     )}
+                    <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                      <div className="ox-unit-card-name">{nameOf(d.unit_id)}</div>
+                      <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>В наличии: {d.count}</div>
+                      <div style={{ fontSize: 14, color: 'var(--ox-danger)' }}>Повреждено: {d.damaged}</div>
+                      <div style={{ marginTop: 4 }}>
+                        <ProgressBar pct={d.shell_percent} variant={d.shell_percent < 40 ? 'danger' : 'warning'} height={4} showLabel />
+                      </div>
+                      {hasReqs && unitMeta?.requires && (
+                        <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginTop: 4, fontFamily: 'var(--ox-mono)' }}>
+                          🔒 {fmtReqs(unitMeta.requires)}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="ox-unit-card-footer">
                     <button
@@ -218,7 +223,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
 
       {tab === 'disassemble' && (
         <>
-          <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', padding: '4px 0' }}>
+          <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', padding: '4px 0' }}>
             Разбор здоровых юнитов возвращает ~70% стоимости.
           </div>
           <DisassembleList
@@ -260,25 +265,28 @@ function DisassembleList({
         } : null;
         return (
           <div key={u.id} className="ox-unit-card">
-            <div className="ox-unit-card-img">
-              <img src={imageOf(u.key)} alt={u.name} width={64} height={64} style={{ imageRendering: 'pixelated' }} />
-            </div>
-            <div className="ox-unit-card-body">
-              <div className="ox-unit-card-name">{u.name}</div>
-              <div style={{ fontSize: 12, color: 'var(--ox-fg-dim)' }}>В наличии: {have}</div>
-              {(u.speed != null || (u.fuel != null && u.fuel > 0)) && (
-                <div style={{ fontSize: 11, color: 'var(--ox-fg-muted)', display: 'flex', gap: 8, marginTop: 2 }}>
-                  {u.speed != null && <span>🚀 {u.speed.toLocaleString('ru-RU')}</span>}
-                  {u.fuel != null && u.fuel > 0 && <span>⛽ {u.fuel}/ед.</span>}
-                </div>
-              )}
-              {refund && draft > 0 && (
-                <div style={{ fontSize: 11, fontFamily: 'var(--ox-mono)', color: 'var(--ox-success)', marginTop: 2, lineHeight: 1.5 }}>
-                  +{refund.metal > 0 && <span style={{ marginRight: 4 }}>🟠{refund.metal.toLocaleString('ru-RU')}</span>}
-                  {refund.silicon > 0 && <span style={{ marginRight: 4 }}>💎{refund.silicon.toLocaleString('ru-RU')}</span>}
-                  {refund.hydrogen > 0 && <span>💧{refund.hydrogen.toLocaleString('ru-RU')}</span>}
-                </div>
-              )}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <img
+                src={imageOf(u.key)} alt={u.name} width={64} height={64}
+                style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4 }}
+              />
+              <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                <div className="ox-unit-card-name">{u.name}</div>
+                <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>В наличии: {have}</div>
+                {(u.speed != null || (u.fuel != null && u.fuel > 0)) && (
+                  <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', display: 'flex', gap: 8, marginTop: 2 }}>
+                    {u.speed != null && <span>🚀 {u.speed.toLocaleString('ru-RU')}</span>}
+                    {u.fuel != null && u.fuel > 0 && <span>⛽ {u.fuel}/ед.</span>}
+                  </div>
+                )}
+                {refund && draft > 0 && (
+                  <div style={{ fontSize: 13, fontFamily: 'var(--ox-mono)', color: 'var(--ox-success)', marginTop: 2, lineHeight: 1.5 }}>
+                    +{refund.metal > 0 && <span style={{ marginRight: 4 }}>🟠{refund.metal.toLocaleString('ru-RU')}</span>}
+                    {refund.silicon > 0 && <span style={{ marginRight: 4 }}>💎{refund.silicon.toLocaleString('ru-RU')}</span>}
+                    {refund.hydrogen > 0 && <span>💧{refund.hydrogen.toLocaleString('ru-RU')}</span>}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="ox-unit-card-footer" style={{ display: 'flex', gap: 6 }}>
               <input
