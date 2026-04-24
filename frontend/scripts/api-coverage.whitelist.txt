@@ -1,0 +1,10 @@
+# Эндпоинты, которые НЕ должны иметь прямого UI-вызова (webhook,
+# внутренние redirect, admin-only без UI и т.п.). Формат: "METHOD /api/path".
+# Комментарии начинаются с #. Каждое исключение должно иметь обоснование.
+
+# Webhook от платёжного шлюза — дёргается сервером Робокассы, не UI.
+POST /api/payment/webhook
+
+# Mock pay — GET-редирект из BuildPayURL, UI переходит туда через
+# window.location.href, но не через api.get() в TS-коде.
+GET /api/payment/mock/pay

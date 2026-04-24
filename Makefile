@@ -56,6 +56,23 @@ worker-run:
 frontend-run:
 	cd $(FRONTEND) && npm run dev
 
+# testseed — детерминированные данные для E2E (5 игроков, альянс, сообщения).
+# Использует DB_URL из окружения (или GOOSE_DBSTRING как fallback).
+# Флаг --reset сначала чистит игровые таблицы.
+.PHONY: test-seed
+test-seed:
+	cd $(BACKEND) && DB_URL="$${DB_URL:-$(GOOSE_DBSTRING)}" go run ./cmd/tools/testseed --reset
+
+# E2E — Playwright, поднимает backend+frontend и прогоняет спеки из frontend/e2e.
+.PHONY: test-e2e
+test-e2e:
+	cd $(FRONTEND) && npm run test:e2e
+
+# Аудит покрытия API → UI (все эндпоинты OpenAPI должны вызываться из фронта).
+.PHONY: api-coverage
+api-coverage:
+	cd $(FRONTEND) && npm run api:coverage
+
 .PHONY: backend-test
 backend-test:
 	cd $(BACKEND) && go test ./...

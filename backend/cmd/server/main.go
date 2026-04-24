@@ -218,6 +218,9 @@ func run() error {
 	r.With(auth.Middleware(jwt)).Get("/api/stats/resource-transfers", scoreH.ResourceTransfers)
 	r.Get("/api/payment/packages", paymentH.Packages)
 	r.Post("/api/payment/webhook", paymentH.Webhook)
+	if cfg.Payment.Provider == "mock" {
+		r.Get("/api/payment/mock/pay", paymentH.MockPay)
+	}
 
 	// i18n доступна без авторизации (логин-экран тоже использует).
 	if i18nH != nil {
