@@ -157,3 +157,12 @@ import-datasheets:
 	cd $(BACKEND) && go run ./cmd/tools/import-datasheets \
 		--input="$(OXSAR2_DUMP)" \
 		--output="$(ROOT)/configs"
+
+# wiki-gen: генерирует docs/wiki/ru/{buildings,ships,defense,research}/*.md
+# из configs/. План 19 (game-wiki). Запускать после каждого изменения
+# балансовых YAML.
+.PHONY: wiki-gen
+wiki-gen:
+	cd $(BACKEND) && go run ./cmd/tools/wiki-gen \
+		--configs="$(ROOT)/configs" \
+		--out="$(ROOT)/docs/wiki/ru"

@@ -1,8 +1,43 @@
 # План 19: Вики игры (документация для игроков)
 
 **Дата**: 2026-04-24
-**Статус**: ЧЕРНОВИК
+**Статус**: **MVP реализован 2026-04-25** (Ф.1 + Ф.2 + backend API). Frontend UI отложен.
 **Стек затрагивает**: docs/ (Markdown-генерация), frontend (React, страница /wiki), backend (возможно — эндпоинт выгрузки каталогов)
+
+---
+
+## MVP что сделано (2026-04-25)
+
+- **Ф.1** — создана структура `docs/wiki/ru/` с index + ручными статьями
+  getting-started/, resources/, combat/, missions/, expedition/ (frontmatter
+  title/category/order).
+- **Ф.2** — генератор `backend/cmd/tools/wiki-gen/`:
+  - buildings/ — index.md + по одной странице на каждое здание с таблицей
+    стоимости первых 10 уровней
+  - ships/ — index.md + страницы с характеристиками и rapidfire-графом
+    ("контрит" / "контрится")
+  - defense/ — аналогично
+  - research/ — index со списком
+  - `make wiki-gen` для запуска
+- **Backend** — `internal/wiki/` пакет + 3 эндпоинта:
+  - `GET /api/wiki` — категории
+  - `GET /api/wiki/{category}` — список страниц
+  - `GET /api/wiki/{category}/{slug}` — одна страница (markdown + frontmatter)
+  - Публичный (без auth).
+  - `safeName` защита от path traversal.
+
+## Что НЕ сделано в MVP
+
+- **Ф.4** — frontend-страница `/wiki` (react-markdown, layout, sidebar).
+  Откладывается: добавление зависимостей React и SPA-интеграция.
+- **Ф.5** — кнопки «?» у зданий/юнитов в игре.
+- **Ф.6** — SEO, sitemap.xml.
+- Калькулятор стоимости до любого уровня.
+- Переключатель ru/en.
+- `[[entity_id]]` transformer.
+- Patch-notes категория.
+
+Все эти пункты — инкрементальные улучшения, не блокер для релиза.
 
 ---
 

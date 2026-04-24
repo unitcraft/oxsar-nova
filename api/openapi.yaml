@@ -786,6 +786,67 @@ paths:
         "409":
           description: Not enough hydrogen (5000 required) or target out of scan range.
 
+  /api/wiki:
+    get:
+      tags: [wiki]
+      summary: Список категорий вики (план 19).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:   { type: string }
+                        title: { type: string }
+                        order: { type: integer }
+
+  /api/wiki/{category}:
+    get:
+      tags: [wiki]
+      summary: Список страниц внутри категории.
+      parameters:
+        - in: path
+          name: category
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/wiki/{category}/{slug}:
+    get:
+      tags: [wiki]
+      summary: Содержимое статьи (markdown + frontmatter).
+      parameters:
+        - in: path
+          name: category
+          required: true
+          schema: { type: string }
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  path:        { type: string }
+                  frontmatter: { type: object, additionalProperties: { type: string } }
+                  markdown:    { type: string }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/messages:
     get:
       tags: [messages]
