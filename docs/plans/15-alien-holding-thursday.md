@@ -88,7 +88,10 @@ Power Scale Thursday             = randFloatRange(1.5, 2.0)
 
 ## Скоуп плана
 
-### Этап 1 — День четверга + HALT/HOLDING + защита (минимум, ~1.5–2 дня)
+### Этап 1 — День четверга + HALT/HOLDING + защита — ЗАКРЫТО
+
+Коммиты: f411e82, 755f678, 4c4920e, fd9c858.
+
 
 - [ ] **Четверг-триггер** в спавне: `time.Now().Weekday() == time.Thursday`
   → `ALIEN_ATTACK_TIME_FLEETS_NUMBER=250` вместо `50`, сила
@@ -162,28 +165,44 @@ Power Scale Thursday             = randFloatRange(1.5, 2.0)
   - `alien/pay_test.go`: платёж продлевает, cap 15 дней, 402 при
     нехватке кредитов.
 
-### Этап 2 — Полный HOLDING_AI (+0.5–1 день)
+### Этап 2 — Полный HOLDING_AI — ЗАКРЫТО частично (commit 1367332)
 
-- [ ] Остальные 7 действий HOLDING_AI. В легаси реализованы не все —
-  проверить каждое и либо портировать, либо пометить как
-  `simplification` в `docs/simplifications.md`:
-  - `onExtractAlientShipsAI` — убывание alien-флота (1–2 корабля за
-    тик).
-  - `onRepairUserUnitsAI` — ремонт кораблей игрока.
-  - `onAddUserUnitsAI` — подарок кораблей.
-  - `onAddCreditsAI` — подарок кредитов.
-  - `onAddArtefactAI` — подарок артефакта.
-  - `onGenerateAsteroidAI` — появление астероида рядом.
-  - `onFindPlanetAfterBattleAI` — подарок новой планеты.
+Проверка legacy (`AlienAI.class.php:1086–1126`) показала: из 8 действий
+HOLDING_AI **6 имеют пустые тела** — в игре они никогда ничего не
+делали. Реально работают только 2:
 
-### Этап 3 — Прочие alien-события (+1–2 дня)
+- [x] `onUnloadAlienResoursesAI` — ресурсы игроку (шаг 2, commit 755f678).
+- [x] `onExtractAlientShipsAI` — убывание alien-флота, закрытие HOLDING
+  при полном уходе (commit 1367332).
+- [-] `onRepairUserUnitsAI`, `onAddUserUnitsAI`, `onAddCreditsAI`,
+  `onAddArtefactAI`, `onGenerateAsteroidAI`, `onFindPlanetAfterBattleAI` —
+  в legacy no-op. Портировать нечего. Зафиксировано в
+  `docs/simplifications.md`.
 
-- [ ] `KindAlienChangeMissionAI` (81): 60% вероятность перед атакой,
-  смена миссии / усиление флота ×1.5.
-- [ ] `KindAlienGrabCredit` (37): отдельный сценарий атаки на
-  богатых игроков. Требует кредитную систему (план 06).
-- [ ] `KindAlienFlyUnknown` (33): переходная миссия с генерацией
-  ATTACK/GRAB при прибытии.
+### Этап 3 — Прочие alien-события — ПРОПУЩЕН
+
+После детального анализа legacy принято решение не делать:
+
+- **`KindAlienChangeMissionAI` (81)** — смена миссии **в полёте**.
+  У нас в nova пришельцы не имеют промежуточного состояния «в полёте»:
+  событие ATTACK создаётся сразу с `fire_at = now+flight`, а
+  `AttackHandler` отрабатывает бой транзакционно за одну итерацию.
+  Механика «поменять цель пока летят» нам не нужна.
+
+- **`KindAlienGrabCredit` (37)** — отдельный event-тип для кражи
+  кредитов у богатых игроков. У нас `applyGrabCredit` уже вызывается
+  в `AttackHandler` при победе пришельцев (commit aedc65b в плане 01
+  A.3). Отдельный event-тип = дублирование.
+
+- **`KindAlienFlyUnknown` (33)** — переходная миссия, которая в legacy
+  при прибытии превращается в ATTACK/GRAB_CREDIT/тихий уход.
+  У нас эту роль выполняет сам `KindAlienAttack` с 30%-рандомизацией
+  спавна в `Spawn`.
+
+Три константы (`KindAlienFlyUnknown=33`, `KindAlienGrabCredit=37`,
+`KindAlienChangeMissionAI=81`) добавлены в `event/kinds.go` как
+«зарезервированные» — пригодятся, если в будущем понадобится более
+точный порт.
 
 ### Этап 4 — UI (+1 день)
 
