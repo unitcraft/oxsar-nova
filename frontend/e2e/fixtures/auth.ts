@@ -24,12 +24,23 @@ interface AuthResponse {
   tokens: { access: string; refresh: string };
 }
 
+// Кешируем токены на весь прогон — backend имеет ratelimit на /api/auth/login
+// (см. authRL в main.go). Без кеша 110 тестов × retries = 429.
+const tokenCache = new Map<string, AuthResponse>();
+
 async function fetchTokens(request: APIRequestContext, username: string): Promise<AuthResponse> {
+  const cached = tokenCache.get(username);
+  if (cached) return cached;
+
+  // Backend принимает username в поле `email` (см. auth.Service.Login:
+  // WHERE email=$1 OR lower(username)=$1).
   const res = await request.post(`${BACKEND_URL}/api/auth/login`, {
-    data: { username, password: TEST_PASSWORD },
+    data: { email: username, password: TEST_PASSWORD },
   });
   expect(res.ok(), `login ${username} failed (${res.status()})`).toBe(true);
-  return (await res.json()) as AuthResponse;
+  const data = (await res.json()) as AuthResponse;
+  tokenCache.set(username, data);
+  return data;
 }
 
 export async function loginAs(page: Page, user: TestUserName): Promise<void> {

@@ -37,8 +37,8 @@ export function ChatScreen() {
   const myId = useAuthStore((s) => s.userId);
 
   useEffect(() => {
-    api.get<ChatMessage[]>(`/api/chat/${kind}/history`)
-      .then(setMessages)
+    api.get<ChatMessage[] | null>(`/api/chat/${kind}/history`)
+      .then((list) => setMessages(list ?? []))
       .catch(() => null);
   }, [kind]);
 

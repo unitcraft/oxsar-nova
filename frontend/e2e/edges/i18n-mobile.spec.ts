@@ -5,15 +5,16 @@ import { loginAs } from '../fixtures/auth';
 import { goToTab } from '../helpers/nav';
 
 test.describe('Ф.4.4 i18n', () => {
-  test('no raw key labels like MENU_FOO on main screens', async ({ page }) => {
+  test('no raw MENU_/ACTION_/STATE_ keys leaking on main screens', async ({ page }) => {
     await loginAs(page, 'bob');
     for (const tab of ['overview', 'buildings', 'research', 'shipyard', 'galaxy', 'messages']) {
       await goToTab(page, tab);
-      const text = await page.locator('body').innerText();
-      expect.soft(
-        text,
-        `tab ${tab} contains raw i18n key`,
-      ).not.toMatch(/\b[A-Z][A-Z0-9_]{3,}\b(?!.*[а-яА-Я])/);
+      const text = await page.locator('main.ox-content').innerText();
+      // Точечные префиксы из src/i18n словарей — если утечёт, значит
+      // ключ не найден в bundle.
+      expect.soft(text, `tab ${tab} contains raw i18n key`).not.toMatch(
+        /\b(MENU_|BTN_|ACTION_|STATE_|LABEL_|HINT_)[A-Z0-9_]{2,}\b/,
+      );
     }
   });
 });

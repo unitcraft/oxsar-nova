@@ -51,7 +51,8 @@ test.describe('Ф.2.8 alliance', () => {
 });
 
 test.describe('Ф.2.9 chat', () => {
-  screenOpens('chat', 'bob', /чат|chat|сообщ/i);
+  // Вкладка чата содержит table с каналами (глобальный/альянс) и поле ввода.
+  screenOpens('chat', 'bob', /глобальн|альянс|global|alliance|отправить|send/i);
 });
 
 test.describe('Ф.2.10 score', () => {

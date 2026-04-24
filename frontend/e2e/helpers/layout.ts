@@ -13,6 +13,8 @@ export interface LayoutIssue {
 }
 
 // Элементы, которым разрешено накладываться на соседей (overlay, badge, portal).
+// .ox-bottom-nav — sticky-панель внизу mobile-экрана поверх контента.
+// .ox-header — sticky-панель сверху.
 const OVERLAY_WHITELIST_SELECTOR = [
   '.ox-modal-overlay',
   '.ox-modal',
@@ -20,6 +22,8 @@ const OVERLAY_WHITELIST_SELECTOR = [
   '.badge',
   '[role="tooltip"]',
   '.ox-toast',
+  '.ox-bottom-nav',
+  '.ox-header',
 ].join(',');
 
 export async function collectLayoutIssues(page: Page): Promise<LayoutIssue[]> {
@@ -47,20 +51,31 @@ export async function collectLayoutIssues(page: Page): Promise<LayoutIssue[]> {
           issues.push({ kind: 'missing-landmark', detail: `${name}: ${selector} has zero size` });
         }
       };
+      const isShown = (el: Element | null): boolean => {
+        if (!el) return false;
+        const r = (el as HTMLElement).getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) return false;
+        const style = window.getComputedStyle(el as HTMLElement);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      };
+
       requireVisible('.ox-header', 'header');
-      const sidebar = document.querySelector('.ox-sidebar');
-      const bottomNav = document.querySelector('.ox-bottom-nav');
-      const sidebarVisible = sidebar && (sidebar as HTMLElement).offsetParent !== null;
-      const bottomVisible = bottomNav && (bottomNav as HTMLElement).offsetParent !== null;
+      const sidebarVisible = isShown(document.querySelector('.ox-sidebar'));
+      const bottomVisible = isShown(document.querySelector('.ox-bottom-nav'));
       if (!sidebarVisible && !bottomVisible) {
         issues.push({ kind: 'missing-landmark', detail: 'neither .ox-sidebar nor .ox-bottom-nav visible' });
       }
       requireVisible('main.ox-content', 'main content');
 
       // 3. Нулевые текстовые узлы — индикатор сломанного flex/grid.
+      // Пропускаем элементы, скрытые через CSS (display:none, visibility:hidden,
+      // offsetParent:null) — на mobile/desktop разные landmark'и скрыты media-query.
       document.querySelectorAll<HTMLElement>('h1, h2, h3, h4, button, a, label, td, th').forEach((el) => {
         const text = el.textContent?.trim() ?? '';
         if (!text) return;
+        if (el.offsetParent === null) return; // скрыт media-query или родителем
+        const style = window.getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden') return;
         const r = el.getBoundingClientRect();
         if (r.width === 0 || r.height === 0) {
           issues.push({

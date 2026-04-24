@@ -30,6 +30,11 @@ export default defineConfig(({ command }) => ({
   },
   server: {
     port: 5173,
+    // Разрешаем запросы с любого host — в docker network фронт дёргают
+    // по service-имени (http://frontend:5173), а Vite 5 по умолчанию
+    // отбивает с 403 всё, что не localhost.
+    host: true,
+    allowedHosts: true,
     watch: { usePolling: true, interval: 500 },
     // В docker'е backend живёт по имени сервиса (backend:8080), а
     // локально — на localhost:8080. Читаем из env, чтобы один и тот

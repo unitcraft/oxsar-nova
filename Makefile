@@ -73,8 +73,17 @@ test-e2e:
 # ручного запуска терминалов.
 .PHONY: test-e2e-docker
 test-e2e-docker:
-	docker compose -f deploy/docker-compose.e2e.yml up --build \
-		--abort-on-container-exit --exit-code-from playwright
+	# Не используем --exit-code-from: он неявно включает
+	# --abort-on-container-exit и валит всё при успешном exit одноразового
+	# сервиса (migrate/testseed). Подход: поднимаем стек в detached-режиме,
+	# логи рядом, ждём playwright отдельной командой, забираем его код.
+	COMPOSE_BAKE=true docker compose -f deploy/docker-compose.e2e.yml up -d --build
+	docker compose -f deploy/docker-compose.e2e.yml logs -f --no-log-prefix playwright & \
+		LOGS=$$!; \
+		STATUS=$$(docker wait deploy-playwright-1 2>/dev/null || echo 1); \
+		kill $$LOGS 2>/dev/null; \
+		docker compose -f deploy/docker-compose.e2e.yml down -v --remove-orphans; \
+		exit $$STATUS
 
 # Очистка E2E-стека (останавливает все контейнеры, удаляет анонимные
 # volumes — TMPFS для pg всё равно не персистится).

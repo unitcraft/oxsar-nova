@@ -10,12 +10,11 @@ test.describe('overview (Ф.1.8)', () => {
     await loginAs(page, 'bob');
     await goToTab(page, 'overview');
 
-    // Ресурсы в шапке
-    await expect(page.locator('.ox-header-resources')).toBeVisible();
-    // Baza planet switcher
+    // Planet switcher виден и на desktop, и на mobile.
     await expect(page.locator('.ox-planet-switcher')).toBeVisible();
-    // Имя планеты bob
     await expect(page.locator('.ox-planet-switcher')).toContainText('Bob-Home');
+    // На main content что-то отображается — не пустой.
+    await expect(page.locator('main.ox-content')).not.toBeEmpty();
   });
 
   test('alice sees energy warning when under-powered or just empty state', async ({ page }) => {

@@ -18,13 +18,13 @@ test.describe('messages (Ф.1.7)', () => {
     await expect(page.locator('main.ox-content')).toBeVisible();
   });
 
-  test('unread badge reflected in sidebar for alice', async ({ page }) => {
+  test('unread badge reflected in nav for alice', async ({ page, isMobile }) => {
     await loginAs(page, 'alice');
-    // Badge у пункта «Сообщения» — если есть непрочитанные
-    // ждём до 16 сек (refetchInterval = 15s)
     await page.waitForTimeout(2_000);
-    // Либо badge видим, либо нет — зависит от того, считает ли unread.
-    // Утверждение мягкое: пункт сообщений точно виден.
-    await expect(page.getByRole('link', { name: /сообщения|messages/i }).first()).toBeVisible();
+    // На desktop — link в sidebar; на mobile — button в bottom-nav.
+    const locator = isMobile
+      ? page.getByRole('button', { name: /сообщ|messages/i }).first()
+      : page.getByRole('link', { name: /сообщения|messages/i }).first();
+    await expect(locator).toBeVisible();
   });
 });
