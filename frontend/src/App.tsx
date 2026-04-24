@@ -182,7 +182,8 @@ function AuthenticatedApp() {
   });
 
   const unreadCount = unread.data?.count ?? 0;
-  const isAdmin = me.data?.role === 'admin' || me.data?.role === 'superadmin';
+  // План 14 Ф.8.1: support — модератор (read-only + ban/unban), тоже видит админку.
+  const isAdmin = me.data?.role === 'support' || me.data?.role === 'admin' || me.data?.role === 'superadmin';
   const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
   const [fleetDst, setFleetDst] = useState<{ g: number; s: number; pos: number; isMoon: boolean; mission: number } | undefined>();
   const [infoUnit, setInfoUnit] = useState<InfoUnit | null>(() => parseHash().infoUnit);
