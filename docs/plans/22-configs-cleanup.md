@@ -84,7 +84,7 @@ catalog_validate_test.go).
 
 | Юнит | Legacy-эффект | Сложность | Ценность |
 |------|--------------|-----------|----------|
-| `terra_former` (58) | +5 полей / уровень к max_fields планеты | S (1 поле в planets + formula в planet.Service) | M — расширяет late-game (больше слотов под здания) |
+| `terra_former` (58) | +5 полей / уровень к max_fields планеты | **M** — ждёт базового field-limit | M — расширяет late-game (больше слотов под здания) |
 | `small_planet_shield` (354) | +10 HP shield pool / штука, 4 слота | M (новое поле planet.shield_pool + интеграция с battle-engine) | H — классический late-game щит |
 | `large_planet_shield` (355) | +40 HP shield pool / штука, 8 слотов | то же, что small | H |
 | `moon_lab` (350) | альтернативная research-лаба на луне + 5 полей | M (формула в research.Service) | M |
@@ -99,8 +99,19 @@ catalog_validate_test.go).
 - **M** 2-6 часов, требуется интеграция с сервисом/engine + тесты
 - **L** > 6 часов, затрагивает баланс / битвы, нужны golden-тесты
 
+**Открытие при попытке реализовать `terra_former`**: в backend'е
+**нет проверки лимита полей при постройке**. `diameter` и `used_fields`
+есть в модели, показываются в UI, но `building.Service.StartBuild`
+не блокирует постройку при превышении. То есть terra_former сейчас
+бесполезен — даже без него можно строить бесконечно. Сначала нужен
+базовый field-limit, потом terra_former имеет смысл.
+
 **Рекомендация по очередности (если решим реализовать):**
-1. `terra_former` — S, ценность M. Простое и полезное (больше полей — больше builds).
+
+0. **(prerequisite для #1)** field-limit в building.Service — блокировать
+   постройку, если `used_fields >= max_fields(diameter)`. Отдельный
+   маленький план.
+1. `terra_former` — S после prerequisite, ценность M.
 2. `planet_shield` пара — M/H. Добавляет late-game вариативность обороны, ожидаемая механика из OGame-like.
 3. `moon_lab` — M/M. Люди уже строят луны, но лаба на луне сейчас «мёртвая».
 4. `moon_repair_factory` — M/L. По желанию после луны.
