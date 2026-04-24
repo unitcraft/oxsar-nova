@@ -117,7 +117,9 @@ buildings:
   # Ракетная шахта (legacy UNIT_ROCKET_STATION=53).
   # max_rockets = level × rocket_capacity_per_level (legacy: level × 10).
   # Используется rocket/service.go для проверки запаса.
-  missile_silo:
+  # Key rocket_station совпадает с units.yml и requirements.yml.
+  # Старое имя missile_silo — alias в frontend/src/api/catalog.ts.
+  rocket_station:
     id: 53
     cost_base:   { metal: 20000, silicon: 20000, hydrogen: 1000 }
     cost_factor: 2.0

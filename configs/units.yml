@@ -80,7 +80,14 @@ defense:
   - { id: 48,  key: plasma_gun,          name: "Plasma Turret" }
   - { id: 49,  key: small_shield,        name: "Small Shield Dome" }
   - { id: 50,  key: large_shield,        name: "Large Shield Dome" }
+  # Ракеты: формально в defense по legacy (na_construction mode=4), но
+  # обрабатываются как fleet — летят через event kind=16, в обычном бою
+  # на планете не участвуют. Runtime читает их из ships.yml, не defense.yml.
+  # Перенос в fleet-группу требует ломки import-datasheets CLI и публичного
+  # контракта; оставляем здесь как совместимость с legacy. См. план 22 Ф.2.3.
   - { id: 51,  key: interceptor_rocket,  name: "Interceptor Missile" }
   - { id: 52,  key: interplanetary_rocket, name: "Interplanetary Missile" }
+  # Planetary shields (354, 355): объявлены в legacy, но у нас нет реализации.
+  # См. план 22 Ф.2.2 — ADR о реализации.
   - { id: 354, key: small_planet_shield, name: "Small Planet Shield" }
   - { id: 355, key: large_planet_shield, name: "Large Planet Shield" }
