@@ -1400,6 +1400,108 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/admin/users/{id}:
+    get:
+      tags: [admin]
+      summary: Глубокая карточка игрока (план 14 Ф.2.1)
+      description: |
+        Агрегат: базовые поля, планеты, флот в полёте, лоты на рынке
+        и арт-рынке, активные офицеры, артефакты, последние 20
+        транзакций res_log, последние 20 credit_purchases, 20 inbox
+        сообщений, 20 боевых/шпионских/экспедиционных отчётов.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminUserProfile" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/admin/users/{id}/resources:
+    post:
+      tags: [admin]
+      summary: Изменить ресурсы на планете игрока (план 14 Ф.2.2)
+      description: |
+        Дельты metal/silicon/hydrogen могут быть отрицательными (списание).
+        Баланс никогда не уходит ниже 0 (GREATEST(0, …)). Пишет в res_log
+        с reason='admin_grant' и в admin_audit_log через middleware.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planet_id]
+              properties:
+                planet_id: { type: string, format: uuid }
+                metal:     { type: integer, format: int64 }
+                silicon:   { type: integer, format: int64 }
+                hydrogen:  { type: integer, format: int64 }
+      responses:
+        "204": { description: updated }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/admin/users/{id}/artefacts/grant:
+    post:
+      tags: [admin]
+      summary: Выдать артефакт игроку (план 14 Ф.2.3)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unit_id]
+              properties:
+                unit_id: { type: integer, description: "ARTEFACT_* код из каталога" }
+      responses:
+        "200":
+          description: созданный артефакт
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/admin/users/{id}/artefacts/{aid}:
+    delete:
+      tags: [admin]
+      summary: Отобрать артефакт у игрока (план 14 Ф.2.3)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: aid
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/admin/audit:
     get:
       tags: [admin]
@@ -1609,6 +1711,122 @@ components:
         ip:          { type: string }
         user_agent:  { type: string }
         created_at:  { type: string, format: date-time }
+
+    AdminUserProfile:
+      type: object
+      properties:
+        id:            { type: string, format: uuid }
+        username:      { type: string }
+        email:         { type: string }
+        role:          { type: string }
+        credit:        { type: integer, format: int64 }
+        score:         { type: integer, format: int64 }
+        banned_at:     { type: string, format: date-time, nullable: true }
+        created_at:    { type: string, format: date-time }
+        last_seen_at:  { type: string, format: date-time }
+        planets:
+          type: array
+          items:
+            type: object
+            properties:
+              id:       { type: string, format: uuid }
+              name:     { type: string }
+              galaxy:   { type: integer }
+              system:   { type: integer }
+              position: { type: integer }
+              is_moon:  { type: boolean }
+              metal:    { type: integer, format: int64 }
+              silicon:  { type: integer, format: int64 }
+              hydrogen: { type: integer, format: int64 }
+        fleets:
+          type: array
+          items:
+            type: object
+            properties:
+              id:           { type: string, format: uuid }
+              mission:      { type: integer }
+              state:        { type: string }
+              dst_galaxy:   { type: integer }
+              dst_system:   { type: integer }
+              dst_position: { type: integer }
+              dst_is_moon:  { type: boolean }
+              arrive_at:    { type: string, format: date-time }
+        market_lots:
+          type: array
+          items:
+            type: object
+            properties:
+              id:            { type: string, format: uuid }
+              sell_resource: { type: string }
+              sell_amount:   { type: integer, format: int64 }
+              buy_resource:  { type: string }
+              buy_amount:    { type: integer, format: int64 }
+              state:         { type: string }
+        artefact_lots:
+          type: array
+          items:
+            type: object
+            properties:
+              id:           { type: string, format: uuid }
+              artefact_id:  { type: string, format: uuid }
+              unit_id:      { type: integer }
+              price_credit: { type: integer, format: int64 }
+        officers:
+          type: array
+          items:
+            type: object
+            properties:
+              key:         { type: string }
+              expires_at:  { type: string, format: date-time }
+        artefacts:
+          type: array
+          items:
+            type: object
+            properties:
+              id:      { type: string, format: uuid }
+              unit_id: { type: integer }
+              state:   { type: string }
+        res_log:
+          type: array
+          items:
+            type: object
+            properties:
+              reason:      { type: string }
+              planet_id:   { type: string, format: uuid, nullable: true }
+              d_metal:     { type: integer, format: int64 }
+              d_silicon:   { type: integer, format: int64 }
+              d_hydrogen:  { type: integer, format: int64 }
+              created_at:  { type: string, format: date-time }
+        purchases:
+          type: array
+          items:
+            type: object
+            properties:
+              id:          { type: string, format: uuid }
+              package_key: { type: string }
+              credits:     { type: integer }
+              price_rub:   { type: number }
+              status:      { type: string }
+              created_at:  { type: string, format: date-time }
+              paid_at:     { type: string, format: date-time, nullable: true }
+        messages_recent:
+          type: array
+          items:
+            type: object
+            properties:
+              id:         { type: string, format: uuid }
+              folder:     { type: integer }
+              subject:    { type: string }
+              created_at: { type: string, format: date-time }
+              read:       { type: boolean }
+        reports_recent:
+          type: array
+          items:
+            type: object
+            properties:
+              id:         { type: string, format: uuid }
+              kind:       { type: string, enum: [battle, espionage, expedition] }
+              created_at: { type: string, format: date-time }
 
     Planet:
       type: object

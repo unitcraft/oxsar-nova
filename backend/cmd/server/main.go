@@ -372,10 +372,15 @@ func run() error {
 			ar.Use(admin.AuditMiddleware(db))
 			ar.Get("/stats", adminH.Stats)
 			ar.Get("/users", adminH.ListUsers)
+			ar.Get("/users/{id}", adminH.GetUserProfile) // Ф.2.1 — глубокая карточка
 			ar.Post("/users/{id}/ban", adminH.Ban)
 			ar.Post("/users/{id}/unban", adminH.Unban)
 			ar.Post("/users/{id}/credit", adminH.Credit)
 			ar.Post("/users/{id}/role", adminH.SetRole)
+			// Ф.2.2–2.3: ресурсы и артефакты через админку
+			ar.Post("/users/{id}/resources", adminH.GrantResources)
+			ar.Post("/users/{id}/artefacts/grant", adminH.GrantArtefact)
+			ar.Delete("/users/{id}/artefacts/{aid}", adminH.DeleteArtefact)
 			ar.Get("/automsgs", adminH.ListAutomsgs)
 			ar.Put("/automsgs/{key}", adminH.UpdateAutomsg)
 			ar.Get("/events", adminH.EventsList)
