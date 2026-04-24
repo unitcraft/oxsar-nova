@@ -551,6 +551,22 @@
   frontend-dev образов.
   **Приоритет**: M (пока PR-флоу терпимый).
 
+- **Deep-сценарии Ф.1/Ф.2 отложены** — регистрация, полный Attack-флоу,
+  alliance create/invite/leave, messages compose, officers activation,
+  art-market buy/sell. Каждый требует точных селекторов форм и/или
+  подготовки событий в БД. Smoke-уровень (экран открывается, показывает
+  ожидаемый текст) уже покрыт.
+  **План возврата**: при первом регрессе — добавлять deep-сценарий
+  в тот же домен. Ориентир: 1 deep-сценарий на домен в 2 недели.
+  **Приоритет**: M.
+
+- **Offline-тесты не написаны** — `context.setOffline(true)` конфликтует
+  с Vite HMR WebSocket (тест зависает). Нужен Playwright middleware,
+  пропускающий HMR, или production-build фронта для этих тестов.
+  **План возврата**: при необходимости — отдельный project в
+  playwright.config с production-билдом.
+  **Приоритет**: L.
+
 - **api-coverage regex matcher грубый** — заменяет `{id}` → `[^\\s'"\`]+?`
   и грепает по литералам. Не отличит `/api/planets/{id}` от
   `/api/planets/foo/bar` в случайной строке. Для текущего репо
