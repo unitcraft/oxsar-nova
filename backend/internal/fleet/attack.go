@@ -37,6 +37,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/oxsar/nova/backend/internal/alien"
 	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/battle"
 	"github.com/oxsar/nova/backend/internal/config"
@@ -178,15 +179,28 @@ func (s *TransportService) AttackHandler() event.Handler {
 			Tech:   defenderTech,
 			Units:  defUnits,
 		}
+
+		// Alien HOLDING: пришельцы на орбите защищают планету как
+		// дополнительный defender (план 15, Assault::loadDefenders в legacy).
+		// Если планета не в HOLDING — holdingDef == nil.
+		holdingDef, err := alien.LoadHoldingDefender(ctx, tx, planetID, s.catalog)
+		if err != nil {
+			return fmt.Errorf("attack: load alien holding: %w", err)
+		}
+		defenders := []battle.Side{defSide}
+		if holdingDef != nil {
+			defenders = append(defenders, holdingDef.Side)
+		}
+
 		if len(atkSide.Units) == 0 {
 			_, uerr := tx.Exec(ctx,
 				`UPDATE fleets SET state='returning' WHERE id=$1`, pl.FleetID)
 			return uerr
 		}
 
-		// Пустая планета (нет ships и нет defense) — без боя, сразу loot.
+		// Пустая планета + нет alien-защиты — без боя, сразу loot.
 		// Debris=0 (ship'ов не было, уничтожать нечего).
-		if len(defSide.Units) == 0 {
+		if len(defSide.Units) == 0 && holdingDef == nil {
 			loot := grabLoot(defMetal, defSil, defHydro, attackerShips, s.catalog, cm, csil, ch)
 			rep := battle.Report{Winner: "attackers", Rounds: 0, Seed: deriveSeed(pl.FleetID)}
 			return finalizeAttack(ctx, tx, pl.FleetID, attackerUserID, defenderUserID, planetID,
@@ -195,12 +209,15 @@ func (s *TransportService) AttackHandler() event.Handler {
 
 		atkPower := sidePower(atkSide.Units)
 		defPower := sidePower(defSide.Units)
+		if holdingDef != nil {
+			defPower += sidePower(holdingDef.Side.Units)
+		}
 
 		input := battle.Input{
 			Seed:      deriveSeed(pl.FleetID),
 			Rounds:    6,
 			Attackers: []battle.Side{atkSide},
-			Defenders: []battle.Side{defSide},
+			Defenders: defenders,
 			Rapidfire: rapidfireToMap(s.catalog),
 			IsMoon:    isMoon,
 		}
@@ -216,6 +233,16 @@ func (s *TransportService) AttackHandler() event.Handler {
 		if err := applyDefenderLosses(ctx, tx, planetID, defenderShips, defenderDefense,
 			report.Defenders[0].Units); err != nil {
 			return fmt.Errorf("attack: apply defender losses: %w", err)
+		}
+
+		// Alien HOLDING: обновить payload (actual survivors) или закрыть
+		// событие, если alien-флот полностью разбит. Defender index 1 —
+		// именно alien-сторона (append порядок выше).
+		if holdingDef != nil && len(report.Defenders) > 1 {
+			if err := alien.CloseHoldingIfWiped(ctx, tx, holdingDef.EventID,
+				report.Defenders[1].Units); err != nil {
+				return fmt.Errorf("attack: close alien holding: %w", err)
+			}
 		}
 
 		// Debris: 30% metal+silicon от стоимости уничтоженных SHIPS

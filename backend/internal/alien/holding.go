@@ -10,9 +10,133 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/oxsar/nova/backend/internal/battle"
+	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/event"
 	"github.com/oxsar/nova/backend/pkg/ids"
 )
+
+// HoldingDefender — alien-флот, стоящий на планете в HOLDING, готовый
+// участвовать в обороне против стороннего атакующего. Возвращается
+// вызывающему слою (fleet/attack), который встраивает его в Defenders.
+type HoldingDefender struct {
+	EventID string      // id HOLDING-события (для закрытия если разбит)
+	Side    battle.Side // готовая сторона с IsAliens=true и alien-юнитами
+}
+
+// LoadHoldingDefender читает активное HOLDING-событие для планеты (если
+// есть) и собирает battle.Side с флотом пришельцев. Возвращает nil, если
+// планета не в HOLDING.
+//
+// Используется из fleet/attack при атаке стороннего игрока — alien-флот
+// подтягивается на сторону защитника (см. legacy Assault::loadDefenders,
+// строки 207–219).
+func LoadHoldingDefender(ctx context.Context, tx pgx.Tx, planetID string, cat *config.Catalog) (*HoldingDefender, error) {
+	var eventID string
+	var payload []byte
+	err := tx.QueryRow(ctx, `
+		SELECT id, payload FROM events
+		WHERE planet_id = $1 AND kind = $2 AND state = 'wait'
+		ORDER BY fire_at ASC LIMIT 1
+	`, planetID, int(event.KindAlienHolding)).Scan(&eventID, &payload)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("alien holding defender: query: %w", err)
+	}
+	var hp holdingPayload
+	if err := json.Unmarshal(payload, &hp); err != nil {
+		return nil, fmt.Errorf("alien holding defender: parse payload: %w", err)
+	}
+	units := stacksToAlienUnits(hp.AlienFleet, cat)
+	if len(units) == 0 {
+		return nil, nil
+	}
+	return &HoldingDefender{
+		EventID: eventID,
+		Side: battle.Side{
+			UserID:   "aliens",
+			Username: "Инопланетяне (удержание)",
+			IsAliens: true,
+			Units:    units,
+		},
+	}, nil
+}
+
+// CloseHoldingIfWiped закрывает HOLDING-событие, если alien-флот
+// уничтожен в бою. Принимает id HOLDING-события и результат его стороны
+// из битвы. Вызывается из fleet/attack после применения потерь.
+func CloseHoldingIfWiped(ctx context.Context, tx pgx.Tx, holdingEventID string, units []battle.UnitResult) error {
+	var alive int64
+	for _, u := range units {
+		alive += u.QuantityEnd
+	}
+	if alive > 0 {
+		// Обновим payload — оставшийся флот меньше, чтобы следующее
+		// применение defender'а использовало актуальную численность.
+		var payload []byte
+		if err := tx.QueryRow(ctx,
+			`SELECT payload FROM events WHERE id = $1`, holdingEventID).Scan(&payload); err != nil {
+			return fmt.Errorf("alien holding update: read: %w", err)
+		}
+		var hp holdingPayload
+		if err := json.Unmarshal(payload, &hp); err != nil {
+			return fmt.Errorf("alien holding update: parse: %w", err)
+		}
+		hp.AlienFleet = survivorsToStacks(units)
+		newPayload, err := json.Marshal(hp)
+		if err != nil {
+			return fmt.Errorf("alien holding update: marshal: %w", err)
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE events SET payload = $1 WHERE id = $2`,
+			newPayload, holdingEventID); err != nil {
+			return fmt.Errorf("alien holding update: save: %w", err)
+		}
+		return nil
+	}
+	// Флот полностью разбит — закрываем HOLDING. Дочерний HOLDING_AI
+	// проверит родителя и завершится сам на следующем тике.
+	if _, err := tx.Exec(ctx, `
+		UPDATE events SET state = 'ok', processed_at = now() WHERE id = $1
+	`, holdingEventID); err != nil {
+		return fmt.Errorf("alien holding close: %w", err)
+	}
+	return nil
+}
+
+// stacksToAlienUnits разворачивает компактные fleetStack в battle.Unit
+// с характеристиками из configs/ships.yml (поля 200–204). Имена берутся
+// из alienShipOrder (helpers.go) — для сообщений и отладочных логов.
+func stacksToAlienUnits(stacks []fleetStack, cat *config.Catalog) []battle.Unit {
+	if len(stacks) == 0 {
+		return nil
+	}
+	specByID := map[int]config.ShipSpec{}
+	for _, spec := range cat.Ships.Ships {
+		specByID[spec.ID] = spec
+	}
+	nameByID := map[int]string{}
+	for _, entry := range alienShipOrder {
+		nameByID[entry.unitID] = entry.name
+	}
+	out := make([]battle.Unit, 0, len(stacks))
+	for _, s := range stacks {
+		spec, ok := specByID[s.UnitID]
+		if !ok {
+			continue
+		}
+		out = append(out, battle.Unit{
+			UnitID:   s.UnitID,
+			Quantity: s.Quantity,
+			Attack:   [3]float64{float64(spec.Attack), 0, 0},
+			Shield:   [3]float64{float64(spec.Shield), 0, 0},
+			Shell:    float64(spec.Shell),
+			Name:     nameByID[s.UnitID],
+		})
+	}
+	return out
+}
 
 // holdingPayload — содержимое events.payload для KindAlienHalt,
 // KindAlienHolding, KindAlienHoldingAI.
