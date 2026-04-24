@@ -262,9 +262,9 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
                 ) : (
                   <button
                     type="button"
-                    className={`btn${inQueue || !canAfford || isLocked ? ' btn-ghost' : ''} btn-sm`}
+                    className={`btn${inQueue || isLocked ? ' btn-ghost' : !canAfford ? ' btn-danger' : ''} btn-sm`}
                     style={{ width: '100%' }}
-                    disabled={enqueue.isPending || inQueue || isLocked}
+                    disabled={enqueue.isPending || inQueue || isLocked || !canAfford}
                     onClick={() => enqueue.mutate(b.id)}
                   >
                     {inQueue ? '⏳ В очереди' : isLocked ? '🔒 Заблокировано' : level === 0 ? 'Построить' : `→ ур. ${level + 1}`}

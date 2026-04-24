@@ -668,7 +668,7 @@ label {
   gap: 16px;
   padding: 0 20px;
   min-width: 0;
-  overflow: hidden;
+  height: var(--ox-header-h);
   background: rgba(5, 13, 24, 0.92);
   border-bottom: 1px solid var(--ox-border);
   backdrop-filter: blur(16px);
@@ -753,17 +753,15 @@ label {
 .ox-planet-switcher-coords { font-family: var(--ox-mono); font-size: 11px; color: var(--ox-fg-dim); }
 
 .ox-planet-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
   min-width: 240px;
   background: var(--ox-bg-panel-2);
   border: 1px solid var(--ox-border-hover);
   border-radius: var(--ox-r-lg);
   box-shadow: var(--ox-shadow);
-  z-index: 200;
+  z-index: 3000;
   overflow: hidden;
   animation: ox-slide-down 150ms ease;
+  backdrop-filter: blur(12px);
 }
 .ox-planet-option {
   display: flex;
@@ -773,6 +771,7 @@ label {
   cursor: pointer;
   transition: background var(--ox-tr);
   font-size: 13px;
+  color: var(--ox-fg);
 }
 .ox-planet-option:hover { background: var(--ox-bg-hover); }
 .ox-planet-option.active { background: var(--ox-bg-active); color: var(--ox-accent); }
@@ -781,7 +780,6 @@ label {
 .ox-body {
   display: flex;
   min-height: 0;
-  overflow: hidden;
 }
 
 /* ── Сайдбар ── */
@@ -790,7 +788,7 @@ label {
   flex-shrink: 0;
   background: rgba(5, 13, 24, 0.9);
   border-right: 1px solid var(--ox-border);
-  padding: 12px 0;
+  padding: 4px 0 12px;
   overflow-y: auto;
   position: sticky;
   top: var(--ox-header-h);
@@ -808,6 +806,7 @@ label {
   padding: 8px 16px 4px;
   margin-top: 4px;
 }
+.ox-sidebar > .ox-sidebar-group-label:first-child { margin-top: 0; padding-top: 4px; }
 
 .ox-sidebar-sep { height: 1px; background: var(--ox-border); margin: 6px 12px; }
 
@@ -830,6 +829,7 @@ label {
   transition: all var(--ox-tr);
   min-height: 36px;
   position: relative;
+  text-decoration: none;
 }
 .ox-nav-btn .icon { font-size: 15px; flex-shrink: 0; width: 18px; text-align: center; }
 .ox-nav-btn .label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -939,6 +939,13 @@ label {
   margin-top: auto;
 }
 .ox-unit-card-actions button { flex: 1; }
+
+.ox-unit-card-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
 /* Статистики */
 .ox-stats-row {

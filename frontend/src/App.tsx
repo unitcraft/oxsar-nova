@@ -1,11 +1,12 @@
 import { Suspense, lazy, useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from './stores/auth';
 import { api } from './api/client';
 import type { Planet } from './api/types';
 import { LoginScreen } from './features/auth/LoginScreen';
 import { OverviewScreen } from './features/overview/OverviewScreen';
-import { useTranslation } from './i18n/i18n';
+import { useTranslation } from '@/i18n/i18n';
 import { ToastProvider, useToast } from './ui/Toast';
 import { ResourceTicker } from './ui/ResourceTicker';
 import { Countdown } from './ui/Countdown';
@@ -269,18 +270,23 @@ function AuthenticatedApp() {
               : item.groupLabel
               ? <div key={item.key} className="ox-sidebar-group-label">{item.groupLabel}</div>
               : (
-                <button
+                <a
                   key={item.key}
-                  type="button"
+                  href={`#${item.key}`}
                   className="ox-nav-btn"
+                  aria-current={tab === item.key ? 'page' : undefined}
                   aria-pressed={tab === item.key}
-                  onClick={() => navigateTo(item.key as Tab)}
+                  onClick={(e) => {
+                    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
+                    e.preventDefault();
+                    navigateTo(item.key as Tab);
+                  }}
                   title={item.label}
                 >
                   <span className="icon">{item.icon}</span>
                   <span className="label">{item.label}</span>
                   {!!item.badge && <span className="badge">{item.badge}</span>}
-                </button>
+                </a>
               )
           )}
         </nav>
@@ -497,25 +503,59 @@ function PlanetSwitcher({
   onChange: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<{ top: number; centerX: number } | null>(null);
+  const btnRef = useRef<HTMLDivElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const hasMultiple = planets.length > 1;
 
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (btnRef.current?.contains(target)) return;
+      if (dropRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const update = () => {
+      if (!btnRef.current) return;
+      const r = btnRef.current.getBoundingClientRect();
+      setRect({ top: r.bottom + 8, centerX: r.left + r.width / 2 });
+    };
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [open]);
+
+  const toggle = () => {
+    setOpen((v) => {
+      if (v) return false;
+      if (btnRef.current) {
+        const r = btnRef.current.getBoundingClientRect();
+        setRect({ top: r.bottom + 8, centerX: r.left + r.width / 2 });
+      }
+      return true;
+    });
+  };
+
   return (
-    <div style={{ position: 'relative' }} ref={ref}>
+    <div style={{ position: 'relative' }}>
       <div
+        ref={btnRef}
         className="ox-planet-switcher"
-        onClick={() => setOpen((v) => !v)}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && setOpen((v) => !v)}
+        onClick={hasMultiple ? toggle : undefined}
+        role={hasMultiple ? 'button' : undefined}
+        tabIndex={hasMultiple ? 0 : -1}
+        onKeyDown={hasMultiple ? (e) => e.key === 'Enter' && toggle() : undefined}
+        style={hasMultiple ? undefined : { cursor: 'default' }}
       >
         <span className="ox-planet-switcher-icon">{planet.is_moon ? '🌑' : '🪐'}</span>
         <span style={{ fontSize: 13, fontWeight: 600 }}>{planet.name}</span>
@@ -523,11 +563,17 @@ function PlanetSwitcher({
         <span className="ox-planet-switcher-coords">
           [{planet.galaxy}:{planet.system}:{planet.position}]
         </span>
-        <span style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginLeft: 2 }}>▾</span>
+        {hasMultiple && (
+          <span style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginLeft: 2 }}>▾</span>
+        )}
       </div>
 
-      {open && planets.length > 1 && (
-        <div className="ox-planet-dropdown">
+      {open && hasMultiple && rect && createPortal(
+        <div
+          ref={dropRef}
+          className="ox-planet-dropdown"
+          style={{ position: 'fixed', top: rect.top, left: rect.centerX, transform: 'translateX(-50%)', animation: 'none' }}
+        >
           {planets.map((p) => (
             <div
               key={p.id}
@@ -541,7 +587,8 @@ function PlanetSwitcher({
               </span>
             </div>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
