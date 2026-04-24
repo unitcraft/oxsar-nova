@@ -367,6 +367,9 @@ func run() error {
 
 		pr.Route("/admin", func(ar chi.Router) {
 			ar.Use(admin.AdminOnly(db))
+			// AuditMiddleware: для write-запросов (не-GET) после 2xx-ответа
+			// асинхронно пишет запись в admin_audit_log. См. Ф.1.2 план 14.
+			ar.Use(admin.AuditMiddleware(db))
 			ar.Get("/stats", adminH.Stats)
 			ar.Get("/users", adminH.ListUsers)
 			ar.Post("/users/{id}/ban", adminH.Ban)
@@ -379,6 +382,7 @@ func run() error {
 			ar.Get("/events/stats", adminH.EventsStats)
 			ar.Post("/events/{id}/retry", adminH.EventRetry)
 			ar.Post("/events/{id}/cancel", adminH.EventCancel)
+			ar.Get("/audit", adminH.ListAudit)
 		})
 	})
 

@@ -1400,6 +1400,53 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/admin/audit:
+    get:
+      tags: [admin]
+      summary: Журнал деструктивных админских действий
+      description: |
+        Write-запросы под /api/admin/* пишут запись в admin_audit_log через
+        middleware (см. план 14 Ф.1.2). Здесь — чтение этого журнала
+        с фильтрами.
+      parameters:
+        - in: query
+          name: admin_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: action
+          description: "ключ действия (например: users.ban, users.credit, events.retry)"
+          schema: { type: string }
+        - in: query
+          name: target_id
+          schema: { type: string }
+        - in: query
+          name: from
+          description: RFC3339 нижняя граница created_at
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          schema: { type: string, format: date-time }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 100, maximum: 500 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items: { $ref: "#/components/schemas/AdminAuditEntry" }
+                  limit:  { type: integer }
+                  offset: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /api/i18n/{lang}:
     get:
       tags: [i18n]
@@ -1547,6 +1594,21 @@ components:
       properties:
         user:   { $ref: "#/components/schemas/User" }
         tokens: { $ref: "#/components/schemas/Tokens" }
+
+    AdminAuditEntry:
+      type: object
+      properties:
+        id:          { type: string, format: uuid }
+        admin_id:    { type: string, format: uuid }
+        admin_name:  { type: string }
+        action:      { type: string, description: "users.ban / users.credit / events.retry / …" }
+        target_kind: { type: string, description: "user / automsg / event / ''" }
+        target_id:   { type: string, description: "id или key цели" }
+        payload:     { type: object, additionalProperties: true, description: "тело запроса без секретов" }
+        status:      { type: integer, description: "HTTP-код ответа" }
+        ip:          { type: string }
+        user_agent:  { type: string }
+        created_at:  { type: string, format: date-time }
 
     Planet:
       type: object
