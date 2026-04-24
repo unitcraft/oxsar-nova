@@ -385,6 +385,10 @@ func run() error {
 			// AuditMiddleware: для write-запросов (не-GET) после 2xx-ответа
 			// асинхронно пишет запись в admin_audit_log. См. Ф.1.2 план 14.
 			ar.Use(admin.AuditMiddleware(db))
+			// RateLimitMiddleware: защита от human-error (например,
+			// случайный banAll). 100 write-действий/час на админа,
+			// in-memory. См. Ф.8.2 план 14.
+			ar.Use(admin.RateLimitMiddleware())
 
 			// Read-only + лёгкая модерация — доступно support+.
 			ar.Get("/stats", adminH.Stats)
@@ -407,6 +411,15 @@ func run() error {
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/events/{id}/retry", adminH.EventRetry)
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/events/{id}/cancel", adminH.EventCancel)
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/events/dead/{id}/resurrect", adminH.ResurrectDeadEvent)
+
+			// План 14 Ф.2.4-2.6 — force-recall, planet-management, user-delete.
+			fleetAdminH := admin.NewFleetAdminHandler(transportSvc, db)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/fleets/{fleet_id}/recall", fleetAdminH.ForceRecall)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/planets/{id}/rename", adminH.PlanetRename)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/planets/{id}/transfer", adminH.PlanetTransfer)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Delete("/planets/{id}", adminH.PlanetDelete)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Delete("/users/{id}", adminH.UserSoftDelete)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/users/{id}/restore", adminH.UserRestore)
 
 			// Только superadmin может менять роли (privilege escalation).
 			ar.With(admin.RequireRole(db, admin.RoleSuperadmin)).Post("/users/{id}/role", adminH.SetRole)

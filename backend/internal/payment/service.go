@@ -53,6 +53,8 @@ func NewService(db repo.Exec, cfg config.PaymentConfig) *Service {
 	switch cfg.Provider {
 	case "robokassa":
 		svc.gateway = NewRobokassaGateway(cfg.RobokassaLogin, cfg.RobokassaPass1, cfg.RobokassaPass2)
+	case "enot":
+		svc.gateway = NewEnotGateway(cfg.EnotShopID, cfg.EnotApiKey)
 	case "mock":
 		svc.gateway = NewMockGateway(cfg.MockBaseURL)
 	}
