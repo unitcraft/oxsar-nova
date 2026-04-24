@@ -7086,3 +7086,48 @@ reward cap, lost_weight scaling). Но предусловие — план 17 B1
 Закрытые записи в roadmap: 18 Ф1 + 21 A + 21 B + 20 Ф2 + 20 Ф1 +
 17 A1 + 17 B1 (неявно через 21 B). Открыто только 18 Ф.2 (не нужна
 по симуляции), 21 C (щиты, отложено до golden-тестов), 20 Ф.3-Ф.8.
+
+
+================================================================
+2026-04-25 — итерация «Фаза 2: POSITION + Phalanx + wiki MVP»
+================================================================
+
+Продолжение автоматической серии по roadmap.
+
+1) План 20 Ф.3 — POSITION (mission=6, kind=6).
+   Порт EventHandler.class.php:2067. Флот разгружает груз, переносит
+   все корабли на целевую планету, state='done'. Разрешено только на
+   свои планеты/луны и планеты игроков с alliance_relationships
+   (relation IN 'ally','nap' AND status='active'). Return-event не
+   удаляем — molchalivyy early-exit. PositionArriveHandler + worker
+   register + ErrPositionNotAllowed (409). FleetScreen MISSION_LABELS
+   и carryAllowed обновлены. Commit 4a60f8a.
+
+2) План 20 Ф.4 — Сенсорная Фаланга.
+   GET /api/phalanx?source_planet_id=UUID&target_galaxy=N&target_system=M.
+   Legacy формула radius = round((level^2-1) * (1+hyperspace_tech/10)).
+   Списывает 5000 hydrogen. Источник — луна с star_surveillance>=1.
+   Возвращает fleets state IN (outbound,returning) пересекающиеся с
+   (target_galaxy, target_system). Здание уже было в configs. UI
+   (вкладка в GalaxyScreen) — отдельно. Commit 3de1c33.
+
+3) План 19 — game-wiki MVP.
+   - docs/wiki/ru/: index + ручные статьи (getting-started, resources,
+     combat, missions, expedition).
+   - Генератор backend/cmd/tools/wiki-gen/ (~400 строк): buildings/,
+     ships/, defense/, research/ из configs. Для кораблей — таблица
+     характеристик и rapidfire «контрит / контрится». Make target
+     `wiki-gen`.
+   - Backend: internal/wiki/ пакет + 3 публичных endpoint
+     /api/wiki, /api/wiki/{cat}, /api/wiki/{cat}/{slug}. safeName
+     protect от path traversal. Возвращает frontmatter+markdown.
+   - OpenAPI: добавлены 3 path'а.
+   - Frontend `/wiki` страница — отложена (требует react-markdown
+     зависимость и SPA-работу, не блокер).
+
+Все тесты зелёные. Все эндпоинты покрыты OpenAPI.
+
+Roadmap Фазы 1+2 полностью закрыт (блокеры и important пункты, кроме
+ops-бэкапов и второго платёжного шлюза, которые выходят за код-скоп).
+Nice-to-have (Astro, Stargate, Moon destruction, IGR, боты) —
+остаются на после-релизный этап.

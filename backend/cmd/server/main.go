@@ -56,6 +56,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/shipyard"
 	"github.com/oxsar/nova/backend/internal/techtree"
 	"github.com/oxsar/nova/backend/internal/storage"
+	"github.com/oxsar/nova/backend/internal/wiki"
 )
 
 func main() {
@@ -230,6 +231,16 @@ func run() error {
 		r.Get("/api/i18n", i18nH.Languages)
 		r.Get("/api/i18n/{lang}", i18nH.Locale)
 	}
+
+	// Wiki (план 19) — публичная, читает docs/wiki/ru/.
+	wikiRoot := os.Getenv("WIKI_ROOT")
+	if wikiRoot == "" {
+		wikiRoot = "docs/wiki/ru"
+	}
+	wikiH := wiki.NewHandler(wiki.NewService(wikiRoot))
+	r.Get("/api/wiki", wikiH.Index)
+	r.Get("/api/wiki/{category}", wikiH.Category)
+	r.Get("/api/wiki/{category}/{slug}", wikiH.Page)
 
 	r.Route("/api", func(pr chi.Router) {
 		pr.Use(auth.Middleware(jwt))
