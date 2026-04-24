@@ -366,31 +366,37 @@ func run() error {
 		pr.Get("/expedition-reports/{id}", messageH.GetExpeditionReport)
 
 		pr.Route("/admin", func(ar chi.Router) {
-			ar.Use(admin.AdminOnly(db))
+			// Ф.8.1 RBAC: на уровне префикса — минимум support (модератор),
+			// на destructive операции — admin или superadmin.
+			ar.Use(admin.RequireRole(db, admin.RoleSupport))
 			// AuditMiddleware: для write-запросов (не-GET) после 2xx-ответа
 			// асинхронно пишет запись в admin_audit_log. См. Ф.1.2 план 14.
 			ar.Use(admin.AuditMiddleware(db))
+
+			// Read-only + лёгкая модерация — доступно support+.
 			ar.Get("/stats", adminH.Stats)
 			ar.Get("/users", adminH.ListUsers)
-			ar.Get("/users/{id}", adminH.GetUserProfile) // Ф.2.1 — глубокая карточка
+			ar.Get("/users/{id}", adminH.GetUserProfile)
 			ar.Post("/users/{id}/ban", adminH.Ban)
 			ar.Post("/users/{id}/unban", adminH.Unban)
-			ar.Post("/users/{id}/credit", adminH.Credit)
-			ar.Post("/users/{id}/role", adminH.SetRole)
-			// Ф.2.2–2.3: ресурсы и артефакты через админку
-			ar.Post("/users/{id}/resources", adminH.GrantResources)
-			ar.Post("/users/{id}/artefacts/grant", adminH.GrantArtefact)
-			ar.Delete("/users/{id}/artefacts/{aid}", adminH.DeleteArtefact)
 			ar.Get("/automsgs", adminH.ListAutomsgs)
-			ar.Put("/automsgs/{key}", adminH.UpdateAutomsg)
 			ar.Get("/events", adminH.EventsList)
 			ar.Get("/events/stats", adminH.EventsStats)
-			ar.Post("/events/{id}/retry", adminH.EventRetry)
-			ar.Post("/events/{id}/cancel", adminH.EventCancel)
-			// Ф.3.2-3.3 dead-letter explorer
 			ar.Get("/events/dead", adminH.ListDeadEvents)
-			ar.Post("/events/dead/{id}/resurrect", adminH.ResurrectDeadEvent)
 			ar.Get("/audit", adminH.ListAudit)
+
+			// Destructive — admin+.
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/users/{id}/credit", adminH.Credit)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/users/{id}/resources", adminH.GrantResources)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/users/{id}/artefacts/grant", adminH.GrantArtefact)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Delete("/users/{id}/artefacts/{aid}", adminH.DeleteArtefact)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Put("/automsgs/{key}", adminH.UpdateAutomsg)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/events/{id}/retry", adminH.EventRetry)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/events/{id}/cancel", adminH.EventCancel)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/events/dead/{id}/resurrect", adminH.ResurrectDeadEvent)
+
+			// Только superadmin может менять роли (privilege escalation).
+			ar.With(admin.RequireRole(db, admin.RoleSuperadmin)).Post("/users/{id}/role", adminH.SetRole)
 		})
 	})
 

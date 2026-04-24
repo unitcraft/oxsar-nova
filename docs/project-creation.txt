@@ -6698,3 +6698,39 @@ UI:
 Ф.3.1 (фильтры по trace_id) уже реализовано в EventsList на бэкенде;
 UI-контролов для trace_id нет, добавим при первой реальной потребности.
 Ф.3.5 (trace explorer кликом) — следующая итерация.
+
+
+================================================================================
+ИТЕРАЦИЯ 2026-04-24 (plan 14 Ф.8.1): RBAC moderator
+================================================================================
+
+Иерархия ролей (по возрастанию):
+  player (0) → support (1) → admin (2) → superadmin (3)
+
+Значения enum user_role (0001_init.sql) уже содержали все четыре,
+миграции не нужны.
+
+Backend:
+  backend/internal/admin/rbac.go — Role enum, RequireRole(min)
+  middleware, roleFromDB() с fallback на RolePlayer.
+  AdminOnly оставлен в handler.go для обратной совместимости,
+  но не используется.
+
+main.go:
+  - Use(RequireRole(RoleSupport)) на префикс /admin (раньше был
+    AdminOnly допускавший только admin/superadmin).
+  - Read-only + ban/unban/list events — доступно support+.
+  - Destructive (credit, resources, artefacts grant/delete,
+    automsg update, events retry/cancel, dead-letter resurrect)
+    — admin+.
+  - Role change — только superadmin (privilege escalation защита).
+
+Frontend:
+  isAdmin (App.tsx) теперь включает support. Support увидит таб
+  «Админ» в шапке, сможет просматривать и банить, но попытка
+  POST /credit вернёт 403 (и это отловится как обычная ошибка в UI).
+
+Почему без отдельной UI-деградации: справиться с 403 при клике —
+дешевле, чем вводить условный рендер «если support, скрыть кнопку
+Credit». Все кнопки показаны, у support они падают с понятным
+сообщением при попытке использовать.
