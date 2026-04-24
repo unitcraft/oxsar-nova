@@ -16,7 +16,7 @@
 | ~~[18 Фаза 1](plans/18-unit-rebalance.md)~~ | ~~Порт недостающих rapidfire из legacy (38 записей)~~ | ✅ **done 2026-04-24** — BA-004 patched, BA-001/002 частично patched (ждёт симуляции). | — |
 | ~~[21 B](plans/21-gameplay-hardening.md)~~ | ~~Экспедиции: min_fleet + reward cap~~ | ✅ **done 2026-04-24** — BA-003 patched (лимит 50k fleet + reward cap ×3 + lost scaling + полное уничтожение при lost из плана 17 B1). | — |
 | [21 C](plans/21-gameplay-hardening.md) | Щиты: golden-тест high-tech | BA-005 — turtle-стратегия с Small Shield + Shield Tech 10+ может оказаться too strong. Сначала симуляция. | S |
-| [20 Ф.1](plans/20-legacy-port.md) | Vacation mode | Без него отпускник теряет флот целиком — классика OGame-жалоб. | S, 1 день |
+| ~~[20 Ф.1](plans/20-legacy-port.md)~~ | ~~Vacation mode~~ | ✅ **done 2026-04-24** — min 48h, blocking events, target/sender shields, prod=0, /api/me fields. Auto-disable через 30d — остаток (не блокер). | — |
 | ~~[20 Ф.2](plans/20-legacy-port.md)~~ | ~~Fleet slots через computer_tech~~ | ✅ **done 2026-04-24** — `1 + floor(computer_tech/6)`, UI-индикатор, 409 при overflow. | — |
 | [17 A1](plans/17-gameplay-improvements.md) | Антибашинг | Без него один игрок может заспамить другого навсегда — причина оттока. | S, 1 день |
 | ops | Резервное копирование БД + мониторинг | В repo нет. Без бэкапа первый сбой = смерть проекта. | M |

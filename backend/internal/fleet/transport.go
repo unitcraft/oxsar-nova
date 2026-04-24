@@ -93,6 +93,8 @@ var (
 	ErrFleetNotFound     = errors.New("fleet: not found")
 	ErrFleetNotRecallable = errors.New("fleet: cannot recall in current state")
 	ErrFleetSlotsExceeded = errors.New("fleet: no free fleet slots (improve computer_tech)")
+	ErrTargetOnVacation   = errors.New("fleet: target player is on vacation (protected)")
+	ErrSenderOnVacation   = errors.New("fleet: you are on vacation, cannot send fleets")
 )
 
 // Send — запуск TRANSPORT или ATTACK_SINGLE в зависимости от
@@ -166,6 +168,13 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		if src.userID != in.UserID {
 			return ErrPlanetOwnership
 		}
+		// План 20 Ф.1: игрок в отпуске не может отправлять флоты.
+		var senderOnVacation bool
+		if err := tx.QueryRow(ctx,
+			`SELECT vacation_since IS NOT NULL FROM users WHERE id=$1`,
+			in.UserID).Scan(&senderOnVacation); err == nil && senderOnVacation {
+			return ErrSenderOnVacation
+		}
 		if src.metal < in.CarryMetal || src.silicon < in.CarrySilicon || src.hydrogen < in.CarryHydro {
 			return ErrNotEnoughCarry
 		}
@@ -185,6 +194,14 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		// летит в неисследованную зону.
 		if in.Mission != 8 && in.Mission != 15 {
 			if err := s.checkTargetExists(ctx, tx, in.Dst); err != nil {
+				return err
+			}
+		}
+		// План 20 Ф.1: для агрессивных миссий проверяем, что target
+		// не в отпуске. ATTACK_SINGLE=10, SPY=11, ATTACK_ALLIANCE=12.
+		// ROCKET_ATTACK (kind=16) идёт через другой путь (rocket/service.go).
+		if in.Mission == 10 || in.Mission == 11 || in.Mission == 12 {
+			if err := s.checkTargetNotOnVacation(ctx, tx, in.Dst); err != nil {
 				return err
 			}
 		}
@@ -643,6 +660,31 @@ func (s *TransportService) checkTargetExists(ctx context.Context, tx pgx.Tx, c g
 	}
 	if !exists {
 		return ErrTargetNotFound
+	}
+	return nil
+}
+
+// checkTargetNotOnVacation — для ATTACK_SINGLE (10), SPY (11),
+// ATTACK_ALLIANCE (12), ROCKET_ATTACK (16) проверяет, что владелец
+// целевой планеты не в режиме отпуска (план 20 Ф.1). Возвращает
+// ErrTargetOnVacation если да.
+func (s *TransportService) checkTargetNotOnVacation(ctx context.Context, tx pgx.Tx, c galaxy.Coords) error {
+	var onVacation bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM planets p
+			JOIN users u ON u.id = p.user_id
+			WHERE p.galaxy=$1 AND p.system=$2 AND p.position=$3 AND p.is_moon=$4
+			  AND p.destroyed_at IS NULL
+			  AND u.vacation_since IS NOT NULL
+		)
+	`, c.Galaxy, c.System, c.Position, c.IsMoon).Scan(&onVacation)
+	if err != nil {
+		return fmt.Errorf("check vacation: %w", err)
+	}
+	if onVacation {
+		return ErrTargetOnVacation
 	}
 	return nil
 }

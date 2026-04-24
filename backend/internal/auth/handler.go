@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -93,20 +94,32 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 	var username, role, profession string
 	var credit float64
+	var vacationSince, vacationLastEnd *time.Time
 	if err := h.db.QueryRow(context.Background(),
-		`SELECT username, COALESCE(role::text, ''), credit, COALESCE(profession, 'none') FROM users WHERE id=$1`,
+		`SELECT username, COALESCE(role::text, ''), credit, COALESCE(profession, 'none'),
+		        vacation_since, vacation_last_end
+		 FROM users WHERE id=$1`,
 		uid,
-	).Scan(&username, &role, &credit, &profession); err != nil {
+	).Scan(&username, &role, &credit, &profession, &vacationSince, &vacationLastEnd); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+	resp := map[string]any{
 		"user_id":    uid,
 		"username":   username,
 		"role":       role,
 		"credit":     credit,
 		"profession": profession,
-	})
+	}
+	if vacationSince != nil {
+		resp["vacation_since"] = vacationSince.UTC().Format(time.RFC3339)
+		// Минимально можно выйти через 48h от vacation_since.
+		resp["vacation_unlock_at"] = vacationSince.Add(VacationMinDuration).UTC().Format(time.RFC3339)
+	}
+	if vacationLastEnd != nil {
+		resp["vacation_last_end"] = vacationLastEnd.UTC().Format(time.RFC3339)
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, resp)
 }
 
 // SetVacation POST /api/me/vacation — включить режим отпуска.
@@ -122,6 +135,8 @@ func (h *Handler) SetVacation(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "vacation already active"))
 		case errors.Is(err, ErrVacationIntervalNotMet):
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "vacation interval not met (20 days)"))
+		case errors.Is(err, ErrVacationBlocked):
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "vacation blocked by pending events (build/fleet/research) — wait for them to finish"))
 		default:
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		}
@@ -141,6 +156,8 @@ func (h *Handler) UnsetVacation(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, ErrVacationNotActive):
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "vacation not active"))
+		case errors.Is(err, ErrVacationTooEarly):
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "vacation must last at least 48h before you can exit"))
 		default:
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		}

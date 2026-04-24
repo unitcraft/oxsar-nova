@@ -26,9 +26,24 @@
 
 ---
 
-## Ф.1: Vacation Mode (umode)
+## Ф.1: Vacation Mode (umode) — ✅ ЗАКРЫТО 2026-04-24 (с остатком)
 
-**Legacy**: `Preferences.class.php`, `Functions.inc.php:548`  
+Реализовано:
+- `SetVacation` требует: нет активных событий из VACATION_BLOCKING_EVENTS (kinds 1-17, 28, 50-51).
+- `UnsetVacation` требует: прошло ≥48ч с `vacation_since` (ErrVacationTooEarly).
+- Cooldown 20 дней между отпусками через `vacation_last_end`.
+- Защита от атак: Send для missions 10/11/12 отказывает если target owner on vacation (ErrTargetOnVacation).
+- Защита от ракет: rocket.Launch отказывает если target owner on vacation.
+- Отправитель в отпуске не может слать флоты (ErrSenderOnVacation).
+- Production: при `vacation_since IS NOT NULL` в `applyTickInTx` rates = 0 (legacy setProdOfUser).
+- `/api/me` возвращает `vacation_since`, `vacation_unlock_at`, `vacation_last_end`.
+
+Остаток (не блокер):
+- Auto-disable через 30 дней — отложено, требует расширения inactivity-воркера.
+- ACS-холдинг на планете отпускника: не проверено (может сломаться семантически).
+- UI: frontend ещё не использует новые поля `/api/me` — план 14 (админка) + FleetScreen.
+
+**Legacy**: `Preferences.class.php`, `Functions.inc.php:548`
 **Ext-override**: нет
 
 **Константы из legacy**:
