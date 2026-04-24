@@ -17,7 +17,7 @@
 | ~~[21 B](plans/21-gameplay-hardening.md)~~ | ~~Экспедиции: min_fleet + reward cap~~ | ✅ **done 2026-04-24** — BA-003 patched (лимит 50k fleet + reward cap ×3 + lost scaling + полное уничтожение при lost из плана 17 B1). | — |
 | [21 C](plans/21-gameplay-hardening.md) | Щиты: golden-тест high-tech | BA-005 — turtle-стратегия с Small Shield + Shield Tech 10+ может оказаться too strong. Сначала симуляция. | S |
 | [20 Ф.1](plans/20-legacy-port.md) | Vacation mode | Без него отпускник теряет флот целиком — классика OGame-жалоб. | S, 1 день |
-| [20 Ф.2](plans/20-legacy-port.md) | Fleet slots через computer_tech | Сейчас можно слать бесконечно флотов — ломает бой и экономику. | S, полдня |
+| ~~[20 Ф.2](plans/20-legacy-port.md)~~ | ~~Fleet slots через computer_tech~~ | ✅ **done 2026-04-24** — `1 + floor(computer_tech/6)`, UI-индикатор, 409 при overflow. | — |
 | [17 A1](plans/17-gameplay-improvements.md) | Антибашинг | Без него один игрок может заспамить другого навсегда — причина оттока. | S, 1 день |
 | ops | Резервное копирование БД + мониторинг | В repo нет. Без бэкапа первый сбой = смерть проекта. | M |
 

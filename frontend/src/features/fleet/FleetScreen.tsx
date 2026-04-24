@@ -74,7 +74,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
 
   const fleets = useQuery({
     queryKey: ['fleets'],
-    queryFn: () => api.get<{ fleets: FleetRow[] | null }>('/api/fleet'),
+    queryFn: () => api.get<{ fleets: FleetRow[] | null; slots_used: number; slots_max: number }>('/api/fleet'),
     refetchInterval: 3000,
   });
 
@@ -159,6 +159,16 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
       <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
         Флот — {planet.name}
       </h2>
+
+      {/* Fleet slots indicator (план 20 Ф.2) */}
+      {typeof fleets.data?.slots_max === 'number' && (
+        <div className="ox-panel" style={{ padding: '8px 16px', fontSize: 13, color: 'var(--ox-fg-muted)' }}>
+          Слоты флота: <strong style={{ color: (fleets.data.slots_used ?? 0) >= fleets.data.slots_max ? 'var(--ox-danger, #ff6b6b)' : 'var(--ox-fg)' }}>
+            {fleets.data.slots_used ?? 0} / {fleets.data.slots_max}
+          </strong>
+          {' '}<span style={{ opacity: 0.7 }}>(увеличивается с computer_tech)</span>
+        </div>
+      )}
 
       {/* Active fleets */}
       {list.length > 0 && (

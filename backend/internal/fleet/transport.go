@@ -92,6 +92,7 @@ var (
 	ErrUnknownShip       = errors.New("fleet: unknown ship unit_id")
 	ErrFleetNotFound     = errors.New("fleet: not found")
 	ErrFleetNotRecallable = errors.New("fleet: cannot recall in current state")
+	ErrFleetSlotsExceeded = errors.New("fleet: no free fleet slots (improve computer_tech)")
 )
 
 // Send — запуск TRANSPORT или ATTACK_SINGLE в зависимости от
@@ -167,6 +168,15 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		}
 		if src.metal < in.CarryMetal || src.silicon < in.CarrySilicon || src.hydrogen < in.CarryHydro {
 			return ErrNotEnoughCarry
+		}
+		// Fleet slots (план 20 Ф.2): maxSlots = 1 + floor(computer_tech / 6).
+		// Не считаются: expedition (15), artefact delivery (29), return
+		// events (20/21/22). EXPEDITION-слот считается отдельно через
+		// astro_tech (план 20 Ф.7, отложено).
+		if in.Mission != 15 && in.Mission != 29 {
+			if err := s.checkFleetSlots(ctx, tx, in.UserID); err != nil {
+				return err
+			}
 		}
 
 		// Для TRANSPORT/ATTACK/RECYCLING/SPY требуется существующая
@@ -489,6 +499,53 @@ func (s *TransportService) Recall(ctx context.Context, userID, fleetID string) (
 		return s.loadShips(ctx, tx, &out)
 	})
 	return out, err
+}
+
+// checkFleetSlots — проверка лимита одновременных флотов (план 20 Ф.2).
+// Legacy: NS.class.php:1871 — maxSlots = 1 + floor(computer_tech / 6).
+// Считаются только state='outbound' mission NOT IN (15 expedition,
+// 29 artefact-delivery). Return-флоты (state='returning') не считаются
+// — они уже летят домой и не занимают слот.
+func (s *TransportService) checkFleetSlots(ctx context.Context, tx pgx.Tx, userID string) error {
+	used, maxSlots, err := readFleetSlots(ctx, tx, userID)
+	if err != nil {
+		return err
+	}
+	if used >= maxSlots {
+		return fmt.Errorf("%w: %d/%d slots used", ErrFleetSlotsExceeded, used, maxSlots)
+	}
+	return nil
+}
+
+// readFleetSlots — читает текущее и максимальное количество слотов.
+// Используется и для check, и для отображения в UI.
+func readFleetSlots(ctx context.Context, q interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}, userID string) (used, max int, err error) {
+	var computerLvl int
+	err = q.QueryRow(ctx,
+		`SELECT level FROM research WHERE user_id=$1 AND unit_id=$2`,
+		userID, unitComputerTech).Scan(&computerLvl)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return 0, 0, fmt.Errorf("read computer_tech: %w", err)
+	}
+	max = 1 + computerLvl/6
+
+	err = q.QueryRow(ctx, `
+		SELECT COUNT(*) FROM fleets
+		WHERE owner_user_id = $1
+		  AND state = 'outbound'
+		  AND mission NOT IN (15, 29)
+	`, userID).Scan(&used)
+	if err != nil {
+		return 0, 0, fmt.Errorf("count fleets: %w", err)
+	}
+	return used, max, nil
+}
+
+// Slots — возвращает used/max слотов флота для userID.
+func (s *TransportService) Slots(ctx context.Context, userID string) (used, max int, err error) {
+	return readFleetSlots(ctx, s.db.Pool(), userID)
 }
 
 // loadShips читает состав флота из fleet_ships и заполняет Fleet.Ships.
