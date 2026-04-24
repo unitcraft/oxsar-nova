@@ -201,14 +201,29 @@ rapidfire:
     42: 70
 ```
 
-### 4.2 Фаза 2: что делать после порта (требует симуляции)
+### 4.2 Фаза 2: результаты симуляции (2026-04-24)
 
-После Фазы 1 прогнать симуляции и сравнить с baseline:
+Симуляция прогнана — [docs/balance/simulation-2026-04-24.md](../balance/simulation-2026-04-24.md).
+Инструмент — [`backend/cmd/tools/battle-sim/`](../../backend/cmd/tools/battle-sim/main.go).
 
-1. **Lancer-spam vs Cruiser-fleet** — теперь Cruiser × 35 Lancer должно доминировать. Если Lancer всё ещё топ → ADR на нерф стоимости (план 21 Блок A).
-2. **DS-только-vs-DS** — теперь BS×30 ничего не меняет (BS пробивает DS при 50k), но Frigate×15 Lancer×100 делают DS ещё страшнее для мелочи. Ассиметрия сохраняется. Возможно ADR: снизить DS shell или rapidfire против тяжёлых — отдельно обсуждать.
-3. **Bomber против defense** — не трогаем. rapidfire ×20 vs RL/LL — это legacy, дизайн «Bomber = спец anti-defense».
-4. **Cruiser vs RocketLauncher ×10** — legacy. Не трогаем.
+**Итог** (exchange = ресурс-потери defender / attacker):
+
+| Сценарий | Exchange | Вывод |
+|---|---:|---|
+| Lancer → Cruiser | **5.11** | BA-002 не закрыт |
+| Lancer → mix LF+Cru+BS | **2.89** | BA-002 не закрыт |
+| DS → Lancer | ∞ | DS×100 работает |
+| DS → BS+SD mix | ∞, но def loss 0.5% | Контрплей DS есть |
+| Bomber → RL | ∞ | Legacy-дизайн работает |
+| Cruiser → RL | 44.3 | Legacy работает |
+| mix → defense | 0.43 | Оборона выгоднее флота (OGame-design) |
+
+**Что решено**:
+
+1. **Lancer-spam (BA-002) НЕ закрыт** — план 21 блок A (нерф стоимости Lancer) **всё-таки нужен**. Причина: rapidfire ×35 работает только после первого kill, а Lancer убивает Cruiser быстрее (attack 5500 vs 400). Детали — в simulation-2026-04-24.md.
+2. **DS endgame (BA-001) — снят до «P2/дизайн»**. Жёсткий фикс (shield 50k→30k, новые rapidfire) не нужен. BS+SD mix vs DS — жизнеспособный контрплей.
+3. **Bomber против defense** — не трогаем. Legacy-дизайн «Bomber = спец anti-defense» подтверждён.
+4. **Cruiser vs RocketLauncher** — legacy. Не трогаем.
 
 ### 4.3 Что из прежнего плана 18 отбрасываем
 
@@ -244,8 +259,8 @@ rapidfire:
 | 18.3 | Портировать 38 недостающих записей rapidfire из legacy | Фикс | нет | ✅ done |
 | 18.3a | Добавить Shadow Ship (325) в `units.yml/fleet:` (catalog_validate раскрыл пропуск) | Фикс | нет | ✅ done |
 | 18.4 | Golden-тесты: обновить `testdata/battle/*.json` под новый rapidfire | Фикс тестов | нет | n/a — golden-файлов ещё нет (см. testdata/battle/README.md) |
-| 18.5 | Симуляция: Lancer-spam, DS-vs-fleet, Bomber-vs-defense — сравнить с baseline | Анализ | нет | ⏳ ожидает |
-| 18.6 | По результатам симуляции — решение по ADR-предложениям 1–3 | Design | **да** | ⏳ ожидает |
+| 18.5 | Симуляция: Lancer-spam, DS-vs-fleet, Bomber-vs-defense — сравнить с baseline | Анализ | нет | ✅ done — [simulation-2026-04-24.md](../balance/simulation-2026-04-24.md) |
+| 18.6 | По результатам симуляции — решение по ADR-предложениям 1–3 | Design | **да** | ✅ решено: Фаза 2 плана 18 **не нужна** (DS endgame ок), но план 21 блок A (Lancer cost) **всё-таки нужен** |
 
 **Итог**: фазы 18.1–18.4 — pure-порт, можно делать без ADR (это возврат к legacy, как и требует CLAUDE.md).
 
