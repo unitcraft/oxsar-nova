@@ -133,6 +133,18 @@ buildings:
     time_base_seconds: 30
     max_level: 40
 
+  # Оборонная фабрика (legacy UNIT_DEFENSE_FACTORY=101, na_construction id=101).
+  # Значения — из legacy na_construction: basic=(350,200,100), charge=basic*2^(level-1).
+  # Требуется для ion_gun, planet_shield и других оборонных юнитов (см. requirements.yml).
+  # План 22 Ф.2.1: ранее отсутствовало в buildings.yml — ion_gun использовал
+  # shipyard level 4 как замену, теперь можно вернуть правильное требование.
+  defense_factory:
+    id: 101
+    cost_base:   { metal: 350, silicon: 200, hydrogen: 100 }
+    cost_factor: 2.0
+    time_base_seconds: 180
+    max_level: 40
+
   # Биржа ресурсов (legacy EXCH_OFFICE=108, EXCHANGE=107, mode=1).
   # time_base_seconds — оценочное (legacy не хранит явно).
   exch_office:

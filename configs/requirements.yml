@@ -124,11 +124,8 @@ requirements:
     - { kind: research, key: shield_tech, level: 1 }
     - { kind: research, key: energy_tech, level: 6 }
   ion_gun:
-    # Из легаси na_requirements: needs defense_factory 4 + ion_tech 4.
-    # defense_factory (id=101) в units.yml, но отсутствует в buildings.yml.
-    # Пока заменяем на shipyard level 4 как аналог — ADR при добавлении
-    # defense_factory.
-    - { kind: building, key: shipyard, level: 4 }
+    # Из легаси na_requirements (план 22 Ф.2.1 — defense_factory добавлен).
+    - { kind: building, key: defense_factory, level: 4 }
     - { kind: research, key: ion_tech, level: 4 }
   plasma_gun:
     - { kind: building, key: shipyard, level: 8 }
