@@ -1,0 +1,58 @@
+# Build-контекст для `docker build` (и всех compose-сервисов, которые
+# берут context из корня). Исключаем всё, что не нужно в образах:
+#   - build artifact'ы (бинари, exe, playwright-отчёты, coverage)
+#   - dev-временные каталоги (node_modules — ставятся в образе)
+#   - .git — 4+ ГБ истории, образам не нужна
+#   - локальные dev-файлы (.env.local, .vscode/, .idea/)
+#
+# ВАЖНО: здесь правила — как в .gitignore, относительно корня репо.
+# Ничего здесь исключённого не попадёт в COPY внутри Dockerfile.
+
+# VCS
+.git
+.gitignore
+.gitattributes
+
+# Эдитор/IDE
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Node
+**/node_modules
+**/.vite
+frontend/dist
+frontend/playwright-report
+frontend/test-results
+
+# Go (артефакты билда на хосте)
+backend/server
+backend/worker
+backend/server.exe
+backend/worker.exe
+backend/testseed.exe
+backend/*.test
+backend/*.out
+
+# Docker / прочие tmp
+**/*.log
+**/tmp
+**/.tmp
+
+# Локальные env-файлы (пароли/секреты не должны попадать в образ)
+.env
+.env.local
+.env.*.local
+
+# Документация и дневники — не нужны в runtime-образах
+docs
+README.md
+CLAUDE.md
+helpful.txt
+oxsar-spec.txt
+
+# Тестдата (большая), но НЕ трогаем configs — она нужна backend'у
+testdata
