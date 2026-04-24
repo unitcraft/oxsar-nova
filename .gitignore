@@ -39,3 +39,7 @@ node_modules/
 # Playwright e2e output
 frontend/playwright-report/
 frontend/test-results/
+
+# Одноразовый выхлоп cmd/tools/import-datasheets — не читается runtime'ом,
+# воспроизводим через `make import-datasheets` из legacy-дампа.
+configs/*_generated.yml

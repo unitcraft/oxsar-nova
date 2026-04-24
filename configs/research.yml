@@ -58,9 +58,21 @@ research:
     id: 25
     cost_factor: 2.0
 
+  # ign / gravi — «пустые» исследования легаси (base_cost в construction.yml).
+  # Добавлены, потому что death_star требует gravi level 1 (см. requirements.yml).
+  # Без них requirements.Check молча возвращал «нет требований», и DS можно было
+  # строить без проверки.
+  ign:
+    id: 26
+    cost_factor: 2.0
+
   expo_tech:
     id: 27
     cost_factor: 1.75
+
+  gravi:
+    id: 28
+    cost_factor: 3.0
 
   ballistics_tech:
     id: 103
