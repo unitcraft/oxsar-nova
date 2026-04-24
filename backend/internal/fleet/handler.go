@@ -177,3 +177,66 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}
 }
+
+// Phalanx GET /api/phalanx?source_planet_id=UUID&target_galaxy=N&target_system=M
+// Сенсорная Фаланга — план 20 Ф.4.
+func (h *Handler) Phalanx(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	q := r.URL.Query()
+	source := q.Get("source_planet_id")
+	if source == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "source_planet_id required"))
+		return
+	}
+	g, err1 := parseIntParam(q.Get("target_galaxy"))
+	s, err2 := parseIntParam(q.Get("target_system"))
+	if err1 != nil || err2 != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "target_galaxy and target_system must be integers"))
+		return
+	}
+	scans, err := h.transport.Phalanx(r.Context(), uid, source, g, s)
+	switch {
+	case err == nil:
+		if scans == nil {
+			scans = []PhalanxScan{}
+		}
+		httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"scans": scans})
+	case errors.Is(err, ErrPhalanxNotAMoon),
+		errors.Is(err, ErrPhalanxNotInstalled),
+		errors.Is(err, ErrPhalanxDifferentGalax):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrPhalanxOutOfRange),
+		errors.Is(err, ErrPhalanxNoHydrogen):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+func parseIntParam(s string) (int, error) {
+	if s == "" {
+		return 0, errors.New("empty")
+	}
+	n := 0
+	neg := false
+	i := 0
+	if s[0] == '-' {
+		neg = true
+		i = 1
+	}
+	for ; i < len(s); i++ {
+		c := s[i]
+		if c < '0' || c > '9' {
+			return 0, errors.New("invalid")
+		}
+		n = n*10 + int(c-'0')
+	}
+	if neg {
+		n = -n
+	}
+	return n, nil
+}

@@ -730,6 +730,62 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /api/phalanx:
+    get:
+      tags: [fleet]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Сенсорная Фаланга (план 20 Ф.4) — скан системы. Источник —
+        луна игрока с зданием star_surveillance (id=55).
+        Списывает 5000 единиц водорода.
+        Формула радиуса: round((level^2 - 1) * (1 + hyperspace_tech / 10))
+        систем в той же галактике.
+      parameters:
+        - in: query
+          name: source_planet_id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: target_galaxy
+          required: true
+          schema: { type: integer }
+        - in: query
+          name: target_system
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scans:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        fleet_id: { type: string, format: uuid }
+                        owner_id: { type: string, format: uuid }
+                        owner_name: { type: string }
+                        mission: { type: integer }
+                        state: { type: string, enum: [outbound, returning] }
+                        src_galaxy: { type: integer }
+                        src_system: { type: integer }
+                        src_position: { type: integer }
+                        dst_galaxy: { type: integer }
+                        dst_system: { type: integer }
+                        dst_position: { type: integer }
+                        dst_is_moon: { type: boolean }
+                        depart_at: { type: string, format: date-time }
+                        arrive_at: { type: string, format: date-time }
+                        return_at: { type: string, format: date-time }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: Not enough hydrogen (5000 required) or target out of scan range.
+
   /api/messages:
     get:
       tags: [messages]

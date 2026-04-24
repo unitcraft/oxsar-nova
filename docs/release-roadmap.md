@@ -29,8 +29,8 @@
 
 | # | Что | Почему | Объём |
 |---|---|---|---|
-| [20 Ф.3](plans/20-legacy-port.md) | Миссия POSITION | Без перебазирования флота игроки не смогут кооперироваться в альянсе. | S |
-| [20 Ф.4](plans/20-legacy-port.md) | Сенсорная Фаланга | Критично для PvP-метагейма на поздней стадии. | M |
+| ~~[20 Ф.3](plans/20-legacy-port.md)~~ | ~~Миссия POSITION~~ | ✅ **done 2026-04-25** — mission=6, ALLY/NAP target validation, PositionArriveHandler. | — |
+| ~~[20 Ф.4](plans/20-legacy-port.md)~~ | ~~Сенсорная Фаланга~~ | ✅ **done 2026-04-25** — GET /api/phalanx, формула radius из legacy, 5000H за скан. | — |
 | [19](plans/19-game-wiki.md) | Вики игры (`/wiki`) | Новички без вики уйдут за первый час. В legacy была. MVP 4–5 дней. | M |
 | [14 Ф.2.4–2.6](plans/14-admin-expansion.md) | Force-recall fleet, soft-delete user | Нужно для модерации (спам, нарушения, запросы «удалите мои данные» / GDPR). | M |
 | [14 Ф.8.2](plans/14-admin-expansion.md) | Rate-limit админ-действий | Защита от случайного `/api/admin/...` spam при эскалации инцидента. | S |

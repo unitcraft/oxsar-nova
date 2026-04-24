@@ -148,9 +148,25 @@ n/a. При появлении artefact-attachment-фичи — добавить
 
 ---
 
-## Ф.4: Сенсорная Фаланга (Sensor Phalanx / Star Surveillance)
+## Ф.4: Сенсорная Фаланга (Sensor Phalanx / Star Surveillance) — ✅ ЗАКРЫТО 2026-04-25
 
-**Legacy**: `MonitorPlanet.class.php`, `NS.class.php:1109`  
+Реализовано:
+- `GET /api/phalanx?source_planet_id=UUID&target_galaxy=N&target_system=M`.
+- `TransportService.Phalanx`: FOR UPDATE on planets, проверки источник-
+  луна/станция/галактика/радиус/водород, списание 5000H, выборка
+  fleets из `state IN ('outbound','returning')` где src или dst в
+  (target_galaxy, target_system).
+- Формула radius = `round((level^2 − 1) × (1 + hyperspace_tech/10))`.
+- Здание `star_surveillance` (id=55) уже было в `buildings.yml` с
+  `moon_only: true`; `units.yml` тоже имел запись.
+- Ошибки: ErrPhalanxNotAMoon (400), ErrPhalanxNotInstalled (400),
+  ErrPhalanxDifferentGalax (400), ErrPhalanxOutOfRange (409),
+  ErrPhalanxNoHydrogen (409).
+
+UI-интеграция отложена: план 19 (вики) и отдельный элемент в
+GalaxyScreen — не блокер.
+
+**Legacy**: `MonitorPlanet.class.php`, `NS.class.php:1109`
 **Ext-override**: нет
 
 **Константы из legacy**:
