@@ -123,6 +123,19 @@ func (s *Service) applyTickInTx(ctx context.Context, p *Planet) error {
 		caps := s.storageCap(p, levels)
 		eProd, eCons := s.energyStats(p, levels, techLevels)
 
+		// План 20 Ф.1: при отпуске игрока производство = 0 (legacy
+		// setProdOfUser → prod_factor=0 во всех планетах).
+		if p.UserID != "" {
+			var onVacation bool
+			if err := tx.QueryRow(ctx,
+				`SELECT vacation_since IS NOT NULL FROM users WHERE id=$1`,
+				p.UserID).Scan(&onVacation); err == nil && onVacation {
+				rates.metalPerSec = 0
+				rates.siliconPerSec = 0
+				rates.hydrogenPerSec = 0
+			}
+		}
+
 		// Ограничиваем ёмкостью хранилища: при заполнении cap добыча
 		// конкретного ресурса замирает (§5.2 ТЗ, как OGame).
 		gainM := rates.metalPerSec * elapsed

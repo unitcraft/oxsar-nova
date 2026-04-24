@@ -98,6 +98,9 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrForbidden)
 	case errors.Is(err, ErrFleetSlotsExceeded):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	case errors.Is(err, ErrTargetOnVacation),
+		errors.Is(err, ErrSenderOnVacation):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}

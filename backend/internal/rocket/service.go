@@ -58,7 +58,8 @@ var (
 	ErrInvalidInput    = errors.New("rocket: invalid input")
 	ErrPlanetOwnership = errors.New("rocket: source planet not owned by user")
 	ErrNoRockets       = errors.New("rocket: not enough rockets on source planet")
-	ErrTargetNotFound  = errors.New("rocket: target coords are empty")
+	ErrTargetNotFound   = errors.New("rocket: target coords are empty")
+	ErrTargetOnVacation = errors.New("rocket: target player is on vacation (protected)")
 	ErrSiloLimit       = errors.New("rocket: count exceeds missile silo capacity")
 )
 
@@ -136,20 +137,30 @@ func (s *Service) Launch(ctx context.Context, userID, srcPlanetID string,
 			return ErrSiloLimit
 		}
 
-		// Проверка цели (должна быть планета/луна).
-		var exists bool
+		// Проверка цели (должна быть планета/луна) + vacation-щит (план 20 Ф.1).
+		var exists, targetOnVacation bool
 		err = tx.QueryRow(ctx, `
-			SELECT EXISTS (
-				SELECT 1 FROM planets
-				WHERE galaxy=$1 AND system=$2 AND position=$3 AND is_moon=$4
-				  AND destroyed_at IS NULL
-			)
-		`, dst.Galaxy, dst.System, dst.Position, dst.IsMoon).Scan(&exists)
+			SELECT
+				EXISTS (
+					SELECT 1 FROM planets
+					WHERE galaxy=$1 AND system=$2 AND position=$3 AND is_moon=$4
+					  AND destroyed_at IS NULL
+				),
+				EXISTS (
+					SELECT 1 FROM planets p
+					JOIN users u ON u.id = p.user_id
+					WHERE p.galaxy=$1 AND p.system=$2 AND p.position=$3 AND p.is_moon=$4
+					  AND p.destroyed_at IS NULL AND u.vacation_since IS NOT NULL
+				)
+		`, dst.Galaxy, dst.System, dst.Position, dst.IsMoon).Scan(&exists, &targetOnVacation)
 		if err != nil {
 			return fmt.Errorf("rocket: check target: %w", err)
 		}
 		if !exists {
 			return ErrTargetNotFound
+		}
+		if targetOnVacation {
+			return ErrTargetOnVacation
 		}
 
 		// Списание ракет.
