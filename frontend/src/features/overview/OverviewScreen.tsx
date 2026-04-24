@@ -419,7 +419,10 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
 
   const diameter = planet.diameter;
   const usedFields = planet.used_fields ?? 0;
-  const maxF = diameter ? Math.floor(diameter / 1000) * 5 : null;
+  // План 23: max_fields считается на сервере (planet.Service.fillMaxFields),
+  // формула из legacy: round((d/1000)^2) + terra_former×5 + 10 (planet)
+  // либо ×2 для малой луны + moon_lab×5.
+  const maxF = planet.max_fields ?? null;
   const tempMin = planet.temp_min;
   const tempMax = planet.temp_max;
 

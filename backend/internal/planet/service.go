@@ -46,6 +46,9 @@ func (s *Service) Get(ctx context.Context, id string) (Planet, error) {
 	if err := s.applyTickInTx(ctx, &p); err != nil {
 		return Planet{}, err
 	}
+	if err := s.fillMaxFields(ctx, &p); err != nil {
+		return Planet{}, err
+	}
 	return p, nil
 }
 
@@ -59,8 +62,35 @@ func (s *Service) ListByUser(ctx context.Context, userID string) ([]Planet, erro
 		if err := s.applyTickInTx(ctx, &planets[i]); err != nil {
 			return nil, err
 		}
+		if err := s.fillMaxFields(ctx, &planets[i]); err != nil {
+			return nil, err
+		}
 	}
 	return planets, nil
+}
+
+// fillMaxFields вычисляет p.MaxFields по формуле из fields.go (legacy).
+// Читает только terra_former (58) и moon_lab (350), больше ничего из
+// зданий не нужно.
+func (s *Service) fillMaxFields(ctx context.Context, p *Planet) error {
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT unit_id, level FROM buildings
+		WHERE planet_id = $1 AND unit_id IN (58, 350)
+	`, p.ID)
+	if err != nil {
+		return fmt.Errorf("max_fields buildings: %w", err)
+	}
+	defer rows.Close()
+	b := make(map[int]int, 2)
+	for rows.Next() {
+		var uid, lvl int
+		if err := rows.Scan(&uid, &lvl); err != nil {
+			return err
+		}
+		b[uid] = lvl
+	}
+	p.MaxFields = MaxFields(p, b, DefaultFieldConsts)
+	return nil
 }
 
 // applyTickInTx догоняет ресурсы до now() и сохраняет в БД. Транзакция

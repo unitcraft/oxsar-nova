@@ -107,13 +107,16 @@ func (s *Starter) Assign(ctx context.Context, userID string) (string, error) {
 			pType := starterPlanetTypeOf(pos, rCoord)
 			tempMin, tempMax := starterPositionTemp(pos, rCoord)
 
+			// План 23: used_fields = число стартовых зданий (они занимают
+			// поля с момента создания планеты).
 			_, err = tx.Exec(ctx, `
 				INSERT INTO planets (id, user_id, is_moon, name, galaxy, system, position,
 				                     diameter, used_fields, planet_type, temperature_min, temperature_max,
 				                     metal, silicon, hydrogen)
-				VALUES ($1, $2, false, $3, $4, $5, $6, $7, 0, $8, $9, $10, $11, $12, $13)
+				VALUES ($1, $2, false, $3, $4, $5, $6, $7, $14, $8, $9, $10, $11, $12, $13)
 			`, id, userID, "Homeworld", g, sys, pos, HomePlanetSize, pType, tempMin, tempMax,
-				StartingResources.Metal, StartingResources.Silicon, StartingResources.Hydrogen)
+				StartingResources.Metal, StartingResources.Silicon, StartingResources.Hydrogen,
+				len(starterBuildings))
 			if err != nil {
 				return fmt.Errorf("insert starter planet: %w", err)
 			}

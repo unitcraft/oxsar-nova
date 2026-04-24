@@ -147,6 +147,18 @@ buildings:
     time_base_seconds: 180
     max_level: 40
 
+  # Терраформер (legacy UNIT_TERRA_FORMER=58, na_construction id=58).
+  # +5 полей к max_fields планеты за уровень (Planet.class.php:702).
+  # Legacy basic: 15k/30k/70k + 1000 energy. Energy cost пока не
+  # поддерживается в buildings.yml — отложено до отдельной задачи.
+  # План 23: теперь имеет смысл, т.к. есть field-limit.
+  terra_former:
+    id: 58
+    cost_base:   { metal: 15000, silicon: 30000, hydrogen: 70000 }
+    cost_factor: 2.0
+    time_base_seconds: 600
+    max_level: 20
+
   # Биржа ресурсов (legacy EXCH_OFFICE=108, EXCHANGE=107, mode=1).
   # time_base_seconds — оценочное (legacy не хранит явно).
   exch_office:

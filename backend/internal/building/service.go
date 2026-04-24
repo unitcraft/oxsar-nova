@@ -30,6 +30,7 @@ var (
 	ErrMoonOnly          = errors.New("building: this building is only available on moons")
 	ErrPlanetOnly        = errors.New("building: this building is not available on moons")
 	ErrMaxLevelReached   = errors.New("building: max level reached")
+	ErrFieldsExhausted   = errors.New("building: no free fields on planet")
 )
 
 type Service struct {
@@ -110,6 +111,21 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		targetLevel := curLevel + 1
 		if spec.MaxLevel > 0 && targetLevel > spec.MaxLevel {
 			return ErrMaxLevelReached
+		}
+
+		// План 23: проверка лимита полей. Новое здание (curLevel==0)
+		// занимает поле; апгрейд существующего — нет. used_fields
+		// обновляется воркером при завершении постройки (не здесь),
+		// но для резервирования слота считаем pending-билды тоже.
+		if curLevel == 0 {
+			bm, err := buildingLevelsTx(ctx, tx, p.ID)
+			if err != nil {
+				return err
+			}
+			maxF := planet.MaxFields(&p, bm, planet.DefaultFieldConsts)
+			if p.UsedFields+1 > maxF {
+				return ErrFieldsExhausted
+			}
 		}
 		cost := economy.CostForLevel(economy.Cost{
 			Metal:    spec.CostBase.Metal,
@@ -343,4 +359,26 @@ func currentLevel(ctx context.Context, tx pgx.Tx, planetID string, unitID int) (
 		return 0, fmt.Errorf("level: %w", err)
 	}
 	return lvl, nil
+}
+
+// buildingLevelsTx читает все постройки планеты как map[unit_id]level.
+// Используется для планет-wide расчётов (MaxFields и т.п.), где нужен
+// уровень нескольких ключевых зданий сразу (terra_former, moon_lab).
+func buildingLevelsTx(ctx context.Context, tx pgx.Tx, planetID string) (map[int]int, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT unit_id, level FROM buildings WHERE planet_id=$1`,
+		planetID)
+	if err != nil {
+		return nil, fmt.Errorf("building levels: %w", err)
+	}
+	defer rows.Close()
+	out := make(map[int]int)
+	for rows.Next() {
+		var uid, lvl int
+		if err := rows.Scan(&uid, &lvl); err != nil {
+			return nil, fmt.Errorf("scan level: %w", err)
+		}
+		out[uid] = lvl
+	}
+	return out, rows.Err()
 }

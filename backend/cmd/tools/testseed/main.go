@@ -240,6 +240,16 @@ func seed(ctx context.Context, pool *pgxpool.Pool, pwHash string) error {
 		}
 	}
 
+	// План 23: синхронизируем used_fields = число записей в buildings.
+	// solar_satellite (id=39) не живёт в buildings, поэтому COUNT(*) норм.
+	if _, err := pool.Exec(ctx, `
+		UPDATE planets p
+		SET used_fields = COALESCE(
+			(SELECT COUNT(*) FROM buildings b WHERE b.planet_id = p.id), 0)
+	`); err != nil {
+		return fmt.Errorf("resync used_fields: %w", err)
+	}
+
 	// --- research (у bob — до гипердвигателя 2) ---
 	type res struct{ userID string; unitID, level int }
 	researches := []res{
