@@ -92,8 +92,14 @@ make lint          # все линтеры
 - [docs/simplifications.md](docs/simplifications.md) — tracker всех
   принятых упрощений с планом возврата. **Любой новый trade-off
   записывается сюда в момент принятия, не "потом".**
-- [docs/balance-audit.md](docs/balance-audit.md) — реестр найденных
+- [docs/balance/audit.md](docs/balance/audit.md) — реестр найденных
   игровых дыр и эксплойтов с расчётами. Новая дыра → сначала запись
   в audit, потом план исправления.
+- [docs/balance/analysis.md](docs/balance/analysis.md) — разбор
+  балансных формул (производство, стоимости, бой).
+- [docs/plans/](docs/plans/) — планы итераций (нумерованные).
 - [docs/adr/](docs/adr/) — архитектурные решения.
+- [docs/ui/](docs/ui/) — UI-спеки, сравнение с OGame, матрица e2e, dev-log.
+- [docs/ops/](docs/ops/) — эксплуатация: VPS-sizing, платежи, runbooks.
+- [docs/legacy/](docs/legacy/) — доступ к oxsar2 для сверки.
 - [api/openapi.yaml](api/openapi.yaml) — контракт REST API.

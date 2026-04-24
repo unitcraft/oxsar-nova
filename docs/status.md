@@ -36,7 +36,8 @@ Milestones из §16 [oxsar-spec.txt](oxsar-spec.txt).
 | Alliance / chat / message   | ✅     | M6 | messages: inbox + mark-read + compose + delete ✅. Alliance MVP ✅ (create/join/leave/disband, relations NAP/WAR/ALLY с mutual acknowledge, кастомные ранги). Chat WebSocket ✅. |
 | Market (exchange)           | ✅     | M6 | Быстрый обменник (M↔Si↔H по курсам) ✅ + ордерная книга (CreateLot/ListLots/CancelLot/AcceptLot, migration 0022) ✅. |
 | Officers                    | ✅     | M7 | 4 officer (ADMIRAL/GEOLOGIST/ENGINEER/MERCHANT), Activate→Expire через event kind=62, factor-поля. Group exclusivity: ADMIRAL+ENGINEER взаимоисключают (group_key 'build', migration 0033). |
-| Achievements                | ✅     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), laны                | ✅     | M7 | 6 шагов (mine→solar→lab→computer_tech→ship→expedition), +10 кредитов за шаг, lazy-check. |
+| Achievements                | ✅     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), lazy-check. |
+| Tutorial                    | ✅     | M7 | 6 шагов (mine→solar→lab→computer_tech→ship→expedition), +10 кредитов за шаг, lazy-check. |
 | Simulator UI                | ✅     | M7.1 | BattleSimScreen с реальными боевыми характеристиками из каталога + таблица потерь + multi-run (num_sim 2–20). |
 | Admin panel                 | ✅     | M8 | GET /admin/stats + users list/ban/unban/credit/role. AutoMsg CMS (GET/PUT /admin/automsgs). AdminOnly middleware. |
 | Payment integrations        | ⬜     | M9 | v2: WebMoney/Robokassa/A1/2Pay/VK/OK/MailRu.             |
@@ -44,8 +45,8 @@ Milestones из §16 [oxsar-spec.txt](oxsar-spec.txt).
 | Frontend каркас             | ✅     | M0 | Vite + TS strict + TanStack Query + Zustand.             |
 | Score / Highscore           | ✅     | M5+ | RecalcUser/RecalcAll (формулы PointRenewer), GET /api/highscore, ScoreScreen. |
 | Frontend экраны             | ✅     | M3 | 19 вкладок: overview, buildings, research, shipyard, repair, galaxy, fleet, market, rockets, artefacts, art-market, officers, tutorial, achievements, score, messages, alliance, chat, sim. |
-| Порт дизайна oxsar2         | 🟡     | —  | CSS-темы перенесены как placeholder, ассеты копируются.  |
-| Порт .tpl-шаблонов          | ⬜     | —  | 134 .tpl (~12600 строк) — эталон разметки UI, §8 ТЗ.     |
+| Порт дизайна oxsar2         | 🟡     | —  | CSS-темы перенесены как placeholder, ассеты копируются. Полный UI-редизайн — в [docs/ui/design-spec.md](ui/design-spec.md). |
+| Порт .tpl-шаблонов          | ⬜     | —  | 134 .tpl (~12600 строк) — эталон разметки. Заменены React-экранами (19 шт.), прямой порт не планируется. |
 | import-datasheets CLI       | ✅     | M0.1 | construction/ships/requirements/artefacts → YAML.        |
 | import-phrases CLI          | ✅     | M0.2 | Запущен: configs/i18n/{ru,en}.yml, 23 группы, 1463 ключа. |
 | pkg/formula (DSL eval)      | ✅     | M0.3 | parser+eval, 12+ legacy-формул проходят тесты.           |

@@ -83,9 +83,9 @@
 ## Что у нас уже есть
 
 - [configs/ships.yml, buildings.yml, research.yml](../../configs/) — **источник истины** для всех чисел
-- [docs/balance-analysis.md](../balance-analysis.md) — разбор балансных формул
+- [docs/balance/analysis.md](../balance/analysis.md) — разбор балансных формул
 - [oxsar-spec.txt](../../oxsar-spec.txt) — полное ТЗ (не для игроков)
-- [docs/legacy-game-reference.md](../legacy-game-reference.md) — ссылка на легаси для сравнения
+- [docs/legacy/game-reference.md](../legacy/game-reference.md) — ссылка на легаси для сравнения
 
 Нет:
 - Пользовательской документации в одном месте

@@ -310,7 +310,7 @@ test-e2e-docker:
   без кеша docker buildx» — эта запись закроется после Ф.1
 - [.github/workflows/ci.yml](../../.github/workflows/ci.yml) — текущий
   CI, job `e2e` будет переписан
-- [docs/runbooks/docker-stacks.md](../runbooks/docker-stacks.md) —
+- [docs/ops/runbooks/docker-stacks.md](../ops/runbooks/docker-stacks.md) —
   шпаргалка по стекам, если появятся команды для работы с кешем —
   добавить туда секцию
 - [docs/plans/13-ui-testing.md](13-ui-testing.md) — план E2E-тестов,

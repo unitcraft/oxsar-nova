@@ -100,7 +100,7 @@ golden-слой ещё не начат.
 
 ### Планы
 
-- **Файлов планов**: 11 (после переноса `10-vps-sizing.md` в [docs/vps-sizing.md](vps-sizing.md)).
+- **Файлов планов**: 11 (после переноса `10-vps-sizing.md` в [docs/ops/vps-sizing.md](ops/vps-sizing.md)).
 - **Завершены**: все 11 планов — 01-08 (A-H), 09 (event-system, фазы 1+2+4+5
   закрыты; фаза 3 «масштабируемость на N воркеров» намеренно отложена до
   роста DAU, так сказано в самом плане), 11 (UI followup, шаги 1-12
@@ -197,14 +197,14 @@ golden-слой ещё не начат.
 | `backend/cmd/server/main.go` | 56 |
 | `frontend/src/App.tsx` | 43 |
 | `docs/status.md` | 35 |
-| `docs/ui-dev-log.md` | 29 |
+| `docs/ui/dev-log.md` | 29 |
 | `backend/cmd/worker/main.go` | 28 |
 | `frontend/src/features/buildings/BuildingsScreen.tsx` | 27 |
 | `frontend/src/features/resource/ResourceScreen.tsx` | 23 |
 | `frontend/src/features/overview/OverviewScreen.tsx` | 22 |
 
 Топ на 50% — это **документация, которая трекает процесс**
-(`project-creation.txt`, `simplifications.md`, `status.md`, `ui-dev-log.md`).
+(`project-creation.txt`, `simplifications.md`, `status.md`, `ui/dev-log.md`).
 Это уникальная особенность проекта: процесс задокументирован плотнее, чем код.
 
 Кода в топе — регистрация роутов (`server/main.go`), корневой UI (`App.tsx`),
@@ -218,7 +218,7 @@ golden-слой ещё не начат.
    весь код сгенерирован AI-ассистентом по планам из `docs/plans/`. Такой
    темп невозможен без AI и без плотной связки «план → PR → коммит».
 2. **Доля `docs:` коммитов — 24%** — процесс записан в четырёх файлах
-   (plans/, simplifications.md, project-creation.txt, ui-dev-log.md)
+   (plans/, simplifications.md, project-creation.txt, ui/dev-log.md)
    и индексируется чаще, чем код меняется.
 3. **Порт легаси при 65% объёма** — без потери функциональности, с типизацией
    и тестами, за счёт ухода от TPL+jQuery к React+TS и от PHP к Go.

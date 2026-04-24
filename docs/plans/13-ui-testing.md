@@ -5,7 +5,7 @@
 симуляционный шлюз (не трогаем живую Робокассу).
 
 **Статус: Ф.0–Ф.5 первичный проход завершён** (2026-04-24).
-См. [docs/ui-test-matrix.md](../ui-test-matrix.md) — актуальная матрица покрытия.
+См. [docs/ui/test-matrix.md](../ui/test-matrix.md) — актуальная матрица покрытия.
 
 Scope: end-to-end (E2E) прохождение всех 35 экранов + проверка покрытия API.
 Вне scope: unit-тесты компонентов (их отсутствие — отдельный tech debt, см.
@@ -373,7 +373,7 @@ Playwright — последний контейнер с `--exit-code-from playwr
       playwright-report + test-results + docker-logs при падении
 - [x] CI job `api-coverage`: `npm run api:coverage` на каждом PR
 - [ ] `make api-coverage` зелёный (все API или покрыты UI, или в whitelist)
-- [ ] Матрица `docs/ui-test-matrix.md`: экран × сценарий × статус — обновляется
+- [ ] Матрица `docs/ui/test-matrix.md`: экран × сценарий × статус — обновляется
       по итогам Ф.1–Ф.4
 - [ ] Итерация в `docs/project-creation.txt`
 - [ ] Любые обнаруженные баги — либо фикс, либо тикет-запись в
