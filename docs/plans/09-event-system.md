@@ -510,6 +510,6 @@ Kafka оправдан при: throughput десятки-сотни тысяч m
 ## Ссылки
 
 - [CLAUDE.md](../../CLAUDE.md) — §17 правила кода, §6 идемпотентность.
-- [oxsar-spec.txt §6, §18](../../oxsar-spec.txt) — требования к event-loop.
+- [oxsar-spec.txt §6, §18](../oxsar-spec.txt) — требования к event-loop.
 - [docs/status.md](../status.md) — Event-loop worker ✅ M3.
 - [docs/simplifications.md](../simplifications.md) — существующие trade-offs.
