@@ -6936,3 +6936,45 @@ configs/units.yml: добавлена строка Shadow Ship (id=325) в fleet
 Следующий шаг: симуляция (Lancer-spam vs Cruiser-fleet, DS-vs-fleet,
 Bomber-vs-defense) для проверки, нужны ли Фаза 2 плана 18 и блоки
 плана 21 (особенно блок A про Lancer cost).
+
+
+================================================================
+2026-04-24 — итерация «симуляция боёв после rapidfire-порта»
+================================================================
+
+Написана CLI-утилита backend/cmd/tools/battle-sim/ — чистая обёртка
+над battle.Calculate, без БД. Читает configs/, прогоняет 8 сценариев
+по 30 раз × 200 раундов, агрегирует exchange ratio по ресурсам.
+
+Результаты (полный отчёт в docs/balance/simulation-2026-04-24.md):
+
+| Сценарий | Exchange | Статус |
+| Lancer → Cruiser | 5.11 | BA-002 НЕ закрыт |
+| Lancer → mix | 2.89 | BA-002 НЕ закрыт |
+| DS → Lancer | ∞ | работает (DS×100) |
+| DS → BS+SD mix | ∞/0.5% loss | контрплей DS есть |
+| Bomber → RL | ∞ | legacy-дизайн ок |
+| Cruiser → RL | 44 | legacy ок |
+| mix → defense | 0.43 | оборона выгоднее (OGame) |
+
+Выводы:
+- План 18 Фаза 2 (shield DS 50k→30k, новые rapidfire vs DS) НЕ нужна —
+  BS+SD mix даёт жизнеспособный контрплей DS в симуляции.
+- План 21 блок A (нерф стоимости Lancer) всё-таки НУЖЕН — rapidfire
+  ×35 не закрывает BA-002 потому что Lancer убивает Cruiser быстрее,
+  чем тот получает право на rapidfire (attack 5500 vs 400).
+- Rapidfire-порт помог, но с ожидаемых 13-15× exchange упал до 5.11×.
+  До честного баланса ещё нужен прямой нерф.
+
+Обновлено:
+- docs/balance/simulation-2026-04-24.md — полный отчёт
+- docs/balance/audit.md — BA-001 patched (P2), BA-002 open с планом фикса
+- docs/plans/18-unit-rebalance.md — фазы 18.5/18.6 done
+- docs/release-roadmap.md — 21 A вместо «если нужно» → подтверждено
+
+Новый файл:
+- backend/cmd/tools/battle-sim/main.go (~300 строк, 8 сценариев)
+
+Запуск:
+  cd backend
+  go run ./cmd/tools/battle-sim/ --configs=../configs --all --runs=30 --rounds=200
