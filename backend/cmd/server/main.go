@@ -141,6 +141,7 @@ func run() error {
 	galaxyH := galaxy.NewHandler(galaxy.NewRepository(pool))
 
 	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod)
+	transportSvc.SetBashingLimits(cfg.Game.BashingPeriod, cfg.Game.BashingMaxAttacks)
 	fleetH := fleet.NewHandler(transportSvc, rdb)
 
 	messageSvc := message.NewService(db)

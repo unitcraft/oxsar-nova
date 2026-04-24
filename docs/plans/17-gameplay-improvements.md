@@ -34,17 +34,20 @@
 
 ## Блок A: Антибашинг и баланс PvP (Приоритет: H)
 
-### A1. Лимит атак на одного игрока (порт из legacy)
+### A1. Лимит атак на одного игрока (порт из legacy) — ✅ ЗАКРЫТО 2026-04-24
 
-**Суть**: нельзя атаковать одного игрока более 4 раз за 5 часов.  
-Значения взяты из `consts.dm.local.php`: `BASHING_PERIOD=18000` (5ч), `BASHING_MAX_ATTACKS=4`.  
-Механизм legacy (`NS.class.php:2285`): считаются все атаки attacker → все планеты defender — и pending (`EVENT_PROCESSED_WAIT`), и завершённые за последние `BASHING_PERIOD` секунд. Блок если `pending + finished >= 4`.
+Реализовано:
+- Константы проброшены из `cfg.Game.BashingPeriod` (18000s) и `cfg.Game.BashingMaxAttacks` (4) в `TransportService.SetBashingLimits`.
+- `checkBashingLimit` (transport.go): JOIN `fleets + planets` по координатам назначения, COUNT атак (mission IN 10, 12) от attacker → любые планеты defender, state='outbound' ИЛИ arrive_at > now()-период. Если ≥ max → `ErrBashingLimit` → HTTP 409 Conflict.
+- Проверка срабатывает в `Send` для mission=10 (ATTACK_SINGLE) и mission=12 (ATTACK_ALLIANCE). SPY (11) не считается — это разведка, не атака.
 
-**Реализация**:
-- Нет отдельной таблицы — запрашиваем `events` (у нас аналог — таблица `events`)
-- В `fleet/attack.go::validateAttack`: два COUNT по `events` — pending (state=wait, kind IN атакующих) + finished (fire_at > now()-5h) где owner_id = defender_user_id
-- `ErrAttackBashingLimit` → HTTP 400 с временем до сброса (`oldest_attack_at + 5h`)
-- **Не меняет баланс формул** — только политика разрешения
+Упрощение vs legacy: подсчёт идёт по таблице `fleets`, не `events`. Это эквивалентно (каждой атаке соответствует запись в fleets), но проще. События пропущены намеренно — они могут быть уже в state='ok' после arrive, тогда как fleets хранит историю через arrive_at.
+
+Sanity: self-attack (attacker == defender) и атаки на пустые слоты (planet.user_id IS NULL) — не считаются.
+
+**Суть**: нельзя атаковать одного игрока более 4 раз за 5 часов.
+Значения взяты из `consts.dm.local.php`: `BASHING_PERIOD=18000` (5ч), `BASHING_MAX_ATTACKS=4`.
+Механизм legacy (`NS.class.php:2285`): считаются все атаки attacker → все планеты defender — и pending, и завершённые за последние `BASHING_PERIOD` секунд. Блок если `pending + finished >= 4`.
 
 ### A2. Щит неактивности — **перенесено в план 20 Ф.1 (vacation mode)**
 

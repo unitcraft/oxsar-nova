@@ -7026,3 +7026,63 @@ Lancer cost ×1..×6 от legacy (2500/7500/15000 → 150000 metal-eq):
 Следующий шаг по roadmap: план 21 блок B (экспедиции — min_fleet,
 reward cap, lost_weight scaling). Но предусловие — план 17 B1
 (полное уничтожение флота при outcome=lost, портировать legacy).
+
+
+================================================================
+2026-04-24 — итерация «PvP-инфраструктура: 17 B1 + 21 B + 20 Ф.2 + 20 Ф.1 + 17 A1»
+================================================================
+
+Автоматическая серия по roadmap Фазы 1.
+
+1) План 17 B1 — полное уничтожение флота при outcome=lost экспедиции.
+   expLoss теперь удаляет все fleet_ships, handler выставляет
+   state='done'. Return-event НЕ удаляем — используем early-exit в
+   ReturnHandler при state='done' (events.go:223). Паттерн «не удалять
+   события из аудита» зафиксирован в docs/ops/event-audit-pattern.md
+   (инсайт пользователя при ревью первой реализации, где был DELETE
+   FROM events). Закрыло упрощение [EXPEDITION] expeditionLost в
+   simplifications.md. Commit bb82c44.
+
+2) План 21 блок B — пороги экспедиций.
+   - B1: min fleet 50k metal-eq при mission=15 (Send отказывает).
+   - B2: lost_weight = 10 * (1 + exp_power * 0.1). При power=11 вес 21
+     вместо 10 (0.85% против 0.42%).
+   - B4: reward cap ≤ fleet_value × 3 в expResources/expAsteroid
+     перед cargo-cap (основная защита от транспорт-фарма).
+   BA-003 patched (ждёт плана 20 Ф.7 для окончательного закрытия).
+   Commit bb82c44.
+
+3) План 20 Ф.2 — fleet slots через computer_tech.
+   Legacy формула 1 + floor(computer_tech/6). TransportService.
+   checkFleetSlots + Slots(userID). GET /api/fleet возвращает
+   slots_used + slots_max. FleetScreen показывает индикатор.
+   ErrFleetSlotsExceeded → 409. Упрощение: ACS-суммирование
+   computer_tech союзников не реализовано (ADR позже). Commit f6cd539.
+
+4) План 20 Ф.1 — полноценный vacation mode.
+   Дополнение существующей базы (toggle + 20-дневный cooldown):
+   - VACATION_BLOCKING_EVENTS (20 kinds): SetVacation отказывает если
+     есть pending события из списка.
+   - min 48h duration: UnsetVacation требует ≥ 48h с vacation_since.
+   - target/sender shields: Send отказывает для ATTACK/SPY/ACS/ROCKET
+     если владелец цели или отправитель на vacation.
+   - prod=0: applyTickInTx выставляет rates=0 при vacation_since≠NULL.
+   - /api/me возвращает vacation_since, vacation_unlock_at (+48h),
+     vacation_last_end.
+   Остаток: auto-disable через 30 дней (требует inactivity-воркера).
+   Commit ef95e5c.
+
+5) План 17 A1 — антибашинг.
+   Legacy BASHING_PERIOD=18000, BASHING_MAX_ATTACKS=4. TransportService.
+   SetBashingLimits пробрасывается из cfg. checkBashingLimit через
+   JOIN fleets+planets: COUNT атак attacker→все планеты defender в
+   окне 5h (outbound + recent arrive_at). ≥4 → ErrBashingLimit (409).
+   Применяется только для mission=10 (ATTACK_SINGLE) и 12 (ACS).
+   Spy (11) не считается.
+
+Все 5 задач — без новых миграций. Backend-тесты зелёные. FleetScreen
+частично обновлён (индикатор слотов); vacation UI — отдельно.
+
+Закрытые записи в roadmap: 18 Ф1 + 21 A + 21 B + 20 Ф2 + 20 Ф1 +
+17 A1 + 17 B1 (неявно через 21 B). Открыто только 18 Ф.2 (не нужна
+по симуляции), 21 C (щиты, отложено до golden-тестов), 20 Ф.3-Ф.8.
