@@ -74,27 +74,49 @@ cost (350, 200, 100), factor 2.0, time_base_seconds 180, max_level 40.
 
 **Рекомендация:** (A). Это здание — часть исходного баланса.
 
-### Ф.2.2 Planetary shields (354, 355)
+### Ф.2.2 Мёртвые legacy-юниты — общий ADR
 
-- В `units.yml defense` объявлены `small_planet_shield`, `large_planet_shield`.
-- Легаси-статы из БД: small `shell=300k, shield=100`; large
-  `shell=1M, shield=100k` (очень высокие параметры).
-- Требования: shield_tech 5+ (small), shield_tech 10 + gun_tech 10 +
-  ballistics 10 (large).
-- **Нет реализации:** battle-engine не знает о планетарных щитах,
-  UI-карточки нет, защитный эффект на планете не применяется.
+Данные из legacy PHP (oxsar2/www + oxsar2/www/ext) и БД, поиск
+2026-04-24. Детали в `knownOrphans` (backend/internal/config/
+catalog_validate_test.go).
 
-**Варианты:**
-- (A) Реализовать как особый defense-юнит с уникальным эффектом
-  (поглощение входящего урона перед ablation). Нужен backend
-  (новый параметр planet.shield_pool), UI (карточка в defense), ADR
-  про механику.
-- (B) Удалить из `units.yml`. Теряем legacy-механику; балансно не
-  обязательная, игра без них жива.
+Список кандидатов на реализацию с оценкой «сложность/ценность»:
 
-**Рекомендация:** (B) на ближайший релиз, (A) когда понадобится
-late-game сдерживание. Legacy планетарные щиты делают DS-раши
-менее болезненными — это классическая late-game механика OGame.
+| Юнит | Legacy-эффект | Сложность | Ценность |
+|------|--------------|-----------|----------|
+| `terra_former` (58) | +5 полей / уровень к max_fields планеты | S (1 поле в planets + formula в planet.Service) | M — расширяет late-game (больше слотов под здания) |
+| `small_planet_shield` (354) | +10 HP shield pool / штука, 4 слота | M (новое поле planet.shield_pool + интеграция с battle-engine) | H — классический late-game щит |
+| `large_planet_shield` (355) | +40 HP shield pool / штука, 8 слотов | то же, что small | H |
+| `moon_lab` (350) | альтернативная research-лаба на луне + 5 полей | M (формула в research.Service) | M |
+| `moon_repair_factory` (351) | лунный repair factory | M (copy-paste логики repair под луну) | L — мало игроков с лунами в M1 |
+| `ign` (26) | virtual lab network: +lab'ы других планет | L (изменяет research-тайминг, нужны тесты баланса) | M — крупная механика альянсов |
+| `gravi` (28) | weapon scale в бою, `getGraviWeaponScale()` | L (правка battle-engine, рискованно для баланса) | L — легко обойти оставив requirement без effect |
+| `moon_hydrogen_lab` (326) | **effect не реализован даже в legacy** | — | — |
+| `lancer_ship` (102) | **effect не реализован даже в legacy** | — | у нас в AlienAI отдельно |
+
+Сложность:
+- **S** ≤ 2 часа, одиночный файл + миграция
+- **M** 2-6 часов, требуется интеграция с сервисом/engine + тесты
+- **L** > 6 часов, затрагивает баланс / битвы, нужны golden-тесты
+
+**Рекомендация по очередности (если решим реализовать):**
+1. `terra_former` — S, ценность M. Простое и полезное (больше полей — больше builds).
+2. `planet_shield` пара — M/H. Добавляет late-game вариативность обороны, ожидаемая механика из OGame-like.
+3. `moon_lab` — M/M. Люди уже строят луны, но лаба на луне сейчас «мёртвая».
+4. `moon_repair_factory` — M/L. По желанию после луны.
+5. `ign` — L/M. Сложно и меняет research-тайминг всей партии, осторожно.
+6. `gravi` — L/L. Или эффект, или просто оставить как требование для DS.
+
+**Что можно сразу выкинуть из units.yml** (нулевой эффект даже в legacy):
+- `moon_hydrogen_lab` (326)
+- `lancer_ship` (102) — если мы не используем в AlienAI как визуальный ship
+
+Но удаление из `units.yml` потребует `import-datasheets` prepatch
+(он при импорте воссоздаст записи из legacy-дампа). Проще
+оставить в реестре + закомментировать в `knownOrphans`.
+
+**Оригинальное описание (для истории):**
+
 
 ### Ф.2.3 Ракеты в `units.yml defense`-группе — ✅ решено «оставить»
 

@@ -18,24 +18,50 @@ import (
 // knownOrphans — юниты из units.yml, для которых намеренно нет
 // балансного файла или requirements. Документируют компромиссы
 // с legacy-реестром. Удалять из списка только при реализации.
+//
+// Данные из legacy-поиска 2026-04-24 (см. docs/plans/22-configs-cleanup.md
+// Ф.2.2). Для каждого указано: что юнит делает в legacy и где в PHP
+// реализован эффект (путь относительно d:/Sources/oxsar2/www).
 var knownOrphans = map[string]string{
-	// units.yml.defense → нет в defense.yml (работают через ships.yml как ракеты)
+	// Ракеты — формально в units.yml.defense (legacy mode=4), но runtime
+	// работает с ними как fleet (event kind=16, ships.yml). Оставлены
+	// здесь для совместимости с legacy-реестром. См. план 22 Ф.2.3.
 	"interceptor_rocket":    "ракета kind=16, работает через ships.yml",
 	"interplanetary_rocket": "ракета kind=16, работает через ships.yml",
-	// units.yml.defense → нет механики планетарных щитов
-	"small_planet_shield": "план 22 Ф.2.2 — ADR",
-	"large_planet_shield": "план 22 Ф.2.2 — ADR",
-	// units.yml.research → legacy-технологии без effect в коде
-	"ign":   "legacy Alliance Network, effect не реализован",
-	// gravi есть в research.yml (требуется death_star), исключение не нужно
-	// units.yml.buildings → legacy-здания без реализации
-	"terra_former": "legacy Terra Former, effect не реализован",
-	// units.yml.moon_buildings → лунные здания кроме базовых 4-х не реализованы
-	"moon_hydrogen_lab":   "legacy moon hydrogen lab, эффект не реализован",
-	"moon_lab":            "legacy moon lab, эффект не реализован",
-	"moon_repair_factory": "legacy moon repair factory, эффект не реализован",
-	// lancer_ship — legacy spec ship, не используется в текущем бою
-	"lancer_ship": "legacy alien ship, используется только в AlienAI",
+
+	// Планетарные щиты. В legacy: EventHandler.class.php:1716-1722 — дают
+	// +10 HP (small) / +40 HP (large) к shield-пулу обороны планеты.
+	// Shipyard.class.php: занимают 4/8 полей. План 22 Ф.2.2 — ADR на
+	// интеграцию с battle-engine.
+	"small_planet_shield": "legacy: +10 HP shield pool, 4 слота (план 22 Ф.2.2)",
+	"large_planet_shield": "legacy: +40 HP shield pool, 8 слота (план 22 Ф.2.2)",
+
+	// Ign — «интергалактическая исследовательская сеть»: добавляет лабы
+	// других планет аккаунта к текущей при расчёте времени исследований
+	// (Planet.class.php:810, 834). MOON_LAB множит бонус ×10.
+	"ign": "legacy: virtual lab network across planets (Planet.class.php:810)",
+
+	// gravi уже в research.yml (требуется death_star). В legacy:
+	// NS.class.php::getGraviWeaponScale — формула масштаба урона от щита
+	// цели. Сейчас у нас gravi = пустое исследование без effect'а в
+	// engine.go. ADR: реализовать weapon scale или оставить как
+	// «пустое» требование для DS.
+
+	// Terra Former — +5 полей за уровень к max_fields планеты
+	// (Planet.class.php:702-705). Простая фича, 1 поле в schema
+	// + вычисление в planet.Service. Отдельный план-ADR.
+	"terra_former": "legacy: +5 max_fields / level (Planet.class.php:702)",
+
+	// Лунные здания. moon_lab + moon_repair_factory имеют эффект в
+	// legacy, moon_hydrogen_lab — пустая константа даже в legacy.
+	"moon_lab":            "legacy: alt lab + 5 polей / level (Planet.class.php:693, Research.class.php:200)",
+	"moon_repair_factory": "legacy: lunar repair factory (Planet.class.php:406, ext/page/ExtRepair.class.php:276)",
+	"moon_hydrogen_lab":   "legacy: только константа в consts.php:288, effect не реализован даже в legacy",
+
+	// Lancer — в legacy тоже чисто константа (consts.php:78, mode=3),
+	// никакого использования. У нас применяется только через AlienAI
+	// (отдельная механика, не в основной модели).
+	"lancer_ship": "legacy: только константа (consts.php:78), у нас — AlienAI юнит",
 }
 
 // loadCatalogForTest читает ../../configs (относительный путь от config-пакета).
