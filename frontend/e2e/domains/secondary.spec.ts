@@ -48,10 +48,10 @@ test.describe('Ф.3.13 admin', () => {
   });
 
   test('admin tab missing for regular player', async ({ page }) => {
-    await loginAs(page, 'bob');
-    // Попытка перейти на #admin — компонент скрыт условием {tab==='admin' && isAdmin}.
+    // bob получил superadmin для удобства ручного тестирования,
+    // поэтому обычного игрока представляет alice.
+    await loginAs(page, 'alice');
     await goToTab(page, 'admin');
-    // main виден, но содержимого admin-экрана нет.
     await expect(page.locator('main.ox-content')).not.toContainText(/бан|role change/i);
   });
 });
