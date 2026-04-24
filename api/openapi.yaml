@@ -672,6 +672,16 @@ paths:
                   fleets:
                     type: array
                     items: { $ref: "#/components/schemas/Fleet" }
+                  slots_used:
+                    type: integer
+                    description: |
+                      Количество флотов, занимающих слот (state=outbound,
+                      mission NOT IN expedition/artefact-delivery).
+                  slots_max:
+                    type: integer
+                    description: |
+                      Максимум слотов = 1 + floor(computer_tech / 6).
+                      Legacy: NS.class.php:1871.
     post:
       tags: [fleet]
       security: [{ bearerAuth: [] }]
@@ -690,6 +700,10 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: |
+            Нет свободных слотов флота (план 20 Ф.2).
+            Максимум = 1 + floor(computer_tech / 6).
 
   /api/fleet/{id}/recall:
     post:

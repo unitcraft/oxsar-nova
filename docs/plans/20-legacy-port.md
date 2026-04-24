@@ -53,9 +53,20 @@
 
 ---
 
-## Ф.2: Fleet Slots через Computer Tech
+## Ф.2: Fleet Slots через Computer Tech — ✅ ЗАКРЫТО 2026-04-24
 
-**Legacy**: `NS.class.php:1871`, `EventHandler.class.php:1442`  
+Реализовано:
+- `TransportService.checkFleetSlots` — `COUNT fleets WHERE owner_user_id=$1 AND state='outbound' AND mission NOT IN (15, 29)` ≥ `1 + floor(computer_tech/6)` → `ErrFleetSlotsExceeded` (409 Conflict).
+- `TransportService.Slots(userID)` — возвращает used/max для UI.
+- `GET /api/fleet` отдаёт `slots_used` и `slots_max` в ответе.
+- FleetScreen показывает индикатор «Слоты флота: N / M» сверху списка.
+
+Упрощение vs legacy: ACS на планету союзника **не суммирует**
+`computer_tech` обоих игроков (в legacy `min_tech = (our + ally) / 2`).
+Можно добавить позже — сейчас ACS пересекается редко, ADR по ACS
+откладывается.
+
+**Legacy**: `NS.class.php:1871`, `EventHandler.class.php:1442`
 **Ext-override**: нет
 
 **Формула из legacy**:

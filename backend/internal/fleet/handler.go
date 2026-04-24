@@ -96,6 +96,8 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	case errors.Is(err, ErrPlanetOwnership):
 		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrFleetSlotsExceeded):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}
@@ -113,7 +115,16 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"fleets": list})
+	slotsUsed, slotsMax, err := h.transport.Slots(r.Context(), uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+		"fleets":     list,
+		"slots_used": slotsUsed,
+		"slots_max":  slotsMax,
+	})
 }
 
 // Incoming GET /api/fleet/incoming — вражеские атакующие флоты к планетам игрока.
