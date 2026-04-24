@@ -3,6 +3,7 @@
 /backend/dist/
 *.test
 *.out
+*.exe
 coverage.*
 
 # Node
