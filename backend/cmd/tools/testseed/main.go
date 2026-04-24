@@ -160,7 +160,9 @@ func seed(ctx context.Context, pool *pgxpool.Pool, pwHash string) error {
 	}{
 		{uidAdmin, "admin", "admin@test.local", "superadmin", 10000},
 		{uidAlice, "alice", "alice@test.local", "player", 100},
-		{uidBob, "bob", "bob@test.local", "player", 5000},
+		// bob — superadmin для удобства ручного тестирования:
+		// один аккаунт со всеми фичами (прокачка + админка).
+		{uidBob, "bob", "bob@test.local", "superadmin", 5000},
 		{uidEve, "eve", "eve@test.local", "player", 50},
 		{uidCharlie, "charlie", "charlie@test.local", "player", 1000},
 	}
