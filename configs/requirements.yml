@@ -97,6 +97,17 @@ requirements:
     - { kind: research, key: hyperspace_tech, level: 6 }
     - { kind: research, key: hyperspace_engine, level: 7 }
     - { kind: research, key: gravi, level: 1 }
+  # Из легаси na_requirements. Раньше отсутствовали — юниты строились
+  # без проверки требований (requirements.Check возвращал nil).
+  star_destroyer:
+    - { kind: building, key: shipyard, level: 9 }
+    - { kind: research, key: hyperspace_tech, level: 5 }
+    - { kind: research, key: hyperspace_engine, level: 6 }
+  shadow_ship:
+    - { kind: building, key: shipyard, level: 6 }
+    - { kind: research, key: combustion_engine, level: 6 }
+    - { kind: research, key: ballistics_tech, level: 5 }
+    - { kind: research, key: masking_tech, level: 5 }
 
   # Оборона.
   rocket_launcher:  [{ kind: building, key: shipyard, level: 1 }]
@@ -112,6 +123,13 @@ requirements:
     - { kind: research, key: gun_tech,   level: 3 }
     - { kind: research, key: shield_tech, level: 1 }
     - { kind: research, key: energy_tech, level: 6 }
+  ion_gun:
+    # Из легаси na_requirements: needs defense_factory 4 + ion_tech 4.
+    # defense_factory (id=101) в units.yml, но отсутствует в buildings.yml.
+    # Пока заменяем на shipyard level 4 как аналог — ADR при добавлении
+    # defense_factory.
+    - { kind: building, key: shipyard, level: 4 }
+    - { kind: research, key: ion_tech, level: 4 }
   plasma_gun:
     - { kind: building, key: shipyard, level: 8 }
     - { kind: research, key: plasma_tech, level: 7 }
