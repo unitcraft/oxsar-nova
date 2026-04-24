@@ -52,6 +52,7 @@ interface FleetRow {
 }
 
 const MISSION_LABELS: Record<number, string> = {
+  6: 'Перебазирование',
   7: 'Транспорт',
   8: 'Колонизация',
   9: 'Переработка',
@@ -92,7 +93,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
 
   const send = useMutation({
     mutationFn: () => {
-      const carryAllowed = mission === 7 || mission === 8;
+      const carryAllowed = mission === 6 || mission === 7 || mission === 8;
       return api.post<unknown>('/api/fleet', {
         src_planet_id: planet.id,
         dst: { galaxy: g, system: s, position: pos, is_moon: isMoon },
@@ -280,7 +281,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
               </div>
             )}
 
-            {(mission === 7 || mission === 8) && (
+            {(mission === 6 || mission === 7 || mission === 8) && (
               <div>
                 <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>
                   Груз

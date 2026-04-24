@@ -100,7 +100,8 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
 	case errors.Is(err, ErrTargetOnVacation),
 		errors.Is(err, ErrSenderOnVacation),
-		errors.Is(err, ErrBashingLimit):
+		errors.Is(err, ErrBashingLimit),
+		errors.Is(err, ErrPositionNotAllowed):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))

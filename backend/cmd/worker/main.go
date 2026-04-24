@@ -147,6 +147,7 @@ func run() error {
 	w.Register(event.KindArtefactExpire, withAchievement(artefactSvc.ExpireEvent()))
 	w.Register(event.KindArtefactDelay, artefactSvc.DelayEvent())
 	w.Register(event.KindTransport, transportSvc.ArriveHandler())
+	w.Register(event.KindPosition, transportSvc.PositionArriveHandler())
 	w.Register(event.KindReturn, transportSvc.ReturnHandler())
 	w.Register(event.KindAttackSingle, withAchievement(transportSvc.AttackHandler()))
 	w.Register(event.KindAttackAlliance, withAchievement(transportSvc.ACSAttackHandler()))

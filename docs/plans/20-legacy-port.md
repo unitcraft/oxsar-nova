@@ -103,9 +103,28 @@ maxSlots = 1 + floor(computer_tech / 6)
 
 ---
 
-## Ф.3: Миссия POSITION (Перебазирование, kind=6)
+## Ф.3: Миссия POSITION (Перебазирование, kind=6) — ✅ ЗАКРЫТО 2026-04-25
 
-**Legacy**: `EventHandler.class.php:2067`  
+Реализовано:
+- `transport.Send`: mission=6 разрешён, `checkPositionTarget` валидирует цель
+  (своя планета/луна ИЛИ планета игрока с alliance relation='ally'/'nap' AND status='active').
+- `TransportService.PositionArriveHandler` (events.go):
+  1. разгружает carried_metal/silicon/hydrogen → planets.*
+  2. переносит все fleet_ships → ships (INSERT ON CONFLICT + count)
+  3. удаляет fleet_ships, carried=0, state='done'
+  4. сообщение владельцу флота (folder=2)
+- Зарегистрирован в worker: `w.Register(event.KindPosition, transportSvc.PositionArriveHandler())`.
+- Флот не возвращается: state='done' → ReturnHandler при срабатывании
+  молча пропускает (паттерн docs/ops/event-audit-pattern.md).
+- Идемпотентно: повторный запуск видит state='done'/'returning' и выходит.
+- UI: в FleetScreen добавлена миссия «Перебазирование», карго разрешено.
+- ErrPositionNotAllowed → 409 Conflict.
+
+Остаток: отцепление артефактов (ф.шаг 4 в плане). В nova артефакты
+не привязываются к флоту (taрaнь на fleet_id нет), поэтому этот шаг
+n/a. При появлении artefact-attachment-фичи — добавить сюда.
+
+**Legacy**: `EventHandler.class.php:2067`
 **Ext-override**: нет
 
 **Логика `arrive` из legacy**:

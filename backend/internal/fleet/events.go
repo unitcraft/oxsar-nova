@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/oxsar/nova/backend/internal/event"
+	"github.com/oxsar/nova/backend/pkg/ids"
 )
 
 // TransportArrivePayload — payload KindTransport=7. Совпадает с тем,
@@ -196,6 +197,131 @@ func (s *TransportService) RecyclingHandler() event.Handler {
 			`UPDATE fleets SET state='returning' WHERE id=$1`, pl.FleetID); err != nil {
 			return fmt.Errorf("recycling: update state: %w", err)
 		}
+		return nil
+	}
+}
+
+// PositionArriveHandler — event.Handler для KindPosition=6 (перебазирование,
+// план 20 Ф.3). По прибытию:
+//   1. Разгружаем carried → планета назначения.
+//   2. Переносим все корабли из fleet_ships → ships на планету назначения
+//      (INSERT ... ON CONFLICT DO UPDATE).
+//   3. Удаляем fleet_ships, carried=0, state='done'.
+//   4. Сообщение игроку (folder=2 = отчёты).
+//
+// Флот НЕ возвращается — return-event не удаляем (см. паттерн в
+// docs/ops/event-audit-pattern.md), при срабатывании ReturnHandler
+// увидит state='done' и молча завершится.
+//
+// Идемпотентно: повторный запуск видит state='done' и возвращает nil.
+func (s *TransportService) PositionArriveHandler() event.Handler {
+	return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
+		var pl transportPayload
+		if err := json.Unmarshal(e.Payload, &pl); err != nil {
+			return fmt.Errorf("position arrive: parse payload: %w", err)
+		}
+		var (
+			state                   string
+			ownerID                 string
+			g, sys, pos             int
+			isMoon                  bool
+			cm, csil, ch            int64
+		)
+		err := tx.QueryRow(ctx, `
+			SELECT state, owner_user_id, dst_galaxy, dst_system, dst_position, dst_is_moon,
+			       carried_metal, carried_silicon, carried_hydrogen
+			FROM fleets WHERE id = $1 FOR UPDATE
+		`, pl.FleetID).Scan(&state, &ownerID, &g, &sys, &pos, &isMoon, &cm, &csil, &ch)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil
+			}
+			return fmt.Errorf("position arrive: select fleet: %w", err)
+		}
+		if state != "outbound" {
+			return nil // уже обработан
+		}
+
+		// Цель по координатам.
+		var planetID string
+		err = tx.QueryRow(ctx, `
+			SELECT id FROM planets
+			WHERE galaxy=$1 AND system=$2 AND position=$3 AND is_moon=$4
+			  AND destroyed_at IS NULL
+		`, g, sys, pos, isMoon).Scan(&planetID)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				// Цель исчезла — возвращаем флот домой.
+				if _, err := tx.Exec(ctx,
+					`UPDATE fleets SET state='returning' WHERE id=$1`, pl.FleetID); err != nil {
+					return fmt.Errorf("position arrive: target gone, update fleet: %w", err)
+				}
+				return nil
+			}
+			return fmt.Errorf("position arrive: find target: %w", err)
+		}
+
+		// 1. Разгружаем carry.
+		if cm > 0 || csil > 0 || ch > 0 {
+			if _, err := tx.Exec(ctx, `
+				UPDATE planets
+				SET metal = metal + $1, silicon = silicon + $2, hydrogen = hydrogen + $3
+				WHERE id = $4
+			`, cm, csil, ch, planetID); err != nil {
+				return fmt.Errorf("position arrive: credit resources: %w", err)
+			}
+		}
+
+		// 2. Переносим корабли из fleet_ships → ships.
+		rows, err := tx.Query(ctx,
+			`SELECT unit_id, count FROM fleet_ships WHERE fleet_id=$1`, pl.FleetID)
+		if err != nil {
+			return fmt.Errorf("position arrive: read fleet_ships: %w", err)
+		}
+		type shipRow struct {
+			id    int
+			count int64
+		}
+		var ships []shipRow
+		for rows.Next() {
+			var sh shipRow
+			if err := rows.Scan(&sh.id, &sh.count); err != nil {
+				rows.Close()
+				return err
+			}
+			ships = append(ships, sh)
+		}
+		rows.Close()
+		for _, sh := range ships {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO ships (planet_id, unit_id, count)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (planet_id, unit_id) DO UPDATE SET count = ships.count + EXCLUDED.count
+			`, planetID, sh.id, sh.count); err != nil {
+				return fmt.Errorf("position arrive: insert ship %d: %w", sh.id, err)
+			}
+		}
+		// 3. Очищаем fleet_ships, carry=0, state='done'.
+		if _, err := tx.Exec(ctx,
+			`DELETE FROM fleet_ships WHERE fleet_id=$1`, pl.FleetID); err != nil {
+			return fmt.Errorf("position arrive: clear fleet_ships: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE fleets
+			SET state='done', carried_metal=0, carried_silicon=0, carried_hydrogen=0
+			WHERE id=$1
+		`, pl.FleetID); err != nil {
+			return fmt.Errorf("position arrive: update fleet: %w", err)
+		}
+
+		// 4. Сообщение владельцу флота.
+		subj := "Перебазирование завершено"
+		body := fmt.Sprintf("Флот прибыл на [%d:%d:%d]. Корабли перемещены на планету, ресурсы разгружены.",
+			g, sys, pos)
+		_, _ = tx.Exec(ctx, `
+			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
+			VALUES ($1, $2, NULL, 2, $3, $4)
+		`, ids.New(), ownerID, subj, body)
 		return nil
 	}
 }
