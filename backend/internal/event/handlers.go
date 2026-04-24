@@ -58,6 +58,21 @@ func HandleBuildConstruction(ctx context.Context, tx pgx.Tx, e Event) error {
 	`, *e.PlanetID, pl.UnitID, pl.TargetLevel); err != nil {
 		return fmt.Errorf("upsert building: %w", err)
 	}
+
+	// План 23: инкрементируем used_fields только при первой постройке
+	// здания (cur==0, target==1). Апгрейд того же здания поля не занимает.
+	// Solar satellite и ракеты не считаются «зданиями» на полях в legacy
+	// (см. Planet.class.php:717 — getFields), но поскольку их нельзя
+	// построить через construction_queue как buildings (они через
+	// shipyard), здесь не фильтруем.
+	if cur == 0 && pl.TargetLevel == 1 {
+		if _, err := tx.Exec(ctx,
+			`UPDATE planets SET used_fields = used_fields + 1 WHERE id = $1`,
+			*e.PlanetID); err != nil {
+			return fmt.Errorf("inc used_fields: %w", err)
+		}
+	}
+
 	if _, err := tx.Exec(ctx, `UPDATE construction_queue SET status='done' WHERE id=$1`, pl.QueueID); err != nil {
 		return fmt.Errorf("close queue: %w", err)
 	}

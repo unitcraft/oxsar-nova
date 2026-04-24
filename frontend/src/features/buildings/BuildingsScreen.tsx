@@ -116,6 +116,23 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
           Постройки — {planet.name}
         </h2>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          {planet.max_fields != null && (
+            <span
+              style={{
+                fontSize: 14,
+                fontFamily: 'var(--ox-mono)',
+                color:
+                  (planet.used_fields ?? 0) >= planet.max_fields
+                    ? 'var(--ox-danger)'
+                    : (planet.used_fields ?? 0) / planet.max_fields >= 0.9
+                      ? 'var(--ox-warn, #f59e0b)'
+                      : 'var(--ox-fg-dim)',
+              }}
+              title="Занято / максимум полей на планете"
+            >
+              🔲 {planet.used_fields ?? 0} / {planet.max_fields}
+            </span>
+          )}
           {planet.build_factor != null && planet.build_factor > 1 && (
             <span style={{ fontSize: 14, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
               🏗 +{Math.round((planet.build_factor - 1) * 100)}% строительство

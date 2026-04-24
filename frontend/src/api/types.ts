@@ -29,6 +29,8 @@ export interface Planet {
   position: number;
   diameter?: number;
   used_fields?: number;
+  max_fields?: number; // план 23: лимит полей для постройки
+
   temp_min?: number;
   temp_max?: number;
   planet_type?: string;

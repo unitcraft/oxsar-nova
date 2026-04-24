@@ -10,6 +10,11 @@
 # kind research — означает исследование игрока.
 
 requirements:
+  # Терраформер — план 23, из legacy na_requirements.
+  terra_former:
+    - { kind: building, key: nano_factory, level: 1 }
+    - { kind: research, key: energy_tech,  level: 11 }
+
   # Исследовательская лаборатория открывает все исследования.
   spyware:         [{ kind: building, key: research_lab, level: 3 }]
   computer_tech:   [{ kind: building, key: research_lab, level: 1 }]

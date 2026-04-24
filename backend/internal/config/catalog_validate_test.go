@@ -50,11 +50,7 @@ var knownOrphans = map[string]string{
 	// Terra Former — +5 полей за уровень к max_fields планеты
 	// (Planet.class.php:702-705). Простая фича, 1 поле в schema
 	// + вычисление в planet.Service. Отдельный план-ADR.
-	// Terra Former зависит от базовой механики field-check (сейчас в nova
-	// max_fields есть (diameter), но ограничение на постройку не
-	// применяется — UsedFields растёт, но билды не блокируются). Имеет
-	// смысл реализовывать только после field-check.
-	"terra_former": "legacy: +5 max_fields / level; ждёт реализации base field-limit",
+	// terra_former — реализован в плане 23 (field-limit + +5 полей/level).
 
 	// Лунные здания. moon_lab + moon_repair_factory имеют эффект в
 	// legacy, moon_hydrogen_lab — пустая константа даже в legacy.
