@@ -115,11 +115,9 @@ var (
 // только базовые поля — UI достаточно).
 func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, error) {
 	if in.Mission == 0 {
-		in.Mission = 7 // обратная совместимость
+		in.Mission = int(event.KindTransport) // обратная совместимость
 	}
-	if in.Mission != 6 && in.Mission != 7 && in.Mission != 8 && in.Mission != 9 && in.Mission != 10 &&
-		in.Mission != 11 && in.Mission != 12 && in.Mission != 15 &&
-		in.Mission != 25 && in.Mission != 27 {
+	if !isValidMission(in.Mission) {
 		return Fleet{}, fmt.Errorf("%w: mission %d not supported",
 			ErrInvalidDispatch, in.Mission)
 	}
@@ -164,11 +162,11 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 	if minSpeed == math.MaxInt {
 		return Fleet{}, fmt.Errorf("%w: fleet has no speed (empty specs?)", ErrInvalidDispatch)
 	}
-	// Экспедиция (mission=15): минимум 50k metal-eq флота. Это отсекает
+	// Экспедиция: минимум 50k metal-eq флота. Это отсекает
 	// фарм-эксплойт BA-003 — отправку 1 LF (4k) ради 5M ресурсов.
 	// 50k ≈ 10 Small Transporter'ов или 1.5 Cruiser — разумный минимум.
 	// План 21 блок B1 + комментарий в 21-gameplay-hardening.md.
-	if in.Mission == 15 && totalFleetValue < expeditionMinFleetValue {
+	if event.Kind(in.Mission) == event.KindExpedition && totalFleetValue < expeditionMinFleetValue {
 		return Fleet{}, fmt.Errorf("%w: expedition requires min %d metal-eq fleet (have %d)",
 			ErrInvalidDispatch, expeditionMinFleetValue, totalFleetValue)
 	}
@@ -193,10 +191,9 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			return ErrNotEnoughCarry
 		}
 		// Fleet slots (план 20 Ф.2): maxSlots = 1 + floor(computer_tech / 6).
-		// Не считаются: expedition (15), artefact delivery (29), return
-		// events (20/21/22). EXPEDITION-слот считается отдельно через
-		// astro_tech (план 20 Ф.7).
-		if in.Mission != 15 && in.Mission != 29 {
+		// Expedition (15) и delivery_units (21) считаются отдельно
+		// (см. isFleetSlotMission).
+		if isFleetSlotMission(in.Mission) {
 			if err := s.checkFleetSlots(ctx, tx, in.UserID); err != nil {
 				return err
 			}
@@ -205,39 +202,35 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		//   max(1, floor(sqrt(astro_tech))).
 		// При стартовом astro=2 → 1 слот. Чем выше astro — тем больше
 		// одновременных экспедиций.
-		if in.Mission == 15 {
+		if event.Kind(in.Mission) == event.KindExpedition {
 			if err := s.checkExpeditionSlots(ctx, tx, in.UserID); err != nil {
 				return err
 			}
 		}
 
-		// Для TRANSPORT/ATTACK/RECYCLING/SPY требуется существующая
-		// цель. Для COLONIZE (mission=8) и EXPEDITION (mission=15)
-		// цель может быть любой: COLONIZE создаёт планету, EXPEDITION
-		// летит в неисследованную зону.
-		if in.Mission != 8 && in.Mission != 15 {
+		// Цель должна существовать для всех миссий, кроме COLONIZE
+		// (создаёт планету) и EXPEDITION (летит в неисследованную зону).
+		if requiresExistingTarget(in.Mission) {
 			if err := s.checkTargetExists(ctx, tx, in.Dst); err != nil {
 				return err
 			}
 		}
-		// POSITION (6): только на свои планеты/луны или планеты ally/nap.
-		if in.Mission == 6 {
+		// POSITION: только на свои планеты/луны или планеты ally/nap.
+		if event.Kind(in.Mission) == event.KindPosition {
 			if err := s.checkPositionTarget(ctx, tx, in.UserID, in.Dst); err != nil {
 				return err
 			}
 		}
 		// План 20 Ф.1: для агрессивных миссий проверяем, что target
-		// не в отпуске. ATTACK_SINGLE=10, SPY=11, ATTACK_ALLIANCE=12,
-		// MOON_DESTROY single=25, alliance=27. ROCKET_ATTACK (kind=16)
-		// идёт через другой путь (rocket/service.go).
-		if in.Mission == 10 || in.Mission == 11 || in.Mission == 12 ||
-			in.Mission == 25 || in.Mission == 27 {
+		// не в отпуске. ROCKET_ATTACK идёт через другой путь
+		// (rocket/service.go).
+		if isAggressiveMission(in.Mission) {
 			if err := s.checkTargetNotOnVacation(ctx, tx, in.Dst); err != nil {
 				return err
 			}
 		}
-		// MOON_DESTROY (25/27): цель должна быть луной + во флоте есть DS.
-		if in.Mission == 25 || in.Mission == 27 {
+		// MOON_DESTROY: цель должна быть луной + во флоте есть DS.
+		if isMoonDestroyMission(in.Mission) {
 			if !in.Dst.IsMoon {
 				return fmt.Errorf("%w: moon-destroy target must be a moon", ErrInvalidDispatch)
 			}
@@ -245,9 +238,9 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 				return fmt.Errorf("%w: moon-destroy fleet must contain Deathstar", ErrInvalidDispatch)
 			}
 		}
-		// План 17 A1: антибашинг для ATTACK/ACS/MOON_DESTROY (spy не считается).
-		if in.Mission == 10 || in.Mission == 12 ||
-			in.Mission == 25 || in.Mission == 27 {
+		// План 17 A1: антибашинг для атак (ATTACK/ACS/MOON_DESTROY).
+		// SPY не считается (см. isAttackMission).
+		if isAttackMission(in.Mission) {
 			if err := s.checkBashingLimit(ctx, tx, in.UserID, in.Dst); err != nil {
 				return err
 			}
@@ -595,6 +588,9 @@ func readFleetSlots(ctx context.Context, q interface {
 	}
 	max = 1 + computerLvl/6
 
+	// mission NOT IN (15, 29): EXPEDITION (event.KindExpedition) и
+	// DELIVERY_UNITS (event.KindDeliveryUnits=21? — у нас 29
+	// для artefact-delivery в legacy). См. isFleetSlotMission.
 	err = q.QueryRow(ctx, `
 		SELECT COUNT(*) FROM fleets
 		WHERE owner_user_id = $1
