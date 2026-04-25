@@ -829,6 +829,68 @@ paths:
         "409":
           description: Not enough hydrogen (5000 required) or target out of scan range.
 
+  /api/daily-quests:
+    get:
+      tags: [daily-quest]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Список ежедневных заданий игрока на сегодня (план 17 D).
+        При первом запросе в новый день quest'ы генерируются lazy
+        (3 случайных из daily_quest_defs с учётом веса).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  quests:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        def_id:          { type: integer }
+                        key:             { type: string }
+                        title:           { type: string }
+                        condition_type:  { type: string }
+                        target_progress: { type: integer }
+                        progress:        { type: integer }
+                        reward_credits:  { type: integer }
+                        reward_metal:    { type: integer, format: int64 }
+                        reward_silicon:  { type: integer, format: int64 }
+                        reward_hydrogen: { type: integer, format: int64 }
+                        date:            { type: string, format: date }
+                        completed:       { type: boolean }
+                        claimed:         { type: boolean }
+
+  /api/daily-quests/{id}/claim:
+    post:
+      tags: [daily-quest]
+      security: [{ bearerAuth: [] }]
+      summary: Забрать награду за completed quest.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: def_id quest'а
+          schema: { type: integer }
+      responses:
+        "200":
+          description: награда выдана
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reward_credits:  { type: integer }
+                  reward_metal:    { type: integer, format: int64 }
+                  reward_silicon:  { type: integer, format: int64 }
+                  reward_hydrogen: { type: integer, format: int64 }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: quest не выполнен или награда уже получена
+
   /api/wiki:
     get:
       tags: [wiki]

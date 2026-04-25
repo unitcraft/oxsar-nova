@@ -56,6 +56,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/shipyard"
 	"github.com/oxsar/nova/backend/internal/techtree"
 	"github.com/oxsar/nova/backend/internal/storage"
+	"github.com/oxsar/nova/backend/internal/dailyquest"
 	"github.com/oxsar/nova/backend/internal/wiki"
 )
 
@@ -141,8 +142,12 @@ func run() error {
 
 	galaxyH := galaxy.NewHandler(galaxy.NewRepository(pool))
 
+	dailyQuestSvc := dailyquest.New(pool)
+	dailyQuestH := dailyquest.NewHandler(dailyQuestSvc)
+
 	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod)
 	transportSvc.SetBashingLimits(cfg.Game.BashingPeriod, cfg.Game.BashingMaxAttacks)
+	transportSvc.SetDailyQuestSvc(dailyQuestSvc)
 	fleetH := fleet.NewHandler(transportSvc, rdb)
 
 	messageSvc := message.NewService(db)
@@ -300,6 +305,10 @@ func run() error {
 		pr.Delete("/artefact-market/offers/{id}", artMarketH.Cancel)
 
 		pr.Get("/achievements", achH.List)
+
+		// План 17 D: daily quests.
+		pr.Get("/daily-quests", dailyQuestH.List)
+		pr.Post("/daily-quests/{id}/claim", dailyQuestH.Claim)
 
 		pr.Get("/officers", officerH.List)
 		pr.Post("/officers/{key}/activate", officerH.Activate)

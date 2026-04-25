@@ -45,6 +45,20 @@ type TransportService struct {
 	protectionPeriod  int // seconds new player is protected
 	bashingPeriod     int // seconds window for bashing count (legacy BASHING_PERIOD)
 	bashingMaxAttacks int // max attacks per attacker→defender in window (legacy BASHING_MAX_ATTACKS)
+	dailyQuests       DailyQuestProgresser // план 17 D — hook для прогресса quest при Send
+}
+
+// DailyQuestProgresser — узкий интерфейс к dailyquest.Service.
+// Используется только в Send для инкремента прогресса fleet_mission
+// quest'ов. Если nil — hook'и no-op.
+type DailyQuestProgresser interface {
+	IncrementProgress(ctx context.Context, userID, conditionType string,
+		delta int, matcher func(condValue json.RawMessage) bool) error
+}
+
+// SetDailyQuestSvc — wire-up из server/main.go.
+func (s *TransportService) SetDailyQuestSvc(p DailyQuestProgresser) {
+	s.dailyQuests = p
 }
 
 func NewTransportService(db repo.Exec, cat *config.Catalog, gameSpeed float64, artefactSvc *artefact.Service) *TransportService {
@@ -388,7 +402,27 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		}
 		return nil
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	// План 17 D: инкремент прогресса fleet_mission quest'ов. После
+	// commit'а транзакции — quest progress не должен зависеть от
+	// успеха основной TX. Если update упадёт — игрок просто не увидит
+	// прогресса, но флот уже отправлен.
+	if s.dailyQuests != nil {
+		mission := in.Mission
+		_ = s.dailyQuests.IncrementProgress(ctx, in.UserID, "fleet_mission", 1,
+			func(cv json.RawMessage) bool {
+				var c struct {
+					Mission int `json:"mission"`
+				}
+				if err := json.Unmarshal(cv, &c); err != nil {
+					return false
+				}
+				return c.Mission == mission
+			})
+	}
+	return out, nil
 }
 
 // List возвращает активные флоты игрока (не done и не cancelled).
