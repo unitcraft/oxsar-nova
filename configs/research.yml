@@ -81,3 +81,9 @@ research:
   masking_tech:
     id: 104
     cost_factor: 2.0
+
+  # Astrophysics (id=112). План 20 Ф.7, ADR-0005.
+  # Расширяет лимит колоний и даёт слоты экспедиций.
+  astro_tech:
+    id: 112
+    cost_factor: 1.75

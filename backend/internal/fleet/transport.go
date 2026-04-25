@@ -107,6 +107,7 @@ var (
 	ErrSenderOnVacation   = errors.New("fleet: you are on vacation, cannot send fleets")
 	ErrBashingLimit       = errors.New("fleet: bashing limit reached (too many attacks on this player)")
 	ErrPositionNotAllowed = errors.New("fleet: POSITION only to own planets or ally/NAP targets")
+	ErrExpeditionSlotsFull = errors.New("fleet: no free expedition slots (improve astro_tech)")
 )
 
 // Send — запуск TRANSPORT или ATTACK_SINGLE в зависимости от
@@ -193,9 +194,18 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		// Fleet slots (план 20 Ф.2): maxSlots = 1 + floor(computer_tech / 6).
 		// Не считаются: expedition (15), artefact delivery (29), return
 		// events (20/21/22). EXPEDITION-слот считается отдельно через
-		// astro_tech (план 20 Ф.7, отложено).
+		// astro_tech (план 20 Ф.7).
 		if in.Mission != 15 && in.Mission != 29 {
 			if err := s.checkFleetSlots(ctx, tx, in.UserID); err != nil {
+				return err
+			}
+		}
+		// Expedition slots (план 20 Ф.7 + ADR-0005):
+		//   max(1, floor(sqrt(astro_tech))).
+		// При стартовом astro=2 → 1 слот. Чем выше astro — тем больше
+		// одновременных экспедиций.
+		if in.Mission == 15 {
+			if err := s.checkExpeditionSlots(ctx, tx, in.UserID); err != nil {
 				return err
 			}
 		}
@@ -587,6 +597,36 @@ func readFleetSlots(ctx context.Context, q interface {
 // Slots — возвращает used/max слотов флота для userID.
 func (s *TransportService) Slots(ctx context.Context, userID string) (used, max int, err error) {
 	return readFleetSlots(ctx, s.db.Pool(), userID)
+}
+
+// checkExpeditionSlots — план 20 Ф.7 + ADR-0005.
+//   maxSlots = max(1, floor(sqrt(astro_tech)))
+//   При astro=2 → 1 слот, astro=4 → 2, astro=9 → 3, astro=16 → 4 и т.д.
+// Считаются только текущие выполняемые экспедиции (state='outbound',
+// mission=15). Возврат не считается — он не блокирует слот.
+func (s *TransportService) checkExpeditionSlots(ctx context.Context, tx pgx.Tx, userID string) error {
+	var astroLvl int
+	_ = tx.QueryRow(ctx,
+		`SELECT level FROM research WHERE user_id=$1 AND unit_id=$2`,
+		userID, unitAstroTech).Scan(&astroLvl)
+	maxSlots := int(math.Sqrt(float64(astroLvl)))
+	if maxSlots < 1 {
+		maxSlots = 1
+	}
+	var used int
+	if err := tx.QueryRow(ctx, `
+		SELECT COUNT(*) FROM fleets
+		WHERE owner_user_id = $1
+		  AND state = 'outbound'
+		  AND mission = 15
+	`, userID).Scan(&used); err != nil {
+		return fmt.Errorf("check expedition slots: %w", err)
+	}
+	if used >= maxSlots {
+		return fmt.Errorf("%w: %d/%d slots used (astro_tech=%d)",
+			ErrExpeditionSlotsFull, used, maxSlots, astroLvl)
+	}
+	return nil
 }
 
 // loadShips читает состав флота из fleet_ships и заполняет Fleet.Ships.

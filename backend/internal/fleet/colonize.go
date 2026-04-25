@@ -38,6 +38,10 @@ const unitColonyShip = 36
 // unitComputerTech — id computer-технологии в research (legacy UNIT_COMPUTER_TECH).
 const unitComputerTech = 14
 
+// unitAstroTech — Astrophysics (id=112). План 20 Ф.7 + ADR-0005.
+// Расширяет лимит колоний и даёт слоты экспедиций.
+const unitAstroTech = 112
+
 // ColonizeHandler — event.Handler для KindColonize=8.
 func (s *TransportService) ColonizeHandler() event.Handler {
 	return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
@@ -100,9 +104,16 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 			return fmt.Errorf("colonize: check empty: %w", err)
 		}
 
-		// Лимит планет.
+		// Лимит планет: max(computer_tech+1, astro_level/2+1).
+		// План 20 Ф.7 + ADR-0005: astro_tech даёт дополнительные
+		// колонии. Берём максимум, чтобы не отнять у игроков с
+		// прокаченным computer_tech их текущие слоты.
 		computerLvl := readComputerLevel(ctx, tx, ownerUserID)
+		astroLvl := readResearchLevel(ctx, tx, ownerUserID, unitAstroTech)
 		maxPlanets := computerLvl + 1
+		if astroLimit := astroLvl/2 + 1; astroLimit > maxPlanets {
+			maxPlanets = astroLimit
+		}
 		if s.maxPlanets > 0 && s.maxPlanets > maxPlanets {
 			maxPlanets = s.maxPlanets
 		}

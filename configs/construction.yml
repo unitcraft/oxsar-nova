@@ -270,6 +270,23 @@ buildings:
       silicon: '{basic} * pow(2, ({level} - 1))'
       hydrogen: '{basic} * pow(2, ({level} - 1))'
     display_order: 270
+  # Astrophysics (id=112). Новая технология (нет в legacy oxsar2).
+  # План 20 Ф.7 + ADR-0005. Стоимость подобрана как у expo_tech ×1.5 —
+  # дороже expo (доступно после expo_tech>=3).
+  astro_tech:
+    id: 112
+    mode: 2
+    legacy_name: ASTRO_TECH
+    front: 10
+    basic:
+      metal: 6000
+      silicon: 12000
+      hydrogen: 6000
+    charge:
+      metal: '{basic} * pow(1.75, ({level} - 1))'
+      silicon: '{basic} * pow(1.75, ({level} - 1))'
+      hydrogen: '{basic} * pow(1.75, ({level} - 1))'
+    display_order: 275
   first_computer_tech:
     id: 346
     mode: 7

@@ -483,8 +483,13 @@ func expArtefact(ctx context.Context, tx pgx.Tx, r *rng.R, userID string,
 
 // expExtraPlanet — создаёт временную планету (expires 12–24ч).
 func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string) (map[string]any, error) {
+	// План 20 Ф.7 + ADR-0005: лимит = max(computer_tech+1, astro/2+1).
 	computerLvl := readComputerLevel(ctx, tx, userID)
+	astroLvl := readResearchLevel(ctx, tx, userID, unitAstroTech)
 	maxPlanets := computerLvl + 1
+	if astroLimit := astroLvl/2 + 1; astroLimit > maxPlanets {
+		maxPlanets = astroLimit
+	}
 	var curPlanets int
 	if err := tx.QueryRow(ctx,
 		`SELECT COUNT(*) FROM planets WHERE user_id=$1 AND destroyed_at IS NULL AND is_moon=false AND expires_at IS NULL`,
