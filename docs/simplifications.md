@@ -939,6 +939,42 @@ Battle-sim: lancer-vs-mixed defender wins 100% (atk loss 96%, def loss
 typecheck не запущен локально (нет npm), правки минимальны и проверены
 визуально.
 
+## 2026-04-26 — План 30 Ф.1: Goal Engine backend (за флагом)
+
+**Где**: `backend/internal/goal/` (новый пакет, 9 файлов),
+`migrations/0065_goal_progress.sql`, `configs/goals.yml`,
+`configs/features.yaml` (новый флаг).
+
+**Что**: backend-движок для замены achievement + dailyquest. Определения
+целей — в YAML (как остальной content проекта, согласно плану 28),
+БД хранит только `goal_progress` и `goal_rewards_log`.
+
+**Архитектура**:
+- `Catalog` загружается из `configs/goals.yml` при старте, валидирует
+  все цели (категория, lifecycle, граф зависимостей, циклы).
+- `Engine` — Recompute/OnEvent/Claim/MarkSeen/List. Все мутации
+  goal_progress в транзакции.
+- Conditions через registry: `RegisterSnapshot` / `RegisterCounter`
+  типизированные функции в `conditions/`.
+- `Rewarder` атомарно зачисляет credits + ресурсы.
+- `Notifier` пишет в inbox при completion.
+- Period_key: '' permanent, 'YYYY-MM-DD' daily, 'YYYY-Www' weekly (UTC).
+
+**За feature flag** `goal_engine` (см. план 31 Ф.2). Сейчас flag=false,
+код мёртв до Ф.5.
+
+**Что в YAML вместо БД** (отличие от первоначального плана):
+- Нет таблицы `goal_defs` — определения в `configs/goals.yml`.
+- Нет таблицы `goal_dependencies` — поле `requires` в YAML.
+- Review через `git diff`, type safety при загрузке, согласовано с
+  планом 28.
+
+**Tests**: 9 unit-тестов в catalog_test.go и period_test.go,
+29 пакетов всего зелёные.
+
+**Что дальше (Ф.2-7)**: HTTP API, worker hook, перенос данных, UI,
+удаление старых пакетов.
+
 ## 2026-04-26 — План 31 Ф.2: feature flags
 
 **Где**: `backend/internal/features/` (новый пакет),
