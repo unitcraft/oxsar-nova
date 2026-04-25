@@ -82,6 +82,22 @@ export function renderMarkdown(md: string, resolveUnit?: UnitResolver): string {
       continue;
     }
 
+    // Fenced code block: ```...```
+    // Внутри блока [[unit:N]] и markdown НЕ обрабатываются — это код.
+    if (/^```/.test(line)) {
+      flushParagraph(para);
+      i++; // пропускаем открывающую ```
+      const codeLines: string[] = [];
+      while (i < lines.length && !/^```/.test(lines[i] ?? '')) {
+        codeLines.push(lines[i] ?? '');
+        i++;
+      }
+      i++; // пропускаем закрывающую ```
+      const escaped = codeLines.map((l) => escapeHtml(l)).join('\n');
+      html.push(`<pre><code>${escaped}</code></pre>`);
+      continue;
+    }
+
     // hr.
     if (/^---+\s*$/.test(line)) {
       flushParagraph(para);
