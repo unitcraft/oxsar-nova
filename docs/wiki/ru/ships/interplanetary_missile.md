@@ -5,19 +5,17 @@ entity_key: interplanetary_missile
 unit_id: 52
 ---
 
-# interplanetary_missile
-
-**Стоимость**: —
+**Стоимость постройки**: бесплатно.
 
 ## Характеристики
 
 | Параметр | Значение |
 |---|---:|
-| Attack | 0 |
-| Shell | 1500 |
-| Shield | 0 |
-| Cargo | 0 |
-| Speed | 12000 |
-| Fuel | 1 |
+| Атака | 0 |
+| Корпус | 1 500 |
+| Щит | 0 |
+| Грузоподъёмность | 0 |
+| Скорость | 12 000 |
+| Расход топлива | 1 |
 
-*Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*
+*Числа берутся из `configs/ships.yml`, `construction.yml`, `rapidfire.yml`.*

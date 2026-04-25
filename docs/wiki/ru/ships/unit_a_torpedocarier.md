@@ -5,19 +5,17 @@ entity_key: unit_a_torpedocarier
 unit_id: 204
 ---
 
-# unit_a_torpedocarier
-
-**Стоимость**: 10 000 M + 10 000 Si + 1 000 H
+**Стоимость постройки**: 10 000 металла + 10 000 кремния + 1 000 водорода.
 
 ## Характеристики
 
 | Параметр | Значение |
 |---|---:|
-| Attack | 350 |
-| Shell | 11000 |
-| Shield | 100 |
-| Cargo | 200 |
-| Speed | 13000 |
-| Fuel | 100 |
+| Атака | 350 |
+| Корпус | 11 000 |
+| Щит | 100 |
+| Грузоподъёмность | 200 |
+| Скорость | 13 000 |
+| Расход топлива | 100 |
 
-*Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*
+*Числа берутся из `configs/ships.yml`, `construction.yml`, `rapidfire.yml`.*
