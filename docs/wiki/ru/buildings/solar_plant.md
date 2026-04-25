@@ -1,10 +1,11 @@
 ---
 title: solar_plant
 category: buildings
-entity_id: solar_plant
+entity_key: solar_plant
+unit_id: 4
 ---
 
-# solar_plant (id=4)
+# solar_plant
 
 **Базовая стоимость**: 75 M + 30 Si
 

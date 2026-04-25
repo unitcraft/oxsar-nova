@@ -76,24 +76,28 @@ func genBuildings(cat *config.Catalog, outDir string) error {
 	fmt.Fprintln(indexB)
 	fmt.Fprintln(indexB, "Полный список построек. Числа берутся из `configs/buildings.yml` и `configs/construction.yml`.")
 	fmt.Fprintln(indexB)
-	fmt.Fprintln(indexB, "| ID | Ключ | Базовая стоимость | Макс. уровень |")
-	fmt.Fprintln(indexB, "|---:|---|---|---:|")
+	fmt.Fprintln(indexB, "| Юнит | Базовая стоимость | Макс. уровень |")
+	fmt.Fprintln(indexB, "|---|---|---:|")
 
 	for _, key := range keys {
 		b := cat.Buildings.Buildings[key]
 		costLine := costStr(b.CostBase.Metal, b.CostBase.Silicon, b.CostBase.Hydrogen)
-		fmt.Fprintf(indexB, "| %d | [%s](./%s.md) | %s | %d |\n",
-			b.ID, key, key, costLine, b.MaxLevel)
+		fmt.Fprintf(indexB, "| [[unit:%d]] | %s | %d |\n",
+			b.ID, costLine, b.MaxLevel)
+		_ = key
 
 		// Отдельная страница.
 		page := &strings.Builder{}
 		fmt.Fprintln(page, "---")
 		fmt.Fprintf(page, "title: %s\n", key)
 		fmt.Fprintln(page, "category: buildings")
-		fmt.Fprintf(page, "entity_id: %s\n", key)
+		fmt.Fprintf(page, "entity_key: %s\n", key)
+		fmt.Fprintf(page, "unit_id: %d\n", b.ID)
 		fmt.Fprintln(page, "---")
 		fmt.Fprintln(page)
-		fmt.Fprintf(page, "# %s (id=%d)\n", key, b.ID)
+		// Заголовок без id-в-скобках — frontend подставит картинку
+		// и человеческое имя через nameOf(unit_id).
+		fmt.Fprintf(page, "# %s\n", key)
 		fmt.Fprintln(page)
 		if b.MoonOnly {
 			fmt.Fprintln(page, "> **Только на луне.**")
@@ -145,24 +149,26 @@ func genShips(cat *config.Catalog, outDir string) error {
 	fmt.Fprintln(indexB)
 	fmt.Fprintln(indexB, "# Корабли")
 	fmt.Fprintln(indexB)
-	fmt.Fprintln(indexB, "| ID | Ключ | Attack | Shell | Shield | Cargo | Speed | Стоимость |")
-	fmt.Fprintln(indexB, "|---:|---|---:|---:|---:|---:|---:|---|")
+	fmt.Fprintln(indexB, "| Юнит | Attack | Shell | Shield | Cargo | Speed | Стоимость |")
+	fmt.Fprintln(indexB, "|---|---:|---:|---:|---:|---:|---|")
 
 	for _, key := range keys {
 		s := cat.Ships.Ships[key]
 		costLine := costStr(s.Cost.Metal, s.Cost.Silicon, s.Cost.Hydrogen)
-		fmt.Fprintf(indexB, "| %d | [%s](./%s.md) | %d | %d | %d | %d | %d | %s |\n",
-			s.ID, key, key, s.Attack, s.Shell, s.Shield, s.Cargo, s.Speed, costLine)
+		fmt.Fprintf(indexB, "| [[unit:%d]] | %d | %d | %d | %d | %d | %s |\n",
+			s.ID, s.Attack, s.Shell, s.Shield, s.Cargo, s.Speed, costLine)
+		_ = key
 
 		// Страница корабля.
 		page := &strings.Builder{}
 		fmt.Fprintln(page, "---")
 		fmt.Fprintf(page, "title: %s\n", key)
 		fmt.Fprintln(page, "category: ships")
-		fmt.Fprintf(page, "entity_id: %s\n", key)
+		fmt.Fprintf(page, "entity_key: %s\n", key)
+		fmt.Fprintf(page, "unit_id: %d\n", s.ID)
 		fmt.Fprintln(page, "---")
 		fmt.Fprintln(page)
-		fmt.Fprintf(page, "# %s (id=%d)\n", key, s.ID)
+		fmt.Fprintf(page, "# %s\n", key)
 		fmt.Fprintln(page)
 		fmt.Fprintf(page, "**Стоимость**: %s\n\n", costLine)
 		fmt.Fprintln(page, "## Характеристики")
@@ -220,23 +226,25 @@ func genDefense(cat *config.Catalog, outDir string) error {
 	fmt.Fprintln(indexB)
 	fmt.Fprintln(indexB, "# Оборона")
 	fmt.Fprintln(indexB)
-	fmt.Fprintln(indexB, "| ID | Ключ | Attack | Shield | Shell | Стоимость |")
-	fmt.Fprintln(indexB, "|---:|---|---:|---:|---:|---|")
+	fmt.Fprintln(indexB, "| Юнит | Attack | Shield | Shell | Стоимость |")
+	fmt.Fprintln(indexB, "|---|---:|---:|---:|---|")
 
 	for _, key := range keys {
 		d := cat.Defense.Defense[key]
 		costLine := costStr(d.Cost.Metal, d.Cost.Silicon, d.Cost.Hydrogen)
-		fmt.Fprintf(indexB, "| %d | [%s](./%s.md) | %d | %d | %d | %s |\n",
-			d.ID, key, key, d.Attack, d.Shield, d.Shell, costLine)
+		fmt.Fprintf(indexB, "| [[unit:%d]] | %d | %d | %d | %s |\n",
+			d.ID, d.Attack, d.Shield, d.Shell, costLine)
+		_ = key
 
 		page := &strings.Builder{}
 		fmt.Fprintln(page, "---")
 		fmt.Fprintf(page, "title: %s\n", key)
 		fmt.Fprintln(page, "category: defense")
-		fmt.Fprintf(page, "entity_id: %s\n", key)
+		fmt.Fprintf(page, "entity_key: %s\n", key)
+		fmt.Fprintf(page, "unit_id: %d\n", d.ID)
 		fmt.Fprintln(page, "---")
 		fmt.Fprintln(page)
-		fmt.Fprintf(page, "# %s (id=%d)\n", key, d.ID)
+		fmt.Fprintf(page, "# %s\n", key)
 		fmt.Fprintln(page)
 		fmt.Fprintf(page, "**Стоимость**: %s\n\n", costLine)
 		fmt.Fprintln(page, "| Параметр | Значение |")
@@ -317,10 +325,10 @@ func rapidfireFrom(cat *config.Catalog, shooterID int) []string {
 		}
 		return items[i].target < items[j].target
 	})
+	_ = cat // имя цели подставит frontend через nameOf(id)
 	out := make([]string, 0, len(items))
 	for _, it := range items {
-		name := entityNameByID(cat, it.target)
-		out = append(out, fmt.Sprintf("**%s** (id=%d) × %d", name, it.target, it.value))
+		out = append(out, fmt.Sprintf("[[unit:%d]] × %d", it.target, it.value))
 	}
 	return out
 }
@@ -342,10 +350,10 @@ func rapidfireTo(cat *config.Catalog, targetID int) []string {
 		}
 		return items[i].shooter < items[j].shooter
 	})
+	_ = cat // имя shooter подставит frontend через nameOf(id)
 	out := make([]string, 0, len(items))
 	for _, it := range items {
-		name := entityNameByID(cat, it.shooter)
-		out = append(out, fmt.Sprintf("**%s** (id=%d) × %d", name, it.shooter, it.value))
+		out = append(out, fmt.Sprintf("[[unit:%d]] × %d", it.shooter, it.value))
 	}
 	return out
 }

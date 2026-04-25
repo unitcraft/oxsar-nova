@@ -1,10 +1,11 @@
 ---
 title: star_gate
 category: buildings
-entity_id: star_gate
+entity_key: star_gate
+unit_id: 56
 ---
 
-# star_gate (id=56)
+# star_gate
 
 > **Только на луне.**
 

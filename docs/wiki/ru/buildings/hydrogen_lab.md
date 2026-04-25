@@ -1,10 +1,11 @@
 ---
 title: hydrogen_lab
 category: buildings
-entity_id: hydrogen_lab
+entity_key: hydrogen_lab
+unit_id: 3
 ---
 
-# hydrogen_lab (id=3)
+# hydrogen_lab
 
 **Базовая стоимость**: 225 M + 75 Si
 

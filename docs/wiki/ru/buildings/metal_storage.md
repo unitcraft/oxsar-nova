@@ -1,10 +1,11 @@
 ---
 title: metal_storage
 category: buildings
-entity_id: metal_storage
+entity_key: metal_storage
+unit_id: 9
 ---
 
-# metal_storage (id=9)
+# metal_storage
 
 **Базовая стоимость**: 1 000 M
 

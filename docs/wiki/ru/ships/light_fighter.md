@@ -1,10 +1,11 @@
 ---
 title: light_fighter
 category: ships
-entity_id: light_fighter
+entity_key: light_fighter
+unit_id: 31
 ---
 
-# light_fighter (id=31)
+# light_fighter
 
 **Стоимость**: 3 000 M + 1 000 Si
 
@@ -21,14 +22,14 @@ entity_id: light_fighter
 
 ## Rapidfire: контрит
 
-- **lancer_ship** (id=102) × 20
-- **espionage_sensor** (id=38) × 5
-- **solar_satellite** (id=39) × 5
+- [[unit:102]] × 20
+- [[unit:38]] × 5
+- [[unit:39]] × 5
 
 ## Rapidfire: контрится
 
-- **death_star** (id=42) × 200
-- **cruiser** (id=33) × 6
-- **shadow_ship** (id=325) × 5
+- [[unit:42]] × 200
+- [[unit:33]] × 6
+- [[unit:325]] × 5
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

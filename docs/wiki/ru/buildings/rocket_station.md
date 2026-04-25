@@ -1,10 +1,11 @@
 ---
 title: rocket_station
 category: buildings
-entity_id: rocket_station
+entity_key: rocket_station
+unit_id: 53
 ---
 
-# rocket_station (id=53)
+# rocket_station
 
 **Базовая стоимость**: 20 000 M + 20 000 Si + 1 000 H
 

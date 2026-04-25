@@ -1,10 +1,11 @@
 ---
 title: strong_fighter
 category: ships
-entity_id: strong_fighter
+entity_key: strong_fighter
+unit_id: 32
 ---
 
-# strong_fighter (id=32)
+# strong_fighter
 
 **Стоимость**: 6 000 M + 4 000 Si
 
@@ -21,15 +22,15 @@ entity_id: strong_fighter
 
 ## Rapidfire: контрит
 
-- **shadow_ship** (id=325) × 25
-- **lancer_ship** (id=102) × 20
-- **espionage_sensor** (id=38) × 5
-- **solar_satellite** (id=39) × 5
-- **small_transporter** (id=29) × 3
+- [[unit:325]] × 25
+- [[unit:102]] × 20
+- [[unit:38]] × 5
+- [[unit:39]] × 5
+- [[unit:29]] × 3
 
 ## Rapidfire: контрится
 
-- **death_star** (id=42) × 100
-- **frigate** (id=35) × 7
+- [[unit:42]] × 100
+- [[unit:35]] × 7
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

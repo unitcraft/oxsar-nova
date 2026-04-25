@@ -1,10 +1,11 @@
 ---
 title: exchange
 category: buildings
-entity_id: exchange
+entity_key: exchange
+unit_id: 107
 ---
 
-# exchange (id=107)
+# exchange
 
 **Базовая стоимость**: 500 000 Si + 500 000 H
 

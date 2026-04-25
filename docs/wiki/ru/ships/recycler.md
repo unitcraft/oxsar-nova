@@ -1,10 +1,11 @@
 ---
 title: recycler
 category: ships
-entity_id: recycler
+entity_key: recycler
+unit_id: 37
 ---
 
-# recycler (id=37)
+# recycler
 
 **Стоимость**: 10 000 M + 6 000 Si + 2 000 H
 
@@ -21,12 +22,12 @@ entity_id: recycler
 
 ## Rapidfire: контрит
 
-- **espionage_sensor** (id=38) × 5
-- **solar_satellite** (id=39) × 5
+- [[unit:38]] × 5
+- [[unit:39]] × 5
 
 ## Rapidfire: контрится
 
-- **death_star** (id=42) × 250
-- **shadow_ship** (id=325) × 30
+- [[unit:42]] × 250
+- [[unit:325]] × 30
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

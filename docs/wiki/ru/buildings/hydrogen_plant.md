@@ -1,10 +1,11 @@
 ---
 title: hydrogen_plant
 category: buildings
-entity_id: hydrogen_plant
+entity_key: hydrogen_plant
+unit_id: 5
 ---
 
-# hydrogen_plant (id=5)
+# hydrogen_plant
 
 **Базовая стоимость**: 900 M + 360 Si + 180 H
 

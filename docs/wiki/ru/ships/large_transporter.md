@@ -1,10 +1,11 @@
 ---
 title: large_transporter
 category: ships
-entity_id: large_transporter
+entity_key: large_transporter
+unit_id: 30
 ---
 
-# large_transporter (id=30)
+# large_transporter
 
 **Стоимость**: 6 000 M + 6 000 Si
 
@@ -21,13 +22,13 @@ entity_id: large_transporter
 
 ## Rapidfire: контрит
 
-- **espionage_sensor** (id=38) × 5
-- **solar_satellite** (id=39) × 5
+- [[unit:38]] × 5
+- [[unit:39]] × 5
 
 ## Rapidfire: контрится
 
-- **death_star** (id=42) × 250
-- **shadow_ship** (id=325) × 15
-- **frigate** (id=35) × 3
+- [[unit:42]] × 250
+- [[unit:325]] × 15
+- [[unit:35]] × 3
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

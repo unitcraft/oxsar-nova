@@ -1,10 +1,11 @@
 ---
 title: unit_a_frigate
 category: ships
-entity_id: unit_a_frigate
+entity_key: unit_a_frigate
+unit_id: 203
 ---
 
-# unit_a_frigate (id=203)
+# unit_a_frigate
 
 **Стоимость**: 40 000 M + 30 000 Si + 15 000 H
 

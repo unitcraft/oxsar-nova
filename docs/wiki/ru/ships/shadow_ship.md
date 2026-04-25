@@ -1,10 +1,11 @@
 ---
 title: shadow_ship
 category: ships
-entity_id: shadow_ship
+entity_key: shadow_ship
+unit_id: 325
 ---
 
-# shadow_ship (id=325)
+# shadow_ship
 
 **Стоимость**: 1 000 M + 3 000 Si + 1 000 H
 
@@ -21,19 +22,19 @@ entity_id: shadow_ship
 
 ## Rapidfire: контрит
 
-- **death_star** (id=42) × 70
-- **recycler** (id=37) × 30
-- **bomber** (id=40) × 25
-- **frigate** (id=35) × 20
-- **colony_ship** (id=36) × 20
-- **large_transporter** (id=30) × 15
-- **star_destroyer** (id=41) × 15
-- **light_fighter** (id=31) × 5
+- [[unit:42]] × 70
+- [[unit:37]] × 30
+- [[unit:40]] × 25
+- [[unit:35]] × 20
+- [[unit:36]] × 20
+- [[unit:30]] × 15
+- [[unit:41]] × 15
+- [[unit:31]] × 5
 
 ## Rapidfire: контрится
 
-- **death_star** (id=42) × 300
-- **battle_ship** (id=34) × 70
-- **strong_fighter** (id=32) × 25
+- [[unit:42]] × 300
+- [[unit:34]] × 70
+- [[unit:32]] × 25
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

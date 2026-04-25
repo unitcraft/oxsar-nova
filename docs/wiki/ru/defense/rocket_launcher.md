@@ -1,10 +1,11 @@
 ---
 title: rocket_launcher
 category: defense
-entity_id: rocket_launcher
+entity_key: rocket_launcher
+unit_id: 43
 ---
 
-# rocket_launcher (id=43)
+# rocket_launcher
 
 **Стоимость**: 2 000 M
 

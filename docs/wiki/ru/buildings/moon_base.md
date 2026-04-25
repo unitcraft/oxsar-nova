@@ -1,10 +1,11 @@
 ---
 title: moon_base
 category: buildings
-entity_id: moon_base
+entity_key: moon_base
+unit_id: 54
 ---
 
-# moon_base (id=54)
+# moon_base
 
 > **Только на луне.**
 

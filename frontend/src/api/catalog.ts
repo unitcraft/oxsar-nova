@@ -225,6 +225,24 @@ export function nameOf(id: number): string {
   return `#${id}`;
 }
 
+// keyOfId — ключ юнита по числовому id (для wiki-навигации, slug страницы).
+export function keyOfId(id: number): string | null {
+  for (const c of [SHIPS, DEFENSE, RESEARCH, ARTEFACTS, BUILDINGS]) {
+    const u = c.find((x) => x.id === id);
+    if (u) return u.key;
+  }
+  return null;
+}
+
+// categoryOfId — wiki-категория для unit_id. ships/defense/buildings/research.
+export function categoryOfId(id: number): string | null {
+  if (SHIPS.find((x) => x.id === id)) return 'ships';
+  if (DEFENSE.find((x) => x.id === id)) return 'defense';
+  if (BUILDINGS.find((x) => x.id === id)) return 'buildings';
+  if (RESEARCH.find((x) => x.id === id)) return 'research';
+  return null;
+}
+
 export function buildingName(id: number): string {
   return BUILDINGS.find((b) => b.id === id)?.name ?? `#${id}`;
 }

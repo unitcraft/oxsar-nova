@@ -1,10 +1,11 @@
 ---
 title: robotic_factory
 category: buildings
-entity_id: robotic_factory
+entity_key: robotic_factory
+unit_id: 6
 ---
 
-# robotic_factory (id=6)
+# robotic_factory
 
 **Базовая стоимость**: 400 M + 120 Si + 200 H
 

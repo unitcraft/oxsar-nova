@@ -1,10 +1,11 @@
 ---
 title: terra_former
 category: buildings
-entity_id: terra_former
+entity_key: terra_former
+unit_id: 58
 ---
 
-# terra_former (id=58)
+# terra_former
 
 **Базовая стоимость**: 15 000 M + 30 000 Si + 70 000 H
 

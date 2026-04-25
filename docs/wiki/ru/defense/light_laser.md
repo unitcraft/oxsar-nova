@@ -1,10 +1,11 @@
 ---
 title: light_laser
 category: defense
-entity_id: light_laser
+entity_key: light_laser
+unit_id: 44
 ---
 
-# light_laser (id=44)
+# light_laser
 
 **Стоимость**: 1 500 M + 500 Si
 

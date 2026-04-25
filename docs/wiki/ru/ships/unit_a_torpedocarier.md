@@ -1,10 +1,11 @@
 ---
 title: unit_a_torpedocarier
 category: ships
-entity_id: unit_a_torpedocarier
+entity_key: unit_a_torpedocarier
+unit_id: 204
 ---
 
-# unit_a_torpedocarier (id=204)
+# unit_a_torpedocarier
 
 **Стоимость**: 10 000 M + 10 000 Si + 1 000 H
 

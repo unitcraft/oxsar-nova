@@ -1,10 +1,11 @@
 ---
 title: nano_factory
 category: buildings
-entity_id: nano_factory
+entity_key: nano_factory
+unit_id: 7
 ---
 
-# nano_factory (id=7)
+# nano_factory
 
 **Базовая стоимость**: 1 000 000 M + 500 000 Si + 100 000 H
 

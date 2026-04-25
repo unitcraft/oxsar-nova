@@ -1,10 +1,11 @@
 ---
 title: strong_laser
 category: defense
-entity_id: strong_laser
+entity_key: strong_laser
+unit_id: 45
 ---
 
-# strong_laser (id=45)
+# strong_laser
 
 **Стоимость**: 6 000 M + 2 000 Si
 

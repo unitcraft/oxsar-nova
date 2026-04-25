@@ -1,10 +1,11 @@
 ---
 title: small_shield
 category: defense
-entity_id: small_shield
+entity_key: small_shield
+unit_id: 49
 ---
 
-# small_shield (id=49)
+# small_shield
 
 **Стоимость**: 10 000 M + 10 000 Si
 

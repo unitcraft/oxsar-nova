@@ -1,10 +1,11 @@
 ---
 title: frigate
 category: ships
-entity_id: frigate
+entity_key: frigate
+unit_id: 35
 ---
 
-# frigate (id=35)
+# frigate
 
 **Стоимость**: 30 000 M + 40 000 Si + 15 000 H
 
@@ -21,18 +22,18 @@ entity_id: frigate
 
 ## Rapidfire: контрит
 
-- **strong_fighter** (id=32) × 7
-- **battle_ship** (id=34) × 7
-- **espionage_sensor** (id=38) × 5
-- **solar_satellite** (id=39) × 5
-- **cruiser** (id=33) × 4
-- **small_transporter** (id=29) × 3
-- **large_transporter** (id=30) × 3
+- [[unit:32]] × 7
+- [[unit:34]] × 7
+- [[unit:38]] × 5
+- [[unit:39]] × 5
+- [[unit:33]] × 4
+- [[unit:29]] × 3
+- [[unit:30]] × 3
 
 ## Rapidfire: контрится
 
-- **shadow_ship** (id=325) × 20
-- **death_star** (id=42) × 15
-- **star_destroyer** (id=41) × 2
+- [[unit:325]] × 20
+- [[unit:42]] × 15
+- [[unit:41]] × 2
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

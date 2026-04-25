@@ -1,10 +1,11 @@
 ---
 title: cruiser
 category: ships
-entity_id: cruiser
+entity_key: cruiser
+unit_id: 33
 ---
 
-# cruiser (id=33)
+# cruiser
 
 **Стоимость**: 20 000 M + 7 000 Si + 2 000 H
 
@@ -21,15 +22,15 @@ entity_id: cruiser
 
 ## Rapidfire: контрит
 
-- **lancer_ship** (id=102) × 35
-- **rocket_launcher** (id=43) × 10
-- **light_fighter** (id=31) × 6
-- **espionage_sensor** (id=38) × 5
-- **solar_satellite** (id=39) × 5
+- [[unit:102]] × 35
+- [[unit:43]] × 10
+- [[unit:31]] × 6
+- [[unit:38]] × 5
+- [[unit:39]] × 5
 
 ## Rapidfire: контрится
 
-- **death_star** (id=42) × 33
-- **frigate** (id=35) × 4
+- [[unit:42]] × 33
+- [[unit:35]] × 4
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

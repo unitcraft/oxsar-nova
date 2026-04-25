@@ -1,10 +1,11 @@
 ---
 title: repair_factory
 category: buildings
-entity_id: repair_factory
+entity_key: repair_factory
+unit_id: 100
 ---
 
-# repair_factory (id=100)
+# repair_factory
 
 **Базовая стоимость**: 800 M + 400 Si + 200 H
 

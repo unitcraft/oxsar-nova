@@ -14,7 +14,11 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function inline(s: string): string {
+// resolveUnit — маппит unit_id в { name, image }. Передаётся снаружи
+// (зависит от каталога, который во frontend живёт отдельным модулем).
+export type UnitResolver = (id: number) => { name: string; image: string } | null;
+
+function inline(s: string, resolveUnit?: UnitResolver): string {
   // Сначала экранируем, потом восстанавливаем разметку.
   let out = escapeHtml(s);
   // Code (без вложенности).
@@ -23,6 +27,22 @@ function inline(s: string): string {
   out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   // Italic.
   out = out.replace(/(^|[^*])\*([^*]+)\*([^*]|$)/g, '$1<em>$2</em>$3');
+  // [[unit:N]] — ссылка на страницу юнита с иконкой + именем.
+  // Должно идти ДО общих [text](url), потому что после escape остаётся
+  // как `[[unit:42]]`.
+  out = out.replace(/\[\[unit:(\d+)\]\]/g, (_m, idStr: string) => {
+    const id = parseInt(idStr, 10);
+    if (resolveUnit) {
+      const u = resolveUnit(id);
+      if (u) {
+        const img = u.image
+          ? `<img src="${u.image}" alt="" class="wiki-unit-icon"/>`
+          : '';
+        return `<a class="wiki-unit-link" data-unit-id="${id}">${img}<span class="wiki-unit-name">${escapeHtml(u.name)}</span></a>`;
+      }
+    }
+    return `<a class="wiki-unit-link" data-unit-id="${id}">unit ${id}</a>`;
+  });
   // Links [text](url).
   out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text: string, url: string) => {
     const safeUrl = url.replace(/"/g, '%22');
@@ -31,7 +51,7 @@ function inline(s: string): string {
   return out;
 }
 
-export function renderMarkdown(md: string): string {
+export function renderMarkdown(md: string, resolveUnit?: UnitResolver): string {
   if (!md) return '';
   const lines = md.split(/\r?\n/);
   const html: string[] = [];
@@ -39,7 +59,7 @@ export function renderMarkdown(md: string): string {
 
   const flushParagraph = (buf: string[]) => {
     if (buf.length === 0) return;
-    html.push(`<p>${inline(buf.join(' '))}</p>`);
+    html.push(`<p>${inline(buf.join(' '), resolveUnit)}</p>`);
     buf.length = 0;
   };
 
@@ -68,7 +88,7 @@ export function renderMarkdown(md: string): string {
     if (h) {
       flushParagraph(para);
       const lvl = (h[1] ?? '').length;
-      html.push(`<h${lvl}>${inline(h[2] ?? '')}</h${lvl}>`);
+      html.push(`<h${lvl}>${inline(h[2] ?? '', resolveUnit)}</h${lvl}>`);
       i++;
       continue;
     }
@@ -87,11 +107,11 @@ export function renderMarkdown(md: string): string {
         curRow = lines[i] ?? '';
       }
       let t = '<table><thead><tr>';
-      for (const h of headers) t += `<th>${inline(h)}</th>`;
+      for (const h of headers) t += `<th>${inline(h, resolveUnit)}</th>`;
       t += '</tr></thead><tbody>';
       for (const r of rows) {
         t += '<tr>';
-        for (const c of r) t += `<td>${inline(c)}</td>`;
+        for (const c of r) t += `<td>${inline(c, resolveUnit)}</td>`;
         t += '</tr>';
       }
       t += '</tbody></table>';
@@ -112,7 +132,7 @@ export function renderMarkdown(md: string): string {
         const o = /^\s*\d+\.\s+(.+)$/.exec(cur);
         if (!u && !o) break;
         const match = (u ?? o)!;
-        items.push(`<li>${inline(match[1] ?? '')}</li>`);
+        items.push(`<li>${inline(match[1] ?? '', resolveUnit)}</li>`);
         i++;
       }
       html.push(`<${tag}>${items.join('')}</${tag}>`);
@@ -129,7 +149,7 @@ export function renderMarkdown(md: string): string {
         q.push(cur.replace(/^\s*>\s+/, ''));
         i++;
       }
-      html.push(`<blockquote>${inline(q.join(' '))}</blockquote>`);
+      html.push(`<blockquote>${inline(q.join(' '), resolveUnit)}</blockquote>`);
       continue;
     }
 

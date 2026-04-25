@@ -1,0 +1,90 @@
+/* Стили wiki — план 19 frontend MVP. */
+
+.wiki-article h1 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  letter-spacing: 0.02em;
+}
+.wiki-article h2 {
+  margin: 16px 0 8px;
+  font-size: 18px;
+  border-bottom: 1px solid var(--ox-border);
+  padding-bottom: 4px;
+}
+.wiki-article h3 {
+  margin: 12px 0 6px;
+  font-size: 16px;
+}
+.wiki-article p {
+  margin: 8px 0;
+}
+.wiki-article ul, .wiki-article ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+.wiki-article li {
+  margin: 4px 0;
+}
+.wiki-article table {
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 14px;
+}
+.wiki-article th, .wiki-article td {
+  border: 1px solid var(--ox-border);
+  padding: 4px 10px;
+  text-align: left;
+}
+.wiki-article th {
+  background: var(--ox-bg-deep, rgba(255,255,255,0.05));
+  font-weight: 700;
+}
+.wiki-article code {
+  background: var(--ox-bg-deep, rgba(255,255,255,0.06));
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+.wiki-article blockquote {
+  border-left: 3px solid var(--ox-accent, #4a90e2);
+  margin: 8px 0;
+  padding: 4px 12px;
+  color: var(--ox-fg-muted);
+  background: rgba(74, 144, 226, 0.05);
+}
+.wiki-article hr {
+  border: 0;
+  border-top: 1px solid var(--ox-border);
+  margin: 16px 0;
+}
+.wiki-article a {
+  color: var(--ox-accent, #4a90e2);
+  text-decoration: none;
+}
+.wiki-article a:hover {
+  text-decoration: underline;
+}
+
+/* Ссылка [[unit:N]] — иконка + имя, кликабельная. */
+.wiki-article a.wiki-unit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  background: rgba(74, 144, 226, 0.08);
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wiki-article a.wiki-unit-link:hover {
+  background: rgba(74, 144, 226, 0.18);
+  text-decoration: none;
+}
+.wiki-article .wiki-unit-icon {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+}
+.wiki-article .wiki-unit-name {
+  vertical-align: middle;
+}

@@ -1,10 +1,11 @@
 ---
 title: unit_a_paladin
 category: ships
-entity_id: unit_a_paladin
+entity_key: unit_a_paladin
+unit_id: 202
 ---
 
-# unit_a_paladin (id=202)
+# unit_a_paladin
 
 **Стоимость**: 3 000 M + 1 000 Si + 200 H
 
