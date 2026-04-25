@@ -22,7 +22,7 @@ function highlightCode(raw: string): string {
   const comment = commentIdx >= 0 ? raw.slice(commentIdx) : '';
 
   // Токенизируем код по токенам: идентификатор, число, оператор, прочее.
-  const tokenRe = /([A-Za-z_]\w*)(\s*\()?|(\d+(?:\.\d+)?%?)|([()[\]])|([=+\-*/×÷≤≥≠])|([^A-Za-z_\d=+\-*/×÷≤≥≠()[\]]+)/g;
+  const tokenRe = /([A-Za-zА-Яа-яЁё_][\wА-Яа-яЁё]*)(\s*\()?|(\d+(?:\.\d+)?%?)|([()[\]])|([=+\-*/×÷≤≥≠])|([^A-Za-zА-Яа-яЁё_\d=+\-*/×÷≤≥≠()[\]]+)/g;
   let out = '';
   let m: RegExpExecArray | null;
   while ((m = tokenRe.exec(code)) !== null) {
