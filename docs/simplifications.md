@@ -938,3 +938,49 @@ Battle-sim: lancer-vs-mixed defender wins 100% (atk loss 96%, def loss
 **Tests**: `go test ./... -count=1` — все 26 пакетов зелёные. Frontend
 typecheck не запущен локально (нет npm), правки минимальны и проверены
 визуально.
+
+## 2026-04-26 — План 29 Ф.1-4: magic numbers cleanup
+
+**Где**: `backend/internal/economy/ids.go`, `shipyard/service.go`,
+`score/event.go`, `alien/alien.go`, `fleet/transport.go`,
+`achievement/service.go`, `planet/service.go`.
+
+**Что упрощено**: магические числа в SQL и Go-коде заменены на
+именованные константы из `event/kinds.go` и `economy/ids.go`:
+
+```go
+// Было
+WHERE kind = 70 AND state = 'wait'
+WHERE b.unit_id = 1 AND b.level >= 1
+
+// Стало (через параметр)
+WHERE kind = $1                              // event.KindScoreRecalcAll
+WHERE b.unit_id = %d                         // fmt.Sprintf + economy.IDMetalmine
+```
+
+**Применено**:
+- В `economy/ids.go` добавлены: `IDImpulseEngine=21`,
+  `IDHyperspaceEngine=22`, `IDTerraformer=58`, `IDMoonLab=350`,
+  `IDCombustionEngine=20`. Группировка упорядочена.
+- В `shipyard.Enqueue`: `kind = 4/5` → `event.KindBuildFleet/KindBuildDefense`.
+- В `score.BootstrapRecalcAllEvent`: `kind = 70` → параметр.
+- В `alien.spawnCandidates`: `kind IN (33,34,35,36)` → 4 параметра с
+  `KindAlienFlyUnknown/KindAlienHolding/KindAlienAttack/KindAlienHalt`.
+- В `fleet/transport.go`: 5 случаев (`mission IN (10,12)`,
+  `kind = 7/20`, `mission NOT IN (15, 29)`) → параметры.
+- В `achievement/service.go`: 9 случаев `unit_id = N` / `mission = N` /
+  `kind = N` → `fmt.Sprintf` с `economy.ID*` / `event.Kind*`.
+- В `planet.fillMaxFields`: `IN (58, 350)` → `IN ($2, $3)`.
+
+**Обнаружен баг (не исправлен)**:
+`STARTER_BUILD_SOLARPLANT/METALLURGY/SHIPYARD/LAB` в
+`achievement/service.go` исторически проверяют unit_id 3/4/21/22, что
+соответствует **HydrogenLab/SolarPlant/ImpulseEngine/HyperspaceEngine**,
+а не Solar Plant / Metallurgy / Shipyard / Research Lab по именам.
+Это баг логики достижений. Сохранено оригинальное поведение через явные
+константы; коррекция — отдельная задача.
+
+**TODO (план 29 Ф.5)**: рассмотреть Mode-enum (`ModeBuilding=1` и т.д.)
+если в Go-коде есть `spec.Mode == 3` сравнения.
+
+**Tests**: `go test ./... -count=1` — все 26 пакетов зелёные.

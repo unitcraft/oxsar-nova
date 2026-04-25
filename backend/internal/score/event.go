@@ -81,9 +81,9 @@ func (s *Service) BootstrapRecalcAllEvent(ctx context.Context) error {
 	err := s.db.Pool().QueryRow(ctx, `
 		SELECT EXISTS(
 			SELECT 1 FROM events
-			WHERE kind = 70 AND state = 'wait'
+			WHERE kind = $1 AND state = 'wait'
 		)
-	`).Scan(&exists)
+	`, int(event.KindScoreRecalcAll)).Scan(&exists)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (s *Service) BootstrapRecalcAllEvent(ctx context.Context) error {
 	fireAt := time.Now().Add(1 * time.Minute)
 	_, err = s.db.Pool().Exec(ctx, `
 		INSERT INTO events (id, kind, state, fire_at, payload)
-		VALUES ($1, 70, 'wait', $2, '{}')
-	`, ids.New(), fireAt)
+		VALUES ($1, $2, 'wait', $3, '{}')
+	`, ids.New(), int(event.KindScoreRecalcAll), fireAt)
 	return err
 }

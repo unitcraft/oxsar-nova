@@ -126,13 +126,12 @@ func (s *Service) ListByUser(ctx context.Context, userID string) ([]Planet, erro
 }
 
 // fillMaxFields вычисляет p.MaxFields по формуле из fields.go (legacy).
-// Читает только terra_former (58) и moon_lab (350), больше ничего из
-// зданий не нужно.
+// Читает только terra_former и moon_lab, больше ничего из зданий не нужно.
 func (s *Service) fillMaxFields(ctx context.Context, p *Planet) error {
 	rows, err := s.db.Pool().Query(ctx, `
 		SELECT unit_id, level FROM buildings
-		WHERE planet_id = $1 AND unit_id IN (58, 350)
-	`, p.ID)
+		WHERE planet_id = $1 AND unit_id IN ($2, $3)
+	`, p.ID, economy.IDTerraformer, economy.IDMoonLab)
 	if err != nil {
 		return fmt.Errorf("max_fields buildings: %w", err)
 	}

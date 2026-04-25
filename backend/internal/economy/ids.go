@@ -1,40 +1,47 @@
 package economy
 
 // Unit ID-константы для зданий и исследований.
-// Источник: configs/construction.yml (поле id).
+// Источник: configs/units.yml (поле id).
 const (
 	// Здания (mode=1)
-	IDMetalmine        = 1
-	IDSiliconLab       = 2
-	IDHydrogenLab      = 3
-	IDSolarPlant       = 4
-	IDHydrogenPlant    = 5
-	IDNanoFactory      = 7
-	IDMetalStorage     = 9
-	IDSiliconStorage   = 10
-	IDHydrogenStorage  = 11
-	IDRoboticFactory   = 6
-	IDMoonHydrogenLab  = 326
+	IDMetalmine       = 1
+	IDSiliconLab      = 2
+	IDHydrogenLab     = 3
+	IDSolarPlant      = 4
+	IDHydrogenPlant   = 5
+	IDRoboticFactory  = 6
+	IDNanoFactory     = 7
+	IDShipyard        = 8
+	IDMetalStorage    = 9
+	IDSiliconStorage  = 10
+	IDHydrogenStorage = 11
+	IDResearchLab     = 12
+	IDTerraformer     = 58  // terra_former — увеличивает поля планеты (план 23)
+	IDDefenseFactory  = 100 // defense_factory
+	IDMoonHydrogenLab = 326
+	IDMoonLab         = 350 // moon_lab (план 22 Ф.2.2 — отложен)
 
 	// Корабли/оборона
-	IDSolarSatellite   = 39
-	IDGravi            = 28
+	IDSolarSatellite = 39
+	IDGravi          = 28
+
+	// Двигатели (research, mode=2)
+	IDCombustionEngine = 20
+	IDImpulseEngine    = 21
+	IDHyperspaceEngine = 22
 
 	// Исследования (mode=2): tech ID в formula.Context.Tech
-	IDTechEnergy       = 18 // energy_tech   — energy_ratio
-	IDTechLaser        = 23 // laser_tech     — metalmine prod
-	IDTechSilicon      = 24 // silicon_tech   — silicon_lab prod
-	IDTechHydrogen     = 25 // hydrogen_tech  — hydrogen_lab prod
+	IDTechEnergy   = 18 // energy_tech   — energy_ratio
+	IDTechLaser    = 23 // laser_tech     — metalmine prod
+	IDTechSilicon  = 24 // silicon_tech   — silicon_lab prod
+	IDTechHydrogen = 25 // hydrogen_tech  — hydrogen_lab prod
 
 	// Боевые техи
-	IDTechGun          = 15 // gun_tech
-	IDTechShield       = 16 // shield_tech
-	IDTechShell        = 17 // shell_tech
-	IDTechBallistics   = 103 // ballistics_tech
-	IDTechMasking      = 104 // masking_tech
-	IDShipyard         = 8   // shipyard
-	IDDefenseFactory   = 100 // repair_factory / defense_factory
-	IDResearchLab      = 12
+	IDTechGun        = 15  // gun_tech
+	IDTechShield     = 16  // shield_tech
+	IDTechShell      = 17  // shell_tech
+	IDTechBallistics = 103 // ballistics_tech
+	IDTechMasking    = 104 // masking_tech
 )
 
 // ProfessionKeyToID — карта ключей профессии к ID юнита/исследования.

@@ -20,6 +20,7 @@ import (
 
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/economy"
+	"github.com/oxsar/nova/backend/internal/event"
 	"github.com/oxsar/nova/backend/internal/planet"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/internal/requirements"
@@ -140,10 +141,10 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 			return fmt.Errorf("insert queue: %w", err)
 		}
 
-		// 5. Событие завершения. Kind = 4 (fleet) или 5 (defense).
-		kind := 4
+		// 5. Событие завершения постройки.
+		kind := int(event.KindBuildFleet)
 		if isDefense {
-			kind = 5
+			kind = int(event.KindBuildDefense)
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)

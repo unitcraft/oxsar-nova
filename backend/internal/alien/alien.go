@@ -83,12 +83,14 @@ func (s *Service) Spawn(ctx context.Context) error {
 		  AND NOT EXISTS (
 		    SELECT 1 FROM events e
 		    JOIN planets p2 ON p2.id = e.planet_id AND p2.user_id = u.id
-		    WHERE e.kind IN (33, 34, 35, 36)
+		    WHERE e.kind IN ($2, $3, $4, $5)
 		      AND e.fire_at > now() - interval '6 days'
 		  )
 		ORDER BY random()
 		LIMIT $1
-	`, limit)
+	`, limit,
+		int(event.KindAlienFlyUnknown), int(event.KindAlienHolding),
+		int(event.KindAlienAttack), int(event.KindAlienHalt))
 	if err != nil {
 		return fmt.Errorf("alien spawn: query: %w", err)
 	}

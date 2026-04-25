@@ -482,11 +482,11 @@ func (s *TransportService) ListIncoming(ctx context.Context, userID string) ([]I
 		             AND p.destroyed_at IS NULL
 		WHERE p.user_id = $1
 		  AND f.owner_user_id <> $1
-		  AND f.mission IN (10, 12)
+		  AND f.mission IN ($2, $3)
 		  AND f.state = 'outbound'
 		  AND f.arrive_at > NOW()
 		ORDER BY f.arrive_at ASC
-	`, userID)
+	`, userID, int(event.KindAttackSingle), int(event.KindAttackAlliance))
 	if err != nil {
 		return nil, fmt.Errorf("list incoming fleets: %w", err)
 	}
@@ -559,17 +559,17 @@ func (s *TransportService) Recall(ctx context.Context, userID, fleetID string) (
 		// гарантирует, что пересечений нет).
 		if _, err := tx.Exec(ctx, `
 			DELETE FROM events
-			WHERE kind = 7 AND state = 'wait'
+			WHERE kind = $2 AND state = 'wait'
 			  AND (payload->>'fleet_id') = $1
-		`, fleetID); err != nil {
+		`, fleetID, int(event.KindTransport)); err != nil {
 			return fmt.Errorf("delete arrive event: %w", err)
 		}
 		// Переносим return-событие.
 		if _, err := tx.Exec(ctx, `
 			UPDATE events SET fire_at = $2
-			WHERE kind = 20 AND state = 'wait'
+			WHERE kind = $3 AND state = 'wait'
 			  AND (payload->>'fleet_id') = $1
-		`, fleetID, newReturn); err != nil {
+		`, fleetID, newReturn, int(event.KindReturn)); err != nil {
 			return fmt.Errorf("reschedule return event: %w", err)
 		}
 
@@ -622,15 +622,15 @@ func readFleetSlots(ctx context.Context, q interface {
 	}
 	max = 1 + computerLvl/6
 
-	// mission NOT IN (15, 29): EXPEDITION (event.KindExpedition) и
-	// DELIVERY_UNITS (event.KindDeliveryUnits=21? — у нас 29
-	// для artefact-delivery в legacy). См. isFleetSlotMission.
+	// EXPEDITION (event.KindExpedition=15) и legacy artefact-delivery
+	// mission=29 не считаются как занятые слоты. См. isFleetSlotMission.
+	const missionLegacyArtefactDelivery = 29
 	err = q.QueryRow(ctx, `
 		SELECT COUNT(*) FROM fleets
 		WHERE owner_user_id = $1
 		  AND state = 'outbound'
-		  AND mission NOT IN (15, 29)
-	`, userID).Scan(&used)
+		  AND mission NOT IN ($2, $3)
+	`, userID, int(event.KindExpedition), missionLegacyArtefactDelivery).Scan(&used)
 	if err != nil {
 		return 0, 0, fmt.Errorf("count fleets: %w", err)
 	}
@@ -661,8 +661,8 @@ func (s *TransportService) checkExpeditionSlots(ctx context.Context, tx pgx.Tx, 
 		SELECT COUNT(*) FROM fleets
 		WHERE owner_user_id = $1
 		  AND state = 'outbound'
-		  AND mission = 15
-	`, userID).Scan(&used); err != nil {
+		  AND mission = $2
+	`, userID, int(event.KindExpedition)).Scan(&used); err != nil {
 		return fmt.Errorf("check expedition slots: %w", err)
 	}
 	if used >= maxSlots {
@@ -858,12 +858,13 @@ func (s *TransportService) checkBashingLimit(ctx context.Context, tx pgx.Tx,
 		 AND p.destroyed_at IS NULL
 		WHERE f.owner_user_id = $1
 		  AND p.user_id = $2
-		  AND f.mission IN (10, 12)
+		  AND f.mission IN ($4, $5)
 		  AND (
 		    f.state = 'outbound'
 		    OR (f.arrive_at IS NOT NULL AND f.arrive_at > now() - ($3 * interval '1 second'))
 		  )
-	`, attackerID, *defenderID, s.bashingPeriod).Scan(&cnt)
+	`, attackerID, *defenderID, s.bashingPeriod,
+		int(event.KindAttackSingle), int(event.KindAttackAlliance)).Scan(&cnt)
 	if err != nil {
 		return fmt.Errorf("bashing: count: %w", err)
 	}
