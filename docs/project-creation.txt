@@ -7647,3 +7647,68 @@ Shipyard=8, ResearchLab=12. Поправил.
 - **Boy-scout правило в CLAUDE.md** — записать «no magic numbers».
 - **Frontend**: тоже есть magic numbers (`mission === 10`), отдельная
   задача.
+
+## 2026-04-26: План 31 Ф.1 — health/ready endpoints + draining state
+
+После обсуждения архитектуры Goal Engine (план 30) выяснилось — нужен
+«пред-инструмент» для безболезненной выкатки рефакторингов. План 31 Ф.1:
+liveness/readiness HTTP endpoints + draining state при SIGTERM.
+
+### Что сделано
+
+**Новый пакет** `backend/internal/health/`:
+- `State` с атомарными флагами `ready` / `draining` + `SetReady()` /
+  `SetDraining()` / `IsReady()` / `IsDraining()`.
+- `HealthHandler()` — liveness, без БД-вызовов: 200 при normal,
+  503 при draining.
+- `ReadyHandler(Pinger)` — readiness с `Pinger.Ping(ctx)` (2s timeout):
+  200 ready / 503 starting/draining/db_unhealthy.
+- `Status` JSON: component, status, version, uptime_sec, reason.
+- 6 unit-тестов покрывают все ветки.
+
+**Интеграция в server** (`cmd/server/main.go`):
+- `var buildVersion = "dev"` (перебивается через ldflags).
+- `healthState := health.NewState("backend", buildVersion)` сразу
+  после `cfg.Load()`.
+- Routes `/api/health` и `/api/ready` без auth-middleware.
+- `healthState.SetReady()` после wire-up всех зависимостей.
+- В shutdown sequence: SetDraining → sleep 10s (drainDelay) →
+  `srv.Shutdown(30s timeout)`. drainDelay даёт nginx/docker-healthcheck
+  время убрать backend из upstream до фактического закрытия listener'а.
+
+**Интеграция в worker** (`cmd/worker/main.go`):
+- Health endpoints на metrics-порту :9091 (рядом с /metrics).
+- `SetReady()` сразу после открытия pool.
+- Goroutine `<-ctx.Done() → SetDraining()` параллельно с `RunWithGrace`.
+
+**Docker**:
+- `Dockerfile`: `apk add wget` для healthcheck (alpine без wget по
+  умолчанию).
+- `docker-compose.yml`: healthcheck для backend и worker на /api/ready,
+  interval 10s, retries 3, start_period 10s.
+- `frontend.depends_on` переключён на `service_healthy` (вместо
+  `service_started`) — фронт не стартует пока бэкенд не готов
+  обрабатывать.
+
+### Эффект
+
+- При выкатке backend через `docker compose up -d backend`:
+  1. SIGTERM → SetDraining → /api/ready начинает возвращать 503.
+  2. Через 10-30s docker healthcheck помечает backend unhealthy.
+  3. orchestrator (или nginx upstream при наличии второго инстанса)
+     убирает unhealthy инстанс.
+  4. srv.Shutdown с 30s timeout — активные HTTP-запросы успевают
+     завершиться.
+  5. Старый процесс умирает чисто, новый стартует и через `start_period
+     + healthcheck` помечается healthy.
+- Для одноинстансной dev-конфигурации drainDelay 10s = «окно простоя»,
+  но 502 не растягивается дольше: nginx внутри docker-compose тоже
+  ждёт healthy upstream.
+
+### Tests
+`go test ./... -count=1`: все 27 пакетов зелёные (было 26 + новый health).
+
+### Что дальше
+- Ф.2: feature flags (configs/features.yaml + features-пакет).
+- Ф.3: API-version header.
+- Ф.4: docs/ops/deploy.md + migrations-style.md.

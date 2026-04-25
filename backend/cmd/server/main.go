@@ -58,9 +58,19 @@ import (
 	"github.com/oxsar/nova/backend/internal/storage"
 	"github.com/oxsar/nova/backend/internal/dailyquest"
 	"github.com/oxsar/nova/backend/internal/galaxyevent"
+	"github.com/oxsar/nova/backend/internal/health"
 	"github.com/oxsar/nova/backend/internal/wiki"
 	"github.com/oxsar/nova/backend/pkg/metrics"
 )
+
+// buildVersion — версия билда. Можно перебить через -ldflags
+// "-X main.buildVersion=1.2.3" в build-pipeline; по умолчанию dev.
+var buildVersion = "dev"
+
+// drainDelay — пауза между SetDraining и srv.Shutdown. Цель —
+// дать nginx/балансировщику время убрать backend из upstream
+// (типичный health-check-interval = 5-10s).
+const drainDelay = 10 * time.Second
 
 func main() {
 	if err := run(); err != nil {
@@ -81,6 +91,8 @@ func run() error {
 	log := newLogger(cfg.Server.LogLevel)
 	slog.SetDefault(log)
 	log.InfoContext(ctx, "starting server", slog.String("env", cfg.Server.Env))
+
+	healthState := health.NewState("backend", buildVersion)
 
 	catalogDir := os.Getenv("CATALOG_DIR")
 	if catalogDir == "" {
@@ -223,6 +235,12 @@ func run() error {
 	}
 
 	r := httpx.NewRouter(httpx.RouterDeps{Log: log})
+
+	// Health/ready endpoints — без auth, без middleware. Используются
+	// orchestrator'ом / nginx upstream health-check для решения, слать
+	// ли запросы на этот backend instance. План 31 Ф.1.
+	r.Get("/api/health", healthState.HealthHandler())
+	r.Get("/api/ready", healthState.ReadyHandler(pool))
 
 	r.With(authRL.Middleware).Post("/api/auth/register", authH.Register)
 	r.With(authRL.Middleware).Post("/api/auth/login", authH.Login)
@@ -464,6 +482,9 @@ func run() error {
 		IdleTimeout:       60 * time.Second,
 	}
 
+	// Все зависимости подняты — сервер готов принимать запросы.
+	healthState.SetReady()
+
 	errCh := make(chan error, 1)
 	go func() {
 		log.InfoContext(ctx, "listening", slog.String("addr", srv.Addr))
@@ -479,8 +500,23 @@ func run() error {
 		}
 	}
 
+	// Phase 1 (drain): /api/health начинает отвечать 503, чтобы nginx/
+	// балансировщик убрал backend из upstream до фактического shutdown.
+	// Это устраняет 502 во время выкатки. План 31 Ф.1.
+	healthState.SetDraining()
+	log.InfoContext(ctx, "draining", slog.Duration("delay", drainDelay))
+	select {
+	case <-time.After(drainDelay):
+	case <-context.Background().Done():
+		// Никогда не сработает — фоновый context не отменяется. Здесь
+		// чисто на случай будущих доработок (force-shutdown signal).
+	}
+
+	// Phase 2 (shutdown): graceful shutdown с timeout. Активные
+	// запросы завершаются, новые отклоняются, listener закрывается.
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	log.InfoContext(ctx, "shutting down http server")
 	return srv.Shutdown(shutdownCtx)
 }
 

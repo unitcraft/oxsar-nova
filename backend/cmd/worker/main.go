@@ -25,6 +25,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/dailyquest"
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/event"
+	"github.com/oxsar/nova/backend/internal/health"
 	"github.com/oxsar/nova/backend/internal/fleet"
 	"github.com/oxsar/nova/backend/internal/officer"
 	"github.com/oxsar/nova/backend/internal/planet"
@@ -36,6 +37,10 @@ import (
 	"github.com/oxsar/nova/backend/internal/storage"
 	"github.com/oxsar/nova/backend/pkg/metrics"
 )
+
+// buildVersion — версия билда. Перебить через -ldflags
+// "-X main.buildVersion=1.2.3"; по умолчанию dev.
+var buildVersion = "dev"
 
 func main() {
 	if err := run(); err != nil {
@@ -280,13 +285,19 @@ func run() error {
 		}
 	}()
 
-	// /metrics HTTP endpoint для Prometheus.
+	// /metrics HTTP endpoint для Prometheus + /api/health, /api/ready
+	// для container healthcheck. План 31 Ф.1.
+	healthState := health.NewState("worker", buildVersion)
+	healthState.SetReady() // worker готов сразу после открытия pool
+
 	metricsAddr := os.Getenv("WORKER_METRICS_ADDR")
 	if metricsAddr == "" {
 		metricsAddr = ":9091"
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", metrics.Register())
+	mux.Handle("/api/health", healthState.HealthHandler())
+	mux.Handle("/api/ready", healthState.ReadyHandler(pool))
 	metricsSrv := &http.Server{Addr: metricsAddr, Handler: mux, ReadHeaderTimeout: 3 * time.Second}
 	go func() {
 		log.InfoContext(ctx, "worker metrics listening", slog.String("addr", metricsAddr))
@@ -298,6 +309,15 @@ func run() error {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = metricsSrv.Shutdown(shutdownCtx)
+	}()
+
+	// При SIGTERM переводим healthcheck в draining-state, чтобы
+	// container-orchestrator (docker healthcheck / k8s) увидел 503 на
+	// /api/ready и перестал считать инстанс живым. План 31 Ф.1.
+	go func() {
+		<-ctx.Done()
+		healthState.SetDraining()
+		log.InfoContext(context.Background(), "worker draining")
 	}()
 
 	grace := parseDurEnv("WORKER_SHUTDOWN_GRACE", 30*time.Second)

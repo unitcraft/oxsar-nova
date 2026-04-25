@@ -939,6 +939,35 @@ Battle-sim: lancer-vs-mixed defender wins 100% (atk loss 96%, def loss
 typecheck не запущен локально (нет npm), правки минимальны и проверены
 визуально.
 
+## 2026-04-26 — План 31 Ф.1: health/ready + draining state
+
+**Где**: `backend/internal/health/` (новый), `cmd/server/main.go`,
+`cmd/worker/main.go`, `backend/Dockerfile`, `deploy/docker-compose.yml`.
+
+**Что**: добавлены liveness/readiness endpoints + draining-state
+для zero-downtime deploy. При SIGTERM процесс:
+1. `SetDraining()` → `/api/health` и `/api/ready` начинают возвращать 503.
+2. Sleep 10s (drainDelay) — даёт nginx/docker-healthcheck время
+   заметить unhealthy и убрать инстанс из ротации.
+3. `srv.Shutdown()` — graceful 30s timeout для активных запросов.
+
+**Endpoints**:
+- `GET /api/health` — liveness, не делает БД-вызовов. 200 ok / 503 draining.
+- `GET /api/ready` — readiness с `pool.Ping(ctx)` (timeout 2s).
+  503 при draining / starting / db_unhealthy.
+- Server: на основном порту (`:8080`).
+- Worker: на metrics-порту (`:9091`, рядом с /metrics).
+
+**Docker healthcheck**: добавлен в compose, `wget --spider /api/ready`
+с интервалом 10s, retries 3. `frontend.depends_on` переключён на
+`service_healthy`.
+
+**buildVersion**: `var buildVersion = "dev"` в server и worker main.go,
+перебивается через `go build -ldflags "-X main.buildVersion=..."` в
+prod-pipeline. Возвращается в JSON-ответе `/api/health`.
+
+**Tests**: 6 unit-тестов в `health_test.go`, все 27 пакетов зелёные.
+
 ## 2026-04-26 — План 29 Ф.1-4: magic numbers cleanup
 
 **Где**: `backend/internal/economy/ids.go`, `shipyard/service.go`,

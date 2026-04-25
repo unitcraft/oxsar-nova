@@ -74,6 +74,16 @@ services:
       CATALOG_DIR: /app/configs
       I18N_DIR: /app/configs/i18n
     ports: ["8081:8080"]
+    # План 31 Ф.1: healthcheck использует /api/ready, который при
+    # SetDraining возвращает 503 → docker помечает контейнер unhealthy
+    # → orchestrator/балансировщик может убрать инстанс из ротации.
+    # start_period 10s даёт время на инициализацию (LoadCatalog, БД).
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 
   worker:
     build:
@@ -91,13 +101,23 @@ services:
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: dev-secret-change-me
       CATALOG_DIR: /app/configs
+      WORKER_METRICS_ADDR: ":9091"
+    # Worker публикует /api/health и /api/ready на metrics-порту :9091
+    # (см. cmd/worker/main.go). План 31 Ф.1.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9091/api/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 
   frontend:
     build:
       context: ..
       dockerfile: frontend/Dockerfile
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
       VITE_PROXY_TARGET: http://backend:8080
     ports: ["5173:5173"]
