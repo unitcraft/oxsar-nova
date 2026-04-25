@@ -42,7 +42,7 @@
 
 - [24 ai-players](plans/24-ai-players.md) — боты имитируют активную галактику. Очень полезно при малом DAU («живой галактика»), но требует 2–3 недели только на MVP. Если запуск с 50+ реальными игроками — можно отложить.
 - ~~[20 Ф.5](plans/20-legacy-port.md)~~ — ✅ **done 2026-04-25**: Stargate Jump (POST /api/stargate), cooldown по формуле legacy.
-- [20 Ф.6](plans/20-legacy-port.md) — Moon destruction: аналогично, эндгейм.
+- ~~[20 Ф.6](plans/20-legacy-port.md)~~ — ✅ **done 2026-04-25**: Moon Destruction (kind=25/27) с OGame-формулой rip-roll, single + ACS.
 - ~~[20 Ф.7](plans/20-legacy-port.md)~~ — ✅ **done 2026-04-25** ([ADR-0005](adr/0005-astrophysics.md)): Astrophysics с MAX(computer+1, astro/2+1) — не ломает существующих.
 - ~~[20 Ф.8](plans/20-legacy-port.md)~~ — ✅ **done 2026-04-25**: IGR network — sum top (1+igr) labs, ускоряет research при множественных лабораториях.
 - [22 Ф.2.2](plans/22-configs-cleanup.md) — orphan-юниты (decorative), не влияют на баланс.

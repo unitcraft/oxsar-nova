@@ -249,9 +249,37 @@ cooldown_sec = 3600 * 0.7^(max(0, jump_gate_level - 1))
 
 ---
 
-## Ф.6: Уничтожение Луны (Moon Destruction, kind=25/27)
+## Ф.6: Уничтожение Луны (Moon Destruction, kind=25/27) — ✅ ЗАКРЫТО 2026-04-25
 
-**Legacy**: `Assault.class.php:505–642`  
+Реализовано:
+- `KindAttackDestroyMoon=25` и `KindAttackAllianceDestroyMoon=27` добавлены
+  в event/kinds.go.
+- `transport.Send`: mission=25/27 разрешены, проверки те же что у обычной
+  атаки (vacation shield, antibashing) + специфичные:
+  - `dst.IsMoon == true`
+  - флот содержит как минимум 1 Deathstar (id=42)
+- `AttackHandler` (kind=25) и `ACSAttackHandler` (kind=27) после обычного
+  боя делают moon-destruction roll, если цель — луна и атакующий выжил
+  с DS:
+  ```
+  P_destroy_moon  = clamp((100 - sqrt(diameter)) * sqrt(rip_count), 0, 100) %
+  P_destroy_fleet = clamp((100 - sqrt(rip_count)) * sqrt(diameter)/200, 0, 100) %
+  ```
+- При успехе уничтожения: `planets.destroyed_at=now()`, сообщения обоим
+  игрокам (folder=2).
+- При уничтожении флота: `DELETE FROM fleet_ships WHERE unit_id=42` —
+  все DS взрываются, остальные корабли возвращаются.
+- ACS-вариант (kind=27): rip_count = СУММА выживших DS у всех участников
+  ACS, при успехе fleet_destroy все DS у каждого участника удаляются.
+- RNG seed = `battleSeed ^ 0xDEADBEEFCAFEBABE` для детерминированности.
+- Worker: те же AttackHandler/ACSAttackHandler зарегистрированы на
+  kinds 25/27 (общая логика, ветка на kind внутри).
+
+Архитектурное замечание: типы `fleetInfo` и `survivorFleet` подняты
+из локальной видимости `ACSAttackHandler` на package-level —
+требовалось чтобы `tryDestroyMoonACS` мог принимать их в параметрах.
+
+**Legacy**: `Assault.class.php:505–642`
 **Ext-override**: **есть** для alliance-варианта (`ExtEventHandler.class.php:704`)
 
 **Как работает в legacy**: `EVENT_MOON_DESTRUCTION` (kind=14) — мёртвый event, handler пустой. Реальная механика — через attack: kinds `EVENT_ATTACK_DESTROY_MOON=25` и `EVENT_ATTACK_ALLIANCE_DESTROY_MOON=27` маршрутизируются в `Assault.class.php`, который после боя применяет moon-logic.

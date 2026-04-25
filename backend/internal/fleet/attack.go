@@ -278,6 +278,16 @@ func (s *TransportService) AttackHandler() event.Handler {
 		if report.Winner == "attackers" && len(atkSurvivors) > 0 {
 			loot = grabLoot(defMetal, defSil, defHydro, atkSurvivors, s.catalog, cm, csil, ch)
 		}
+		// План 20 Ф.6: Moon Destruction (kind=25/27). Только если цель —
+		// луна и атакующий выжил с DS. Roll по OGame-формуле, при успехе
+		// помечаем луну destroyed_at и шлём сообщение обоим игрокам.
+		if (e.Kind == event.KindAttackDestroyMoon ||
+			e.Kind == event.KindAttackAllianceDestroyMoon) && isMoon {
+			if err := s.tryDestroyMoon(ctx, tx, pl.FleetID, planetID,
+				attackerUserID, defenderUserID, atkSurvivors, report.Seed); err != nil {
+				return fmt.Errorf("attack: moon destroy: %w", err)
+			}
+		}
 		return finalizeAttack(ctx, tx, pl.FleetID, attackerUserID, defenderUserID, planetID,
 			report, loot, debrisM, debrisS, cm, csil, ch, atkPower, defPower)
 	}

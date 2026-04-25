@@ -33,6 +33,8 @@ const (
 	KindReturn                     Kind = 20
 	KindDeliveryUnits              Kind = 21
 	KindDeliveryResources          Kind = 22
+	KindAttackDestroyMoon          Kind = 25 // план 20 Ф.6: атака с целью уничтожить луну
+	KindAttackAllianceDestroyMoon  Kind = 27 // план 20 Ф.6: ACS-вариант
 	KindStargateTransport          Kind = 28
 	KindStargateJump               Kind = 32 // план 20 Ф.5: мгновенный прыжок флота между лунами с jump_gate
 	KindAlienFlyUnknown            Kind = 33 // миссия пришельцев без явной цели (план 15, этап 3)

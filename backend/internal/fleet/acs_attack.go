@@ -60,13 +60,8 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 		}
 
 		// Читаем все флоты группы (outbound).
-		type fleetInfo struct {
-			id          string
-			ownerUserID string
-			cm, cs, ch  int64
-			isMoon      bool
-			g, sys, pos int
-		}
+		// (fleetInfo объявлен на package level — см. moon_destruction.go,
+		//  чтобы tryDestroyMoonACS мог принимать его.)
 		rows, err := tx.Query(ctx, `
 			SELECT id, owner_user_id, carried_metal, carried_silicon, carried_hydrogen,
 			       dst_is_moon, dst_galaxy, dst_system, dst_position
@@ -205,10 +200,7 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 		}
 
 		// Применяем потери атакующих по каждому флоту.
-		type survivorFleet struct {
-			info      fleetInfo
-			survivors []unitStack
-		}
+		// (survivorFleet объявлен на package level — см. moon_destruction.go.)
 		var survivingFleets []survivorFleet
 		for i, af := range atkFleets {
 			var endUnits []battle.UnitResult
@@ -253,6 +245,26 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 				if err := tryCreateMoon(ctx, tx, lead.g, lead.sys, lead.pos,
 					debrisM+debrisS, report.Seed, defenderUserID, lead.ownerUserID); err != nil {
 					return fmt.Errorf("acs attack: moon: %w", err)
+				}
+			}
+		}
+
+		// План 20 Ф.6: ACS Moon Destruction (kind=27).
+		// rip_count = сумма выживших DS по всем участникам ACS.
+		if e.Kind == event.KindAttackAllianceDestroyMoon && isMoon {
+			var ripTotal int64
+			for _, sf := range survivingFleets {
+				for _, st := range sf.survivors {
+					if st.UnitID == unitDeathstar {
+						ripTotal += st.Count
+					}
+				}
+			}
+			if ripTotal > 0 {
+				if err := s.tryDestroyMoonACS(ctx, tx, planetID,
+					lead.ownerUserID, defenderUserID, survivingFleets, ripTotal,
+					report.Seed); err != nil {
+					return fmt.Errorf("acs attack: moon destroy: %w", err)
 				}
 			}
 		}

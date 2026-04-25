@@ -118,7 +118,8 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		in.Mission = 7 // обратная совместимость
 	}
 	if in.Mission != 6 && in.Mission != 7 && in.Mission != 8 && in.Mission != 9 && in.Mission != 10 &&
-		in.Mission != 11 && in.Mission != 12 && in.Mission != 15 {
+		in.Mission != 11 && in.Mission != 12 && in.Mission != 15 &&
+		in.Mission != 25 && in.Mission != 27 {
 		return Fleet{}, fmt.Errorf("%w: mission %d not supported",
 			ErrInvalidDispatch, in.Mission)
 	}
@@ -226,15 +227,27 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			}
 		}
 		// План 20 Ф.1: для агрессивных миссий проверяем, что target
-		// не в отпуске. ATTACK_SINGLE=10, SPY=11, ATTACK_ALLIANCE=12.
-		// ROCKET_ATTACK (kind=16) идёт через другой путь (rocket/service.go).
-		if in.Mission == 10 || in.Mission == 11 || in.Mission == 12 {
+		// не в отпуске. ATTACK_SINGLE=10, SPY=11, ATTACK_ALLIANCE=12,
+		// MOON_DESTROY single=25, alliance=27. ROCKET_ATTACK (kind=16)
+		// идёт через другой путь (rocket/service.go).
+		if in.Mission == 10 || in.Mission == 11 || in.Mission == 12 ||
+			in.Mission == 25 || in.Mission == 27 {
 			if err := s.checkTargetNotOnVacation(ctx, tx, in.Dst); err != nil {
 				return err
 			}
 		}
-		// План 17 A1: антибашинг для ATTACK/ACS (spy не считается).
-		if in.Mission == 10 || in.Mission == 12 {
+		// MOON_DESTROY (25/27): цель должна быть луной + во флоте есть DS.
+		if in.Mission == 25 || in.Mission == 27 {
+			if !in.Dst.IsMoon {
+				return fmt.Errorf("%w: moon-destroy target must be a moon", ErrInvalidDispatch)
+			}
+			if in.Ships[unitDeathstar] <= 0 {
+				return fmt.Errorf("%w: moon-destroy fleet must contain Deathstar", ErrInvalidDispatch)
+			}
+		}
+		// План 17 A1: антибашинг для ATTACK/ACS/MOON_DESTROY (spy не считается).
+		if in.Mission == 10 || in.Mission == 12 ||
+			in.Mission == 25 || in.Mission == 27 {
 			if err := s.checkBashingLimit(ctx, tx, in.UserID, in.Dst); err != nil {
 				return err
 			}
