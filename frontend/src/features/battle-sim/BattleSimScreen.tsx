@@ -46,12 +46,27 @@ function makeUnit(entry: CombatEntry, qty: number) {
   return {
     unit_id: entry.id,
     quantity: qty,
-    front: 10,
+    front: entry.front ?? 10,
+    ballistics: entry.ballistics ?? 0,
+    masking: entry.masking ?? 0,
     attack: [entry.attack, 0, 0] as [number, number, number],
     shield: [entry.shield, 0, 0] as [number, number, number],
     shell: entry.shell,
   };
 }
+
+// Строим глобальную таблицу rapidfire из всех юнитов каталога.
+function buildRapidfire(entries: CombatEntry[]): Record<number, Record<number, number>> {
+  const table: Record<number, Record<number, number>> = {};
+  for (const e of entries) {
+    if (e.rapidfire && Object.keys(e.rapidfire).length > 0) {
+      table[e.id] = e.rapidfire;
+    }
+  }
+  return table;
+}
+const ALL_COMBAT = [...SHIPS, ...DEFENSE];
+const RAPIDFIRE_TABLE = buildRapidfire(ALL_COMBAT);
 
 export function BattleSimScreen() {
   const { t, tf } = useTranslation();
@@ -79,6 +94,7 @@ export function BattleSimScreen() {
     sim.mutate({
       seed,
       num_sim: numSim >= 2 ? numSim : undefined,
+      rapidfire: RAPIDFIRE_TABLE,
       attackers: toSide(attackers, COMBAT_SHIPS),
       defenders: toSide(defenders, [...COMBAT_SHIPS, ...COMBAT_DEFENSE]),
     });
