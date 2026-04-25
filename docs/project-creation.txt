@@ -7185,3 +7185,36 @@ Release-roadmap: все "Важные" пункты теперь ✅. Остал
 - Nice-to-have (20 Ф.5-8, 24 боты, 19 frontend-UI)
 
 Релиз в прод реально возможен.
+
+
+================================================================================
+ИТЕРАЦИЯ: Plan 21 C — BA-005 щиты (2026-04-25)
+================================================================================
+
+Блокер: BA-005 — щиты при shield_tech=10 оказались абсолютно непробиваемыми.
+10 000 Light Fighter (attack=50) vs 100 Small Shield (shield_tech=10): 0 урона за
+6 раундов. Turtle-стратегия работала.
+
+Диагностика выявила два дефекта в портировании Java:
+
+1) Структура Java-алгоритма (Units.processAttack строки 358-420) портирована
+   неверно. В Go "shotsToShell = shieldDestroyUnits" — к корпусу шли только
+   "разрушенные щиты". В Java наоборот: shieldShotsNumber = ceil(shots×shieldExistFactor),
+   и **оставшиеся** shots идут к shell. При shieldDamageFactor→1 shieldDestroyFactor=0.01,
+   значит 99% shots шло в щит, 1% — к корпусу. Это фактически нуль для больших стеков.
+
+2) ignoreAttack для планетарных щитов (Small Shield id=49, Large Shield id=50)
+   должен быть 0 — Java строки 348-350: специальный case. В Go не было этого.
+   ignoreAttack вычислялся по масштабированному shield → tech=10 давал threshold 40,
+   хотя должен считаться от базового (2000/100=20) или вообще 0 для щитов.
+
+Фиксы:
+- Переписан applyShots: shieldShotsNumber = ceil(shots×shieldExistFactor),
+  remaining shots идут в shell (Java-структура).
+- Добавлено поле baseShield в unitState — хранит shield до tech-масштабирования.
+- Для unit id=49/50: ignoreAttack=0 (прямой порт Java строк 348-350).
+
+Golden-тест TestShield_HighTech_NotImpenetrable: 10000 LF vs 100 SmallShield
+shield_tech=10. Проверяет что не все 100 выживают — BA-005 закрыт.
+
+Все 24 теста battle-движка зелёные.

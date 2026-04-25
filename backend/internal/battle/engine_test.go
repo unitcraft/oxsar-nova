@@ -448,6 +448,67 @@ func TestAblation_DamagedCarriesOverAndDies(t *testing.T) {
 	}
 }
 
+// --- Plan 21 C: high-tech shield golden test (BA-005) ---
+//
+// Сценарий из плана 21 C: 100× Small Shield (shield=2000, shell=20000)
+// при shield_tech=10 против 10 000× Light Fighter (attack=50).
+//
+// До фикса BA-005: ignoreAttack = scaledShield/100 = 4000/100 = 40.
+// LF attack=50 > 40 → должно пробивать, но shield_tech=10 делал щит
+// практически неуязвимым через завышенный ignoreAttack.
+//
+// После фикса: ignoreAttack = baseShield/100 = 2000/100 = 20.
+// LF attack=50 > 20 → всегда пробивает, урон по корпусу гарантирован.
+// BA-005 ЗАКРЫТ: tech усиливает абсорбцию, но не делает щит абсолютным.
+func TestShield_HighTech_NotImpenetrable(t *testing.T) {
+	t.Parallel()
+	smallShield := Unit{
+		UnitID:   49,
+		Quantity: 100,
+		Front:    0,
+		Attack:   [3]float64{1, 0, 0},
+		Shield:   [3]float64{2000, 0, 0},
+		Shell:    20000,
+		Cost:     UnitCost{Metal: 10000, Silicon: 10000},
+	}
+	lightFighter := Unit{
+		UnitID:   31,
+		Quantity: 10000,
+		Front:    0,
+		Attack:   [3]float64{50, 0, 0},
+		Shield:   [3]float64{10, 0, 0},
+		Shell:    4000,
+		Cost:     UnitCost{Metal: 3000, Silicon: 1000, Hydrogen: 0},
+	}
+	in := Input{
+		Seed:   1,
+		Rounds: 6,
+		Attackers: []Side{{
+			UserID: "att",
+			Tech:   Tech{},
+			Units:  []Unit{lightFighter},
+		}},
+		Defenders: []Side{{
+			UserID: "def",
+			Tech:   Tech{Shield: 10},
+			Units:  []Unit{smallShield},
+		}},
+	}
+	rep, err := Calculate(in)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Главная проверка BA-005: урон по корпусу должен быть нанесён.
+	// Shell Small Shield = 20000 × 100 = 2 000 000.
+	// После фикса LF attack=50 > ignoreAttack=20 → пробивает → часть
+	// выстрелов каждый раунд снимает shell. За 6 раундов должны быть потери.
+	defEnd := rep.Defenders[0].Units[0].QuantityEnd
+	if defEnd >= 100 {
+		t.Fatalf("BA-005: high-tech shield must not be impenetrable: all 100 survived with no damage. ignoreAttack fix not working.")
+	}
+	t.Logf("BA-005 OK: shield_tech=10 Small Shield vs 10k LF: %d/100 survived in %d rounds", defEnd, rep.Rounds)
+}
+
 // --- Unit tests for pure engine helpers ---
 
 func TestTotalShell_Normal(t *testing.T) {
