@@ -22,7 +22,7 @@ function highlightCode(raw: string): string {
   const comment = commentIdx >= 0 ? raw.slice(commentIdx) : '';
 
   // Токенизируем код по токенам: идентификатор, число, оператор, прочее.
-  const tokenRe = /([A-Za-z_]\w*)(\s*\()?|(\d+(?:\.\d+)?%?)|([=+\-*/×÷≤≥≠()[\]])|([^A-Za-z_\d=+\-*/×÷≤≥≠()[\]]+)/g;
+  const tokenRe = /([A-Za-z_]\w*)(\s*\()?|(\d+(?:\.\d+)?%?)|([()[\]])|([=+\-*/×÷≤≥≠])|([^A-Za-z_\d=+\-*/×÷≤≥≠()[\]]+)/g;
   let out = '';
   let m: RegExpExecArray | null;
   while ((m = tokenRe.exec(code)) !== null) {
@@ -38,9 +38,11 @@ function highlightCode(raw: string): string {
     } else if (m[3] !== undefined) {
       out += `<span class="ch-num">${escapeHtml(m[3])}</span>`;
     } else if (m[4] !== undefined) {
-      out += `<span class="ch-op">${escapeHtml(m[4])}</span>`;
+      out += `<span class="ch-paren">${escapeHtml(m[4])}</span>`;
+    } else if (m[5] !== undefined) {
+      out += `<span class="ch-op">${escapeHtml(m[5])}</span>`;
     } else {
-      out += escapeHtml(m[5] ?? m[0] ?? '');
+      out += escapeHtml(m[6] ?? m[0] ?? '');
     }
   }
 
