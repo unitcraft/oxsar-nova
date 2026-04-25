@@ -139,7 +139,7 @@
 .wiki-article pre .ch-num     { color: #5dbb8a; }
 .wiki-article pre .ch-op      { color: #e0c060; }
 .wiki-article pre .ch-fn      { color: #c084e8; }
-.wiki-article pre .ch-paren   { color: #8a9eb0; }
+.wiki-article pre .ch-paren   { color: #b8ccd8; }
 .wiki-article blockquote {
   border-left: 3px solid var(--ox-accent, #4a90e2);
   margin: 20px 0;
