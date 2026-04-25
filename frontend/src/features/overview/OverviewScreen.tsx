@@ -9,6 +9,7 @@ import { ResourceTicker } from '@/ui/ResourceTicker';
 import { useToast } from '@/ui/Toast';
 import { GalaxyEventBanner } from '../galaxyevent/GalaxyEventBanner';
 import { AlienHoldingPanel } from '../alien/AlienHoldingPanel';
+import { ForecastWidget } from './ForecastWidget';
 
 interface FleetRow {
   id: string;
@@ -501,6 +502,9 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
         <ResourceCell icon="💎" label="Кремний" value={planet.silicon} ratePerSec={planet.silicon_per_sec ?? 0} />
         <ResourceCell icon="💧" label="Водород" value={planet.hydrogen} ratePerSec={planet.hydrogen_per_sec ?? 0} />
       </div>
+
+      {/* План 17 G1: прогноз ресурсов через N часов */}
+      <ForecastWidget planetID={planet.id} />
 
       {/* Очереди */}
       {hasActivity && (

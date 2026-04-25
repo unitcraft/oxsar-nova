@@ -284,6 +284,7 @@ func run() error {
 		pr.Delete("/planets/{id}", planetH.Abandon)
 		pr.Get("/planets/{id}/resource-report", planetH.ResourceReport)
 		pr.Post("/planets/{id}/resource-update", planetH.ResourceUpdate)
+		pr.Get("/planets/{id}/forecast", planetH.Forecast)
 
 		pr.Get("/planets/{id}/buildings", buildingH.Levels)
 		pr.Post("/planets/{id}/buildings", buildingH.Enqueue)
