@@ -23,7 +23,9 @@ RUN cd backend && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/worker ./cmd/worker
 
 FROM alpine:3.20 AS runtime
-RUN apk add --no-cache ca-certificates tzdata
+# wget — для docker healthcheck (--no-check-certificate не нужен,
+# обращаемся к localhost). ca-certificates — для go-redis и внешних HTTPS.
+RUN apk add --no-cache ca-certificates tzdata wget
 WORKDIR /app
 
 COPY --from=build /out/server /app/server
