@@ -25,9 +25,9 @@
 }
 .wiki-cat-btn.active,
 .wiki-page-btn.active {
-  background: rgba(99, 217, 255, 0.12);
-  border-color: rgba(99, 217, 255, 0.4);
-  color: var(--ox-accent-bright, #63d9ff);
+  background: rgba(99, 217, 255, 0.07);
+  border-color: rgba(99, 217, 255, 0.2);
+  color: #7abfd4;
   font-weight: 600;
 }
 .wiki-cat-btn {
