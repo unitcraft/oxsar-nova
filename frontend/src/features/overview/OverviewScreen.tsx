@@ -8,6 +8,7 @@ import { ProgressBar } from '@/ui/ProgressBar';
 import { ResourceTicker } from '@/ui/ResourceTicker';
 import { useToast } from '@/ui/Toast';
 import { GalaxyEventBanner } from '../galaxyevent/GalaxyEventBanner';
+import { AlienHoldingPanel } from '../alien/AlienHoldingPanel';
 
 interface FleetRow {
   id: string;
@@ -136,6 +137,9 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
 
       {/* План 17 F: галактическое событие (если активно). */}
       <GalaxyEventBanner />
+
+      {/* План 15 этап 4: панель захваченных пришельцами планет (если есть). */}
+      <AlienHoldingPanel />
 
       {/* Уведомление о сообщениях */}
       {unreadCount > 0 && (

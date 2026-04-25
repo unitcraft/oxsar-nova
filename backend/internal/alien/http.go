@@ -60,3 +60,24 @@ func (h *Handler) Pay(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, res)
 }
+
+// MyHoldings — GET /api/alien/holdings/me
+// Возвращает все активные HOLDING на планетах текущего игрока с
+// инфой для UI (player видит захват, может оплатить продление).
+// План 15 Этап 4.
+func (h *Handler) MyHoldings(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	list, err := ListMyHoldings(r.Context(), h.db, uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	if list == nil {
+		list = []HoldingInfo{}
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"holdings": list})
+}
