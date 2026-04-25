@@ -972,13 +972,15 @@ WHERE b.unit_id = %d                         // fmt.Sprintf + economy.IDMetalmin
   `kind = N` → `fmt.Sprintf` с `economy.ID*` / `event.Kind*`.
 - В `planet.fillMaxFields`: `IN (58, 350)` → `IN ($2, $3)`.
 
-**Обнаружен баг (не исправлен)**:
+**Обнаружен и исправлен баг STARTER-достижений** (2026-04-26):
 `STARTER_BUILD_SOLARPLANT/METALLURGY/SHIPYARD/LAB` в
-`achievement/service.go` исторически проверяют unit_id 3/4/21/22, что
-соответствует **HydrogenLab/SolarPlant/ImpulseEngine/HyperspaceEngine**,
-а не Solar Plant / Metallurgy / Shipyard / Research Lab по именам.
-Это баг логики достижений. Сохранено оригинальное поведение через явные
-константы; коррекция — отдельная задача.
+`achievement/service.go` исторически проверяли unit_id 3/4/21/22, что
+соответствует HydrogenLab/SolarPlant/ImpulseEngine/HyperspaceEngine.
+**STARTER_BUILD_SHIPYARD и STARTER_BUILD_LAB никогда не
+разблокировались** — unit_id 21/22 это research, а не buildings.
+Сверил с legacy oxsar2 (`sql/tutorial.sql` + `na_requirements`):
+ожидаемые ID — SolarPlant=4, SiliconLab=2 (металлургический), Shipyard=8,
+ResearchLab=12. Поправлено в этом же commit (см. план 29).
 
 **TODO (план 29 Ф.5)**: рассмотреть Mode-enum (`ModeBuilding=1` и т.д.)
 если в Go-коде есть `spec.Mode == 3` сравнения.

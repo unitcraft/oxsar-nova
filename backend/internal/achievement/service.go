@@ -180,11 +180,14 @@ func (s *Service) CheckAllStarter(ctx context.Context, userID string) error {
 		key string
 		sql string
 	}
-	// NB: STARTER_BUILD_SOLARPLANT/METALLURGY/SHIPYARD/LAB используют unit_id
-	// 3/4/21/22, что соответствует HydrogenLab/SolarPlant/ImpulseEngine/
-	// HyperspaceEngine — это похоже на исторический баг (имена не соответствуют
-	// реальным ID). Сохраняем оригинальное поведение, но через константы; коррекция
-	// логики достижений — отдельная задача.
+	// Fix 2026-04-26: STARTER_BUILD_SOLARPLANT/METALLURGY/SHIPYARD/LAB
+	// исторически проверяли unit_id 3/4/21/22, что соответствовало
+	// HydrogenLab/SolarPlant/ImpulseEngine/HyperspaceEngine — не совпадало
+	// с именами достижений. STARTER_BUILD_SHIPYARD и STARTER_BUILD_LAB
+	// при этом никогда не разблокировались (unit_id 21/22 — research, не
+	// buildings). Сверка с legacy oxsar2 (sql/tutorial.sql) показала
+	// ожидаемые ID: SolarPlant=4, SiliconLab=2 (металлургический), Shipyard=8,
+	// ResearchLab=12. Исправлено.
 	checks := []check{
 		{"STARTER_BUILD_METALMINE", fmt.Sprintf(`
 			SELECT EXISTS (
@@ -197,25 +200,25 @@ func (s *Service) CheckAllStarter(ctx context.Context, userID string) error {
 				SELECT 1 FROM buildings b
 				JOIN planets p ON p.id = b.planet_id
 				WHERE p.user_id = $1 AND b.unit_id = %d AND b.level >= 1
-			)`, economy.IDHydrogenLab)},
+			)`, economy.IDSolarPlant)},
 		{"STARTER_BUILD_METALLURGY", fmt.Sprintf(`
 			SELECT EXISTS (
 				SELECT 1 FROM buildings b
 				JOIN planets p ON p.id = b.planet_id
 				WHERE p.user_id = $1 AND b.unit_id = %d AND b.level >= 1
-			)`, economy.IDSolarPlant)},
+			)`, economy.IDSiliconLab)},
 		{"STARTER_BUILD_SHIPYARD", fmt.Sprintf(`
 			SELECT EXISTS (
 				SELECT 1 FROM buildings b
 				JOIN planets p ON p.id = b.planet_id
 				WHERE p.user_id = $1 AND b.unit_id = %d AND b.level >= 1
-			)`, economy.IDImpulseEngine)},
+			)`, economy.IDShipyard)},
 		{"STARTER_BUILD_LAB", fmt.Sprintf(`
 			SELECT EXISTS (
 				SELECT 1 FROM buildings b
 				JOIN planets p ON p.id = b.planet_id
 				WHERE p.user_id = $1 AND b.unit_id = %d AND b.level >= 1
-			)`, economy.IDHyperspaceEngine)},
+			)`, economy.IDResearchLab)},
 		{"STARTER_RESEARCH_TECH", `
 			SELECT EXISTS (
 				SELECT 1 FROM research WHERE user_id = $1 AND level >= 1
