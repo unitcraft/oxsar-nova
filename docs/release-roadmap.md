@@ -51,7 +51,10 @@
 - ~~[17 D](plans/17-gameplay-improvements.md)~~ — ✅ **done 2026-04-25**: Daily Quests с lazy-gen, 9 типов заданий, claim API, frontend tab.
 - ~~17 E~~ — ✅ уже реализовано (категориальные рейтинги в ScoreScreen существуют с M5+).
 - ~~17 F~~ — ✅ **MVP done 2026-04-25**: meteor_storm с +30% metal через admin-API, баннер на Overview.
-- [17 B, C, G, H](plans/17-gameplay-improvements.md) — UX, бой, alien подарки: итеративно.
+- ~~17 G1~~ — ✅ **done 2026-04-25**: forecast ресурсов в Overview.
+- ~~17 G2/G3/G4~~ — отложены v1.x (UX мелочи).
+- ~~17 H~~ — отложены v1.x (точность боя, не блокер).
+- ~~17 B2, C~~ — отложены v1.x (B1 закрыт, B2/C — flavor).
 
 ---
 
