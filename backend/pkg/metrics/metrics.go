@@ -20,6 +20,12 @@ var (
 	EventHandlerSec *prometheus.HistogramVec
 	EventsQueue     *prometheus.GaugeVec
 	EventsLagSec    prometheus.Gauge
+
+	// Scheduler-метрики (план 32). Job — символическое имя в schedule.yaml
+	// (alien_spawn, score_recalc_all, …).
+	SchedulerJobRuns     *prometheus.CounterVec   // labels: job, status (ok|error|skip)
+	SchedulerJobDuration *prometheus.HistogramVec // labels: job
+	SchedulerJobLastRun  *prometheus.GaugeVec     // labels: job — unix-timestamp последнего запуска (любой status)
 )
 
 // Register инициализирует все метрики и возвращает http.Handler для
@@ -55,7 +61,30 @@ func Register() http.Handler {
 			Help:      "Age of the oldest wait event with fire_at<=now.",
 		})
 
-		prometheus.MustRegister(EventsProcessed, EventHandlerSec, EventsQueue, EventsLagSec)
+		SchedulerJobRuns = prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: "oxsar",
+			Subsystem: "scheduler",
+			Name:      "job_runs_total",
+			Help:      "Scheduler job runs by name and status (ok|error|skip).",
+		}, []string{"job", "status"})
+
+		SchedulerJobDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Namespace: "oxsar",
+			Subsystem: "scheduler",
+			Name:      "job_duration_seconds",
+			Help:      "Scheduler job execution duration by name (only for non-skip runs).",
+			Buckets:   []float64{0.01, 0.1, 1, 5, 30, 60, 300, 1800},
+		}, []string{"job"})
+
+		SchedulerJobLastRun = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: "oxsar",
+			Subsystem: "scheduler",
+			Name:      "job_last_run_timestamp",
+			Help:      "Unix timestamp of the last scheduler job tick (regardless of status).",
+		}, []string{"job"})
+
+		prometheus.MustRegister(EventsProcessed, EventHandlerSec, EventsQueue, EventsLagSec,
+			SchedulerJobRuns, SchedulerJobDuration, SchedulerJobLastRun)
 	})
 	return promhttp.Handler()
 }
