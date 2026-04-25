@@ -315,37 +315,34 @@ function LotsPanel({ planet, userId }: { planet: Planet; userId: string }) {
 }
 
 interface CreditExchangeResult {
-  direction: 'to_credit' | 'from_credit';
+  direction: 'from_credit';
   resource: string;
   resource_delta: number;
   credit_delta: number;
 }
 
+// CreditPanel: покупка ресурсов за кредиты. Обратное направление (продажа
+// ресурсов за кредиты, бывшее "to_credit") удалено 2026-04-26 — было
+// уязвимостью (бесконечный фарминг premium-валюты через производство).
 function CreditPanel({ planet, userRate }: { planet: Planet; userRate: number }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const [direction, setDirection] = useState<'to_credit' | 'from_credit'>('to_credit');
   const [resource, setResource] = useState<Res>('metal');
   const [amount, setAmount] = useState(1000);
 
   const RES_COST: Record<Res, number> = { metal: 1, silicon: 2, hydrogen: 4 };
   const CREDIT_RATE_PER_UNIT = 100;
 
-  const preview = direction === 'to_credit'
-    ? amount * RES_COST[resource] / CREDIT_RATE_PER_UNIT / userRate
-    : Math.floor(amount * CREDIT_RATE_PER_UNIT / RES_COST[resource] / userRate);
+  const preview = Math.floor(amount * CREDIT_RATE_PER_UNIT / RES_COST[resource] / userRate);
 
   const exchange = useMutation({
     mutationFn: () => api.post<CreditExchangeResult>(`/api/planets/${planet.id}/market/credit`, {
-      direction, resource, amount,
+      direction: 'from_credit', resource, amount,
     }),
     onSuccess: (res) => {
       void qc.invalidateQueries({ queryKey: ['planets'] });
       void qc.invalidateQueries({ queryKey: ['me'] });
-      const msg = res.direction === 'to_credit'
-        ? `${Math.abs(res.resource_delta)} ${res.resource} → ${res.credit_delta.toFixed(2)} кред.`
-        : `${amount} кред. → ${res.resource_delta} ${res.resource}`;
-      toast.show('success', 'Обмен', msg);
+      toast.show('success', 'Обмен', `${amount} кред. → ${res.resource_delta} ${res.resource}`);
     },
     onError: (e) => toast.show('danger', 'Ошибка', e instanceof Error ? e.message : ''),
   });
@@ -353,18 +350,11 @@ function CreditPanel({ planet, userRate }: { planet: Planet; userRate: number })
   return (
     <div className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>
-        Обмен ресурсов на кредиты и обратно. 1 кредит = {CREDIT_RATE_PER_UNIT} единиц металла.
+        Покупка ресурсов за кредиты. 1 кредит = {CREDIT_RATE_PER_UNIT} единиц металла.
         Курс учитывает ваш personal rate ({userRate.toFixed(2)}).
       </div>
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <div>
-          <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Направление</label>
-          <select value={direction} onChange={(e) => setDirection(e.target.value as 'to_credit' | 'from_credit')}>
-            <option value="to_credit">Ресурс → Кредиты</option>
-            <option value="from_credit">Кредиты → Ресурс</option>
-          </select>
-        </div>
         <div>
           <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Ресурс</label>
           <select value={resource} onChange={(e) => setResource(e.target.value as Res)}>
@@ -375,7 +365,7 @@ function CreditPanel({ planet, userRate }: { planet: Planet; userRate: number })
         </div>
         <div>
           <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>
-            {direction === 'to_credit' ? 'Количество ресурса' : 'Количество кредитов'}
+            Количество кредитов
           </label>
           <input
             type="number" min={1} value={amount}
@@ -386,11 +376,7 @@ function CreditPanel({ planet, userRate }: { planet: Planet; userRate: number })
       </div>
 
       <div style={{ fontSize: 16 }}>
-        {direction === 'to_credit' ? (
-          <>Вы получите: <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)', fontWeight: 700 }}>{preview.toFixed(2)}</span> кредитов</>
-        ) : (
-          <>Вы получите: <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)', fontWeight: 700 }}>{(preview as number).toLocaleString('ru-RU')}</span> {RES_LABEL[resource]}</>
-        )}
+        Вы получите: <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)', fontWeight: 700 }}>{preview.toLocaleString('ru-RU')}</span> {RES_LABEL[resource]}
       </div>
 
       <div>
@@ -400,7 +386,7 @@ function CreditPanel({ planet, userRate }: { planet: Planet; userRate: number })
           disabled={exchange.isPending || amount <= 0}
           onClick={() => exchange.mutate()}
         >
-          {exchange.isPending ? '…' : 'Обменять'}
+          {exchange.isPending ? '…' : 'Купить'}
         </button>
       </div>
     </div>

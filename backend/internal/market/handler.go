@@ -179,12 +179,14 @@ func (h *Handler) Exchange(w http.ResponseWriter, r *http.Request) {
 }
 
 type creditExchangeRequest struct {
-	Direction string  `json:"direction"` // to_credit | from_credit
+	Direction string  `json:"direction"` // только "from_credit" (оставлено для совместимости)
 	Resource  string  `json:"resource"`
 	Amount    float64 `json:"amount"`
 }
 
-// ExchangeCredit POST /api/planets/{id}/market/credit — обмен ресурсов на кредиты и обратно.
+// ExchangeCredit POST /api/planets/{id}/market/credit — покупка ресурса
+// за кредиты. Обратное направление (продажа ресурсов за кредиты) удалено
+// 2026-04-26 — было уязвимостью (бесконечный фарминг premium-валюты).
 func (h *Handler) ExchangeCredit(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
 	if !ok {

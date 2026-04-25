@@ -900,3 +900,41 @@ game-механики. Это **проще и чище**:
 **Tests**: `go test ./... -count=1` — все 26 пакетов зелёные.
 Battle-sim: lancer-vs-mixed defender wins 100% (atk loss 96%, def loss
 81%, exchange 0.10) — Lancer-spam убыточен.
+
+## 2026-04-26 — security: удалена продажа ресурсов за кредиты (`to_credit`)
+
+**Где**: `backend/internal/market/{service,handler}.go`,
+`frontend/src/features/market/MarketScreen.tsx`.
+
+**Что удалено**: направление `direction: "to_credit"` в endpoint
+`POST /api/planets/{id}/market/credit`. Это была функция «продать
+ресурс (metal/silicon/hydrogen) за premium-кредиты».
+
+**Почему**: уязвимость экономики. Игрок мог:
+1. Производить ресурсы через mines (бесплатно, runtime).
+2. Конвертировать их в premium-валюту (кредиты).
+3. Кредиты тратятся в shop на artefacts/officers/premium-фичи и
+   monetary value (через payment-систему обратное направление есть:
+   real money → credits).
+4. Итог: бесконечный фарминг premium-валюты → ломает payment-балaнс.
+
+**Что осталось**:
+- `direction: "from_credit"` (купить ресурс за кредиты) — это
+  legitimate-направление: игрок, потративший real-money на credits,
+  может конвертировать их в ресурсы. Этот путь **расходный**, не
+  фарминг.
+- Backend принимает `direction = ""` или `"from_credit"`; `"to_credit"`
+  возвращает `ErrInvalidResource` (HTTP 400).
+- Frontend отдаёт только `"from_credit"` в payload.
+- Поле `Direction` в `CreditExchangeResult` сохранено для совместимости
+  (всегда `"from_credit"`).
+
+**Что НЕ тронуто**:
+- Обмен ресурс↔ресурс (`/api/planets/{id}/market/exchange`) — нет
+  premium-валюты, не уязвимость.
+- Покупка credits через payment-систему (real money → credits).
+- Чтение баланса credits (`GET /api/artefact-market/credit`).
+
+**Tests**: `go test ./... -count=1` — все 26 пакетов зелёные. Frontend
+typecheck не запущен локально (нет npm), правки минимальны и проверены
+визуально.
