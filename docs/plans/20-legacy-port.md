@@ -294,20 +294,25 @@ colony_limit     = floor(astro_level / 2) + 1
 
 ---
 
-## Ф.8: Интергалактическая исследовательская сеть (IGR_TECH, id=113) — новая фича
+## Ф.8: Интергалактическая исследовательская сеть (IGR_TECH, id=113) — ✅ ЗАКРЫТО 2026-04-25
+
+Реализовано:
+- `igr_tech` (id=113) добавлен в research.yml/units.yml/construction.yml
+  (cost_factor=2.0, basic 240k/400k/160k — дорогая endgame-технология).
+- requirements.yml: `research_lab >= 10` + `expo_tech >= 5`.
+- **Уточнение формулы**: `effective_lab = sum(top (1 + igr_level) labs DESC)`.
+  При igr=0 — эквивалент MAX (одна лаба, как раньше). При igr=1 —
+  две лучшие, при igr=N — (N+1) лучших.
+- `research/service.go::Enqueue` использует `effectiveLabLevel(ctx, tx, ...)`
+  для расчёта длительности (вместо `labLvl` planetID). minLab защищает
+  от случая, когда другие планеты исчезли, и effective < planet's lab.
+- `ResearchSecondsMap` (UI) тоже использует effective — игрок видит
+  ускорение сразу после прокачки IGR.
+
+Эффект: стимул развивать лаборатории на нескольких планетах вместо
+одной гигантской.
 
 **Legacy**: частично через `research_factor` artефакта. Spec §12.6: `research_network_level` (id=113) зарезервирован.
-
-**Формула**:
-```
-effective_lab_level = sum(level ORDER BY level DESC LIMIT igr_level)
-// из всех планет пользователя, топ-N по уровню research_lab
-```
-
-**Реализация**:
-- Добавить `IGR_TECH` (id=113) в `research.yml`, требование `research_lab >= 10, expo_tech >= 5`
-- `research/service.go::calcDuration`: при `igr_level > 1` — SELECT топ-N `research_lab` уровней WHERE `user_id=?`, сумма вместо одного уровня
-- Стимул развивать лаборатории на нескольких планетах
 
 ---
 

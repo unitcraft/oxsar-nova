@@ -54,6 +54,7 @@ research:
   - { id: 103, key: ballistics_tech,     name: "Ballistics" }
   - { id: 104, key: masking_tech,        name: "Masking" }
   - { id: 112, key: astro_tech,          name: "Astrophysics" }
+  - { id: 113, key: igr_tech,            name: "Intergalactic Research Network" }
 
 fleet:
   - { id: 29,  key: small_transporter,   name: "Small Transporter" }

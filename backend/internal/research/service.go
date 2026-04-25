@@ -122,6 +122,14 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 			return ErrNoResearchLab
 		}
 
+		// План 20 Ф.8: IGR network. При igr_level >= 1 лаба-источник
+		// объединяется с топ-N других лабораторий игрока (N = igr_level).
+		// Формула effective = sum(top (igr+1) lab-levels DESC).
+		effectiveLab, err := s.effectiveLabLevel(ctx, tx, userID, planetID, labLvl)
+		if err != nil {
+			return fmt.Errorf("effective lab: %w", err)
+		}
+
 		// 4. Текущий уровень исследования (у игрока, не у планеты).
 		curLevel := 0
 		err = tx.QueryRow(ctx,
@@ -157,9 +165,10 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		}
 
 		// 6. Длительность. Формула исследования:
-		//    t = (m+s) / (1000 * (1 + lab_level)) секунд, / GAMESPEED / RESEARCH_SPEED_FACTOR.
+		//    t = (m+s) / (1000 * (1 + effective_lab)) секунд, / GAMESPEED / RESEARCH_SPEED_FACTOR.
+		// effective_lab = sum(top (1+igr_level) labs DESC).
 		resSum := float64(cost.Metal + cost.Silicon)
-		raw := resSum / (1000.0 * float64(1+labLvl))
+		raw := resSum / (1000.0 * float64(1+effectiveLab))
 		if s.gameSpd > 0 {
 			raw /= s.gameSpd
 		}
@@ -252,13 +261,31 @@ func (s *Service) ResearchSecondsMap(ctx context.Context, userID string, levels 
 	if !ok {
 		return map[int]int{}, nil
 	}
+	// План 20 Ф.8: используем effective lab = sum top-(1+igr) уровней.
+	// Если igr=0 — это эквивалент MAX, как и было раньше.
+	var igrLvl int
+	_ = s.db.Pool().QueryRow(ctx,
+		`SELECT level FROM research WHERE user_id=$1 AND unit_id=$2`,
+		userID, unitIGRTech).Scan(&igrLvl)
+	limit := 1 + igrLvl
 	var labLvl int
-	_ = s.db.Pool().QueryRow(ctx, `
-		SELECT COALESCE(MAX(b.level), 0)
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT b.level
 		FROM buildings b
 		JOIN planets p ON p.id = b.planet_id
 		WHERE p.user_id = $1 AND b.unit_id = $2 AND p.destroyed_at IS NULL
-	`, userID, labSpec.ID).Scan(&labLvl)
+		ORDER BY b.level DESC
+		LIMIT $3
+	`, userID, labSpec.ID, limit)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var lvl int
+			if err := rows.Scan(&lvl); err == nil {
+				labLvl += lvl
+			}
+		}
+	}
 
 	out := make(map[int]int, len(s.catalog.Research.Research))
 	for _, spec := range s.catalog.Research.Research {
@@ -291,4 +318,56 @@ func (s *Service) lookupResearch(unitID int) (string, config.ResearchSpec, bool)
 		}
 	}
 	return "", config.ResearchSpec{}, false
+}
+
+// unitIGRTech — id Intergalactic Research Network (план 20 Ф.8).
+const unitIGRTech = 113
+
+// effectiveLabLevel — сумма топ-(1+igr_level) уровней research_lab
+// по всем планетам игрока (DESC). При igr=0 → 1 лаба = текущая
+// планетарная (но всё ещё через MAX, см. ниже).
+//
+// План 20 Ф.8: позволяет игроку использовать пул лабораторий,
+// если он развивает их на нескольких планетах. Стимул не строить
+// одну гигантскую, а распределять.
+//
+// minLab — уровень лаборатории на планете-источнике, чтобы при
+// деградации (одна планета удалена) effective не упал ниже её.
+func (s *Service) effectiveLabLevel(ctx context.Context, tx pgx.Tx,
+	userID, planetID string, minLab int) (int, error) {
+	// Уровень IGR.
+	var igrLvl int
+	_ = tx.QueryRow(ctx,
+		`SELECT level FROM research WHERE user_id=$1 AND unit_id=$2`,
+		userID, unitIGRTech).Scan(&igrLvl)
+
+	labID := s.catalog.Buildings.Buildings["research_lab"].ID
+	limit := 1 + igrLvl
+	rows, err := tx.Query(ctx, `
+		SELECT b.level FROM buildings b
+		JOIN planets p ON p.id = b.planet_id
+		WHERE p.user_id = $1 AND p.destroyed_at IS NULL
+		  AND b.unit_id = $2
+		ORDER BY b.level DESC
+		LIMIT $3
+	`, userID, labID, limit)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	sum := 0
+	for rows.Next() {
+		var lvl int
+		if err := rows.Scan(&lvl); err != nil {
+			return 0, err
+		}
+		sum += lvl
+	}
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	if sum < minLab {
+		sum = minLab
+	}
+	return sum, nil
 }

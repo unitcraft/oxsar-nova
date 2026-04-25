@@ -61,6 +61,9 @@ requirements:
   astro_tech:
     - { kind: building, key: research_lab, level: 4 }
     - { kind: research, key: expo_tech, level: 3 }
+  igr_tech:
+    - { kind: building, key: research_lab, level: 10 }
+    - { kind: research, key: expo_tech, level: 5 }
 
   # Корабли: нужна верфь + профильные исследования.
   small_transporter:

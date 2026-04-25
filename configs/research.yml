@@ -87,3 +87,9 @@ research:
   astro_tech:
     id: 112
     cost_factor: 1.75
+
+  # Intergalactic Research Network (id=113). План 20 Ф.8.
+  # Уровень определяет, сколько лабораторий участвуют в общем пуле.
+  igr_tech:
+    id: 113
+    cost_factor: 2.0

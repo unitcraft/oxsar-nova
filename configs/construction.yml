@@ -287,6 +287,22 @@ buildings:
       silicon: '{basic} * pow(1.75, ({level} - 1))'
       hydrogen: '{basic} * pow(1.75, ({level} - 1))'
     display_order: 275
+  # Intergalactic Research Network (id=113). План 20 Ф.8.
+  # Объединяет N лучших лабораторий игрока в общий пул.
+  igr_tech:
+    id: 113
+    mode: 2
+    legacy_name: IGR_TECH
+    front: 10
+    basic:
+      metal: 240000
+      silicon: 400000
+      hydrogen: 160000
+    charge:
+      metal: '{basic} * pow(2, ({level} - 1))'
+      silicon: '{basic} * pow(2, ({level} - 1))'
+      hydrogen: '{basic} * pow(2, ({level} - 1))'
+    display_order: 280
   first_computer_tech:
     id: 346
     mode: 7
