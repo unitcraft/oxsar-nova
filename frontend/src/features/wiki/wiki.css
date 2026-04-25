@@ -135,10 +135,10 @@
   color: #7a9eb5;
   white-space: pre;
 }
-.wiki-article pre .ch-comment { color: #4d6b7a; font-style: italic; }
-.wiki-article pre .ch-num     { color: #7ec8a0; }
-.wiki-article pre .ch-op      { color: #5a9fd4; }
-.wiki-article pre .ch-fn      { color: #b8a0d8; }
+.wiki-article pre .ch-comment { color: #4d7a8a; font-style: italic; }
+.wiki-article pre .ch-num     { color: #5dbb8a; }
+.wiki-article pre .ch-op      { color: #7ab8e0; }
+.wiki-article pre .ch-fn      { color: #c084e8; }
 .wiki-article blockquote {
   border-left: 3px solid var(--ox-accent, #4a90e2);
   margin: 20px 0;

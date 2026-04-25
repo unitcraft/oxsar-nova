@@ -14,17 +14,26 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-// Минимальная подсветка псевдокода: числа, строки, операторы, комментарии //.
-function highlightCode(line: string): string {
-  // Комментарий // ... — всё до конца строки серым.
-  line = line.replace(/(\/\/.*)$/, '<span class="ch-comment">$1</span>');
+// Минимальная подсветка псевдокода: числа, операторы, комментарии //, функции.
+// Принимает сырую (не escaped) строку, возвращает safe HTML.
+function highlightCode(raw: string): string {
+  // Разбиваем на комментарий и код.
+  const commentIdx = raw.indexOf('//');
+  const code = commentIdx >= 0 ? raw.slice(0, commentIdx) : raw;
+  const comment = commentIdx >= 0 ? raw.slice(commentIdx) : '';
+
+  let out = escapeHtml(code);
   // Числа (включая дробные и %).
-  line = line.replace(/\b(\d+(?:\.\d+)?%?)\b/g, '<span class="ch-num">$1</span>');
-  // Операторы и разделители.
-  line = line.replace(/([=×\-+*/&lt;&gt;≤≥≠|,])/g, '<span class="ch-op">$1</span>');
+  out = out.replace(/\b(\d+(?:\.\d+)?%?)\b/g, '<span class="ch-num">$1</span>');
   // Функции: слово перед «(».
-  line = line.replace(/\b([a-zA-Z_]\w*)\s*(?=\()/g, '<span class="ch-fn">$1</span>');
-  return line;
+  out = out.replace(/\b([a-zA-Z_]\w*)\s*(?=\()/g, '<span class="ch-fn">$1</span>');
+  // Операторы.
+  out = out.replace(/([=+\-*/×÷≤≥≠])/g, '<span class="ch-op">$1</span>');
+
+  if (comment) {
+    out += `<span class="ch-comment">${escapeHtml(comment)}</span>`;
+  }
+  return out;
 }
 
 // resolveUnit — маппит unit_id в { name, image }. Передаётся снаружи
@@ -106,7 +115,7 @@ export function renderMarkdown(md: string, resolveUnit?: UnitResolver): string {
         i++;
       }
       i++; // пропускаем закрывающую ```
-      const escaped = codeLines.map((l) => highlightCode(escapeHtml(l))).join('\n');
+      const escaped = codeLines.map((l) => highlightCode(l)).join('\n');
       html.push(`<pre><code>${escaped}</code></pre>`);
       continue;
     }
