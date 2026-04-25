@@ -27,7 +27,7 @@ func alienTestCatalog() *config.Catalog {
 func fleetAttackSum(units []battle.Unit) float64 {
 	var s float64
 	for _, u := range units {
-		s += float64(u.Quantity) * u.Attack[0]
+		s += float64(u.Quantity) * u.Attack
 	}
 	return s
 }

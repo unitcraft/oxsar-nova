@@ -574,8 +574,8 @@ func expPirates(ctx context.Context, tx pgx.Tx, fleetID string,
 			UnitID:   unitLF,
 			Quantity: pirateCount,
 			Front:    0,
-			Attack:   [3]float64{float64(lfSpec.Attack), 0, 0},
-			Shield:   [3]float64{float64(lfSpec.Shield), 0, 0},
+			Attack:   float64(lfSpec.Attack),
+			Shield:   float64(lfSpec.Shield),
 			Shell:    float64(lfSpec.Shell),
 		}},
 	}
@@ -618,8 +618,8 @@ func expBattlefield(ctx context.Context, tx pgx.Tx, fleetID string,
 		UnitID:   unitLF,
 		Quantity: lfCount,
 		Front:    0,
-		Attack:   [3]float64{float64(lfSpec.Attack) * 0.5, 0, 0}, // shell_percent=0.5
-		Shield:   [3]float64{float64(lfSpec.Shield) * 0.5, 0, 0},
+		Attack:   float64(lfSpec.Attack) * 0.5, // shell_percent=0.5
+		Shield:   float64(lfSpec.Shield) * 0.5,
 		Shell:    float64(lfSpec.Shell) * 0.5,
 	}
 

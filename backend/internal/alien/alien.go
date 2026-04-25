@@ -410,23 +410,23 @@ func alienFleet(tier int) []battle.Unit {
 	case 3:
 		return []battle.Unit{
 			{UnitID: 202, Quantity: 50, Front: 8,
-				Attack: [3]float64{2000, 0, 0}, Shell: 25000, Name: "Alien Cruiser"},
+				Attack: 2000, Shell: 25000, Name: "Alien Cruiser"},
 			{UnitID: 203, Quantity: 10, Front: 9,
-				Attack: [3]float64{8000, 0, 0}, Shell: 80000, Name: "Alien Battleship"},
+				Attack: 8000, Shell: 80000, Name: "Alien Battleship"},
 		}
 	case 2:
 		return []battle.Unit{
 			{UnitID: 201, Quantity: 30, Front: 7,
-				Attack: [3]float64{800, 0, 0}, Shell: 10000, Name: "Alien Destroyer"},
+				Attack: 800, Shell: 10000, Name: "Alien Destroyer"},
 			{UnitID: 202, Quantity: 10, Front: 8,
-				Attack: [3]float64{2000, 0, 0}, Shell: 25000, Name: "Alien Cruiser"},
+				Attack: 2000, Shell: 25000, Name: "Alien Cruiser"},
 		}
 	default: // tier 1
 		return []battle.Unit{
 			{UnitID: 200, Quantity: 20, Front: 5,
-				Attack: [3]float64{150, 0, 0}, Shell: 2000, Name: "Alien Scout"},
+				Attack: 150, Shell: 2000, Name: "Alien Scout"},
 			{UnitID: 201, Quantity: 5, Front: 6,
-				Attack: [3]float64{800, 0, 0}, Shell: 10000, Name: "Alien Destroyer"},
+				Attack: 800, Shell: 10000, Name: "Alien Destroyer"},
 		}
 	}
 }

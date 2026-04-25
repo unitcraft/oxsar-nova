@@ -49,8 +49,8 @@ function makeUnit(entry: CombatEntry, qty: number) {
     front: entry.front ?? 10,
     ballistics: entry.ballistics ?? 0,
     masking: entry.masking ?? 0,
-    attack: [entry.attack, 0, 0] as [number, number, number],
-    shield: [entry.shield, 0, 0] as [number, number, number],
+    attack: entry.attack,
+    shield: entry.shield,
     shell: entry.shell,
   };
 }
