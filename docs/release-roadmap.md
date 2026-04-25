@@ -19,7 +19,7 @@
 | ~~[20 Ф.1](plans/20-legacy-port.md)~~ | ~~Vacation mode~~ | ✅ **done 2026-04-24** — min 48h, blocking events, target/sender shields, prod=0, /api/me fields. Auto-disable через 30d — остаток (не блокер). | — |
 | ~~[20 Ф.2](plans/20-legacy-port.md)~~ | ~~Fleet slots через computer_tech~~ | ✅ **done 2026-04-24** — `1 + floor(computer_tech/6)`, UI-индикатор, 409 при overflow. | — |
 | ~~[17 A1](plans/17-gameplay-improvements.md)~~ | ~~Антибашинг~~ | ✅ **done 2026-04-24** — max 4 атаки (ATTACK_SINGLE/ACS) от attacker→defender за 5h, ErrBashingLimit → 409. | — |
-| ops | Резервное копирование БД + мониторинг | В repo нет. Без бэкапа первый сбой = смерть проекта. | M |
+| ~~ops~~ | ~~Резервное копирование БД + мониторинг~~ | ✅ **done 2026-04-25** — deploy/backup.sh (pg_dump+rotate+S3), docker-compose.monitoring.yml (Prometheus+Grafana+pg-exporter), /metrics на сервере и воркере, runbook. | — |
 
 **Вместе:** ~1–1.5 недели работы, из которых 70% — планы 21+18.
 

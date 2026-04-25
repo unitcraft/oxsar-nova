@@ -59,6 +59,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/dailyquest"
 	"github.com/oxsar/nova/backend/internal/galaxyevent"
 	"github.com/oxsar/nova/backend/internal/wiki"
+	"github.com/oxsar/nova/backend/pkg/metrics"
 )
 
 func main() {
@@ -243,6 +244,10 @@ func run() error {
 		r.Get("/api/i18n", i18nH.Languages)
 		r.Get("/api/i18n/{lang}", i18nH.Locale)
 	}
+
+	// Prometheus /metrics — внутренний endpoint для мониторинга.
+	// Не требует авторизации: закрывается firewall-ом на сетевом уровне.
+	r.Handle("/metrics", metrics.Register())
 
 	// Wiki (план 19) — публичная, читает docs/wiki/ru/.
 	wikiRoot := os.Getenv("WIKI_ROOT")

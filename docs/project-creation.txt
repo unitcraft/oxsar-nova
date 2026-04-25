@@ -7218,3 +7218,28 @@ Golden-тест TestShield_HighTech_NotImpenetrable: 10000 LF vs 100 SmallShield
 shield_tech=10. Проверяет что не все 100 выживают — BA-005 закрыт.
 
 Все 24 теста battle-движка зелёные.
+
+
+================================================================================
+ИТЕРАЦИЯ: ops — бэкапы + мониторинг (2026-04-25)
+================================================================================
+
+Последний блокер перед продом: резервное копирование и мониторинг.
+
+1) deploy/backup.sh
+   pg_dump --format=custom --compress=9. Ротация BACKUP_RETAIN архивов.
+   Опциональная выгрузка в S3-совместимое хранилище (aws s3 cp + endpoint-url
+   для Selectel/Yandex Cloud). Cron каждые 6 часов.
+   Runbook: docs/ops/runbooks/backup-and-monitoring.md.
+
+2) deploy/docker-compose.monitoring.yml
+   Prometheus v2.53 + Grafana 11.1 + postgres-exporter v0.15.
+   Grafana auto-provisioned datasource (prometheus.yml).
+   Запуск одним overlay к prod-стеку.
+
+3) backend /metrics endpoint
+   Воркер уже экспортировал /metrics (pkg/metrics). Сервер не экспортировал.
+   Добавлен r.Handle("/metrics", metrics.Register()) в cmd/server/main.go.
+   Prometheus scrape_config: backend:8080 + worker:9090 + postgres-exporter:9187.
+
+Все блокеры закрыты. Roadmap чистый. Проект готов к запуску в прод.
