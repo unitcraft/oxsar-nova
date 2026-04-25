@@ -2,35 +2,36 @@ package score
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/oxsar/nova/backend/internal/event"
-	"github.com/oxsar/nova/backend/pkg/ids"
 )
 
+// RecalcAllScheduled — точка входа для scheduler'а (план 32 Ф.4).
+// Пересчитывает очки всех активных (umode=false, deleted_at IS NULL)
+// игроков через RecalcUser. Не работает в транзакции — большой update
+// на 10k+ users мог бы блокировать всё. Ошибки отдельных игроков
+// логируются внутри, цикл продолжается.
+//
+// Существующий RecalcAll(ctx, log) в service.go оставлен для
+// admin-handler'ов (требует свой log-интерфейс).
+func (s *Service) RecalcAllScheduled(ctx context.Context) error {
+	return s.recalcAllWithLog(ctx)
+}
+
 // RecalcAllEvent возвращает handler для KindScoreRecalcAll.
-// Handler пересчитывает очки всех активных (umode=false, deleted_at IS NULL)
-// игроков через RecalcUser + планирует следующий запуск на +24h.
-// При ошибках отдельных игроков — логируем, продолжаем цикл.
+// Сохранён для совместимости с legacy wait-events, созданных до
+// плана 32. Новые запуски идут через scheduler.RecalcAll напрямую.
+// При обработке legacy event'а handler reschedule НЕ делает —
+// scheduler сам тикает по cron-расписанию.
 func (s *Service) RecalcAllEvent() event.Handler {
 	return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
-		// Reschedule next run первым, чтобы даже при fallthrough
-		// следующая итерация состоялась.
-		nextAt := time.Now().Add(24 * time.Hour)
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, kind, state, fire_at, payload)
-			VALUES ($1, 70, 'wait', $2, '{}')
-		`, ids.New(), nextAt); err != nil {
-			return fmt.Errorf("score.recalc_all_event: schedule next: %w", err)
-		}
-
-		// Пересчёт не в транзакции event'а — слишком большой update
-		// на 10k+ users может блокировать всё. Вместо этого используем
-		// отдельный connection из пула, foreground, без tx event'а.
+		// Пересчёт не в транзакции event'а — большой update может
+		// блокировать всё. Goroutine отрабатывает на отдельном connection.
+		// Reschedule не делаем — scheduler тикает по cron независимо.
 		go func() {
 			bgCtx := context.Background()
 			if err := s.recalcAllWithLog(bgCtx); err != nil {
@@ -73,28 +74,3 @@ func (s *Service) recalcAllWithLog(ctx context.Context) error {
 	return nil
 }
 
-// BootstrapRecalcAllEvent обеспечивает, что в events есть хотя бы один
-// wait-event типа KindScoreRecalcAll (чтобы цикл запустился).
-// Вызывается при старте worker'а. Идемпотентно.
-func (s *Service) BootstrapRecalcAllEvent(ctx context.Context) error {
-	var exists bool
-	err := s.db.Pool().QueryRow(ctx, `
-		SELECT EXISTS(
-			SELECT 1 FROM events
-			WHERE kind = $1 AND state = 'wait'
-		)
-	`, int(event.KindScoreRecalcAll)).Scan(&exists)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return nil
-	}
-	// Ставим первый запуск через 1 минуту после старта worker'а.
-	fireAt := time.Now().Add(1 * time.Minute)
-	_, err = s.db.Pool().Exec(ctx, `
-		INSERT INTO events (id, kind, state, fire_at, payload)
-		VALUES ($1, $2, 'wait', $3, '{}')
-	`, ids.New(), int(event.KindScoreRecalcAll), fireAt)
-	return err
-}
