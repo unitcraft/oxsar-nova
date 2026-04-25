@@ -1,10 +1,11 @@
 ---
 title: star_surveillance
 category: buildings
-entity_id: star_surveillance
+entity_key: star_surveillance
+unit_id: 55
 ---
 
-# star_surveillance (id=55)
+# star_surveillance
 
 > **Только на луне.**
 

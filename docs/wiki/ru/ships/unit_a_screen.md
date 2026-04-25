@@ -1,10 +1,11 @@
 ---
 title: unit_a_screen
 category: ships
-entity_id: unit_a_screen
+entity_key: unit_a_screen
+unit_id: 201
 ---
 
-# unit_a_screen (id=201)
+# unit_a_screen
 
 **Стоимость**: 20 000 M + 10 000 Si
 

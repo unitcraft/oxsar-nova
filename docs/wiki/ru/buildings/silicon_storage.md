@@ -1,10 +1,11 @@
 ---
 title: silicon_storage
 category: buildings
-entity_id: silicon_storage
+entity_key: silicon_storage
+unit_id: 10
 ---
 
-# silicon_storage (id=10)
+# silicon_storage
 
 **Базовая стоимость**: 1 000 M + 500 Si
 

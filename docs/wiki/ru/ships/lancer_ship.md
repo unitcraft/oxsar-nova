@@ -1,10 +1,11 @@
 ---
 title: lancer_ship
 category: ships
-entity_id: lancer_ship
+entity_key: lancer_ship
+unit_id: 102
 ---
 
-# lancer_ship (id=102)
+# lancer_ship
 
 **Стоимость**: 15 000 M + 35 000 Si + 60 000 H
 
@@ -21,15 +22,15 @@ entity_id: lancer_ship
 
 ## Rapidfire: контрит
 
-- **death_star** (id=42) × 3
+- [[unit:42]] × 3
 
 ## Rapidfire: контрится
 
-- **death_star** (id=42) × 100
-- **cruiser** (id=33) × 35
-- **light_fighter** (id=31) × 20
-- **strong_fighter** (id=32) × 20
-- **bomber** (id=40) × 5
-- **star_destroyer** (id=41) × 3
+- [[unit:42]] × 100
+- [[unit:33]] × 35
+- [[unit:31]] × 20
+- [[unit:32]] × 20
+- [[unit:40]] × 5
+- [[unit:41]] × 3
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

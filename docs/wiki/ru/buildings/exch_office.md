@@ -1,10 +1,11 @@
 ---
 title: exch_office
 category: buildings
-entity_id: exch_office
+entity_key: exch_office
+unit_id: 108
 ---
 
-# exch_office (id=108)
+# exch_office
 
 **Базовая стоимость**: 1 000 Si + 500 H
 

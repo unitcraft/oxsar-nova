@@ -1,10 +1,11 @@
 ---
 title: bomber
 category: ships
-entity_id: bomber
+entity_key: bomber
+unit_id: 40
 ---
 
-# bomber (id=40)
+# bomber
 
 **Стоимость**: 50 000 M + 25 000 Si + 15 000 H
 
@@ -21,17 +22,17 @@ entity_id: bomber
 
 ## Rapidfire: контрит
 
-- **rocket_launcher** (id=43) × 20
-- **light_laser** (id=44) × 20
-- **strong_laser** (id=45) × 10
-- **ion_gun** (id=46) × 10
-- **espionage_sensor** (id=38) × 5
-- **solar_satellite** (id=39) × 5
-- **lancer_ship** (id=102) × 5
+- [[unit:43]] × 20
+- [[unit:44]] × 20
+- [[unit:45]] × 10
+- [[unit:46]] × 10
+- [[unit:38]] × 5
+- [[unit:39]] × 5
+- [[unit:102]] × 5
 
 ## Rapidfire: контрится
 
-- **death_star** (id=42) × 25
-- **shadow_ship** (id=325) × 25
+- [[unit:42]] × 25
+- [[unit:325]] × 25
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

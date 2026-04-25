@@ -1,10 +1,11 @@
 ---
 title: moon_robotic_factory
 category: buildings
-entity_id: moon_robotic_factory
+entity_key: moon_robotic_factory
+unit_id: 57
 ---
 
-# moon_robotic_factory (id=57)
+# moon_robotic_factory
 
 > **Только на луне.**
 

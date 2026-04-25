@@ -1,10 +1,11 @@
 ---
 title: defense_factory
 category: buildings
-entity_id: defense_factory
+entity_key: defense_factory
+unit_id: 101
 ---
 
-# defense_factory (id=101)
+# defense_factory
 
 **Базовая стоимость**: 350 M + 200 Si + 100 H
 

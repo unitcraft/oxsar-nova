@@ -10,6 +10,7 @@ order: 35
 
 | ID | Ключ | Базовая стоимость | Множитель |
 |---:|---|---|---:|
+| 112 | astro_tech | 6 000 M + 12 000 Si + 6 000 H | ×1.75 |
 | 103 | ballistics_tech | 400 M + 500 Si | ×2.00 |
 | 20 | combustion_engine | 400 M + 600 H | ×2.00 |
 | 14 | computer_tech | 400 Si + 600 H | ×2.00 |
@@ -20,6 +21,7 @@ order: 35
 | 22 | hyperspace_engine | 10 000 M + 20 000 Si + 6 000 H | ×3.00 |
 | 19 | hyperspace_tech | 4 000 Si + 2 000 H | ×2.00 |
 | 26 | ign | 240 000 M + 400 000 Si + 160 000 H | ×2.00 |
+| 113 | igr_tech | 240 000 M + 400 000 Si + 160 000 H | ×2.00 |
 | 21 | impulse_engine | 2 000 M + 4 000 Si + 600 H | ×2.00 |
 | 24 | ion_tech | 1 000 M + 300 Si + 100 H | ×2.00 |
 | 23 | laser_tech | 200 M + 100 Si | ×2.00 |

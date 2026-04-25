@@ -1,10 +1,11 @@
 ---
 title: research_lab
 category: buildings
-entity_id: research_lab
+entity_key: research_lab
+unit_id: 12
 ---
 
-# research_lab (id=12)
+# research_lab
 
 **Базовая стоимость**: 200 M + 400 Si + 200 H
 

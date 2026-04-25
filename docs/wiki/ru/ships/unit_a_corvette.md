@@ -1,10 +1,11 @@
 ---
 title: unit_a_corvette
 category: ships
-entity_id: unit_a_corvette
+entity_key: unit_a_corvette
+unit_id: 200
 ---
 
-# unit_a_corvette (id=200)
+# unit_a_corvette
 
 **Стоимость**: 19 000 M + 6 000 Si + 2 000 H
 

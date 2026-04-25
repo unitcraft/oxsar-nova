@@ -1,10 +1,11 @@
 ---
 title: plasma_gun
 category: defense
-entity_id: plasma_gun
+entity_key: plasma_gun
+unit_id: 48
 ---
 
-# plasma_gun (id=48)
+# plasma_gun
 
 **Стоимость**: 50 000 M + 50 000 Si + 30 000 H
 

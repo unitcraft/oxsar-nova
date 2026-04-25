@@ -1,10 +1,11 @@
 ---
 title: small_transporter
 category: ships
-entity_id: small_transporter
+entity_key: small_transporter
+unit_id: 29
 ---
 
-# small_transporter (id=29)
+# small_transporter
 
 **Стоимость**: 2 000 M + 2 000 Si
 
@@ -21,13 +22,13 @@ entity_id: small_transporter
 
 ## Rapidfire: контрит
 
-- **espionage_sensor** (id=38) × 5
-- **solar_satellite** (id=39) × 5
+- [[unit:38]] × 5
+- [[unit:39]] × 5
 
 ## Rapidfire: контрится
 
-- **death_star** (id=42) × 250
-- **strong_fighter** (id=32) × 3
-- **frigate** (id=35) × 3
+- [[unit:42]] × 250
+- [[unit:32]] × 3
+- [[unit:35]] × 3
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

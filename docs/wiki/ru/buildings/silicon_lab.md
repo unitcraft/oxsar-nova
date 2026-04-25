@@ -1,10 +1,11 @@
 ---
 title: silicon_lab
 category: buildings
-entity_id: silicon_lab
+entity_key: silicon_lab
+unit_id: 2
 ---
 
-# silicon_lab (id=2)
+# silicon_lab
 
 **Базовая стоимость**: 48 M + 24 Si
 

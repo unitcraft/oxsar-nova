@@ -1,10 +1,11 @@
 ---
 title: star_destroyer
 category: ships
-entity_id: star_destroyer
+entity_key: star_destroyer
+unit_id: 41
 ---
 
-# star_destroyer (id=41)
+# star_destroyer
 
 **Стоимость**: 60 000 M + 50 000 Si + 15 000 H
 
@@ -21,15 +22,15 @@ entity_id: star_destroyer
 
 ## Rapidfire: контрит
 
-- **light_laser** (id=44) × 10
-- **espionage_sensor** (id=38) × 5
-- **solar_satellite** (id=39) × 5
-- **lancer_ship** (id=102) × 3
-- **frigate** (id=35) × 2
+- [[unit:44]] × 10
+- [[unit:38]] × 5
+- [[unit:39]] × 5
+- [[unit:102]] × 3
+- [[unit:35]] × 2
 
 ## Rapidfire: контрится
 
-- **shadow_ship** (id=325) × 15
-- **death_star** (id=42) × 5
+- [[unit:325]] × 15
+- [[unit:42]] × 5
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

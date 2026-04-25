@@ -1,10 +1,11 @@
 ---
 title: shipyard
 category: buildings
-entity_id: shipyard
+entity_key: shipyard
+unit_id: 8
 ---
 
-# shipyard (id=8)
+# shipyard
 
 **Базовая стоимость**: 400 M + 200 Si + 100 H
 

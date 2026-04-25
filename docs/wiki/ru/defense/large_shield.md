@@ -1,10 +1,11 @@
 ---
 title: large_shield
 category: defense
-entity_id: large_shield
+entity_key: large_shield
+unit_id: 50
 ---
 
-# large_shield (id=50)
+# large_shield
 
 **Стоимость**: 50 000 M + 50 000 Si
 

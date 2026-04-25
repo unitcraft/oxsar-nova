@@ -1,10 +1,11 @@
 ---
 title: hydrogen_storage
 category: buildings
-entity_id: hydrogen_storage
+entity_key: hydrogen_storage
+unit_id: 11
 ---
 
-# hydrogen_storage (id=11)
+# hydrogen_storage
 
 **Базовая стоимость**: 1 000 M + 1 000 Si
 

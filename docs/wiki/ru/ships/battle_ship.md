@@ -1,10 +1,11 @@
 ---
 title: battle_ship
 category: ships
-entity_id: battle_ship
+entity_key: battle_ship
+unit_id: 34
 ---
 
-# battle_ship (id=34)
+# battle_ship
 
 **Стоимость**: 40 000 M + 20 000 Si
 
@@ -21,13 +22,13 @@ entity_id: battle_ship
 
 ## Rapidfire: контрит
 
-- **shadow_ship** (id=325) × 70
-- **espionage_sensor** (id=38) × 5
-- **solar_satellite** (id=39) × 5
+- [[unit:325]] × 70
+- [[unit:38]] × 5
+- [[unit:39]] × 5
 
 ## Rapidfire: контрится
 
-- **death_star** (id=42) × 30
-- **frigate** (id=35) × 7
+- [[unit:42]] × 30
+- [[unit:35]] × 7
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

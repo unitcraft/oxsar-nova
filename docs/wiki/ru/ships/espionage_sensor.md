@@ -1,10 +1,11 @@
 ---
 title: espionage_sensor
 category: ships
-entity_id: espionage_sensor
+entity_key: espionage_sensor
+unit_id: 38
 ---
 
-# espionage_sensor (id=38)
+# espionage_sensor
 
 **Стоимость**: 1 000 Si
 
@@ -21,17 +22,17 @@ entity_id: espionage_sensor
 
 ## Rapidfire: контрится
 
-- **death_star** (id=42) × 1250
-- **small_transporter** (id=29) × 5
-- **large_transporter** (id=30) × 5
-- **light_fighter** (id=31) × 5
-- **strong_fighter** (id=32) × 5
-- **cruiser** (id=33) × 5
-- **battle_ship** (id=34) × 5
-- **frigate** (id=35) × 5
-- **colony_ship** (id=36) × 5
-- **recycler** (id=37) × 5
-- **bomber** (id=40) × 5
-- **star_destroyer** (id=41) × 5
+- [[unit:42]] × 1250
+- [[unit:29]] × 5
+- [[unit:30]] × 5
+- [[unit:31]] × 5
+- [[unit:32]] × 5
+- [[unit:33]] × 5
+- [[unit:34]] × 5
+- [[unit:35]] × 5
+- [[unit:36]] × 5
+- [[unit:37]] × 5
+- [[unit:40]] × 5
+- [[unit:41]] × 5
 
 *Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*

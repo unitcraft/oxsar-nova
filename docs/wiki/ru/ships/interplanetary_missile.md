@@ -1,10 +1,11 @@
 ---
 title: interplanetary_missile
 category: ships
-entity_id: interplanetary_missile
+entity_key: interplanetary_missile
+unit_id: 52
 ---
 
-# interplanetary_missile (id=52)
+# interplanetary_missile
 
 **Стоимость**: —
 

@@ -1,10 +1,11 @@
 ---
 title: gauss_gun
 category: defense
-entity_id: gauss_gun
+entity_key: gauss_gun
+unit_id: 47
 ---
 
-# gauss_gun (id=47)
+# gauss_gun
 
 **Стоимость**: 20 000 M + 15 000 Si + 2 000 H
 

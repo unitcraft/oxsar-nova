@@ -1,10 +1,11 @@
 ---
 title: metal_mine
 category: buildings
-entity_id: metal_mine
+entity_key: metal_mine
+unit_id: 1
 ---
 
-# metal_mine (id=1)
+# metal_mine
 
 **Базовая стоимость**: 60 M + 15 Si
 
