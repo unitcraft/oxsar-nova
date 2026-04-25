@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import { useToast } from '../../shared/Toast';
+import { useToast } from '@/ui/Toast';
 
 type Quest = {
   def_id: number;

@@ -31,7 +31,7 @@
 |---|---|---|---|
 | ~~[20 Ф.3](plans/20-legacy-port.md)~~ | ~~Миссия POSITION~~ | ✅ **done 2026-04-25** — mission=6, ALLY/NAP target validation, PositionArriveHandler. | — |
 | ~~[20 Ф.4](plans/20-legacy-port.md)~~ | ~~Сенсорная Фаланга~~ | ✅ **done 2026-04-25** — GET /api/phalanx, формула radius из legacy, 5000H за скан. | — |
-| ~~[19](plans/19-game-wiki.md)~~ | ~~Вики игры~~ | ✅ **MVP done 2026-04-25** — backend API + генератор из configs. Frontend UI (`/wiki`) — отложен. | — |
+| ~~[19](plans/19-game-wiki.md)~~ | ~~Вики игры~~ | ✅ **Полный MVP done 2026-04-25** — backend API + генератор + frontend UI с собственным md-renderer (без react-markdown зависимости). | — |
 | ~~[14 Ф.2.4–2.6](plans/14-admin-expansion.md)~~ | ~~Force-recall fleet, soft-delete user~~ | ✅ **done 2026-04-25** — admin endpoints для флота/планет/user-delete с auditable. | — |
 | ~~[14 Ф.8.2](plans/14-admin-expansion.md)~~ | ~~Rate-limit админ-действий~~ | ✅ **done 2026-04-25** — 100 write/hour на админа, 429 + Retry-After. | — |
 | ~~payment~~ | ~~Второй шлюз (ЮKassa или Enot.io)~~ | ✅ **done 2026-04-25** — Enot.io gateway + 5 unit-тестов. PAYMENT_PROVIDER=enot переключает. | — |
