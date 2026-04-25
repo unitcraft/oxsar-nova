@@ -261,11 +261,12 @@ const (
 - [x] Ф.2 — простые случаи (shipyard, score, alien, fleet).
 - [x] Ф.3 — `achievement/service.go` (главный нарушитель). Замечено:
        `STARTER_BUILD_SOLARPLANT/METALLURGY/SHIPYARD/LAB` исторически
-       проверяют unit_id 3/4/21/22, что соответствует HydrogenLab/
-       SolarPlant/ImpulseEngine/HyperspaceEngine — имена не совпадают
-       с реальными ID. Это **отдельный баг логики достижений**, не
-       исправлено (выходит за рамки magic-numbers cleanup); сохранено
-       оригинальное поведение через явные константы.
+       проверяли unit_id 3/4/21/22 (HydrogenLab/SolarPlant/ImpulseEngine/
+       HyperspaceEngine) — имена не совпадали с реальными ID, и
+       SHIPYARD/LAB никогда не разблокировались (21/22 это research).
+       **Исправлено отдельным проходом** после сверки с legacy
+       (`oxsar2/sql/tutorial.sql`): SolarPlant=4, SiliconLab=2
+       (металлургический), Shipyard=8, ResearchLab=12.
 - [x] Ф.4 — `planet/service.go` (`IN (58, 350)` → `IN ($2, $3)` через
        `IDTerraformer`/`IDMoonLab`).
 - [ ] Ф.5 — Mode-enum (если применимо). **Отложено**: проверить, есть
