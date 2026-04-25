@@ -262,8 +262,8 @@ func makeUnit(cat *config.Catalog, key string, qty int64) battle.Unit {
 	return battle.Unit{
 		UnitID:   spec.ID,
 		Quantity: qty,
-		Attack:   [3]float64{float64(spec.Attack), 0, 0},
-		Shield:   [3]float64{float64(spec.Shield), 0, 0},
+		Attack:   float64(spec.Attack),
+		Shield:   float64(spec.Shield),
 		Shell:    float64(spec.Shell),
 		Name:     key,
 		Cost: battle.UnitCost{
@@ -282,8 +282,8 @@ func makeDefUnit(cat *config.Catalog, key string, qty int64) battle.Unit {
 	return battle.Unit{
 		UnitID:   spec.ID,
 		Quantity: qty,
-		Attack:   [3]float64{float64(spec.Attack), 0, 0},
-		Shield:   [3]float64{float64(spec.Shield), 0, 0},
+		Attack:   float64(spec.Attack),
+		Shield:   float64(spec.Shield),
 		Shell:    float64(spec.Shell),
 		Name:     key,
 		Cost: battle.UnitCost{

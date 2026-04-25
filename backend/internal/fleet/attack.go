@@ -481,8 +481,8 @@ func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense bool
 			Damaged:      s.Damaged,
 			ShellPercent: s.ShellPercent,
 			Front:        0,
-			Attack:       [3]float64{float64(attack), 0, 0},
-			Shield:       [3]float64{float64(shieldVal), 0, 0},
+			Attack:       float64(attack),
+			Shield:       float64(shieldVal),
 			Shell:        float64(shell),
 			Cost:         battle.UnitCost{Metal: cost.Metal, Silicon: cost.Silicon, Hydrogen: cost.Hydrogen},
 		})
@@ -636,12 +636,8 @@ func applyDefenderLosses(ctx context.Context, tx pgx.Tx, planetID string,
 // Множители умножаются на Attack/Shield/Shell каждого юнита.
 func applyBattleMod(units []battle.Unit, m artefact.BattleModifier) []battle.Unit {
 	for i := range units {
-		for ch := range units[i].Attack {
-			units[i].Attack[ch] *= m.AttackMul
-		}
-		for ch := range units[i].Shield {
-			units[i].Shield[ch] *= m.ShieldMul
-		}
+		units[i].Attack *= m.AttackMul
+		units[i].Shield *= m.ShieldMul
 		units[i].Shell *= m.ShellMul
 	}
 	return units
@@ -656,13 +652,7 @@ func applyBattleMod(units []battle.Unit, m artefact.BattleModifier) []battle.Uni
 func sidePower(units []battle.Unit) float64 {
 	var total float64
 	for _, u := range units {
-		ch := 0
-		for i := 1; i < 3; i++ {
-			if u.Attack[i] > u.Attack[ch] {
-				ch = i
-			}
-		}
-		total += u.Attack[ch] * float64(u.Quantity)
+		total += u.Attack * float64(u.Quantity)
 	}
 	return total
 }

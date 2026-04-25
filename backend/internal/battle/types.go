@@ -50,8 +50,8 @@ type Unit struct {
 	Damaged      int64      `json:"damaged,omitempty"`
 	ShellPercent float64    `json:"shell_percent,omitempty"`
 	Front        int        `json:"front,omitempty"`
-	Attack       [3]float64 `json:"attack"`
-	Shield       [3]float64 `json:"shield,omitempty"`
+	Attack       float64    `json:"attack"`
+	Shield       float64    `json:"shield,omitempty"`
 	Shell        float64    `json:"shell"`
 	Name         string     `json:"name,omitempty"`
 	Cost         UnitCost   `json:"cost,omitempty"`

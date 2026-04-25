@@ -22,8 +22,8 @@ export interface BattleUnit {
   unitId: number;
   quantity: number;
   front: number;
-  attack: [number, number, number];
-  shield: [number, number, number];
+  attack: number;
+  shield: number;
   shell: number;
 }
 

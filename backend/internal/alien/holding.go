@@ -129,8 +129,8 @@ func stacksToAlienUnits(stacks []fleetStack, cat *config.Catalog) []battle.Unit 
 		out = append(out, battle.Unit{
 			UnitID:   s.UnitID,
 			Quantity: s.Quantity,
-			Attack:   [3]float64{float64(spec.Attack), 0, 0},
-			Shield:   [3]float64{float64(spec.Shield), 0, 0},
+			Attack:   float64(spec.Attack),
+			Shield:   float64(spec.Shield),
 			Shell:    float64(spec.Shell),
 			Name:     nameByID[s.UnitID],
 		})

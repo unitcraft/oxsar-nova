@@ -18,8 +18,6 @@ var ErrInvalidInput = errors.New("battle: invalid input")
 //   * каждый раунд: обе стороны стреляют по снимку начала раунда;
 //   * unitState.turnShield восстанавливается до Shield × Quantity
 //     в начале раунда (100% regen — Java default);
-//   * выстрел выбирает primary channel (канал с max Attack),
-//     бьёт по соответствующему Shield[channel];
 //   * урон сначала съедает turnShield, остаток — turnShell;
 //   * при turnShell <= 0 юниты погибают целиком.
 //
@@ -93,7 +91,7 @@ type unitState struct {
 	idx int
 	// turnShell = totalShell (учитывает damaged), уменьшается выстрелами.
 	turnShell float64
-	// turnShield = Shield[primaryCh] × Quantity, восстанавливается regen.
+	// turnShield = Shield × Quantity, восстанавливается regen.
 	turnShield float64
 	// startTurnShield — значение turnShield в начале раунда (до атак).
 	// Используется в shieldDestroyFactor (Java startTurnQuantity × shield).
@@ -106,16 +104,13 @@ type unitState struct {
 	damaged int64
 	// shellPercent — 0..100, доля shell у damaged-юнита (у здоровых 100%).
 	shellPercent float64
-	// primaryChannel — канал с max Attack; выбираем один раз, не
-	// пересчитываем каждый выстрел.
-	primaryChannel int
-	// effectiveAttack — attack[primaryChannel] с применённым gun tech (+10%/уровень).
+	// effectiveAttack — Attack с применённым gun tech (+10%/уровень).
 	effectiveAttack float64
-	// effectiveShield — Shield[primaryChannel] с применённым shield tech.
-	effectiveShell float64 // shell на юнит с применённым shell tech
-	// baseShield — Shield[primaryChannel] БЕЗ tech-множителя. Используется
-	// для вычисления ignoreAttack-порога: tech повышает абсорбцию, но не
-	// делает щит абсолютным (BA-005).
+	// effectiveShell — shell на юнит с применённым shell tech.
+	effectiveShell float64
+	// baseShield — Shield БЕЗ tech-множителя. Используется для вычисления
+	// ignoreAttack-порога: tech повышает абсорбцию, но не делает щит
+	// абсолютным (BA-005).
 	baseShield float64
 }
 
@@ -143,27 +138,25 @@ func newState(input []Side, rf map[int]map[int]int) *battleState {
 		shieldFactor := 1.0 + float64(s.Tech.Shield)*0.10
 		shellFactor := 1.0 + float64(s.Tech.Shell)*0.10
 		for ui, u := range s.Units {
-			pch := primaryChannel(u.Attack)
 			us := &unitState{
 				tmpl:            u,
 				idx:             ui,
 				quantity:        u.Quantity,
 				damaged:         clampDamaged(u.Damaged, u.Quantity),
 				shellPercent:    clampPercent(u.ShellPercent),
-				primaryChannel:  pch,
-				effectiveAttack: u.Attack[pch] * gunFactor,
+				effectiveAttack: u.Attack * gunFactor,
 				effectiveShell:  u.Shell * shellFactor,
 			}
 			// effectiveShield хранится прямо в turnShield/regen через
 			// scaledShield — считаем один раз.
-			baseShield := u.Shield[pch]
+			baseShield := u.Shield
 			scaledShield := baseShield * shieldFactor
 			us.baseShield = baseShield
 			us.turnShell = totalShell(us.effectiveShell, us.quantity, us.damaged, us.shellPercent)
 			us.turnShield = float64(u.Quantity) * scaledShield
 			us.startTurnShield = us.turnShield
 			// Сохраняем масштабированный shield обратно в tmpl для regen и applyShots.
-			us.tmpl.Shield[pch] = scaledShield
+			us.tmpl.Shield = scaledShield
 			us.tmpl.Shell = us.effectiveShell
 			ss.units = append(ss.units, us)
 		}
@@ -218,7 +211,7 @@ func (b *battleState) regen() {
 				u.turnShield = 0
 				continue
 			}
-			u.turnShield = float64(u.quantity) * u.tmpl.Shield[u.primaryChannel]
+			u.turnShield = float64(u.quantity) * u.tmpl.Shield
 			u.startTurnShield = u.turnShield
 		}
 	}
@@ -470,7 +463,7 @@ func applyShots(shooter, target *unitState, attack float64, shots int64) {
 	}
 	_ = shooter
 
-	unitShield := target.tmpl.Shield[target.primaryChannel]
+	unitShield := target.tmpl.Shield
 	// ignoreAttack вычисляется по базовому (до tech) щиту — BA-005.
 	// Исключение (Java строки 348-350): планетарные щиты (Small/Large Shield,
 	// id 49/50) имеют ignoreAttack=0 — любая атака их пробивает.
@@ -574,18 +567,6 @@ func applyShots(shooter, target *unitState, attack float64, shots int64) {
 			target.turnShell = 0
 		}
 	}
-}
-
-// primaryChannel — возвращает индекс канала (0/1/2) с максимальным
-// Attack. Если все нули — 0.
-func primaryChannel(attack [3]float64) int {
-	maxIdx := 0
-	for i := 1; i < 3; i++ {
-		if attack[i] > attack[maxIdx] {
-			maxIdx = i
-		}
-	}
-	return maxIdx
 }
 
 // unitWeight — 2^Front × Quantity. Java: getStartTurnWeight.

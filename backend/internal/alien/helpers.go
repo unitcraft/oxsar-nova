@@ -139,8 +139,8 @@ func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense bool
 			Quantity:     s.Count,
 			Damaged:      s.Damaged,
 			ShellPercent: s.ShellPercent,
-			Attack:       [3]float64{float64(attack), 0, 0},
-			Shield:       [3]float64{float64(shield), 0, 0},
+			Attack:       float64(attack),
+			Shield:       float64(shield),
 			Shell:        float64(shell),
 			Cost:         battle.UnitCost{Metal: cost.Metal, Silicon: cost.Silicon, Hydrogen: cost.Hydrogen},
 		})
@@ -153,13 +153,7 @@ func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense bool
 func calcDefPower(units []battle.Unit) float64 {
 	var total float64
 	for _, u := range units {
-		maxAtk := u.Attack[0]
-		for _, a := range u.Attack[1:] {
-			if a > maxAtk {
-				maxAtk = a
-			}
-		}
-		total += maxAtk * float64(u.Quantity)
+		total += u.Attack * float64(u.Quantity)
 	}
 	return total
 }
@@ -221,7 +215,7 @@ func scaledAlienFleet(defPower float64, r *rng.R, cat *config.Catalog, bonusScal
 		// Каталог не загружен или alien ships отсутствуют — fallback.
 		return []battle.Unit{{
 			UnitID: 200, Quantity: 5, Name: "Alien Corvette",
-			Attack: [3]float64{150, 0, 0}, Shell: 2000,
+			Attack: 150, Shell: 2000,
 		}}
 	}
 
@@ -260,9 +254,9 @@ func scaledAlienFleet(defPower float64, r *rng.R, cat *config.Catalog, bonusScal
 				UnitID:   chosen.unitID,
 				Quantity: int64(maxAdd),
 				Name:     chosen.name,
-				Attack:   [3]float64{chosen.attack, 0, 0},
+				Attack:   chosen.attack,
 				Shell:    chosen.shell,
-				Shield:   [3]float64{chosen.shield, 0, 0},
+				Shield:   chosen.shield,
 			})
 		}
 		currentPower += chosen.attack * float64(maxAdd)
