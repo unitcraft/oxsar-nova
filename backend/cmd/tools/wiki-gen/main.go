@@ -147,7 +147,7 @@ func genBuildings(cat *config.Catalog, outDir string) error {
 		fmt.Fprintln(page, "## Стоимость и время")
 		fmt.Fprintln(page)
 		fmt.Fprintf(page, "- **Стоимость 1-го уровня**: %s.\n", costLine)
-		fmt.Fprintf(page, "- **Каждый следующий уровень дороже в %.2f раза** (стоимость растёт геометрической прогрессией).\n", b.CostFactor)
+		fmt.Fprintf(page, "- **Каждый следующий уровень дороже в %.2f раза** по всем ресурсам.\n", b.CostFactor)
 		fmt.Fprintf(page, "- **Базовое время постройки**: %s.\n", durationStr(b.TimeBaseSeconds))
 		if b.MaxLevel > 0 {
 			fmt.Fprintf(page, "- **Максимальный уровень**: %d.\n", b.MaxLevel)
@@ -359,7 +359,7 @@ func genResearch(cat *config.Catalog, outDir string) error {
 		fmt.Fprintln(page, "## Стоимость и время")
 		fmt.Fprintln(page)
 		fmt.Fprintf(page, "- **Стоимость 1-го уровня**: %s.\n", costLine)
-		fmt.Fprintf(page, "- **Каждый следующий уровень дороже в %.2f раза** (стоимость растёт геометрической прогрессией).\n\n", b.CostFactor)
+		fmt.Fprintf(page, "- **Каждый следующий уровень дороже в %.2f раза** по всем ресурсам.\n\n", b.CostFactor)
 
 		fmt.Fprintln(page, "## Стоимость по уровням")
 		fmt.Fprintln(page)
