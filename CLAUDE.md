@@ -103,5 +103,6 @@ make lint          # все линтеры
 - [docs/ui/](docs/ui/) — UI-спеки, сравнение с OGame, матрица e2e, dev-log.
 - [docs/ops/](docs/ops/) — эксплуатация: VPS-sizing, платежи, runbooks, паттерны.
 - [docs/ops/event-audit-pattern.md](docs/ops/event-audit-pattern.md) — почему не удалять записи events при отменах.
+- [docs/ops/release-process.md](docs/ops/release-process.md) — релиз-процесс (теги, GHCR, откат, хотфиксы).
 - [docs/legacy/](docs/legacy/) — доступ к oxsar2 для сверки.
 - [api/openapi.yaml](api/openapi.yaml) — контракт REST API.
