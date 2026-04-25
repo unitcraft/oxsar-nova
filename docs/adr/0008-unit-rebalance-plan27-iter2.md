@@ -87,42 +87,48 @@ defense — больше не «универсальная wunderwaffe».
 `configs/ships.yml`. Причина: SF был «trap-юнитом». Теперь дешёвый
 anti-LF (sf-vs-lf exchange 1.57 → 2.05).
 
-### 27-J/W — Lancer rebalance (двухходовка)
+### 27-J/W' — Lancer rebalance (трёхходовка)
 
-| Параметр | Было | 27-J | 27-W (финал) |
-|---|---:|---:|---:|
-| **attack** | 5500 | 4000 | **5000** |
-| fuel | 100 | **400** | 400 |
-| speed | 8000 | **6000** | 6000 |
-| front | 8 | **6** | 6 |
-| **max_per_planet** | — | — | **50** (game-механика) |
+| Параметр | Было | 27-J | 27-W (cap) | 27-W' (финал) |
+|---|---:|---:|---:|---:|
+| **attack** | 5500 | 4000 | 5000 | **5000** |
+| fuel | 100 | **400** | 400 | 400 |
+| speed | 8000 | **6000** | 6000 | 6000 |
+| front | 8 | **6** | 6 | 6 |
+| max_per_planet | — | — | 50 (game) | **— (откачено)** |
+| **RF Cruiser→Lancer** | 35 | 35 | 35 | **45** ⭐ |
 
-`configs/ships.yml` + `backend/internal/shipyard/service.go` (cap-проверка).
+`configs/ships.yml` + `configs/rapidfire.yml`.
 
 **Эволюция решения**:
 - **27-J (промежуточно)**: attack 5500→4000 + fuel/speed nerf + front
   8→6. После прогона матрицы 1v1 (план 27 §17) выяснилось, что
   attack=4000 делает Lancer **trap-юнитом**: vs LF 0.04, vs SF 0.02,
   vs Cru 0.04 — проигрывает всем 1v1.
-- **27-W (финал)**: attack 4000→**5000** возвращает Lancer боеспособность
-  (vs LF 0.04, vs Cru 0.05, vs Frigate 0.66 — Lancer всё ещё слабый
-  одиночный юнит, но не trap). При attack=5000 Lancer-spam vs lite
-  возвращается (lancer-vs-mixed exchange 0.19, attacker_wins 100%) —
-  поэтому добавлен **cap=50 Lancer/планета** (game-механика).
+- **27-W (промежуточно)**: attack 4000→5000 возвращает Lancer
+  боеспособность, но Lancer-spam vs lite снова работает (exchange
+  0.19, attacker_wins 100%). Добавили `max_per_planet: 50` как
+  game-механику.
+- **27-W' (финал)**: после sweep-тестов всех характеристик (см. план
+  27 §20) выяснилось, что Lancer-spam закрывается без cap — через
+  **RF Cruiser→Lancer ×35 → ×45**. Это чистый ребаланс, без новой
+  game-механики. Cap откачен:
+  - Удалено `max_per_planet: 50` из `ships.yml`.
+  - Удалено поле `MaxPerPlanet` из `ShipSpec` в Go.
+  - Удалена проверка cap в `shipyard.Service.Enqueue`.
+  - Удалена ошибка `ErrPlanetCapExceeded` и её handler-маппинг.
 
-**Cap=50 Lancer/планета** реализован через:
-- Поле `max_per_planet: 50` в `configs/ships.yml`.
-- Поле `MaxPerPlanet` в `config.ShipSpec`.
-- Проверка в `shipyard.Service.Enqueue`: считает `existing + in_queue + new ≤ cap`.
-- Новая ошибка `ErrPlanetCapExceeded` → HTTP 400.
+**Эффект RF×45**:
+- `lancer-vs-mixed`: defender wins 100% ✅, atk loss 96%, def loss 81%,
+  exchange 0.10 (Lancer-spam убыточен: −53M потерь vs +5M loot).
+- `lancer-bs-combo`: 0.61 (близко к baseline 0.73, combo сохраняется).
+- `lancer-vs-cruiser` 1v1: 0.05 (без изменений — RF×45 активируется
+  только когда Cruiser стреляет в Lancer-mass; при равной cost
+  Cruiser×35→×45 эффективнее, но не катастрофически).
 
-С cap=50 максимальный Lancer-флот собирается с 10 планет (500 Lancer),
-для атаки на дальнюю цель — fuel-bottleneck (400/Lancer + speed=6000).
-Lancer-spam как raid-инструмент **экономически невозможен**.
-
-**Trade-off**: Lancer-как-anti-DS-mass ослаблен (300 Lancer vs 1 DS:
-def-clean — Lancer теряет всё). Anti-DS-роль теперь основная у
-Shadow (27-F), Lancer **в комбо** с другими юнитами.
+**Trade-off**: Lancer-как-anti-DS-mass всё равно ослаблен (300 Lancer
+vs 1 DS: def-clean). Anti-DS-роль основная у Shadow (27-F), Lancer
+**в комбо** с другими юнитами.
 
 ### 27-K — Defense shell ×1.5
 

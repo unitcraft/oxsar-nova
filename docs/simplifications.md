@@ -869,3 +869,34 @@ legacy `na_construction.metalmine` больше не цель.
 - **Frontend**: `frontend/src/api/catalog.ts` имеет hardcoded SHIPS/
   DEFENSE с устаревшими значениями. Нужна синхронизация (задача
   плана 28 Ф.5 — `/api/catalog` endpoint).
+
+## 2026-04-26 — 27-W': откат cap, замена на RF Cruiser→Lancer ×45
+
+**Где**: `configs/rapidfire.yml`, `configs/ships.yml`,
+`backend/internal/config/catalog.go`, `backend/internal/shipyard/{service,handler}.go`.
+
+**Что упрощено**: убрана game-механика `max_per_planet` (cap=50 на
+Lancer/планета), которая была введена в 27-W. Заменена на чистый
+ребаланс — RF Cruiser→Lancer 35→**45** в `rapidfire.yml`.
+
+**Почему**: после sweep-тестов всех характеристик Lancer'а (план 27 §20)
+выяснилось, что Lancer-spam закрывается одним RF-числом, без новой
+game-механики. Это **проще и чище**:
+- Нет нового поля в ShipSpec (`MaxPerPlanet`).
+- Нет проверки в shipyard.Enqueue.
+- Нет ошибки `ErrPlanetCapExceeded` и её handler-маппинга.
+- Согласуется с принципом «counter через RF» (как Cruiser×6 vs LF,
+  Bomber×20 vs RL).
+
+**Что удалено**:
+- `configs/ships.yml`: поле `max_per_planet: 50` у Lancer.
+- `backend/internal/config/catalog.go`: поле `MaxPerPlanet int64` в
+  `ShipSpec`.
+- `backend/internal/shipyard/service.go`: блок «2.5. Per-planet cap»
+  в `Enqueue`, переменная `ErrPlanetCapExceeded`.
+- `backend/internal/shipyard/handler.go`: case `ErrPlanetCapExceeded`
+  → HTTP 400.
+
+**Tests**: `go test ./... -count=1` — все 26 пакетов зелёные.
+Battle-sim: lancer-vs-mixed defender wins 100% (atk loss 96%, def loss
+81%, exchange 0.10) — Lancer-spam убыточен.
