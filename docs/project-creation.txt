@@ -7593,3 +7593,53 @@ payment-балaнс.
 Frontend typecheck не запускался локально (нет npm/node в окружении),
 правки визуально проверены: убраны state `direction`/`setDirection`,
 все ссылки на `to_credit` удалены, тип CreditExchangeResult обновлён.
+
+## 2026-04-26: План 29 Ф.1-4 — magic numbers cleanup
+
+После замечания пользователя «много числовых констант, а не именованных»
+провёл аудит и заменил magic numbers в 7 файлах. Существующие константы
+(`event.KindXxx`, `economy.IDXxx`) использовались не везде.
+
+### Аудит (см. docs/plans/29-magic-numbers-cleanup.md §2)
+- ~25 magic numbers в SQL/Go-коде (event kinds, unit IDs, mission types).
+- Горячие файлы: `achievement/service.go` (9), `fleet/transport.go` (5),
+  `planet/service.go` (2).
+- Лакуны: `IDImpulseEngine=21`, `IDHyperspaceEngine=22`, `IDTerraformer=58`,
+  `IDMoonLab=350`, `IDCombustionEngine=20` отсутствовали.
+
+### Применено
+1. **Ф.1**: добавлены недостающие константы в `economy/ids.go`,
+   группировка упорядочена.
+2. **Ф.2**: `shipyard.Enqueue` (kind=4/5 → константы), `score.BootstrapRecalcAllEvent`
+   (kind=70 → параметр), `alien.spawnCandidates` (kind IN(33,34,35,36)
+   → 4 параметра), `fleet/transport.go` (5 случаев).
+3. **Ф.3**: `achievement/service.go` — 9 случаев в SQL переписаны через
+   `fmt.Sprintf` с константами. Запросы хранятся как строки в `check{}`
+   slice, поэтому параметризация через `$N` неудобна — substitution
+   на этапе формирования.
+4. **Ф.4**: `planet.fillMaxFields` (IN (58,350) → параметры).
+
+### Обнаружен баг (не исправлен)
+В `achievement/service.go` достижения `STARTER_BUILD_SOLARPLANT/
+METALLURGY/SHIPYARD/LAB` исторически проверяют unit_id 3/4/21/22, что
+соответствует HydrogenLab/SolarPlant/ImpulseEngine/HyperspaceEngine, а
+не Solar Plant / Metallurgy / Shipyard / Research Lab по именам. Это
+баг логики, не magic-numbers. Сохранил поведение, добавил комментарий
+с TODO.
+
+### Стиль (для будущего)
+- SQL-параметры: предпочтительно `WHERE kind = $1` + передача
+  `int(event.KindXxx)`.
+- Если SQL — слот в slice/map: `fmt.Sprintf` с подстановкой константы
+  (тоже compile-time safety).
+- Никогда не литералы 1, 2, 70 в SQL.
+
+### Tests
+`go test ./... -count=1`: все 26 пакетов зелёные.
+
+### Не сделано (отложено)
+- **Ф.5**: Mode-enum (`ModeBuilding=1` и т.д.) — нужно ли, зависит от
+  наличия `spec.Mode == N` сравнений.
+- **Boy-scout правило в CLAUDE.md** — записать «no magic numbers».
+- **Frontend**: тоже есть magic numbers (`mission === 10`), отдельная
+  задача.

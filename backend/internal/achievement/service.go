@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/oxsar/nova/backend/internal/economy"
+	"github.com/oxsar/nova/backend/internal/event"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/pkg/ids"
 )
@@ -92,8 +93,8 @@ type Def struct {
 //
 // Правила (MVP):
 //   FIRST_METAL    — у пользователя хоть одна планета с
-//                    buildings.unit_id=1 (metal_mine) level>=1.
-//   FIRST_SILICON  — аналогично для unit_id=2.
+//                    buildings.unit_id=IDMetalmine level>=1.
+//   FIRST_SILICON  — аналогично для IDSiliconLab.
 //   FIRST_ARTEFACT — есть хотя бы одна запись в artefacts_user.
 //   FIRST_WIN      — есть battle_reports winner='attackers' где
 //                    attacker_user_id = userID.
@@ -104,18 +105,18 @@ func (s *Service) CheckAll(ctx context.Context, userID string) error {
 		sql string
 	}
 	checks := []check{
-		{"FIRST_METAL", `
+		{"FIRST_METAL", fmt.Sprintf(`
 			SELECT EXISTS (
 				SELECT 1 FROM buildings b
 				JOIN planets p ON p.id = b.planet_id
-				WHERE p.user_id = $1 AND b.unit_id = 1 AND b.level >= 1
-			)`},
-		{"FIRST_SILICON", `
+				WHERE p.user_id = $1 AND b.unit_id = %d AND b.level >= 1
+			)`, economy.IDMetalmine)},
+		{"FIRST_SILICON", fmt.Sprintf(`
 			SELECT EXISTS (
 				SELECT 1 FROM buildings b
 				JOIN planets p ON p.id = b.planet_id
-				WHERE p.user_id = $1 AND b.unit_id = 2 AND b.level >= 1
-			)`},
+				WHERE p.user_id = $1 AND b.unit_id = %d AND b.level >= 1
+			)`, economy.IDSiliconLab)},
 		{"FIRST_ARTEFACT", `SELECT EXISTS (SELECT 1 FROM artefacts_user WHERE user_id = $1)`},
 		{"FIRST_WIN", `SELECT EXISTS (
 				SELECT 1 FROM battle_reports
@@ -126,9 +127,9 @@ func (s *Service) CheckAll(ctx context.Context, userID string) error {
 			WHERE user_id = $1 AND destroyed_at IS NULL AND is_moon = false
 		`},
 		{"FIRST_FLEET", `SELECT EXISTS (SELECT 1 FROM fleets WHERE owner_user_id = $1)`},
-		{"FIRST_EXPEDITION", `SELECT EXISTS (
-				SELECT 1 FROM fleets WHERE owner_user_id = $1 AND mission = 15
-			)`},
+		{"FIRST_EXPEDITION", fmt.Sprintf(`SELECT EXISTS (
+				SELECT 1 FROM fleets WHERE owner_user_id = $1 AND mission = %d
+			)`, int(event.KindExpedition))},
 		{"FIRST_RESEARCH", `SELECT EXISTS (SELECT 1 FROM research WHERE user_id = $1 AND level >= 1)`},
 		{"BATTLE_10", `
 			SELECT (COUNT(*) >= 10) FROM battle_reports
@@ -144,18 +145,18 @@ func (s *Service) CheckAll(ctx context.Context, userID string) error {
 				WHERE user_id = $1 AND acquired_at IS NOT NULL
 					AND state IN ('held','active','delayed','listed')
 			)`},
-		{"SPY_SUCCESS", `SELECT EXISTS (
-				SELECT 1 FROM fleets WHERE owner_user_id = $1 AND mission = 11
+		{"SPY_SUCCESS", fmt.Sprintf(`SELECT EXISTS (
+				SELECT 1 FROM fleets WHERE owner_user_id = $1 AND mission = %d
 					AND state IN ('returning','done')
-			)`},
-		{"RECYCLING", `SELECT EXISTS (
-				SELECT 1 FROM fleets WHERE owner_user_id = $1 AND mission = 9
+			)`, int(event.KindSpy))},
+		{"RECYCLING", fmt.Sprintf(`SELECT EXISTS (
+				SELECT 1 FROM fleets WHERE owner_user_id = $1 AND mission = %d
 					AND state IN ('returning','done')
-			)`},
-		{"ROCKET_LAUNCH", `SELECT EXISTS (
+			)`, int(event.KindRecycling))},
+		{"ROCKET_LAUNCH", fmt.Sprintf(`SELECT EXISTS (
 				SELECT 1 FROM events
-				WHERE user_id = $1 AND kind = 16
-			)`},
+				WHERE user_id = $1 AND kind = %d
+			)`, int(event.KindRocketAttack))},
 		{"SCORE_1000", `SELECT (COALESCE(points,0) >= 1000) FROM users WHERE id = $1`},
 	}
 	for _, c := range checks {
@@ -179,37 +180,42 @@ func (s *Service) CheckAllStarter(ctx context.Context, userID string) error {
 		key string
 		sql string
 	}
+	// NB: STARTER_BUILD_SOLARPLANT/METALLURGY/SHIPYARD/LAB используют unit_id
+	// 3/4/21/22, что соответствует HydrogenLab/SolarPlant/ImpulseEngine/
+	// HyperspaceEngine — это похоже на исторический баг (имена не соответствуют
+	// реальным ID). Сохраняем оригинальное поведение, но через константы; коррекция
+	// логики достижений — отдельная задача.
 	checks := []check{
-		{"STARTER_BUILD_METALMINE", `
+		{"STARTER_BUILD_METALMINE", fmt.Sprintf(`
 			SELECT EXISTS (
 				SELECT 1 FROM buildings b
 				JOIN planets p ON p.id = b.planet_id
-				WHERE p.user_id = $1 AND b.unit_id = 1 AND b.level >= 1
-			)`},
-		{"STARTER_BUILD_SOLARPLANT", `
+				WHERE p.user_id = $1 AND b.unit_id = %d AND b.level >= 1
+			)`, economy.IDMetalmine)},
+		{"STARTER_BUILD_SOLARPLANT", fmt.Sprintf(`
 			SELECT EXISTS (
 				SELECT 1 FROM buildings b
 				JOIN planets p ON p.id = b.planet_id
-				WHERE p.user_id = $1 AND b.unit_id = 3 AND b.level >= 1
-			)`},
-		{"STARTER_BUILD_METALLURGY", `
+				WHERE p.user_id = $1 AND b.unit_id = %d AND b.level >= 1
+			)`, economy.IDHydrogenLab)},
+		{"STARTER_BUILD_METALLURGY", fmt.Sprintf(`
 			SELECT EXISTS (
 				SELECT 1 FROM buildings b
 				JOIN planets p ON p.id = b.planet_id
-				WHERE p.user_id = $1 AND b.unit_id = 4 AND b.level >= 1
-			)`},
-		{"STARTER_BUILD_SHIPYARD", `
+				WHERE p.user_id = $1 AND b.unit_id = %d AND b.level >= 1
+			)`, economy.IDSolarPlant)},
+		{"STARTER_BUILD_SHIPYARD", fmt.Sprintf(`
 			SELECT EXISTS (
 				SELECT 1 FROM buildings b
 				JOIN planets p ON p.id = b.planet_id
-				WHERE p.user_id = $1 AND b.unit_id = 21 AND b.level >= 1
-			)`},
-		{"STARTER_BUILD_LAB", `
+				WHERE p.user_id = $1 AND b.unit_id = %d AND b.level >= 1
+			)`, economy.IDImpulseEngine)},
+		{"STARTER_BUILD_LAB", fmt.Sprintf(`
 			SELECT EXISTS (
 				SELECT 1 FROM buildings b
 				JOIN planets p ON p.id = b.planet_id
-				WHERE p.user_id = $1 AND b.unit_id = 22 AND b.level >= 1
-			)`},
+				WHERE p.user_id = $1 AND b.unit_id = %d AND b.level >= 1
+			)`, economy.IDHyperspaceEngine)},
 		{"STARTER_RESEARCH_TECH", `
 			SELECT EXISTS (
 				SELECT 1 FROM research WHERE user_id = $1 AND level >= 1
@@ -220,10 +226,10 @@ func (s *Service) CheckAllStarter(ctx context.Context, userID string) error {
 					SELECT id FROM planets WHERE user_id = $1
 				) AND count >= 1
 			)`},
-		{"STARTER_SEND_MISSION", `
+		{"STARTER_SEND_MISSION", fmt.Sprintf(`
 			SELECT EXISTS (
-				SELECT 1 FROM fleets WHERE owner_user_id = $1 AND mission = 10
-			)`},
+				SELECT 1 FROM fleets WHERE owner_user_id = $1 AND mission = %d
+			)`, int(event.KindAttackSingle))},
 	}
 	for _, c := range checks {
 		var ok bool
