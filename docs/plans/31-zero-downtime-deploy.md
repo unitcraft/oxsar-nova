@@ -6,7 +6,7 @@ status: in-progress
 
 > **Статус 2026-04-26**:
 > - Ф.1 (health/ready/draining) — ✅ done.
-> - Ф.2 (feature flags) — pending.
+> - Ф.2 (feature flags) — ✅ done.
 > - Ф.3 (API-version header) — pending.
 > - Ф.4 (документация) — pending.
 > - Ф.5 (blue-green nginx) — отложено до prod-load.
@@ -271,19 +271,56 @@ Backend **не должен** ломать old-clients жёстко — стар
 
 **Tests**: `go test ./... -count=1`: 27 пакетов зелёные.
 
-### Фаза 2: feature flags
+### Фаза 2: feature flags ✅ DONE
 
-**Затрагивает**: новый пакет `backend/internal/features/`,
-`configs/features.yaml`.
+**Затронуто**: `backend/internal/features/` (новый пакет),
+`configs/features.yaml`, `backend/cmd/server/main.go`,
+`backend/cmd/worker/main.go`, `frontend/src/features/flags.ts`.
 
-- [ ] `features.Load(path)` — парсит YAML.
-- [ ] Прокидывание `*Flags` в server и worker (через config-loader).
-- [ ] Метод `flags.Enabled(key string) bool`.
-- [ ] Endpoint `GET /api/features` (для UI: какие фичи включены, чтобы
-      рисовать UI conditionally).
-- [ ] Документация в comment'ах: «как добавить новый флаг».
+- [x] `features.Load(path)` — парсит YAML, missing-file = пустой Set
+      (не ошибка, fail-safe для dev).
+- [x] `Set` immutable, atomic-safe; `Enabled(s, key)` — fail-closed
+      для unknown ключей и nil-Set.
+- [x] `EnabledKeys(s)` — отсортированный список включенных (для UI и
+      `/api/features`).
+- [x] Endpoint `GET /api/features` — публичный, без auth: фронтенд
+      решает, какой UI рисовать. Возвращает `{features, enabled}`.
+- [x] Server: load из `FEATURES_FILE` или `${CATALOG_DIR}/features.yaml`,
+      логирует enabled-ключи на старте.
+- [x] Worker: то же самое — флаги доступны event-handler'ам (для
+      будущих хуков плана 30).
+- [x] Frontend: hook `useFeatureFlag(key)` через TanStack Query
+      (staleTime 5min), fail-closed при загрузке.
+- [x] Шаблон `configs/features.yaml` с инструкциями.
+- [x] Unit-тесты: 7 тестов в `features_test.go` (parse-empty, parse-yaml,
+      nil-set, sorted-keys, copy-immutable, missing-file, load-from-file).
 
-**Готовность**: 1 PR, ~150 строк, 0 миграций.
+**Tests**: `go test ./... -count=1`: 28 пакетов зелёные.
+
+### Использование в коде
+
+Backend:
+```go
+if features.Enabled(featureSet, "goal_engine") {
+    return goalEngine.Handle(ctx, ...)
+}
+return oldAchievementSvc.Handle(ctx, ...)
+```
+
+Frontend:
+```tsx
+const goalEngine = useFeatureFlag('goal_engine');
+return goalEngine ? <NewGoalScreen /> : <LegacyAchievementsScreen />;
+```
+
+### Workflow для рефакторинга
+
+1. Добавить запись в `configs/features.yaml` с `enabled: false`.
+2. Обернуть новый код в `if features.Enabled(...)`.
+3. Деплой — новый код есть, но не активен.
+4. Проверить вживую через временное `enabled: true` + restart.
+5. Стабильно? — `enabled: true` для всех, redeploy.
+6. Через ~неделю удалить старую ветку кода + флаг.
 
 ### Фаза 3: API-version header
 
