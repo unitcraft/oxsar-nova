@@ -191,7 +191,30 @@ CREATE TABLE daily_quests (
 
 ---
 
-## Блок F: Галактические события (Приоритет: L)
+## Блок F: Галактические события — ✅ MVP ЗАКРЫТО 2026-04-25
+
+Реализовано:
+- Migration 0064: `galaxy_events` (id, kind, started_at, ends_at, params).
+- `internal/galaxyevent` пакет: Service.Active / Create / Cancel /
+  MetalMultiplier (читает params.metal_mult у активного meteor_storm).
+- `planet.applyTickInTx` применяет MetalMultiplier к `rates.metalPerSec`.
+  Для других типов событий (solar_flare/trade_forum/star_nebula) хуки
+  можно добавить инкрементально.
+- HTTP: GET /api/galaxy-event (204 при отсутствии), admin POST/DELETE
+  /api/admin/galaxy-events для создания/отмены.
+- Frontend: `GalaxyEventBanner` в OverviewScreen с обратным отсчётом
+  и описанием эффекта.
+
+Отклонения от плана:
+- **Нет автопланировщика**: события создаются админом вручную через
+  /api/admin/galaxy-events (план 14 + 17 F). Cron-планировщик
+  («раз в 3-7 дней») — отложено в v1.x.
+- **Реализован только meteor_storm**: эффект +30% к metal production.
+  solar_flare/trade_forum/star_nebula — типы есть в KIND_META фронта
+  с описаниями, но backend-эффект не подключён. Можно добавлять
+  инкрементально.
+- **Нет Redis-кеша**: MetalMultiplier делает SQL-запрос на каждый тик
+  планеты. Ок для MVP с малым DAU; при росте — кеш с TTL=ends_at.
 
 **Суть**: раз в 3-7 дней случайное событие по всей галактике.
 

@@ -7,6 +7,7 @@ import { Countdown } from '@/ui/Countdown';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { ResourceTicker } from '@/ui/ResourceTicker';
 import { useToast } from '@/ui/Toast';
+import { GalaxyEventBanner } from '../galaxyevent/GalaxyEventBanner';
 
 interface FleetRow {
   id: string;
@@ -132,6 +133,9 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '16px 0' }}>
+
+      {/* План 17 F: галактическое событие (если активно). */}
+      <GalaxyEventBanner />
 
       {/* Уведомление о сообщениях */}
       {unreadCount > 0 && (
