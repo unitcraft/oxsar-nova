@@ -58,6 +58,9 @@ requirements:
   masking_tech:
     - { kind: building, key: research_lab, level: 5 }
     - { kind: research, key: hyperspace_tech, level: 3 }
+  astro_tech:
+    - { kind: building, key: research_lab, level: 4 }
+    - { kind: research, key: expo_tech, level: 3 }
 
   # Корабли: нужна верфь + профильные исследования.
   small_transporter:

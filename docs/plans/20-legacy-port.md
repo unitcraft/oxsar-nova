@@ -274,15 +274,23 @@ expedition_slots = max(1, floor(sqrt(astro_level)))
 colony_limit     = floor(astro_level / 2) + 1
 ```
 
-**Breaking change**: без ASTRO_TECH игроки не смогут колонизировать после введения лимита.  
+**Breaking change**: без ASTRO_TECH игроки не смогут колонизировать после введения лимита.
 **Решение**: дать всем игрокам стартовый `astro_level=2` при миграции (даёт 2 колонии, 1 экспедицию).
 
-**Реализация**:
-- Добавить `ASTRO_TECH` (id=112) в `research.yml`, требование `expo_tech >= 3`
-- Миграция: `UPDATE research SET level=2 WHERE unit_id=112` для всех игроков без ASTRO_TECH
-- `fleet/expedition.go::Validate`: `COUNT outbound expeditions WHERE kind=15` ≥ `floor(sqrt(astro_level))` → `ErrExpeditionSlotsFull`
-- `fleet/colonize.go::Validate`: `COUNT planets WHERE user_id=?` ≥ `floor(astro_level/2)+1` → `ErrColonyLimit`
-- **Требует ADR** — breaking change для текущих игроков
+**Реализация — ✅ ЗАКРЫТО 2026-04-25** ([ADR-0005](../adr/0005-astrophysics.md)):
+- `astro_tech` (id=112) добавлен в research.yml, units.yml, construction.yml,
+  requirements.yml (research_lab>=4 + expo_tech>=3).
+- Migration 0061 — даёт astro_level=2 всем существующим игрокам.
+  **Новые регистрации** получают astro=0 (отличие от плана) — поведение
+  совпадает с прежним (1 экспедиция через `max(1, sqrt(0))=1`).
+- `colony_limit` = **MAX**(computer_tech+1, astro/2+1) — отклонение от
+  плана: вместо жёсткой замены берём максимум, чтобы существующие
+  игроки с прокачанным computer_tech ничего не теряли.
+- `expedition_slots` = `max(1, floor(sqrt(astro)))`.
+- `fleet/transport.go::checkExpeditionSlots` — COUNT outbound mission=15
+  ≥ maxSlots → `ErrExpeditionSlotsFull` (409).
+- `fleet/colonize.go` + `expedition.go::expExtraPlanet` — лимит планет
+  по новой формуле.
 
 ---
 
