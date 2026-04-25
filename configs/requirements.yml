@@ -10,10 +10,53 @@
 # kind research — означает исследование игрока.
 
 requirements:
-  # Терраформер — план 23, из legacy na_requirements.
+  # --- Здания. Сверено с oxsar2/sql/new-for-dm/data.sql, na_requirements. ---
+
+  # Термоядерная электростанция: id=5, нужны hydrogen_lab(3) ур.5 + energy_tech(18) ур.3.
+  hydrogen_plant:
+    - { kind: building, key: hydrogen_lab, level: 5 }
+    - { kind: research, key: energy_tech,  level: 3 }
+
+  # Нано-фабрика: id=7, нужны robotic_factory(6) ур.10 + computer_tech(14) ур.10.
+  nano_factory:
+    - { kind: building, key: robotic_factory, level: 10 }
+    - { kind: research, key: computer_tech,   level: 10 }
+
+  # Верфь: id=8, нужна robotic_factory(6) ур.2.
+  shipyard:
+    - { kind: building, key: robotic_factory, level: 2 }
+
+  # Ремонтный ангар: id=100, нужны robotic_factory ур.3 + research_lab ур.2.
+  repair_factory:
+    - { kind: building, key: robotic_factory, level: 3 }
+    - { kind: building, key: research_lab,    level: 2 }
+
+  # Завод обороны: id=101, нужна robotic_factory ур.1.
+  defense_factory:
+    - { kind: building, key: robotic_factory, level: 1 }
+
+  # Обменник: id=107, нужны computer_tech ур.10 + energy_tech ур.10.
+  exchange:
+    - { kind: research, key: computer_tech, level: 10 }
+    - { kind: research, key: energy_tech,   level: 10 }
+
+  # Биржа: id=108, нужна computer_tech ур.1.
+  exch_office:
+    - { kind: research, key: computer_tech, level: 1 }
+
+  # Ракетная шахта: id=53 — в legacy не имеет requirements (доступна сразу).
+
+  # Терраформер: id=58, nano_factory ур.1 + energy_tech ур.11.
   terra_former:
     - { kind: building, key: nano_factory, level: 1 }
     - { kind: research, key: energy_tech,  level: 11 }
+
+  # Лунные здания: ставятся только на луне, требуют moon_base.
+  star_surveillance:    [{ kind: building, key: moon_base, level: 1 }]
+  star_gate:
+    - { kind: building, key: moon_base,       level: 1 }
+    - { kind: research, key: hyperspace_tech, level: 7 }
+  moon_robotic_factory: [{ kind: building, key: moon_base, level: 1 }]
 
   # Исследовательская лаборатория открывает все исследования.
   spyware:         [{ kind: building, key: research_lab, level: 3 }]

@@ -21,9 +21,19 @@ type CategoryPages = { category: string; pages: Page[] };
  * с картинкой и красивым именем юнита; click переключает текущий
  * page внутри SPA-вкладки.
  */
+// parseWikiHash: «#wiki/buildings/exchange» → { cat: 'buildings', slug: 'exchange' }.
+// Возвращает пустые строки, если хеш не относится к wiki.
+function parseWikiHash(): { cat: string; slug: string } {
+  const hash = window.location.hash.replace(/^#/, '');
+  const parts = hash.split('/');
+  if (parts[0] !== 'wiki') return { cat: '', slug: '' };
+  return { cat: parts[1] ?? '', slug: parts[2] ?? 'index' };
+}
+
 export function WikiScreen() {
-  const [activeCat, setActiveCat] = useState<string>('');
-  const [activeSlug, setActiveSlug] = useState<string>('index');
+  const initial = parseWikiHash();
+  const [activeCat, setActiveCat] = useState<string>(initial.cat);
+  const [activeSlug, setActiveSlug] = useState<string>(initial.slug || 'index');
   const contentRef = useRef<HTMLDivElement | null>(null);
 
   const cats = useQuery({
@@ -54,6 +64,36 @@ export function WikiScreen() {
     }
   }, [cats.data, activeCat]);
 
+  // navigate: меняем активную страницу и записываем в history, чтобы
+  // браузерные «назад/вперёд» возвращали к предыдущим статьям вики.
+  const navigate = (cat: string, slug: string) => {
+    setActiveCat(cat);
+    setActiveSlug(slug);
+    const url = `#wiki/${cat}/${slug || 'index'}`;
+    if (window.location.hash !== url) {
+      history.pushState(null, '', url);
+    }
+  };
+
+  // Синхронизируем url с авто-выбранной категорией (без push в историю).
+  useEffect(() => {
+    if (activeCat && !parseWikiHash().cat) {
+      history.replaceState(null, '', `#wiki/${activeCat}/${activeSlug || 'index'}`);
+    }
+  }, [activeCat, activeSlug]);
+
+  // popstate: пользователь нажал «назад» — восстанавливаем страницу из url.
+  useEffect(() => {
+    const onPop = () => {
+      const parsed = parseWikiHash();
+      if (!parsed.cat) return; // вышли за пределы wiki — пусть App.tsx разруливает.
+      setActiveCat(parsed.cat);
+      setActiveSlug(parsed.slug || 'index');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
   // resolveUnit: id → { name, image } для md-рендерера.
   const resolveUnit = useMemo(
     () => (id: number) => {
@@ -82,8 +122,7 @@ export function WikiScreen() {
       const cat = categoryOfId(id);
       const slug = keyOfId(id);
       if (!cat || !slug) return;
-      setActiveCat(cat);
-      setActiveSlug(slug);
+      navigate(cat, slug);
     };
     root.addEventListener('click', onClick);
     return () => {
@@ -140,10 +179,7 @@ export function WikiScreen() {
         {(cats.data?.categories ?? []).map((c) => (
           <div key={c.key} style={{ marginBottom: 4 }}>
             <button
-              onClick={() => {
-                setActiveCat(c.key);
-                setActiveSlug('index');
-              }}
+              onClick={() => navigate(c.key, 'index')}
               className={`wiki-cat-btn${activeCat === c.key ? ' active' : ''}`}
             >
               {c.title}
@@ -159,7 +195,7 @@ export function WikiScreen() {
                   return (
                     <button
                       key={slug}
-                      onClick={() => setActiveSlug(slug)}
+                      onClick={() => navigate(c.key, slug)}
                       className={`wiki-page-btn${activeSlug === slug ? ' active' : ''}`}
                     >
                       {img && <img src={img} alt="" className="wiki-page-icon" />}
