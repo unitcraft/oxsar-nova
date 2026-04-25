@@ -322,6 +322,7 @@ func run() error {
 		pr.Get("/fleet", fleetH.List)
 		pr.Get("/fleet/incoming", fleetH.Incoming)
 		pr.Get("/phalanx", fleetH.Phalanx)
+		pr.Post("/stargate", fleetH.Stargate)
 		pr.Post("/fleet/{id}/recall", fleetH.Recall)
 
 		pr.Get("/market/rates", marketH.Rates)
