@@ -151,6 +151,9 @@ func run() error {
 	w.Register(event.KindReturn, transportSvc.ReturnHandler())
 	w.Register(event.KindAttackSingle, withAchievement(transportSvc.AttackHandler()))
 	w.Register(event.KindAttackAlliance, withAchievement(transportSvc.ACSAttackHandler()))
+	// План 20 Ф.6: moon destruction — те же handlers с веткой rip-roll.
+	w.Register(event.KindAttackDestroyMoon, withAchievement(transportSvc.AttackHandler()))
+	w.Register(event.KindAttackAllianceDestroyMoon, withAchievement(transportSvc.ACSAttackHandler()))
 	w.Register(event.KindRaidWarning, transportSvc.RaidWarningHandler())
 	w.Register(event.KindRecycling, withAchievement(transportSvc.RecyclingHandler()))
 	w.Register(event.KindSpy, withAchievement(transportSvc.SpyHandler()))
