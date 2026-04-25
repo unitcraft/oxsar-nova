@@ -43,6 +43,13 @@ function inline(s: string, resolveUnit?: UnitResolver): string {
     }
     return `<a class="wiki-unit-link" data-unit-id="${id}">unit ${id}</a>`;
   });
+  // [[wiki:category/slug|подпись]] — ссылка на рукописную страницу
+  // вики (например, [[wiki:resources/index]] или [[wiki:combat/index|боя]]).
+  out = out.replace(/\[\[wiki:([a-z0-9_-]+)\/([a-z0-9_-]+)(?:\|([^\]]+))?\]\]/g,
+    (_m, cat: string, slug: string, label: string | undefined) => {
+      const text = escapeHtml(label ?? slug);
+      return `<a class="wiki-page-link" data-wiki-cat="${cat}" data-wiki-slug="${slug}">${text}</a>`;
+    });
   // Links [text](url).
   out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text: string, url: string) => {
     const safeUrl = url.replace(/"/g, '%22');
@@ -119,22 +126,41 @@ export function renderMarkdown(md: string, resolveUnit?: UnitResolver): string {
       continue;
     }
 
-    // Список — нумерованный или маркированный.
+    // Список — нумерованный или маркированный. Поддерживает
+    // продолжение строк с отступом (CommonMark «list item continuation»),
+    // чтобы перенос строки внутри пункта не разрывал нумерацию.
     const ul = /^\s*[-*]\s+(.+)$/.exec(line);
     const ol = /^\s*\d+\.\s+(.+)$/.exec(line);
     if (ul || ol) {
       flushParagraph(para);
       const tag = ul ? 'ul' : 'ol';
       const items: string[] = [];
+      let buf: string[] = [];
+      const pushItem = () => {
+        if (buf.length === 0) return;
+        items.push(`<li>${inline(buf.join(' '), resolveUnit)}</li>`);
+        buf = [];
+      };
       while (i < lines.length) {
         const cur = lines[i] ?? '';
         const u = /^\s*[-*]\s+(.+)$/.exec(cur);
         const o = /^\s*\d+\.\s+(.+)$/.exec(cur);
-        if (!u && !o) break;
-        const match = (u ?? o)!;
-        items.push(`<li>${inline(match[1] ?? '', resolveUnit)}</li>`);
-        i++;
+        if (u || o) {
+          pushItem();
+          const match = (u ?? o)!;
+          buf.push(match[1] ?? '');
+          i++;
+          continue;
+        }
+        // Продолжение пункта: отступ ≥ 2 пробел/табуляция и непустая строка.
+        if (buf.length > 0 && /^\s+\S/.test(cur)) {
+          buf.push(cur.trim());
+          i++;
+          continue;
+        }
+        break;
       }
+      pushItem();
       html.push(`<${tag}>${items.join('')}</${tag}>`);
       continue;
     }

@@ -111,10 +111,20 @@ export function WikiScreen() {
     if (!root) return;
     const onClick = (e: MouseEvent) => {
       let el = e.target as HTMLElement | null;
-      while (el && !el.classList?.contains('wiki-unit-link')) {
+      while (el && !el.classList?.contains('wiki-unit-link') && !el.classList?.contains('wiki-page-link')) {
         el = el.parentElement;
       }
       if (!el) return;
+      // [[wiki:cat/slug]] — прямая навигация по категории и slug.
+      if (el.classList.contains('wiki-page-link')) {
+        e.preventDefault();
+        const cat = el.getAttribute('data-wiki-cat') ?? '';
+        const slug = el.getAttribute('data-wiki-slug') ?? 'index';
+        if (!cat) return;
+        navigate(cat, slug);
+        return;
+      }
+      // [[unit:N]] — ищем категорию и slug по числовому id юнита.
       e.preventDefault();
       const idStr = el.getAttribute('data-unit-id');
       if (!idStr) return;
@@ -160,9 +170,10 @@ export function WikiScreen() {
     if (!page.data) return '';
     let md = page.data.markdown;
     const fm = page.data.frontmatter ?? {};
-    if (fm.unit_id) {
-      // Удаляем первый `# ...` (он совпадает с headerNode).
-      md = md.replace(/^#\s+.+\n+/, '');
+    // Если headerNode уже отрисует заголовок (по unit_id или title из
+    // frontmatter), убираем первый `# ...` из markdown, иначе он дублирует.
+    if (fm.unit_id || fm.title) {
+      md = md.replace(/^\s*#\s+.+\n+/, '');
     }
     return renderMarkdown(md, resolveUnit);
   }, [page.data, resolveUnit]);

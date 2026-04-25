@@ -127,6 +127,14 @@
   background: rgba(74, 144, 226, 0.18);
   text-decoration: none;
 }
+.wiki-article a.wiki-page-link {
+  color: var(--ox-accent-bright, #63d9ff);
+  cursor: pointer;
+  font-weight: 600;
+}
+.wiki-article a.wiki-page-link:hover {
+  text-decoration: underline;
+}
 .wiki-article .wiki-unit-icon {
   width: 18px;
   height: 18px;
