@@ -34,6 +34,7 @@ var (
 	ErrInvalidCount      = errors.New("shipyard: invalid count")
 	ErrQueueItemNotFound = errors.New("shipyard: queue item not found")
 	ErrAlreadyDone       = errors.New("shipyard: queue item already completed")
+	ErrPlanetCapExceeded = errors.New("shipyard: per-planet limit exceeded")
 )
 
 type Service struct {
@@ -99,6 +100,32 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		// 2. Зависимости юнита.
 		if err := s.reqs.Check(ctx, tx, key, userID, planetID); err != nil {
 			return err
+		}
+
+		// 2.5. Per-planet cap (план 27-W: Lancer max 50/планета).
+		if !isDefense {
+			if spec, ok := s.catalog.Ships.Ships[key]; ok && spec.MaxPerPlanet > 0 {
+				// Текущее количество в инвентаре планеты.
+				var existing int64
+				if err := tx.QueryRow(ctx,
+					`SELECT COALESCE(count, 0) FROM ships WHERE planet_id=$1 AND unit_id=$2`,
+					planetID, unitID,
+				).Scan(&existing); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+					return fmt.Errorf("ships count: %w", err)
+				}
+				// Уже в очереди (строящиеся, ещё не зачислены в ships).
+				var inQueue int64
+				if err := tx.QueryRow(ctx,
+					`SELECT COALESCE(SUM(count), 0) FROM shipyard_queue
+					 WHERE planet_id=$1 AND unit_id=$2 AND status='running'`,
+					planetID, unitID,
+				).Scan(&inQueue); err != nil {
+					return fmt.Errorf("queue count: %w", err)
+				}
+				if existing+inQueue+count > spec.MaxPerPlanet {
+					return ErrPlanetCapExceeded
+				}
+			}
 		}
 
 		// 3. Стоимость × count. Масштаб ресурсов — int64.

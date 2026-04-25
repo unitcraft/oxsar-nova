@@ -46,6 +46,8 @@ func (h *Handler) Enqueue(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "not enough resources"))
 	case errors.Is(err, ErrNoShipyard):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "shipyard required"))
+	case errors.Is(err, ErrPlanetCapExceeded):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "per-planet limit exceeded for this unit"))
 	case errors.Is(err, ErrPlanetOwnership):
 		httpx.WriteError(w, r, httpx.ErrForbidden)
 	case requirements.IsNotMet(err):

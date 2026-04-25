@@ -724,3 +724,148 @@
 
 Все миграции 0051–0055, go build чистый. Осталась одна незакрытая
 запись в UI Porting — phalanx-producer, ждёт реализации самого сканера.
+
+## 2026-04-25 — План 28 Ф.1-4: удалён configs/construction.yml
+
+- **Где**: `configs/construction.yml` (удалён), `backend/internal/config/catalog.go`,
+  `backend/internal/planet/service.go`, `backend/cmd/tools/battle-sim/main.go`,
+  `backend/cmd/tools/import-datasheets/`.
+- **Что упрощено**: единый источник истины для cost/front/ballistics/masking
+  кораблей и обороны теперь — `ships.yml`/`defense.yml` (раньше — двойная
+  загрузка через construction.yml). `cost_base` исследований —
+  `research.yml`. `display_order`/`demolish`/`charge_credit` зданий —
+  `buildings.yml`. ConstructionCatalog/ConstructionSpec удалены из Go.
+  Удалены `productionRatesApprox` (fallback-путь) и `convert_construction.go`.
+- **Почему**: формулы prod/cons/charge давно в `economy/formulas.go`,
+  поля в YAML были текстовой документацией. Двойная загрузка
+  (construction.yml + ships.yml с `Cost yaml:"-"`) усложняла навигацию.
+- **Ф.5-7** (frontend через `/api/catalog`, валидатор) — отложены,
+  отдельный заход.
+- **Известный десинк**: ключи `metal_mine` (buildings.yml) ↔ `metalmine`
+  (бывший construction.yml). После Ф.4 в коде остался только `metal_mine`
+  (через `cat.Units` / `buildings.yml`); `metalmine` как ключ больше не
+  существует. Константа `economy.IDMetalmine=1` сохранена (это ID, не ключ).
+- **Тесты**: `go test ./... -count=1` зелёный, battle-sim regression
+  идентичен (lancer-vs-cruiser exchange 0.05, mass-fleet сценарии без
+  изменений).
+
+## 2026-04-25 — TODO: rename `metalmine` → `metal_mine` (косметика)
+
+**Где**: 7 файлов, ~15 мест.
+
+**Что**: ключ/имя металлической шахты в коде и конфигах живёт в двух
+вариантах:
+- `metal_mine` — в `configs/buildings.yml`, `configs/units.yml`,
+  `frontend/src/api/catalog.ts` (KEY_MAP), `economy/IDS` (как ID-константа).
+- `metalmine` — в `configs/professions.yml`, `economy.IDMetalmine`,
+  `economy.MetalmineProdMetal`, тестах, `frontend/.../ProfessionScreen.tsx`,
+  имени файла иконки `frontend/public/images/units/metalmine.gif`.
+
+**Рекомендация**: оставить **только `metal_mine`** — согласуется со
+всеми другими ключами проекта (`silicon_lab`, `hydrogen_lab`,
+`solar_plant`, `metal_storage`, `robotic_factory`, ...). Паритет с
+legacy `na_construction.metalmine` больше не цель.
+
+**Что переименовать**:
+1. `configs/professions.yml` — `metalmine:` → `metal_mine:` (2 места).
+2. `backend/internal/economy/ids.go`:
+   - константа `IDMetalmine` → `IDMetalMine`;
+   - ключ в `ProfessionKeyToID["metalmine"]` → `["metal_mine"]`.
+3. `backend/internal/economy/formulas.go` — функция
+   `MetalmineProdMetal` → `MetalMineProdMetal`.
+4. `backend/internal/economy/formulas_test.go` — тесты с этим именем.
+5. `backend/internal/planet/service.go` — все вызовы
+   `economy.IDMetalmine` / `economy.MetalmineProdMetal`.
+6. `backend/internal/planet/production_test.go` — тесты.
+7. `frontend/src/features/profession/ProfessionScreen.tsx:19` —
+   ключ-словарь `metalmine: 'Рудник металла'` → `metal_mine: ...`
+   (должен быть синхронен с professions.yml).
+
+**Что НЕ трогать**:
+- `frontend/public/images/units/metalmine.gif` — оставить как есть.
+  Это имя ассета (нет ценности в переименовании). `KEY_MAP` в
+  `frontend/src/api/catalog.ts:170` (`metal_mine: 'metalmine'`) тоже
+  остаётся как маппинг ключ→имя файла иконки.
+- `legacy_name: METALMINE` в YAML — уже не существует (удалён вместе
+  с `construction.yml` в плане 28 Ф.4).
+- Документация и dev-log (упоминания `metalmine` как исторического
+  факта — оставить).
+
+**Trade-off**: чисто косметическая правка, поведение не меняется.
+Тесты должны пройти после rename. Объём — ~15 правок в 7 файлах.
+
+**Приоритет**: low (отложено как «очистка после плана 28»).
+
+## 2026-04-25 — План 27 итерация 2: глубокая ребалансировка юнитов
+
+- **Где**: `configs/ships.yml`, `configs/defense.yml`,
+  `configs/rapidfire.yml`, `backend/internal/config/catalog.go`.
+- **Что изменилось**: 9 групп изменений (27-F..27-U), все задокументированы
+  в [ADR-0008](adr/0008-unit-rebalance-plan27-iter2.md). Главное:
+  - Shadow attack 200 → 520 + front 5 (anti-DS-роль работает).
+  - Bomber получил RF×3 vs Gauss/Plasma (anti-defense восстановлен).
+  - SF cost ↓ до 6k, attack 150 → 120 (ниша anti-LF).
+  - Lancer fuel 100 → 400, speed 8000 → 6000, front 8 → 6.
+  - Defense shell ×1.5 (RL→3k, Plasma→150k и т.д.).
+  - SSat shell 2k → 5k, cost +50% (закрыт эксплойт).
+  - Front-тюнинг: транспорты/recycler/probe → 6/5; SD → 9; Bomber → 8;
+    shields → 13/14.
+  - Удалены per-unit ballistics/masking (dead-fields, движок их не читал).
+- **Tests**: `go test ./... -count=1` зелёный, battle-sim --runs=20
+  показывает целевые exchange по всем критическим сценариям.
+- **Известные ограничения** (после переоценки):
+  - DS-флот при 3.5× превосходстве проходит planet-defense с потерями
+    ~3% — это **by design**, defense — налог, не барьер. При паритете
+    1:1 defense сдерживает (exchange 0.28).
+  - DS-как-защитник vs BS+SD без RF неуязвим — это специфика юнитов,
+    не дизайн-проблема. Анти-DS в защите работает через Shadow-mass:
+    5000 Shadow (25M) vs 5 DS (50M) → атакующий побеждает с exchange
+    6.67.
+  - Lancer-spam vs lite **починен** через дополнительный nerf attack
+    5500 → 4000 (lancer-vs-mixed exchange 0.21 → 0.13, raid убыточен).
+    Lancer-как-anti-DS ослаблен — anti-DS теперь через Shadow.
+
+## 2026-04-26 — План 27-V/W: финальный фикс ролей (Variant Б)
+
+После прогона расширенных симуляций (`battle-sim --matrix` +
+`--groups`, см. план 27 §17-18) выявлены 2 проблемы:
+1. Shadow доминирует чрезмерно (vs LF 90.91, vs Frigate 104.68 при
+   равной cost — катастрофа).
+2. Lancer стал trap-юнитом после 27-J (vs всё 1v1 0.02-0.13).
+
+**Variant Б (выбран и применён)**:
+
+### 27-V — Shadow Ship cost 5k → 15k
+- `configs/ships.yml`: cost 1k+3k+1k → **3k+9k+3k**.
+- Эффект: vs мирный флот 7-30 (норма), vs DS **2.22** (целевой
+  коридор), vs defense 0.07-0.27 (Shadow проигрывает defense, как
+  должен).
+- Shadow стал специализированным anti-fleet/anti-DS, не «wunderwaffe».
+
+### 27-W — Lancer attack + cap-per-planet
+- `configs/ships.yml`: attack 4000 → **5000**, новое поле
+  `max_per_planet: 50`.
+- `backend/internal/config/catalog.go`: новое поле `MaxPerPlanet int64`
+  в `ShipSpec`.
+- `backend/internal/shipyard/service.go`: проверка
+  `existing + in_queue + new ≤ cap` в `Enqueue` перед charge.
+  Новая ошибка `ErrPlanetCapExceeded`.
+- `backend/internal/shipyard/handler.go`: маппинг → HTTP 400.
+- Эффект: Lancer боеспособен 1v1 (не trap), Lancer-spam как raid
+  невозможен (нужен сбор с 10+ планет).
+
+### Finals
+- Все combat-юниты имеют уникальные ниши, **дубликатов нет**.
+- Trap-юнитов **нет**.
+- Полу-дубль LL≈RL — оставлено, не критично (в OGame так же).
+- Сравнение с OGame: совпадает по основным паттернам, oxsar-nova даже
+  **лучше** в роли Strong Fighter (получил нишу, тогда как OGame Heavy
+  Fighter — trap).
+- Tests: `go test ./... -count=1` зелёный.
+
+### TODO (низкий приоритет)
+- 27-Y: дать Light Laser уникальную роль (например, RF×3 vs SF). Сейчас
+  LL и RL — близкие mass-defense юниты.
+- **Frontend**: `frontend/src/api/catalog.ts` имеет hardcoded SHIPS/
+  DEFENSE с устаревшими значениями. Нужна синхронизация (задача
+  плана 28 Ф.5 — `/api/catalog` endpoint).

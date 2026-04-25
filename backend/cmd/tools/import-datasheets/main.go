@@ -24,8 +24,13 @@ import (
 type converter func(inputDir, outputDir string) error
 
 // converters — реестр «входной SQL-файл → конвертер». Порядок не важен.
+//
+// Утилита одноразовая: запускается на CSV-дампах legacy oxsar2 для
+// первичного портирования данных. Plan 28 (2026-04-25) удалил
+// na_construction-конвертер: configs/construction.yml больше не нужен,
+// все балансные параметры теперь живут в ships.yml/defense.yml/
+// research.yml/buildings.yml.
 var converters = map[string]converter{
-	"na_construction.sql":      convertConstruction,
 	"na_ship_datasheet.sql":    convertShips,
 	"na_requirements.sql":      convertRequirements,
 	"na_artefact_datasheet.sql": convertArtefacts,

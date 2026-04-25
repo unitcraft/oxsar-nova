@@ -72,10 +72,12 @@ rapidfire:
   40:
     38: 5
     39: 5
-    43: 20    # vs Rocket Launcher — legacy, не нерфим
-    44: 20    # vs Light Laser — legacy
+    43: 20    # vs Rocket Launcher
+    44: 20    # vs Light Laser
     45: 10    # vs Strong Laser
     46: 10    # vs Ion Cannon
+    47: 3     # vs Gauss Gun — ADR-0009 (27-G): возврат anti-defense-роли Bomber
+    48: 3     # vs Plasma Gun — ADR-0009 (27-G)
     102: 5    # vs Lancer
 
   # Star Destroyer (41)
