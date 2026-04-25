@@ -14,6 +14,19 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
+// Минимальная подсветка псевдокода: числа, строки, операторы, комментарии //.
+function highlightCode(line: string): string {
+  // Комментарий // ... — всё до конца строки серым.
+  line = line.replace(/(\/\/.*)$/, '<span class="ch-comment">$1</span>');
+  // Числа (включая дробные и %).
+  line = line.replace(/\b(\d+(?:\.\d+)?%?)\b/g, '<span class="ch-num">$1</span>');
+  // Операторы и разделители.
+  line = line.replace(/([=×\-+*/&lt;&gt;≤≥≠|,])/g, '<span class="ch-op">$1</span>');
+  // Функции: слово перед «(».
+  line = line.replace(/\b([a-zA-Z_]\w*)\s*(?=\()/g, '<span class="ch-fn">$1</span>');
+  return line;
+}
+
 // resolveUnit — маппит unit_id в { name, image }. Передаётся снаружи
 // (зависит от каталога, который во frontend живёт отдельным модулем).
 export type UnitResolver = (id: number) => { name: string; image: string } | null;
@@ -93,7 +106,7 @@ export function renderMarkdown(md: string, resolveUnit?: UnitResolver): string {
         i++;
       }
       i++; // пропускаем закрывающую ```
-      const escaped = codeLines.map((l) => escapeHtml(l)).join('\n');
+      const escaped = codeLines.map((l) => highlightCode(escapeHtml(l))).join('\n');
       html.push(`<pre><code>${escaped}</code></pre>`);
       continue;
     }
