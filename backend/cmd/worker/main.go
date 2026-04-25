@@ -22,6 +22,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/alien"
 	"github.com/oxsar/nova/backend/internal/artefact"
 	"github.com/oxsar/nova/backend/internal/automsg"
+	"github.com/oxsar/nova/backend/internal/dailyquest"
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/event"
 	"github.com/oxsar/nova/backend/internal/fleet"
@@ -96,6 +97,7 @@ func run() error {
 
 	scoreSvc := score.NewServiceWithCoeffs(db, cat, cfg.Game.Points)
 	achSvc := achievement.NewService(db)
+	dailyQuestSvc := dailyquest.New(pool)
 
 	// withScore оборачивает handler: после успеха пересчитывает очки
 	// пользователя события (если UserID задан). Ошибка пересчёта не
@@ -136,12 +138,36 @@ func run() error {
 		}
 	}
 
+	// План 17 D: withDailyQuest оборачивает handler — после успеха
+	// инкрементирует прогресс quest по condition_type.
+	// Ошибка не прерывает основной handler.
+	withDailyQuest := func(conditionType string) func(event.Handler) event.Handler {
+		return func(h event.Handler) event.Handler {
+			return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
+				if err := h(ctx, tx, e); err != nil {
+					return err
+				}
+				if e.UserID == nil || dailyQuestSvc == nil {
+					return nil
+				}
+				if err := dailyQuestSvc.IncrementProgress(ctx, *e.UserID,
+					conditionType, 1, nil); err != nil {
+					log.WarnContext(ctx, "daily_quest_progress_failed",
+						slog.String("user_id", *e.UserID),
+						slog.String("condition", conditionType),
+						slog.String("err", err.Error()))
+				}
+				return nil
+			}
+		}
+	}
+
 	// Регистрация handler-ов.
 	// Один handler на Kind. Domain-пакеты сами не регистрируются —
 	// чтобы воркер видел весь список в одном месте и было проще
 	// отслеживать, что именно обрабатывается.
-	w.Register(event.KindBuildConstruction, withAchievement(withScore(event.HandleBuildConstruction)))
-	w.Register(event.KindResearch, withAchievement(withScore(event.HandleResearch)))
+	w.Register(event.KindBuildConstruction, withDailyQuest("building_done")(withAchievement(withScore(event.HandleBuildConstruction))))
+	w.Register(event.KindResearch, withDailyQuest("research_done")(withAchievement(withScore(event.HandleResearch))))
 	w.Register(event.KindBuildFleet, withAchievement(withScore(event.HandleBuildFleet)))
 	w.Register(event.KindBuildDefense, withScore(event.HandleBuildFleet))
 	w.Register(event.KindArtefactExpire, withAchievement(artefactSvc.ExpireEvent()))

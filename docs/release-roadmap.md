@@ -48,7 +48,8 @@
 - ~~[22 Ф.2.2](plans/22-configs-cleanup.md)~~ — ✅ **решено 2026-04-25** ([ADR-0006](adr/0006-orphan-units-deferred.md)): orphan-юниты НЕ реализуем в v1, knownOrphans = roadmap для v1.x.
 - [15 Этап 4](plans/15-alien-holding-thursday.md) — UI для alien/holding: механика работает, UI позже.
 - [14 Ф.4–Ф.7](plans/14-admin-expansion.md) — админ-дашборды / runbooks: полезны, но не блокер.
-- [17 B–H](plans/17-gameplay-improvements.md) — daily quests, рейтинги, события: ретеншн-механики, итеративно.
+- ~~[17 D](plans/17-gameplay-improvements.md)~~ — ✅ **done 2026-04-25**: Daily Quests с lazy-gen, 9 типов заданий, claim API, frontend tab.
+- [17 B, C, E, F, G, H](plans/17-gameplay-improvements.md) — рейтинги категорий, события, UX, бой: ретеншн, итеративно.
 
 ---
 
