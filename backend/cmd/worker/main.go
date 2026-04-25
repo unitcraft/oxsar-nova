@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/dailyquest"
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/event"
+	"github.com/oxsar/nova/backend/internal/features"
 	"github.com/oxsar/nova/backend/internal/health"
 	"github.com/oxsar/nova/backend/internal/fleet"
 	"github.com/oxsar/nova/backend/internal/officer"
@@ -73,6 +75,24 @@ func run() error {
 	if err != nil {
 		return err
 	}
+
+	// Feature flags (план 31 Ф.2). Worker читает тот же набор, что и
+	// server — позволяет event-handler'ам ветвиться по флагам
+	// (например goal_engine для плана 30).
+	featuresPath := os.Getenv("FEATURES_FILE")
+	if featuresPath == "" {
+		featuresPath = filepath.Join(catalogDir, "features.yaml")
+	}
+	featureSet, err := features.Load(featuresPath)
+	if err != nil {
+		log.WarnContext(ctx, "features load failed, using empty set",
+			slog.String("path", featuresPath), slog.String("err", err.Error()))
+		featureSet, _ = features.ParseBytes(nil)
+	}
+	log.InfoContext(ctx, "features loaded",
+		slog.String("path", featuresPath),
+		slog.Any("enabled", features.EnabledKeys(featureSet)))
+	_ = featureSet // используется в event-handler'ах при появлении флагов
 
 	pool, err := storage.OpenPostgres(ctx, cfg.DB.URL)
 	if err != nil {

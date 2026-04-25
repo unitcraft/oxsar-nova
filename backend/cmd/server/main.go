@@ -57,6 +57,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/techtree"
 	"github.com/oxsar/nova/backend/internal/storage"
 	"github.com/oxsar/nova/backend/internal/dailyquest"
+	"github.com/oxsar/nova/backend/internal/features"
 	"github.com/oxsar/nova/backend/internal/galaxyevent"
 	"github.com/oxsar/nova/backend/internal/health"
 	"github.com/oxsar/nova/backend/internal/wiki"
@@ -105,6 +106,22 @@ func run() error {
 	log.InfoContext(ctx, "catalog loaded",
 		slog.Int("buildings", len(cat.Buildings.Buildings)),
 		slog.Int("ships", len(cat.Ships.Ships)))
+
+	// Feature flags. Отсутствие файла — не ошибка (все флаги false). План 31 Ф.2.
+	featuresPath := os.Getenv("FEATURES_FILE")
+	if featuresPath == "" {
+		featuresPath = filepath.Join(catalogDir, "features.yaml")
+	}
+	featureSet, err := features.Load(featuresPath)
+	if err != nil {
+		log.WarnContext(ctx, "features load failed, using empty set",
+			slog.String("path", featuresPath), slog.String("err", err.Error()))
+		featureSet, _ = features.ParseBytes(nil)
+	}
+	log.InfoContext(ctx, "features loaded",
+		slog.String("path", featuresPath),
+		slog.Any("enabled", features.EnabledKeys(featureSet)))
+	featureH := features.NewHandler(featureSet)
 
 	pool, err := storage.OpenPostgres(ctx, cfg.DB.URL)
 	if err != nil {
@@ -241,6 +258,10 @@ func run() error {
 	// ли запросы на этот backend instance. План 31 Ф.1.
 	r.Get("/api/health", healthState.HealthHandler())
 	r.Get("/api/ready", healthState.ReadyHandler(pool))
+
+	// Feature flags для UI — публично читаются без auth: фронтенд при
+	// загрузке решает, какой UI рисовать. План 31 Ф.2.
+	r.Get("/api/features", featureH.List)
 
 	r.With(authRL.Middleware).Post("/api/auth/register", authH.Register)
 	r.With(authRL.Middleware).Post("/api/auth/login", authH.Login)

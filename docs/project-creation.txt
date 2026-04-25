@@ -7712,3 +7712,65 @@ liveness/readiness HTTP endpoints + draining state при SIGTERM.
 - Ф.2: feature flags (configs/features.yaml + features-пакет).
 - Ф.3: API-version header.
 - Ф.4: docs/ops/deploy.md + migrations-style.md.
+
+## 2026-04-26: План 31 Ф.2 — feature flags
+
+После Ф.1 (health/draining) появилась инфра для безболезненного
+restart, теперь добавлен механизм флагов: новый функционал за
+`if features.Enabled(set, "key") { ... }`, переключение через YAML
++ restart.
+
+### Backend
+
+**Новый пакет** `backend/internal/features/`:
+- `Set` иммутабелен после Load, atomic-safe (RWMutex для будущего hot-reload).
+- `ParseBytes` / `Load(path)` — missing-file не ошибка (fail-safe в dev).
+- `Enabled(s, key)` — nil-safe, unknown → false (fail-closed).
+- `All(s)` копирует map (защита от мутаций извне).
+- `EnabledKeys(s)` — отсортированный список (для UI/тестов).
+- `Handler.List` — GET /api/features (public, без auth).
+- 7 unit-тестов покрывают все ветки.
+
+**Интеграция**:
+- `cmd/server/main.go`: load после catalog, route `/api/features`.
+- `cmd/worker/main.go`: load для event-handler'ов (будут использовать
+  с плана 30).
+- Path: `FEATURES_FILE` env или `${CATALOG_DIR}/features.yaml`.
+- Логируется на старте: `features loaded enabled=[...]`.
+
+### Frontend
+
+`frontend/src/features/flags.ts`:
+- `useFeatures()` — весь набор через TanStack Query, staleTime 5min,
+  без refetch на focus.
+- `useFeatureFlag(key)` — boolean, fail-closed во время загрузки.
+- `useEnabledFlagKeys()` — debug-helper.
+
+### Шаблон конфига
+
+`configs/features.yaml` с инструкциями:
+- workflow добавления флага.
+- пример заглушки `example_disabled` (удалить, когда появятся реальные).
+
+### Workflow рефакторинга
+
+1. Добавить флаг с `enabled: false`.
+2. Обернуть новый код.
+3. Deploy — мёртвый код в проде.
+4. Тест на своём аккаунте (временное `enabled: true` + restart).
+5. Раскатить: `enabled: true`, redeploy.
+6. Через неделю — удалить старую ветку + флаг.
+
+### Hot-reload отсутствует сознательно
+Причина: restart дёшев (Ф.1), предсказуем, упрощает рассуждения.
+В будущем при необходимости — отдельный итерированием.
+
+### Tests
+`go test ./... -count=1`: 28 пакетов (было 27 + features).
+Frontend typecheck не запущен локально (нет npm), правки минимальны.
+
+### Что дальше
+- Ф.3 (API-version header) — отложено.
+- Ф.4 (документация деплоя) — параллельно по ходу.
+- **План 30 (Goal Engine)** — теперь готов к началу: и feature flags,
+  и graceful drain есть.

@@ -939,6 +939,34 @@ Battle-sim: lancer-vs-mixed defender wins 100% (atk loss 96%, def loss
 typecheck не запущен локально (нет npm), правки минимальны и проверены
 визуально.
 
+## 2026-04-26 — План 31 Ф.2: feature flags
+
+**Где**: `backend/internal/features/` (новый пакет),
+`configs/features.yaml`, `backend/cmd/server/main.go`,
+`backend/cmd/worker/main.go`, `frontend/src/features/flags.ts`.
+
+**Что**: добавлены feature flags для безопасной выкатки рефакторингов.
+YAML-конфиг + Go-пакет + frontend hook.
+
+- `features.Set` иммутабелен после `Load`, atomic-safe.
+- `Enabled(s, "key")` fail-closed: unknown / nil → false.
+- Endpoint `GET /api/features` (без auth) — для UI conditional render.
+- Frontend `useFeatureFlag('goal_engine')` через TanStack Query
+  (staleTime 5min, fail-closed во время загрузки).
+
+**Workflow**:
+1. Добавить запись в `features.yaml` с `enabled: false`.
+2. Обернуть новый код в `if features.Enabled(...)`.
+3. Деплой — новый код есть, но не активен.
+4. Тест в проде через временное `enabled: true` + restart.
+5. Стабильно — `enabled: true` для всех.
+
+**Hot-reload не реализован сознательно**: restart дёшев (план 31 Ф.1
+graceful drain), предсказуем. При необходимости — добавить отдельным
+итерированием.
+
+**Tests**: 7 unit-тестов в `features_test.go`, 28 пакетов всего зелёные.
+
 ## 2026-04-26 — План 31 Ф.1: health/ready + draining state
 
 **Где**: `backend/internal/health/` (новый), `cmd/server/main.go`,
