@@ -29,10 +29,13 @@ WORKDIR /app
 COPY --from=build /out/server /app/server
 COPY --from=build /out/worker /app/worker
 COPY configs /app/configs
+# План 19: вики читается на runtime — копируем сгенерированные .md.
+COPY docs/wiki /app/wiki
 
-ENV CATALOG_DIR=/app/configs \
-    I18N_DIR=/app/configs/i18n \
-    SERVER_ADDR=:8080
+ENV CATALOG_DIR=/app/configs
+ENV I18N_DIR=/app/configs/i18n
+ENV WIKI_ROOT=/app/wiki/ru
+ENV SERVER_ADDR=:8080
 
 EXPOSE 8080
 

@@ -17,8 +17,10 @@ CREATE TABLE galaxy_events (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Активное событие = ends_at > now(). Индекс на быстрый запрос.
-CREATE INDEX ix_galaxy_events_active ON galaxy_events(ends_at) WHERE ends_at > now();
+-- Запросы фильтруют по ends_at > now(); обычный индекс по ends_at
+-- эффективен для b-tree-сканов диапазона. Partial index с now() в
+-- предикате не работает (функция не IMMUTABLE).
+CREATE INDEX ix_galaxy_events_ends_at ON galaxy_events(ends_at);
 
 -- +goose Down
 DROP TABLE galaxy_events;
