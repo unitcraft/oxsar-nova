@@ -233,7 +233,10 @@ func run() error {
 	adminH := admin.NewHandler(db)
 	alienH := alien.NewHandler(db)
 
-	chatHub := chat.NewHub()
+	// План 32 Ф.5: chat.Hub использует Redis pub/sub для multi-instance
+	// fan-out'а. При rdb=nil деградирует до single-instance broadcast.
+	chatHub := chat.NewHubWithRedis(ctx, rdb, log)
+	defer chatHub.Close()
 	chatH := chat.NewHandler(chatHub, db)
 
 	// i18n: папка необязательна — если её нет или пустая, i18n просто
