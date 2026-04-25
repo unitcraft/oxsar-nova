@@ -1,0 +1,38 @@
+# Расписание периодических задач worker'а (план 32).
+#
+# Все cron-выражения в UTC.
+# Формат: стандартный cron (5 полей: min hour dom mon dow) или @every <duration>.
+#
+# Каждая job обёрнута в Postgres advisory lock — при N≥2 worker-инстансах
+# выполняет ровно один. См. backend/internal/scheduler/ и backend/internal/locks/.
+#
+# ENV-overrides:
+#   SCHEDULER_<JOB>_CRON      — заменить schedule конкретной job
+#   SCHEDULER_<JOB>_ENABLED   — true|false включить/отключить job
+#   SCHEDULER_DISABLE_ALL     — kill-switch для всего scheduler'а
+
+jobs:
+  alien_spawn:
+    schedule: "0 */6 * * *"        # каждые 6 ч в :00 UTC (00, 06, 12, 18)
+    enabled: true
+    description: "Spawn alien AI attacks; thursday-bonus active автоматически по UTC."
+
+  inactivity_reminders:
+    schedule: "0 9 * * *"          # ежедневно в 09:00 UTC
+    enabled: true
+    description: "Email-напоминания неактивным игрокам (3+ дня), 1 раз в ISO-неделю."
+
+  expire_temp_planets:
+    schedule: "5 * * * *"          # каждый час в :05 (не совпадая с alien_spawn)
+    enabled: true
+    description: "DELETE planets WHERE expires_at < now() — лунные руины и temp-объекты."
+
+  event_pruner:
+    schedule: "30 3 * * *"         # 03:30 UTC — низкий трафик, до score_recalc
+    enabled: true
+    description: "Перенос error-events старше 7 дней в events_dead."
+
+  score_recalc_all:
+    schedule: "0 4 * * *"          # 04:00 UTC — после event_pruner
+    enabled: true
+    description: "Полный пересчёт очков всех активных игроков."

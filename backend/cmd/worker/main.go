@@ -35,6 +35,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/internal/requirements"
 	"github.com/oxsar/nova/backend/internal/rocket"
+	"github.com/oxsar/nova/backend/internal/scheduler"
 	"github.com/oxsar/nova/backend/internal/score"
 	"github.com/oxsar/nova/backend/internal/storage"
 	"github.com/oxsar/nova/backend/pkg/metrics"
@@ -224,78 +225,83 @@ func run() error {
 
 	automsgSvc := automsg.NewService(db)
 
-	// Alien AI: спавн атак раз в 6 часов.
-	go func() {
-		t := time.NewTicker(6 * time.Hour)
-		defer t.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-				if err := alienSvc.Spawn(ctx); err != nil {
-					log.ErrorContext(ctx, "alien_spawn_failed", slog.String("err", err.Error()))
-				}
-			}
+	// План 32: периодические задачи через scheduler с advisory lock.
+	// При N≥2 worker'ах ровно один инстанс выполняет каждую job, остальные
+	// тихо инкрементят skip-метрику.
+	schedulePath := os.Getenv("SCHEDULE_FILE")
+	if schedulePath == "" {
+		schedulePath = filepath.Join(catalogDir, "schedule.yaml")
+	}
+	schedCfg, err := scheduler.LoadConfig(schedulePath)
+	if err != nil {
+		return fmt.Errorf("load schedule: %w", err)
+	}
+	sch := scheduler.New(schedCfg, pool, log)
+
+	if err := sch.Register("alien_spawn", alienSvc.Spawn); err != nil {
+		return fmt.Errorf("register alien_spawn: %w", err)
+	}
+
+	if err := sch.Register("inactivity_reminders", func(ctx context.Context) error {
+		year, week := time.Now().UTC().ISOWeek()
+		weekSuffix := fmt.Sprintf("%dW%02d", year, week)
+		n, err := automsgSvc.SendInactivityReminders(ctx, 3, weekSuffix)
+		if err != nil {
+			return err
 		}
-	}()
+		if n > 0 {
+			log.InfoContext(ctx, "inactivity_reminders_sent", slog.Int("count", n))
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("register inactivity_reminders: %w", err)
+	}
+
+	if err := sch.Register("expire_temp_planets", func(ctx context.Context) error {
+		tag, err := pool.Exec(ctx,
+			`DELETE FROM planets WHERE expires_at IS NOT NULL AND expires_at < now()`)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() > 0 {
+			log.InfoContext(ctx, "expire_planets_deleted",
+				slog.Int64("count", tag.RowsAffected()))
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("register expire_temp_planets: %w", err)
+	}
+
+	if err := sch.Register("event_pruner", func(ctx context.Context) error {
+		moved, err := w.PruneErrors(ctx)
+		if err != nil {
+			return err
+		}
+		if moved > 0 {
+			log.InfoContext(ctx, "event_pruned",
+				slog.Int64("moved", moved),
+				slog.String("threshold", event.DeadLetterThreshold.String()))
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("register event_pruner: %w", err)
+	}
 
 	// Пересчёт очков всех игроков — через событие KindScoreRecalcAll
-	// (раз в сутки). Бывший 5-минутный ticker удалён в пользу
-	// event-based подхода (план 09 Ф.5.2).
+	// (Ф.4 переведёт на scheduler; пока совместимое поведение).
 	w.Register(event.KindScoreRecalcAll, scoreSvc.RecalcAllEvent())
 	if err := scoreSvc.BootstrapRecalcAllEvent(ctx); err != nil {
 		log.WarnContext(ctx, "score_bootstrap_recalc_failed",
 			slog.String("err", err.Error()))
 	}
 
-	// Ежедневная рассылка уведомлений о неактивности.
-	go func() {
-		t := time.NewTicker(24 * time.Hour)
-		defer t.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case tick := <-t.C:
-				year, week := tick.ISOWeek()
-				weekSuffix := fmt.Sprintf("%dW%02d", year, week)
-				n, err := automsgSvc.SendInactivityReminders(ctx, 3, weekSuffix)
-				if err != nil {
-					log.ErrorContext(ctx, "inactivity_reminders_failed", slog.String("err", err.Error()))
-				} else if n > 0 {
-					log.InfoContext(ctx, "inactivity_reminders_sent", slog.Int("count", n))
-				}
-			}
-		}
-	}()
-
-	// Удаление временных планет с истёкшим expires_at (раз в час).
-	go func() {
-		t := time.NewTicker(time.Hour)
-		defer t.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-				tag, err := pool.Exec(ctx,
-					`DELETE FROM planets WHERE expires_at IS NOT NULL AND expires_at < now()`)
-				if err != nil {
-					log.ErrorContext(ctx, "expire_planets_failed", slog.String("err", err.Error()))
-				} else if tag.RowsAffected() > 0 {
-					log.InfoContext(ctx, "expire_planets_deleted",
-						slog.Int64("count", tag.RowsAffected()))
-				}
-			}
-		}
-	}()
-
-	// Pruner: ежедневно переносит error-events старше 7 дней в events_dead.
-	go func() {
-		if err := w.RunPruner(ctx); err != nil && err != context.Canceled {
-			log.ErrorContext(ctx, "event_pruner_exit", slog.String("err", err.Error()))
-		}
+	if err := sch.Start(ctx); err != nil {
+		return fmt.Errorf("scheduler start: %w", err)
+	}
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_ = sch.Stop(stopCtx)
 	}()
 
 	// Обновлятор queue-depth / lag gauge'ов.
