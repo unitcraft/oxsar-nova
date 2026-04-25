@@ -184,11 +184,16 @@ func (s *Service) Exchange(ctx context.Context, userID, planetID string,
 // 1 credit = 100 condition units (т.е. 100 metal / 50 silicon / 25 hydrogen).
 const CreditRatePerUnit = 100.0
 
-// ExchangeCredit обменивает ресурсы на кредиты или наоборот.
-// direction: "to_credit" — продать ресурс за кредиты.
-//            "from_credit" — купить ресурс за кредиты.
+// ExchangeCredit покупает ресурс за кредиты (premium → ресурсы).
 // resource: metal|silicon|hydrogen
-// amount при "to_credit" — количество ресурса; при "from_credit" — количество кредитов.
+// amount: количество кредитов, которое тратится.
+//
+// Обратное направление (продажа ресурсов за кредиты, бывшее direction
+// "to_credit") удалено 2026-04-26 как уязвимость: позволяло бесконечно
+// фармить premium-валюту через производство ресурсов. См. ADR/dev-log.
+//
+// Поле Direction в ответе сохранено для совместимости с frontend и теперь
+// всегда равно "from_credit".
 type CreditExchangeResult struct {
 	Direction     string  `json:"direction"`
 	Resource      string  `json:"resource"`
@@ -204,7 +209,10 @@ func (s *Service) ExchangeCredit(ctx context.Context, userID, planetID, directio
 	if amount <= 0 {
 		return CreditExchangeResult{}, ErrInvalidAmount
 	}
-	if direction != "to_credit" && direction != "from_credit" {
+	// Удалено направление "to_credit" (продажа ресурсов за кредиты).
+	// Принимаем только "from_credit" или пустую строку (default = from_credit
+	// для обратной совместимости со старым клиентом, ещё не обновлённым).
+	if direction != "" && direction != "from_credit" {
 		return CreditExchangeResult{}, ErrInvalidResource
 	}
 
@@ -225,6 +233,7 @@ func (s *Service) ExchangeCredit(ctx context.Context, userID, planetID, directio
 		if ownerID != userID {
 			return ErrPlanetOwnership
 		}
+		_ = balance // нужен для FOR UPDATE-lock на planets row
 
 		var userRate, credit float64
 		if err := tx.QueryRow(ctx,
@@ -233,34 +242,6 @@ func (s *Service) ExchangeCredit(ctx context.Context, userID, planetID, directio
 		}
 		if userRate <= 0 {
 			userRate = 1.2
-		}
-
-		if direction == "to_credit" {
-			resAmount := int64(math.Floor(amount))
-			if resAmount <= 0 {
-				return ErrInvalidAmount
-			}
-			if int64(balance) < resAmount {
-				return ErrNotEnough
-			}
-			// condition units = resAmount × cost.
-			// credits = condition / CreditRatePerUnit / userRate.
-			credits := float64(resAmount) * cost / CreditRatePerUnit / userRate
-			if credits <= 0 {
-				return ErrInvalidAmount
-			}
-			if _, err := tx.Exec(ctx,
-				`UPDATE planets SET `+resource+` = `+resource+` - $1 WHERE id = $2`,
-				resAmount, planetID); err != nil {
-				return fmt.Errorf("market: debit planet: %w", err)
-			}
-			if _, err := tx.Exec(ctx,
-				`UPDATE users SET credit = credit + $1 WHERE id = $2`,
-				credits, userID); err != nil {
-				return fmt.Errorf("market: credit user: %w", err)
-			}
-			out = CreditExchangeResult{Direction: "to_credit", Resource: resource, ResourceDelta: -resAmount, CreditDelta: credits}
-			return nil
 		}
 
 		// from_credit: amount — количество кредитов, покупаем ресурс.

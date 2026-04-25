@@ -7556,3 +7556,40 @@ RF×45 — минимально инвазивное решение:
 - Matrix 1v1: идентична Variant Б — cap не влиял на 1v1, его удаление
   не меняет картину.
 - `go test ./... -count=1`: 26 пакетов зелёные.
+
+## 2026-04-26: Security — удалена продажа ресурсов за credits
+
+В endpoint `POST /api/planets/{id}/market/credit` было два направления:
+- `to_credit` — продать ресурс за credits (premium-валюту).
+- `from_credit` — купить ресурс за credits.
+
+Направление `to_credit` представляло **economy-уязвимость**: игрок мог
+бесконечно фармить premium-валюту через mines (металл/silicon/hydrogen
+производятся runtime → конвертируются в credits → credits тратятся в
+shop или дают monetary value через payment-систему). Это ломало
+payment-балaнс.
+
+### Удалено
+- `backend/internal/market/service.go`: ветка `if direction == "to_credit"
+  { ... }` в `ExchangeCredit`. Теперь принимается только `from_credit`
+  или пустая строка.
+- `backend/internal/market/handler.go`: обновлён комментарий к
+  `creditExchangeRequest.Direction`.
+- `frontend/src/features/market/MarketScreen.tsx`: убран `<select>` с
+  выбором направления, убрана ветка preview/onSuccess для to_credit.
+  Тип `CreditExchangeResult.direction` сужен до `'from_credit'`.
+
+### Что осталось
+- `from_credit` — покупка ресурсов за credits (legitimate расход premium
+  валюты). Игрок, заплативший real money за credits через payment, может
+  конвертировать их в ресурсы.
+- Обмен ресурс↔ресурс (`/api/planets/{id}/market/exchange`) — не уязвим.
+- Payment-флоу real money → credits.
+
+### Tests
+`go test ./... -count=1`: 26 пакетов зелёные. Market-пакет тестов нет
+(only smoke), но изменения минимальные — удаление одной ветки.
+
+Frontend typecheck не запускался локально (нет npm/node в окружении),
+правки визуально проверены: убраны state `direction`/`setDirection`,
+все ссылки на `to_credit` удалены, тип CreditExchangeResult обновлён.
