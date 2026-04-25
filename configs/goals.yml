@@ -1,0 +1,49 @@
+# Цели игроков — единый каталог для achievements + daily quests +
+# tutorial-flow. План 30 Goal Engine.
+#
+# Schema (см. backend/internal/goal/types.go):
+#   goals:
+#     <KEY>:                          # уникальный ключ
+#       title: "..."                  # обязательно
+#       description: "..."            # опц.
+#       category: achievement|starter|daily|weekly|event
+#       lifecycle: permanent|one-time|daily|weekly|seasonal
+#       condition:
+#         type: <registered>          # см. backend/internal/goal/conditions/
+#         params: { ... }             # параметры конкретного типа
+#       target: 1                     # для прогресс-баров; default 1
+#       reward:
+#         credits:  N
+#         metal:    N
+#         silicon:  N
+#         hydrogen: N
+#       requires: [KEY1, KEY2]        # граф зависимостей (опц.)
+#       random_weight: 100            # для daily-pool (опц.)
+#       active_from: "2026-04-01T00:00:00Z"  # seasonal окно (опц.)
+#       active_until: "2026-05-01T00:00:00Z"
+#       points: 1                     # очки достижений (опц.)
+#       icon: "⛏️"                    # для UI (опц.)
+#       sort_order: 10                # для UI (опц.)
+#
+# Workflow добавления:
+#   1. Добавить запись здесь.
+#   2. Если нужен новый condition.type — реализовать в
+#      backend/internal/goal/conditions/, зарегистрировать в init().
+#   3. Перезагрузить backend (graceful drain через план 31).
+
+goals:
+  # Минимальный smoke-test для Ф.1: одна снимочная цель.
+  # На Ф.4 будут перенесены все 32 цели из старых таблиц.
+  FIRST_METAL:
+    title: "Первая шахта"
+    description: "Постройте Metal Mine на своей планете."
+    category: achievement
+    lifecycle: permanent
+    points: 1
+    icon: "⛏️"
+    condition:
+      type: building_level
+      params: { unit_id: 1, min_level: 1 }
+    target: 1
+    reward:
+      credits: 10

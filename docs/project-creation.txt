@@ -7774,3 +7774,78 @@ Frontend typecheck не запущен локально (нет npm), правк
 - Ф.4 (документация деплоя) — параллельно по ходу.
 - **План 30 (Goal Engine)** — теперь готов к началу: и feature flags,
   и graceful drain есть.
+
+## 2026-04-26: План 30 Ф.1 — Goal Engine backend (за флагом)
+
+После обсуждения архитектуры решено: определения целей — в YAML
+(согласовано с планом 28, где content проекта живёт в configs/), БД
+хранит только пользовательский state. Это упрощает миграцию (2 таблицы
+вместо 4), даёт review через git diff и type safety при загрузке.
+
+### Backend (новый пакет internal/goal)
+
+**9 файлов**:
+- types.go: GoalDef + Reward + View + ConditionSpec.DecodeParams.
+- catalog.go: LoadCatalog с валидацией (категория, lifecycle, requires,
+  циклы), индексы byCategory и byEventKind.
+- registry.go: snapshotRegistry + counterRegistry.
+- period.go: PeriodKey(lifecycle, now) — '' / 'YYYY-MM-DD' / 'YYYY-Www'.
+- engine.go: Recompute (snapshot), OnEvent (counter), Claim, MarkSeen,
+  List.
+- rewarder.go: SimpleRewarder — credits + ресурсы на home-планету.
+- notifier.go: InboxNotifier + NoopNotifier.
+- conditions/building_level.go: snapshot, max-level через JOIN.
+- conditions/event_count.go: counter по event_kind.
+
+### YAML
+
+configs/goals.yml — стартовый smoke-test (FIRST_METAL). Schema-документация
+в шапке файла (workflow, поля, пример).
+
+### Migration
+
+0065_goal_progress.sql:
+- goal_progress (user_id, goal_key, period_key, progress, completed_at,
+  claimed_at, seen_at).
+- goal_rewards_log (id, user_id, goal_key, period_key, granted_at, reward).
+- Индексы для UI list и unseen-badge.
+
+### Архитектурные решения
+
+- **YAML вместо goal_defs в БД**: согласовано с планом 28 (content в
+  configs/). Преимущества: review через diff, type safety при load,
+  массовые правки sed/editor, единый паттерн с units.yml/defense.yml.
+- **String goal_key вместо FK на serial id**: ключи в YAML стабильные.
+  Trade-off: нет DB-уровневой ловли «orphan progress на удалённую
+  цель» — решается validate-step при load YAML.
+- **Conditions через Go-registry**: типизированные функции в
+  conditions/, params сохраняются в YAML как map[string]any и
+  типобезопасно декодируются через DecodeParams (json.Marshal+Unmarshal).
+- **byEventKind index** в Catalog: O(1) lookup для counter-целей при
+  OnEvent (вместо SELECT с JSONB-фильтром). Возможно благодаря тому,
+  что определения в памяти.
+
+### Feature flag
+
+goal_engine = false в configs/features.yaml. Код мёртв до Ф.5 (UI
+переключение). Engine можно тестировать через unit-тесты и smoke-тест
+с одной FIRST_METAL целью.
+
+### Tests
+
+29 пакетов зелёные (28 + новый goal). 9 unit-тестов:
+- ParseCatalog: empty, sample, requires-valid/missing/cycle,
+  invalid-category, seasonal-window.
+- ByEventKind index, ByCategory sorted.
+- PeriodKey + UTC normalization.
+
+### Что дальше (Ф.2-7)
+
+- Ф.2: HTTP API (GET /api/goals, POST claim, POST seen).
+- Ф.3: Worker hook (заменить withAchievement + withDailyQuest на
+  withGoal под флагом).
+- Ф.4: Перенести 32 цели из старых таблиц в goals.yml + миграция
+  goal_progress (Go-tool, идемпотентен).
+- Ф.5: UI на /api/goals.
+- Ф.6: Расширения (новые conditions, weekly, seasonal).
+- Ф.7: Удалить старые пакеты achievement + dailyquest.
