@@ -88,10 +88,12 @@ function inline(s: string, resolveUnit?: UnitResolver): string {
       const text = escapeHtml(label ?? slug);
       return `<a class="wiki-page-link" data-wiki-cat="${cat}" data-wiki-slug="${slug}">${text}</a>`;
     });
-  // Links [text](url).
+  // Links [text](url). Внешние ссылки (http/https) открываются в новой вкладке.
   out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text: string, url: string) => {
     const safeUrl = url.replace(/"/g, '%22');
-    return `<a href="${safeUrl}">${text}</a>`;
+    const external = /^https?:\/\//.test(url);
+    const extra = external ? ' target="_blank" rel="noopener noreferrer"' : '';
+    return `<a href="${safeUrl}"${extra}>${text}</a>`;
   });
   return out;
 }

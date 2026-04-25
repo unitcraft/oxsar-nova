@@ -194,12 +194,12 @@ order: 50
 
 ## Исходный код
 
-Боевой движок реализован в `backend/internal/battle/engine.go`:
+Боевой движок реализован в [engine.go](https://github.com/unitcraft/oxsar-nova/blob/main/backend/internal/battle/engine.go):
 
-- `applyShots` — алгоритм щита и распределение выстрелов
-- `applyMasking` — формула баллистики и маскировки
-- `runRound` — один раунд боя
-- `RunBattle` — точка входа, 6 раундов
+- [Calculate](https://github.com/unitcraft/oxsar-nova/blob/main/backend/internal/battle/engine.go#L33) — точка входа, 6 раундов
+- [shootAtSides](https://github.com/unitcraft/oxsar-nova/blob/main/backend/internal/battle/engine.go#L353) — один раунд боя
+- [applyShots](https://github.com/unitcraft/oxsar-nova/blob/main/backend/internal/battle/engine.go#L480) — алгоритм щита и распределение выстрелов
+- [applyMasking](https://github.com/unitcraft/oxsar-nova/blob/main/backend/internal/battle/engine.go#L443) — формула баллистики и маскировки
 
 ## Что читать дальше
 
