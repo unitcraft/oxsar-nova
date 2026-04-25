@@ -891,6 +891,61 @@ paths:
         "409":
           description: quest не выполнен или награда уже получена
 
+  /api/galaxy-event:
+    get:
+      tags: [galaxy-event]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Текущее активное галактическое событие (план 17 F). 204 No Content
+        если активного события нет.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:         { type: integer, format: int64 }
+                  kind:       { type: string }
+                  started_at: { type: string, format: date-time }
+                  ends_at:    { type: string, format: date-time }
+                  params:     { type: object }
+        "204": { description: no active event }
+
+  /api/admin/galaxy-events:
+    post:
+      tags: [admin]
+      summary: Создать галактическое событие (план 17 F).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, duration_hours]
+              properties:
+                kind:           { type: string, example: meteor_storm }
+                duration_hours: { type: integer, minimum: 1, maximum: 168 }
+                params:         { type: object, example: { metal_mult: 1.3 } }
+      responses:
+        "201":
+          description: created
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/admin/galaxy-events/{id}:
+    delete:
+      tags: [admin]
+      summary: Преждевременно завершить галактическое событие.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "204": { description: cancelled }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/wiki:
     get:
       tags: [wiki]

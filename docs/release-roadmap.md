@@ -50,7 +50,8 @@
 - [14 Ф.4–Ф.7](plans/14-admin-expansion.md) — админ-дашборды / runbooks: полезны, но не блокер.
 - ~~[17 D](plans/17-gameplay-improvements.md)~~ — ✅ **done 2026-04-25**: Daily Quests с lazy-gen, 9 типов заданий, claim API, frontend tab.
 - ~~17 E~~ — ✅ уже реализовано (категориальные рейтинги в ScoreScreen существуют с M5+).
-- [17 B, C, F, G, H](plans/17-gameplay-improvements.md) — события, UX, бой: ретеншн, итеративно.
+- ~~17 F~~ — ✅ **MVP done 2026-04-25**: meteor_storm с +30% metal через admin-API, баннер на Overview.
+- [17 B, C, G, H](plans/17-gameplay-improvements.md) — UX, бой, alien подарки: итеративно.
 
 ---
 

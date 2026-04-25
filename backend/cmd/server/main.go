@@ -57,6 +57,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/techtree"
 	"github.com/oxsar/nova/backend/internal/storage"
 	"github.com/oxsar/nova/backend/internal/dailyquest"
+	"github.com/oxsar/nova/backend/internal/galaxyevent"
 	"github.com/oxsar/nova/backend/internal/wiki"
 )
 
@@ -112,6 +113,12 @@ func run() error {
 
 	planetRepo := planet.NewRepository(pool)
 	planetSvc := planet.NewServiceWithFactors(db, planetRepo, cat, cfg.Game.StorageFactor, cfg.Game.EnergyProductionFactor)
+
+	// План 17 F: galaxy events. Wire-up в planet до handler.
+	galaxyEventSvc := galaxyevent.New(pool)
+	galaxyEventH := galaxyevent.NewHandler(galaxyEventSvc)
+	planetSvc.SetGalaxyEventReader(galaxyEventSvc)
+
 	planetH := planet.NewHandler(planetSvc)
 	starter := planet.NewStarter(db)
 
@@ -246,6 +253,9 @@ func run() error {
 	r.Get("/api/wiki", wikiH.Index)
 	r.Get("/api/wiki/{category}", wikiH.Category)
 	r.Get("/api/wiki/{category}/{slug}", wikiH.Page)
+
+	// План 17 F: galaxy events — public read, admin create/cancel.
+	r.Get("/api/galaxy-event", galaxyEventH.Active)
 
 	r.Route("/api", func(pr chi.Router) {
 		pr.Use(auth.Middleware(jwt))
@@ -430,6 +440,10 @@ func run() error {
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Delete("/planets/{id}", adminH.PlanetDelete)
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Delete("/users/{id}", adminH.UserSoftDelete)
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/users/{id}/restore", adminH.UserRestore)
+
+			// План 17 F: галактические события (admin создаёт/отменяет).
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/galaxy-events", galaxyEventH.Create)
+			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Delete("/galaxy-events/{id}", galaxyEventH.Cancel)
 
 			// Только superadmin может менять роли (privilege escalation).
 			ar.With(admin.RequireRole(db, admin.RoleSuperadmin)).Post("/users/{id}/role", adminH.SetRole)

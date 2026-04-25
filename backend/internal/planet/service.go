@@ -21,6 +21,19 @@ type Service struct {
 	catalog                *config.Catalog
 	storageFactor          float64 // global STORAGE_FACTOR multiplier
 	energyProductionFactor float64 // global ENEGRY_PRODUCTION_FACTOR multiplier
+	galaxyEvent            GalaxyEventReader // план 17 F — может быть nil
+}
+
+// GalaxyEventReader — узкий интерфейс к galaxyevent.Service.
+// Используется для чтения мультипликатора production. Если nil —
+// мультипликатор всегда 1.0.
+type GalaxyEventReader interface {
+	MetalMultiplier(ctx context.Context) float64
+}
+
+// SetGalaxyEventReader — wire-up из server/main.go.
+func (s *Service) SetGalaxyEventReader(r GalaxyEventReader) {
+	s.galaxyEvent = r
 }
 
 func NewService(db repo.Exec, r *Repository, cat *config.Catalog) *Service {
@@ -133,6 +146,14 @@ func (s *Service) applyTickInTx(ctx context.Context, p *Planet) error {
 				rates.metalPerSec = 0
 				rates.siliconPerSec = 0
 				rates.hydrogenPerSec = 0
+			}
+		}
+
+		// План 17 F: галактические события. Активный 'meteor_storm'
+		// даёт +30% (или иной множитель) к metal production.
+		if s.galaxyEvent != nil {
+			if mult := s.galaxyEvent.MetalMultiplier(ctx); mult != 1.0 {
+				rates.metalPerSec *= mult
 			}
 		}
 
