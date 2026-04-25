@@ -20,7 +20,47 @@ import (
 	"strings"
 
 	"github.com/oxsar/nova/backend/internal/config"
+	"gopkg.in/yaml.v3"
 )
+
+// wikiDescriptions — отдельный конфиг с описаниями. Не смешиваем с
+// catalog: описания — это контент wiki, не баланс.
+type wikiDescriptions struct {
+	Descriptions map[string]struct {
+		Short string `yaml:"short"`
+		Long  string `yaml:"long"`
+	} `yaml:"descriptions"`
+}
+
+var descCatalog wikiDescriptions
+
+func loadDescriptions(configsDir string) error {
+	path := filepath.Join(configsDir, "wiki-descriptions.yml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read wiki-descriptions: %w", err)
+	}
+	if err := yaml.Unmarshal(data, &descCatalog); err != nil {
+		return fmt.Errorf("parse wiki-descriptions: %w", err)
+	}
+	return nil
+}
+
+// writeDescription добавляет на страницу секцию «Описание» из
+// configs/wiki-descriptions.yml. Если описания нет — секцию не пишем.
+func writeDescription(page *strings.Builder, key string) {
+	d, ok := descCatalog.Descriptions[key]
+	if !ok || d.Long == "" {
+		return
+	}
+	fmt.Fprintln(page, "## Описание")
+	fmt.Fprintln(page)
+	fmt.Fprintln(page, strings.TrimRight(d.Long, "\n"))
+	fmt.Fprintln(page)
+}
 
 func main() {
 	if err := run(); err != nil {
@@ -39,6 +79,9 @@ func run() error {
 	cat, err := config.LoadCatalog(*configsDir)
 	if err != nil {
 		return fmt.Errorf("load catalog: %w", err)
+	}
+	if err := loadDescriptions(*configsDir); err != nil {
+		return err
 	}
 
 	if err := genBuildings(cat, *outDir); err != nil {
@@ -99,14 +142,17 @@ func genBuildings(cat *config.Catalog, outDir string) error {
 			fmt.Fprintln(page, "> **Только на луне.**")
 			fmt.Fprintln(page)
 		}
-		fmt.Fprintf(page, "**Стоимость 1-го уровня**: %s.\n\n", costLine)
-		fmt.Fprintf(page, "**Каждый следующий уровень дороже в %.2f раза** (стоимость растёт геометрической прогрессией).\n\n", b.CostFactor)
-		fmt.Fprintf(page, "**Базовое время постройки**: %s.\n\n", durationStr(b.TimeBaseSeconds))
-		if b.MaxLevel > 0 {
-			fmt.Fprintf(page, "**Максимальный уровень**: %d.\n\n", b.MaxLevel)
-		}
-
+		writeDescription(page, key)
 		writeRequirements(page, cat, key)
+		fmt.Fprintln(page, "## Стоимость и время")
+		fmt.Fprintln(page)
+		fmt.Fprintf(page, "- **Стоимость 1-го уровня**: %s.\n", costLine)
+		fmt.Fprintf(page, "- **Каждый следующий уровень дороже в %.2f раза** (стоимость растёт геометрической прогрессией).\n", b.CostFactor)
+		fmt.Fprintf(page, "- **Базовое время постройки**: %s.\n", durationStr(b.TimeBaseSeconds))
+		if b.MaxLevel > 0 {
+			fmt.Fprintf(page, "- **Максимальный уровень**: %d.\n", b.MaxLevel)
+		}
+		fmt.Fprintln(page)
 
 		// Таблица первых 10 уровней.
 		fmt.Fprintln(page, "## Стоимость по уровням")
@@ -169,9 +215,11 @@ func genShips(cat *config.Catalog, outDir string) error {
 		fmt.Fprintf(page, "unit_id: %d\n", s.ID)
 		fmt.Fprintln(page, "---")
 		fmt.Fprintln(page)
-		fmt.Fprintf(page, "**Стоимость постройки**: %s.\n\n", costLine)
+		writeDescription(page, key)
+		writeRequirements(page, cat, key)
 		fmt.Fprintln(page, "## Характеристики")
 		fmt.Fprintln(page)
+		fmt.Fprintf(page, "**Стоимость постройки**: %s.\n\n", costLine)
 		fmt.Fprintln(page, "| Параметр | Значение |")
 		fmt.Fprintln(page, "|---|---:|")
 		fmt.Fprintf(page, "| Атака | %s |\n", fmtNum(int64(s.Attack)))
@@ -181,8 +229,6 @@ func genShips(cat *config.Catalog, outDir string) error {
 		fmt.Fprintf(page, "| Скорость | %s |\n", fmtNum(int64(s.Speed)))
 		fmt.Fprintf(page, "| Расход топлива | %s |\n", fmtNum(int64(s.Fuel)))
 		fmt.Fprintln(page)
-
-		writeRequirements(page, cat, key)
 
 		// Rapidfire граф.
 		if rfOut := rapidfireFrom(cat, s.ID); len(rfOut) > 0 {
@@ -251,17 +297,17 @@ func genDefense(cat *config.Catalog, outDir string) error {
 		fmt.Fprintf(page, "unit_id: %d\n", d.ID)
 		fmt.Fprintln(page, "---")
 		fmt.Fprintln(page)
-		fmt.Fprintf(page, "**Стоимость постройки**: %s.\n\n", costLine)
+		writeDescription(page, key)
+		writeRequirements(page, cat, key)
 		fmt.Fprintln(page, "## Характеристики")
 		fmt.Fprintln(page)
+		fmt.Fprintf(page, "**Стоимость постройки**: %s.\n\n", costLine)
 		fmt.Fprintln(page, "| Параметр | Значение |")
 		fmt.Fprintln(page, "|---|---:|")
 		fmt.Fprintf(page, "| Атака | %s |\n", fmtNum(int64(d.Attack)))
 		fmt.Fprintf(page, "| Щит | %s |\n", fmtNum(int64(d.Shield)))
 		fmt.Fprintf(page, "| Корпус | %s |\n", fmtNum(int64(d.Shell)))
 		fmt.Fprintln(page)
-
-		writeRequirements(page, cat, key)
 
 		fmt.Fprintln(page, "*Числа берутся из `configs/defense.yml`.*")
 
@@ -308,10 +354,12 @@ func genResearch(cat *config.Catalog, outDir string) error {
 		fmt.Fprintf(page, "unit_id: %d\n", b.ID)
 		fmt.Fprintln(page, "---")
 		fmt.Fprintln(page)
-		fmt.Fprintf(page, "**Стоимость 1-го уровня**: %s.\n\n", costLine)
-		fmt.Fprintf(page, "**Каждый следующий уровень дороже в %.2f раза** (стоимость растёт геометрической прогрессией).\n\n", b.CostFactor)
-
+		writeDescription(page, key)
 		writeRequirements(page, cat, key)
+		fmt.Fprintln(page, "## Стоимость и время")
+		fmt.Fprintln(page)
+		fmt.Fprintf(page, "- **Стоимость 1-го уровня**: %s.\n", costLine)
+		fmt.Fprintf(page, "- **Каждый следующий уровень дороже в %.2f раза** (стоимость растёт геометрической прогрессией).\n\n", b.CostFactor)
 
 		fmt.Fprintln(page, "## Стоимость по уровням")
 		fmt.Fprintln(page)
