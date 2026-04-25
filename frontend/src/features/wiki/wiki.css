@@ -137,7 +137,7 @@
 }
 .wiki-article pre .ch-comment { color: #4d7a8a; font-style: italic; }
 .wiki-article pre .ch-num     { color: #5dbb8a; }
-.wiki-article pre .ch-op      { color: #7ab8e0; }
+.wiki-article pre .ch-op      { color: #e0c060; }
 .wiki-article pre .ch-fn      { color: #c084e8; }
 .wiki-article blockquote {
   border-left: 3px solid var(--ox-accent, #4a90e2);
