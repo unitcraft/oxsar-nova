@@ -156,11 +156,12 @@ ships:
     speed: 8000
     fuel: 100
 
-  # Shadow Ship (id=325). Stealth-корабль: masking=4, ballistics=3, front=9.
-  # Низкая стоимость, слабый в бою — используется для разведки.
+  # Shadow Ship (id=325). Stealth-корабль с anti-DS-ролью.
+  # ADR-0007 (план 27-B): attack 30→200, masking 5 (было 4 в construction.yml).
+  # Открывает альтернативный endgame-путь через stealth-флот.
   shadow_ship:
     id: 325
-    attack: 30
+    attack: 200
     shield: 30
     shell: 4000
     cargo: 75
