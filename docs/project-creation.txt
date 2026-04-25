@@ -7292,3 +7292,230 @@ rapidfire-таблица, баллистика/маскировка (factor=1-1/
 - Параграфы: margin-bottom 1.1em (asymmetric, стандарт Habr)
 - pre-блоки: padding 16px, border-radius 6px, тёмный фон
 - Убран inline lineHeight в JSX перекрывавший CSS
+
+## 2026-04-25: План 28 Ф.1-4 — удаление configs/construction.yml
+
+Архитектурная чистка конфигов юнитов на backend-стороне без изменения
+логики и поведения.
+
+**Контекст до**: параметры юнитов раскиданы между `ships.yml`,
+`defense.yml`, `buildings.yml`, `research.yml` и `construction.yml`.
+Последний — генерированный из legacy `na_construction` файл, содержал
+дублирующие cost+front+ballistics+masking для кораблей/обороны и
+текстовые «формулы» prod/cons/charge, которые никем не читались
+(runtime-формулы с плана 16 живут в `backend/internal/economy/formulas.go`).
+`ShipSpec.Cost` подтягивался через runtime-loader из `Construction.Buildings`
+(`yaml:"-"` + блок копирования в `LoadCatalog`). Та же история с
+`ResearchSpec.CostBase`.
+
+**Что сделано**:
+1. **Ф.1 — расширение целевых YAML.** Скриптом перенесены:
+   - `cost`, `front`, `ballistics`, `masking` → `ships.yml`/`defense.yml`.
+   - `cost_base` → `research.yml`.
+   - `display_order`, `demolish`, `charge_credit` → `buildings.yml`.
+   Расширены `ShipSpec`/`DefenseSpec`/`ResearchSpec`/`BuildingSpec` в
+   `backend/internal/config/catalog.go`. Fallback-блоки в `LoadCatalog`
+   удалены.
+2. **Ф.2 — battle-sim читает front из ShipSpec.Front** (вместо
+   `cat.Construction.Buildings[key].Front`). Флаг `--front=key=N`
+   теперь работает на ships/defense.
+3. **Ф.3-4 — удаление дублей и самого construction.yml.**
+   - Удалён `configs/construction.yml` (1182 строки → 0).
+   - Удалены `ConstructionCatalog`/`ConstructionSpec`/`ConstructionBasic`
+     в Go.
+   - Удалён `productionRatesApprox` (fallback-путь — был для случая
+     «construction.yml ещё не сгенерирован»).
+   - `getBuildingName` переключён на `cat.Units` (UnitsCatalog как
+     registry id↔key).
+   - Удалён `convert_construction.go`, `writeYAMLSorted` переехал в
+     `helpers.go`.
+
+**Тесты**: `go test ./... -count=1` зелёный (26 пакетов). Battle-sim
+regression идентичен прежнему: lancer-vs-cruiser exchange 0.05,
+frigate-vs-bs 8.21, ds-vs-bs-fleet draws 100% — все 35+ сценариев
+дают побитово одинаковые числа.
+
+**Известный артефакт**: ключи `metal_mine` (buildings.yml) и
+`metalmine` (бывший construction.yml) — это десинк, тянущийся из
+импорта legacy. После Ф.4 в коде остался только `metal_mine`. Константа
+`economy.IDMetalmine=1` (это ID, не ключ) сохранена.
+
+**Что НЕ сделано** (отдельный заход):
+- Ф.5: frontend через `/api/catalog` endpoint — отдельная большая
+  задача (gen-from-OpenAPI + замена hardcoded SHIPS/DEFENSE/RESEARCH
+  в `frontend/src/api/catalog.ts`).
+- Ф.6: per-unit ballistics/masking — пока в YAML как omitempty,
+  движок их не читает (решение принимается в плане 27 §16).
+- Ф.7: валидатор согласованности в CI.
+
+**Diff stat**:
+```
+backend/cmd/tools/battle-sim/main.go        ~30 lines
+backend/cmd/tools/import-datasheets/        -convert_construction.go (-280), +helpers.go (+50)
+backend/internal/config/catalog.go          -65 (Construction* + блоки копирования)
+backend/internal/planet/service.go          -50 (productionRatesApprox + getBuildingName fix)
+backend/internal/planet/production_test.go  -25 (TestProductionRatesApprox_NotCrash)
+configs/buildings.yml                       +57 (display_order/demolish/charge_credit)
+configs/construction.yml                    -1182 (удалён)
+configs/defense.yml                         +6 (front для shields)
+configs/research.yml                        +20 (cost_base)
+configs/ships.yml                           +30 (cost/front/ballistics/masking)
+```
+Итого: −1380 строк YAML, ~−110 строк Go-кода runtime-логики.
+
+## 2026-04-25: План 27 итерация 2 — глубокая ребалансировка юнитов
+
+После плана 28 (архитектурная чистка) — содержательный ребаланс на
+основе battle-sim анализа. Паритет с legacy уже не цель, поэтому
+изменения принимаются по симуляции и геймдизайну.
+
+**9 групп изменений (27-F..27-U), все в одном ADR-0008:**
+
+### 27-F — Shadow Ship: anti-DS работает
+- attack 200 → **520** (пробивает DS ignoreAttack=500 → активирует RF×70).
+- front 7 → 5 (stealth-эффект в смешанной атаке).
+- **shadow-mass-vs-ds: 0.00 → 6.67 ✅** — открыт альтернативный anti-DS-путь.
+
+### 27-G — Bomber: anti-defense восстановлен
+- Bomber → Gauss Gun (47): **RF×3** (новое).
+- Bomber → Plasma Gun (48): **RF×3** (новое).
+- **bomber-vs-plasma: 0.64 → 1.44 ✅**, bomber-vs-gauss: 1.13 → 3.84.
+
+### 27-I — Strong Fighter: ниша
+- attack 150 → 120, cost 10k → **6k** (4k+2k).
+- **sf-vs-lf: 1.57 → 2.05** (теперь чётко лучше LF).
+
+### 27-J — Lancer полный nerf
+- **attack 5500 → 4000** (главное — раньше Lancer-spam выигрывал raid).
+- fuel 100 → **400**, speed 8000 → **6000** (миссионные параметры).
+- front 8 → **6** (Lancer прячется за тяжёлым флотом).
+- **lancer-vs-mixed: 0.21 → 0.13** (атакующий теряет 80%, raid убыточен).
+- **lancer-bs-combo-vs-mixed: 0.22 → 0.61**.
+- Trade-off: Lancer-как-anti-DS ослаблен. Anti-DS теперь через Shadow.
+
+### 27-K — Defense buff
+- Все defense-юниты shell ×1.5 без изменения cost.
+- RL/LL: 2k → 3k. Gauss: 35k → 52k. Plasma: 100k → 150k.
+- Атаковать стало дороже (cruiser-vs-rl 8.62 → 4.57, lf-mass-vs-rl-ll
+  0.32 → 0.21).
+
+### 27-L — Solar Satellite: эксплойт закрыт
+- shell 2k → **5k**, cost +50% (Si 2k→3k, H 0.5k→1k).
+- 50k SSat теперь стоят 200M (+60%), эксплойт-ловушка для DS невыгодна.
+
+### 27-N..T — Front-тюнинг (по симуляции чувствительности)
+- Логистика (transports, recycler, probe): front 10 → 6/5 (не «принимают огонь»).
+- Lancer 8→6, Bomber 10→8, Shadow 7→5 (капитал-юниты прячутся).
+- Star Destroyer 10→9 (ниша «капитал-средняя цель»).
+- Small/Large Shield 16/17→13/14 (менее агрессивный приоритет; защитнику
+  выгоднее, потому что shield-юнит не «сгорает» в раунд 1).
+
+### 27-U — Удаление dead-полей
+- `ballistics`/`masking` per-unit удалены из YAML и Go (`ShipSpec`/`DefenseSpec`).
+- Движок их никогда не читал — использует `Side.Tech.Ballistics/Masking`.
+- Затронуто: DS (ballistics=4), Lancer (3), Shadow (5/5), Paladin (5/1),
+  4 alien-юнита, Interplanetary Rocket (10).
+
+### 27-H — отвергнуто
+DS ignoreAttack /150 (открытие Cruiser anti-DS). Слишком инвазивно —
+меняет порог пробивания глобально. Anti-DS уже открыт через 27-F.
+
+**Симуляция (battle-sim --runs=20, before → after)**:
+
+| Сценарий | Before | After | Δ |
+|---|---:|---:|---:|
+| shadow-mass-vs-ds | 0.00 | 6.67 | +6.67 |
+| shadow-bs-mix-vs-cruiser | 2.39 | 4.60 | +2.21 |
+| bomber-vs-gauss | 1.13 | 3.84 | +2.71 |
+| bomber-vs-plasma | 0.64 | 1.44 | +0.80 |
+| lancer-vs-mixed | 0.21 | 0.13 | -0.08 (raid убыточен) |
+| lancer-bs-combo-vs-mixed | 0.22 | 0.61 | +0.39 |
+| sf-vs-lf | 1.57 | 2.05 | +0.48 |
+| recycler-bs-mix | 1.70 | 1.93 | +0.23 |
+| bomber-vs-rl | 16.67 | 11.11 | -5.56 (defense buff) |
+| cruiser-vs-rl | 8.62 | 4.57 | -4.05 (defense buff) |
+| bs-vs-plasma | 1.81 | 1.17 | -0.64 (defense buff) |
+| huge-fleet mirror | 1.00 | 1.00 | 0.00 |
+| frigate-vs-bs | 8.21 | 8.21 | 0.00 |
+
+**По «не починенным» из первого прогона** — переоценка:
+- `ds-fleet-vs-defended-planet`: 3.51 → 3.70 — **не проблема**.
+  Сценарий специально использует 3.5× превосходство атакующего;
+  defense — налог, не барьер при таком превосходстве. При паритете 1:1
+  (новый сценарий fleet-vs-defense-parity) defense сдерживает с
+  exchange 0.28.
+- `ds-as-defense-vs-fleet`: 0.00 — **не проблема**. У BS/SD нет RF
+  vs DS, потому 500 BS + 200 SD не пробивают 5 DS. Контр через
+  Shadow-mass работает: новый сценарий shadow-mass-vs-ds-defense
+  (5000 Shadow vs 5 DS): **exchange 6.67, attacker wins 100%**. То есть
+  DS-как-защитник убивается дешевле через RF×70-юнит.
+- `shadow-vs-ds` (100 Shadow): 0.00 — **не проблема**. Дизайн юнита:
+  Shadow дешёвый, требует массы. 1000 Shadow убивают 1 DS.
+- `lancer-vs-mixed`: 0.21 → **0.13** — **починено** через дополнительный
+  Lancer attack 5500 → 4000.
+
+**Frontend синхронизация — TODO**: `catalog.ts` имеет hardcoded
+SHIPS/DEFENSE с устаревшими значениями. Поправится в плане 28 Ф.5
+(`/api/catalog` endpoint).
+
+**Tests**: `go test ./... -count=1` все 26 пакетов зелёные.
+
+## 2026-04-26: План 27-V/W — Variant Б после ролевого аудита
+
+После применения 27-F..27-U прогнал расширенные симуляции через
+`battle-sim --matrix` (1v1 каждый-vs-каждый при 1M/10M/100M бюджетах) и
+`battle-sim --groups` (lite/mid/capital/endgame/shadow/lancer fleets vs
+defense lite/heavy/mixed). Сравнил с OGame classic паттернами.
+
+### Ключевые находки ролевого аудита (см. план 27 §17-18)
+- **Shadow доминировал чрезмерно**: vs LF 90.91, vs Frigate 104.68, vs
+  Bomber 83.25 — катастрофа для всех мирных юнитов при равной cost.
+- **Lancer стал trap-юнитом** после 27-J (attack 5500→4000): vs LF 0.04,
+  vs SF 0.02, vs Cru 0.04 — проигрывает 1v1 всем.
+- Все остальные юниты имеют уникальные ниши, дубликатов нет.
+
+### Variant Б (выбран): 27-V + 27-W
+- **27-V**: Shadow cost 5k → **15k** (3k+9k+3k). Сохраняет attack=520
+  и anti-DS-роль, но Shadow стал специализированным:
+  - vs мирный флот: 7-30 (вместо 50-100) ✅
+  - vs DS: 2.22 (целевой коридор 1.5-3.0) ✅
+  - vs defense: 0.07-0.27 (Shadow проигрывает defense) ✅
+- **27-W**: Lancer attack 4000 → **5000** + новое поле
+  `max_per_planet: 50`:
+  - Lancer боеспособен 1v1 (vs LF 0.04, vs Frigate 0.66 — слабый, но
+    не trap).
+  - Cap реализован: новое поле `MaxPerPlanet` в `ShipSpec`,
+    runtime-проверка в `shipyard.Service.Enqueue` (учитывает
+    existing + in_queue + new ≤ cap), новая ошибка
+    `ErrPlanetCapExceeded`.
+  - Lancer-spam vs lite теоретически возможен (exchange 0.19), но cap
+    делает его экономически невозможным (нужен флот с 10+ планет).
+
+### Сравнение с OGame
+В целом oxsar-nova совпадает с OGame паттернами (Cruiser RF×6 vs LF,
+Frigate как «king of fleet» = OGame Battlecruiser, Bomber anti-defense,
+Plasma+Shield turtle, shield 1% threshold, регенерация щита). Главные
+расхождения:
+- **Strong Fighter лучше OGame** — после 27-I получил нишу (в OGame
+  Heavy Fighter считается trap-юнитом).
+- **Shadow** — уникальная фича oxsar-nova, нет в OGame classic.
+- **Lancer** — унаследован из oxsar2.
+
+### Финальные роли (без дубликатов и trap-юнитов)
+- Tier 0: LF (mass)
+- Tier 1: SF, Cruiser (anti-LF, anti-fighter)
+- Tier 2: BS, Frigate (king-of-fleet), Bomber (anti-defense)
+- Tier 3: SD (anti-Frigate), Lancer (premium-combo, capped),
+  Shadow (anti-DS specialist)
+- Tier 4: DS (godfist endgame)
+- Logistics: LT, ST, Recycler, Probe, Colony, Solar Sat (по дизайну).
+
+### Расширения battle-sim
+- `--matrix --matrix-budget=N` — матрица 1v1 при равной metal-eq.
+- `--groups` — групповые тесты (9×9 групп при 3 бюджетах).
+- Новые сценарии: `huge-fleet-vs-ds-defense`,
+  `shadow-mass-vs-ds-defense`, `lancer-mass-vs-ds-defense`,
+  `ds-fleet-vs-equal-defense`, `fleet-vs-defense-parity`.
+
+### Tests
+`go test ./... -count=1` все 26 пакетов зелёные.

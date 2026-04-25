@@ -19,54 +19,7 @@ type Catalog struct {
 	Rapidfire    RapidfireCatalog    `yaml:"-"`
 	Requirements RequirementsCatalog `yaml:"-"`
 	Artefacts    ArtefactCatalog     `yaml:"-"`
-	Construction ConstructionCatalog `yaml:"-"`
 	Professions  ProfessionCatalog   `yaml:"-"`
-}
-
-// ConstructionCatalog — данные из legacy-таблицы na_construction,
-// сгенерированные `import-datasheets` в configs/construction.yml
-// (§1.4, §5.2.1 ТЗ).
-//
-// Источник истины для баланса. Если загружен — предпочтительнее
-// BuildingCatalog: в BuildingCatalog живёт «приближение» из
-// configs/buildings.yml, в ConstructionCatalog — исходные формулы
-// legacy.
-type ConstructionCatalog struct {
-	Buildings map[string]ConstructionSpec `yaml:"buildings"`
-}
-
-// ConstructionSpec — одна запись na_construction в виде YAML.
-// Поля prod/cons/charge хранят формулы как строки — только для документации;
-// runtime-расчёт идёт через статические функции economy (план 16).
-type ConstructionSpec struct {
-	ID           int64          `yaml:"id"`
-	Mode         int64          `yaml:"mode"`
-	LegacyName   string         `yaml:"legacy_name"`
-	Front        int64          `yaml:"front,omitempty"`
-	Ballistics   int64          `yaml:"ballistics,omitempty"`
-	Masking      int64          `yaml:"masking,omitempty"`
-	Basic        ConstructionBasic    `yaml:"basic,omitempty"`
-	Prod         ConstructionFormulas `yaml:"prod,omitempty"`
-	Cons         ConstructionFormulas `yaml:"cons,omitempty"`
-	Charge       ConstructionFormulas `yaml:"charge,omitempty"`
-	ChargeCredit string               `yaml:"charge_credit,omitempty"`
-	Demolish     float64              `yaml:"demolish,omitempty"`
-	DisplayOrder int64                `yaml:"display_order,omitempty"`
-}
-
-type ConstructionBasic struct {
-	Metal    int64 `yaml:"metal,omitempty"`
-	Silicon  int64 `yaml:"silicon,omitempty"`
-	Hydrogen int64 `yaml:"hydrogen,omitempty"`
-	Energy   int64 `yaml:"energy,omitempty"`
-	Credit   int64 `yaml:"credit,omitempty"`
-}
-
-type ConstructionFormulas struct {
-	Metal    string `yaml:"metal,omitempty"`
-	Silicon  string `yaml:"silicon,omitempty"`
-	Hydrogen string `yaml:"hydrogen,omitempty"`
-	Energy   string `yaml:"energy,omitempty"`
 }
 
 type UnitsCatalog struct {
@@ -99,6 +52,9 @@ type BuildingSpec struct {
 	RocketCapacityPerLevel  *int64   `yaml:"rocket_capacity_per_level,omitempty"`
 	MoonOnly                bool     `yaml:"moon_only,omitempty"`
 	MaxLevel                int      `yaml:"max_level,omitempty"`
+	DisplayOrder            int      `yaml:"display_order,omitempty"`
+	Demolish                float64  `yaml:"demolish,omitempty"`
+	ChargeCredit            string   `yaml:"charge_credit,omitempty"`
 }
 
 type ResCost struct {
@@ -119,9 +75,13 @@ type ShipSpec struct {
 	Cargo  int64   `yaml:"cargo"`
 	Speed  int     `yaml:"speed"`
 	Fuel   int     `yaml:"fuel"`
-	// Cost заполняется при загрузке из Construction.Buildings (na_construction, mode=3).
-	// В ships.yml это поле отсутствует — источник истины для стоимостей — construction.yml.
-	Cost ResCost `yaml:"-"`
+	Cost   ResCost `yaml:"cost"`
+	Front  int     `yaml:"front,omitempty"`
+	// MaxPerPlanet — лимит количества юнитов на одной планете. 0 = без лимита.
+	// Ограничивает накопление premium-юнитов (план 27-W: Lancer cap=50).
+	MaxPerPlanet int64 `yaml:"max_per_planet,omitempty"`
+	// Per-unit ballistics/masking удалены (ADR-0015, план 27-U): движок
+	// использует только Side.Tech.Ballistics/Masking (research уровни).
 }
 
 type DefenseCatalog struct {
@@ -134,6 +94,8 @@ type DefenseSpec struct {
 	Attack int     `yaml:"attack"`
 	Shield int     `yaml:"shield"`
 	Shell  int     `yaml:"shell"`
+	Front  int     `yaml:"front,omitempty"`
+	// Per-unit ballistics/masking удалены (ADR-0015, план 27-U).
 }
 
 // RapidfireCatalog — table[shooter][target] = multiplier.
@@ -149,7 +111,7 @@ type ResearchCatalog struct {
 
 type ResearchSpec struct {
 	ID         int     `yaml:"id"`
-	CostBase   ResCost `yaml:"-"`
+	CostBase   ResCost `yaml:"cost_base"`
 	CostFactor float64 `yaml:"cost_factor"`
 }
 
@@ -253,50 +215,6 @@ func LoadCatalog(dir string) (*Catalog, error) {
 		}
 		if err := yaml.Unmarshal(data, p.into); err != nil {
 			return nil, fmt.Errorf("parse %s: %w", p.file, err)
-		}
-	}
-
-	// Опциональные generated-файлы. Если их нет — экономика работает
-	// на приближённых формулах buildings.yml. Появляются после первого
-	// прогона `cmd/tools/import-datasheets` (§1.4, §5.2.1 ТЗ).
-	optional := []pair{
-		{"construction.yml", &cat.Construction},
-	}
-	for _, p := range optional {
-		path := filepath.Join(dir, p.file)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return nil, fmt.Errorf("read %s: %w", p.file, err)
-		}
-		if err := yaml.Unmarshal(data, p.into); err != nil {
-			return nil, fmt.Errorf("parse %s: %w", p.file, err)
-		}
-	}
-	// Заполнить ShipSpec.Cost из construction.yml (na_construction, mode=3).
-	// Это единственный источник истины для стоимостей кораблей.
-	for key, spec := range cat.Ships.Ships {
-		if cs, ok := cat.Construction.Buildings[key]; ok {
-			spec.Cost = ResCost{
-				Metal:    cs.Basic.Metal,
-				Silicon:  cs.Basic.Silicon,
-				Hydrogen: cs.Basic.Hydrogen,
-			}
-			cat.Ships.Ships[key] = spec
-		}
-	}
-
-	// Заполнить ResearchSpec.CostBase из construction.yml (na_construction, mode=2).
-	for key, spec := range cat.Research.Research {
-		if cs, ok := cat.Construction.Buildings[key]; ok {
-			spec.CostBase = ResCost{
-				Metal:    cs.Basic.Metal,
-				Silicon:  cs.Basic.Silicon,
-				Hydrogen: cs.Basic.Hydrogen,
-			}
-			cat.Research.Research[key] = spec
 		}
 	}
 

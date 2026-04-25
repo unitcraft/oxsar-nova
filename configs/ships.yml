@@ -3,6 +3,7 @@
 # oxsar2 ShipDatasheet_YII на этапе M3.
 
 ships:
+  # 27-Q: front 10→6 (логистический юнит, не должен «принимать» обычный огонь).
   small_transporter:
     id: 29
     attack: 5
@@ -11,7 +12,10 @@ ships:
     cargo: 5000
     speed: 5000
     fuel: 10
+    cost: { metal: 2000, silicon: 2000, hydrogen: 0 }
+    front: 6
 
+  # 27-Q: front 10→6 (логистика).
   large_transporter:
     id: 30
     attack: 5
@@ -20,6 +24,8 @@ ships:
     cargo: 25000
     speed: 7500
     fuel: 50
+    cost: { metal: 6000, silicon: 6000, hydrogen: 0 }
+    front: 6
 
   light_fighter:
     id: 31
@@ -29,15 +35,20 @@ ships:
     cargo: 50
     speed: 12500
     fuel: 20
+    cost: { metal: 3000, silicon: 1000, hydrogen: 0 }
 
+  # ADR-0011 (27-I): cost 10k → 6k (4k+2k), attack 150 → 120.
+  # Причина: SF был «trap-юнитом» — дорогой, без чёткой ниши.
+  # После изменений: дешёвый anti-LF (RF×3 vs LT, ×6 vs LF в legacy сохраняем).
   strong_fighter:
     id: 32
-    attack: 150
+    attack: 120
     shield: 25
     shell: 10000
     cargo: 100
     speed: 10000
     fuel: 75
+    cost: { metal: 4000, silicon: 2000, hydrogen: 0 }
 
   cruiser:
     id: 33
@@ -47,6 +58,7 @@ ships:
     cargo: 800
     speed: 15000
     fuel: 300
+    cost: { metal: 20000, silicon: 7000, hydrogen: 2000 }
 
   battle_ship:
     id: 34
@@ -56,6 +68,7 @@ ships:
     cargo: 1500
     speed: 10000
     fuel: 500
+    cost: { metal: 40000, silicon: 20000, hydrogen: 0 }
 
   frigate:
     id: 35
@@ -65,6 +78,7 @@ ships:
     cargo: 750
     speed: 10000
     fuel: 250
+    cost: { metal: 30000, silicon: 40000, hydrogen: 15000 }
 
   colony_ship:
     id: 36
@@ -74,7 +88,9 @@ ships:
     cargo: 7500
     speed: 2500
     fuel: 1000
+    cost: { metal: 10000, silicon: 20000, hydrogen: 10000 }
 
+  # 27-Q: front 10→6 (логистика).
   recycler:
     id: 37
     attack: 1
@@ -83,10 +99,13 @@ ships:
     cargo: 20000
     speed: 2000
     fuel: 300
+    cost: { metal: 10000, silicon: 6000, hydrogen: 2000 }
+    front: 6
 
   # Espionage Sensor (id=38 в legacy UNIT_ESPIONAGE_SENSOR). Быстрый
   # и хрупкий probe для SPY-миссий (mission=11). В бою почти бесполезен
   # (attack=0, shell=1000); rapidfire battleship→probe=5 сносит пачкой.
+  # 27-R: front 10→5 (probe — шпион, не цель для обычного огня).
   espionage_sensor:
     id: 38
     attack: 0
@@ -95,16 +114,25 @@ ships:
     cargo: 5
     speed: 100000000
     fuel: 1
+    cost: { metal: 0, silicon: 1000, hydrogen: 0 }
+    front: 5
 
+  # ADR-0014 (27-L): shell 2000→5000, cost +50% (silicon 2k→3k, hydrogen 500→1k).
+  # Причина: 50000 SSat (125M-eq) служили «poison pill» против DS — DS
+  # тратил выстрелы на дешёвых SSat вместо настоящей обороны. Закрытие
+  # SSat-эксплойта.
   solar_satellite:
     id: 39
     attack: 0
     shield: 2
-    shell: 2000
+    shell: 5000
     cargo: 0
     speed: 0
     fuel: 0
+    cost: { metal: 0, silicon: 3000, hydrogen: 1000 }
 
+  # 27-O: front 10→8 (Bomber-уклонист в смешанной атаке — меньше теряется
+  # за тяжёлым флотом).
   bomber:
     id: 40
     attack: 900
@@ -113,7 +141,11 @@ ships:
     cargo: 500
     speed: 4000
     fuel: 1000
+    cost: { metal: 50000, silicon: 25000, hydrogen: 15000 }
+    front: 8
 
+  # 27-T: front 10→9 (даёт SD нишу «капитал-средняя цель» между BS=10
+  # и Lancer=6).
   star_destroyer:
     id: 41
     attack: 2000
@@ -122,6 +154,8 @@ ships:
     cargo: 2000
     speed: 5000
     fuel: 1000
+    cost: { metal: 60000, silicon: 50000, hydrogen: 15000 }
+    front: 9
 
   death_star:
     id: 42
@@ -131,6 +165,8 @@ ships:
     cargo: 1000000
     speed: 100
     fuel: 1
+    cost: { metal: 5000000, silicon: 4000000, hydrogen: 1000000 }
+    front: 9
 
   # Interplanetary Missile (id=52 в legacy UNIT_INTERPLANETARY_ROCKET).
   # Не корабль и не участвует в обычном бою (attack=0) — используется
@@ -144,32 +180,63 @@ ships:
     cargo: 0
     speed: 12000
     fuel: 1
+    cost: { metal: 12500, silicon: 2500, hydrogen: 10000 }
 
-  # Lancer Ship (id=102). Premium-корабль, front=8 (атакует раньше обычных).
-  # Rapidfire × 3 против Deathstar. Стоимость — из construction.yml.
+  # Lancer Ship (id=102). Premium-корабль с RF×3 vs DS.
+  # ADR-0004: cost ×10 (закрыло BA-002).
+  # ADR-0008 (27-J/W):
+  #   - attack 5500→4000 (27-J), затем 4000→5000 (27-W). 27-J был
+  #     слишком сильным нерфом — Lancer стал trap-юнитом, проигрывал 1v1
+  #     всем (vs LF 0.04, vs SF 0.02). 5000 — компромисс: Lancer-spam
+  #     vs lite остаётся убыточным (закрытие BA-002 через cost-нерф
+  #     ADR-0004 + raid не выгоден), но юнит сохраняет anti-DS-роль
+  #     через RF×3 и боеспособность в смешанном флоте.
+  #   - Защита от raid-эксплойта Lancer-spam теперь дополнительно
+  #     обеспечивается лимитом 50 Lancer/планета (game-механика, отдельный
+  #     тикет на реализацию).
+  #   - fuel 100→400, speed 8000→6000 — ограничение рейдинг-возможностей.
+  #   - front 8→6 (27-N) — Lancer прячется за тяжёлым флотом.
   lancer_ship:
     id: 102
-    attack: 5500
+    attack: 5000
     shield: 200
     shell: 10000
     cargo: 200
-    speed: 8000
-    fuel: 100
+    speed: 6000
+    fuel: 400
+    cost: { metal: 15000, silicon: 35000, hydrogen: 60000 }
+    front: 6
+    # 27-W: лимит 50 Lancer/планета. Закрывает Lancer-spam-эксплойт через
+    # ограничение массы (без cap при attack=5000 lancer-vs-mixed снова
+    # становится attacker_wins). Рейд через Lancer-флот теперь требует
+    # сбора с N планет.
+    max_per_planet: 50
 
   # Shadow Ship (id=325). Stealth-корабль с anti-DS-ролью.
-  # ADR-0007 (план 27-B): attack 30→200, masking 5 (было 4 в construction.yml).
-  # Открывает альтернативный endgame-путь через stealth-флот.
+  # ADR-0007 (27-B): attack 30→200, masking 5.
+  # ADR-0008 (27-F): attack 200→520 (пробивает DS ignoreAttack=500 и
+  # активирует RF×70 vs DS).
+  # ADR-0008 (27-V): cost 5k → 15k (3k+9k+3k). Причина: при cost=5k
+  # Shadow доминировал 1v1 при равной metal-eq (vs LF 90.91, vs Frigate
+  # 104.68 — катастрофа для других юнитов). cost ×3 снижает «эффективную
+  # массу» Shadow в 3× при тех же ресурсах, anti-DS-роль сохраняется
+  # (нужно меньше юнитов, но они дороже).
+  # 27-P: front 7→5 (усиливает stealth-эффект в смешанной атаке).
   shadow_ship:
     id: 325
-    attack: 200
+    attack: 520
     shield: 30
     shell: 4000
     cargo: 75
     speed: 13000
     fuel: 35
+    cost: { metal: 3000, silicon: 9000, hydrogen: 3000 }
+    front: 5
 
   # Alien ships (id 200–204). Корабли пришельцев — не строятся игроком,
-  # используются в AI-атаках. Стоимость — из construction.yml (для расчёта обломков).
+  # используются в AI-атаках.
+  # ADR-0015 (27-U): per-unit ballistics/masking удалены — движок их
+  # никогда не читал (использует только Side.Tech). См. план 27 §16.
   unit_a_corvette:
     id: 200
     attack: 200
@@ -178,6 +245,7 @@ ships:
     cargo: 300
     speed: 20000
     fuel: 150
+    cost: { metal: 19000, silicon: 6000, hydrogen: 2000 }
 
   unit_a_screen:
     id: 201
@@ -187,6 +255,8 @@ ships:
     cargo: 800
     speed: 10000
     fuel: 75
+    cost: { metal: 20000, silicon: 10000, hydrogen: 0 }
+    front: 15
 
   unit_a_paladin:
     id: 202
@@ -196,6 +266,7 @@ ships:
     cargo: 50
     speed: 8000
     fuel: 20
+    cost: { metal: 3000, silicon: 1000, hydrogen: 200 }
 
   unit_a_frigate:
     id: 203
@@ -205,6 +276,7 @@ ships:
     cargo: 2000
     speed: 10000
     fuel: 300
+    cost: { metal: 40000, silicon: 30000, hydrogen: 15000 }
 
   unit_a_torpedocarier:
     id: 204
@@ -214,3 +286,4 @@ ships:
     cargo: 200
     speed: 13000
     fuel: 100
+    cost: { metal: 10000, silicon: 10000, hydrogen: 1000 }

@@ -9,54 +9,67 @@ research:
   spyware:
     id: 13
     cost_factor: 2.0
+    cost_base: { metal: 200, silicon: 1000, hydrogen: 200 }
 
   computer_tech:
     id: 14
     cost_factor: 2.0
+    cost_base: { metal: 0, silicon: 400, hydrogen: 600 }
 
   gun_tech:
     id: 15
     cost_factor: 2.0
+    cost_base: { metal: 800, silicon: 200, hydrogen: 0 }
 
   shield_tech:
     id: 16
     cost_factor: 2.0
+    cost_base: { metal: 200, silicon: 600, hydrogen: 0 }
 
   shell_tech:
     id: 17
     cost_factor: 2.0
+    cost_base: { metal: 1000, silicon: 0, hydrogen: 0 }
 
   energy_tech:
     id: 18
     cost_factor: 2.0
+    cost_base: { metal: 0, silicon: 800, hydrogen: 400 }
 
   hyperspace_tech:
     id: 19
     cost_factor: 2.0
+    cost_base: { metal: 0, silicon: 4000, hydrogen: 2000 }
 
   combustion_engine:
     id: 20
     cost_factor: 2.0
+    cost_base: { metal: 400, silicon: 0, hydrogen: 600 }
 
   impulse_engine:
     id: 21
     cost_factor: 2.0
+    cost_base: { metal: 2000, silicon: 4000, hydrogen: 600 }
 
   hyperspace_engine:
     id: 22
     cost_factor: 3.0
+    cost_base: { metal: 10000, silicon: 20000, hydrogen: 6000 }
 
   laser_tech:
     id: 23
     cost_factor: 2.0
+    cost_base: { metal: 200, silicon: 100, hydrogen: 0 }
 
   ion_tech:
     id: 24
     cost_factor: 2.0
+    cost_base: { metal: 1000, silicon: 300, hydrogen: 100 }
 
   plasma_tech:
     id: 25
     cost_factor: 2.0
+    cost_base: { metal: 2000, silicon: 4000, hydrogen: 1000 }
 
   # ign / gravi — «пустые» исследования легаси (base_cost в construction.yml).
   # Добавлены, потому что death_star требует gravi level 1 (см. requirements.yml).
@@ -65,31 +78,38 @@ research:
   ign:
     id: 26
     cost_factor: 2.0
+    cost_base: { metal: 240000, silicon: 400000, hydrogen: 160000 }
 
   expo_tech:
     id: 27
     cost_factor: 1.75
+    cost_base: { metal: 4000, silicon: 8000, hydrogen: 4000 }
 
   gravi:
     id: 28
     cost_factor: 3.0
+    cost_base: { metal: 0, silicon: 0, hydrogen: 0 }
 
   ballistics_tech:
     id: 103
     cost_factor: 2.0
+    cost_base: { metal: 400, silicon: 500, hydrogen: 0 }
 
   masking_tech:
     id: 104
     cost_factor: 2.0
+    cost_base: { metal: 1000, silicon: 1000, hydrogen: 0 }
 
   # Astrophysics (id=112). План 20 Ф.7, ADR-0005.
   # Расширяет лимит колоний и даёт слоты экспедиций.
   astro_tech:
     id: 112
     cost_factor: 1.75
+    cost_base: { metal: 6000, silicon: 12000, hydrogen: 6000 }
 
   # Intergalactic Research Network (id=113). План 20 Ф.8.
   # Уровень определяет, сколько лабораторий участвуют в общем пуле.
   igr_tech:
     id: 113
     cost_factor: 2.0
+    cost_base: { metal: 240000, silicon: 400000, hydrogen: 160000 }

@@ -244,22 +244,12 @@ type caps struct {
 }
 
 // productionRates считает скорость добычи per-second на основе
-// уровней зданий и множителей планеты.
-//
-// Ветка 1 (предпочтительная): если загружен configs/construction.yml
-// (ConstructionCatalog), используются статические формулы из economy —
-// бит-в-бит паритет с oxsar2 (§5.2.1 ТЗ).
-//
-// Ветка 2 (fallback): старое приближение base_rate_per_hour из
-// configs/buildings.yml. Оставлено для режима «мы ещё не прогнали
-// import-datasheets».
+// уровней зданий и множителей планеты. Использует статические формулы
+// из economy (§5.2.1 ТЗ).
 //
 // Не делает IO — все данные уже прочитаны вызывающим.
 func (s *Service) productionRates(p *Planet, levels map[int]int, tech map[int]int) rates {
-	if len(s.catalog.Construction.Buildings) > 0 {
-		return s.productionRatesDSL(p, levels, tech)
-	}
-	return s.productionRatesApprox(p, levels)
+	return s.productionRatesDSL(p, levels, tech)
 }
 
 // productionRatesDSL — основной путь с legacy-формулами.
@@ -333,39 +323,6 @@ func (s *Service) energyRatio(p *Planet, levels map[int]int, tech map[int]int) f
 		ratio = 1
 	}
 	return ratio
-}
-
-// productionRatesApprox — fallback-путь на приближённых формулах
-// из configs/buildings.yml. Используется до прогона import-datasheets.
-func (s *Service) productionRatesApprox(p *Planet, levels map[int]int) rates {
-	mine := s.catalog.Buildings.Buildings["metal_mine"]
-	lab := s.catalog.Buildings.Buildings["silicon_lab"]
-	synth := s.catalog.Buildings.Buildings["hydrogen_lab"]
-	solar := s.catalog.Buildings.Buildings["solar_plant"]
-
-	metalBase := floatOr(mine.BaseRatePerHour, 30)
-	silBase := floatOr(lab.BaseRatePerHour, 20)
-	hydBase := floatOr(synth.BaseRatePerHour, 10)
-
-	metalLvl := levels[mine.ID]
-	silLvl := levels[lab.ID]
-	hydLvl := levels[synth.ID]
-
-	demand := economy.EnergyDemand(floatOr(mine.EnergyPerLevel, 10), metalLvl) +
-		economy.EnergyDemand(floatOr(lab.EnergyPerLevel, 10), silLvl) +
-		economy.EnergyDemand(floatOr(synth.EnergyPerLevel, 20), hydLvl)
-	output := economy.EnergyOutput(floatOr(solar.EnergyOutputPerLevel, 20), levels[solar.ID])
-	ratio := economy.EnergyRatio(output, demand) * float64(p.EnergyFactor)
-	if ratio > 1 {
-		ratio = 1
-	}
-
-	f := float64(p.ProduceFactor) * ratio
-	return rates{
-		metalPerSec:    economy.ProductionPerHour(metalBase, metalLvl, f) / 3600.0,
-		siliconPerSec:  economy.ProductionPerHour(silBase, silLvl, f) / 3600.0,
-		hydrogenPerSec: economy.ProductionPerHour(hydBase, hydLvl, f) / 3600.0,
-	}
 }
 
 // researchLevels читает уровни всех исследований игрока внутри транзакции.
@@ -805,11 +762,17 @@ func (s *Service) UpdateResourceFactors(ctx context.Context, userID, planetID st
 	return nil
 }
 
-// getBuildingName возвращает имя здания по его ID.
+// getBuildingName возвращает имя здания по его ID. Ищет в buildings.yml и
+// затем в moon_buildings (UnitsCatalog — registry id↔key).
 func (s *Service) getBuildingName(unitID int) string {
-	for key, spec := range s.catalog.Construction.Buildings {
-		if int(spec.ID) == unitID {
-			return key
+	for _, e := range s.catalog.Units.Buildings {
+		if e.ID == unitID {
+			return e.Key
+		}
+	}
+	for _, e := range s.catalog.Units.MoonBuildings {
+		if e.ID == unitID {
+			return e.Key
 		}
 	}
 	return ""

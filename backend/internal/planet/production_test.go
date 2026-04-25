@@ -23,11 +23,6 @@ func TestProductionRatesMetal(t *testing.T) {
 			"silicon_storage":  {ID: 10},
 			"hydrogen_storage": {ID: 11},
 		}},
-		// ConstructionCatalog нужен непустым, чтобы productionRates выбрал DSL-ветку.
-		Construction: config.ConstructionCatalog{Buildings: map[string]config.ConstructionSpec{
-			"metalmine":   {ID: 1, LegacyName: "METALMINE"},
-			"solar_plant": {ID: 4, LegacyName: "SOLAR_PLANT"},
-		}},
 	}
 
 	svc := NewService(nil, nil, cat)
@@ -60,24 +55,3 @@ func TestProductionRatesMetal(t *testing.T) {
 	}
 }
 
-// Fallback-путь — когда ConstructionCatalog пуст, экономика работает
-// на приближениях buildings.yml. Проверяем, что не падает и возвращает
-// конечные числа.
-func TestProductionRatesApprox_NotCrash(t *testing.T) {
-	t.Parallel()
-	baseRate := 30.0
-	cat := &config.Catalog{
-		Buildings: config.BuildingCatalog{Buildings: map[string]config.BuildingSpec{
-			"metal_mine":   {ID: 1, BaseRatePerHour: &baseRate},
-			"silicon_lab":  {ID: 2},
-			"hydrogen_lab": {ID: 3},
-			"solar_plant":  {ID: 4},
-		}},
-	}
-	svc := NewService(nil, nil, cat)
-	p := &Planet{EnergyFactor: 1, ProduceFactor: 1}
-	r := svc.productionRates(p, map[int]int{1: 5, 4: 5}, nil)
-	if math.IsNaN(r.metalPerSec) || math.IsInf(r.metalPerSec, 0) {
-		t.Fatalf("metal rate invalid: %v", r.metalPerSec)
-	}
-}
