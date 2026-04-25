@@ -287,12 +287,12 @@ func run() error {
 		return fmt.Errorf("register event_pruner: %w", err)
 	}
 
-	// Пересчёт очков всех игроков — через событие KindScoreRecalcAll
-	// (Ф.4 переведёт на scheduler; пока совместимое поведение).
+	// Пересчёт очков всех игроков — теперь через scheduler (план 32 Ф.4).
+	// Handler KindScoreRecalcAll оставлен для legacy wait-events,
+	// созданных до миграции (через 7 дней миграция удалит их).
 	w.Register(event.KindScoreRecalcAll, scoreSvc.RecalcAllEvent())
-	if err := scoreSvc.BootstrapRecalcAllEvent(ctx); err != nil {
-		log.WarnContext(ctx, "score_bootstrap_recalc_failed",
-			slog.String("err", err.Error()))
+	if err := sch.Register("score_recalc_all", scoreSvc.RecalcAllScheduled); err != nil {
+		return fmt.Errorf("register score_recalc_all: %w", err)
 	}
 
 	if err := sch.Start(ctx); err != nil {
