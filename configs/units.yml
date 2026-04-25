@@ -73,6 +73,13 @@ fleet:
   - { id: 42,  key: death_star,          name: "Deathstar" }
   - { id: 102, key: lancer_ship,         name: "Lancer" }
   - { id: 325, key: shadow_ship,         name: "Shadow Ship" }
+  # Alien ships (200-204) — не строятся игроком, появляются в AI-атаках.
+  # Балансные параметры в configs/ships.yml. См. план 26.
+  - { id: 200, key: unit_a_corvette,     name: "Alien Corvette" }
+  - { id: 201, key: unit_a_screen,       name: "Alien Screen" }
+  - { id: 202, key: unit_a_paladin,      name: "Alien Paladin" }
+  - { id: 203, key: unit_a_frigate,      name: "Alien Frigate" }
+  - { id: 204, key: unit_a_torpedocarier, name: "Alien Torpedo Carrier" }
 
 defense:
   - { id: 43,  key: rocket_launcher,     name: "Rocket Launcher" }
