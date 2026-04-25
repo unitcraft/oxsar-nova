@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -182,6 +183,28 @@ func (h *Handler) ResourceReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, report)
+}
+
+// Forecast GET /api/planets/{id}/forecast?hours=N
+// План 17 G1. Прогноз ресурсов через N часов с учётом storage cap.
+func (h *Handler) Forecast(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "id required"))
+		return
+	}
+	hours := 4
+	if v := r.URL.Query().Get("hours"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			hours = n
+		}
+	}
+	res, err := h.svc.Forecast(r.Context(), id, hours)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, res)
 }
 
 // ResourceUpdate POST /api/planets/{id}/resource-update — обновить факторы производства.

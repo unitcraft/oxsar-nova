@@ -245,11 +245,16 @@ CREATE TABLE galaxy_events (
 
 ## Блок G: Улучшения UX (без изменения баланса)
 
-### G1. Прогноз ресурсов
+### G1. Прогноз ресурсов — ✅ ЗАКРЫТО 2026-04-25
 
-В OverviewScreen: «Через 4 часа: metal +12 400, silicon +4 200, hydrogen +800».  
-Реализация: `GET /api/planets/{id}/forecast?hours=N` — берём текущий `prod_per_sec` × N × 3600, учитываем storage cap.  
-Нет новых таблиц, чистая математика.
+Реализовано:
+- `GET /api/planets/{id}/forecast?hours=N` (default 4, max 168).
+- `Service.Forecast` — абсолютные значения через N часов с учётом
+  storage cap. `capped: true` если хотя бы один ресурс упёрся.
+- Frontend: `ForecastWidget` в OverviewScreen для каждой планеты
+  с кнопками 1ч / 4ч / 12ч / 24ч и иконкой ⚠️ при cap.
+
+Smoke в Docker: 401 без auth, маршрут работает.
 
 ### G2. Уведомление о возврате флота
 

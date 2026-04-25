@@ -65,6 +65,49 @@ func (s *Service) Get(ctx context.Context, id string) (Planet, error) {
 	return p, nil
 }
 
+// Forecast — прогноз ресурсов через `hours` часов на планете.
+// План 17 G1. Возвращает абсолютные значения (не дельты), c учётом
+// storage cap. Чистая математика, без БД-обращений после Get.
+type ForecastResult struct {
+	Hours    int     `json:"hours"`
+	Metal    float64 `json:"metal"`
+	Silicon  float64 `json:"silicon"`
+	Hydrogen float64 `json:"hydrogen"`
+	// Capped — true если хотя бы один ресурс упёрся в storage cap.
+	Capped bool `json:"capped"`
+}
+
+func (s *Service) Forecast(ctx context.Context, planetID string, hours int) (ForecastResult, error) {
+	if hours < 0 {
+		hours = 0
+	}
+	if hours > 168 { // неделя — разумный потолок
+		hours = 168
+	}
+	p, err := s.Get(ctx, planetID)
+	if err != nil {
+		return ForecastResult{}, err
+	}
+	secs := float64(hours) * 3600
+	r := ForecastResult{Hours: hours}
+	r.Metal = p.Metal + p.MetalPerSec*secs
+	if r.Metal > p.MetalCap {
+		r.Metal = p.MetalCap
+		r.Capped = true
+	}
+	r.Silicon = p.Silicon + p.SiliconPerSec*secs
+	if r.Silicon > p.SiliconCap {
+		r.Silicon = p.SiliconCap
+		r.Capped = true
+	}
+	r.Hydrogen = p.Hydrogen + p.HydrogenPerSec*secs
+	if r.Hydrogen > p.HydrogenCap {
+		r.Hydrogen = p.HydrogenCap
+		r.Capped = true
+	}
+	return r, nil
+}
+
 // ListByUser возвращает все планеты игрока с применённым тиком каждой.
 func (s *Service) ListByUser(ctx context.Context, userID string) ([]Planet, error) {
 	planets, err := s.repo.ListByUser(ctx, userID)
