@@ -73,6 +73,10 @@ export const BUILDINGS: BuildingEntry[] = [
   { id: 12,  key: 'research_lab',     name: 'Исследовательская лаборатория', description: 'Позволяет проводить научные исследования',            fullDesc: 'Для исследования новых технологий необходима работа исследовательской станции. Уровень развития исследовательской станции является решающим фактором того, как быстро могут быть освоены новые технологии. Чем выше уровень развития исследовательской лаборатории, тем больше может быть исследовано новых технологий.',            costBase: { metal: 200,     silicon: 400,    hydrogen: 200    }, costFactor: 2.0 },
   { id: 53,  key: 'missile_silo',     name: 'Ракетная шахта',                description: 'Хранит межпланетные ракеты для атаки',                fullDesc: 'Ракетные шахты служат для хранения ракет. С каждым уровнем можно хранить на пять межпланетных или десять ракет-перехватчиков больше. Одна межпланетная ракета требует места в два раза больше, чем ракета-перехватчик. Возможно любое комбинирование различных типов ракет.',                costBase: { metal: 20000,   silicon: 20000,  hydrogen: 1000   }, costFactor: 2.0 },
   { id: 100, key: 'repair_factory',   name: 'Ремонтный ангар',               description: 'Восстанавливает повреждённые корабли после боя',      fullDesc: 'Ремонтный ангар необходим для выполнения двух операций: 1 — ремонт повреждённых кораблей и оборонительных сооружений, 2 — утилизация ненужных кораблей и обороны для получения ресурсов.',      costBase: { metal: 800,     silicon: 400,    hydrogen: 200    }, costFactor: 2.0 },
+  { id: 101, key: 'defense_factory',  name: 'Завод обороны',                 description: 'Ускоряет постройку оборонительных сооружений',         costBase: { metal: 350,     silicon: 200,    hydrogen: 100    }, costFactor: 2.0 },
+  { id: 107, key: 'exchange',         name: 'Обменник',                       description: 'Быстрый обмен ресурсов по фиксированному курсу',       costBase: { metal: 0,       silicon: 1000,   hydrogen: 500    }, costFactor: 2.0 },
+  { id: 108, key: 'exch_office',      name: 'Биржа',                          description: 'Книга ордеров на обмен ресурсами между игроками',      costBase: { metal: 500000,  silicon: 500000, hydrogen: 500000 }, costFactor: 2.0 },
+  { id: 58,  key: 'terra_former',     name: 'Терраформер',                    description: 'Расширяет пригодную для постройки площадь планеты',    costBase: { metal: 50000,   silicon: 50000,  hydrogen: 100000 }, costFactor: 2.0 },
 ];
 
 export const MOON_BUILDINGS: BuildingEntry[] = [
@@ -158,7 +162,7 @@ export function imageOf(key: string): string {
 
 // imageOfId возвращает путь к иконке юнита по его числовому id.
 export function imageOfId(id: number): string {
-  for (const c of [SHIPS, DEFENSE, RESEARCH, ARTEFACTS, BUILDINGS]) {
+  for (const c of [SHIPS, DEFENSE, RESEARCH, ARTEFACTS, BUILDINGS, MOON_BUILDINGS]) {
     const u = c.find((x) => x.id === id);
     if (u) return imageOf(u.key);
   }
@@ -167,7 +171,7 @@ export function imageOfId(id: number): string {
 
 // nameByKey возвращает отображаемое имя юнита по ключу.
 function nameByKey(key: string): string {
-  for (const c of [...BUILDINGS, ...RESEARCH, ...SHIPS, ...DEFENSE]) {
+  for (const c of [...BUILDINGS, ...MOON_BUILDINGS, ...RESEARCH, ...SHIPS, ...DEFENSE]) {
     if (c.key === key) return c.name;
   }
   return key;
@@ -218,7 +222,7 @@ export function planetImageSize(diameter?: number): number {
 }
 
 export function nameOf(id: number): string {
-  for (const c of [SHIPS, DEFENSE, RESEARCH, ARTEFACTS, BUILDINGS]) {
+  for (const c of [SHIPS, DEFENSE, RESEARCH, ARTEFACTS, BUILDINGS, MOON_BUILDINGS]) {
     const u = c.find((x) => x.id === id);
     if (u) return u.name;
   }
@@ -227,7 +231,7 @@ export function nameOf(id: number): string {
 
 // keyOfId — ключ юнита по числовому id (для wiki-навигации, slug страницы).
 export function keyOfId(id: number): string | null {
-  for (const c of [SHIPS, DEFENSE, RESEARCH, ARTEFACTS, BUILDINGS]) {
+  for (const c of [SHIPS, DEFENSE, RESEARCH, ARTEFACTS, BUILDINGS, MOON_BUILDINGS]) {
     const u = c.find((x) => x.id === id);
     if (u) return u.key;
   }
@@ -239,6 +243,7 @@ export function categoryOfId(id: number): string | null {
   if (SHIPS.find((x) => x.id === id)) return 'ships';
   if (DEFENSE.find((x) => x.id === id)) return 'defense';
   if (BUILDINGS.find((x) => x.id === id)) return 'buildings';
+  if (MOON_BUILDINGS.find((x) => x.id === id)) return 'buildings';
   if (RESEARCH.find((x) => x.id === id)) return 'research';
   return null;
 }

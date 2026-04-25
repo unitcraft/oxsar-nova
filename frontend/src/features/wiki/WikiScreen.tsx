@@ -144,13 +144,7 @@ export function WikiScreen() {
                 setActiveCat(c.key);
                 setActiveSlug('index');
               }}
-              className={activeCat === c.key ? 'ox-btn ox-btn-primary' : 'ox-btn'}
-              style={{
-                width: '100%',
-                justifyContent: 'flex-start',
-                padding: '4px 8px',
-                fontSize: 13,
-              }}
+              className={`wiki-cat-btn${activeCat === c.key ? ' active' : ''}`}
             >
               {c.title}
             </button>
@@ -166,17 +160,9 @@ export function WikiScreen() {
                     <button
                       key={slug}
                       onClick={() => setActiveSlug(slug)}
-                      className={activeSlug === slug ? 'ox-btn ox-btn-secondary' : 'ox-btn'}
-                      style={{
-                        padding: '2px 6px',
-                        fontSize: 12,
-                        justifyContent: 'flex-start',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                      }}
+                      className={`wiki-page-btn${activeSlug === slug ? ' active' : ''}`}
                     >
-                      {img && <img src={img} alt="" style={{ width: 18, height: 18 }} />}
+                      {img && <img src={img} alt="" className="wiki-page-icon" />}
                       <span>{title}</span>
                     </button>
                   );
