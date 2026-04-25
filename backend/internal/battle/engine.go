@@ -23,13 +23,6 @@ var ErrInvalidInput = errors.New("battle: invalid input")
 //   * урон сначала съедает turnShield, остаток — turnShell;
 //   * при turnShell <= 0 юниты погибают целиком.
 //
-// Что не реализовано (пойдёт в M4.2+):
-//   - rapidfire (in.Rapidfire уже есть, но не используется);
-//   - ballistics/masking roll (RNG подготовлен);
-//   - частичный regen щитов (damageFactor при массовом пробитии);
-//   - multi-канальное распределение одного выстрела;
-//   - ablation (damaged/ShellPercent) — пока работает «целиком жив
-//     или мёртв».
 func Calculate(in Input) (Report, error) {
 	if err := validate(in); err != nil {
 		return Report{}, err
@@ -341,12 +334,6 @@ func (b *battleState) toSides() []Side {
 // Распределение выстрелов по целям — пропорционально их weight
 // (2^Front × Quantity, как Java Units.getStartTurnWeight).
 //
-// M4.2 добавляет:
-//   - rapidfire: shots = quantity × rapidfire[shooter_id][target_id];
-//   - masking vs ballistics: часть выстрелов промахивается.
-//     Detmerministic-формула Java (НЕ RNG-roll):
-//        maskingEffect = max(0, target.Masking - shooter.Ballistics)
-//        factor = 1 - 1/(1 + maskingEffect * 0.2)
 //        missed = floor(shots * factor)
 //     где masking берётся со стороны ЦЕЛИ, ballistics — со СТОРОНЫ-
 //     стрелка. Семантика: «я прячу свой флот, враг ищет сквозь помехи».
