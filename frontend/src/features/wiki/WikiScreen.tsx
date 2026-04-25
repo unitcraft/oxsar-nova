@@ -224,12 +224,12 @@ export function WikiScreen() {
       <main
         ref={contentRef}
         className="ox-panel"
-        style={{ flex: 1, overflowY: 'auto', padding: 16 }}
+        style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}
       >
         {page.isLoading && <div>Загрузка статьи…</div>}
         {page.isError && <div>Не удалось загрузить статью.</div>}
         {page.data && (
-          <article className="wiki-article" style={{ lineHeight: 1.6 }}>
+          <article className="wiki-article">
             {headerNode}
             <div
               // Контент из docs/wiki/, контролируется командой проекта.
