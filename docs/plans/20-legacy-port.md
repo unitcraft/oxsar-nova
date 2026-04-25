@@ -196,9 +196,31 @@ range = round((level^2 - 1) * (1 + hyperspace_tech / 10))
 
 ---
 
-## Ф.5: Stargate Jump (kind=32)
+## Ф.5: Stargate Jump (kind=32) — ✅ ЗАКРЫТО 2026-04-25
 
-**Legacy**: `ExtMission.class.php:185`, `ExtEventHandler.class.php:630`, `Functions.inc.php:1693`  
+Реализовано:
+- Endpoint `POST /api/stargate {src_planet_id, dst_planet_id, ships}`.
+- `TransportService.StargateJump`: FOR UPDATE на src.planet, проверки
+  src/dst — лун игрока (или союзника NAP/ALLY через `checkPositionTarget`),
+  оба имеют `star_gate >= 1`, src.position >= 3, нет запрещённых юнитов.
+- Cooldown: `3600 * 0.7^(jump_gate_level - 1)` секунд. Хранится в новой
+  таблице `stargate_cooldowns(planet_id PK, last_jump_at)` (миграция
+  0062). На src создаётся/обновляется `INSERT ... ON CONFLICT`.
+- Запрещены: small_shield (49), large_shield (50), interceptor (51),
+  interplanetary (52), small/large_planet_shield (354/355).
+- Корабли мгновенно списываются с src.ships и добавляются на dst.ships
+  (`ON CONFLICT DO UPDATE`). count<=0 строки чистятся.
+- Без события — мгновенный action. Не использует event-loop, потому что
+  fire_at = now делал бы это нагрузкой на воркер без причины.
+- KindStargateJump=32 добавлен в event/kinds.go (на всякий случай для
+  будущего отчётного канала, пока handler не нужен).
+
+Ошибки: 400 для bad input / banned / position<3, 403 для not-owner,
+409 для cooldown / not-enough-ships.
+
+UI (вкладка Stargate в FleetScreen) — отложен.
+
+**Legacy**: `ExtMission.class.php:185`, `ExtEventHandler.class.php:630`, `Functions.inc.php:1693`
 **Ext-override**: **есть** (`ExtMission` + `ExtEventHandler`)
 
 **Формула cooldown** (`Functions.inc.php:1693`):

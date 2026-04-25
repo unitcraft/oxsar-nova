@@ -34,6 +34,7 @@ const (
 	KindDeliveryUnits              Kind = 21
 	KindDeliveryResources          Kind = 22
 	KindStargateTransport          Kind = 28
+	KindStargateJump               Kind = 32 // план 20 Ф.5: мгновенный прыжок флота между лунами с jump_gate
 	KindAlienFlyUnknown            Kind = 33 // миссия пришельцев без явной цели (план 15, этап 3)
 	KindAlienHolding               Kind = 34 // пришельцы удерживают планету игрока
 	KindAlienAttack                Kind = 35 // инопланетяне атакуют планету игрока

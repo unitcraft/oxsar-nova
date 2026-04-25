@@ -218,6 +218,50 @@ func (h *Handler) Phalanx(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Stargate POST /api/stargate
+// Body: { "src_planet_id": "...", "dst_planet_id": "...", "ships": {"unit_id": count} }
+func (h *Handler) Stargate(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	var body struct {
+		SrcPlanetID string          `json:"src_planet_id"`
+		DstPlanetID string          `json:"dst_planet_id"`
+		Ships       map[int]int64   `json:"ships"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	res, err := h.transport.StargateJump(r.Context(), StargateJumpInput{
+		UserID:      uid,
+		SrcPlanetID: body.SrcPlanetID,
+		DstPlanetID: body.DstPlanetID,
+		Ships:       body.Ships,
+	})
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, res)
+	case errors.Is(err, ErrInvalidDispatch),
+		errors.Is(err, ErrStargateBannedUnit),
+		errors.Is(err, ErrStargateNotMoon),
+		errors.Is(err, ErrStargateNotInstalled),
+		errors.Is(err, ErrStargatePositionLimit),
+		errors.Is(err, ErrTargetNotFound):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrStargateNotOwner),
+		errors.Is(err, ErrPositionNotAllowed):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrStargateCooldown),
+		errors.Is(err, ErrStargateNotEnoughShip):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 func parseIntParam(s string) (int, error) {
 	if s == "" {
 		return 0, errors.New("empty")

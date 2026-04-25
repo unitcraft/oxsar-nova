@@ -261,31 +261,23 @@ func (s *Service) ResearchSecondsMap(ctx context.Context, userID string, levels 
 	if !ok {
 		return map[int]int{}, nil
 	}
-	// План 20 Ф.8: используем effective lab = sum top-(1+igr) уровней.
-	// Если igr=0 — это эквивалент MAX, как и было раньше.
-	var igrLvl int
-	_ = s.db.Pool().QueryRow(ctx,
-		`SELECT level FROM research WHERE user_id=$1 AND unit_id=$2`,
-		userID, unitIGRTech).Scan(&igrLvl)
-	limit := 1 + igrLvl
+	// План 20 Ф.8: effective lab = sum top-(1+igr) уровней. Если igr=0
+	// — эквивалент max(level), как и было раньше. Один SQL:
+	// igr_level в подзапросе LIMIT.
 	var labLvl int
-	rows, err := s.db.Pool().Query(ctx, `
-		SELECT b.level
-		FROM buildings b
-		JOIN planets p ON p.id = b.planet_id
-		WHERE p.user_id = $1 AND b.unit_id = $2 AND p.destroyed_at IS NULL
-		ORDER BY b.level DESC
-		LIMIT $3
-	`, userID, labSpec.ID, limit)
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var lvl int
-			if err := rows.Scan(&lvl); err == nil {
-				labLvl += lvl
-			}
-		}
-	}
+	_ = s.db.Pool().QueryRow(ctx, `
+		SELECT COALESCE(SUM(level), 0) FROM (
+			SELECT b.level
+			FROM buildings b
+			JOIN planets p ON p.id = b.planet_id
+			WHERE p.user_id = $1 AND b.unit_id = $2 AND p.destroyed_at IS NULL
+			ORDER BY b.level DESC
+			LIMIT 1 + COALESCE(
+				(SELECT level FROM research WHERE user_id = $1 AND unit_id = $3),
+				0
+			)
+		) t
+	`, userID, labSpec.ID, unitIGRTech).Scan(&labLvl)
 
 	out := make(map[int]int, len(s.catalog.Research.Research))
 	for _, spec := range s.catalog.Research.Research {
@@ -324,8 +316,8 @@ func (s *Service) lookupResearch(unitID int) (string, config.ResearchSpec, bool)
 const unitIGRTech = 113
 
 // effectiveLabLevel — сумма топ-(1+igr_level) уровней research_lab
-// по всем планетам игрока (DESC). При igr=0 → 1 лаба = текущая
-// планетарная (но всё ещё через MAX, см. ниже).
+// по всем планетам игрока (DESC). При igr=0 → 1 лаба = max planet's
+// research_lab (то же поведение что и до плана 20 Ф.8).
 //
 // План 20 Ф.8: позволяет игроку использовать пул лабораторий,
 // если он развивает их на нескольких планетах. Стимул не строить
@@ -333,37 +325,27 @@ const unitIGRTech = 113
 //
 // minLab — уровень лаборатории на планете-источнике, чтобы при
 // деградации (одна планета удалена) effective не упал ниже её.
+//
+// Один SQL: igr_level берётся подзапросом в LIMIT, чтобы не делать
+// два round-trip'а к БД.
 func (s *Service) effectiveLabLevel(ctx context.Context, tx pgx.Tx,
 	userID, planetID string, minLab int) (int, error) {
-	// Уровень IGR.
-	var igrLvl int
-	_ = tx.QueryRow(ctx,
-		`SELECT level FROM research WHERE user_id=$1 AND unit_id=$2`,
-		userID, unitIGRTech).Scan(&igrLvl)
-
 	labID := s.catalog.Buildings.Buildings["research_lab"].ID
-	limit := 1 + igrLvl
-	rows, err := tx.Query(ctx, `
-		SELECT b.level FROM buildings b
-		JOIN planets p ON p.id = b.planet_id
-		WHERE p.user_id = $1 AND p.destroyed_at IS NULL
-		  AND b.unit_id = $2
-		ORDER BY b.level DESC
-		LIMIT $3
-	`, userID, labID, limit)
+	var sum int
+	err := tx.QueryRow(ctx, `
+		SELECT COALESCE(SUM(level), 0) FROM (
+			SELECT b.level FROM buildings b
+			JOIN planets p ON p.id = b.planet_id
+			WHERE p.user_id = $1 AND p.destroyed_at IS NULL
+			  AND b.unit_id = $2
+			ORDER BY b.level DESC
+			LIMIT 1 + COALESCE(
+				(SELECT level FROM research WHERE user_id = $1 AND unit_id = $3),
+				0
+			)
+		) t
+	`, userID, labID, unitIGRTech).Scan(&sum)
 	if err != nil {
-		return 0, err
-	}
-	defer rows.Close()
-	sum := 0
-	for rows.Next() {
-		var lvl int
-		if err := rows.Scan(&lvl); err != nil {
-			return 0, err
-		}
-		sum += lvl
-	}
-	if err := rows.Err(); err != nil {
 		return 0, err
 	}
 	if sum < minLab {

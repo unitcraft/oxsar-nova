@@ -730,6 +730,49 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /api/stargate:
+    post:
+      tags: [fleet]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Stargate Jump (план 20 Ф.5) — мгновенный прыжок флота между
+        лунами игрока (или союзника NAP/ALLY). Обе луны должны иметь
+        здание star_gate >= 1. Cooldown на источнике: 3600 × 0.7^(level-1)
+        секунд. Запрещены щиты и ракеты. Источник должен быть с
+        position >= 3.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [src_planet_id, dst_planet_id, ships]
+              properties:
+                src_planet_id: { type: string, format: uuid }
+                dst_planet_id: { type: string, format: uuid }
+                ships:
+                  type: object
+                  additionalProperties: { type: integer }
+      responses:
+        "200":
+          description: jumped
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jumped_at:    { type: string, format: date-time }
+                  next_jump_at: { type: string, format: date-time }
+                  cooldown_sec: { type: integer }
+                  ships:
+                    type: object
+                    additionalProperties: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: cooldown active or not enough ships
+
   /api/phalanx:
     get:
       tags: [fleet]
