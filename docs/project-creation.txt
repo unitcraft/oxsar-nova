@@ -7275,3 +7275,20 @@ wiki-descriptions, requirements, catalog.ts, wiki/ru/):
 Принцип: oxsar-nova не строгий 1:1 порт. В каждом слое юнит должен
 иметь либо полные данные, либо отсутствовать целиком. Потерянных
 юнитов с частичными параметрами быть не должно.
+
+## 2026-04-25: Wiki — боевая система, fenced code blocks, типографика
+
+Добавлено полное описание боевого алгоритма в wiki (docs/wiki/ru/combat/index.md):
+формулы технологий, трёхступенчатый алгоритм щита (port Java Units.processAttack),
+rapidfire-таблица, баллистика/маскировка (factor=1-1/(1+delta*0.2)), ablation
+(damaged-юниты), определение победителя, обломки и луна.
+
+В md.ts добавлен парсер fenced code blocks (```...```) — код рендерится
+в <pre><code> без обработки markdown и [[unit:N]]-ссылок.
+
+Типографика wiki улучшена по образцу Habr:
+- 16px / line-height 1.8 вместо 15px / 1.7
+- h2 margin-top 36px, h3 28px (была одна «каша» без зазоров)
+- Параграфы: margin-bottom 1.1em (asymmetric, стандарт Habr)
+- pre-блоки: padding 16px, border-radius 6px, тёмный фон
+- Убран inline lineHeight в JSX перекрывавший CSS

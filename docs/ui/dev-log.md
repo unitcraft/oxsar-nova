@@ -887,3 +887,17 @@ Frontend-only: `unitMeta.requires` из catalog, `fmtReqs()` для формат
 
 ### Tooltip'ы (задача 4)
 Луна: `title="{name} | {diameter} км | {min}..{max}°C"`. Обломки: `title="Обломки\nМеталл: N\nКремний: N"`.
+
+## Итерация UI-40: Wiki — типографика (2026-04-25)
+
+Жалоба пользователя: «шрифт неудачный, всё сливается». Референс — Habr.
+
+### Изменения
+- **Базовый шрифт**: 15px → 16px, line-height 1.7 → 1.8
+- **Заголовки**: h1 30px (было 28px), h2 22px / font-weight 700 / margin-top 36px, h3 18px / margin-top 28px. Добавлен `line-height` для каждого уровня (1.3/1.35/1.4)
+- **Параграфы**: `margin: 12px 0` → `margin: 0 0 1.1em` (asymmetric bottom-only — стандарт Habr)
+- **pre-блоки**: padding 12→16px, border-radius 4→6px, тёмный фон `rgba(10,18,32,0.85)`, border вместо только border-left тонкий синеватый
+- **inline code**: font-size `13px` → `0.875em` (масштабируется вместе с текстом)
+- **Таблицы**: cell padding 6→8px, th font-size уменьшен до 13.5px с letter-spacing
+- **Контейнер**: padding `16px` → `20px 28px`
+- **Убран inline `lineHeight: 1.6`** в JSX WikiScreen, который перекрывал CSS
