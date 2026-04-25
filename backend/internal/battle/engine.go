@@ -120,6 +120,10 @@ type unitState struct {
 	effectiveAttack float64
 	// effectiveShield — Shield[primaryChannel] с применённым shield tech.
 	effectiveShell float64 // shell на юнит с применённым shell tech
+	// baseShield — Shield[primaryChannel] БЕЗ tech-множителя. Используется
+	// для вычисления ignoreAttack-порога: tech повышает абсорбцию, но не
+	// делает щит абсолютным (BA-005).
+	baseShield float64
 }
 
 type sideState struct {
@@ -159,7 +163,9 @@ func newState(input []Side, rf map[int]map[int]int) *battleState {
 			}
 			// effectiveShield хранится прямо в turnShield/regen через
 			// scaledShield — считаем один раз.
-			scaledShield := u.Shield[pch] * shieldFactor
+			baseShield := u.Shield[pch]
+			scaledShield := baseShield * shieldFactor
+			us.baseShield = baseShield
 			us.turnShell = totalShell(us.effectiveShell, us.quantity, us.damaged, us.shellPercent)
 			us.turnShield = float64(u.Quantity) * scaledShield
 			us.startTurnShield = us.turnShield
@@ -478,7 +484,13 @@ func applyShots(shooter, target *unitState, attack float64, shots int64) {
 	_ = shooter
 
 	unitShield := target.tmpl.Shield[target.primaryChannel]
-	ignoreAttack := unitShield / 100.0
+	// ignoreAttack вычисляется по базовому (до tech) щиту — BA-005.
+	// Исключение (Java строки 348-350): планетарные щиты (Small/Large Shield,
+	// id 49/50) имеют ignoreAttack=0 — любая атака их пробивает.
+	var ignoreAttack float64
+	if target.tmpl.UnitID != 49 && target.tmpl.UnitID != 50 {
+		ignoreAttack = target.baseShield / 100.0
+	}
 
 	// Shots weaker than ignoreAttack don't penetrate to shell.
 	if attack > 0 && attack <= ignoreAttack {
@@ -509,6 +521,10 @@ func applyShots(shooter, target *unitState, attack float64, shots int64) {
 		return
 	}
 
+	// Портировано из Java Units.processAttack строки 358-420.
+	//
+	// fullTurnShield = startTurnQuantity × shield (Java строка 358).
+	// В Go startTurnShield уже хранит это значение.
 	fullTurnShield := target.startTurnShield
 	var shieldDamageFactor float64
 	if fullTurnShield > 0 {
@@ -521,31 +537,45 @@ func applyShots(shooter, target *unitState, attack float64, shots int64) {
 		shieldDestroyFactor = 1.0
 	}
 
-	// Shots that pass through destroyed-shield units, going straight to shell.
-	shieldDestroyUnits := math.Floor(target.turnShield * shieldDestroyFactor / unitShield)
+	// shieldDestroyUnits — сколько щитов уже «сломано» (Java строки 366-372).
+	shieldDestroy := target.turnShield * shieldDestroyFactor
+	shieldDestroyUnits := math.Floor(shieldDestroy / unitShield)
 	if shieldDestroyUnits > shotsF {
 		shieldDestroyUnits = shotsF
 	}
-	shotsToShell := shieldDestroyUnits
-	shotsToShield := shotsF - shotsToShell
+	shieldDestroy = shieldDestroyUnits * unitShield
+	if target.turnShield > 0 {
+		shieldDestroyFactor = shieldDestroy / target.turnShield
+	}
+	shieldExistFactor := 1.0 - shieldDestroyFactor
 
-	// Apply remaining shots to shield.
-	if shotsToShield > 0 && target.turnShield > 0 {
-		shieldPower := attack * shotsToShield
-		maxShieldPower := unitShield * shotsToShield
-		if shieldPower > maxShieldPower {
-			shieldPower = maxShieldPower
+	// shieldShotsNumber — выстрелы, которые бьют в щит (Java строка 377).
+	shieldShotsNumber := math.Ceil(shotsF * shieldExistFactor)
+	remainingShots := shotsF
+
+	if shieldShotsNumber > 0 && target.turnShield > 0 {
+		shieldShotsPower := attack * shieldShotsNumber
+		// При attack > ignoreAttack cap power по unitShield (Java строки 380-388).
+		if attack > ignoreAttack {
+			maxShieldShotsPower := shieldShotsNumber * unitShield
+			if shieldShotsPower > maxShieldShotsPower {
+				shieldShotsPower = maxShieldShotsPower
+			}
+			shieldExist := target.turnShield * shieldExistFactor
+			if shieldShotsPower > shieldExist {
+				shieldShotsPower = shieldExist
+			}
+			target.turnShield -= shieldShotsPower
+			// Пересчёт фактического числа shots потраченных на щит (Java строка 389).
+			shieldShotsNumber = math.Round(shieldShotsPower / attack)
 		}
-		if shieldPower > target.turnShield {
-			shieldPower = target.turnShield
-		}
-		target.turnShield -= shieldPower
+		remainingShots -= shieldShotsNumber
 	}
 
-	// Apply shell shots.
-	if shotsToShell > 0 && target.turnShell > 0 {
-		shellPower := attack * shotsToShell
-		maxShellPower := target.tmpl.Shell * shotsToShell
+	// Оставшиеся выстрелы идут в shell (Java строки 409-420).
+	if remainingShots > 0 && target.turnShell > 0 {
+		shellPower := attack * remainingShots
+		maxShellPower := target.tmpl.Shell * remainingShots
 		if shellPower > maxShellPower {
 			shellPower = maxShellPower
 		}

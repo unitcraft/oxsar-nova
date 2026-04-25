@@ -19,10 +19,13 @@
 
 ## Battle engine (M4)
 
-### [M4.1] Щиты — Java-алгоритм портирован — ЗАКРЫТО
+### [M4.1] Щиты — Java-алгоритм портирован — ЗАКРЫТО (уточнён 2026-04-25)
 - Портирован `Units.processAttack` shield-блок (строки 315–427 oxsar2-java):
-  `ignoreAttack = shield/100`, `shieldDestroyFactor = clamp(1-turnShield/fullTurnShield, 0.01, 1.0)`,
-  `startTurnShield` хранится в `unitState`. Тесты обновлены под Java-поведение (commit 665cdd7).
+  `shieldDestroyFactor = clamp(1-turnShield/fullTurnShield, 0.01, 1.0)`,
+  `startTurnShield` хранится в `unitState`. Исправлена структура Java-алгоритма:
+  выстрелы делятся на «к щиту» (shieldExistFactor) и «к shell» (остаток), а не
+  наоборот. `ignoreAttack` вычисляется по базовому щиту без tech-масштабирования.
+  Для планетарных щитов (id 49/50) `ignoreAttack=0` как в Java. BA-005 ЗАКРЫТ.
 
 ### [M4.1] Регенерация щитов — 100% каждый раунд
 - **Где**: `battle/engine.go::regen`.
