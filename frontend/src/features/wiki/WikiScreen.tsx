@@ -195,27 +195,39 @@ export function WikiScreen() {
             >
               {c.title}
             </button>
-            {activeCat === c.key && pages.data && (
-              <div style={{ marginLeft: 12, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {pages.data.pages.map((p) => {
-                  const slug = p.path.split('/')[1] ?? 'index';
-                  const fm = p.frontmatter ?? {};
-                  const unitID = fm.unit_id ? Number(fm.unit_id) : 0;
-                  const title = unitID > 0 ? nameOf(unitID) : (fm.title ?? slug);
-                  const img = unitID > 0 ? imageOfId(unitID) : '';
-                  return (
-                    <button
-                      key={slug}
-                      onClick={() => navigate(c.key, slug)}
-                      className={`wiki-page-btn${activeSlug === slug ? ' active' : ''}`}
-                    >
-                      {img && <img src={img} alt="" className="wiki-page-icon" />}
-                      <span>{title}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            {activeCat === c.key && pages.data && (() => {
+              // Скрываем список если единственная страница — index с тем же именем что категория.
+              const pageList = pages.data.pages.filter((p) => {
+                const slug = p.path.split('/')[1] ?? 'index';
+                if (slug !== 'index') return true;
+                const fm = p.frontmatter ?? {};
+                const unitID = fm.unit_id ? Number(fm.unit_id) : 0;
+                const title = unitID > 0 ? nameOf(unitID) : (fm.title ?? slug);
+                return title !== c.title;
+              });
+              if (pageList.length === 0) return null;
+              return (
+                <div style={{ marginLeft: 12, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {pageList.map((p) => {
+                    const slug = p.path.split('/')[1] ?? 'index';
+                    const fm = p.frontmatter ?? {};
+                    const unitID = fm.unit_id ? Number(fm.unit_id) : 0;
+                    const title = unitID > 0 ? nameOf(unitID) : (fm.title ?? slug);
+                    const img = unitID > 0 ? imageOfId(unitID) : '';
+                    return (
+                      <button
+                        key={slug}
+                        onClick={() => navigate(c.key, slug)}
+                        className={`wiki-page-btn${activeSlug === slug ? ' active' : ''}`}
+                      >
+                        {img && <img src={img} alt="" className="wiki-page-icon" />}
+                        <span>{title}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         ))}
       </aside>
