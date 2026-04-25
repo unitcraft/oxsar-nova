@@ -334,6 +334,7 @@ func run() error {
 		pr.Get("/payment/history", paymentH.History)
 
 		pr.Post("/alien/holding/{event_id}/pay", alienH.Pay)
+		pr.Get("/alien/holdings/me", alienH.MyHoldings)
 
 		pr.Get("/galaxy/{g}/{s}", galaxyH.System)
 
