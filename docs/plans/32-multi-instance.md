@@ -1,7 +1,7 @@
 ---
 title: 32 — Multi-instance readiness (scheduler + advisory locks + chat pub/sub)
 date: 2026-04-26
-status: draft
+status: done
 ---
 
 # План 32: Multi-instance readiness
@@ -252,77 +252,76 @@ ENV-overrides:
 
 ### Фаза 1 — пакет `locks` (S, ~0.5 дня)
 
-- [ ] `backend/internal/locks/advisory.go`: `TryRun(ctx, pool, name, fn)`
+- [x] `backend/internal/locks/advisory.go`: `TryRun(ctx, pool, name, fn)`
       возвращает `(acquired bool, err error)`.
-- [ ] FNV-64 hash имени lock'а в int64.
-- [ ] Использует `pool.Acquire()` для одного connection на lock-сессию.
-- [ ] Defer-unlock при выходе.
-- [ ] Unit-тесты: parallel-вызовы — только один acquired=true.
-- [ ] Integration test (с реальным Postgres через testcontainers или
+- [x] FNV-64 hash имени lock'а в int64.
+- [x] Использует `pool.Acquire()` для одного connection на lock-сессию.
+- [x] Defer-unlock при выходе.
+- [x] Unit-тесты: parallel-вызовы — только один acquired=true.
+- [x] Integration test (с реальным Postgres через testcontainers или
       опциональный — пропускается без БД).
 
 **Готовность**: 1 PR, ~80 строк + тесты.
 
 ### Фаза 2 — пакет `scheduler` (M, ~1 день)
 
-- [ ] `backend/internal/scheduler/scheduler.go`: `Scheduler` обёртка
+- [x] `backend/internal/scheduler/scheduler.go`: `Scheduler` обёртка
       над `robfig/cron/v3`.
-- [ ] `scheduler.Register(name string, fn func(ctx) error)`:
+- [x] `scheduler.Register(name string, fn func(ctx) error)`:
       внутри обёртывает в `locks.TryRun("scheduler:"+name, ...)`.
-- [ ] `Config` — load YAML, ENV-overrides, валидация cron-выражений
+- [x] `Config` — load YAML, ENV-overrides, валидация cron-выражений
       (fail-fast при invalid).
-- [ ] Метрики Prometheus.
-- [ ] Graceful Stop: дожидается активных job до shutdown grace.
-- [ ] Unit-тесты: load YAML, ENV override, invalid cron = fail,
+- [x] Метрики Prometheus.
+- [x] Graceful Stop: дожидается активных job до shutdown grace.
+- [x] Unit-тесты: load YAML, ENV override, invalid cron = fail,
       disabled job не зарегистрирована, lock-skip metric.
 
 **Готовность**: 1 PR, ~250 строк + тесты + dependency на robfig/cron.
 
 ### Фаза 3 — миграция 4 ticker-задач (M, ~0.5 дня)
 
-- [ ] Создать `configs/schedule.yaml`.
-- [ ] В `cmd/worker/main.go` заменить 4 goroutine-блока (alien_spawn,
+- [x] Создать `configs/schedule.yaml`.
+- [x] В `cmd/worker/main.go` заменить 4 goroutine-блока (alien_spawn,
       inactivity_reminders, expire_temp_planets, RunPruner) на
       `sch.Register(...)`.
-- [ ] Удалить старые ticker-goroutines.
-- [ ] `metrics_updater` оставить как ticker-goroutine (read-only).
-- [ ] Smoke-тест: scheduler стартует, jobs регистрируются.
+- [x] Удалить старые ticker-goroutines.
+- [x] `metrics_updater` оставить как ticker-goroutine (read-only).
+- [x] Smoke-тест: scheduler стартует, jobs регистрируются.
 
 **Готовность**: 1 PR, ~80 строк правок в worker/main.go.
 
 ### Фаза 4 — score_recalc через scheduler (S, ~0.5 дня)
 
-- [ ] Scheduler.Register("score_recalc_all", ...) → прямой
+- [x] Scheduler.Register("score_recalc_all", ...) → прямой
       `scoreSvc.RecalcAll(ctx)` (без события).
-- [ ] Удалить `BootstrapRecalcAllEvent`.
-- [ ] `KindScoreRecalcAll` handler оставить для legacy wait-events
+- [x] Удалить `BootstrapRecalcAllEvent`.
+- [x] `KindScoreRecalcAll` handler оставить для legacy wait-events
       (через 7 дней удалить отдельной миграцией).
 
 **Готовность**: 1 PR, ~30 строк.
 
 ### Фаза 5 — chat Redis pub/sub (M, ~1 день)
 
-- [ ] `chat.Hub` рефакторинг: `local map[channel]→clients` +
+- [x] `chat.Hub` рефакторинг: `local map[channel]→clients` +
       `runSubscriber` горутина с PSubscribe `chat:*`.
-- [ ] `Publish` пишет в Redis вместо local broadcast.
-- [ ] При падении Redis: продолжать работать на local (degradation
+- [x] `Publish` пишет в Redis вместо local broadcast.
+- [x] При падении Redis: продолжать работать на local (degradation
       до single-instance поведения).
-- [ ] Тесты: два Hub'а на одном Redis — broadcast от одного приходит
+- [x] Тесты: два Hub'а на одном Redis — broadcast от одного приходит
       ко второму.
 
 **Готовность**: 1 PR, ~150 строк chat refactor + тесты.
 
-### Фаза 6 — race-fix BootstrapRecalcAllEvent (S, ~0.1 дня)
+### Фаза 6 — race-fix BootstrapRecalcAllEvent — снято
 
-- [ ] `score/event.go:79`: переписать через CTE `WHERE NOT EXISTS`.
-
-**Готовность**: 5 строк в существующем файле.
+`BootstrapRecalcAllEvent` удалён в Ф.4 (scheduler сам тикает по cron,
+event-кикстарт не нужен). Race-фиксить нечего.
 
 ### Фаза 7 — документация и тестирование multi-instance (S, ~0.5 дня)
 
-- [ ] `docs/ops/scaling.md`: «как запустить N>1 worker'а / backend».
-- [ ] `docker-compose.scaling.yml` (overlay): пример с replicas: 2.
-- [ ] Smoke-тест: поднять 2 worker'а в docker-compose, убедиться что
+- [x] `docs/ops/scaling.md`: «как запустить N>1 worker'а / backend».
+- [x] `docker-compose.scaling.yml` (overlay): пример с replicas: 2.
+- [x] Smoke-тест: поднять 2 worker'а в docker-compose, убедиться что
       scheduler выполняет каждую job ровно один раз.
 
 **Готовность**: 1 PR, документация + compose-overlay.
