@@ -1,0 +1,36 @@
+# Overlay для smoke-теста multi-instance (план 32).
+#
+# Использование:
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.scaling.yml up
+#
+# Что меняется по сравнению с базовым docker-compose.yml:
+#   - worker: replicas=2 (Postgres advisory lock гарантирует, что каждая
+#     scheduler-job выполнится только в одном из инстансов).
+#   - backend: replicas=2 (chat Redis pub/sub fan-out — сообщения видны
+#     на обоих).
+#   - порты на хосте отвязаны: при replicas>1 publish-порт нельзя
+#     ставить статический. В прод-сетапе перед backend ставится reverse
+#     proxy (nginx/traefik); здесь просто открываем :8081 на одном из
+#     инстансов через "ports" в base — для scale-теста хватит curl
+#     внутри docker-сети или временный exec в контейнер.
+
+services:
+  worker:
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    # Метрики порт 9091 у обоих инстансов: Prometheus может сам
+    # обнаружить через docker-sd. Для smoke-теста смотрим логи:
+    #   docker compose ... logs worker | grep "scheduler job"
+    # Должны быть status=ok ровно от одного инстанса каждое окно.
+
+  backend:
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    # Убираем фиксированный port-mapping — он несовместим с replicas>1.
+    # Если нужен доступ снаружи — поднимите reverse proxy перед сервисом
+    # (nginx/traefik), либо тестируйте изнутри docker-сети.
+    ports: !reset []

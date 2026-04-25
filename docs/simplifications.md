@@ -1032,6 +1032,40 @@ prod-pipeline. Возвращается в JSON-ответе `/api/health`.
 
 **Tests**: 6 unit-тестов в `health_test.go`, все 27 пакетов зелёные.
 
+## 2026-04-26 — План 32: multi-instance readiness
+
+**Где**: `backend/internal/locks/` (новый), `backend/internal/scheduler/`
+(новый), `backend/internal/chat/hub.go`, `cmd/worker/main.go`,
+`cmd/server/main.go`, `configs/schedule.yaml`,
+`deploy/docker-compose.scaling.yml`, `docs/ops/scaling.md`.
+
+**Что**: backend готов к запуску в N≥2 инстансов:
+- Postgres advisory locks (`pg_try_advisory_lock`, FNV-64 hashing)
+  через `locks.TryRun(ctx, pool, name, fn)`.
+- Scheduler на `robfig/cron/v3` оборачивает каждую job в advisory lock —
+  ровно один worker выполняет, остальные status=skip.
+- 5 singleton-задач переведены: `alien_spawn`, `inactivity_reminders`,
+  `expire_temp_planets`, `event_pruner`, `score_recalc_all`. YAML —
+  `configs/schedule.yaml`, ENV-overrides поддерживаются.
+- `chat.Hub` рефакторен: Publish → Redis `chat:*`, на каждом инстансе
+  subscriber-горутина читает и broadcast'ит локальным WS-клиентам.
+  При недоступном Redis — degradation до local-only (single-instance
+  поведение, без полного отказа).
+- `BootstrapRecalcAllEvent` удалён — scheduler тикает по cron.
+- Метрики: `oxsar_scheduler_job_runs_total{job,status}`,
+  `_duration_seconds`, `_last_run_timestamp`.
+
+**Trade-off**:
+- **Catch-up пропущенных запусков НЕ поддерживается**. Если worker лежал
+  во время cron-tick'а — следующий запуск через cron-период.
+  Приоритет: L (можно отдельным планом, если потеря критична).
+- **Chat при недоступном Redis** деградирует до single-instance:
+  клиенты разных backend'ов перестают видеть друг друга, но внутри
+  одного инстанса чат работает. Приоритет: L.
+
+**Tests**: 4 unit-теста для `locks`, 13 для `scheduler`, 3 для
+`chat.Hub` (single-instance fallback). Все backend-пакеты зелёные.
+
 ## 2026-04-26 — План 29 Ф.1-4: magic numbers cleanup
 
 **Где**: `backend/internal/economy/ids.go`, `shipyard/service.go`,

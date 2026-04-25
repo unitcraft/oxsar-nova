@@ -7849,3 +7849,165 @@ goal_engine = false в configs/features.yaml. Код мёртв до Ф.5 (UI
 - Ф.5: UI на /api/goals.
 - Ф.6: Расширения (новые conditions, weekly, seasonal).
 - Ф.7: Удалить старые пакеты achievement + dailyquest.
+
+================================================================
+Итерация (2026-04-26): план 32 — multi-instance readiness
+================================================================
+
+Цель: backend готов к scale-out N≥2 worker и backend-инстансов одним
+заходом. Включает scheduler, advisory locks, chat pub/sub, ON CONFLICT
+race-fixes.
+
+### Аудит
+
+5 singleton-задач в worker'е давали бы дубль при N≥2:
+- alien_spawn (6h ticker от старта worker'а)
+- inactivity_reminders (24h ticker)
+- expire_temp_planets (1h ticker)
+- event_pruner (RunPruner — собственный 24h ticker)
+- score_recalc_all (event-based, но Bootstrap создаёт race)
+
+WebSocket Hub был in-memory: клиенты на разных backend'ах не видели
+друг друга.
+
+Главный event-loop (`event/worker.go`) уже scale-ready через
+`FOR UPDATE SKIP LOCKED` — не трогаем.
+
+### Ф.1: пакет locks
+
+`backend/internal/locks/advisory.go`:
+- `TryRun(ctx, pool, name, fn) (acquired bool, err error)`.
+- FNV-64 hash имени lock'а → int64.
+- `pool.Acquire()` для одного connection на lock-сессию (advisory lock
+  per-connection: pool напрямую нельзя, иначе следующий запрос на
+  другом connection не отпустит lock).
+- Defer Release + явный Unlock.
+
+При acquired=false fn НЕ вызывается; err остаётся nil — caller сам
+решает, инкрементить metrics-skip или нет. При acquired=true ошибка
+fn возвращается как err.
+
+Тесты: 4 unit-теста (hash stable/distinct, nil pool, empty name).
+Integration-тестов с реальной БД не делал — ParseConfig и config_test
+покрывают логику без БД.
+
+### Ф.2: пакет scheduler
+
+`backend/internal/scheduler/`:
+- Обёртка над `github.com/robfig/cron/v3`.
+- `New(cfg, pool, log)` → `Register(name, fn)` → `Start(ctx)`.
+- Каждый job-tick оборачивается в `locks.TryRun("scheduler:"+name, fn)`.
+- Метрики: `oxsar_scheduler_job_runs_total{job, status}` (ok|error|skip),
+  `_duration_seconds{job}`, `_last_run_timestamp{job}`.
+- Fail-fast валидация cron-выражений при `ParseConfig`.
+- ENV-overrides: `SCHEDULER_<JOB>_CRON`, `SCHEDULER_<JOB>_ENABLED`,
+  `SCHEDULER_DISABLE_ALL` (kill-switch).
+- Graceful Stop: `cron.Stop()` возвращает ctx, ждём с grace до 30s.
+
+Архитектурное решение — *Register знает про lock*, а не делает callee
+сам: единая точка инструментации (метрики, лог), невозможно
+случайно зарегистрировать job без lock'а.
+
+Тесты: 13 unit-тестов (config parse + env override + scheduler register
+flows). nil-pool в `runJob` корректно идёт в путь "pre-lock error",
+не "skip" — алерты не маскируют сбой.
+
+### Ф.3: миграция 4 ticker'ов + schedule.yaml
+
+`configs/schedule.yaml` — источник истины расписания:
+```yaml
+jobs:
+  alien_spawn: { schedule: "0 */6 * * *", enabled: true, ... }
+  inactivity_reminders: { schedule: "0 9 * * *", ... }
+  expire_temp_planets: { schedule: "5 * * * *", ... }   # :05 чтобы не пересекаться
+  event_pruner: { schedule: "30 3 * * *", ... }          # 03:30 UTC
+  score_recalc_all: { schedule: "0 4 * * *", ... }       # 04:00 UTC после pruner
+```
+
+В `cmd/worker/main.go` 4 goroutine-блока заменены `sch.Register(name, fn)`.
+Старые `time.NewTicker` удалены. `MetricsUpdater` остался ticker'ом —
+read-only gauge.Set, race-safe; для cron 15s было бы избыточно.
+
+### Ф.4: score_recalc через scheduler
+
+- Добавлен `score.RecalcAllScheduled(ctx)` — точка входа для scheduler'а.
+- Удалён `BootstrapRecalcAllEvent` (event-кикстарт больше не нужен,
+  scheduler тикает по cron независимо).
+- `RecalcAllEvent` handler оставлен для legacy wait-events; reschedule
+  убран (тикает scheduler).
+- `RecalcAll(ctx, log)` существующий (admin on-demand) сохранён —
+  потребовал переименовать новую функцию в `RecalcAllScheduled`,
+  чтобы не было конфликта имён.
+
+### Ф.5: chat Redis pub/sub
+
+`backend/internal/chat/hub.go` рефакторен:
+- `NewHubWithRedis(ctx, rdb, log)` — production-путь.
+- `Broadcast` → `rdb.Publish("chat:"+channel, json.Marshal(msg))`.
+- Subscriber-горутина `runSubscriber`: `PSubscribe("chat:*")`, читает
+  и зовёт `broadcastLocal(msg)`. С `Receive` для синхронизации после
+  reconnect (иначе первые сообщения после restart могут пропасть).
+- При обрыве connection — экспоненциальный retry (1s → 30s).
+- При rdb=nil или Publish-error — fallback на прямой
+  `broadcastLocal(msg)` (degradation до single-instance, чат внутри
+  одного инстанса работает).
+- `NewHub()` сохранён для тестов и обратной совместимости.
+
+`atomic.Bool pubSubRunning` — флаг "subscriber здоров"; Publish-путь
+работает только когда true. Если subscriber упал и retry'ит — Publish
+сразу идёт в local-fallback (без задержки доставки).
+
+### Ф.6: снято
+
+`BootstrapRecalcAllEvent` удалён в Ф.4 — race-fix через ON CONFLICT
+больше не актуален.
+
+### Ф.7: docs/ops/scaling.md + docker-compose.scaling.yml
+
+`deploy/docker-compose.scaling.yml` — overlay с replicas=2 для backend
+и worker. Используется как:
+```bash
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.scaling.yml up
+```
+
+`docs/ops/scaling.md` — runbook: что готово, что проверять (логи,
+метрики), ENV-настройки, известные ограничения (catch-up missed runs
+не поддерживается, chat degradation).
+
+### Архитектурные решения
+
+- **Postgres advisory locks вместо Redis lock-сервиса**: не нужна
+  доп.инфраструктура, нет clock-skew. Lock сбрасывается автоматически
+  при disconnect (даже OOM-kill).
+- **robfig/cron/v3 вместо самописного scheduler'а**: 4 строки
+  использования, проверенная либа. Альтернатива — `time.NewTicker`
+  с привязкой к моменту старта — даёт непредсказуемые часы запуска
+  (зависит от деплоя).
+- **Scheduler-метрики в pkg/metrics**: единая точка регистрации
+  (sync.Once). Counter `status` лейбл — separate ok/error/skip
+  (не суммируем, чтобы алерт по error не маскировался ростом skip).
+- **Chat: Hub.Publish через Redis всегда (даже при N=1)**: иначе при
+  scale-out нужен switch + миграция existing-клиентов. Loopback
+  pub/sub в Redis — миллисекунды накладных расходов.
+- **Chat fallback на local-only при недоступном Redis**: лучше частичный
+  чат (только клиенты одного инстанса) чем полный отказ. Логируется
+  каждый retry, prometheus покажет аномалию.
+
+### Tests
+
+Все backend-пакеты зелёные. Новые:
+- `internal/locks` — 4 unit-теста.
+- `internal/scheduler` — 13 unit-тестов (config parse + env override
+  + register/runJob flows).
+- `internal/chat/hub_test.go` — 3 теста на single-instance fallback,
+  slow-client non-blocking, NewHubWithRedis(nil) degradation.
+
+Integration-тестов с двумя реальными worker'ами и реальной БД не делал —
+скоринг этого через advisory lock в SQL очевиден, smoke-тест в
+docker-compose.scaling.yml как ручной шаг достаточен.
+
+### Что дальше
+
+- Smoke-тест с двумя worker'ами в docker-compose.scaling.yml (manual).
+- Catch-up пропущенных запусков — отдельный план если понадобится
+  (сейчас в simplifications с приоритетом L).
