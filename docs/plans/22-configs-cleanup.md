@@ -74,7 +74,24 @@ cost (350, 200, 100), factor 2.0, time_base_seconds 180, max_level 40.
 
 **Рекомендация:** (A). Это здание — часть исходного баланса.
 
-### Ф.2.2 Мёртвые legacy-юниты — общий ADR
+### Ф.2.2 Мёртвые legacy-юниты — ✅ РЕШЕНО 2026-04-25 ([ADR-0006](../adr/0006-orphan-units-deferred.md))
+
+**Не реализуем в v1.0**. Все 7 orphan-юнитов остаются в `units.yml` для
+совместимости с legacy-дампом, без игрового эффекта. `knownOrphans`
+теперь = roadmap для v1.x.
+
+Главные мотивы:
+- `planet_shield` пара — самые ценные (H), но требуют ad-hoc shield-pool
+  несовместимый с battle-engine. Скоп L, не M.
+- `moon_lab + ign` — после реализации IGR-tech (ADR-0005) частично
+  избыточны.
+- `moon_hydrogen_lab + lancer_ship` — won't fix (никогда не имели
+  effect'а в legacy).
+
+После релиза: priority 1 = planet_shield (если симуляция/playtesting
+потребует), priority 2 = moon_lab.
+
+
 
 Данные из legacy PHP (oxsar2/www + oxsar2/www/ext) и БД, поиск
 2026-04-24. Детали в `knownOrphans` (backend/internal/config/

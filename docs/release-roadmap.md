@@ -45,7 +45,7 @@
 - ~~[20 Ф.6](plans/20-legacy-port.md)~~ — ✅ **done 2026-04-25**: Moon Destruction (kind=25/27) с OGame-формулой rip-roll, single + ACS.
 - ~~[20 Ф.7](plans/20-legacy-port.md)~~ — ✅ **done 2026-04-25** ([ADR-0005](adr/0005-astrophysics.md)): Astrophysics с MAX(computer+1, astro/2+1) — не ломает существующих.
 - ~~[20 Ф.8](plans/20-legacy-port.md)~~ — ✅ **done 2026-04-25**: IGR network — sum top (1+igr) labs, ускоряет research при множественных лабораториях.
-- [22 Ф.2.2](plans/22-configs-cleanup.md) — orphan-юниты (decorative), не влияют на баланс.
+- ~~[22 Ф.2.2](plans/22-configs-cleanup.md)~~ — ✅ **решено 2026-04-25** ([ADR-0006](adr/0006-orphan-units-deferred.md)): orphan-юниты НЕ реализуем в v1, knownOrphans = roadmap для v1.x.
 - [15 Этап 4](plans/15-alien-holding-thursday.md) — UI для alien/holding: механика работает, UI позже.
 - [14 Ф.4–Ф.7](plans/14-admin-expansion.md) — админ-дашборды / runbooks: полезны, но не блокер.
 - [17 B–H](plans/17-gameplay-improvements.md) — daily quests, рейтинги, события: ретеншн-механики, итеративно.
