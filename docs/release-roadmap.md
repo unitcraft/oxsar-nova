@@ -49,7 +49,8 @@
 - [15 Этап 4](plans/15-alien-holding-thursday.md) — UI для alien/holding: механика работает, UI позже.
 - [14 Ф.4–Ф.7](plans/14-admin-expansion.md) — админ-дашборды / runbooks: полезны, но не блокер.
 - ~~[17 D](plans/17-gameplay-improvements.md)~~ — ✅ **done 2026-04-25**: Daily Quests с lazy-gen, 9 типов заданий, claim API, frontend tab.
-- [17 B, C, E, F, G, H](plans/17-gameplay-improvements.md) — рейтинги категорий, события, UX, бой: ретеншн, итеративно.
+- ~~17 E~~ — ✅ уже реализовано (категориальные рейтинги в ScoreScreen существуют с M5+).
+- [17 B, C, F, G, H](plans/17-gameplay-improvements.md) — события, UX, бой: ретеншн, итеративно.
 
 ---
 
