@@ -14,21 +14,35 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-// Минимальная подсветка псевдокода: числа, операторы, комментарии //, функции.
-// Принимает сырую (не escaped) строку, возвращает safe HTML.
+// Минимальная подсветка псевдокода — токенизатор без regex по HTML.
+// Принимает сырую строку, возвращает safe HTML.
 function highlightCode(raw: string): string {
-  // Разбиваем на комментарий и код.
   const commentIdx = raw.indexOf('//');
   const code = commentIdx >= 0 ? raw.slice(0, commentIdx) : raw;
   const comment = commentIdx >= 0 ? raw.slice(commentIdx) : '';
 
-  let out = escapeHtml(code);
-  // Числа (включая дробные и %).
-  out = out.replace(/\b(\d+(?:\.\d+)?%?)\b/g, '<span class="ch-num">$1</span>');
-  // Функции: слово перед «(».
-  out = out.replace(/\b([a-zA-Z_]\w*)\s*(?=\()/g, '<span class="ch-fn">$1</span>');
-  // Операторы.
-  out = out.replace(/([=+\-*/×÷≤≥≠])/g, '<span class="ch-op">$1</span>');
+  // Токенизируем код по токенам: идентификатор, число, оператор, прочее.
+  const tokenRe = /([A-Za-z_]\w*)(\s*\()?|(\d+(?:\.\d+)?%?)|([=+\-*/×÷≤≥≠])|([^A-Za-z_\d=+\-*/×÷≤≥≠]+)/g;
+  let out = '';
+  let m: RegExpExecArray | null;
+  while ((m = tokenRe.exec(code)) !== null) {
+    if (m[1] !== undefined) {
+      // Идентификатор — функция если за ним «(», иначе обычный текст.
+      const name = escapeHtml(m[1]);
+      const paren = m[2] ?? '';
+      if (paren.trimStart().startsWith('(')) {
+        out += `<span class="ch-fn">${name}</span>${escapeHtml(paren)}`;
+      } else {
+        out += name + escapeHtml(paren);
+      }
+    } else if (m[3] !== undefined) {
+      out += `<span class="ch-num">${escapeHtml(m[3])}</span>`;
+    } else if (m[4] !== undefined) {
+      out += `<span class="ch-op">${escapeHtml(m[4])}</span>`;
+    } else {
+      out += escapeHtml(m[5] ?? m[0] ?? '');
+    }
+  }
 
   if (comment) {
     out += `<span class="ch-comment">${escapeHtml(comment)}</span>`;
