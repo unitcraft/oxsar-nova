@@ -77,9 +77,6 @@ type ShipSpec struct {
 	Fuel   int     `yaml:"fuel"`
 	Cost   ResCost `yaml:"cost"`
 	Front  int     `yaml:"front,omitempty"`
-	// MaxPerPlanet — лимит количества юнитов на одной планете. 0 = без лимита.
-	// Ограничивает накопление premium-юнитов (план 27-W: Lancer cap=50).
-	MaxPerPlanet int64 `yaml:"max_per_planet,omitempty"`
 	// Per-unit ballistics/masking удалены (ADR-0015, план 27-U): движок
 	// использует только Side.Tech.Ballistics/Masking (research уровни).
 }

@@ -40,7 +40,10 @@ rapidfire:
     38: 5
     39: 5
     43: 10    # vs Rocket Launcher
-    102: 35   # vs Lancer — критично для закрытия BA-002
+    102: 45   # vs Lancer — ADR-0008 (27-W'): RF×35→×45.
+              # Закрывает Lancer-spam vs lite без cap-механики:
+              # 500 Lancer (55M) vs 200 LF + 100 Cru + 50 BS (6.7M) →
+              # defender wins 100%, atk loss 96%. Замена для cap=50/планета.
 
   # Battleship (34)
   34:
