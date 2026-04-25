@@ -5,19 +5,17 @@ entity_key: unit_a_screen
 unit_id: 201
 ---
 
-# unit_a_screen
-
-**Стоимость**: 20 000 M + 10 000 Si
+**Стоимость постройки**: 20 000 металла + 10 000 кремния.
 
 ## Характеристики
 
 | Параметр | Значение |
 |---|---:|
-| Attack | 22 |
-| Shell | 30000 |
-| Shield | 5000 |
-| Cargo | 800 |
-| Speed | 10000 |
-| Fuel | 75 |
+| Атака | 22 |
+| Корпус | 30 000 |
+| Щит | 5 000 |
+| Грузоподъёмность | 800 |
+| Скорость | 10 000 |
+| Расход топлива | 75 |
 
-*Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*
+*Числа берутся из `configs/ships.yml`, `construction.yml`, `rapidfire.yml`.*

@@ -5,19 +5,17 @@ entity_key: unit_a_corvette
 unit_id: 200
 ---
 
-# unit_a_corvette
-
-**Стоимость**: 19 000 M + 6 000 Si + 2 000 H
+**Стоимость постройки**: 19 000 металла + 6 000 кремния + 2 000 водорода.
 
 ## Характеристики
 
 | Параметр | Значение |
 |---|---:|
-| Attack | 200 |
-| Shell | 25500 |
-| Shield | 75 |
-| Cargo | 300 |
-| Speed | 20000 |
-| Fuel | 150 |
+| Атака | 200 |
+| Корпус | 25 500 |
+| Щит | 75 |
+| Грузоподъёмность | 300 |
+| Скорость | 20 000 |
+| Расход топлива | 150 |
 
-*Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*
+*Числа берутся из `configs/ships.yml`, `construction.yml`, `rapidfire.yml`.*

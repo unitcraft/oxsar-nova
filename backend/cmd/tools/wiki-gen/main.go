@@ -63,7 +63,6 @@ func genBuildings(cat *config.Catalog, outDir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	// Список ключей для стабильного порядка.
 	keys := sortedKeys(cat.Buildings.Buildings)
 	indexB := &strings.Builder{}
 	fmt.Fprintln(indexB, "---")
@@ -74,9 +73,9 @@ func genBuildings(cat *config.Catalog, outDir string) error {
 	fmt.Fprintln(indexB)
 	fmt.Fprintln(indexB, "# Здания")
 	fmt.Fprintln(indexB)
-	fmt.Fprintln(indexB, "Полный список построек. Числа берутся из `configs/buildings.yml` и `configs/construction.yml`.")
+	fmt.Fprintln(indexB, "Полный список построек. Каждое здание занимает одно поле планеты. Стоимость следующего уровня растёт по формуле `базовая × множитель^(уровень−1)`.")
 	fmt.Fprintln(indexB)
-	fmt.Fprintln(indexB, "| Юнит | Базовая стоимость | Макс. уровень |")
+	fmt.Fprintln(indexB, "| Здание | Стоимость 1-го уровня | Макс. уровень |")
 	fmt.Fprintln(indexB, "|---|---|---:|")
 
 	for _, key := range keys {
@@ -84,7 +83,6 @@ func genBuildings(cat *config.Catalog, outDir string) error {
 		costLine := costStr(b.CostBase.Metal, b.CostBase.Silicon, b.CostBase.Hydrogen)
 		fmt.Fprintf(indexB, "| [[unit:%d]] | %s | %d |\n",
 			b.ID, costLine, b.MaxLevel)
-		_ = key
 
 		// Отдельная страница.
 		page := &strings.Builder{}
@@ -95,20 +93,20 @@ func genBuildings(cat *config.Catalog, outDir string) error {
 		fmt.Fprintf(page, "unit_id: %d\n", b.ID)
 		fmt.Fprintln(page, "---")
 		fmt.Fprintln(page)
-		// Заголовок без id-в-скобках — frontend подставит картинку
-		// и человеческое имя через nameOf(unit_id).
-		fmt.Fprintf(page, "# %s\n", key)
-		fmt.Fprintln(page)
+		// Имя и иконку показывает frontend по unit_id; собственный заголовок
+		// в md не пишем — он бы дублировался.
 		if b.MoonOnly {
 			fmt.Fprintln(page, "> **Только на луне.**")
 			fmt.Fprintln(page)
 		}
-		fmt.Fprintf(page, "**Базовая стоимость**: %s\n\n", costLine)
-		fmt.Fprintf(page, "**Множитель стоимости** (geometric): ×%.2f за уровень.\n\n", b.CostFactor)
-		fmt.Fprintf(page, "**Базовое время постройки**: %d секунд.\n\n", b.TimeBaseSeconds)
+		fmt.Fprintf(page, "**Стоимость 1-го уровня**: %s.\n\n", costLine)
+		fmt.Fprintf(page, "**Каждый следующий уровень дороже в %.2f раза** (стоимость растёт геометрической прогрессией).\n\n", b.CostFactor)
+		fmt.Fprintf(page, "**Базовое время постройки**: %s.\n\n", durationStr(b.TimeBaseSeconds))
 		if b.MaxLevel > 0 {
 			fmt.Fprintf(page, "**Максимальный уровень**: %d.\n\n", b.MaxLevel)
 		}
+
+		writeRequirements(page, cat, key)
 
 		// Таблица первых 10 уровней.
 		fmt.Fprintln(page, "## Стоимость по уровням")
@@ -123,7 +121,7 @@ func genBuildings(cat *config.Catalog, outDir string) error {
 			fmt.Fprintf(page, "| %d | %s | %s | %s |\n", lvl, fmtNum(m), fmtNum(si), fmtNum(h))
 		}
 		fmt.Fprintln(page)
-		fmt.Fprintln(page, "*Сгенерировано из `configs/buildings.yml`.*")
+		fmt.Fprintln(page, "*Числа берутся из `configs/buildings.yml`.*")
 
 		if err := writeIfChanged(filepath.Join(dir, key+".md"), page.String()); err != nil {
 			return err
@@ -149,15 +147,18 @@ func genShips(cat *config.Catalog, outDir string) error {
 	fmt.Fprintln(indexB)
 	fmt.Fprintln(indexB, "# Корабли")
 	fmt.Fprintln(indexB)
-	fmt.Fprintln(indexB, "| Юнит | Attack | Shell | Shield | Cargo | Speed | Стоимость |")
+	fmt.Fprintln(indexB, "Корабли строятся на [[unit:8]] и используются для атак, обороны, перевозки ресурсов и колонизации. Скорость в бою и в полёте усиливается двигательными исследованиями.")
+	fmt.Fprintln(indexB)
+	fmt.Fprintln(indexB, "| Корабль | Атака | Корпус | Щит | Грузоподъёмность | Скорость | Стоимость |")
 	fmt.Fprintln(indexB, "|---|---:|---:|---:|---:|---:|---|")
 
 	for _, key := range keys {
 		s := cat.Ships.Ships[key]
 		costLine := costStr(s.Cost.Metal, s.Cost.Silicon, s.Cost.Hydrogen)
-		fmt.Fprintf(indexB, "| [[unit:%d]] | %d | %d | %d | %d | %d | %s |\n",
-			s.ID, s.Attack, s.Shell, s.Shield, s.Cargo, s.Speed, costLine)
-		_ = key
+		fmt.Fprintf(indexB, "| [[unit:%d]] | %s | %s | %s | %s | %s | %s |\n",
+			s.ID, fmtNum(int64(s.Attack)), fmtNum(int64(s.Shell)),
+			fmtNum(int64(s.Shield)), fmtNum(int64(s.Cargo)),
+			fmtNum(int64(s.Speed)), costLine)
 
 		// Страница корабля.
 		page := &strings.Builder{}
@@ -168,24 +169,26 @@ func genShips(cat *config.Catalog, outDir string) error {
 		fmt.Fprintf(page, "unit_id: %d\n", s.ID)
 		fmt.Fprintln(page, "---")
 		fmt.Fprintln(page)
-		fmt.Fprintf(page, "# %s\n", key)
-		fmt.Fprintln(page)
-		fmt.Fprintf(page, "**Стоимость**: %s\n\n", costLine)
+		fmt.Fprintf(page, "**Стоимость постройки**: %s.\n\n", costLine)
 		fmt.Fprintln(page, "## Характеристики")
 		fmt.Fprintln(page)
 		fmt.Fprintln(page, "| Параметр | Значение |")
 		fmt.Fprintln(page, "|---|---:|")
-		fmt.Fprintf(page, "| Attack | %d |\n", s.Attack)
-		fmt.Fprintf(page, "| Shell | %d |\n", s.Shell)
-		fmt.Fprintf(page, "| Shield | %d |\n", s.Shield)
-		fmt.Fprintf(page, "| Cargo | %d |\n", s.Cargo)
-		fmt.Fprintf(page, "| Speed | %d |\n", s.Speed)
-		fmt.Fprintf(page, "| Fuel | %d |\n", s.Fuel)
+		fmt.Fprintf(page, "| Атака | %s |\n", fmtNum(int64(s.Attack)))
+		fmt.Fprintf(page, "| Корпус | %s |\n", fmtNum(int64(s.Shell)))
+		fmt.Fprintf(page, "| Щит | %s |\n", fmtNum(int64(s.Shield)))
+		fmt.Fprintf(page, "| Грузоподъёмность | %s |\n", fmtNum(int64(s.Cargo)))
+		fmt.Fprintf(page, "| Скорость | %s |\n", fmtNum(int64(s.Speed)))
+		fmt.Fprintf(page, "| Расход топлива | %s |\n", fmtNum(int64(s.Fuel)))
 		fmt.Fprintln(page)
+
+		writeRequirements(page, cat, key)
 
 		// Rapidfire граф.
 		if rfOut := rapidfireFrom(cat, s.ID); len(rfOut) > 0 {
-			fmt.Fprintln(page, "## Rapidfire: контрит")
+			fmt.Fprintln(page, "## Скорострельность по целям")
+			fmt.Fprintln(page)
+			fmt.Fprintln(page, "Каждый указанный юнит этот корабль может обстрелять несколько раз за один раунд боя:")
 			fmt.Fprintln(page)
 			for _, ln := range rfOut {
 				fmt.Fprintln(page, "- "+ln)
@@ -193,14 +196,16 @@ func genShips(cat *config.Catalog, outDir string) error {
 			fmt.Fprintln(page)
 		}
 		if rfIn := rapidfireTo(cat, s.ID); len(rfIn) > 0 {
-			fmt.Fprintln(page, "## Rapidfire: контрится")
+			fmt.Fprintln(page, "## Уязвим к скорострельности")
+			fmt.Fprintln(page)
+			fmt.Fprintln(page, "Эти юниты могут обстреливать данный корабль несколько раз за раунд:")
 			fmt.Fprintln(page)
 			for _, ln := range rfIn {
 				fmt.Fprintln(page, "- "+ln)
 			}
 			fmt.Fprintln(page)
 		}
-		fmt.Fprintln(page, "*Сгенерировано из `configs/ships.yml` + `construction.yml` + `rapidfire.yml`.*")
+		fmt.Fprintln(page, "*Числа берутся из `configs/ships.yml`, `construction.yml`, `rapidfire.yml`.*")
 
 		if err := writeIfChanged(filepath.Join(dir, key+".md"), page.String()); err != nil {
 			return err
@@ -226,15 +231,17 @@ func genDefense(cat *config.Catalog, outDir string) error {
 	fmt.Fprintln(indexB)
 	fmt.Fprintln(indexB, "# Оборона")
 	fmt.Fprintln(indexB)
-	fmt.Fprintln(indexB, "| Юнит | Attack | Shield | Shell | Стоимость |")
+	fmt.Fprintln(indexB, "Стационарные сооружения, защищающие планету от атак. В отличие от флота, обломки от уничтоженной обороны после боя восстанавливаются на 70 %.")
+	fmt.Fprintln(indexB)
+	fmt.Fprintln(indexB, "| Сооружение | Атака | Щит | Корпус | Стоимость |")
 	fmt.Fprintln(indexB, "|---|---:|---:|---:|---|")
 
 	for _, key := range keys {
 		d := cat.Defense.Defense[key]
 		costLine := costStr(d.Cost.Metal, d.Cost.Silicon, d.Cost.Hydrogen)
-		fmt.Fprintf(indexB, "| [[unit:%d]] | %d | %d | %d | %s |\n",
-			d.ID, d.Attack, d.Shield, d.Shell, costLine)
-		_ = key
+		fmt.Fprintf(indexB, "| [[unit:%d]] | %s | %s | %s | %s |\n",
+			d.ID, fmtNum(int64(d.Attack)), fmtNum(int64(d.Shield)),
+			fmtNum(int64(d.Shell)), costLine)
 
 		page := &strings.Builder{}
 		fmt.Fprintln(page, "---")
@@ -244,16 +251,19 @@ func genDefense(cat *config.Catalog, outDir string) error {
 		fmt.Fprintf(page, "unit_id: %d\n", d.ID)
 		fmt.Fprintln(page, "---")
 		fmt.Fprintln(page)
-		fmt.Fprintf(page, "# %s\n", key)
+		fmt.Fprintf(page, "**Стоимость постройки**: %s.\n\n", costLine)
+		fmt.Fprintln(page, "## Характеристики")
 		fmt.Fprintln(page)
-		fmt.Fprintf(page, "**Стоимость**: %s\n\n", costLine)
 		fmt.Fprintln(page, "| Параметр | Значение |")
 		fmt.Fprintln(page, "|---|---:|")
-		fmt.Fprintf(page, "| Attack | %d |\n", d.Attack)
-		fmt.Fprintf(page, "| Shield | %d |\n", d.Shield)
-		fmt.Fprintf(page, "| Shell | %d |\n", d.Shell)
+		fmt.Fprintf(page, "| Атака | %s |\n", fmtNum(int64(d.Attack)))
+		fmt.Fprintf(page, "| Щит | %s |\n", fmtNum(int64(d.Shield)))
+		fmt.Fprintf(page, "| Корпус | %s |\n", fmtNum(int64(d.Shell)))
 		fmt.Fprintln(page)
-		fmt.Fprintln(page, "*Сгенерировано из `configs/defense.yml`.*")
+
+		writeRequirements(page, cat, key)
+
+		fmt.Fprintln(page, "*Числа берутся из `configs/defense.yml`.*")
 
 		if err := writeIfChanged(filepath.Join(dir, key+".md"), page.String()); err != nil {
 			return err
@@ -269,10 +279,6 @@ func genResearch(cat *config.Catalog, outDir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	// Research идёт из Buildings (type=Research mode=2 в legacy-трактовке).
-	// У нас он лежит в cat.Research — но если его нет, соберём из тех
-	// construction-entries, у которых mode=2. Для MVP ограничимся Research
-	// из construction-каталога.
 	indexB := &strings.Builder{}
 	fmt.Fprintln(indexB, "---")
 	fmt.Fprintln(indexB, "title: Исследования")
@@ -282,23 +288,48 @@ func genResearch(cat *config.Catalog, outDir string) error {
 	fmt.Fprintln(indexB)
 	fmt.Fprintln(indexB, "# Исследования")
 	fmt.Fprintln(indexB)
-	fmt.Fprintln(indexB, "Технологии, требующие Research Lab.")
+	fmt.Fprintln(indexB, "Технологии открывают новые корабли, исследования и оборону. Все исследования проводятся в [[unit:12]]; чем выше её уровень, тем быстрее завершается работа.")
 	fmt.Fprintln(indexB)
-	fmt.Fprintln(indexB, "| ID | Ключ | Базовая стоимость | Множитель |")
-	fmt.Fprintln(indexB, "|---:|---|---|---:|")
+	fmt.Fprintln(indexB, "| Технология | Стоимость 1-го уровня | Каждый уровень дороже |")
+	fmt.Fprintln(indexB, "|---|---|---:|")
 
-	// Стабильный порядок.
 	rKeys := sortedKeys(cat.Research.Research)
-	count := 0
 	for _, key := range rKeys {
 		b := cat.Research.Research[key]
 		costLine := costStr(b.CostBase.Metal, b.CostBase.Silicon, b.CostBase.Hydrogen)
-		fmt.Fprintf(indexB, "| %d | %s | %s | ×%.2f |\n", b.ID, key, costLine, b.CostFactor)
-		count++
-	}
-	if count == 0 {
-		fmt.Fprintln(indexB)
-		fmt.Fprintln(indexB, "*(Каталог research не загружен — требуется проверка конфига.)*")
+		fmt.Fprintf(indexB, "| [[unit:%d]] | %s | в %.2f раза |\n", b.ID, costLine, b.CostFactor)
+
+		// Отдельная страница на исследование.
+		page := &strings.Builder{}
+		fmt.Fprintln(page, "---")
+		fmt.Fprintf(page, "title: %s\n", key)
+		fmt.Fprintln(page, "category: research")
+		fmt.Fprintf(page, "entity_key: %s\n", key)
+		fmt.Fprintf(page, "unit_id: %d\n", b.ID)
+		fmt.Fprintln(page, "---")
+		fmt.Fprintln(page)
+		fmt.Fprintf(page, "**Стоимость 1-го уровня**: %s.\n\n", costLine)
+		fmt.Fprintf(page, "**Каждый следующий уровень дороже в %.2f раза** (стоимость растёт геометрической прогрессией).\n\n", b.CostFactor)
+
+		writeRequirements(page, cat, key)
+
+		fmt.Fprintln(page, "## Стоимость по уровням")
+		fmt.Fprintln(page)
+		fmt.Fprintln(page, "| Уровень | Металл | Кремний | Водород |")
+		fmt.Fprintln(page, "|---:|---:|---:|---:|")
+		for lvl := 1; lvl <= 10; lvl++ {
+			factor := math.Pow(b.CostFactor, float64(lvl-1))
+			m := int64(float64(b.CostBase.Metal) * factor)
+			si := int64(float64(b.CostBase.Silicon) * factor)
+			h := int64(float64(b.CostBase.Hydrogen) * factor)
+			fmt.Fprintf(page, "| %d | %s | %s | %s |\n", lvl, fmtNum(m), fmtNum(si), fmtNum(h))
+		}
+		fmt.Fprintln(page)
+		fmt.Fprintln(page, "*Числа берутся из `configs/research.yml` и `configs/construction.yml`.*")
+
+		if err := writeIfChanged(filepath.Join(dir, key+".md"), page.String()); err != nil {
+			return err
+		}
 	}
 	return writeIfChanged(filepath.Join(dir, "index.md"), indexB.String())
 }
@@ -358,33 +389,97 @@ func rapidfireTo(cat *config.Catalog, targetID int) []string {
 	return out
 }
 
-func entityNameByID(cat *config.Catalog, id int) string {
-	for key, s := range cat.Ships.Ships {
-		if s.ID == id {
-			return key
-		}
+// idByKey ищет числовой id юнита по ключу — нужно для перекрёстных ссылок
+// `[[unit:N]]` на здания и исследования из requirements.yml.
+func idByKey(cat *config.Catalog, key string) int {
+	if b, ok := cat.Buildings.Buildings[key]; ok {
+		return b.ID
 	}
-	for key, d := range cat.Defense.Defense {
-		if d.ID == id {
-			return key
-		}
+	if r, ok := cat.Research.Research[key]; ok {
+		return r.ID
 	}
-	return fmt.Sprintf("unit_%d", id)
+	if s, ok := cat.Ships.Ships[key]; ok {
+		return s.ID
+	}
+	if d, ok := cat.Defense.Defense[key]; ok {
+		return d.ID
+	}
+	return 0
+}
+
+// writeRequirements добавляет на страницу секцию «Требования» — список
+// зданий и технологий, без которых юнит/исследование недоступны. Каждое
+// требование — кликабельная ссылка `[[unit:N]]` на свою страницу вики.
+func writeRequirements(page *strings.Builder, cat *config.Catalog, key string) {
+	reqs := cat.Requirements.Requirements[key]
+	if len(reqs) == 0 {
+		return
+	}
+	// Стабильный порядок: сначала здания, потом исследования; внутри —
+	// по уровню убыванием, при равенстве по ключу.
+	sorted := make([]config.Requirement, len(reqs))
+	copy(sorted, reqs)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if sorted[i].Kind != sorted[j].Kind {
+			return sorted[i].Kind == "building"
+		}
+		if sorted[i].Level != sorted[j].Level {
+			return sorted[i].Level > sorted[j].Level
+		}
+		return sorted[i].Key < sorted[j].Key
+	})
+	fmt.Fprintln(page, "## Требования")
+	fmt.Fprintln(page)
+	fmt.Fprintln(page, "Чтобы открыть постройку, нужно достроить или изучить:")
+	fmt.Fprintln(page)
+	for _, r := range sorted {
+		id := idByKey(cat, r.Key)
+		if id == 0 {
+			fmt.Fprintf(page, "- %s — уровень %d\n", r.Key, r.Level)
+			continue
+		}
+		fmt.Fprintf(page, "- [[unit:%d]] — уровень %d\n", id, r.Level)
+	}
+	fmt.Fprintln(page)
+}
+
+// durationStr форматирует секунды в человекочитаемый вид: «1 ч 30 мин».
+func durationStr(seconds int) string {
+	if seconds <= 0 {
+		return "мгновенно"
+	}
+	h := seconds / 3600
+	m := (seconds % 3600) / 60
+	s := seconds % 60
+	parts := []string{}
+	if h > 0 {
+		parts = append(parts, fmt.Sprintf("%d ч", h))
+	}
+	if m > 0 {
+		parts = append(parts, fmt.Sprintf("%d мин", m))
+	}
+	if s > 0 && h == 0 {
+		parts = append(parts, fmt.Sprintf("%d сек", s))
+	}
+	if len(parts) == 0 {
+		return "0 сек"
+	}
+	return strings.Join(parts, " ")
 }
 
 func costStr(m, si, h int64) string {
 	parts := []string{}
 	if m > 0 {
-		parts = append(parts, fmt.Sprintf("%s M", fmtNum(m)))
+		parts = append(parts, fmt.Sprintf("%s металла", fmtNum(m)))
 	}
 	if si > 0 {
-		parts = append(parts, fmt.Sprintf("%s Si", fmtNum(si)))
+		parts = append(parts, fmt.Sprintf("%s кремния", fmtNum(si)))
 	}
 	if h > 0 {
-		parts = append(parts, fmt.Sprintf("%s H", fmtNum(h)))
+		parts = append(parts, fmt.Sprintf("%s водорода", fmtNum(h)))
 	}
 	if len(parts) == 0 {
-		return "—"
+		return "бесплатно"
 	}
 	return strings.Join(parts, " + ")
 }
