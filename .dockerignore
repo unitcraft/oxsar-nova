@@ -49,6 +49,8 @@ backend/*.out
 
 # Документация и дневники — не нужны в runtime-образах
 docs
+# Исключение: docs/wiki — нужен в backend-образе для /api/wiki (план 19).
+!docs/wiki
 README.md
 CLAUDE.md
 helpful.txt
