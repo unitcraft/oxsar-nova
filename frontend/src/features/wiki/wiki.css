@@ -116,6 +116,7 @@
 .wiki-article a.wiki-unit-link {
   display: inline-flex;
   align-items: center;
+  vertical-align: middle;
   gap: 4px;
   padding: 1px 6px;
   background: rgba(74, 144, 226, 0.08);
