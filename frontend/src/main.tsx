@@ -43,10 +43,10 @@ class RootErrorBoundary extends React.Component<
           fontFamily: 'monospace', color: '#ccc', background: '#0a0c10',
         }}>
           <div style={{ fontSize: 40 }}>⚠️</div>
-          <div style={{ fontSize: 16, color: '#f66' }}>Ошибка приложения</div>
+          <div style={{ fontSize: 16, color: '#f66' }}>App error / Ошибка приложения</div>
           {where && (
             <div style={{ fontSize: 15, color: '#fa0', fontWeight: 700 }}>
-              Компонент: {where}
+              Component / Компонент: {where}
             </div>
           )}
           <div style={{ fontSize: 14, color: '#aaa', maxWidth: 500, textAlign: 'center' }}>
@@ -68,7 +68,7 @@ class RootErrorBoundary extends React.Component<
               color: '#63d9ff', cursor: 'pointer', fontSize: 16,
             }}
           >
-            Сбросить кэш и перезагрузить
+            Reset & Reload
           </button>
         </div>
       );

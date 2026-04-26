@@ -1570,6 +1570,25 @@ adminUi:
   reportBattle: "" # TODO: en
   reportEspionage: "" # TODO: en
   reportExpedition: "" # TODO: en
+  colName: "" # TODO: en
+  colCoords: "" # TODO: en
+  colMission: "" # TODO: en
+  colDest: "" # TODO: en
+  colArrival: "" # TODO: en
+  officerUntil: "" # TODO: en
+  colSells: "" # TODO: en
+  colWants: "" # TODO: en
+  colArtefact: "" # TODO: en
+  colPrice: "" # TODO: en
+  colDate: "" # TODO: en
+  colPackage: "" # TODO: en
+  colCreditsShort: "" # TODO: en
+  colStatus: "" # TODO: en
+  colAdmin: "" # TODO: en
+  colAction: "" # TODO: en
+  colFolder: "" # TODO: en
+  colSubject: "" # TODO: en
+  colRead: "" # TODO: en
 
 # TODO: en
 artMarketUi:

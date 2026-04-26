@@ -124,7 +124,7 @@ function SummaryTab({ p, userID, onChanged }: { p: UserProfile; userID: string; 
         {p.planets.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
             <thead>
-              <tr><Th>Имя</Th><Th>Координаты</Th><Th>🟠 Метал</Th><Th>💎 Крем</Th><Th>💧 Водор</Th></tr>
+              <tr><Th>{t('colName')}</Th><Th>{t('colCoords')}</Th><Th>🟠</Th><Th>💎</Th><Th>💧</Th></tr>
             </thead>
             <tbody>
               {p.planets.map((pl) => (
@@ -148,7 +148,7 @@ function SummaryTab({ p, userID, onChanged }: { p: UserProfile; userID: string; 
       <Section title={`${t('sectionFleets')} (${p.fleets.length})`}>
         {p.fleets.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
-            <thead><tr><Th>Миссия</Th><Th>State</Th><Th>Куда</Th><Th>Прилёт</Th></tr></thead>
+            <thead><tr><Th>{t('colMission')}</Th><Th>State</Th><Th>{t('colDest')}</Th><Th>{t('colArrival')}</Th></tr></thead>
             <tbody>
               {p.fleets.map((f) => (
                 <tr key={f.id}>
@@ -165,7 +165,7 @@ function SummaryTab({ p, userID, onChanged }: { p: UserProfile; userID: string; 
 
       <Section title={`${t('sectionOfficers')} (${p.officers.length})`}>
         {p.officers.length === 0 ? <Empty /> : (
-          <ul>{p.officers.map((o) => <li key={o.key}><b>{o.key}</b> до {fmtDate(o.expires_at)}</li>)}</ul>
+          <ul>{p.officers.map((o) => <li key={o.key}><b>{o.key}</b> {t('officerUntil')} {fmtDate(o.expires_at)}</li>)}</ul>
         )}
       </Section>
 
@@ -183,7 +183,7 @@ function EconomyTab({ p }: { p: UserProfile }) {
       <Section title={`${t('sectionMarketLots')} (${p.market_lots.length})`}>
         {p.market_lots.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
-            <thead><tr><Th>Продаёт</Th><Th>Хочет</Th><Th>State</Th></tr></thead>
+            <thead><tr><Th>{t('colSells')}</Th><Th>{t('colWants')}</Th><Th>State</Th></tr></thead>
             <tbody>
               {p.market_lots.map((l) => (
                 <tr key={l.id}>
@@ -200,7 +200,7 @@ function EconomyTab({ p }: { p: UserProfile }) {
       <Section title={`${t('sectionArtefactLots')} (${p.artefact_lots.length})`}>
         {p.artefact_lots.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
-            <thead><tr><Th>Артефакт</Th><Th>unit_id</Th><Th>Цена</Th></tr></thead>
+            <thead><tr><Th>{t('colArtefact')}</Th><Th>unit_id</Th><Th>{t('colPrice')}</Th></tr></thead>
             <tbody>
               {p.artefact_lots.map((l) => (
                 <tr key={l.id}>
@@ -217,7 +217,7 @@ function EconomyTab({ p }: { p: UserProfile }) {
       <Section title={`${t('sectionResLog')} (${p.res_log.length})`}>
         {p.res_log.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
-            <thead><tr><Th>Дата</Th><Th>Reason</Th><Th>🟠</Th><Th>💎</Th><Th>💧</Th></tr></thead>
+            <thead><tr><Th>{t('colDate')}</Th><Th>Reason</Th><Th>🟠</Th><Th>💎</Th><Th>💧</Th></tr></thead>
             <tbody>
               {p.res_log.map((l, i) => (
                 <tr key={i}>
@@ -236,7 +236,7 @@ function EconomyTab({ p }: { p: UserProfile }) {
       <Section title={`${t('sectionPurchases')} (${p.purchases.length})`}>
         {p.purchases.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
-            <thead><tr><Th>Дата</Th><Th>Пакет</Th><Th>+Кр</Th><Th>Цена</Th><Th>Статус</Th></tr></thead>
+            <thead><tr><Th>{t('colDate')}</Th><Th>{t('colPackage')}</Th><Th>{t('colCreditsShort')}</Th><Th>{t('colPrice')}</Th><Th>{t('colStatus')}</Th></tr></thead>
             <tbody>
               {p.purchases.map((pu) => (
                 <tr key={pu.id}>
@@ -274,7 +274,7 @@ function CombatTab({ p }: { p: UserProfile }) {
       <Section title={`${t('sectionMessages')} (${p.messages_recent.length})`}>
         {p.messages_recent.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
-            <thead><tr><Th>Дата</Th><Th>Folder</Th><Th>Тема</Th><Th>Read</Th></tr></thead>
+            <thead><tr><Th>{t('colDate')}</Th><Th>{t('colFolder')}</Th><Th>{t('colSubject')}</Th><Th>{t('colRead')}</Th></tr></thead>
             <tbody>
               {p.messages_recent.map((m) => (
                 <tr key={m.id}>
@@ -305,7 +305,7 @@ function AuditTab({ userID }: { userID: string }) {
     <Section title={`${t('sectionAdminAudit')} (${entries.length})`}>
       {entries.length === 0 ? <Empty /> : (
         <table style={tableStyle}>
-          <thead><tr><Th>Дата</Th><Th>Админ</Th><Th>Действие</Th><Th>Статус</Th></tr></thead>
+          <thead><tr><Th>{t('colDate')}</Th><Th>{t('colAdmin')}</Th><Th>{t('colAction')}</Th><Th>{t('colStatus')}</Th></tr></thead>
           <tbody>
             {entries.map((e) => (
               <tr key={e.id}>
