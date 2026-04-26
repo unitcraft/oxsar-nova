@@ -1,6 +1,4 @@
 # Go
-/backend/bin/
-/backend/dist/
 *.test
 *.out
 *.exe
@@ -8,9 +6,10 @@ coverage.*
 
 # Node
 node_modules/
-/frontend/dist/
 .vite/
 .pnpm-store/
+projects/game-nova/frontend/dist/
+projects/portal/frontend/dist/
 
 # Editor
 .idea/
@@ -31,13 +30,19 @@ node_modules/
 /.data/
 /tmp/
 
-../oxsar2/
-
 # Playwright e2e output
-frontend/playwright-report/
-frontend/test-results/
+projects/game-nova/frontend/playwright-report/
+projects/game-nova/frontend/test-results/
 
-# Одноразовый выхлоп cmd/tools/import-datasheets — не читается runtime'ом,
-# воспроизводим через `make import-datasheets` из legacy-дампа.
-configs/*_generated.yml
+# Одноразовый выхлоп cmd/tools/import-datasheets
+projects/game-nova/configs/*_generated.yml
+
+# Остатки старых папок до реструктуризации (переехали в projects/)
+/portal/
+/frontend/
+/backend/
+/migrations/
+/api/
+/configs/
+
 helpful.txt
