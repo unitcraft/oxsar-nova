@@ -34,7 +34,7 @@ make lint          # все линтеры
 - `projects/auth/backend/` (plan 36)   — auth-service (JWT, OAuth, credits)
 - `migrations/`               — goose SQL-миграции
 - `configs/`                  — YAML-справочники (источник истины для юнитов/зданий)
-- `api/openapi.yaml`          — источник истины для REST-контрактов
+- `projects/game-nova/api/openapi.yaml`          — источник истины для REST-контрактов
 
 ## Правила кода (обязательно)
 
@@ -108,4 +108,4 @@ make lint          # все линтеры
 - [docs/ops/event-audit-pattern.md](docs/ops/event-audit-pattern.md) — почему не удалять записи events при отменах.
 - [docs/ops/release-process.md](docs/ops/release-process.md) — релиз-процесс (теги, GHCR, откат, хотфиксы).
 - [docs/legacy/](docs/legacy/) — доступ к oxsar2 для сверки.
-- [api/openapi.yaml](api/openapi.yaml) — контракт REST API.
+- [projects/game-nova/api/openapi.yaml](projects/game-nova/api/openapi.yaml) — контракт REST API.

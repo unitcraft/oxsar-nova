@@ -48,7 +48,7 @@
 game-server  +  game-worker  +  postgres (свой инстанс)  +  redis (свой инстанс)
 ```
 
-Добавление вселенной = новый `docker-compose.uniN.yml` + строка в `configs/universes.yaml`.  
+Добавление вселенной = новый `docker-compose.uniN.yml` + строка в `projects/game-nova/configs/universes.yaml`.  
 Никаких изменений в коде.
 
 ---
@@ -153,7 +153,7 @@ POST /auth/login              — вход по паролю
 POST /auth/refresh            — обновить access token
 POST /auth/logout             — отозвать refresh token
 GET  /auth/me                 — профиль текущего пользователя
-GET  /auth/universes          — публичный список вселенных (из configs/universes.yaml)
+GET  /auth/universes          — публичный список вселенных (из projects/game-nova/configs/universes.yaml)
 
 GET  /auth/oauth/{provider}           — редирект к провайдеру
 GET  /auth/oauth/{provider}/callback  — приём кода, выдача JWT
@@ -505,7 +505,7 @@ services:
 
 ### Ф.2 — Universe Registry (1 день)
 
-1. `configs/universes.yaml` — настройки всех вселенных.
+1. `projects/game-nova/configs/universes.yaml` — настройки всех вселенных.
 2. Auth Service: `GET /auth/universes`.
 3. Portal Backend: `GET /api/universes` + агрегация онлайна из Redis вселенных.
 
@@ -554,7 +554,7 @@ services:
 Запуск сразу с двумя вселенными. Вторая — существенно быстрее по скорости (×N),
 остальные настройки (bash-лимиты, экономика) уточняются перед деплоем.
 
-1. `configs/universes.yaml` — финальные настройки обеих вселенных (имена, скорость).
+1. `projects/game-nova/configs/universes.yaml` — финальные настройки обеих вселенных (имена, скорость).
 2. `docker-compose.uni01.yml` + `docker-compose.uni02.yml`.
 3. Деплой обоих стеков + smoke-test каждого.
 4. Переключение между вселенными — проверить handoff-флоу end-to-end.
@@ -567,9 +567,9 @@ services:
 ```
 portal/
   frontend/     ← было frontend/portal/
-  backend/      ← будет (backend/cmd/portal + internal/portalsvc + migrations/portal/)
+  backend/      ← будет (backend/cmd/portal + internal/portalsvc + projects/portal/migrations/)
 auth/
-  backend/      ← будет (backend/cmd/auth-service + internal/authsvc + migrations/auth/)
+  backend/      ← будет (backend/cmd/auth-service + internal/authsvc + projects/auth/migrations/)
 game/
   frontend/     ← было frontend/ (src/, e2e/, public/, scripts/, *.config.*)
   backend/      ← будет (весь backend/ — Go-модуль остаётся единым)
@@ -605,7 +605,7 @@ game/
 - `frontend/src/` → `frontend/game/src/` (чтобы рядом лежал `frontend/portal/`)
 - `backend/cmd/server/` → переименовать в `backend/cmd/game-server/` для ясности
 - `migrations/` → `migrations/game/`, `migrations/auth/`, `migrations/portal/` (по сервисам)
-- `api/openapi.yaml` → `api/openapi-game.yaml` + `api/openapi-auth.yaml` + `api/openapi-portal.yaml`
+- `projects/game-nova/api/openapi.yaml` → `api/openapi-game.yaml` + `api/openapi-auth.yaml` + `api/openapi-portal.yaml`
 
 При реструктуризации обновляются: `Makefile`, `docker-compose*.yml`, импорты Go,
 `tsconfig.json`, `vite.config.ts`, CI-конфиги.

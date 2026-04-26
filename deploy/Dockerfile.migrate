@@ -12,13 +12,14 @@ RUN apk add --no-cache git && \
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates
 COPY --from=build /go/bin/goose /usr/local/bin/goose
-COPY migrations /migrations
-WORKDIR /migrations
+# Все миграции по доменам; конкретная папка выбирается через MIGRATE_DIR
+# (или через command в compose: ["goose", "-dir", "/migrations/game-nova", ...]).
+COPY projects/game-nova/migrations /migrations/game-nova
+COPY projects/auth/migrations      /migrations/auth
+COPY projects/portal/migrations    /migrations/portal
 
-# DB_URL подхватывается из compose-env. goose up применяет все
-# pending миграции и выходит с 0, если всё ок.
-#
 # ВАЖНО: НЕ выставляем GOOSE_DRIVER — в goose v3.22 комбинация
-# GOOSE_DRIVER из env + driver в позиционных аргументах ломает парсер
-# (он считает URL первым позиционным и ищет в нём command).
-ENTRYPOINT ["sh", "-c", "goose -dir /migrations postgres \"$DB_URL\" up"]
+# GOOSE_DRIVER из env + driver в позиционных аргументах ломает парсер.
+# MIGRATE_DIR — папка миграций, передаётся через env или command.
+ENV MIGRATE_DIR=/migrations/game-nova
+ENTRYPOINT ["sh", "-c", "goose -dir \"$MIGRATE_DIR\" postgres \"$DB_URL\" up"]

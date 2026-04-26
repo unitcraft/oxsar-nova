@@ -34,7 +34,7 @@ COPY --from=build /out/server       /app/server
 COPY --from=build /out/worker       /app/worker
 COPY --from=build /out/auth-service /app/auth-service
 COPY --from=build /out/portal       /app/portal
-COPY configs /app/configs
+COPY projects/game-nova/configs /app/configs
 # План 19: вики читается на runtime — копируем сгенерированные .md.
 COPY docs/wiki /app/wiki
 
