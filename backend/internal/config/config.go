@@ -38,11 +38,20 @@ type RedisConfig struct {
 }
 
 type AuthConfig struct {
+	// JWTSecret используется только для legacy HS256 (локальная разработка без auth-service).
+	// При AUTH_JWKS_URL != "" игровой сервер переключается на RSA-256 верификацию.
 	JWTSecret     string
 	AccessTTL     time.Duration
 	RefreshTTL    time.Duration
 	OAuthGoogleID string
 	OAuthGoogleSc string
+	// JWKSUrl — URL Auth Service: http://auth-service:9000/.well-known/jwks.json
+	JWKSUrl        string
+	// AuthServiceURL — базовый URL Auth Service для межсервисных вызовов.
+	// Пример: http://auth-service:9000
+	AuthServiceURL string
+	// UniverseID — идентификатор этой вселенной (uni01, uni02, …).
+	UniverseID string
 }
 
 type GameConfig struct {
@@ -106,11 +115,14 @@ func Load() (Config, error) {
 			URL: env("REDIS_URL", "redis://localhost:6379/0"),
 		},
 		Auth: AuthConfig{
-			JWTSecret:     mustEnv("JWT_SECRET"),
-			AccessTTL:     envDuration("JWT_ACCESS_TTL", 15*time.Minute),
-			RefreshTTL:    envDuration("JWT_REFRESH_TTL", 30*24*time.Hour),
-			OAuthGoogleID: env("OAUTH_GOOGLE_CLIENT_ID", ""),
-			OAuthGoogleSc: env("OAUTH_GOOGLE_CLIENT_SECRET", ""),
+			JWTSecret:      env("JWT_SECRET", ""),
+			AccessTTL:      envDuration("JWT_ACCESS_TTL", 60*time.Minute),
+			RefreshTTL:     envDuration("JWT_REFRESH_TTL", 30*24*time.Hour),
+			OAuthGoogleID:  env("OAUTH_GOOGLE_CLIENT_ID", ""),
+			OAuthGoogleSc:  env("OAUTH_GOOGLE_CLIENT_SECRET", ""),
+			JWKSUrl:        env("AUTH_JWKS_URL", ""),
+			AuthServiceURL: env("AUTH_SERVICE_URL", ""),
+			UniverseID:     env("UNIVERSE_ID", "uni01"),
 		},
 		Game: GameConfig{
 			Speed:                  envFloat("GAMESPEED", 0.75),
@@ -156,8 +168,9 @@ func Load() (Config, error) {
 	if cfg.DB.URL == "" {
 		return Config{}, fmt.Errorf("DB_URL is required")
 	}
-	if cfg.Auth.JWTSecret == "" {
-		return Config{}, fmt.Errorf("JWT_SECRET is required")
+	// JWT_SECRET обязателен только в режиме без auth-service (AUTH_JWKS_URL не задан).
+	if cfg.Auth.JWTSecret == "" && cfg.Auth.JWKSUrl == "" {
+		return Config{}, fmt.Errorf("either JWT_SECRET or AUTH_JWKS_URL is required")
 	}
 	return cfg, nil
 }

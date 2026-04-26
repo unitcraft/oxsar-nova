@@ -9,6 +9,7 @@ import (
 
 	"github.com/oxsar/nova/backend/internal/economy"
 	"github.com/oxsar/nova/backend/internal/httpx"
+	"github.com/oxsar/nova/backend/pkg/jwtrs"
 )
 
 type ctxKey int
@@ -38,6 +39,32 @@ func Middleware(j *JWTIssuer) func(http.Handler) http.Handler {
 				return
 			}
 			ctx := context.WithValue(r.Context(), userIDKey, uid)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// RSAMiddleware — аналог Middleware, но верифицирует RSA-256 токены
+// выданные Auth Service. Используется когда AUTH_JWKS_URL задан.
+func RSAMiddleware(ver *jwtrs.Verifier) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			token := ""
+			if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
+				token = strings.TrimPrefix(h, "Bearer ")
+			} else if q := r.URL.Query().Get("token"); q != "" {
+				token = q
+			}
+			if token == "" {
+				httpx.WriteError(w, r, httpx.ErrUnauthorized)
+				return
+			}
+			claims, err := ver.Parse(token, "access")
+			if err != nil {
+				httpx.WriteError(w, r, httpx.ErrUnauthorized)
+				return
+			}
+			ctx := context.WithValue(r.Context(), userIDKey, claims.Subject)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
