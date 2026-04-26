@@ -3,6 +3,21 @@ import { Link } from '@/components/Link';
 import { portalApi } from '@/api/portal';
 import styles from './HomePage.module.css';
 
+// VITE_BASE_DOMAIN — корневой домен (без протокола), например "oxsar-nova.ru".
+// Вселенные открываются по адресу https://{subdomain}.{VITE_BASE_DOMAIN}.
+// Для локальной разработки: VITE_BASE_DOMAIN=localhost, VITE_UNIVERSE_PORT_uni01=5173 и т.д.
+const BASE_DOMAIN = import.meta.env['VITE_BASE_DOMAIN'] as string | undefined;
+
+function universeURL(subdomain: string): string {
+  if (!BASE_DOMAIN) return '#';
+  const portKey = `VITE_UNIVERSE_PORT_${subdomain}` as keyof ImportMeta['env'];
+  const port = import.meta.env[portKey] as string | undefined;
+  if (port) {
+    return `http://${BASE_DOMAIN}:${port}`;
+  }
+  return `https://${subdomain}.${BASE_DOMAIN}`;
+}
+
 export function HomePage() {
   const { data: universesData } = useQuery({
     queryKey: ['universes'],
@@ -35,7 +50,7 @@ export function HomePage() {
               </div>
               {u.status === 'active' && (
                 <a
-                  href={`https://${u.subdomain}.oxsar-nova.ru`}
+                  href={universeURL(u.subdomain)}
                   className={styles.universePlay}
                   rel="noopener noreferrer"
                 >
@@ -53,7 +68,7 @@ export function HomePage() {
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Новости</h2>
-          <Link href="/news">Все новости →</Link>
+          <Link href="/news" className={styles.sectionMore}>Все новости →</Link>
         </div>
         <div className={styles.newsList}>
           {newsData?.news.map((n) => (
@@ -71,7 +86,7 @@ export function HomePage() {
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Предложения игроков</h2>
-          <Link href="/feedback">Все предложения →</Link>
+          <Link href="/feedback" className={styles.sectionMore}>Все предложения →</Link>
         </div>
         <TopFeedbackPreview />
       </section>

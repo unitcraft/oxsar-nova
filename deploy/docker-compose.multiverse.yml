@@ -270,6 +270,21 @@ services:
       REDIS_URL:     redis://redis:6379/2
       CATALOG_DIR:   /app/configs
 
+  # ─── Portal Frontend ──────────────────────────────────────────────────────
+
+  portal-frontend:
+    build:
+      context: ..
+      dockerfile: frontend/portal/Dockerfile
+    depends_on:
+      portal: { condition: service_healthy }
+    environment:
+      VITE_PORTAL_API: http://portal:8090
+      VITE_BASE_DOMAIN: ${BASE_DOMAIN:-oxsar-nova.ru}
+      # Порты не задаём — на проде вселенные доступны по субдоменам без порта
+    ports: ["5174:5174"]
+    restart: unless-stopped
+
 volumes:
   auth-db-data:
   portal-db-data:

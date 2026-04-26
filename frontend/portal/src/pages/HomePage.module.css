@@ -1,31 +1,40 @@
 .page {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 0 1rem 3rem;
+  padding: 0 1.25rem 3rem;
 }
 
 .hero {
   text-align: center;
-  padding: 4rem 0 2rem;
+  padding: 4rem 0 2.5rem;
+  position: relative;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .heroTitle {
-  font-size: 3rem;
+  font-size: 3.2rem;
   font-weight: 700;
-  color: var(--color-accent);
-  margin: 0;
-  letter-spacing: 0.05em;
+  color: var(--ox-accent);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-shadow: 0 0 32px var(--ox-accent-glow), 0 0 60px rgba(56, 189, 248, 0.1);
+  margin-bottom: 0.5rem;
 }
 
 .heroSub {
-  margin: 0.5rem 0 0;
-  color: var(--color-muted);
-  font-size: 1.1rem;
+  color: var(--ox-fg-muted);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.section {
-  margin-top: 3rem;
-}
+.section { margin-top: 2.5rem; }
 
 .sectionHeader {
   display: flex;
@@ -35,129 +44,159 @@
 }
 
 .sectionTitle {
-  font-size: 1.4rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  margin: 0 0 1rem;
-  color: var(--color-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ox-fg-dim);
+  border-left: 3px solid var(--ox-accent);
+  padding-left: 0.6rem;
 }
+
+.sectionMore {
+  font-size: 0.8rem;
+  color: var(--ox-accent);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+.sectionMore:hover { text-decoration: underline; }
 
 /* universes */
 .universeGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
 }
 
 .universeCard {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+  background: var(--ox-bg-panel);
+  border: 1px solid var(--ox-border);
+  border-radius: var(--ox-r-lg);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  backdrop-filter: blur(8px);
+  transition: border-color var(--ox-tr), box-shadow var(--ox-tr);
 }
 
-.status_active { border-color: var(--color-accent); }
-.status_upcoming { opacity: 0.7; }
-.status_maintenance { opacity: 0.6; }
-.status_retired { opacity: 0.4; }
+.status_active {
+  border-color: var(--ox-accent-border);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.06);
+}
+.status_active:hover {
+  border-color: var(--ox-accent);
+  box-shadow: var(--ox-glow);
+}
+.status_upcoming { opacity: 0.6; }
+.status_maintenance { opacity: 0.55; }
+.status_retired { opacity: 0.35; }
 
 .universeName {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--color-text);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--ox-fg);
 }
 
 .universeDesc {
   font-size: 0.875rem;
-  color: var(--color-muted);
+  color: var(--ox-fg-muted);
   flex: 1;
+  line-height: 1.5;
 }
 
 .universeMeta {
-  font-size: 0.8rem;
-  color: var(--color-muted);
   display: flex;
   gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--ox-fg-dim);
+  font-family: var(--ox-mono);
 }
 
 .universePlay {
-  display: inline-block;
+  display: block;
   margin-top: 0.25rem;
   padding: 0.5rem 1rem;
-  background: var(--color-accent);
+  background: var(--ox-accent);
   color: #fff;
-  border-radius: 4px;
+  border-radius: var(--ox-r);
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: var(--ox-tr);
+  box-shadow: 0 0 12px var(--ox-accent-glow);
+}
+.universePlay:hover {
+  opacity: 0.9;
+  box-shadow: 0 0 20px var(--ox-accent-glow);
   text-decoration: none;
 }
 
 .universeSoon {
   font-size: 0.8rem;
-  color: var(--color-muted);
+  color: var(--ox-fg-muted);
   font-style: italic;
+  margin-top: 0.25rem;
 }
 
 /* news */
-.newsList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
+.newsList { display: flex; flex-direction: column; gap: 0.4rem; }
 
 .newsCard {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
+  padding: 0.65rem 1rem;
+  background: var(--ox-bg-panel);
+  border: 1px solid var(--ox-border);
+  border-radius: var(--ox-r);
   text-decoration: none;
-  color: var(--color-text);
-  transition: border-color 0.15s;
+  color: var(--ox-fg);
+  transition: border-color var(--ox-tr), background var(--ox-tr);
 }
-
-.newsCard:hover { border-color: var(--color-accent); }
+.newsCard:hover {
+  border-color: var(--ox-accent-border);
+  background: var(--ox-bg-hover);
+  text-decoration: none;
+}
 
 .newsPin { font-size: 0.8rem; }
-
-.newsTitle { flex: 1; font-size: 0.95rem; }
-
-.newsDate { font-size: 0.8rem; color: var(--color-muted); white-space: nowrap; }
+.newsTitle { flex: 1; font-size: 0.925rem; }
+.newsDate { font-size: 0.775rem; color: var(--ox-fg-muted); white-space: nowrap; font-family: var(--ox-mono); }
 
 /* feedback */
-.feedbackList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
+.feedbackList { display: flex; flex-direction: column; gap: 0.4rem; }
 
 .feedbackCard {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
+  padding: 0.65rem 1rem;
+  background: var(--ox-bg-panel);
+  border: 1px solid var(--ox-border);
+  border-radius: var(--ox-r);
   text-decoration: none;
-  color: var(--color-text);
-  transition: border-color 0.15s;
+  color: var(--ox-fg);
+  transition: border-color var(--ox-tr), background var(--ox-tr);
 }
-
-.feedbackCard:hover { border-color: var(--color-accent); }
+.feedbackCard:hover {
+  border-color: var(--ox-accent-border);
+  background: var(--ox-bg-hover);
+  text-decoration: none;
+}
 
 .feedbackVotes {
   font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-accent);
-  min-width: 3rem;
+  font-weight: 700;
+  color: var(--ox-accent);
+  min-width: 3.5rem;
   text-align: center;
+  font-family: var(--ox-mono);
 }
 
-.feedbackTitle { flex: 1; font-size: 0.95rem; }
-
-.feedbackAuthor { font-size: 0.8rem; color: var(--color-muted); white-space: nowrap; }
+.feedbackTitle { flex: 1; font-size: 0.925rem; }
+.feedbackAuthor { font-size: 0.775rem; color: var(--ox-fg-muted); white-space: nowrap; }
