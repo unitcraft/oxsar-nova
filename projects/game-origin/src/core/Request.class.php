@@ -263,7 +263,6 @@ class Request
 		{
 			echo "requestedURL: <pre>";
 			print_r($url);
-			// print_r($_SERVER);
 			echo "</pre>";
 		}
 		$splitted = false;
@@ -271,10 +270,9 @@ class Request
 		{
 			$splitted = @parse_url($url);
 		}
-		catch(Exception $e)
+		catch(\Throwable $e)
 		{
 			error_log('Couldn\'t parse_url: ' . $url);
-			// echo "catched: " . $e->getMessage();
 		}
 
 		if(!$splitted)

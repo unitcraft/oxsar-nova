@@ -121,17 +121,13 @@ class Language extends Collection
 			$groups = array();
 			// foreach($this->getLoadLangs() as $lang_id)
 			{
-				$rows = Phrasesgroups_YII::model()->findAll(array(
-					// 'condition' => 'languageid=:languageid',
-					// 'params' => array(':languageid' => $lang_id),
-					'order' => 'phrasegroupid ASC'));
-				if($rows)
+				$res = Core::getDB()->query(
+					"SELECT phrasegroupid, title FROM `" . PREFIX . "phrasesgroups` ORDER BY phrasegroupid ASC"
+				);
+				while($row = Core::getDB()->fetch($res))
 				{
-					foreach( $rows as $row )
-					{
-						$groups[$row->title]['id'] = $row->phrasegroupid;
-						$groups[$row->title]['loaded'] = false;
-					}
+					$groups[$row['title']]['id']     = $row['phrasegroupid'];
+					$groups[$row['title']]['loaded'] = false;
 				}
 			}
 			// cache disabled
@@ -196,20 +192,16 @@ class Language extends Collection
 			$phrases = array();
 			foreach($load_langs as $lang_id)
 			{
-				$crit = new CDbCriteria();
-				$crit->addCondition('phrasegroupid=:id');
-				$crit->addCondition('languageid=:languageid');
-				$crit->params[':id'] = $id;
-				$crit->params[':languageid'] = $lang_id;
-				$rows = Phrases_YII::model()->findAll($crit);
-				if($rows)
+				$res = Core::getDB()->query(
+					"SELECT title, content FROM `" . PREFIX . "phrases`"
+					. " WHERE phrasegroupid = " . (int)$id
+					. " AND languageid = " . (int)$lang_id
+				);
+				while($row = Core::getDB()->fetch($res))
 				{
-					foreach( $rows as $row )
-					{
-						$compiler = new LanguageCompiler($row->content, true);
-						$phrases[$row->title] = $compiler->getPhrase();
-						$compiler->shutdown();
-					}
+					$compiler = new LanguageCompiler($row['content'], true);
+					$phrases[$row['title']] = $compiler->getPhrase();
+					$compiler->shutdown();
 				}
 			}
 			// cache disabled

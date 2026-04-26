@@ -110,9 +110,9 @@ class XMLObj extends SimpleXMLElement
   {
     if(is_null($name))
     {
-      return new String($this);
+      return new OxsarString($this);
     }
-    return new String($this->$name);
+    return new OxsarString($this->$name);
   }
 
   /**

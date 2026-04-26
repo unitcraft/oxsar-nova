@@ -72,7 +72,7 @@ class Curl extends Request_Adapter
   public function close()
   {
     curl_close($this->resource);
-    unset($this);
+    // PHP 8: unset($this) запрещён
     return;
   }
 }

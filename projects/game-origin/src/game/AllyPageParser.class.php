@@ -399,7 +399,7 @@ class AllyPageParser
 	*/
 	public function kill()
 	{
-		unset($this);
+		// PHP 8: unset($this) запрещён
 		return;
 	}
 }

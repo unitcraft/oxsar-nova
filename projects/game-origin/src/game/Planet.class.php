@@ -303,11 +303,11 @@ class Planet
 	*/
 	protected function getProduction()
 	{
-		$produce_factor = $this->data["produce_factor"];
-		$energy_factor = $this->data["energy_factor"];
-		$storage_factor = $this->data["storage_factor"];
+		$produce_factor = (float)($this->data["produce_factor"]  ?? 1);
+		$energy_factor  = (float)($this->data["energy_factor"]   ?? 1);
+		$storage_factor = (float)($this->data["storage_factor"]  ?? 1);
 
-		$produce_factor *= Core::getConfig()->get("PRODUCTION_FACTOR");
+		$produce_factor *= (float)(Core::getConfig()->get("PRODUCTION_FACTOR") ?: 1);
 
 		$this->setStandardValues();
 

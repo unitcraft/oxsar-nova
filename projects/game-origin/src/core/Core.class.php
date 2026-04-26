@@ -214,12 +214,12 @@ class Core
 	protected function setDatabase()
 	{
 		$database = array();
-		$database["port"] = null;
-		if( !file_exists(APP_ROOT_DIR."config.inc.php") )
-		{
-			doHeaderRedirection("install/install.php", false);
-		}
-		require(APP_ROOT_DIR."config.inc.php");
+		$database["type"]         = defined('DB_TYPE')   ? DB_TYPE   : 'DB_MYSQL_PDO';
+		$database["host"]         = defined('DB_HOST')   ? DB_HOST   : '127.0.0.1';
+		$database["user"]         = defined('DB_USER')   ? DB_USER   : '';
+		$database["userpw"]       = defined('DB_PWD')    ? DB_PWD    : '';
+		$database["databasename"] = defined('DB_NAME')   ? DB_NAME   : '';
+		$database["port"]         = defined('DB_PORT')   ? DB_PORT   : null;
 		self::$DatabaseObj = new $database["type"]($database["host"], $database["user"], $database["userpw"], $database["databasename"], $database["port"]);
 		return $this;
 	}
@@ -270,7 +270,7 @@ class Core
 	*/
 	protected function setOptions()
 	{
-		self::$OptionsObj = new Options();
+		self::$OptionsObj = new Options(false); // false = читать из na_config через прямой SQL (без Yii)
 		return $this;
 	}
 
@@ -398,6 +398,10 @@ class Core
 	*/
 	protected function setUser()
 	{
+		// JWT lazy join (требует уже инициализированной БД)
+		if (class_exists('JwtAuth', false)) {
+			JwtAuth::resolveUser();
+		}
 		if(URL_SESSION)
 		{
 			$sid = (self::getRequest()->getGET("sid")) ? self::getRequest()->getGET("sid") : "";

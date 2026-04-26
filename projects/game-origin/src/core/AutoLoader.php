@@ -56,8 +56,7 @@ foreach($includingFiles as $inc)
   require_once(RECIPE_ROOT_DIR.$inc);
 }
 
-function __autoload($class)
-{
+spl_autoload_register(function($class) {
   $include = false;
   $class = getClassPath($class);
   $coreDirs = explode(",", AUTOLOAD_PATH_CORE);
@@ -83,6 +82,20 @@ function __autoload($class)
       }
     }
   }
+  // ext/ переопределяет/дополняет game/ (Ext-классы наследуют базовые)
+  if(!$include && defined('AUTOLOAD_PATH_APP_EXT'))
+  {
+    $extDirs = explode(",", AUTOLOAD_PATH_APP_EXT);
+    foreach($extDirs as $dir)
+    {
+      $classFile = APP_ROOT_DIR.$dir.$class.".class.php";
+      if(file_exists($classFile))
+      {
+        $include = $classFile;
+        break;
+      }
+    }
+  }
   if(!$include)
   {
     $include = RECIPE_ROOT_DIR."util/".$class.".util.class.php";
@@ -91,5 +104,5 @@ function __autoload($class)
   {
     require_once($include);
   }
-}
+});
 ?>

@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mysql:8.0
+    image: mysql:5.7
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root_pass
@@ -38,8 +38,8 @@ services:
     volumes:
       - ../src:/var/www/src:ro
       - ../public:/var/www/public:ro
-      - ../templates:/var/www/templates:ro
       - ../config:/var/www/config:ro
+      - ../src/cache:/var/www/src/cache:rw
     depends_on:
       mysql:
         condition: service_healthy
@@ -48,12 +48,13 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     ports:
-      - "${HTTP_PORT:-8090}:80"
+      - "${HTTP_PORT:-8092}:80"
     volumes:
       - ../public:/var/www/public:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - php
+      php:
+        condition: service_started
 
 volumes:
   mysql_data:

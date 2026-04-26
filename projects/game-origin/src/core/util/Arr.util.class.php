@@ -22,6 +22,9 @@ class Arr
   */
   public static function trimArray($array)
   {
+    if (!is_array($array)) {
+      return is_string($array) ? trim($array) : $array;
+    }
     for($i = 0; $i < count($array); $i++)
     {
       $array[$i] = trim($array[$i]);

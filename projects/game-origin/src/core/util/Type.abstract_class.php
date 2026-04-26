@@ -12,7 +12,7 @@
 abstract class Type
 {
   protected $validObjects = array(
-    "String",
+    "OxsarString",
     "Integer",
     "Float",
     "Map",
@@ -41,7 +41,7 @@ abstract class Type
     }
     if(!is_null($type))
     {
-      $type = new String($type);
+      $type = new OxsarString($type);
       $type = $type->upperWords()->get();
       if(in_array($type, $this->validObjects))
       {
@@ -85,7 +85,7 @@ abstract class Type
   {
     if(is_string($arg))
     {
-      return new String($arg);
+      return new OxsarString($arg);
     }
     if(is_array($arg))
     {
@@ -134,7 +134,7 @@ abstract class Type
   */
   private function getType()
   {
-    return new String(get_class($this));
+    return new OxsarString(get_class($this));
   }
 }
 ?>

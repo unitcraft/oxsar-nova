@@ -72,7 +72,7 @@ class Logger
 	*/
 	public static function dieMessage($message, $mode = "error")
 	{
-		error_log($message, 'warning');
+		error_log($message);
 		Core::getLanguage()->load("error");
 		$message = Core::getLanguage()->getItem($message);
 		Core::getTPL()->addLogMessage("<div class=\"".$mode."\">".$message."</div>");

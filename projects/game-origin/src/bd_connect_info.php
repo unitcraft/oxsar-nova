@@ -5,6 +5,8 @@
 define('DB_HOST',   getenv('DB_HOST')   ?: '127.0.0.1');
 define('DB_PORT',   getenv('DB_PORT')   ?: '3306');
 define('DB_PREFIX', getenv('DB_PREFIX') ?: 'na_');
+// Legacy alias: код использует PREFIX, новые куски — DB_PREFIX
+defined('PREFIX') or define('PREFIX', DB_PREFIX);
 define('DB_TYPE',   'DB_MYSQL_PDO');
 define('DB_USER',   getenv('DB_USER')   ?: 'oxsar_user');
 define('DB_PWD',    getenv('DB_PWD')    ?: 'oxsar_pass');

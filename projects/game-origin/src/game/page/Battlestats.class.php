@@ -152,7 +152,7 @@ class Battlestats extends Page
 		$where = trim("a.time >= ".sqlVal($date_min)." and a.time <= ".sqlVal($date_max)." AND a.accomplished=1 $where_show_no_destroyed $where_show_aliens $where_new_moon $where_moon_battle $where_show_drawn");
 		if($user_filter)
 		{
-			$user_filter_str = new String($user_filter);
+			$user_filter_str = new OxsarString($user_filter);
 			$user_filter_str->trim()->prepareForSearch();
 			if($user_filter_str->validSearchString)
 			{
@@ -162,7 +162,7 @@ class Battlestats extends Page
 		}
 		if($alliance_filter)
 		{
-			$alliance_filter_str = new String($alliance_filter);
+			$alliance_filter_str = new OxsarString($alliance_filter);
 			$alliance_filter_str->trim()->prepareForSearch();
 			if($alliance_filter_str->validSearchString)
 			{

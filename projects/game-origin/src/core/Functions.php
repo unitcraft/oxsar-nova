@@ -58,6 +58,12 @@ function forwardToLogin($errorid)
 *
 * @return void
 */
+
+// Stub: socialUrl был для соц.сетей (ОК/VK iframe). В oxsar-nova OAuth убран.
+if (!function_exists('socialUrl')) {
+  function socialUrl($url) { return $url; }
+}
+
 function doHeaderRedirection($url, $appendSession = true)
 {
   // $test =  strpos("http://", $url);
@@ -102,7 +108,6 @@ function doHeaderRedirection($url, $appendSession = true)
   		$path = RELATIVE_URL . $path;
   	}
   }
-  error_log($path);
   header("Location: ".$path);
   exit();
 }

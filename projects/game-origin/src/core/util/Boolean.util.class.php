@@ -120,7 +120,7 @@ class Boolean extends Type
   */
   public function getString()
   {
-    return new String($this->toString());
+    return new OxsarString($this->toString());
   }
 
   /**

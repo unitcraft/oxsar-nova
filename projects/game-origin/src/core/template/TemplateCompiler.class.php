@@ -122,7 +122,7 @@ class TemplateCompiler extends Cache
   */
   protected function compile()
   {
-    $this->compiledTemplate = new String($this->sourceTemplate);
+    $this->compiledTemplate = new OxsarString($this->sourceTemplate);
 
     // remove utf-8 prefix
     $this->compiledTemplate

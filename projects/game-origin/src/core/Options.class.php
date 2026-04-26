@@ -50,7 +50,8 @@ class Options extends Collection
 			{
 				$this->cacheActive = CACHE_ACTIVE;
 			}
-			$this->loadConfigFile()->setItems();
+			$this->item = array();
+			$this->setItems();
 		}
 		else
 		{
@@ -148,12 +149,11 @@ class Options extends Collection
 		}
 		else
 		{
-			$result = Core::getQuery()->select("config", array("var", "value", "type"));
-			while($row = Core::getDatabase()->fetch($result))
+			$result = Core::getDB()->query("SELECT var, value, type FROM `" . PREFIX . "config`");
+			while($row = Core::getDB()->fetch($result))
 			{
-				$this->item[$row["var"]] = $this->parseItemByType($row["value"], $row["type"]);
+				$this->item[$row["var"]] = $this->parseItemByTypeNew($row["value"], $row["type"]);
 			}
-			Core::getDatabase()->free_result($result);
 		}
 		return $this;
 	}

@@ -1094,7 +1094,13 @@ function getUserStyles($type)
 	$css_dir_local = APP_ROOT_DIR . "css/$css_dir_web";
 
 	$styles = array();
+	if (!is_dir($css_dir_local)) {
+		return $styles;
+	}
 	$handle = opendir($css_dir_local);
+	if ($handle === false) {
+		return $styles;
+	}
 	while(false !== ($file = readdir($handle)))
 	{
 		if(!is_file($css_dir_local . $file))

@@ -437,7 +437,7 @@ class Map extends Type implements IteratorAggregate
   */
   public function getString($glue = null)
   {
-    return new String($this->toString($glue));
+    return new OxsarString($this->toString($glue));
   }
 
   /**
