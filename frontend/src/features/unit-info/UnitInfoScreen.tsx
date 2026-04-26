@@ -98,9 +98,6 @@ export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) 
         />
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>{entry.name}</h2>
-          {entry.fullDesc && (
-            <div style={{ fontSize: 15, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 4 }}>{entry.fullDesc}</div>
-          )}
           {currentLevel > 0 && (
             <div style={{ fontSize: 15, color: 'var(--ox-accent)', marginTop: 4, fontFamily: 'var(--ox-mono)' }}>{t('currentLevel', { level: String(currentLevel) })}</div>
           )}
@@ -201,9 +198,6 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
         />
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>{entry.name}</h2>
-          {entry.description && (
-            <div style={{ fontSize: 15, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 4 }}>{entry.description}</div>
-          )}
         </div>
       </div>
 

@@ -135,30 +135,30 @@ function AuthenticatedApp() {
       key: 'h',
       alt: true,
       handler: () => navigateTo('overview'),
-      description: 'Alt+H — главный экран',
+      description: 'Alt+H — overview',
     },
     {
       key: 'b',
       alt: true,
       handler: () => navigateTo('buildings'),
-      description: 'Alt+B — постройки',
+      description: 'Alt+B — buildings',
     },
     {
       key: 'r',
       alt: true,
       handler: () => navigateTo('research'),
-      description: 'Alt+R — исследования',
+      description: 'Alt+R — research',
     },
     {
       key: 'm',
       alt: true,
       handler: () => navigateTo('messages'),
-      description: 'Alt+M — сообщения',
+      description: 'Alt+M — messages',
     },
     {
       key: 'Escape',
       handler: () => navigateTo('overview'),
-      description: 'Esc — вернуться на главный экран',
+      description: 'Esc — back to overview',
     },
   ]);
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
-import { nameOf, ARTEFACTS } from '@/api/catalog';
+import { nameOf } from '@/api/catalog';
 import { useToast } from '@/ui/Toast';
 import { useTranslation } from '@/i18n/i18n';
 
@@ -109,7 +109,6 @@ export function ArtefactMarketScreen() {
                     <tr key={o.id}>
                       <td data-label={t('colArtefact')}>
                         <div>{nameOf(o.unit_id)}</div>
-                        {(() => { const meta = ARTEFACTS.find((x) => x.id === o.unit_id); return meta && <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>{meta.benefit}</div>; })()}
                       </td>
                       <td data-label={t('colSeller')}>{o.seller_name ?? '—'}</td>
                       <td data-label={t('colPrice')} className="num" style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>

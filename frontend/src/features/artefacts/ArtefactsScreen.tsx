@@ -192,14 +192,6 @@ function ArtefactGroup({
               <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
                 {stateLabel(a.state)}
               </div>
-              {(() => {
-                const meta = ARTEFACTS.find((x) => x.id === a.unit_id);
-                return meta && (
-                  <div style={{ fontSize: 13, color: 'var(--ox-success)', fontStyle: 'italic', marginBottom: 2 }}>
-                    {meta.benefit}
-                  </div>
-                );
-              })()}
               {a.expire_at && a.state === 'active' && (
                 <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>
                   {t('expires')} <Countdown finishAt={a.expire_at} />

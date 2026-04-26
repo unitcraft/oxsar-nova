@@ -187,11 +187,6 @@ function UnitCards({
                   style={onOpenInfo ? { cursor: 'pointer' } : undefined}
                   onClick={onOpenInfo ? () => onOpenInfo(unitKind, u.id) : undefined}
                 >{u.name}</div>
-                {u.description && (
-                  <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 2 }}>
-                    {u.description}
-                  </div>
-                )}
                 <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
                   <span>⚔ {u.attack.toLocaleString('ru-RU')}</span>
                   <span>🛡 {u.shield.toLocaleString('ru-RU')}</span>

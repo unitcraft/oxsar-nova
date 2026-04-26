@@ -150,9 +150,6 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
                   <div style={{ fontSize: 14, color: level > 0 ? 'var(--ox-fg-dim)' : 'var(--ox-fg-muted)', marginBottom: 2 }}>
                     {level > 0 ? t('level', { n: String(level) }) : t('notStudied')}
                   </div>
-                  <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
-                    {r.benefit}
-                  </div>
                   {level === 0 && r.requires && r.requires.length > 0 && (
                     <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginBottom: 2, fontFamily: 'var(--ox-mono)' }}>
                       🔒 {fmtReqs(r.requires)}
