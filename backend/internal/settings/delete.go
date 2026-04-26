@@ -95,10 +95,11 @@ func (h *Handler) RequestDeletionCode(w http.ResponseWriter, r *http.Request) {
 
 	// Отправить код системным сообщением (folder=13 SYSTEM).
 	if h.automsg != nil {
-		title := "Код для удаления аккаунта"
-		body := fmt.Sprintf(
-			"Код подтверждения удаления аккаунта: %s\nДействителен до %s.\n\nЕсли это не вы — просто проигнорируйте.",
-			code, expiresAt.Format("15:04 02.01.2006"))
+		title := h.tr("settings", "deletionCode.title", nil)
+		body := h.tr("settings", "deletionCode.body", map[string]string{
+			"code":      code,
+			"expiresAt": expiresAt.Format("15:04 02.01.2006"),
+		})
 		_ = h.automsg.SendDirect(r.Context(), nil, uid, 13, title, body)
 	}
 

@@ -477,6 +477,70 @@ buildings:
   startIn: "<nobr>Старт через</nobr>"
   started: Запустилось
   upgradeToLevel: Построить уровень
+colonize:
+  success.title: "Основана колония {{coords}}"
+  success.body: "Новая планета «{{planetName}}» на координатах [{{coords}}]. Стартовые ресурсы: {{metal}} M / {{silicon}} Si / {{hydrogen}} H."
+  failed.title: "Колонизация {{coords}} провалена"
+  error.moonOnly: Колонизация луны невозможна
+  error.noColonyShip: Нет колониального корабля во флоте
+  error.occupied: Координата занята
+  error.planetLimit: "Достигнут лимит планет ({{current}}/{{max}}). Улучшите computer_tech."
+
+spy:
+  intercepted.title: "Зонды перехвачены {{coords}}"
+  intercepted.body: "Все {{count}} зонд(ов) уничтожены обороной цели. Флот потерян."
+  report.title: "Разведка {{coords}} (ratio={{ratio}})"
+  report.body: "Металл: {{metal}}, Кремний: {{silicon}}, Водород: {{hydrogen}}"
+  targetNotified.title: "Вас шпионили {{coords}}"
+  targetNotified.body: "Противник послал {{probes}} зонд(ов). Соотношение {{ratio}}."
+
+rocket:
+  failed.title: "Ракетный удар {{coords}} провалился"
+  failed.body: Цель не найдена (уничтожена или не существовала).
+  impact.title: "Ракетный удар {{coords}}"
+  impact.allIntercepted: "{{intercepted}} ракет перехвачено антиракетами ({{abm}} ABM). Урон отсутствует."
+  impact.noDefense: "{{count}} ракет долетели. Оборона отсутствует — урон {{damage}} пропал."
+  impact.body: "{{surviving}}/{{total}} ракет долетели{{abmNote}} (урон {{damage}}). Потери обороны:{{losses}}"
+  impact.abmNote: " ({{count}} сбито ABM)"
+  impact.unitLoss: "\n- юнит #{{unitId}}: -{{lost}}"
+
+alien:
+  attack.title: Атака инопланетян
+  attack.victory: атаковали и победили
+  attack.defeat: атаковали, но были отбиты
+  attack.draw: атаковали — ничья
+  attack.body: "Инопланетяне (тир {{tier}}) {{result}} вашу планету."
+  attack.creditStolen: " Похищено {{credits}} кредитов."
+  attack.creditGifted: " Инопланетяне оставили {{credits}} кредитов в знак уважения."
+  attack.haltNote: " Их флот остался на орбите — ждите отдельного сообщения об удержании."
+  raceName: Инопланетяне
+
+alliance:
+  joined.title: Вы вступили в альянс
+  joined.body: "Вы стали членом альянса [{{allianceName}}]."
+  application.title: Заявка на вступление в альянс
+  application.body: "Игрок {{username}} подал заявку на вступление в ваш альянс [{{allianceName}}]."
+  approved.title: Заявка одобрена
+  approved.body: "Ваша заявка на вступление в альянс [{{allianceName}}] одобрена."
+  rejected.title: Заявка отклонена
+  rejected.body: "Ваша заявка на вступление в альянс [{{allianceName}}] отклонена."
+
+referral:
+  bonus.title: Реферальный бонус
+  bonus.body: "Ваш реферал {{username}} совершил покупку. На ваш счёт зачислено {{credits}} кредитов."
+
+payment:
+  credited.title: Кредиты зачислены
+  credited.body: "На ваш счёт зачислено {{credits}} кредитов (заказ #{{orderId}}). Спасибо за поддержку!"
+
+settings:
+  deletionCode.title: Код для удаления аккаунта
+  deletionCode.body: "Код подтверждения удаления аккаунта: {{code}}\nДействителен до {{expiresAt}}.\n\nЕсли это не вы — просто проигнорируйте."
+
+artefact:
+  expired.title: Артефакт истёк
+  expired.body: "Действие артефакта «{{artefactName}}» завершилось. Эффекты отменены."
+
 error:
   accountActivation: Аккаунт еще на активирован.
   accountActivationMail: Аккаунт еще не активирован. Мы послали вам еще одно письмо с ссылкой на активацию.

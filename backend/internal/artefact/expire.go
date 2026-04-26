@@ -62,8 +62,10 @@ func (s *Service) ExpireEvent() event.Handler {
 		}
 		// Системное сообщение об истечении (folder=7 ARTEFACTS).
 		if s.automsg != nil {
-			title := "Артефакт истёк"
-			body := fmt.Sprintf("Действие артефакта «%s» завершилось. Эффекты отменены.", spec.Name)
+			title := s.tr("artefact", "expired.title", nil)
+			body := s.tr("artefact", "expired.body", map[string]string{
+				"artefactName": spec.Name,
+			})
 			_ = s.automsg.SendDirect(ctx, tx, rec.UserID, 7, title, body)
 		}
 		return nil

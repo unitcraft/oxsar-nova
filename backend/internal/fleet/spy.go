@@ -113,13 +113,14 @@ func (s *TransportService) SpyHandler() event.Handler {
 		if maxInterceptable > probes {
 			maxInterceptable = probes
 		}
+		coords := fmt.Sprintf("%d:%d:%d", g, sys, pos)
 		if maxInterceptable > 0 {
 			intercepted := rand.IntN(maxInterceptable + 1)
 			probes -= intercepted
 			if probes <= 0 {
 				// All probes destroyed — fleet annihilated.
-				notifSubj := fmt.Sprintf("Зонды перехвачены %d:%d:%d", g, sys, pos)
-				notifBody := fmt.Sprintf("Все %d зонд(ов) уничтожены обороной цели. Флот потерян.", intercepted)
+				notifSubj := s.tr("spy", "intercepted.title", map[string]string{"coords": coords})
+				notifBody := s.tr("spy", "intercepted.body", map[string]string{"count": fmt.Sprintf("%d", intercepted)})
 				_, _ = tx.Exec(ctx, `
 					INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 					VALUES ($1, $2, $3, 4, $4, $5)
@@ -149,9 +150,13 @@ func (s *TransportService) SpyHandler() event.Handler {
 		}
 
 		// Сообщение шпиону с деталями.
-		spySubj := fmt.Sprintf("Разведка %d:%d:%d (ratio=%d)", g, sys, pos, ratio)
-		spyBody := fmt.Sprintf("Металл: %d, Кремний: %d, Водород: %d",
-			int64(metal), int64(silicon), int64(hydrogen))
+		ratioStr := fmt.Sprintf("%d", ratio)
+		spySubj := s.tr("spy", "report.title", map[string]string{"coords": coords, "ratio": ratioStr})
+		spyBody := s.tr("spy", "report.body", map[string]string{
+			"metal":   fmt.Sprintf("%d", int64(metal)),
+			"silicon": fmt.Sprintf("%d", int64(silicon)),
+			"hydro":   fmt.Sprintf("%d", int64(hydrogen)),
+		})
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body, espionage_report_id)
 			VALUES ($1, $2, $3, 4, $4, $5, $6)
@@ -160,9 +165,11 @@ func (s *TransportService) SpyHandler() event.Handler {
 		}
 		// Уведомление цели — без деталей, только факт попытки.
 		if targetUserID != "" && targetUserID != spyUserID {
-			tgtSubj := fmt.Sprintf("Вас шпионили %d:%d:%d", g, sys, pos)
-			tgtBody := fmt.Sprintf("Противник послал %d зонд(ов). Соотношение %d.",
-				probes, ratio)
+			tgtSubj := s.tr("spy", "targetNotified.title", map[string]string{"coords": coords})
+			tgtBody := s.tr("spy", "targetNotified.body", map[string]string{
+				"probes": fmt.Sprintf("%d", probes),
+				"ratio":  ratioStr,
+			})
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 				VALUES ($1, $2, $3, 4, $4, $5)

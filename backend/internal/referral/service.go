@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/repo"
 )
 
@@ -30,6 +31,7 @@ type AutoMsgSender interface {
 type Service struct {
 	db      repo.Exec
 	automsg AutoMsgSender
+	bundle  *i18n.Bundle
 }
 
 func NewService(db repo.Exec) *Service {
@@ -40,6 +42,18 @@ func NewService(db repo.Exec) *Service {
 func (s *Service) WithAutoMsg(a AutoMsgSender) *Service {
 	s.automsg = a
 	return s
+}
+
+func (s *Service) WithBundle(b *i18n.Bundle) *Service {
+	s.bundle = b
+	return s
+}
+
+func (s *Service) tr(group, key string, vars map[string]string) string {
+	if s.bundle == nil {
+		return "[" + group + "." + key + "]"
+	}
+	return s.bundle.Tr(i18n.LangRu, group, key, vars)
 }
 
 // ProcessRegistration записывает referred_by и начисляет стартовые ресурсы
@@ -119,8 +133,11 @@ func (s *Service) ProcessPurchase(ctx context.Context, buyerID string, amount fl
 
 	// Системное сообщение рефереру (folder=8 CREDIT).
 	if s.automsg != nil {
-		title := "Реферальный бонус"
-		body := fmt.Sprintf("Ваш реферал %s совершил покупку. На ваш счёт зачислено %.2f кредитов.", buyerName, bonus)
+		title := s.tr("referral", "bonus.title", nil)
+		body := s.tr("referral", "bonus.body", map[string]string{
+			"username": buyerName,
+			"credits":  fmt.Sprintf("%.2f", bonus),
+		})
 		if err := s.automsg.SendDirect(ctx, nil, *referrerID, 8, title, body); err != nil {
 			// Не критично — покупка уже проведена.
 			return nil

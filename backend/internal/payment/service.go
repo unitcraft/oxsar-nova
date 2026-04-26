@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/oxsar/nova/backend/internal/config"
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/pkg/ids"
 )
@@ -44,6 +45,7 @@ type Service struct {
 	gateway  Gateway
 	referral ReferralProcessor
 	automsg  AutoMsgSender
+	bundle   *i18n.Bundle
 }
 
 // NewService создаёт Service. Если PAYMENT_PROVIDER не задан — gateway равен nil,
@@ -86,6 +88,18 @@ func (s *Service) WithReferral(r ReferralProcessor) *Service {
 func (s *Service) WithAutoMsg(a AutoMsgSender) *Service {
 	s.automsg = a
 	return s
+}
+
+func (s *Service) WithBundle(b *i18n.Bundle) *Service {
+	s.bundle = b
+	return s
+}
+
+func (s *Service) tr(group, key string, vars map[string]string) string {
+	if s.bundle == nil {
+		return "[" + group + "." + key + "]"
+	}
+	return s.bundle.Tr(i18n.LangRu, group, key, vars)
 }
 
 // CreateOrder создаёт pending-запись в credit_purchases и возвращает orderID и URL оплаты.
@@ -155,8 +169,11 @@ func (s *Service) ConfirmPayment(ctx context.Context, orderID, providerID string
 
 		// Системное сообщение о зачислении (folder=8 CREDIT).
 		if s.automsg != nil {
-			title := "Кредиты зачислены"
-			body := fmt.Sprintf("На ваш счёт зачислено %d кредитов (заказ #%s). Спасибо за поддержку!", credits, orderID)
+			title := s.tr("payment", "credited.title", nil)
+			body := s.tr("payment", "credited.body", map[string]string{
+				"credits": fmt.Sprintf("%d", credits),
+				"orderId": orderID,
+			})
 			if err := s.automsg.SendDirect(ctx, tx, userID, 8, title, body); err != nil {
 				slog.Warn("payment: credit msg failed", "order_id", orderID, "err", err.Error())
 			}
