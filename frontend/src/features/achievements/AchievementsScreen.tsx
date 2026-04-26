@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { ProgressBar } from '@/ui/ProgressBar';
+import { useTranslation } from '@/i18n/i18n';
 
 interface Entry {
   key: string;
@@ -16,12 +17,8 @@ interface Entry {
 
 type CategoryFilter = 'all' | 'starter' | 'passive';
 
-const CATEGORY_LABELS: Record<string, string> = {
-  starter: '🎓 Старт',
-  passive: '🥇 Достижения',
-};
-
 function AchievementCard({ e }: { e: Entry }) {
+  const { t } = useTranslation('achievementsUi');
   const done = !!e.unlocked_at;
   const hasProg = e.progress_max != null && !done;
   const pct = hasProg ? Math.min(100, ((e.progress ?? 0) / e.progress_max!) * 100) : 0;
@@ -51,7 +48,7 @@ function AchievementCard({ e }: { e: Entry }) {
         {hasProg && <ProgressBar pct={pct} height={3} />}
         {done && e.unlocked_at && (
           <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginTop: 4 }}>
-            Получено {new Date(e.unlocked_at).toLocaleString('ru-RU')}
+            {t('gotAt')} {new Date(e.unlocked_at).toLocaleString('ru-RU')}
           </div>
         )}
       </div>
@@ -63,6 +60,7 @@ function AchievementCard({ e }: { e: Entry }) {
 }
 
 export function AchievementsScreen() {
+  const { t } = useTranslation('achievementsUi');
   const [filter, setFilter] = useState<CategoryFilter>('all');
 
   const q = useQuery({
@@ -79,19 +77,25 @@ export function AchievementsScreen() {
 
   const categories: CategoryFilter[] = ['all', 'starter', 'passive'];
 
+  const catLabel = (cat: CategoryFilter): string => {
+    if (cat === 'all') return t('catAll');
+    if (cat === 'starter') return t('catStarter');
+    return t('catPassive');
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-          🎖 Достижения
+          {t('title')}
         </h2>
         <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>
-          Открыто:{' '}
+          {t('unlocked')}{' '}
           <span style={{ fontWeight: 700, color: 'var(--ox-accent)', fontFamily: 'var(--ox-mono)' }}>
             {unlocked.length}/{list.length}
           </span>
           {' · '}
-          Очки:{' '}
+          {t('points')}{' '}
           <span style={{ fontWeight: 700, fontFamily: 'var(--ox-mono)', color: 'var(--ox-success)' }}>
             {totalPoints}
           </span>
@@ -118,7 +122,7 @@ export function AchievementsScreen() {
               fontSize: 15, fontWeight: 600, cursor: 'pointer',
             }}
           >
-            {cat === 'all' ? '📋 Все' : (CATEGORY_LABELS[cat] ?? cat)}
+            {catLabel(cat)}
           </button>
         ))}
       </div>

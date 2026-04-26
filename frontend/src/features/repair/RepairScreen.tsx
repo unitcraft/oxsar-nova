@@ -7,6 +7,7 @@ import type { Inventory, Planet } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
+import { useTranslation } from '@/i18n/i18n';
 
 interface RepairQueueItem {
   id: string;
@@ -39,6 +40,7 @@ interface DamagedUnit {
 }
 
 export function RepairScreen({ planet }: { planet: Planet }) {
+  const { t } = useTranslation('repairUi');
   const qc = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState<'repair' | 'disassemble'>('repair');
@@ -66,9 +68,9 @@ export function RepairScreen({ planet }: { planet: Planet }) {
       void qc.invalidateQueries({ queryKey: ['repair-damaged', planet.id] });
       void qc.invalidateQueries({ queryKey: ['shipyard-inventory', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('success', 'Ремонт', `${nameOf(unitId)} отправлен на ремонт`);
+      toast.show('success', t('toastRepairTitle'), t('toastRepaired', { name: nameOf(unitId) }));
     },
-    onError: (err) => { toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Ошибка ремонта'); },
+    onError: (err) => { toast.show('danger', t('toastError'), err instanceof Error ? err.message : t('toastRepairErr')); },
   });
 
   const disassemble = useMutation({
@@ -78,9 +80,9 @@ export function RepairScreen({ planet }: { planet: Planet }) {
       void qc.invalidateQueries({ queryKey: ['repair-queue', planet.id] });
       void qc.invalidateQueries({ queryKey: ['shipyard-inventory', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('success', 'Разбор', `${nameOf(unitId)} × ${count} отправлено на разбор`);
+      toast.show('success', t('toastDisassTitle'), t('toastDisassembled', { name: nameOf(unitId), count: String(count) }));
     },
-    onError: (err) => { toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Ошибка разбора'); },
+    onError: (err) => { toast.show('danger', t('toastError'), err instanceof Error ? err.message : t('toastDisassErr')); },
   });
 
   const cancel = useMutation({
@@ -91,9 +93,9 @@ export function RepairScreen({ planet }: { planet: Planet }) {
       void qc.invalidateQueries({ queryKey: ['repair-damaged', planet.id] });
       void qc.invalidateQueries({ queryKey: ['shipyard-inventory', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('success', 'Отменено', 'Задание отменено, ресурсы возвращены');
+      toast.show('success', t('toastCancelledTitle'), t('toastCancelled'));
     },
-    onError: (err) => { toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось отменить'); },
+    onError: (err) => { toast.show('danger', t('toastError'), err instanceof Error ? err.message : t('toastCancelErr')); },
   });
 
   const list = (queue.data?.queue ?? []).filter((i) => new Date(i.end_at).getTime() > Date.now());
@@ -107,12 +109,12 @@ export function RepairScreen({ planet }: { planet: Planet }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-          Ремонтный ангар — {planet.name}
+          {t('title', { planetName: planet.name })}
         </h2>
         {storage.total > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 160 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ox-fg-muted)' }}>
-              <span>Хранилище</span>
+              <span>{t('storage')}</span>
               <span style={{ fontFamily: 'var(--ox-mono)' }}>{storage.used} / {storage.total}</span>
             </div>
             <ProgressBar pct={storagePct} variant={storageVariant} height={6} />
@@ -120,11 +122,10 @@ export function RepairScreen({ planet }: { planet: Planet }) {
         )}
       </div>
 
-      {/* Queue */}
       {list.length > 0 && (
         <div className="ox-panel" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 2 }}>
-            Очередь ангара
+            {t('queueTitle')}
           </div>
           {list.map((q, i) => {
             const total = new Date(q.end_at).getTime() - new Date(q.start_at).getTime();
@@ -136,7 +137,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15 }}>
                   <span>{i === 0 ? icon : '⏳'}</span>
                   <span style={{ flex: 1, fontWeight: i === 0 ? 600 : 400 }}>
-                    {q.mode === 'repair' ? 'Ремонт' : 'Разбор'}: {nameOf(q.unit_id)} × {q.count}
+                    {q.mode === 'repair' ? t('modeRepair') : t('modeDisassemble')}: {nameOf(q.unit_id)} × {q.count}
                   </span>
                   {i === 0 ? <Countdown finishAt={q.end_at} /> : (
                     <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
@@ -148,7 +149,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
                     className="btn-ghost btn-sm"
                     style={{ fontSize: 13, padding: '2px 6px', color: 'var(--ox-fg-muted)' }}
                     onClick={() => cancel.mutate(q.id)}
-                    title="Отменить"
+                    title={t('cancelTitle')}
                   >
                     ✕
                   </button>
@@ -160,20 +161,19 @@ export function RepairScreen({ planet }: { planet: Planet }) {
         </div>
       )}
 
-      {/* Tabs */}
       <div className="ox-tabs">
         <button type="button" aria-pressed={tab === 'repair'} onClick={() => setTab('repair')}>
-          🔧 Ремонт ({damagedList.length})
+          {t('tabRepair', { count: String(damagedList.length) })}
         </button>
         <button type="button" aria-pressed={tab === 'disassemble'} onClick={() => setTab('disassemble')}>
-          ♻️ Разбор
+          {t('tabDisassemble')}
         </button>
       </div>
 
       {tab === 'repair' && (
         damagedList.length === 0 ? (
           <div style={{ color: 'var(--ox-fg-dim)', fontSize: 16, padding: '8px 0' }}>
-            🔧 Нет повреждённых кораблей
+            {t('noDamaged')}
           </div>
         ) : (
           <div className="ox-cards-grid">
@@ -191,8 +191,8 @@ export function RepairScreen({ planet }: { planet: Planet }) {
                     )}
                     <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                       <div className="ox-unit-card-name">{nameOf(d.unit_id)}</div>
-                      <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>В наличии: {d.count}</div>
-                      <div style={{ fontSize: 14, color: 'var(--ox-danger)' }}>Повреждено: {d.damaged}</div>
+                      <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>{t('inStock')} {d.count}</div>
+                      <div style={{ fontSize: 14, color: 'var(--ox-danger)' }}>{t('damaged')} {d.damaged}</div>
                       <div style={{ marginTop: 4 }}>
                         <ProgressBar pct={d.shell_percent} variant={d.shell_percent < 40 ? 'danger' : 'warning'} height={4} showLabel />
                       </div>
@@ -211,7 +211,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
                       disabled={repair.isPending || hasReqs}
                       onClick={() => repair.mutate(d.unit_id)}
                     >
-                      Починить все
+                      {t('repairAll')}
                     </button>
                   </div>
                 </div>
@@ -224,7 +224,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
       {tab === 'disassemble' && (
         <>
           <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', padding: '4px 0' }}>
-            Разбор здоровых юнитов возвращает ~70% стоимости.
+            {t('disassembleHint')}
           </div>
           <DisassembleList
             units={[...SHIPS, ...DEFENSE]}
@@ -248,6 +248,7 @@ function DisassembleList({
   onGo: (unitId: number, count: number) => void;
   pending: boolean;
 }) {
+  const { t } = useTranslation('repairUi');
   const [drafts, setDrafts] = useState<Record<number, number>>({});
   const isShip = (id: number) => SHIPS.some((s) => s.id === id);
 
@@ -272,11 +273,11 @@ function DisassembleList({
               />
               <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                 <div className="ox-unit-card-name">{u.name}</div>
-                <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>В наличии: {have}</div>
+                <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>{t('inStock')} {have}</div>
                 {(u.speed != null || (u.fuel != null && u.fuel > 0)) && (
                   <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', display: 'flex', gap: 8, marginTop: 2 }}>
                     {u.speed != null && <span>🚀 {u.speed.toLocaleString('ru-RU')}</span>}
-                    {u.fuel != null && u.fuel > 0 && <span>⛽ {u.fuel}/ед.</span>}
+                    {u.fuel != null && u.fuel > 0 && <span>⛽ {u.fuel}{t('fuelPer')}</span>}
                   </div>
                 )}
                 {refund && draft > 0 && (
@@ -299,7 +300,7 @@ function DisassembleList({
                 disabled={pending || draft < 1}
                 onClick={() => onGo(u.id, draft)}
               >
-                Разобрать
+                {t('disassembleBtn')}
               </button>
             </div>
           </div>
