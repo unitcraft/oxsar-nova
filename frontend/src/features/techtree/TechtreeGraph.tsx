@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { nameOf } from '@/api/catalog';
+import { useTranslation } from '@/i18n/i18n';
 
 type NodeKind = 'building' | 'research' | 'ship' | 'defense';
 
@@ -34,6 +35,7 @@ const GAP_X = 60;
 const GAP_Y = 16;
 
 export function TechtreeGraph({ nodes, kind }: { nodes: TechNode[]; kind: NodeKind }) {
+  const { t } = useTranslation('techtreeUi');
   const [hover, setHover] = useState<string | null>(null);
 
   // Фильтрация по kind.
@@ -99,8 +101,8 @@ export function TechtreeGraph({ nodes, kind }: { nodes: TechNode[]; kind: NodeKi
             </text>
             <text x={10} y={40} fill="var(--ox-fg-muted)" fontSize={10} fontFamily="var(--ox-mono)">
               {p.node.current_level > 0
-                ? `Ур. ${p.node.current_level}`
-                : p.node.unlocked ? 'доступно' : 'закрыто'}
+                ? `${t('levelAbbr')} ${p.node.current_level}`
+                : p.node.unlocked ? t('available') : t('locked')}
             </text>
           </g>
         ))}

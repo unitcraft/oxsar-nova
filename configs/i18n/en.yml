@@ -1237,6 +1237,360 @@ unitInfoUi:
   rfColAttacker: "" # TODO: en
 
 # TODO: en
+allianceUi:
+  title: "" # TODO: en
+  noAlliance: "" # TODO: en
+  createTitle: "" # TODO: en
+  createNamePlaceholder: "" # TODO: en
+  createTagPlaceholder: "" # TODO: en
+  createBtn: "" # TODO: en
+  createErr: "" # TODO: en
+  tabMine: "" # TODO: en
+  tabList: "" # TODO: en
+  sectionInfo: "" # TODO: en
+  labelTag: "" # TODO: en
+  labelRank: "" # TODO: en
+  labelMembers: "" # TODO: en
+  labelOpen: "" # TODO: en
+  labelClosed: "" # TODO: en
+  toggleOpenBtn: "" # TODO: en
+  toggleCloseBtn: "" # TODO: en
+  leaveBtn: "" # TODO: en
+  disbandBtn: "" # TODO: en
+  leaveConfirm: "" # TODO: en
+  disbandConfirm: "" # TODO: en
+  confirmBtn: "" # TODO: en
+  cancelBtn: "" # TODO: en
+  sectionApplications: "" # TODO: en
+  noApplications: "" # TODO: en
+  applyBtn: "" # TODO: en
+  alreadyApplied: "" # TODO: en
+  acceptBtn: "" # TODO: en
+  rejectBtn: "" # TODO: en
+  sectionRelations: "" # TODO: en
+  relNap: "" # TODO: en
+  relWar: "" # TODO: en
+  relAlly: "" # TODO: en
+  colMember: "" # TODO: en
+  colRole: "" # TODO: en
+  colPoints: "" # TODO: en
+  colRelation: "" # TODO: en
+  colActions: "" # TODO: en
+
+# TODO: en
+dailyquestUi:
+  title: "" # TODO: en
+  hint: "" # TODO: en
+  loading: "" # TODO: en
+  empty: "" # TODO: en
+  received: "" # TODO: en
+  claimBtn: "" # TODO: en
+  rewardLabel: "" # TODO: en
+  rewardCredits: "" # TODO: en
+  rewardMetal: "" # TODO: en
+  rewardSilicon: "" # TODO: en
+  rewardHydrogen: "" # TODO: en
+
+# TODO: en
+friendsUi:
+  title: "" # TODO: en
+  loading: "" # TODO: en
+  empty: "" # TODO: en
+  addPlaceholder: "" # TODO: en
+  addBtn: "" # TODO: en
+  removeBtn: "" # TODO: en
+  colPlayer: "" # TODO: en
+  colStatus: "" # TODO: en
+  colActions: "" # TODO: en
+  statusOnline: "" # TODO: en
+  statusMinAgo: "" # TODO: en
+  statusHourAgo: "" # TODO: en
+  statusDayAgo: "" # TODO: en
+
+# TODO: en
+galaxyEventUi:
+  untilEnd: "" # TODO: en
+  defaultTitle: "" # TODO: en
+  defaultDescr: "" # TODO: en
+  kind.meteor_storm.title: "" # TODO: en
+  kind.meteor_storm.descr: "" # TODO: en
+  kind.solar_flare.title: "" # TODO: en
+  kind.solar_flare.descr: "" # TODO: en
+  kind.trade_forum.title: "" # TODO: en
+  kind.trade_forum.descr: "" # TODO: en
+  kind.star_nebula.title: "" # TODO: en
+  kind.star_nebula.descr: "" # TODO: en
+
+# TODO: en
+forecastUi:
+  forecastIn: "" # TODO: en
+  hourUnit: "" # TODO: en
+  capWarning: "" # TODO: en
+  capTooltip: "" # TODO: en
+
+# TODO: en
+creditsUi:
+  title: "" # TODO: en
+  balanceLabel: "" # TODO: en
+  creditsUnit: "" # TODO: en
+  testModeBanner: "" # TODO: en
+  sectionPackages: "" # TODO: en
+  sectionHistory: "" # TODO: en
+  historyEmpty: "" # TODO: en
+  colDate: "" # TODO: en
+  colPackage: "" # TODO: en
+  colCredits: "" # TODO: en
+  colPrice: "" # TODO: en
+  colStatus: "" # TODO: en
+  statusPending: "" # TODO: en
+  statusPaid: "" # TODO: en
+  statusFailed: "" # TODO: en
+  statusCancelled: "" # TODO: en
+  buyBtn: "" # TODO: en
+  hintSmall: "" # TODO: en
+  hintMedium: "" # TODO: en
+  hintLarge: "" # TODO: en
+  packageHintCustom: "" # TODO: en
+  bonusLabel: "" # TODO: en
+  sectionSpendHints: "" # TODO: en
+  hint5000: "" # TODO: en
+  hint2000: "" # TODO: en
+  hint1000: "" # TODO: en
+  hint500: "" # TODO: en
+  hint100: "" # TODO: en
+  priceHintOfficer.label: "" # TODO: en
+  priceHintOfficer.value: "" # TODO: en
+  priceHintProfession.label: "" # TODO: en
+  priceHintProfession.value: "" # TODO: en
+  priceHintRename.label: "" # TODO: en
+  priceHintRename.value: "" # TODO: en
+  priceHintArtefact.label: "" # TODO: en
+  priceHintArtefact.value: "" # TODO: en
+
+# TODO: en
+recordsUi:
+  title: "" # TODO: en
+  filterAll: "" # TODO: en
+  filterPlaceholder: "" # TODO: en
+  empty: "" # TODO: en
+  colCategory: "" # TODO: en
+  colRank: "" # TODO: en
+  colHolder: "" # TODO: en
+  colRecord: "" # TODO: en
+  colMine: "" # TODO: en
+  catTotal: "" # TODO: en
+  catBuildings: "" # TODO: en
+  catResearch: "" # TODO: en
+  catFleet: "" # TODO: en
+  catBattle: "" # TODO: en
+  catAchievements: "" # TODO: en
+
+# TODO: en
+searchUi:
+  placeholder: "" # TODO: en
+  hint: "" # TODO: en
+  searching: "" # TODO: en
+  promptEmpty: "" # TODO: en
+  notFound: "" # TODO: en
+  sectionPlayers: "" # TODO: en
+  sectionAlliances: "" # TODO: en
+  sectionPlanets: "" # TODO: en
+  membersCount: "" # TODO: en
+
+# TODO: en
+wikiUi:
+  sidebarTitle: "" # TODO: en
+  loading: "" # TODO: en
+  articleLoading: "" # TODO: en
+  articleError: "" # TODO: en
+
+# TODO: en
+techtreeUi:
+  title: "" # TODO: en
+  filterAll: "" # TODO: en
+  filterAvailable: "" # TODO: en
+  filterLocked: "" # TODO: en
+  viewCards: "" # TODO: en
+  viewGraph: "" # TODO: en
+  levelAbbr: "" # TODO: en
+  available: "" # TODO: en
+  locked: "" # TODO: en
+  noRequirements: "" # TODO: en
+  kindBuildings: "" # TODO: en
+  kindResearch: "" # TODO: en
+  kindShips: "" # TODO: en
+  kindDefense: "" # TODO: en
+
+# TODO: en
+professionUi:
+  title: "" # TODO: en
+  active: "" # TODO: en
+  currentLabel: "" # TODO: en
+  available: "" # TODO: en
+  chooseBtn: "" # TODO: en
+  confirmChoose: "" # TODO: en
+  confirmBtn: "" # TODO: en
+  cancelBtn: "" # TODO: en
+  bonusUnknown: "" # TODO: en
+  bonusProductionMetal: "" # TODO: en
+  bonusProductionSilicon: "" # TODO: en
+  bonusProductionHydrogen: "" # TODO: en
+  bonusFleetSpeed: "" # TODO: en
+  bonusResearchSpeed: "" # TODO: en
+  bonusBuildSpeed: "" # TODO: en
+  bonusShipAttack: "" # TODO: en
+  bonusShipShield: "" # TODO: en
+  bonusShipHull: "" # TODO: en
+  bonusEspionage: "" # TODO: en
+
+# TODO: en
+alienUi:
+  title: "" # TODO: en
+  departsLabel: "" # TODO: en
+  fleetLabel: "" # TODO: en
+  paidLabel: "" # TODO: en
+  payBtn: "" # TODO: en
+  payHint: "" # TODO: en
+  expiresLabel: "" # TODO: en
+  empty: "" # TODO: en
+  tierLabel: "" # TODO: en
+  payMinutes: "" # TODO: en
+
+# TODO: en
+adminUi:
+  title: "" # TODO: en
+  tabUsers: "" # TODO: en
+  tabEvents: "" # TODO: en
+  tabAudit: "" # TODO: en
+  sectionActions: "" # TODO: en
+  sectionUsers: "" # TODO: en
+  sectionAutomsgs: "" # TODO: en
+  statUsers: "" # TODO: en
+  statPlanets: "" # TODO: en
+  statFleets: "" # TODO: en
+  statEvents: "" # TODO: en
+  creditTitle: "" # TODO: en
+  creditAmountPlaceholder: "" # TODO: en
+  creditConfirm: "" # TODO: en
+  roleTitle: "" # TODO: en
+  roleConfirm: "" # TODO: en
+  okBtn: "" # TODO: en
+  profileBtn: "" # TODO: en
+  banBtn: "" # TODO: en
+  unbanBtn: "" # TODO: en
+  banConfirm: "" # TODO: en
+  unbanConfirm: "" # TODO: en
+  confirmTitle: "" # TODO: en
+  confirmBtn: "" # TODO: en
+  cancelBtn: "" # TODO: en
+  colPlayer: "" # TODO: en
+  colRole: "" # TODO: en
+  colCredits: "" # TODO: en
+  colScore: "" # TODO: en
+  colCreated: "" # TODO: en
+  colActions: "" # TODO: en
+  automsgColKey: "" # TODO: en
+  automsgColTitle: "" # TODO: en
+  automsgColFolder: "" # TODO: en
+  automsgEditBtn: "" # TODO: en
+  automsgSaveBtn: "" # TODO: en
+  automsgCancelBtn: "" # TODO: en
+  automsgTitleLabel: "" # TODO: en
+  automsgFolderLabel: "" # TODO: en
+  automsgBodyLabel: "" # TODO: en
+  automsgSaveErr: "" # TODO: en
+  eventsMonitorTitle: "" # TODO: en
+  eventsTopErrors: "" # TODO: en
+  eventsLoading: "" # TODO: en
+  eventsEmpty: "" # TODO: en
+  eventsColId: "" # TODO: en
+  eventsColKind: "" # TODO: en
+  eventsColState: "" # TODO: en
+  eventsColAtt: "" # TODO: en
+  eventsColFire: "" # TODO: en
+  eventsColLastErr: "" # TODO: en
+  deadTitle: "" # TODO: en
+  deadLoading: "" # TODO: en
+  deadLoadErr: "" # TODO: en
+  deadEmpty: "" # TODO: en
+  deadRetryConfirm: "" # TODO: en
+  deadColFailed: "" # TODO: en
+  deadColKind: "" # TODO: en
+  deadColAttempt: "" # TODO: en
+  deadColError: "" # TODO: en
+  deadColTarget: "" # TODO: en
+  auditTitle: "" # TODO: en
+  auditActionPlaceholder: "" # TODO: en
+  auditTargetPlaceholder: "" # TODO: en
+  auditRefreshBtn: "" # TODO: en
+  auditLoading: "" # TODO: en
+  auditLoadErr: "" # TODO: en
+  auditEmpty: "" # TODO: en
+  auditColDate: "" # TODO: en
+  auditColAdmin: "" # TODO: en
+  auditColAction: "" # TODO: en
+  auditColTarget: "" # TODO: en
+  auditColPayload: "" # TODO: en
+  auditColIp: "" # TODO: en
+  profileCloseBtn: "" # TODO: en
+  profileLoading: "" # TODO: en
+  profileLoadErr: "" # TODO: en
+  profileLabelRole: "" # TODO: en
+  profileLabelCredits: "" # TODO: en
+  profileLabelScore: "" # TODO: en
+  profileLabelReg: "" # TODO: en
+  profileLabelOnline: "" # TODO: en
+  profileBanned: "" # TODO: en
+  profileTabSummary: "" # TODO: en
+  profileTabEconomy: "" # TODO: en
+  profileTabCombat: "" # TODO: en
+  profileTabAudit: "" # TODO: en
+  sectionPlanets: "" # TODO: en
+  sectionResources: "" # TODO: en
+  sectionFleets: "" # TODO: en
+  sectionOfficers: "" # TODO: en
+  sectionArtefacts: "" # TODO: en
+  sectionMarketLots: "" # TODO: en
+  sectionArtefactLots: "" # TODO: en
+  sectionResLog: "" # TODO: en
+  sectionPurchases: "" # TODO: en
+  sectionReports: "" # TODO: en
+  sectionMessages: "" # TODO: en
+  sectionAdminAudit: "" # TODO: en
+  resourceApplyBtn: "" # TODO: en
+  artefactGrantBtn: "" # TODO: en
+  missionAttack: "" # TODO: en
+  missionEspionage: "" # TODO: en
+  missionTransport: "" # TODO: en
+  missionColonize: "" # TODO: en
+  missionHarvest: "" # TODO: en
+  missionExpedition: "" # TODO: en
+  missionInvasion: "" # TODO: en
+  reportBattle: "" # TODO: en
+  reportEspionage: "" # TODO: en
+  reportExpedition: "" # TODO: en
+
+# TODO: en
+artMarketUi:
+  title: "" # TODO: en
+  balanceLabel: "" # TODO: en
+  tabAll: "" # TODO: en
+  tabMine: "" # TODO: en
+  empty: "" # TODO: en
+  colArtefact: "" # TODO: en
+  colSeller: "" # TODO: en
+  colPrice: "" # TODO: en
+  colDate: "" # TODO: en
+  buyBtn: "" # TODO: en
+  buyBtnCantAfford: "" # TODO: en
+  cancelBtn: "" # TODO: en
+  tooltipNoCredits: "" # TODO: en
+  toastBoughtTitle: "" # TODO: en
+  toastBoughtBody: "" # TODO: en
+  toastBuyErrTitle: "" # TODO: en
+  toastCancelledTitle: "" # TODO: en
+
+# TODO: en
 authUi:
   tagline: ""
   loginTab: ""
@@ -1452,12 +1806,37 @@ global:
   menuLogout: ""
   menuMain: ""
   menuMessages: ""
+  menuAdmin: "" # TODO: en
+  menuChat: "" # TODO: en
+  menuDailyQuests: "" # TODO: en
   menuNotepad: ""
   menuPlanetOptions: ""
   menuPreferences: ""
+  menuProfession: "" # TODO: en
   menuRanking: ""
   menuRecords: ""
   menuReferal: ""
+  menuReferral: "" # TODO: en
+  menuSettings: "" # TODO: en
+  menuWiki: "" # TODO: en
+  navGroupPlanet: "" # TODO: en
+  navGroupSpace: "" # TODO: en
+  navGroupSocial: "" # TODO: en
+  navGroupTrade: "" # TODO: en
+  navGroupStats: "" # TODO: en
+  navMore: "" # TODO: en
+  navNavigation: "" # TODO: en
+  navGalaxy: "" # TODO: en
+  navMessages: "" # TODO: en
+  resMetalAbbr: "" # TODO: en
+  resSiliconAbbr: "" # TODO: en
+  resHydrogenAbbr: "" # TODO: en
+  btnLogout: "" # TODO: en
+  btnAdmin: "" # TODO: en
+  btnSearch: "" # TODO: en
+  paymentFail: "" # TODO: en
+  paymentSuccess: "" # TODO: en
+  reloadBtn: "" # TODO: en
   menuRepair: ""
   menuResearch: ""
   menuResource: ""
@@ -1542,6 +1921,16 @@ global:
   wiki: ""
   writeMessage: ""
   yesterday: ""
+  loadingUniverse: "" # TODO: en
+  incomingAttackWarning: "" # TODO: en
+  incomingAttackWarningMoon: "" # TODO: en
+  creditsTitle: "" # TODO: en
+  adminTitle: "" # TODO: en
+  searchTitle: "" # TODO: en
+  profileTitle: "" # TODO: en
+  timeUnitDay: "" # TODO: en
+  timeUnitHour: "" # TODO: en
+  timeUnitMin: "" # TODO: en
 info:
   abort: ""
   alienTech: ""

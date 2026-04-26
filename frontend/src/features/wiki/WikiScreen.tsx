@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/api/client';
 import { categoryOfId, imageOfId, keyOfId, nameOf } from '@/api/catalog';
 import { renderMarkdown } from './md';
+import { useTranslation } from '@/i18n/i18n';
 import './wiki.css';
 
 type Category = { key: string; title: string; order: number };
@@ -31,6 +32,7 @@ function parseWikiHash(): { cat: string; slug: string } {
 }
 
 export function WikiScreen() {
+  const { t } = useTranslation('wikiUi');
   const initial = parseWikiHash();
   const [activeCat, setActiveCat] = useState<string>(initial.cat);
   const [activeSlug, setActiveSlug] = useState<string>(initial.slug || 'index');
@@ -185,8 +187,8 @@ export function WikiScreen() {
         className="ox-panel"
         style={{ width: 240, flexShrink: 0, overflowY: 'auto', padding: 8 }}
       >
-        <h3 style={{ margin: '4px 8px', fontSize: 14 }}>Вики</h3>
-        {cats.isLoading && <div style={{ padding: 8 }}>Загрузка…</div>}
+        <h3 style={{ margin: '4px 8px', fontSize: 14 }}>{t('sidebarTitle')}</h3>
+        {cats.isLoading && <div style={{ padding: 8 }}>{t('loading')}</div>}
         {(cats.data?.categories ?? []).map((c) => (
           <div key={c.key} style={{ marginBottom: 4 }}>
             <button
@@ -238,8 +240,8 @@ export function WikiScreen() {
         className="ox-panel"
         style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}
       >
-        {page.isLoading && <div>Загрузка статьи…</div>}
-        {page.isError && <div>Не удалось загрузить статью.</div>}
+        {page.isLoading && <div>{t('articleLoading')}</div>}
+        {page.isError && <div>{t('articleError')}</div>}
         {page.data && (
           <article className="wiki-article">
             {headerNode}

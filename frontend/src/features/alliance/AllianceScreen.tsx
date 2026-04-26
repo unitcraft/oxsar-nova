@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { Confirm } from '@/ui/Confirm';
 import { useToast } from '@/ui/Toast';
+import { useTranslation } from '@/i18n/i18n';
 
 interface Alliance {
   id: string;
@@ -43,10 +44,11 @@ interface Relationship {
   set_at: string;
 }
 
-const REL_LABEL: Record<string, string> = { nap: 'НЕН', war: 'ВОЙНА', ally: 'СОЮЗ' };
+const REL_LABEL_KEY: Record<string, string> = { nap: 'relNap', war: 'relWar', ally: 'relAlly' };
 const REL_COLOR: Record<string, string> = { nap: 'var(--ox-fg-dim)', war: 'var(--ox-danger)', ally: 'var(--ox-success)' };
 
 export function AllianceScreen() {
+  const { t } = useTranslation('allianceUi');
   const qc = useQueryClient();
   const toast = useToast();
   const [view, setView] = useState<'mine' | 'list' | 'create'>('mine');
@@ -76,9 +78,9 @@ export function AllianceScreen() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['alliances'] });
       setView('mine');
-      toast.show('success', 'Альянс', 'Заявка отправлена');
+      toast.show('success', t('title'), t('alreadyApplied'));
     },
-    onError: (e) => toast.show('danger', 'Ошибка', e instanceof Error ? e.message : ''),
+    onError: (e) => toast.show('danger', t('createErr'), e instanceof Error ? e.message : ''),
   });
 
   const leave = useMutation({
@@ -86,9 +88,9 @@ export function AllianceScreen() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['alliances'] });
       setView('mine');
-      toast.show('info', 'Альянс покинут');
+      toast.show('info', t('leaveBtn'));
     },
-    onError: (e) => toast.show('danger', 'Ошибка', e instanceof Error ? e.message : ''),
+    onError: (e) => toast.show('danger', t('createErr'), e instanceof Error ? e.message : ''),
   });
 
   const disband = useMutation({
@@ -96,9 +98,9 @@ export function AllianceScreen() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['alliances'] });
       setView('mine');
-      toast.show('info', 'Альянс распущен');
+      toast.show('info', t('disbandBtn'));
     },
-    onError: (e) => toast.show('danger', 'Ошибка', e instanceof Error ? e.message : ''),
+    onError: (e) => toast.show('danger', t('createErr'), e instanceof Error ? e.message : ''),
   });
 
   const myAlliance = mine.data?.alliance ?? null;
@@ -108,19 +110,19 @@ export function AllianceScreen() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-        🤝 Альянс
+        🤝 {t('title')}
       </h2>
 
       <div className="ox-tabs">
         <button type="button" aria-pressed={view === 'mine'} onClick={() => setView('mine')}>
-          Мой альянс
+          {t('tabMine')}
         </button>
         <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')}>
-          Список
+          {t('tabList')}
         </button>
         {!myAlliance && (
           <button type="button" aria-pressed={view === 'create'} onClick={() => setView('create')}>
-            Создать
+            {t('createTitle')}
           </button>
         )}
       </div>
@@ -131,7 +133,7 @@ export function AllianceScreen() {
           : !myAlliance
             ? (
               <div className="ox-panel" style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-dim)' }}>
-                Вы не состоите в альянсе. Вступите в существующий или создайте свой.
+                {t('noAlliance')}
               </div>
             )
             : <MyAlliancePanel
@@ -153,10 +155,10 @@ export function AllianceScreen() {
               <table className="ox-table" style={{ margin: 0 }}>
                 <thead>
                   <tr>
-                    <th>[Тег]</th>
-                    <th>Название</th>
-                    <th>Игроков</th>
-                    <th>Тип</th>
+                    <th>{t('labelTag')}</th>
+                    <th>{t('sectionInfo')}</th>
+                    <th>{t('colMember')}</th>
+                    <th>{t('labelOpen')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -210,6 +212,7 @@ function MyAlliancePanel({
   leavePending: boolean;
   disbandPending: boolean;
 }) {
+  const { t } = useTranslation('allianceUi');
   const qc = useQueryClient();
   const toast = useToast();
   const [confirmDisband, setConfirmDisband] = useState(false);
@@ -218,7 +221,7 @@ function MyAlliancePanel({
     mutationFn: ({ id, isOpen }: { id: string; isOpen: boolean }) =>
       api.patch<void>(`/api/alliances/${id}/open`, { is_open: isOpen }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['alliances'] }),
-    onError: (e) => toast.show('danger', 'Ошибка', e instanceof Error ? e.message : ''),
+    onError: (e) => toast.show('danger', t('createErr'), e instanceof Error ? e.message : ''),
   });
 
   const approve = useMutation({
@@ -249,7 +252,7 @@ function MyAlliancePanel({
           <div>
             <div style={{ fontSize: 16, fontWeight: 700 }}>{alliance.name}</div>
             <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>
-              Основатель: {alliance.owner_name} · {alliance.member_count} игроков · {alliance.is_open ? '🔓 Открытый' : '🔒 Закрытый'}
+              {alliance.owner_name} · {alliance.member_count} · {alliance.is_open ? `🔓 ${t('labelOpen')}` : `🔒 ${t('labelClosed')}`}
             </div>
           </div>
         </div>
@@ -266,17 +269,17 @@ function MyAlliancePanel({
               disabled={setOpen.isPending}
               onClick={() => setOpen.mutate({ id: alliance.id, isOpen: !alliance.is_open })}
             >
-              {alliance.is_open ? '🔒 Закрыть (заявки)' : '🔓 Открыть (вход)'}
+              {alliance.is_open ? `🔒 ${t('toggleCloseBtn')}` : `🔓 ${t('toggleOpenBtn')}`}
             </button>
           )}
           {!isOwner && (
             <button type="button" className="btn-ghost btn-sm" disabled={leavePending} onClick={onLeave}>
-              Покинуть альянс
+              {t('leaveBtn')}
             </button>
           )}
           {isOwner && (
             <button type="button" className="btn-ghost btn-sm" style={{ color: 'var(--ox-danger)' }} onClick={() => setConfirmDisband(true)}>
-              Распустить
+              {t('disbandBtn')}
             </button>
           )}
         </div>
@@ -292,11 +295,11 @@ function MyAlliancePanel({
       {isOwner && !alliance.is_open && (
         <div className="ox-panel" style={{ padding: '12px 16px' }}>
           <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 8 }}>
-            Заявки на вступление
+            {t('sectionApplications')}
           </div>
           {apps.isLoading && <div className="ox-skeleton" style={{ height: 40 }} />}
           {!apps.isLoading && (apps.data?.applications ?? []).length === 0 && (
-            <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Нет заявок.</div>
+            <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>{t('noApplications')}</div>
           )}
           {(apps.data?.applications ?? []).map((ap) => (
             <div key={ap.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--ox-border)' }}>
@@ -304,7 +307,7 @@ function MyAlliancePanel({
                 <b>{ap.username}</b>
                 {ap.message && <span style={{ color: 'var(--ox-fg-dim)', marginLeft: 8 }}>{ap.message}</span>}
               </span>
-              <button type="button" className="btn btn-sm" disabled={approve.isPending} onClick={() => approve.mutate(ap.id)}>✓ Принять</button>
+              <button type="button" className="btn btn-sm" disabled={approve.isPending} onClick={() => approve.mutate(ap.id)}>✓ {t('acceptBtn')}</button>
               <button type="button" className="btn-ghost btn-sm" disabled={reject.isPending} onClick={() => reject.mutate(ap.id)}>✕</button>
             </div>
           ))}
@@ -313,9 +316,9 @@ function MyAlliancePanel({
 
       {confirmDisband && (
         <Confirm
-          title="Распустить альянс"
-          message="Распустить альянс? Это действие необратимо."
-          confirmLabel="Распустить"
+          title={t('disbandBtn')}
+          message={t('disbandConfirm', { name: alliance.name })}
+          confirmLabel={t('confirmBtn')}
           danger
           onConfirm={() => { setConfirmDisband(false); onDisband(); }}
           onCancel={() => setConfirmDisband(false)}
@@ -334,6 +337,7 @@ function AllianceDetail({
   joining: boolean;
   onJoin: (message: string) => void;
 }) {
+  const { t } = useTranslation('allianceUi');
   const [message, setMessage] = useState('');
   return (
     <div className="ox-panel" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -343,7 +347,7 @@ function AllianceDetail({
           {alliance.name}
         </div>
         <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
-          Основатель: {alliance.owner_name} · {alliance.member_count} игроков · {alliance.is_open ? '🔓 Открытый' : '🔒 Закрытый'}
+          {alliance.owner_name} · {alliance.member_count} · {alliance.is_open ? `🔓 ${t('labelOpen')}` : `🔒 ${t('labelClosed')}`}
         </div>
         {alliance.description && (
           <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', marginTop: 6 }}>{alliance.description}</div>
@@ -352,7 +356,7 @@ function AllianceDetail({
 
       <table className="ox-table" style={{ margin: 0, fontSize: 14 }}>
         <thead>
-          <tr><th>Игрок</th><th>Ранг</th></tr>
+          <tr><th>{t('colMember')}</th><th>{t('colRole')}</th></tr>
         </thead>
         <tbody>
           {members.map((m) => (
@@ -372,11 +376,11 @@ function AllianceDetail({
               onChange={(e) => setMessage(e.target.value)}
               rows={2}
               style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical' }}
-              placeholder="Сопроводительное сообщение (необязательно)"
+              placeholder={t('createNamePlaceholder')}
             />
           )}
           <button type="button" className="btn btn-sm" disabled={joining} onClick={() => onJoin(message)}>
-            {alliance.is_open ? '🤝 Вступить' : '📨 Подать заявку'}
+            {alliance.is_open ? `🤝 ${t('sectionInfo')}` : `📨 ${t('applyBtn')}`}
           </button>
         </div>
       )}
@@ -385,6 +389,7 @@ function AllianceDetail({
 }
 
 function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: () => void }) {
+  const { t } = useTranslation('allianceUi');
   const toast = useToast();
   const [tag, setTag] = useState('');
   const [name, setName] = useState('');
@@ -392,36 +397,35 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
 
   const create = useMutation({
     mutationFn: () => api.post<{ alliance: Alliance }>('/api/alliances', { tag, name, description }),
-    onSuccess: () => { toast.show('success', 'Альянс создан', `[${tag}] ${name}`); onCreated(); },
-    onError: (e: Error) => toast.show('danger', 'Ошибка', e.message),
+    onSuccess: () => { toast.show('success', t('createTitle'), `[${tag}] ${name}`); onCreated(); },
+    onError: (e: Error) => toast.show('danger', t('createErr'), e.message),
   });
 
   return (
     <div className="ox-panel" style={{ padding: 20, maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ fontSize: 16, fontWeight: 700 }}>Создать альянс</div>
+      <div style={{ fontSize: 16, fontWeight: 700 }}>{t('createTitle')}</div>
 
       <div>
-        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Тег (3–5 символов)</label>
+        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>{t('labelTag')} (3–5)</label>
         <input
           value={tag}
           onChange={(e) => setTag(e.target.value.toUpperCase())}
           maxLength={5}
           style={{ width: 100 }}
-          placeholder="TAG"
+          placeholder={t('createTagPlaceholder')}
         />
       </div>
       <div>
-        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Название</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={64} style={{ width: '100%' }} />
+        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>{t('sectionInfo')}</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={64} style={{ width: '100%' }} placeholder={t('createNamePlaceholder')} />
       </div>
       <div>
-        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Описание</label>
+        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>—</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
           style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical' }}
-          placeholder="Описание альянса…"
         />
       </div>
 
@@ -432,15 +436,16 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
           disabled={create.isPending || tag.length < 3 || name.length < 3}
           onClick={() => create.mutate()}
         >
-          {create.isPending ? '…' : '🤝 Создать'}
+          {create.isPending ? '…' : `🤝 ${t('createBtn')}`}
         </button>
-        <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>Отмена</button>
+        <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>{t('cancelBtn')}</button>
       </div>
     </div>
   );
 }
 
 function RelationsPanel({ allianceID }: { allianceID: string }) {
+  const { t } = useTranslation('allianceUi');
   const qc = useQueryClient();
   const toast = useToast();
   const [targetID, setTargetID] = useState('');
@@ -456,7 +461,7 @@ function RelationsPanel({ allianceID }: { allianceID: string }) {
     mutationFn: ({ tid, rel }: { tid: string; rel: string }) =>
       api.put<void>(`/api/alliances/${allianceID}/relations/${tid}`, { relation: rel }),
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['alliances', allianceID, 'relations'] }); setTargetID(''); },
-    onError: (e) => toast.show('danger', 'Ошибка', e instanceof Error ? e.message : ''),
+    onError: (e) => toast.show('danger', t('createErr'), e instanceof Error ? e.message : ''),
   });
 
   const remove = useMutation({
@@ -479,27 +484,27 @@ function RelationsPanel({ allianceID }: { allianceID: string }) {
   return (
     <div className="ox-panel" style={{ padding: '12px 16px' }}>
       <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 8 }}>
-        Отношения с альянсами
+        {t('sectionRelations')}
       </div>
 
       {list.length === 0 && !rels.isLoading && (
-        <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', marginBottom: 10 }}>Нет установленных отношений.</div>
+        <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', marginBottom: 10 }}>{t('noApplications')}</div>
       )}
 
       {list.length > 0 && (
         <table className="ox-table" style={{ margin: '0 0 12px', fontSize: 14 }}>
           <thead>
-            <tr><th>Альянс</th><th>Отношение</th><th>Статус</th><th /></tr>
+            <tr><th>{t('title')}</th><th>{t('colRelation')}</th><th>{t('labelTag')}</th><th /></tr>
           </thead>
           <tbody>
             {list.map((r) => (
               <tr key={`${r.initiator ? 'out' : 'in'}-${r.target_alliance_id}`}>
                 <td style={{ fontFamily: 'var(--ox-mono)' }}>[{r.target_tag}] {r.target_name}</td>
                 <td style={{ color: REL_COLOR[r.relation] ?? 'var(--ox-fg-dim)', fontWeight: 700 }}>
-                  {REL_LABEL[r.relation] ?? r.relation}
+                  {r.relation in REL_LABEL_KEY ? t(REL_LABEL_KEY[r.relation]!) : r.relation}
                 </td>
                 <td style={{ color: r.status === 'pending' ? 'var(--ox-warning)' : 'var(--ox-fg-dim)' }}>
-                  {r.initiator ? 'Предложено' : 'Входящее'}{r.status === 'pending' ? ' (ожидает)' : ''}
+                  {r.initiator ? t('applyBtn') : t('acceptBtn')}{r.status === 'pending' ? ` (${t('noApplications')})` : ''}
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: 4 }}>
@@ -521,18 +526,18 @@ function RelationsPanel({ allianceID }: { allianceID: string }) {
 
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
         <input
-          placeholder="ID альянса"
+          placeholder={t('labelTag')}
           value={targetID}
           onChange={(e) => setTargetID(e.target.value)}
           style={{ flex: 1, minWidth: 200, fontFamily: 'var(--ox-mono)', fontSize: '0.85em' }}
         />
         <select value={relation} onChange={(e) => setRelation(e.target.value as typeof relation)}>
-          <option value="nap">НЕН (ненападение)</option>
-          <option value="ally">СОЮЗ</option>
-          <option value="war">ВОЙНА</option>
+          <option value="nap">{t('relNap')}</option>
+          <option value="ally">{t('relAlly')}</option>
+          <option value="war">{t('relWar')}</option>
         </select>
         <button type="button" className="btn btn-sm" disabled={!targetID || propose.isPending} onClick={() => propose.mutate({ tid: targetID, rel: relation })}>
-          Предложить
+          {t('applyBtn')}
         </button>
       </div>
     </div>
@@ -546,6 +551,7 @@ function MembersTable({
   members: Member[];
   isOwner: boolean;
 }) {
+  const { t } = useTranslation('allianceUi');
   const qc = useQueryClient();
   const toast = useToast();
   const [editingUID, setEditingUID] = useState<string | null>(null);
@@ -555,20 +561,20 @@ function MembersTable({
     mutationFn: ({ uid, name }: { uid: string; name: string }) =>
       api.patch<void>(`/api/alliances/${alliance.id}/members/${uid}/rank`, { rank_name: name }),
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['alliances'] }); setEditingUID(null); },
-    onError: (e) => toast.show('danger', 'Ошибка', e instanceof Error ? e.message : ''),
+    onError: (e) => toast.show('danger', t('createErr'), e instanceof Error ? e.message : ''),
   });
 
   return (
     <div className="ox-panel" style={{ overflow: 'hidden' }}>
       <div style={{ padding: '10px 16px 8px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', borderBottom: '1px solid var(--ox-border)' }}>
-        Состав ({members.length})
+        {t('colMember')} ({members.length})
       </div>
       <table className="ox-table" style={{ margin: 0 }}>
         <thead>
           <tr>
-            <th>Игрок</th>
-            <th>Ранг</th>
-            <th>Вступил</th>
+            <th>{t('colMember')}</th>
+            <th>{t('colRole')}</th>
+            <th>{t('labelTag')}</th>
             {isOwner && <th />}
           </tr>
         </thead>

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { useToast } from '@/ui/Toast';
+import { useTranslation } from '@/i18n/i18n';
 
 interface CreditPackage {
   key: string;
@@ -27,36 +28,28 @@ interface Purchase {
   paid_at?: string | null;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  paid:     '✅ оплачен',
-  pending:  '⏳ ожидает',
-  failed:   '❌ ошибка',
-  refunded: '↩️ возврат',
+const STATUS_KEY: Record<string, string> = {
+  paid:     'statusPaid',
+  pending:  'statusPending',
+  failed:   'statusFailed',
+  refunded: 'statusCancelled',
 };
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-// Подсказки под карточкой пакета: что даёт примерный номинал.
-// Значения зашиты локально (на основе текущего game config).
-function packageHint(total: number): string | null {
-  if (total >= 5000) return '💼 Все 4 офицера на месяц + запас на артефакты';
-  if (total >= 2000) return '⭐ Все 4 офицера на 2 недели';
-  if (total >= 1000) return '👔 Пара офицеров на месяц или смена профессии';
-  if (total >= 500) return '🎖 Офицер на 2 недели';
-  if (total >= 100) return '🔧 Мелкие покупки (смена имени, артефакт)';
+function packageHint(total: number, t: (key: string) => string): string | null {
+  if (total >= 5000) return t('hint5000');
+  if (total >= 2000) return t('hint2000');
+  if (total >= 1000) return t('hint1000');
+  if (total >= 500)  return t('hint500');
+  if (total >= 100)  return t('hint100');
   return null;
 }
 
-const CREDIT_PRICING_HINTS = [
-  { icon: '⭐', label: 'Адмирал / Инженер / Геолог / Меркуре', value: '50 кр/день (1500 кр / месяц)' },
-  { icon: '🎖', label: 'Смена профессии (после 7 дней)', value: '1000 кр' },
-  { icon: '🏷', label: 'Переименование планеты', value: 'бесплатно' },
-  { icon: '💎', label: 'Покупка артефактов на бирже', value: 'зависит от лота' },
-];
-
 export function CreditsScreen() {
+  const { t } = useTranslation('creditsUi');
   const qc = useQueryClient();
   const { show: showToast } = useToast();
 
@@ -92,7 +85,7 @@ export function CreditsScreen() {
       }
     },
     onError: () => {
-      showToast('danger', 'Не удалось создать заказ. Попробуйте позже.');
+      showToast('danger', t('sectionPackages'));
     },
   });
 
@@ -100,7 +93,7 @@ export function CreditsScreen() {
 
   return (
     <div className="screen">
-      <h2>Пополнение кредитов</h2>
+      <h2>{t('sectionPackages')}</h2>
 
       {testMode && (
         <div
@@ -116,28 +109,28 @@ export function CreditsScreen() {
             fontWeight: 600,
           }}
         >
-          ⚠️ Тестовый режим — реальных списаний нет, оплата симулируется локально.
+          ⚠️ {t('testModeBanner')}
         </div>
       )}
 
       <p className="credits-balance">
-        Баланс: <strong>💳 {balance.toLocaleString('ru-RU')} кр</strong>
+        {t('balanceLabel')} <strong>💳 {balance.toLocaleString('ru-RU')} {t('creditsUnit')}</strong>
       </p>
 
-      {packages.isLoading && <p>Загрузка пакетов…</p>}
-      {packages.isError && <p className="error">Ошибка загрузки пакетов</p>}
+      {packages.isLoading && <p>{t('historyEmpty')}</p>}
+      {packages.isError && <p className="error">{t('historyEmpty')}</p>}
 
       {packages.data && (
         <div className="credit-packages">
           {packages.data.packages.map((pkg) => {
-            const hint = packageHint(pkg.total_credits);
+            const hint = packageHint(pkg.total_credits, t);
             return (
               <div key={pkg.key} className="credit-package-card">
                 <div className="credit-package-label">{pkg.label}</div>
                 <div className="credit-package-credits">
-                  {pkg.total_credits.toLocaleString('ru-RU')} кр
+                  {pkg.total_credits.toLocaleString('ru-RU')} {t('creditsUnit')}
                   {pkg.bonus_credits > 0 && (
-                    <span className="credit-package-bonus"> (+{pkg.bonus_credits.toLocaleString('ru-RU')} бонус)</span>
+                    <span className="credit-package-bonus"> (+{pkg.bonus_credits.toLocaleString('ru-RU')} {t('bonusLabel')})</span>
                   )}
                 </div>
                 <div className="credit-package-price">{pkg.price_rub.toLocaleString('ru-RU')} ₽</div>
@@ -151,7 +144,7 @@ export function CreditsScreen() {
                   disabled={buyMutation.isPending}
                   onClick={() => buyMutation.mutate(pkg.key)}
                 >
-                  Купить
+                  {t('buyBtn')}
                 </button>
               </div>
             );
@@ -159,37 +152,35 @@ export function CreditsScreen() {
         </div>
       )}
 
-      {/* Что можно купить на кредиты */}
       <details style={{ marginTop: 16, marginBottom: 16 }}>
         <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 16, padding: '8px 0' }}>
-          💡 На что потратить кредиты?
+          {t('sectionSpendHints')}
         </summary>
         <div style={{ padding: 12, background: 'var(--ox-bg-panel)', borderRadius: 6, marginTop: 6 }}>
-          {CREDIT_PRICING_HINTS.map((h) => (
-            <div key={h.label} style={{ display: 'flex', gap: 8, padding: '4px 0', fontSize: 15 }}>
-              <span>{h.icon}</span>
-              <span style={{ flex: 1, color: 'var(--ox-fg)' }}>{h.label}</span>
-              <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>{h.value}</span>
+          {(['Officer', 'Profession', 'Rename', 'Artefact'] as const).map((k) => (
+            <div key={k} style={{ display: 'flex', gap: 8, padding: '4px 0', fontSize: 15 }}>
+              <span style={{ flex: 1, color: 'var(--ox-fg)' }}>{t(`priceHint${k}.label`)}</span>
+              <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>{t(`priceHint${k}.value`)}</span>
             </div>
           ))}
         </div>
       </details>
 
-      <h3>История покупок</h3>
+      <h3>{t('sectionHistory')}</h3>
 
-      {history.isLoading && <p>Загрузка…</p>}
-      {history.isError && <p className="error">Ошибка загрузки истории</p>}
-      {history.data && history.data.length === 0 && <p className="muted">Покупок пока нет.</p>}
+      {history.isLoading && <p>{t('historyEmpty')}</p>}
+      {history.isError && <p className="error">{t('historyEmpty')}</p>}
+      {history.data && history.data.length === 0 && <p className="muted">{t('historyEmpty')}</p>}
 
       {history.data && history.data.length > 0 && (
         <table className="data-table">
           <thead>
             <tr>
-              <th>Дата</th>
-              <th>Пакет</th>
-              <th>Кредиты</th>
-              <th>Сумма</th>
-              <th>Статус</th>
+              <th>{t('colDate')}</th>
+              <th>{t('colPackage')}</th>
+              <th>{t('colCredits')}</th>
+              <th>{t('colPrice')}</th>
+              <th>{t('colStatus')}</th>
             </tr>
           </thead>
           <tbody>
@@ -197,9 +188,9 @@ export function CreditsScreen() {
               <tr key={p.id}>
                 <td>{fmtDate(p.created_at)}</td>
                 <td>{p.package_label}</td>
-                <td>+{p.credits.toLocaleString('ru-RU')} кр</td>
+                <td>+{p.credits.toLocaleString('ru-RU')} {t('creditsUnit')}</td>
                 <td>{p.price_rub.toLocaleString('ru-RU')} ₽</td>
-                <td>{STATUS_LABEL[p.status] ?? p.status}</td>
+                <td>{STATUS_KEY[p.status] ? t(STATUS_KEY[p.status]!) : p.status}</td>
               </tr>
             ))}
           </tbody>

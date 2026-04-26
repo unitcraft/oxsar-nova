@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
+import { useTranslation } from '@/i18n/i18n';
 
 type GalaxyEvent = {
   id: number;
@@ -9,20 +10,20 @@ type GalaxyEvent = {
   params: Record<string, unknown>;
 };
 
-const KIND_META: Record<string, { icon: string; title: string; descr: string }> = {
-  meteor_storm: { icon: '☄️', title: 'Метеоритный шторм',  descr: '+30% к добыче металла' },
-  solar_flare:  { icon: '🌞', title: 'Солнечная вспышка',  descr: '−20% энергии' },
-  trade_forum:  { icon: '📈', title: 'Торговый форум',     descr: 'Льготные курсы рынка' },
-  star_nebula:  { icon: '🌌', title: 'Звёздная туманность', descr: '+15% к мощи экспедиций' },
+const KIND_ICON: Record<string, string> = {
+  meteor_storm: '☄️',
+  solar_flare:  '🌞',
+  trade_forum:  '📈',
+  star_nebula:  '🌌',
 };
 
-function formatRemaining(endsAt: string): string {
+function formatRemaining(endsAt: string, unitHour: string, unitMin: string): string {
   const ms = new Date(endsAt).getTime() - Date.now();
   if (ms <= 0) return '—';
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
-  if (h > 0) return `${h}ч ${m}м`;
-  return `${m}м`;
+  if (h > 0) return `${h}${unitHour} ${m}${unitMin}`;
+  return `${m}${unitMin}`;
 }
 
 /**
@@ -30,6 +31,9 @@ function formatRemaining(endsAt: string): string {
  * Возвращает null если событий нет (204 No Content от backend).
  */
 export function GalaxyEventBanner() {
+  const { t, tf } = useTranslation('galaxyEventUi');
+  const unitHour = t('global', 'timeUnitHour');
+  const unitMin  = t('global', 'timeUnitMin');
   const q = useQuery({
     queryKey: ['galaxy-event'],
     queryFn: () => api.get<GalaxyEvent | undefined>('/api/galaxy-event'),
@@ -38,7 +42,9 @@ export function GalaxyEventBanner() {
 
   const e = q.data;
   if (!e) return null;
-  const meta = KIND_META[e.kind] ?? { icon: '✨', title: e.kind, descr: 'Действует особый эффект' };
+  const icon = KIND_ICON[e.kind] ?? '✨';
+  const title = tf('galaxyEventUi', `kind.${e.kind}.title`, t('defaultTitle'));
+  const descr = tf('galaxyEventUi', `kind.${e.kind}.descr`, t('defaultDescr'));
   return (
     <div
       className="ox-panel"
@@ -52,13 +58,13 @@ export function GalaxyEventBanner() {
         borderLeft: '3px solid var(--ox-accent, #4a90e2)',
       }}
     >
-      <span style={{ fontSize: 24 }}>{meta.icon}</span>
+      <span style={{ fontSize: 24 }}>{icon}</span>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <strong>{meta.title}</strong>
-        <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>{meta.descr}</span>
+        <strong>{title}</strong>
+        <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>{descr}</span>
       </div>
       <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>
-        До конца: <strong>{formatRemaining(e.ends_at)}</strong>
+        {t('untilEnd')} <strong>{formatRemaining(e.ends_at, unitHour, unitMin)}</strong>
       </span>
     </div>
   );
