@@ -1750,7 +1750,7 @@ function isFacebookSkin()
 			return true;
 		}
 	}
-	return !empty($_SESSION["userid"]) && $_SESSION["skin_type"] ?? "standard" == SKIN_TYPE_FB;
+	return !empty($_SESSION["userid"]) && (($_SESSION["skin_type"] ?? "standard") == SKIN_TYPE_FB);
 }
 
 function isMobiSkin()
@@ -1771,7 +1771,7 @@ function isMobileSkin()
 			return true;
 		}
 	}
-	return !empty($_SESSION["userid"]) && $_SESSION["skin_type"] ?? "standard" == SKIN_TYPE_MOBI;
+	return !empty($_SESSION["userid"]) && (($_SESSION["skin_type"] ?? "standard") == SKIN_TYPE_MOBI);
 }
 
 function isHomePlanetRequiredForPage($page_name)
