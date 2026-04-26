@@ -130,10 +130,10 @@ func run() error {
 	reqs := requirements.New(cat)
 	repairSvc := repair.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
 	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed).WithBundle(i18nBundle)
-	officerSvc := officer.NewService(db)
+	officerSvc := officer.NewService(db).WithBundle(i18nBundle)
 
 	scoreSvc := score.NewServiceWithCoeffs(db, cat, cfg.Game.Points)
-	achSvc := achievement.NewService(db)
+	achSvc := achievement.NewService(db).WithBundle(i18nBundle)
 	dailyQuestSvc := dailyquest.New(pool)
 
 	// withScore оборачивает handler: после успеха пересчитывает очки

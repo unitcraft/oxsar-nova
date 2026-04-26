@@ -150,24 +150,24 @@ func (s *TransportService) ExpeditionHandler() event.Handler {
 		switch outcome {
 		case "resource":
 			reportData = expResources(ctx, tx, r, expPower, hours, visitedScale,
-				pl.FleetID, fleetShips, s.catalog, cm, csil, ch)
+				pl.FleetID, fleetShips, s.catalog, cm, csil, ch, s.tr)
 		case "asteroid":
 			reportData = expAsteroid(ctx, tx, r, expPower, hours, visitedScale,
-				pl.FleetID, fleetShips, s.catalog, cm, csil, ch)
+				pl.FleetID, fleetShips, s.catalog, cm, csil, ch, s.tr)
 		case "artefact":
-			reportData = expArtefact(ctx, tx, r, ownerUserID, s.catalog)
+			reportData = expArtefact(ctx, tx, r, ownerUserID, s.catalog, s.tr)
 		case "extra_planet":
-			reportData, err = expExtraPlanet(ctx, tx, r, ownerUserID)
+			reportData, err = expExtraPlanet(ctx, tx, r, ownerUserID, s.tr)
 			if err != nil {
 				return err
 			}
 		case "xSkirmish":
-			reportData, err = expPirates(ctx, tx, pl.FleetID, fleetShips, s.catalog, expPower, r)
+			reportData, err = expPirates(ctx, tx, pl.FleetID, fleetShips, s.catalog, expPower, r, s.tr)
 			if err != nil {
 				return err
 			}
 		case "battlefield":
-			reportData, err = expBattlefield(ctx, tx, pl.FleetID, fleetShips, s.catalog, expPower, r)
+			reportData, err = expBattlefield(ctx, tx, pl.FleetID, fleetShips, s.catalog, expPower, r, s.tr)
 			if err != nil {
 				return err
 			}
@@ -177,12 +177,12 @@ func (s *TransportService) ExpeditionHandler() event.Handler {
 				return err
 			}
 		case "delay":
-			reportData, err = expDelay(ctx, tx, r, pl.ReturnEventID, flightSeconds)
+			reportData, err = expDelay(ctx, tx, r, pl.ReturnEventID, flightSeconds, s.tr)
 			if err != nil {
 				return err
 			}
 		case "fast":
-			reportData, err = expFast(ctx, tx, r, pl.ReturnEventID, flightSeconds)
+			reportData, err = expFast(ctx, tx, r, pl.ReturnEventID, flightSeconds, s.tr)
 			if err != nil {
 				return err
 			}
@@ -198,7 +198,7 @@ func (s *TransportService) ExpeditionHandler() event.Handler {
 			}
 		default: // nothing
 			outcome = "nothing"
-			reportData = map[string]any{"message": "Ничего не нашли."}
+			reportData = map[string]any{"message": s.tr("mission", "expeditionNothingFound", nil)}
 		}
 
 		reportJSON, _ := json.Marshal(reportData)
@@ -210,8 +210,8 @@ func (s *TransportService) ExpeditionHandler() event.Handler {
 			return fmt.Errorf("expedition: insert report: %w", err)
 		}
 
-		subj := fmt.Sprintf("Экспедиция: %s", outcome)
-		body := fmt.Sprintf("Результат: %s", outcome)
+		subj := s.tr("mission", "expeditionSubject", map[string]string{"outcome": outcome})
+		body := s.tr("mission", "expeditionBody", map[string]string{"outcome": outcome})
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body, expedition_report_id)
 			VALUES ($1, $2, NULL, 2, $3, $4, $5)
@@ -377,12 +377,12 @@ func calcResK(r *rng.R, expPower float64, hours int, visitedScale float64) int64
 func expResources(ctx context.Context, tx pgx.Tx, r *rng.R,
 	expPower float64, hours int, visitedScale float64,
 	fleetID string, ships []unitStack, cat *config.Catalog,
-	cm, csil, ch int64) map[string]any {
+	cm, csil, ch int64, tr trFn) map[string]any {
 
 	totalCap := fleetCargoCap(ships, cat)
 	free := totalCap - (cm + csil + ch)
 	if free <= 0 {
-		return map[string]any{"bonus": "нет места в cargo"}
+		return map[string]any{"bonus": tr("mission", "expeditionNoCargoSpace", nil)}
 	}
 
 	resK := calcResK(r, expPower, hours, visitedScale)
@@ -423,12 +423,12 @@ func expResources(ctx context.Context, tx pgx.Tx, r *rng.R,
 func expAsteroid(ctx context.Context, tx pgx.Tx, r *rng.R,
 	expPower float64, hours int, visitedScale float64,
 	fleetID string, ships []unitStack, cat *config.Catalog,
-	cm, csil, ch int64) map[string]any {
+	cm, csil, ch int64, tr trFn) map[string]any {
 
 	totalCap := fleetCargoCap(ships, cat)
 	free := totalCap - (cm + csil + ch)
 	if free <= 0 {
-		return map[string]any{"bonus": "нет места в cargo"}
+		return map[string]any{"bonus": tr("mission", "expeditionNoCargoSpace", nil)}
 	}
 
 	resK := calcResK(r, expPower, hours, visitedScale)
@@ -462,9 +462,9 @@ func expAsteroid(ctx context.Context, tx pgx.Tx, r *rng.R,
 
 // expArtefact — вставить случайный артефакт в state=held.
 func expArtefact(ctx context.Context, tx pgx.Tx, r *rng.R, userID string,
-	cat *config.Catalog) map[string]any {
+	cat *config.Catalog, tr trFn) map[string]any {
 	if len(cat.Artefacts.Artefacts) == 0 {
-		return map[string]any{"message": "артефакты недоступны"}
+		return map[string]any{"message": tr("mission", "expeditionNoArtefacts", nil)}
 	}
 	artIDs := make([]int, 0, len(cat.Artefacts.Artefacts))
 	for _, spec := range cat.Artefacts.Artefacts {
@@ -482,7 +482,7 @@ func expArtefact(ctx context.Context, tx pgx.Tx, r *rng.R, userID string,
 }
 
 // expExtraPlanet — создаёт временную планету (expires 12–24ч).
-func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string) (map[string]any, error) {
+func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string, tr trFn) (map[string]any, error) {
 	// План 20 Ф.7 + ADR-0005: лимит = max(computer_tech+1, astro/2+1).
 	computerLvl := readComputerLevel(ctx, tx, userID)
 	astroLvl := readResearchLevel(ctx, tx, userID, unitAstroTech)
@@ -498,7 +498,10 @@ func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string) (ma
 	}
 	if curPlanets >= maxPlanets {
 		return map[string]any{
-			"message": fmt.Sprintf("Обнаружена пригодная планета, но достигнут лимит (%d/%d). Улучшите computer_tech.", curPlanets, maxPlanets),
+			"message": tr("mission", "expeditionPlanetLimitReached", map[string]string{
+				"current": fmt.Sprintf("%d", curPlanets),
+				"max":     fmt.Sprintf("%d", maxPlanets),
+			}),
 		}, nil
 	}
 
@@ -554,15 +557,15 @@ func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string) (ma
 			"expires_at": expiresAt,
 		}, nil
 	}
-	return map[string]any{"message": "Пригодная планета найдена, но подходящая позиция не обнаружена."}, nil
+	return map[string]any{"message": tr("mission", "expeditionNoPlanetPos", nil)}, nil
 }
 
 // expPirates — PvE-битва с флотом пиратов, масштабированным по exp_power.
 func expPirates(ctx context.Context, tx pgx.Tx, fleetID string,
-	ships []unitStack, cat *config.Catalog, expPower float64, r *rng.R) (map[string]any, error) {
+	ships []unitStack, cat *config.Catalog, expPower float64, r *rng.R, tr trFn) (map[string]any, error) {
 	atkUnits := stacksToBattleUnits(ships, cat, false)
 	if len(atkUnits) == 0 {
-		return map[string]any{"message": "нет ship'ов"}, nil
+		return map[string]any{"message": tr("mission", "expeditionNoShips", nil)}, nil
 	}
 
 	pirateCount := calcPirateCount(ships, cat, expPower, r)
@@ -595,16 +598,16 @@ func expPirates(ctx context.Context, tx pgx.Tx, fleetID string,
 	return map[string]any{
 		"winner":       report.Winner,
 		"rounds":       report.Rounds,
-		"pirate_fleet": fmt.Sprintf("%d × light_fighter", pirateCount),
+		"pirate_fleet": tr("mission", "expeditionPirates", map[string]string{"count": fmt.Sprintf("%d", pirateCount)}),
 	}, nil
 }
 
 // expBattlefield — бой с повреждённым флотом противника (shell_percent=0.5).
 func expBattlefield(ctx context.Context, tx pgx.Tx, fleetID string,
-	ships []unitStack, cat *config.Catalog, expPower float64, r *rng.R) (map[string]any, error) {
+	ships []unitStack, cat *config.Catalog, expPower float64, r *rng.R, tr trFn) (map[string]any, error) {
 	atkUnits := stacksToBattleUnits(ships, cat, false)
 	if len(atkUnits) == 0 {
-		return map[string]any{"message": "нет ship'ов"}, nil
+		return map[string]any{"message": tr("mission", "expeditionNoShips", nil)}, nil
 	}
 
 	// Генерируем повреждённый флот из LF + Cruiser пропорционально expPower.
@@ -641,7 +644,7 @@ func expBattlefield(ctx context.Context, tx pgx.Tx, fleetID string,
 	result := map[string]any{
 		"winner": report.Winner,
 		"rounds": report.Rounds,
-		"enemy":  fmt.Sprintf("%d × light_fighter (повреждённые)", lfCount),
+		"enemy":  tr("mission", "expeditionEnemyDamaged", map[string]string{"count": fmt.Sprintf("%d", lfCount)}),
 	}
 	if report.Winner == "attacker" && len(report.Defenders) > 0 {
 		for _, du := range report.Defenders[0].Units {
@@ -693,9 +696,9 @@ func expCredit(ctx context.Context, tx pgx.Tx, r *rng.R,
 
 // expDelay — сдвинуть fire_at события возврата вправо (10–30% от времени полёта).
 func expDelay(ctx context.Context, tx pgx.Tx, r *rng.R,
-	returnEventID string, flightSeconds int64) (map[string]any, error) {
+	returnEventID string, flightSeconds int64, tr trFn) (map[string]any, error) {
 	if returnEventID == "" {
-		return map[string]any{"message": "delay: нет return_event_id"}, nil
+		return map[string]any{"message": tr("mission", "expeditionDelayNoReturnEvent", nil)}, nil
 	}
 	delta := int64(math.Round(float64(flightSeconds) * (0.10 + r.Float64()*0.20)))
 	if _, err := tx.Exec(ctx,
@@ -708,9 +711,9 @@ func expDelay(ctx context.Context, tx pgx.Tx, r *rng.R,
 
 // expFast — сдвинуть fire_at события возврата влево (10–60% от времени полёта).
 func expFast(ctx context.Context, tx pgx.Tx, r *rng.R,
-	returnEventID string, flightSeconds int64) (map[string]any, error) {
+	returnEventID string, flightSeconds int64, tr trFn) (map[string]any, error) {
 	if returnEventID == "" {
-		return map[string]any{"message": "fast: нет return_event_id"}, nil
+		return map[string]any{"message": tr("mission", "expeditionFastNoReturnEvent", nil)}, nil
 	}
 	delta := int64(math.Round(float64(flightSeconds) * (0.10 + r.Float64()*0.50)))
 	if _, err := tx.Exec(ctx,

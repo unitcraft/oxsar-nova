@@ -12,6 +12,7 @@ package achievement
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,15 +20,29 @@ import (
 
 	"github.com/oxsar/nova/backend/internal/economy"
 	"github.com/oxsar/nova/backend/internal/event"
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/pkg/ids"
 )
 
 type Service struct {
-	db repo.Exec
+	db     repo.Exec
+	bundle *i18n.Bundle
 }
 
 func NewService(db repo.Exec) *Service { return &Service{db: db} }
+
+func (s *Service) WithBundle(b *i18n.Bundle) *Service {
+	s.bundle = b
+	return s
+}
+
+func (s *Service) tr(group, key string, vars map[string]string) string {
+	if s.bundle == nil {
+		return "[" + group + "." + key + "]"
+	}
+	return s.bundle.Tr(i18n.LangRu, group, key, vars)
+}
 
 // UnlockIfNew открывает достижение userID. Если уже открыто —
 // ничего. При открытии пишет message (folder=2).
@@ -61,8 +76,8 @@ func (s *Service) UnlockIfNew(ctx context.Context, tx pgx.Tx, userID, key string
 		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 		VALUES ($1, $2, NULL, 2, $3, $4)
 	`, ids.New(), userID,
-		fmt.Sprintf("Достижение: %s", key),
-		fmt.Sprintf("Открыто новое достижение: %s. Начислено %d кредитов.", key, economy.CreditAchievement),
+		s.tr("achievement", "subject", map[string]string{"key": key}),
+		s.tr("achievement", "body", map[string]string{"key": key, "credits": strconv.FormatInt(economy.CreditAchievement, 10)}),
 	); err != nil {
 		return fmt.Errorf("unlock message: %w", err)
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
@@ -60,11 +61,10 @@ func (s *TransportService) RaidWarningHandler() event.Handler {
 			return nil // атакующий атакует свою же планету
 		}
 
-		subject := "Предупреждение: вражеский флот!"
-		body := fmt.Sprintf(
-			"Вражеский флот приближается к вашей планете [%d:%d:%d]. Ожидаемое прибытие — менее чем через 10 минут.",
-			g, sys, pos,
-		)
+		subject := s.tr("mission", "raidWarnSubject", nil)
+		body := s.tr("mission", "raidWarnBody", map[string]string{
+			"g": strconv.Itoa(g), "s": strconv.Itoa(sys), "pos": strconv.Itoa(pos),
+		})
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 			VALUES ($1, $2, NULL, 13, $3, $4)

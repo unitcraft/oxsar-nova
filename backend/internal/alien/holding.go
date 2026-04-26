@@ -56,7 +56,7 @@ func LoadHoldingDefender(ctx context.Context, tx pgx.Tx, planetID string, cat *c
 		EventID: eventID,
 		Side: battle.Side{
 			UserID:   "aliens",
-			Username: "Инопланетяне (удержание)",
+			Username: "aliens:holding",
 			IsAliens: true,
 			Units:    units,
 		},
@@ -272,16 +272,16 @@ func (s *Service) HaltHandler() event.Handler {
 		}
 
 		// Сообщение: пришельцы блокировали планету.
-		body := fmt.Sprintf(
-			"Инопланетяне (тир %d) установили контроль над вашей планетой. "+
-				"Их флот останется на орбите до %s. Пока они здесь, они отражают "+
-				"атаки других игроков — но и сами забирают часть ресурсов.",
-			hp.Tier, holdingStart.Add(dur).Format("2006-01-02 15:04 MST"),
-		)
+		holdVars := map[string]string{
+			"tier":  fmt.Sprintf("%d", hp.Tier),
+			"until": holdingStart.Add(dur).Format("2006-01-02 15:04 MST"),
+		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
-			VALUES ($1, $2, NULL, 1, 'Пришельцы удерживают планету', $3)
-		`, ids.New(), hp.UserID, body); err != nil {
+			VALUES ($1, $2, NULL, 1, $3, $4)
+		`, ids.New(), hp.UserID,
+			s.tr("alien", "holding.startSubject", nil),
+			s.tr("alien", "holding.startBody", holdVars)); err != nil {
 			return fmt.Errorf("alien halt: message: %w", err)
 		}
 		return nil
@@ -312,18 +312,17 @@ func (s *Service) HoldingHandler() event.Handler {
 			return fmt.Errorf("alien holding: check planet: %w", err)
 		}
 
-		body := "Инопланетяне покинули вашу планету — флот ушёл в глубокий космос."
+		body := s.tr("alien", "holding.leftBody", nil)
 		if hp.PaidTimes > 0 {
-			body = fmt.Sprintf(
-				"Инопланетяне покинули вашу планету. За время удержания вы "+
-					"заплатили им %d кредитов за %d продлений.",
-				hp.PaidCredit, hp.PaidTimes,
-			)
+			body = s.tr("alien", "holding.leftPaidBody", map[string]string{
+				"credits": fmt.Sprintf("%d", hp.PaidCredit),
+				"times":   fmt.Sprintf("%d", hp.PaidTimes),
+			})
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
-			VALUES ($1, $2, NULL, 1, 'Пришельцы ушли', $3)
-		`, ids.New(), hp.UserID, body); err != nil {
+			VALUES ($1, $2, NULL, 1, $3, $4)
+		`, ids.New(), hp.UserID, s.tr("alien", "holding.leftSubject", nil), body); err != nil {
 			return fmt.Errorf("alien holding: message: %w", err)
 		}
 		return nil
@@ -368,11 +367,11 @@ func (s *Service) HoldingAIHandler() event.Handler {
 		// что-то делают, остальные 6 — заглушки, поэтому вероятность
 		// 2×(1/8) ≈ 0.25 на каждое, итого ~50/50 между активными.
 		if rand.IntN(2) == 0 {
-			if err := unloadAlienResources(ctx, tx, hp); err != nil {
+			if err := unloadAlienResources(ctx, tx, hp, s.tr); err != nil {
 				return fmt.Errorf("alien holding_ai: unload: %w", err)
 			}
 		} else {
-			closed, err := extractAlienShips(ctx, tx, hp)
+			closed, err := extractAlienShips(ctx, tx, hp, s.tr)
 			if err != nil {
 				return fmt.Errorf("alien holding_ai: extract: %w", err)
 			}
@@ -402,7 +401,7 @@ func (s *Service) HoldingAIHandler() event.Handler {
 // unloadAlienResources — onUnloadAlienResoursesAI: 7–10% ресурсов планеты
 // добавляется на склад (упрощение — в legacy возвращаются РАНЕЕ
 // захваченные, но эта история в payload не хранится; см. simplifications).
-func unloadAlienResources(ctx context.Context, tx pgx.Tx, hp holdingPayload) error {
+func unloadAlienResources(ctx context.Context, tx pgx.Tx, hp holdingPayload, tr func(string, string, map[string]string) string) error {
 	var curMetal, curSil, curHydro float64
 	if err := tx.QueryRow(ctx, `
 		SELECT metal, silicon, hydrogen FROM planets
@@ -427,15 +426,17 @@ func unloadAlienResources(ctx context.Context, tx pgx.Tx, hp holdingPayload) err
 	`, giftM, giftS, giftH, hp.PlanetID); err != nil {
 		return fmt.Errorf("gift: %w", err)
 	}
-	body := fmt.Sprintf(
-		"Инопланетяне выгрузили на вашу планету ресурсы: "+
-			"металл +%d, кремний +%d, водород +%d.",
-		giftM, giftS, giftH,
-	)
+	giftVars := map[string]string{
+		"metal":   fmt.Sprintf("%d", giftM),
+		"silicon": fmt.Sprintf("%d", giftS),
+		"hydrogen": fmt.Sprintf("%d", giftH),
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
-		VALUES ($1, $2, NULL, 1, 'Подарок пришельцев', $3)
-	`, ids.New(), hp.UserID, body); err != nil {
+		VALUES ($1, $2, NULL, 1, $3, $4)
+	`, ids.New(), hp.UserID,
+		tr("alien", "holding.giftSubject", nil),
+		tr("alien", "holding.giftBody", giftVars)); err != nil {
 		return fmt.Errorf("message: %w", err)
 	}
 	return nil
@@ -446,7 +447,7 @@ func unloadAlienResources(ctx context.Context, tx pgx.Tx, hp holdingPayload) err
 // Убывание: quantity = min(q-1, ceil(q × 0.01 × times²)) — где times = 1
 // (у нас control_times не продвигается, упрощение). Если после
 // уменьшения флот пуст — HOLDING закрывается, возвращаем closed=true.
-func extractAlienShips(ctx context.Context, tx pgx.Tx, hp holdingPayload) (bool, error) {
+func extractAlienShips(ctx context.Context, tx pgx.Tx, hp holdingPayload, tr func(string, string, map[string]string) string) (bool, error) {
 	// Загружаем актуальный payload HOLDING (может быть обновлён после
 	// боя со сторонним атакующим через CloseHoldingIfWiped).
 	var holdingPayloadBytes []byte
@@ -508,11 +509,12 @@ func extractAlienShips(ctx context.Context, tx pgx.Tx, hp holdingPayload) (bool,
 		`, hp.HoldingEventID); err != nil {
 			return false, fmt.Errorf("close holding: %w", err)
 		}
-		body := "Инопланетяне постепенно покинули вашу планету — их флот рассеялся."
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
-			VALUES ($1, $2, NULL, 1, 'Пришельцы рассеялись', $3)
-		`, ids.New(), hp.UserID, body); err != nil {
+			VALUES ($1, $2, NULL, 1, $3, $4)
+		`, ids.New(), hp.UserID,
+			tr("alien", "holding.scatteredSubject", nil),
+			tr("alien", "holding.scatteredBody", nil)); err != nil {
 			return false, fmt.Errorf("message: %w", err)
 		}
 		return true, nil
