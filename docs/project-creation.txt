@@ -8118,10 +8118,28 @@ benefit/lifetime), добавить поле tKey для i18n-маппинга, 
 3. **benefit/fullDesc удалены безвозвратно**: эти строки были только UI-hint,
    не игровой механикой. Будущий аналог — отдельная wiki-страница юнита.
 
-### Что осталось в Ф.5
+================================================================================
+ИТЕРАЦИЯ 33-batch-8/9 (2026-04-26) — Ф.5 завершена: nameOf/fmtReqs i18n
+================================================================================
 
-- Экраны ещё рендерят `entry.name` (snake_case) вместо `t('info', entry.tKey)`.
-  Это следующий шаг: обновить BuildingsScreen, ResearchScreen, ShipyardScreen,
-  RepairScreen, UnitInfoScreen, BattleSimScreen (nameOf calls).
-- fmtReqs() возвращает snake_case имена — нужно передать t-функцию.
-- EN переводы для новых ключей.
+### Что сделано
+
+**batch-8**: Все 19 screen-файлов обновлены:
+- nameOf(id, t?) и buildingName(id, t?) расширены опциональным параметром
+  translator (info-группа); при omit — возвращают snake_case fallback.
+- Во всех компонентах добавлен `const { t: ti } = useTranslation('info')` и
+  вызовы `nameOf(id)` → `nameOf(id, ti)`.
+- UnitPicker в BattleSimScreen получает `tInfo` пропом (нельзя вызывать хуки
+  внутри map, а пикер рендерится итерацией).
+
+**batch-9**: fmtReqs i18n:
+- `fmtReqs(reqs, t?)` — nameByKey внутри теперь принимает t для перевода.
+- Все 4 call sites (ResearchScreen, ShipyardScreen, RepairScreen,
+  UnitInfoScreen ×2) передают ti.
+
+### Что осталось в Ф.5 (завершена)
+
+Ф.5 полностью завершена. Остаток по плану 33:
+- Ф.6: EN-переводы всех TODO: en ключей (~ 200+ ключей).
+- Ф.7: backend automsg migration (Bundle.Tr для ошибок/уведомлений).
+- Ф.8: CI lint-правило на запрет кириллицы в .tsx/.ts вне i18n.
