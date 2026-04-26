@@ -2,9 +2,9 @@
 SHELL := /bin/bash
 
 ROOT := $(shell pwd)
-BACKEND := $(ROOT)/game/backend
-FRONTEND := $(ROOT)/game/frontend
-PORTAL_FRONTEND := $(ROOT)/portal/frontend
+BACKEND := $(ROOT)/projects/game-nova/backend
+FRONTEND := $(ROOT)/projects/game-nova/frontend
+PORTAL_FRONTEND := $(ROOT)/projects/portal/frontend
 MIGRATIONS := $(ROOT)/migrations
 
 GOOSE_DRIVER := postgres

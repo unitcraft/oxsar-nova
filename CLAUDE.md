@@ -22,16 +22,16 @@ make lint          # все линтеры
 
 ## Структура
 
-- `game/backend/cmd/server`   — HTTP/WS entry point
-- `game/backend/cmd/worker`   — фоновый обработчик events
-- `game/backend/cmd/tools`    — CLI-утилиты (reseed, ресинк артефактов)
-- `game/backend/internal/*`   — домены (auth, planet, fleet, battle, …)
-- `game/backend/pkg/*`        — общие утилиты (rng, proto, ids)
-- `game/frontend/src/api`     — сгенерированный клиент из OpenAPI
-- `game/frontend/src/features/<domain>` — вертикальные срезы UI
-- `portal/frontend/`          — портал oxsar-nova.ru (Vite/React)
-- `portal/backend/` (plan 36) — portal API (новости, предложения)
-- `auth/backend/` (plan 36)   — auth-service (JWT, OAuth, credits)
+- `projects/game-nova/backend/cmd/server`   — HTTP/WS entry point
+- `projects/game-nova/backend/cmd/worker`   — фоновый обработчик events
+- `projects/game-nova/backend/cmd/tools`    — CLI-утилиты (reseed, ресинк артефактов)
+- `projects/game-nova/backend/internal/*`   — домены (auth, planet, fleet, battle, …)
+- `projects/game-nova/backend/pkg/*`        — общие утилиты (rng, proto, ids)
+- `projects/game-nova/frontend/src/api`     — сгенерированный клиент из OpenAPI
+- `projects/game-nova/frontend/src/features/<domain>` — вертикальные срезы UI
+- `projects/portal/frontend/`          — портал oxsar-nova.ru (Vite/React)
+- `projects/portal/backend/` (plan 36) — portal API (новости, предложения)
+- `projects/auth/backend/` (plan 36)   — auth-service (JWT, OAuth, credits)
 - `migrations/`               — goose SQL-миграции
 - `configs/`                  — YAML-справочники (источник истины для юнитов/зданий)
 - `api/openapi.yaml`          — источник истины для REST-контрактов
@@ -47,7 +47,7 @@ make lint          # все линтеры
 - Ошибки заворачиваются через `fmt.Errorf("context: %w", err)`; между слоями —
   типизированные sentinel-ошибки (`battle.ErrInvalidInput`).
 - Логирование: `log/slog` с полями `user_id`, `planet_id`, `event_id`, `trace_id`.
-- БД: только через `sqlc`-сгенерированные методы + сырой SQL в `game/backend/queries/`
+- БД: только через `sqlc`-сгенерированные методы + сырой SQL в `projects/game-nova/backend/queries/`
   для сложной агрегации. Транзакции — `repo.InTx(ctx, fn)`.
 - Запрещено: `init()` с побочными эффектами, глобальные изменяемые переменные
   (кроме конфига, загруженного при старте), `panic` в прод-коде (кроме bootstrap),

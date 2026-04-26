@@ -2,16 +2,16 @@
 # данными для E2E (5 игроков, альянс [UT], сообщения). Ждёт успешной
 # миграции и работает до завершения сида.
 #
-# См. game/backend/cmd/tools/testseed/main.go — пароль и UUID фиксированные.
+# См. projects/game-nova/backend/cmd/tools/testseed/main.go — пароль и UUID фиксированные.
 
 FROM golang:1.23-alpine AS build
 WORKDIR /src
 
-COPY game/backend/go.mod game/backend/go.sum ./game/backend/
-RUN cd game/backend && go mod download
+COPY projects/game-nova/backend/go.mod projects/game-nova/backend/go.sum ./projects/game-nova/backend/
+RUN cd projects/game-nova/backend && go mod download
 
-COPY game/backend ./game/backend
-RUN cd game/backend && \
+COPY projects/game-nova/backend ./projects/game-nova/backend
+RUN cd projects/game-nova/backend && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/testseed ./cmd/tools/testseed
 
 FROM alpine:3.20

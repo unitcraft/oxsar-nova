@@ -13,12 +13,12 @@ WORKDIR /src
 
 # Сначала копируем только манифест — кешируем слой go mod download,
 # если go.mod/go.sum не менялись.
-COPY game/backend/go.mod game/backend/go.sum ./game/backend/
-RUN cd game/backend && go mod download
+COPY projects/game-nova/backend/go.mod projects/game-nova/backend/go.sum ./projects/game-nova/backend/
+RUN cd projects/game-nova/backend && go mod download
 
 # Копируем исходники и собираем оба бинаря.
-COPY game/backend ./game/backend
-RUN cd game/backend && \
+COPY projects/game-nova/backend ./projects/game-nova/backend
+RUN cd projects/game-nova/backend && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server       ./cmd/server && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/worker       ./cmd/worker && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/auth-service ./cmd/auth-service && \
