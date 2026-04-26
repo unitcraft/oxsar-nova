@@ -22,6 +22,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/portalsvc"
 	"github.com/oxsar/nova/backend/internal/storage"
 	"github.com/oxsar/nova/backend/internal/universe"
+	"github.com/oxsar/nova/backend/pkg/jwtrs"
 	"github.com/oxsar/nova/backend/pkg/metrics"
 )
 
@@ -40,7 +41,7 @@ func run() error {
 
 	addr := envStr("PORTAL_ADDR", ":8090")
 	dbURL := mustEnv("PORTAL_DB_URL")
-	jwksURL := mustEnv("AUTH_JWKS_URL")
+	jwksURL := envStr("AUTH_JWKS_URL", "")
 	authServiceURL := envStr("AUTH_SERVICE_URL", "")
 	universesPath := envStr("UNIVERSES_CONFIG", "configs/universes.yaml")
 	allowedOrigins := strings.Split(envStr("ALLOWED_ORIGINS",
@@ -56,9 +57,16 @@ func run() error {
 	}
 	defer pool.Close()
 
-	ver, err := auth.LoadVerifier(ctx, jwksURL)
-	if err != nil {
-		return err
+	var ver *jwtrs.Verifier
+	if jwksURL != "" {
+		if v, verErr := auth.LoadVerifier(ctx, jwksURL); verErr != nil {
+			log.WarnContext(ctx, "JWKS not loaded — protected endpoints will reject all requests",
+				slog.String("err", verErr.Error()))
+		} else {
+			ver = v
+		}
+	} else {
+		log.WarnContext(ctx, "AUTH_JWKS_URL not set — auth middleware disabled (dev mode)")
 	}
 
 	reg, err := universe.NewRegistry(universesPath)
@@ -96,9 +104,12 @@ func run() error {
 	r.Get("/api/feedback/{id}", h.GetFeedback)
 	r.Get("/api/feedback/{id}/comments", h.ListComments)
 
-	// Защищённые endpoints (требуют JWT от auth-service)
+	// Защищённые endpoints (требуют JWT от auth-service).
+	// В dev-режиме без JWKS middleware пропускает все запросы (ver == nil).
 	r.Group(func(pr chi.Router) {
-		pr.Use(portalsvc.Middleware(ver))
+		if ver != nil {
+			pr.Use(portalsvc.Middleware(ver))
+		}
 		pr.Post("/api/feedback", h.CreateFeedback)
 		pr.Post("/api/feedback/{id}/vote", h.VoteFeedback)
 		pr.Post("/api/feedback/{id}/comments", h.AddComment)
