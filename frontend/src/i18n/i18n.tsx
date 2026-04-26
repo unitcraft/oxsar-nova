@@ -23,14 +23,13 @@
 //   3) "[group.key]" — маркер отсутствия ключа (виден в UI, чтобы
 //      разработчик сразу заметил и добавил перевод)
 //
-// Плейсхолдеры %s и %d подставляются через sprintfLite — минимальная
-// реализация для совместимости с legacy-текстами.
+// Плейсхолдеры — только именованные {{name}}, подставляются через vars.
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 
-const LOCALE_VERSION = 1;
+const LOCALE_VERSION = 2;
 const LOCALE_STORAGE_PREFIX = 'oxsar.locale.v';
 
 function storageKey(lang: string): string {
@@ -114,52 +113,48 @@ export function I18nProvider({ lang, children }: { lang: Lang; children: ReactNo
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
-// useTranslation возвращает `t(group, key, ...args)`. Если группа
-// известна заранее (типично — один компонент работает с одной
-// группой), удобнее передать её в параметре хука: useTranslation('auth').
+// useTranslation возвращает `t` и `tf`.
 //
-// Форма с дефолтом: tf(group, key, fallback, ...args). Используется,
-// когда ключа может не быть в словаре (например, локаль не прогнана
-// import-phrases или русский текст новый — нет в legacy na_phrases).
-// В этом случае вместо "[group.key]" возвращается fallback, к которому
-// применяется sprintfLite.
+// t(group, key, vars?) — основная форма.
+// Если группа известна заранее, удобнее передать её в параметре хука:
+// useTranslation('auth') → t('myKey').
+//
+// tf(group, key, fallback, vars?) — форма с fallback. Используется,
+// когда ключ может отсутствовать в словаре (новый текст ещё не добавлен).
+// Вместо "[group.key]" возвращается fallback.
+//
+// vars — именованные плейсхолдеры {{name}} → значение.
 export function useTranslation(defaultGroup?: string) {
   const ctx = useContext(I18nContext);
   if (!ctx) {
     throw new Error('useTranslation must be used inside <I18nProvider>');
   }
 
-  function t(groupOrKey: string, keyOrArgs?: string | unknown, ...rest: unknown[]): string {
+  function t(groupOrKey: string, keyOrVars?: string | Record<string, string>, vars?: Record<string, string>): string {
     let group: string;
     let key: string;
-    let args: unknown[];
+    let v: Record<string, string> | undefined;
 
-    if (defaultGroup && typeof keyOrArgs !== 'string') {
+    if (defaultGroup && typeof keyOrVars !== 'string') {
       group = defaultGroup;
       key = groupOrKey;
-      args = keyOrArgs === undefined ? rest : [keyOrArgs, ...rest];
+      v = keyOrVars;
     } else {
       group = groupOrKey;
-      key = (keyOrArgs as string) ?? '';
-      args = rest;
+      key = (keyOrVars as string) ?? '';
+      v = vars;
     }
 
     const template = lookup(ctx.dict, group, key) ?? lookup(ctx.fallback, group, key);
     if (template === null) {
       return `[${group}.${key}]`;
     }
-    if (args.length === 0) {
-      return template;
-    }
-    return sprintfLite(template, args);
+    return interpolate(template, v);
   }
 
-  function tf(group: string, key: string, fallback: string, ...args: unknown[]): string {
+  function tf(group: string, key: string, fallback: string, vars?: Record<string, string>): string {
     const template = lookup(ctx.dict, group, key) ?? lookup(ctx.fallback, group, key) ?? fallback;
-    if (args.length === 0) {
-      return template;
-    }
-    return sprintfLite(template, args);
+    return interpolate(template, vars);
   }
 
   return { t, tf, lang: ctx.lang, loading: ctx.loading };
@@ -173,15 +168,7 @@ function lookup(d: LocaleDict | null, group: string, key: string): string | null
   return v === undefined ? null : v;
 }
 
-// sprintfLite — минимальная реализация %s/%d, достаточная для legacy
-// строк. Не поддерживает %-флаги, ширину и точность — в na_phrases
-// этого не встречается. Не используем полноценный sprintf-js, чтобы
-// не тянуть зависимость ради десятка кейсов.
-function sprintfLite(tmpl: string, args: unknown[]): string {
-  let i = 0;
-  return tmpl.replace(/%[sd]/g, (m) => {
-    const v = args[i++];
-    if (v === undefined) return m;
-    return String(v);
-  });
+function interpolate(tmpl: string, vars?: Record<string, string>): string {
+  if (!vars) return tmpl;
+  return tmpl.replace(/\{\{(\w+)\}\}/g, (m, name: string) => vars[name] ?? m);
 }

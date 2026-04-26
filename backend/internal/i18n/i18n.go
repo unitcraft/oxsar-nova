@@ -1,21 +1,19 @@
 // Package i18n — locale loader и Tr() для серверных сообщений.
 //
-// Источник истины — configs/i18n/ru.yml и en.yml (см. §10.3 ТЗ),
-// сгенерированные cmd/tools/import-phrases из legacy-таблицы
-// na_phrases (1489 ключей).
+// Источник истины — configs/i18n/ru.yml и en.yml (см. §10.3 ТЗ).
 //
 // Принципы:
 //   - immutable: загружается один раз на старте, в рантайме read-only;
 //   - fallback: если ключа нет в запрошенном языке, падаем в ru;
 //     если и в ru нет — возвращаем маркер "[group.key]";
-//   - плейсхолдеры %s/%d — через fmt.Sprintf, args прокидываются
-//     напрямую (именно так в legacy, например в AutoMsg).
+//   - плейсхолдеры — только именованные {{name}}, подставляются через vars.
 package i18n
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -73,19 +71,18 @@ func Load(dir string, fallback Lang) (*Bundle, error) {
 // Tr возвращает переведённую строку.
 //
 // Порядок поиска:
-//   1. locales[lang][group][key]
-//   2. locales[fallback][group][key]
-//   3. "[group.key]"
+//  1. locales[lang][group][key]
+//  2. locales[fallback][group][key]
+//  3. "[group.key]"
 //
-// Если args пустые — возвращает шаблон без форматирования. Иначе
-// применяет fmt.Sprintf.
-func (b *Bundle) Tr(lang Lang, group, key string, args ...any) string {
+// vars — именованные плейсхолдеры {{name}} → значение. Nil допустим.
+func (b *Bundle) Tr(lang Lang, group, key string, vars map[string]string) string {
 	if s, ok := b.lookup(lang, group, key); ok {
-		return format(s, args)
+		return interpolate(s, vars)
 	}
 	if lang != b.fallback {
 		if s, ok := b.lookup(b.fallback, group, key); ok {
-			return format(s, args)
+			return interpolate(s, vars)
 		}
 	}
 	return "[" + group + "." + key + "]"
@@ -128,9 +125,17 @@ func (b *Bundle) lookup(lang Lang, group, key string) (string, bool) {
 	return v, ok
 }
 
-func format(tmpl string, args []any) string {
-	if len(args) == 0 {
+var rePlaceholder = regexp.MustCompile(`\{\{(\w+)\}\}`)
+
+func interpolate(tmpl string, vars map[string]string) string {
+	if len(vars) == 0 {
 		return tmpl
 	}
-	return fmt.Sprintf(tmpl, args...)
+	return rePlaceholder.ReplaceAllStringFunc(tmpl, func(m string) string {
+		name := m[2 : len(m)-2]
+		if v, ok := vars[name]; ok {
+			return v
+		}
+		return m
+	})
 }
