@@ -83,8 +83,8 @@ defined('IPCHECK') or define('IPCHECK', false);			// Enables IP check for sessio
 define("LOGIN_REQUIRED", true);		// If false, access can be handled by permissions.
 define("EXEC_CRON", true); // OXSAR_RELEASED);			// Enables cron jobs.
 
-define("MC_SERVER", 'localhost'); // memcache server
-define("MC_PORT", 11211);         // memcache port
+define("MC_SERVER", getenv('MC_SERVER') ?: 'memcached'); // memcache server (docker service name)
+define("MC_PORT",   (int)(getenv('MC_PORT') ?: 11211));
 
 // Загружаем игровые константы из config/
 // GAME_UNIVERSE определяет какой конфиг вселенной использовать (dm, dominator, niro, ...)

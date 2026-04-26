@@ -458,6 +458,8 @@ projects/game-origin/
 | 37.4 | Перекомпоновка файлов в новую структуру + ENV-based конфиг + обновление путей include/require + замена DB_MYSQL_PDO на чистый PDO (без Yii) | средний |
 | 37.5 | Docker-compose: mysql + php-fpm, первый запуск; наполнение схемой из `new-for-dm/schema.sql` + `data.sql` | средний |
 | 37.5b | **Слияние ext/ → game/** (отступление от §198 «оставляем нетронутым»): вместо отдельного слоя ext-классы вмерживаются в базовые. Причина — упрощение архитектуры и забывчивость о том, что ext имеет приоритет; стало источником багов. См. подробности ниже. | средний |
+| 37.5c | **Event-monitor воркер + стартовая планета**: PHP-аналог `NewEHMonitorCommand` запускает `EventHandler::goThroughEvents()` в цикле; при первом логине вставляется event `EVENT_COLONIZE_NEW_USER_PLANET` (как в legacy `BaseWebUser`). См. подробности ниже. | средний |
+| 37.5d | **UI-багфиксы первого запуска**: «Пополнить кредиты» наезжает на ресурсы, прочие layout-проблемы. См. подробности ниже. | низкий |
 | 37.6 | Аудит багов и дыр (SQL-инъекции, XSS, CSRF, race cond.) | высокий |
 | 37.7 | Исправление критических уязвимостей (безопасность) | высокий |
 | 37.8 | Исправление игровых дыр (не меняя баланс) | высокий |
@@ -509,3 +511,188 @@ override-слоёв не будет).
 **Памятка для будущего AI/разработчика**: записи о приоритете ext в memory
 актуальны только для **legacy-кода** (`d:\Sources\oxsar2`), но НЕ для
 game-origin — здесь ext-слой убран.
+
+---
+
+## 37.5c — Event-monitor воркер + стартовая планета
+
+### Контекст
+
+Сейчас новый юзер видит «колонисты ищут планету», но планета никогда не
+появляется. Причина: в legacy планета создаётся не синхронно при регистрации,
+а через **асинхронное событие** `EVENT_COLONIZE_NEW_USER_PLANET`, которое
+обрабатывается отдельным воркером:
+
+1. **Триггер** — `BaseWebUser::checkAndCreateHomePlanet()` (Yii-фильтр на
+   каждый HTTP-запрос). Проверяет `na_user.hp IS NULL`, если нет уже
+   запланированного события — вставляет `EVENT_COLONIZE_NEW_USER_PLANET` с
+   `time = now() + COLONIZE_NEW_USER_PLANET_TIME` (3 сек по дефолту).
+2. **Обработчик** — `cron-event-monitor.sh` через системный cron раз в
+   минуту запускает `console.php NewEHMonitor` (Yii-команда). Команда
+   живёт ~125 сек, в цикле вызывает `EventHandler::goThroughEvents(100)`
+   каждые 50ms. При обработке `EVENT_COLONIZE_NEW_USER_PLANET` →
+   `EventHandler::colonize()` → `new PlanetCreator($userid)` → планета в БД +
+   `na_user.curplanet/hp` обновляются.
+
+У нас:
+- Yii выкинут → `BaseWebUser` нет → событие никто не вставляет.
+- Воркера нет → даже если вставить событие вручную, оно не обработается.
+- `NS::startEvents()` вызывается на каждом HTTP-запросе, но это **не главный
+  обработчик** — это только обновление event-stack для текущего юзера, и оно
+  rate-limited через memcache (раз в секунду на юзера). Memcache в
+  контейнере **не установлен** (`Memcached` class not found), что отдельно
+  ломает rate-limit.
+
+### Подход
+
+Сделать **два независимых компонента**, повторяющих legacy-механизм:
+
+#### 1. Триггер `OnboardingService::ensureColonizationScheduled($userid)`
+
+- Новый файл `projects/game-origin/src/game/OnboardingService.class.php`
+- Один статический метод — копия логики `BaseWebUser:65-114` без Yii:
+  - Если `na_user.hp IS NULL` И нет события `EVENT_COLONIZE_NEW_USER_PLANET`
+    в `processed = WAIT` для этого юзера → `INSERT events`.
+  - Защита от race condition: `INSERT ... ON DUPLICATE KEY` нельзя (нет
+    уникального индекса), используем `SELECT FOR UPDATE` в транзакции
+    или короткий advisory-lock через `GET_LOCK("colonize:$userid", 0)`
+    (legacy использовал Yii cache.add — у нас аналог через MySQL lock).
+- Вызывать из `Core::setUser()` (после успешной JWT-аутентификации, перед
+  `setUser` финализацией).
+
+#### 2. Воркер `projects/game-origin/worker/event-monitor.php`
+
+**Стратегия (выбран Вариант 2 из 4 рассмотренных)**: PHP-скрипт живёт
+ограниченное время (~125 сек) и сам выходит, docker-сервис с
+`restart: unless-stopped` поднимает его заново.
+
+Контекст выбора:
+- В legacy этот скрипт периодически падал по непонятным причинам
+  (memory leaks / stale connections / etc.) — поэтому короткий life-cycle
+  и проверка `oxsar-monitor-manager.txt` для предотвращения дублирования.
+- Docker даёт **более простую** реализацию того же подхода:
+  - Не нужен системный cron внутри контейнера.
+  - Не нужен token-файл — docker гарантирует один экземпляр сервиса
+    (если не делать `--scale=2`).
+  - Не нужна `ps grep` защита от параллельного запуска — гарантирует docker.
+  - При краше PHP (`exit 1` или сегфолт) docker auto-restart через ~1-2 сек.
+  - При нескольких крашах подряд docker уходит в backoff — видно в
+    `docker compose ps`, тривиально диагностировать.
+
+Рассмотренные альтернативы:
+- **Внешний cron каждую минуту** (как в legacy) — нужен системный cron в
+  контейнере, антипаттерн docker «один контейнер — один процесс».
+- **`pcntl_fork` с auto-restart внутри одного процесса** — больше кода,
+  ещё один failure mode (родительский watchdog тоже может упасть).
+- **Supervisor внутри контейнера** — индустриальный стандарт, но
+  избыточен когда сам docker умеет restart-policy.
+
+Реализация:
+- CLI-скрипт, копия `NewEHMonitorCommand::run()` без Yii:
+  - Bootstrap через `bd_connect_info.php` + `global.inc.php` + `Core` + `NS`
+    (как `public/game.php`, но с CLI-режимом — без HTTP-роутинга).
+  - Цикл `while(time() - $start < 125)`: `EventHandler::goThroughEvents(100)`
+    → sleep 50ms если 0 обработано.
+  - **Безопасность каждой итерации**: `try/catch` вокруг
+    `goThroughEvents()` — одно битое событие не убивает цикл, exception
+    логируется в stdout, цикл продолжается.
+  - **Защита от мёртвого MySQL connection**: перед каждой итерацией
+    короткий `SELECT 1` — при разрыве выходим с `exit 1`, docker
+    перезапустит со свежим коннектом (вместо «висящего» процесса).
+  - Logging: stdout (docker compose logs подберёт).
+
+В docker-compose.yml добавить сервис `event-monitor`:
+```yaml
+event-monitor:
+  build: { context: .., dockerfile: docker/Dockerfile.php }
+  command: php /var/www/worker/event-monitor.php
+  restart: unless-stopped  # перезапускает после 125-сек выхода
+  depends_on: [mysql]
+  volumes: [ ../:/var/www ]
+```
+
+#### 3. Memcache
+
+**Решение**: ставим **настоящий Memcached** (как в проде), не заглушку.
+
+Контекст: класс `MemCacheHandler` уже устроен как graceful no-op — при
+отсутствии расширения `Memcache` всё работает в degraded-режиме. Но:
+- Использование (8 точек): rate-limit `EventHandler::startEvents` (раз в
+  секунду на юзера), кеш кредитов в `UserList`, кеш счётчиков `AlienAI`,
+  и др. Без кеша каждый HTTP-запрос делает лишний SQL — для прод-нагрузки
+  неприемлемо.
+- Лучше один раз поднять как в проде, чем потом ловить деградацию.
+
+Реализация:
+- Сервис `memcached:alpine` в `docker-compose.yml`.
+- В `Dockerfile.php` добавить расширение `memcache` (legacy использует
+  старое API `class Memcache`, не `Memcached` — см. `MemCacheHandler:24`):
+  ```dockerfile
+  RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS zlib-dev \
+      && pecl install memcache-8.2 \
+      && docker-php-ext-enable memcache \
+      && apk del .build-deps
+  ```
+- В `bd_connect_info.php` константы `MC_SERVER=memcached`, `MC_PORT=11211`.
+
+### Приёмочный тест
+
+1. `dev-login.php` → JWT cookie → первый GET `/?go=Main`.
+2. В БД сразу появляется event `EVENT_COLONIZE_NEW_USER_PLANET` для юзера.
+3. Через ~5 сек воркер его обрабатывает — в `na_planet` появляется запись,
+   `na_user.curplanet` и `hp` заполнены.
+4. Повторный GET `/?go=Main` показывает страницу планеты с ресурсами,
+   а не «колонисты ищут».
+5. Логи воркера в `docker compose logs event-monitor` — без fatal/warnings.
+
+### Риски
+
+- **EventHandler после слияния не тестировался end-to-end** — это первый
+  реальный прогон обработки событий. Возможны баги от слияния, которые
+  всплывут только сейчас. Готов чинить по мере выявления.
+- **Race condition при первом логине из нескольких вкладок** одновременно —
+  triггер должен быть идемпотентен. Отсюда необходимость advisory-lock.
+- **Воркер уходит в бесконечный цикл при ошибке** — если `goThroughEvents`
+  бросает exception, не катит. Обернуть в `try/catch + exit 1` — restart
+  поднимет заново.
+
+---
+
+## 37.5d — UI-багфиксы первого запуска
+
+### 1. «Пополнить кредиты» наезжает на ресурсы
+
+**Симптом** (скриншот пользователя): заголовок «Пополнить кредиты» в
+header'е перекрывает строку с балансами Металл/Кремний/Водород/Энергия.
+
+**Подозреваемый источник** (по grep `templates/`): `payment.tpl`
+включается куда-то в header через `{include}` или появляется как
+absolute-позиционированный блок. Найти точно — после починки event-monitor
+(когда страница перестанет быть «заглушкой колонистов» и можно будет
+визуально отлавливать настоящие layout-проблемы).
+
+**Подход**:
+1. Открыть страницу в браузере с DevTools → найти DOM-элемент «Пополнить
+   кредиты», посмотреть его computed style и родителей.
+2. Найти источник (`grep -r "Пополнить кредиты\|REPLENISH" templates/`).
+3. Если виноват `position: absolute` без правильного container — поправить
+   CSS. Если виновата структура DOM — поправить шаблон.
+4. **Не править глобальный CSS** без необходимости — у legacy огромный
+   `style.css`/`layout.css`, любая правка может сломать другие страницы.
+   Предпочесть точечный fix в шаблоне.
+
+### 2. Прочие layout-проблемы
+
+По мере появления (после 37.5c и реальной игры новым юзером):
+- Меню overflow на узких экранах
+- Таблицы с числами без выравнивания
+- Иконки с broken `src` (legacy ссылается на пути соцсетей, которых нет)
+
+Каждый багфикс — отдельный коммит, минимальная правка, сначала шаблон,
+потом CSS (если без CSS никак).
+
+### Что НЕ делаем в 37.5d
+
+- Не редизайним. UI остаётся legacy-style (`.tpl` шаблоны).
+- Не меняем балансные числа на странице (это 37.6+).
+- Не добавляем новые UI-фичи — только фиксы существующих.

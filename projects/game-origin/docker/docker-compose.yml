@@ -18,6 +18,11 @@ services:
       timeout: 3s
       retries: 10
 
+  memcached:
+    image: memcached:1.6-alpine
+    restart: unless-stopped
+    command: ["-m", "64"]
+
   php:
     build:
       context: .

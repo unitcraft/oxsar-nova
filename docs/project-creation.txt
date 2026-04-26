@@ -8406,3 +8406,39 @@ VK-платежей в нём остался невалидный синтакс
 (`d:\Sources\oxsar2`), не для game-origin.
 
 **Коммиты**: 1 (слияние ext/ → game/, ~30 файлов).
+
+---
+
+## Итерация 37.5c.1 (2026-04-27) — Memcache в инфраструктуру game-origin
+
+**Задача**: Поднять настоящий Memcached как в проде (не заглушка), чтобы
+`MemCacheHandler` работал не в degraded-режиме. Подготовка к event-monitor
+воркеру (37.5c).
+
+**Контекст**: класс `MemCacheHandler` уже устроен как graceful no-op —
+при отсутствии расширения `Memcache` (legacy old API, не `Memcached`)
+все `get/set/add` молча игнорируются. Использование (8 точек):
+- `EventHandler::startEvents` — rate-limit goThroughEvents (раз в сек на юзера)
+- `UserList::getCredit` — кеш кредитов на 1-2 часа
+- `AlienAI` — кеш счётчиков AI
+- `Functions::isAgreementShown` — кеш ArgeementTime на 10 мин
+
+Без кеша каждый HTTP-запрос делает лишний SQL — для прод-нагрузки
+неприемлемо. Лучше один раз поднять как в проде, чем потом ловить
+деградацию. Пользователь явно сказал «как в проде, не заглушку».
+
+**Изменения**:
+- `docker-compose.yml`: добавлен сервис `memcached:1.6-alpine` с `-m 64`
+  (64 MB лимит — для dev хватит).
+- `Dockerfile.php`: добавлено расширение `memcache-8.2` через PECL
+  (legacy использует старое API `class Memcache`, см.
+  `MemCacheHandler.class.php:24` — поэтому именно `memcache`, не
+  `memcached`). Сборка через `apk .build-deps` + `pecl install` +
+  `apk del .build-deps` чтобы не раздувать финальный image.
+- `src/global.inc.php`: `MC_SERVER` берётся из ENV (`memcached` —
+  docker service name) с fallback на старое значение.
+
+**Что дальше (37.5c.2)**: OnboardingService для триггера
+EVENT_COLONIZE_NEW_USER_PLANET при первом логине.
+
+**Коммиты**: 1.
