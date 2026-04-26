@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { Confirm } from '@/ui/Confirm';
+import { useTranslation } from '@/i18n/i18n';
 
 interface ChatMessage {
   id: string;
@@ -20,6 +21,7 @@ const EMOJIS = ['😀','😂','😍','🤔','👍','👎','❤️','🔥','🎉'
 const EDIT_WINDOW_MS = 5 * 60 * 1000; // 5 минут
 
 export function ChatScreen() {
+  const { t } = useTranslation('chatUi');
   const [kind, setKind] = useState<ChannelKind>('global');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -68,7 +70,6 @@ export function ChatScreen() {
             setMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, body: msg.body, ...(msg.edited_at !== undefined ? { edited_at: msg.edited_at } : {}) } : m));
             return;
           }
-          // kind === "msg" или не задан (старые сообщения)
           setMessages((prev) => {
             const tmpIdx = prev.findIndex(
               (m) => m.id.startsWith('tmp-') && m.author_id === msg.author_id && m.body === msg.body,
@@ -90,7 +91,7 @@ export function ChatScreen() {
         if (ev.wasClean) {
           setWsError('');
         } else {
-          setWsError('Переподключение…');
+          setWsError(t('reconnecting'));
           retryTimer = setTimeout(() => {
             setWsError('');
             connect();
@@ -107,7 +108,7 @@ export function ChatScreen() {
       wsRef.current?.close();
       wsRef.current = null;
     };
-  }, [kind, token]);
+  }, [kind, token, t]);
 
   useEffect(() => {
     if (messages.length > prevLenRef.current) {
@@ -191,13 +192,12 @@ export function ChatScreen() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '72vh', minHeight: 400 }}>
-      {/* Channel tabs */}
       <div className="ox-tabs" style={{ marginBottom: 8 }}>
         <button type="button" aria-pressed={kind === 'global'} onClick={() => setKind('global')}>
-          🌐 Глобальный
+          {t('tabGlobal')}
         </button>
         <button type="button" aria-pressed={kind === 'alliance'} onClick={() => setKind('alliance')}>
-          ⚔️ Альянс
+          {t('tabAlliance')}
         </button>
       </div>
 
@@ -207,7 +207,6 @@ export function ChatScreen() {
         </div>
       )}
 
-      {/* Messages area */}
       <div
         ref={scrollBoxRef}
         className="ox-panel"
@@ -236,13 +235,12 @@ export function ChatScreen() {
               )}
 
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, flexDirection: isOwn ? 'row-reverse' : 'row', maxWidth: '78%' }}>
-                {/* Action buttons — видны рядом с пузырём */}
                 {modifiable && !isEditing && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
                     <button
                       type="button"
                       onClick={() => startEdit(m)}
-                      title="Редактировать"
+                      title={t('editTitle')}
                       style={{
                         fontSize: 13, lineHeight: 1, padding: '3px 5px',
                         background: 'rgba(99,217,255,0.12)', border: '1px solid rgba(99,217,255,0.25)',
@@ -252,7 +250,7 @@ export function ChatScreen() {
                     <button
                       type="button"
                       onClick={() => deleteMsg(m.id)}
-                      title="Удалить"
+                      title={t('deleteTitle')}
                       style={{
                         fontSize: 13, lineHeight: 1, padding: '3px 5px',
                         background: 'rgba(244,67,54,0.12)', border: '1px solid rgba(244,67,54,0.25)',
@@ -262,7 +260,6 @@ export function ChatScreen() {
                   </div>
                 )}
 
-                {/* Bubble */}
                 <div
                   style={{
                     padding: '7px 11px',
@@ -301,17 +298,15 @@ export function ChatScreen() {
                 </div>
               </div>
 
-              {/* Timestamp + edited */}
               <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginTop: 2, paddingLeft: isOwn ? 0 : 4, paddingRight: isOwn ? 4 : 0 }}>
                 {new Date(m.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                {m.edited_at && <span style={{ marginLeft: 4, fontStyle: 'italic', color: 'var(--ox-fg-muted)' }}>изм.</span>}
+                {m.edited_at && <span style={{ marginLeft: 4, fontStyle: 'italic', color: 'var(--ox-fg-muted)' }}>{t('editedMark')}</span>}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Emoji picker */}
       {showEmoji && (
         <div style={{
           display: 'flex', flexWrap: 'wrap', gap: 2, padding: '6px 8px',
@@ -331,37 +326,35 @@ export function ChatScreen() {
         </div>
       )}
 
-      {/* Delete confirm */}
       {confirmDeleteId && (
         <Confirm
-          title="Удалить сообщение?"
-          message="Сообщение будет удалено безвозвратно."
-          confirmLabel="Удалить"
+          title={t('deleteConfirmTitle')}
+          message={t('deleteConfirmMsg')}
+          confirmLabel={t('deleteConfirmBtn')}
           danger
           onConfirm={confirmDelete}
           onCancel={() => setConfirmDeleteId(null)}
         />
       )}
 
-      {/* Input bar */}
       <div style={{ display: 'flex', gap: 6 }}>
         <button
           type="button"
           onClick={() => setShowEmoji((v) => !v)}
           style={{ fontSize: 18, padding: '0 8px', flexShrink: 0, background: showEmoji ? 'var(--ox-bg-active)' : undefined, borderRadius: 6 }}
-          title="Смайлики"
+          title={t('emojiTitle')}
         >😊</button>
         <input
           ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKey}
-          placeholder="Сообщение… (Enter — отправить)"
+          placeholder={t('inputPlaceholder')}
           maxLength={500}
           style={{ flex: 1 }}
         />
         <button type="button" className="btn" onClick={send} disabled={!input.trim()}>
-          Отправить
+          {t('sendBtn')}
         </button>
       </div>
     </div>

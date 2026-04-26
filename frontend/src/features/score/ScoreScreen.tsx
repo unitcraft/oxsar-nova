@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { useTranslation } from '@/i18n/i18n';
 
 type ScoreType = 'total' | 'b' | 'r' | 'u' | 'a' | 'e';
 type MainTab = 'players' | 'alliances' | 'vacation' | 'transfers';
@@ -43,13 +44,13 @@ interface MyRank {
   type: string;
 }
 
-const SCORE_TYPES: { value: ScoreType; label: string; icon: string }[] = [
-  { value: 'total', label: 'Общий',        icon: '🏆' },
-  { value: 'b',     label: 'Постройки',    icon: '🏗' },
-  { value: 'r',     label: 'Исследования', icon: '🔬' },
-  { value: 'u',     label: 'Флот',         icon: '🛸' },
-  { value: 'a',     label: 'Достижения',   icon: '🎖' },
-  { value: 'e',     label: 'Боевой',       icon: '⚔️' },
+const SCORE_TYPES: { value: ScoreType; tkey: string; icon: string }[] = [
+  { value: 'total', tkey: 'scoreTypeTotal',         icon: '🏆' },
+  { value: 'b',     tkey: 'scoreTypeBuildings',     icon: '🏗' },
+  { value: 'r',     tkey: 'scoreTypeResearch',      icon: '🔬' },
+  { value: 'u',     tkey: 'scoreTypeFleet',         icon: '🛸' },
+  { value: 'a',     tkey: 'scoreTypeAchievements',  icon: '🎖' },
+  { value: 'e',     tkey: 'scoreTypeBattle',        icon: '⚔️' },
 ];
 
 function getPoints(e: Entry, type: ScoreType): number {
@@ -79,6 +80,7 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
   initialQuery?: string;
   onPlanetClick?: (g: number, s: number) => void;
 }) {
+  const { t } = useTranslation('scoreUi');
   const [filter, setFilter] = useState(initialQuery ?? '');
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
@@ -110,6 +112,7 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
     ? fullList.filter((e) => e.username.toLowerCase().includes(filterTrim))
     : fullList;
   const typeMeta = SCORE_TYPES.find((s) => s.value === scoreType)!;
+  const typeLabel = t(typeMeta.tkey);
 
   return (
     <>
@@ -117,7 +120,7 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
         <div className="ox-panel" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 28 }}>{MEDAL[myRank.data.rank - 1] ?? '🎯'}</span>
           <div>
-            <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>Ваше место в рейтинге «{typeMeta.label}»</div>
+            <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>{t('myRankLabel', { typeLabel })}</div>
             <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>
               #{myRank.data.rank}
             </div>
@@ -133,14 +136,14 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
             aria-pressed={scoreType === s.value}
             onClick={() => setScoreType(s.value)}
           >
-            {s.icon} {s.label}
+            {s.icon} {t(s.tkey)}
           </button>
         ))}
       </div>
 
       <input
         type="text"
-        placeholder="🔍 Фильтр по нику…"
+        placeholder={t('filterPlaceholder')}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         style={{ padding: '6px 10px', maxWidth: 300 }}
@@ -150,7 +153,7 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
         {q.isLoading && <Skeleton />}
         {!q.isLoading && list.length === 0 && (
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-muted)' }}>
-            Рейтинг пока пуст — начните строить!
+            {t('emptyPlayers')}
           </div>
         )}
         {list.length > 0 && (
@@ -159,10 +162,10 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
               <thead>
                 <tr>
                   <th style={{ width: 48 }}>#</th>
-                  <th>Игрок</th>
-                  <th style={{ width: 60 }}>Альянс</th>
-                  <th style={{ width: 100 }}>Координаты</th>
-                  <th>{typeMeta.label}</th>
+                  <th>{t('colPlayer')}</th>
+                  <th style={{ width: 60 }}>{t('colAlliance')}</th>
+                  <th style={{ width: 100 }}>{t('colCoords')}</th>
+                  <th>{typeLabel}</th>
                   {scoreType === 'total' && (
                     <>
                       <th>🏗</th>
@@ -182,30 +185,30 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
                     style={isMatch ? { background: 'rgba(99,217,255,0.08)' } : undefined}
                   >
                     <td data-label="#" className="num">{MEDAL[e.rank - 1] ?? e.rank}</td>
-                    <td data-label="Игрок" style={{ fontWeight: e.rank <= 3 ? 700 : 400 }}>{e.username}</td>
-                    <td data-label="Альянс" style={{ fontSize: 13, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
+                    <td data-label={t('colPlayer')} style={{ fontWeight: e.rank <= 3 ? 700 : 400 }}>{e.username}</td>
+                    <td data-label={t('colAlliance')} style={{ fontSize: 13, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
                       {e.alliance_tag ? `[${e.alliance_tag}]` : '—'}
                     </td>
-                    <td data-label="Координаты" style={{ fontFamily: 'var(--ox-mono)', fontSize: 14 }}>
+                    <td data-label={t('colCoords')} style={{ fontFamily: 'var(--ox-mono)', fontSize: 14 }}>
                       {e.home_galaxy != null && e.home_system != null && e.home_position != null ? (
                         <button
                           type="button"
                           onClick={() => onPlanetClick?.(e.home_galaxy!, e.home_system!)}
                           style={{ background: 'transparent', border: 'none', color: 'var(--ox-accent)', cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontSize: 'inherit' }}
-                          title="Перейти в галактику"
+                          title={t('goToGalaxy')}
                         >
                           [{e.home_galaxy}:{e.home_system}:{e.home_position}]
                         </button>
                       ) : <span style={{ color: 'var(--ox-fg-muted)' }}>—</span>}
                     </td>
-                    <td data-label={typeMeta.label} className="num" style={{ color: 'var(--ox-accent)', fontWeight: 600 }}>
+                    <td data-label={typeLabel} className="num" style={{ color: 'var(--ox-accent)', fontWeight: 600 }}>
                       {Math.round(getPoints(e, scoreType)).toLocaleString('ru-RU')}
                     </td>
                     {scoreType === 'total' && (
                       <>
-                        <td data-label="Постройки" className="num">{Math.round(e.b_points).toLocaleString('ru-RU')}</td>
-                        <td data-label="Исследования" className="num">{Math.round(e.r_points).toLocaleString('ru-RU')}</td>
-                        <td data-label="Флот" className="num">{Math.round(e.u_points).toLocaleString('ru-RU')}</td>
+                        <td data-label={t('scoreTypeBuildings')} className="num">{Math.round(e.b_points).toLocaleString('ru-RU')}</td>
+                        <td data-label={t('scoreTypeResearch')} className="num">{Math.round(e.r_points).toLocaleString('ru-RU')}</td>
+                        <td data-label={t('scoreTypeFleet')} className="num">{Math.round(e.u_points).toLocaleString('ru-RU')}</td>
                       </>
                     )}
                   </tr>
@@ -221,6 +224,7 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
 }
 
 function AlliancesTab() {
+  const { t } = useTranslation('scoreUi');
   const q = useQuery({
     queryKey: ['highscore', 'alliances'],
     queryFn: () => api.get<{ alliances: AllianceEntry[] | null }>('/api/highscore/alliances'),
@@ -234,7 +238,7 @@ function AlliancesTab() {
       {q.isLoading && <Skeleton />}
       {!q.isLoading && list.length === 0 && (
         <div style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-muted)' }}>
-          Нет альянсов с игроками
+          {t('emptyAlliances')}
         </div>
       )}
       {list.length > 0 && (
@@ -243,9 +247,9 @@ function AlliancesTab() {
             <thead>
               <tr>
                 <th style={{ width: 48 }}>#</th>
-                <th>Альянс</th>
-                <th style={{ width: 60 }}>Игроков</th>
-                <th>Очки</th>
+                <th>{t('colAlliance')}</th>
+                <th style={{ width: 60 }}>{t('colCount')}</th>
+                <th>{t('colPoints')}</th>
               </tr>
             </thead>
             <tbody>
@@ -271,6 +275,7 @@ function AlliancesTab() {
 }
 
 function VacationTab() {
+  const { t } = useTranslation('scoreUi');
   const q = useQuery({
     queryKey: ['highscore', 'vacation'],
     queryFn: () => api.get<{ players: VacationEntry[] | null }>('/api/highscore/vacation'),
@@ -284,7 +289,7 @@ function VacationTab() {
       {q.isLoading && <Skeleton />}
       {!q.isLoading && list.length === 0 && (
         <div style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-muted)' }}>
-          Нет игроков в режиме отпуска
+          {t('emptyVacation')}
         </div>
       )}
       {list.length > 0 && (
@@ -293,10 +298,10 @@ function VacationTab() {
             <thead>
               <tr>
                 <th style={{ width: 48 }}>#</th>
-                <th>Игрок</th>
-                <th style={{ width: 60 }}>Альянс</th>
-                <th>Очки</th>
-                <th>В отпуске с</th>
+                <th>{t('colPlayer')}</th>
+                <th style={{ width: 60 }}>{t('colAlliance')}</th>
+                <th>{t('colPoints')}</th>
+                <th>{t('colVacationSince')}</th>
               </tr>
             </thead>
             <tbody>
@@ -333,6 +338,7 @@ interface TransferRow {
 }
 
 function TransfersTab() {
+  const { t } = useTranslation('scoreUi');
   const [direction, setDirection] = useState<'received' | 'sent'>('received');
   const [period, setPeriod] = useState<'all' | 'week' | 'month'>('all');
 
@@ -348,13 +354,13 @@ function TransfersTab() {
     <>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 4 }}>
-          <button type="button" className={direction === 'received' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setDirection('received')}>📥 Получатели</button>
-          <button type="button" className={direction === 'sent' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setDirection('sent')}>📤 Отправители</button>
+          <button type="button" className={direction === 'received' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setDirection('received')}>{t('dirReceived')}</button>
+          <button type="button" className={direction === 'sent' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setDirection('sent')}>{t('dirSent')}</button>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
-          <button type="button" className={period === 'all' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setPeriod('all')}>Всё время</button>
-          <button type="button" className={period === 'month' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setPeriod('month')}>Месяц</button>
-          <button type="button" className={period === 'week' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setPeriod('week')}>Неделя</button>
+          <button type="button" className={period === 'all' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setPeriod('all')}>{t('periodAll')}</button>
+          <button type="button" className={period === 'month' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setPeriod('month')}>{t('periodMonth')}</button>
+          <button type="button" className={period === 'week' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setPeriod('week')}>{t('periodWeek')}</button>
         </div>
       </div>
 
@@ -362,7 +368,7 @@ function TransfersTab() {
         {q.isLoading && <Skeleton />}
         {!q.isLoading && list.length === 0 && (
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-muted)' }}>
-            Нет данных
+            {t('emptyTransfers')}
           </div>
         )}
         {list.length > 0 && (
@@ -371,23 +377,23 @@ function TransfersTab() {
               <thead>
                 <tr>
                   <th style={{ width: 48 }}>#</th>
-                  <th>{direction === 'received' ? 'Получатель' : 'Отправитель'}</th>
-                  <th className="num">Металл</th>
-                  <th className="num">Кремний</th>
-                  <th className="num">Водород</th>
-                  <th className="num">Всего (у.е.)</th>
+                  <th>{direction === 'received' ? t('colReceiver') : t('colSender')}</th>
+                  <th className="num">{t('colMetal')}</th>
+                  <th className="num">{t('colSilicon')}</th>
+                  <th className="num">{t('colHydrogen')}</th>
+                  <th className="num">{t('colTotal')}</th>
                 </tr>
               </thead>
               <tbody>
-                {list.map((t, i) => (
-                  <tr key={t.user_id}>
+                {list.map((row, i) => (
+                  <tr key={row.user_id}>
                     <td className="num">{MEDAL[i] ?? i + 1}</td>
-                    <td style={{ fontWeight: i < 3 ? 700 : 400 }}>{t.username}</td>
-                    <td className="num">{Math.round(t.metal).toLocaleString('ru-RU')}</td>
-                    <td className="num">{Math.round(t.silicon).toLocaleString('ru-RU')}</td>
-                    <td className="num">{Math.round(t.hydrogen).toLocaleString('ru-RU')}</td>
+                    <td style={{ fontWeight: i < 3 ? 700 : 400 }}>{row.username}</td>
+                    <td className="num">{Math.round(row.metal).toLocaleString('ru-RU')}</td>
+                    <td className="num">{Math.round(row.silicon).toLocaleString('ru-RU')}</td>
+                    <td className="num">{Math.round(row.hydrogen).toLocaleString('ru-RU')}</td>
                     <td className="num" style={{ color: 'var(--ox-accent)', fontWeight: 600 }}>
-                      {Math.round(t.total).toLocaleString('ru-RU')}
+                      {Math.round(row.total).toLocaleString('ru-RU')}
                     </td>
                   </tr>
                 ))}
@@ -404,6 +410,7 @@ export function ScoreScreen({ initialQuery, onPlanetClick }: {
   initialQuery?: string;
   onPlanetClick?: (g: number, s: number) => void;
 } = {}) {
+  const { t } = useTranslation('scoreUi');
   const [mainTab, setMainTab] = useState<MainTab>('players');
   const [scoreType, setScoreType] = useState<ScoreType>('total');
 
@@ -416,14 +423,14 @@ export function ScoreScreen({ initialQuery, onPlanetClick }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-        🏆 Рейтинг
+        {t('title')}
       </h2>
 
       <div className="ox-tabs">
-        <button type="button" aria-pressed={mainTab === 'players'} onClick={() => setMainTab('players')}>👤 Игроки</button>
-        <button type="button" aria-pressed={mainTab === 'alliances'} onClick={() => setMainTab('alliances')}>🤝 Альянсы</button>
-        <button type="button" aria-pressed={mainTab === 'vacation'} onClick={() => setMainTab('vacation')}>✈ В отпуске</button>
-        <button type="button" aria-pressed={mainTab === 'transfers'} onClick={() => setMainTab('transfers')}>📦 Торговля</button>
+        <button type="button" aria-pressed={mainTab === 'players'} onClick={() => setMainTab('players')}>{t('tabPlayers')}</button>
+        <button type="button" aria-pressed={mainTab === 'alliances'} onClick={() => setMainTab('alliances')}>{t('tabAlliances')}</button>
+        <button type="button" aria-pressed={mainTab === 'vacation'} onClick={() => setMainTab('vacation')}>{t('tabVacation')}</button>
+        <button type="button" aria-pressed={mainTab === 'transfers'} onClick={() => setMainTab('transfers')}>{t('tabTransfers')}</button>
       </div>
 
       {mainTab === 'players'   && <PlayersTab scoreType={scoreType} setScoreType={setScoreType} initialQuery={initialQuery} onPlanetClick={onPlanetClick} />}

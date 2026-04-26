@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { useTranslation } from '@/i18n/i18n';
 
 interface ReferredUser {
   user_id: string;
@@ -18,6 +19,7 @@ interface ReferralData {
 }
 
 export function ReferralScreen() {
+  const { t } = useTranslation('referralUi');
   const me = useQuery({
     queryKey: ['me'],
     queryFn: () => api.get<{ user_id: string }>('/api/me'),
@@ -42,7 +44,7 @@ export function ReferralScreen() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setShareError('Не удалось скопировать');
+      setShareError(t('copyError'));
     }
   }
 
@@ -51,7 +53,7 @@ export function ReferralScreen() {
     setShareError('');
     if (typeof navigator.share === 'function') {
       try {
-        await navigator.share({ title: 'oxsar — космическая стратегия', url });
+        await navigator.share({ title: t('shareGameTitle'), url });
       } catch {
         // cancelled — no-op
       }
@@ -68,10 +70,10 @@ export function ReferralScreen() {
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>🎁 Реферальная программа</h2>
+      <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t('title')}</h2>
 
       <section className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Ваша ссылка</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>{t('sectionLink')}</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input
             type="text"
@@ -82,50 +84,48 @@ export function ReferralScreen() {
             style={{ flex: 1, minWidth: 240, fontFamily: 'var(--ox-mono)', fontSize: 14 }}
           />
           <button type="button" className="btn" onClick={() => void handleCopy()}>
-            {copied ? '✓ Скопировано' : '📋 Копировать'}
+            {copied ? t('copiedBtn') : t('copyBtn')}
           </button>
           <button type="button" className="btn-ghost" onClick={() => void handleShare()}>
-            📤 Поделиться
+            {t('shareBtn')}
           </button>
         </div>
         {shareError && <span style={{ fontSize: 14, color: 'var(--ox-danger)' }}>{shareError}</span>}
         <p style={{ margin: 0, fontSize: 14, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
-          Отправьте эту ссылку друзьям. Когда они зарегистрируются и начнут играть —
-          вы получите {Math.round((d?.credit_percent ?? 0) * 100)}% от всех их покупок кредитов
-          и очки за каждого активного реферала.
+          {t('refDesc', { pct: String(Math.round((d?.credit_percent ?? 0) * 100)) })}
         </p>
       </section>
 
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-        <StatCard label="Приглашено" value={String(d?.invited_count ?? 0)} icon="👥" />
+        <StatCard label={t('statInvited')} value={String(d?.invited_count ?? 0)} icon="👥" />
         <StatCard
-          label="Бонусные очки"
+          label={t('statBonusPoints')}
           value={Math.min(d?.bonus_points ?? 0, d?.max_bonus_points ?? 0).toLocaleString('ru-RU')}
           icon="🏆"
-          hint={`макс. ${(d?.max_bonus_points ?? 0).toLocaleString('ru-RU')}`}
+          hint={t('statBonusMax', { max: (d?.max_bonus_points ?? 0).toLocaleString('ru-RU') })}
         />
         <StatCard
-          label="Бонус от покупок"
+          label={t('statBonus')}
           value={`${Math.round((d?.credit_percent ?? 0) * 100)}%`}
           icon="💳"
-          hint="с каждой покупки кредитов реферала"
+          hint={t('statBonusHint')}
         />
       </section>
 
       <section className="ox-panel" style={{ padding: 20 }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Приглашённые игроки</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>{t('sectionReferred')}</h3>
         {(!d || d.referred.length === 0) ? (
           <div style={{ textAlign: 'center', padding: 24, color: 'var(--ox-fg-muted)' }}>
-            Пока никого. Поделитесь ссылкой — бонусы приходят сразу после регистрации.
+            {t('emptyReferred')}
           </div>
         ) : (
           <div className="ox-table-responsive">
             <table className="ox-table" style={{ margin: 0 }}>
               <thead>
                 <tr>
-                  <th>Игрок</th>
-                  <th className="num">Очки</th>
-                  <th>Зарегистрирован</th>
+                  <th>{t('colPlayer')}</th>
+                  <th className="num">{t('colPoints')}</th>
+                  <th>{t('colRegistered')}</th>
                 </tr>
               </thead>
               <tbody>

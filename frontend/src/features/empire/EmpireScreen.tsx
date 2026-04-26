@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { BUILDINGS, SHIPS, DEFENSE, buildingName, nameOf } from '@/api/catalog';
+import { useTranslation } from '@/i18n/i18n';
 
 interface EmpirePlanet {
   id: string;
@@ -22,16 +23,14 @@ interface EmpirePlanet {
   defense: Record<string, number>;
 }
 
-// Группы зданий для сворачиваемых секций
-const BUILDING_GROUPS: Array<{ label: string; ids: number[] }> = [
-  { label: 'Добыча', ids: [1, 2, 3] },
-  { label: 'Энергия', ids: [4, 5, 6] },
-  { label: 'Хранилища', ids: [7, 8, 9] },
-  { label: 'Производство', ids: [10, 11, 12, 14, 15] },
-  { label: 'Особые', ids: [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31] },
+const BUILDING_GROUPS: Array<{ tkey: string; ids: number[] }> = [
+  { tkey: 'groupMining',    ids: [1, 2, 3] },
+  { tkey: 'groupEnergy',    ids: [4, 5, 6] },
+  { tkey: 'groupStorages',  ids: [7, 8, 9] },
+  { tkey: 'groupProduction', ids: [10, 11, 12, 14, 15] },
+  { tkey: 'groupSpecial',   ids: [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31] },
 ];
 
-// Берём все ID зданий из каталога, которые не вошли в группы
 const ALL_BUILDING_IDS = BUILDINGS.map((b) => b.id);
 const GROUPED_IDS = new Set(BUILDING_GROUPS.flatMap((g) => g.ids));
 const OTHER_BUILDING_IDS = ALL_BUILDING_IDS.filter((id) => !GROUPED_IDS.has(id));
@@ -94,6 +93,7 @@ function SectionHeader({
 }
 
 export function EmpireScreen() {
+  const { t } = useTranslation('empireUi');
   const { data, isLoading } = useQuery({
     queryKey: ['empire'],
     queryFn: () => api.get<{ planets: EmpirePlanet[] }>('/api/empire'),
@@ -121,17 +121,15 @@ export function EmpireScreen() {
 
   const planets = data?.planets ?? [];
   if (planets.length === 0) {
-    return <div style={{ padding: 24, color: 'var(--ox-fg-dim)' }}>Нет планет.</div>;
+    return <div style={{ padding: 24, color: 'var(--ox-fg-dim)' }}>{t('noPlanets')}</div>;
   }
 
-  const colCount = planets.length + 1; // +1 для колонки с названием строки
+  const colCount = planets.length + 1;
 
-  // Суммарные ресурсы
   const totalMetal = planets.reduce((s, p) => s + p.metal, 0);
   const totalSilicon = planets.reduce((s, p) => s + p.silicon, 0);
   const totalHydrogen = planets.reduce((s, p) => s + p.hydrogen, 0);
 
-  // Все уникальные ID зданий, которые есть хоть на одной планете
   const usedBuildingIds = new Set<number>();
   for (const p of planets) {
     for (const id of Object.keys(p.buildings)) usedBuildingIds.add(Number(id));
@@ -173,23 +171,20 @@ export function EmpireScreen() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 0' }}>
-      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Империя</h2>
+      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{t('title')}</h2>
 
-      {/* Суммарные ресурсы */}
       <div className="ox-panel" style={{ padding: '10px 16px', display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 15 }}>
-        <span style={{ color: 'var(--ox-fg-dim)' }}>Всего ресурсов:</span>
+        <span style={{ color: 'var(--ox-fg-dim)' }}>{t('totalResources')}</span>
         <span>🟠 <b style={{ fontFamily: 'var(--ox-mono)' }}>{fmtRes(totalMetal)}</b></span>
         <span>💎 <b style={{ fontFamily: 'var(--ox-mono)' }}>{fmtRes(totalSilicon)}</b></span>
         <span>💧 <b style={{ fontFamily: 'var(--ox-mono)' }}>{fmtRes(totalHydrogen)}</b></span>
       </div>
 
-      {/* Основная таблица */}
       <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--ox-border)' }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: planets.length * 90 + 160 }}>
-          {/* Заголовок планет */}
           <thead>
             <tr>
-              <th style={{ ...thStyle, position: 'sticky', left: 0, zIndex: 2 }}>Параметр</th>
+              <th style={{ ...thStyle, position: 'sticky', left: 0, zIndex: 2 }}>{t('colParam')}</th>
               {planets.map((p) => (
                 <th key={p.id} style={{ ...thStyle, textAlign: 'center', maxWidth: 90 }}>
                   <div>{p.is_moon ? '🌑' : '🪐'} {p.name}</div>
@@ -202,11 +197,10 @@ export function EmpireScreen() {
           </thead>
 
           <tbody>
-            {/* Базовые характеристики */}
-            <SectionHeader label="Планета" colSpan={colCount} collapsed={collapsedGroups.has('planet')} onToggle={() => toggleGroup('planet')} />
+            <SectionHeader label={t('groupPlanet')} colSpan={colCount} collapsed={collapsedGroups.has('planet')} onToggle={() => toggleGroup('planet')} />
             {!collapsedGroups.has('planet') && <>
               <tr>
-                <td style={rowLabelStyle}>📐 Диаметр</td>
+                <td style={rowLabelStyle}>{t('rowDiameter')}</td>
                 {planets.map((p) => (
                   <td key={p.id} style={{ textAlign: 'center', fontSize: 13, fontFamily: 'var(--ox-mono)' }}>
                     {p.diameter.toLocaleString('ru-RU')}
@@ -214,7 +208,7 @@ export function EmpireScreen() {
                 ))}
               </tr>
               <tr>
-                <td style={rowLabelStyle}>🔲 Поля</td>
+                <td style={rowLabelStyle}>{t('rowFields')}</td>
                 {planets.map((p) => (
                   <td key={p.id} style={{ textAlign: 'center', fontSize: 13, fontFamily: 'var(--ox-mono)' }}>
                     {p.used_fields}
@@ -222,7 +216,7 @@ export function EmpireScreen() {
                 ))}
               </tr>
               <tr>
-                <td style={rowLabelStyle}>🌡️ Температура</td>
+                <td style={rowLabelStyle}>{t('rowTemp')}</td>
                 {planets.map((p) => (
                   <td key={p.id} style={{ textAlign: 'center', fontSize: 13 }}>
                     {p.temp_min}…{p.temp_max}°C
@@ -231,10 +225,9 @@ export function EmpireScreen() {
               </tr>
             </>}
 
-            {/* Ресурсы */}
-            <SectionHeader label="Ресурсы" colSpan={colCount} collapsed={collapsedGroups.has('res')} onToggle={() => toggleGroup('res')} />
+            <SectionHeader label={t('groupResources')} colSpan={colCount} collapsed={collapsedGroups.has('res')} onToggle={() => toggleGroup('res')} />
             {!collapsedGroups.has('res') && <>
-              {(['🟠 Металл', '💎 Кремний', '💧 Водород'] as const).map((label, i) => (
+              {([t('rowMetal'), t('rowSilicon'), t('rowHydrogen')] as const).map((label, i) => (
                 <tr key={label}>
                   <td style={rowLabelStyle}>{label}</td>
                   {planets.map((p) => (
@@ -246,34 +239,31 @@ export function EmpireScreen() {
               ))}
             </>}
 
-            {/* Здания по группам */}
             {BUILDING_GROUPS.map((group) => {
               const visibleIds = group.ids.filter((id) => usedBuildingIds.has(id));
               if (visibleIds.length === 0) return null;
-              const key = `bg-${group.label}`;
+              const key = `bg-${group.tkey}`;
               return (
                 <>
-                  <SectionHeader key={`hdr-${key}`} label={group.label} colSpan={colCount} collapsed={collapsedGroups.has(key)} onToggle={() => toggleGroup(key)} />
+                  <SectionHeader key={`hdr-${key}`} label={t(group.tkey)} colSpan={colCount} collapsed={collapsedGroups.has(key)} onToggle={() => toggleGroup(key)} />
                   {!collapsedGroups.has(key) && renderBuildingRows(visibleIds)}
                 </>
               );
             })}
 
-            {/* Прочие здания */}
             {(() => {
               const visibleOther = OTHER_BUILDING_IDS.filter((id) => usedBuildingIds.has(id));
               if (visibleOther.length === 0) return null;
               return (
                 <>
-                  <SectionHeader label="Прочие постройки" colSpan={colCount} collapsed={collapsedGroups.has('other-b')} onToggle={() => toggleGroup('other-b')} />
+                  <SectionHeader label={t('groupOtherBuildings')} colSpan={colCount} collapsed={collapsedGroups.has('other-b')} onToggle={() => toggleGroup('other-b')} />
                   {!collapsedGroups.has('other-b') && renderBuildingRows(visibleOther)}
                 </>
               );
             })()}
 
-            {/* Флот */}
             {usedShipIds.size > 0 && <>
-              <SectionHeader label="Флот" colSpan={colCount} collapsed={collapsedGroups.has('ships')} onToggle={() => toggleGroup('ships')} />
+              <SectionHeader label={t('groupFleet')} colSpan={colCount} collapsed={collapsedGroups.has('ships')} onToggle={() => toggleGroup('ships')} />
               {!collapsedGroups.has('ships') && ALL_SHIP_IDS.filter((id) => usedShipIds.has(id)).map((id) => (
                 <tr key={id}>
                   <td style={rowLabelStyle}>{nameOf(id)}</td>
@@ -282,9 +272,8 @@ export function EmpireScreen() {
               ))}
             </>}
 
-            {/* Оборона */}
             {usedDefenseIds.size > 0 && <>
-              <SectionHeader label="Оборона" colSpan={colCount} collapsed={collapsedGroups.has('defense')} onToggle={() => toggleGroup('defense')} />
+              <SectionHeader label={t('groupDefense')} colSpan={colCount} collapsed={collapsedGroups.has('defense')} onToggle={() => toggleGroup('defense')} />
               {!collapsedGroups.has('defense') && ALL_DEFENSE_IDS.filter((id) => usedDefenseIds.has(id)).map((id) => (
                 <tr key={id}>
                   <td style={rowLabelStyle}>{nameOf(id)}</td>

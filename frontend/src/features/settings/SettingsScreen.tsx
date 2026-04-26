@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/auth';
+import { useTranslation } from '@/i18n/i18n';
 
 interface SettingsData {
   email: string;
@@ -36,6 +37,7 @@ const TIMEZONES = [
 ];
 
 export function SettingsScreen() {
+  const { t } = useTranslation('settingsUi');
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -85,13 +87,13 @@ export function SettingsScreen() {
   const requestCodeMutation = useMutation({
     mutationFn: () => api.post<{ expires_at: string }>('/api/me/deletion/code'),
     onSuccess: (r) => { setCodeSent(true); setCodeExpires(r.expires_at); setDeleteError(''); },
-    onError: (e) => setDeleteError(e instanceof Error ? e.message : 'Ошибка запроса кода'),
+    onError: (e) => setDeleteError(e instanceof Error ? e.message : t('requestCodeErr')),
   });
 
   const confirmDeleteMutation = useMutation({
     mutationFn: (c: string) => api.delete<void>('/api/me', { code: c }),
     onSuccess: () => { logout(); },
-    onError: (e) => setDeleteError(e instanceof Error ? e.message : 'Неверный код'),
+    onError: (e) => setDeleteError(e instanceof Error ? e.message : t('confirmDeleteErr')),
   });
 
   if (isLoading || !data) {
@@ -112,35 +114,34 @@ export function SettingsScreen() {
       setEmailSaved(true);
       setTimeout(() => setEmailSaved(false), 3000);
     } catch (e: unknown) {
-      setEmailError(e instanceof Error ? e.message : 'Ошибка сохранения');
+      setEmailError(e instanceof Error ? e.message : t('pwSaveError'));
     }
   }
 
   async function handlePasswordSave() {
     setPwError('');
     setPwSaved(false);
-    if (newPw !== confirmPw) { setPwError('Пароли не совпадают'); return; }
-    if (newPw.length < 8) { setPwError('Минимум 8 символов'); return; }
+    if (newPw !== confirmPw) { setPwError(t('pwMismatch')); return; }
+    if (newPw.length < 8) { setPwError(t('pwTooShort')); return; }
     try {
       await passwordMutation.mutateAsync({ current_password: currentPw, new_password: newPw });
       setPwSaved(true);
       setCurrentPw(''); setNewPw(''); setConfirmPw('');
       setTimeout(() => setPwSaved(false), 3000);
     } catch (e: unknown) {
-      setPwError(e instanceof Error ? e.message : 'Неверный текущий пароль');
+      setPwError(e instanceof Error ? e.message : t('pwWrongCurrent'));
     }
   }
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Настройки аккаунта</h2>
+      <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t('title')}</h2>
 
-      {/* Профиль */}
       <section className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Профиль</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>{t('sectionProfile')}</h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Email</label>
+          <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>{t('labelEmail')}</label>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               type="email"
@@ -156,27 +157,27 @@ export function SettingsScreen() {
               disabled={updateMutation.isPending || !email}
               onClick={() => void handleEmailSave()}
             >
-              Сохранить
+              {t('saveBtn')}
             </button>
           </div>
-          {emailSaved && <span style={{ fontSize: 14, color: 'var(--ox-success)' }}>✓ Email обновлён</span>}
+          {emailSaved && <span style={{ fontSize: 14, color: 'var(--ox-success)' }}>{t('emailSaved')}</span>}
           {emailError && <span style={{ fontSize: 14, color: 'var(--ox-danger)' }}>{emailError}</span>}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Язык</label>
+          <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>{t('labelLanguage')}</label>
           <select
             className="ox-input"
             value={data.language}
             onChange={(e) => void updateMutation.mutateAsync({ language: e.target.value })}
           >
-            <option value="ru">Русский</option>
-            <option value="en">English</option>
+            <option value="ru">{t('langRu')}</option>
+            <option value="en">{t('langEn')}</option>
           </select>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Часовой пояс</label>
+          <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>{t('labelTimezone')}</label>
           <select
             className="ox-input"
             value={data.timezone}
@@ -189,13 +190,12 @@ export function SettingsScreen() {
         </div>
       </section>
 
-      {/* Безопасность */}
       <section className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Безопасность</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>{t('sectionSecurity')}</h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Текущий пароль</label>
+            <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>{t('labelCurrentPw')}</label>
             <input
               type="password"
               className="ox-input"
@@ -205,7 +205,7 @@ export function SettingsScreen() {
             />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Новый пароль</label>
+            <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>{t('labelNewPw')}</label>
             <input
               type="password"
               className="ox-input"
@@ -215,7 +215,7 @@ export function SettingsScreen() {
             />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>Повторите новый пароль</label>
+            <label style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>{t('labelConfirmPw')}</label>
             <input
               type="password"
               className="ox-input"
@@ -231,26 +231,24 @@ export function SettingsScreen() {
             disabled={passwordMutation.isPending || !currentPw || !newPw || !confirmPw}
             onClick={() => void handlePasswordSave()}
           >
-            Сменить пароль
+            {t('changePwBtn')}
           </button>
-          {pwSaved && <span style={{ fontSize: 14, color: 'var(--ox-success)' }}>✓ Пароль изменён</span>}
+          {pwSaved && <span style={{ fontSize: 14, color: 'var(--ox-success)' }}>{t('pwSaved')}</span>}
           {pwError && <span style={{ fontSize: 14, color: 'var(--ox-danger)' }}>{pwError}</span>}
         </div>
       </section>
 
-      {/* Режим отпуска */}
       <section className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>Режим отпуска</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>{t('sectionVacation')}</h3>
 
         <p style={{ margin: 0, fontSize: 15, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
-          В режиме отпуска вы защищены от атак, но не можете строить, исследовать, отправлять флот или торговать.
-          Минимальный интервал между отпусками — 20 дней.
+          {t('vacationDesc')}
         </p>
 
         {isOnVacation ? (
           <>
             <div style={{ fontSize: 15, color: 'var(--ox-accent)' }}>
-              ✈ Отпуск активен с {new Date(data.vacation_since!).toLocaleDateString('ru-RU')}
+              {t('vacationActive', { date: new Date(data.vacation_since!).toLocaleDateString('ru-RU') })}
             </div>
             <button
               type="button"
@@ -259,7 +257,7 @@ export function SettingsScreen() {
               disabled={vacationUnsetMutation.isPending}
               onClick={() => void vacationUnsetMutation.mutateAsync()}
             >
-              Выйти из отпуска
+              {t('leaveVacationBtn')}
             </button>
           </>
         ) : (
@@ -271,12 +269,12 @@ export function SettingsScreen() {
                 style={{ alignSelf: 'flex-start' }}
                 onClick={() => setVacationConfirm(true)}
               >
-                Включить режим отпуска
+                {t('startVacationBtn')}
               </button>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <p style={{ margin: 0, fontSize: 15, color: 'var(--ox-warn, #f59e0b)', fontWeight: 600 }}>
-                  ⚠ Вы уверены? Вся активность будет заморожена.
+                  {t('vacationWarning')}
                 </p>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
@@ -285,19 +283,19 @@ export function SettingsScreen() {
                     disabled={vacationSetMutation.isPending}
                     onClick={() => void vacationSetMutation.mutateAsync()}
                   >
-                    Да, уйти в отпуск
+                    {t('vacationConfirmBtn')}
                   </button>
                   <button
                     type="button"
                     className="btn-ghost"
                     onClick={() => setVacationConfirm(false)}
                   >
-                    Отмена
+                    {t('vacationCancelBtn')}
                   </button>
                 </div>
                 {vacationSetMutation.isError && (
                   <span style={{ fontSize: 14, color: 'var(--ox-danger)' }}>
-                    {vacationSetMutation.error instanceof Error ? vacationSetMutation.error.message : 'Ошибка'}
+                    {vacationSetMutation.error instanceof Error ? vacationSetMutation.error.message : t('pwSaveError')}
                   </span>
                 )}
               </div>
@@ -306,10 +304,8 @@ export function SettingsScreen() {
         )}
       </section>
 
-      {/* Порядок планет */}
       <PlanetOrderSection />
 
-      {/* Опасная зона */}
       <section style={{
         padding: 20,
         border: '1px solid var(--ox-danger)',
@@ -318,7 +314,7 @@ export function SettingsScreen() {
         background: 'rgba(239,68,68,0.03)',
       }}>
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-danger)' }}>
-          ⚠ Опасная зона
+          {t('sectionDanger')}
         </h3>
 
         {!dangerOpen ? (
@@ -328,14 +324,12 @@ export function SettingsScreen() {
             style={{ alignSelf: 'flex-start', color: 'var(--ox-danger)' }}
             onClick={() => setDangerOpen(true)}
           >
-            🗑 Удалить аккаунт…
+            {t('deleteAccountBtn')}
           </button>
         ) : (
           <>
             <p style={{ margin: 0, fontSize: 15, color: 'var(--ox-fg-dim)', lineHeight: 1.6 }}>
-              Аккаунт будет удалён навсегда: планеты, флоты, сообщения и участие в альянсе
-              исчезнут. Восстановление невозможно. Для подтверждения требуется одноразовый
-              код, который будет отправлен вам в системные сообщения.
+              {t('deleteAccountDesc')}
             </p>
 
             {!codeSent ? (
@@ -346,19 +340,16 @@ export function SettingsScreen() {
                   disabled={requestCodeMutation.isPending}
                   onClick={() => requestCodeMutation.mutate()}
                 >
-                  {requestCodeMutation.isPending ? '…' : 'Получить код подтверждения'}
+                  {requestCodeMutation.isPending ? '…' : t('requestCodeBtn')}
                 </button>
                 <button type="button" className="btn-ghost" onClick={() => setDangerOpen(false)}>
-                  Отмена
+                  {t('cancelBtn')}
                 </button>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>
-                  Код отправлен в сообщения (папка «Система»). Действителен до{' '}
-                  <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg)' }}>
-                    {codeExpires ? new Date(codeExpires).toLocaleTimeString('ru-RU') : '—'}
-                  </span>.
+                  {t('codeSentMsg', { time: codeExpires ? new Date(codeExpires).toLocaleTimeString('ru-RU') : '—' })}
                 </div>
                 <input
                   type="text"
@@ -378,14 +369,14 @@ export function SettingsScreen() {
                     disabled={code.length !== 8 || confirmDeleteMutation.isPending}
                     onClick={() => confirmDeleteMutation.mutate(code)}
                   >
-                    {confirmDeleteMutation.isPending ? '…' : '🗑 Удалить аккаунт навсегда'}
+                    {confirmDeleteMutation.isPending ? '…' : t('confirmDeleteBtn')}
                   </button>
                   <button
                     type="button"
                     className="btn-ghost"
                     onClick={() => { setDangerOpen(false); setCodeSent(false); setCode(''); setDeleteError(''); }}
                   >
-                    Отмена
+                    {t('cancelBtn')}
                   </button>
                 </div>
               </div>
@@ -402,6 +393,7 @@ export function SettingsScreen() {
 }
 
 function PlanetOrderSection() {
+  const { t } = useTranslation('settingsUi');
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ['planets'],
@@ -413,11 +405,9 @@ function PlanetOrderSection() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['planets'] }),
   });
 
-  // Локальный порядок только для не-лун (луны следуют за материнской планетой).
   const [order, setOrder] = useState<PlanetLite[]>([]);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
-  // Синхронизация с server-данными.
   if (q.data && order.length === 0 && q.data.planets.length > 0) {
     setOrder(q.data.planets.filter((p) => !p.is_moon));
   }
@@ -439,10 +429,10 @@ function PlanetOrderSection() {
   return (
     <section className="ox-panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ox-fg-muted)' }}>
-        Порядок планет
+        {t('sectionPlanetOrder')}
       </h3>
       <p style={{ margin: 0, fontSize: 14, color: 'var(--ox-fg-dim)' }}>
-        Перетащите, чтобы изменить порядок. Этот порядок используется в переключателе планет.
+        {t('planetOrderDesc')}
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {order.map((p, i) => (
@@ -468,7 +458,7 @@ function PlanetOrderSection() {
           </div>
         ))}
       </div>
-      {reorder.isPending && <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>💾 Сохранение…</span>}
+      {reorder.isPending && <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>{t('planetOrderSaving')}</span>}
     </section>
   );
 }

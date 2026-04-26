@@ -4,6 +4,7 @@ import { api } from '@/api/client';
 import type { Planet } from '@/api/types';
 import { Confirm } from '@/ui/Confirm';
 import { useToast } from '@/ui/Toast';
+import { useTranslation } from '@/i18n/i18n';
 
 interface PlanetOptionsScreenProps {
   planet: Planet;
@@ -18,6 +19,7 @@ export function PlanetOptionsScreen({
   homePlanetId,
   onBack,
 }: PlanetOptionsScreenProps) {
+  const { t } = useTranslation('planetOptionsUi');
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -31,10 +33,10 @@ export function PlanetOptionsScreen({
       api.patch<{ status: string }>(`/api/planets/${planet.id}`, { name }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('success', 'Планета переименована', `Новое имя: ${newName}`);
+      toast.show('success', t('toastRenameTitle'), t('toastRenameBody', { name: newName }));
     },
     onError: (err) => {
-      toast.show('danger', 'Ошибка переименования', err instanceof Error ? err.message : '');
+      toast.show('danger', t('toastRenameErr'), err instanceof Error ? err.message : '');
     },
   });
 
@@ -43,11 +45,11 @@ export function PlanetOptionsScreen({
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['planets'] });
       setConfirmSetHome(false);
-      toast.show('success', 'Главная планета', `${planet.name} теперь ваша главная планета`);
+      toast.show('success', t('toastHomeTitle'), t('toastHomeBody', { name: planet.name }));
       onBack();
     },
     onError: (err) => {
-      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : '');
+      toast.show('danger', t('toastHomeErr'), err instanceof Error ? err.message : '');
     },
   });
 
@@ -57,11 +59,11 @@ export function PlanetOptionsScreen({
       void qc.invalidateQueries({ queryKey: ['planets'] });
       setConfirmAbandon(false);
       setAbandonCode('');
-      toast.show('success', 'Планета покинута', `${planet.name} была удалена`);
+      toast.show('success', t('toastAbandonTitle'), t('toastAbandonBody', { name: planet.name }));
       onBack();
     },
     onError: (err) => {
-      toast.show('danger', 'Ошибка при удалении', err instanceof Error ? err.message : '');
+      toast.show('danger', t('toastAbandonErr'), err instanceof Error ? err.message : '');
     },
   });
 
@@ -79,17 +81,16 @@ export function PlanetOptionsScreen({
           onClick={onBack}
           style={{ padding: '4px 8px', fontSize: 16 }}
         >
-          ← Назад
+          {t('backBtn')}
         </button>
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-          Параметры: {planet.name}
+          {t('titlePrefix')} {planet.name}
         </h2>
       </div>
 
-      {/* Переименование */}
       <div className="ox-panel" style={{ padding: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 12 }}>
-          Переименовать
+          {t('sectionRename')}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -99,7 +100,7 @@ export function PlanetOptionsScreen({
               onChange={(e) => setNewName(e.target.value)}
               maxLength={50}
               style={{ width: '100%', boxSizing: 'border-box' }}
-              placeholder="Новое имя"
+              placeholder={t('renamePlaceholder')}
             />
           </div>
           <button
@@ -108,19 +109,18 @@ export function PlanetOptionsScreen({
             disabled={rename.isPending || newName === planet.name || newName.trim().length === 0}
             onClick={() => rename.mutate(newName.trim())}
           >
-            {rename.isPending ? '…' : 'Сохранить'}
+            {rename.isPending ? '…' : t('saveBtn')}
           </button>
         </div>
       </div>
 
-      {/* Установить главной */}
       {canSetHome && (
         <div className="ox-panel" style={{ padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 12 }}>
-            Главная планета
+            {t('sectionHome')}
           </div>
           <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', marginBottom: 12 }}>
-            Текущая главная: {planets.find((p) => p.id === homePlanetId)?.name || '—'}
+            {t('currentHome', { name: planets.find((p) => p.id === homePlanetId)?.name ?? '—' })}
           </div>
           <button
             type="button"
@@ -128,7 +128,7 @@ export function PlanetOptionsScreen({
             onClick={() => setConfirmSetHome(true)}
             disabled={setHome.isPending}
           >
-            Установить как главную
+            {t('setHomeBtn')}
           </button>
         </div>
       )}
@@ -136,7 +136,7 @@ export function PlanetOptionsScreen({
       {isHome && (
         <div className="ox-panel" style={{ padding: 20, background: 'rgba(76, 175, 80, 0.05)', border: '1px solid rgba(76, 175, 80, 0.2)' }}>
           <div style={{ fontSize: 15, color: 'var(--ox-success)', fontWeight: 500 }}>
-            ✓ Это ваша главная планета
+            {t('isHomeMsg')}
           </div>
         </div>
       )}
@@ -144,22 +144,21 @@ export function PlanetOptionsScreen({
       {planet.is_moon && !canSetHome && (
         <div className="ox-panel" style={{ padding: 20, background: 'rgba(158, 158, 158, 0.05)', border: '1px solid rgba(158, 158, 158, 0.2)' }}>
           <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', fontWeight: 500 }}>
-            ℹ Луны не могут быть главной планетой
+            {t('moonNoHomeMsg')}
           </div>
         </div>
       )}
 
-      {/* Покинуть планету */}
       {canAbandon && (
         <div className="ox-panel" style={{ padding: 20, background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
           <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-danger)', marginBottom: 12 }}>
-            Покинуть планету
+            {t('sectionAbandon')}
           </div>
           <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', marginBottom: 12 }}>
-            Это действие необратимо. Введите код подтверждения для удаления.
+            {t('abandonDesc')}
           </div>
           <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)', marginBottom: 12, padding: '8px 12px', background: 'var(--ox-bg)', borderRadius: 4 }}>
-            Код: <span style={{ fontWeight: 700 }}>{expectedCode}</span>
+            {t('abandonCodeLabel')} <span style={{ fontWeight: 700 }}>{expectedCode}</span>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -177,7 +176,7 @@ export function PlanetOptionsScreen({
               disabled={abandon.isPending || abandonCode !== expectedCode}
               onClick={() => setConfirmAbandon(true)}
             >
-              {abandon.isPending ? '…' : 'Покинуть'}
+              {abandon.isPending ? '…' : t('abandonBtn')}
             </button>
           </div>
         </div>
@@ -186,17 +185,16 @@ export function PlanetOptionsScreen({
       {!canAbandon && planet.is_moon && (
         <div className="ox-panel" style={{ padding: 20, background: 'rgba(158, 158, 158, 0.05)', border: '1px solid rgba(158, 158, 158, 0.2)' }}>
           <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', fontWeight: 500 }}>
-            ℹ Луны удаляются автоматически при уничтожении планеты
+            {t('moonAbandonMsg')}
           </div>
         </div>
       )}
 
-      {/* Confirm dialogs */}
       {confirmSetHome && (
         <Confirm
-          message={`Установить "${planet.name}" как главную планету?`}
-          confirmLabel="Да"
-          cancelLabel="Отмена"
+          message={t('setHomeConfirm', { name: planet.name })}
+          confirmLabel={t('setHomeConfirmBtn')}
+          cancelLabel={t('cancelBtn')}
           onConfirm={() => setHome.mutate()}
           onCancel={() => setConfirmSetHome(false)}
         />
@@ -204,10 +202,10 @@ export function PlanetOptionsScreen({
 
       {confirmAbandon && (
         <Confirm
-          message={`Вы уверены? Планета "${planet.name}" будет удалена без возможности восстановления.`}
+          message={t('abandonConfirm', { name: planet.name })}
           danger
-          confirmLabel="Удалить"
-          cancelLabel="Отмена"
+          confirmLabel={t('abandonConfirmBtn')}
+          cancelLabel={t('cancelBtn')}
           onConfirm={() => abandon.mutate()}
           onCancel={() => setConfirmAbandon(false)}
         />
