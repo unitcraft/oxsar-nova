@@ -3,14 +3,14 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n/i18n';
 import { ScreenSkeleton } from '@/ui/Skeleton';
 
-function fmtDuration(secs: number): string {
-  if (secs < 60) return `${secs}с`;
+function fmtDuration(secs: number, uS: string, uM: string, uH: string, uD: string): string {
+  if (secs < 60) return `${secs}${uS}`;
   const m = Math.floor(secs / 60) % 60;
   const h = Math.floor(secs / 3600) % 24;
   const d = Math.floor(secs / 86400);
-  if (d > 0) return `${d}д ${h}ч ${m}м`;
-  if (h > 0) return `${h}ч ${m}м`;
-  return `${m}м`;
+  if (d > 0) return `${d}${uD} ${h}${uH} ${m}${uM}`;
+  if (h > 0) return `${h}${uH} ${m}${uM}`;
+  return `${m}${uM}`;
 }
 import { api } from '@/api/client';
 import { BUILDINGS, MOON_BUILDINGS, imageOf, costForLevel } from '@/api/catalog';
@@ -19,11 +19,11 @@ import type { Planet, QueueItem, UnmetRequirement } from '@/api/types';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
 
-function fmtPerHour(v: number): string {
+function fmtPerHour(v: number, perHourSuffix: string): string {
   const h = Math.round(v * 3600);
-  if (h >= 1_000_000) return `${(h / 1_000_000).toFixed(1)}M/ч`;
-  if (h >= 1_000) return `${Math.round(h / 1_000)}k/ч`;
-  return `${h}/ч`;
+  if (h >= 1_000_000) return `${(h / 1_000_000).toFixed(1)}M${perHourSuffix}`;
+  if (h >= 1_000) return `${Math.round(h / 1_000)}k${perHourSuffix}`;
+  return `${h}${perHourSuffix}`;
 }
 
 type ProdField = 'metal_per_sec' | 'silicon_per_sec' | 'hydrogen_per_sec';
@@ -46,6 +46,11 @@ const PROD_STAT: Record<string, ProdStat> = {
 export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo: (id: number, level: number) => void }) {
   const { t } = useTranslation('buildingsUi');
   const { t: tg } = useTranslation('global');
+  const uS = tg('timeUnitSec');
+  const uM = tg('timeUnitMin');
+  const uH = tg('timeUnitHour');
+  const uD = tg('timeUnitDay');
+  const perH = tg('perHourSuffix');
   const qc = useQueryClient();
   const toast = useToast();
   const [showLocked, setShowLocked] = useState<boolean>(
@@ -231,7 +236,7 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
                   const raw = planet[stat.field];
                   const display = stat.isEnergy
                     ? `${Math.round(raw as number)}`
-                    : fmtPerHour(raw as number);
+                    : fmtPerHour(raw as number, perH);
                   return (
                     <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginBottom: 2, fontFamily: 'var(--ox-mono)' }}>
                       {stat.icon} {display}
@@ -268,7 +273,7 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
                     )}
                     {secs > 0 && (
                       <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
-                        ⏱ {fmtDuration(secs)}
+                        ⏱ {fmtDuration(secs, uS, uM, uH, uD)}
                       </div>
                     )}
                   </>

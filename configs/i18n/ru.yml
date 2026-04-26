@@ -760,6 +760,7 @@ galaxyUi:
   statusInactive7: "Неактивный (7+ дн)"
   statusInactive21: "Очень неактивный (21+ дн)"
   friendTitle: В друзьях
+  kmUnit: " км"
 
 battlestatsUi:
   title: ⚔ История боёв
@@ -1918,9 +1919,10 @@ global:
   adminTitle: Панель администратора
   searchTitle: "Поиск (Ctrl+K)"
   profileTitle: "Профиль / настройки"
-  timeUnitDay: "д"
-  timeUnitHour: "ч"
+  timeUnitSec: "с"
   timeUnitMin: "м"
+  timeUnitHour: "ч"
+  timeUnitDay: "д"
 info:
   abort: Отмена
   alienTech: Инопланетная технология

@@ -26,14 +26,14 @@ function flightSecs(dist: number, minSpeed: number, speedPct: number): number {
   return Math.max(1, raw / GAME_SPEED);
 }
 
-function fmtDuration(secs: number): string {
-  if (secs < 60) return `${Math.ceil(secs)}с`;
+function fmtDuration(secs: number, uS: string, uM: string, uH: string, uD: string): string {
+  if (secs < 60) return `${Math.ceil(secs)}${uS}`;
   const m = Math.floor(secs / 60) % 60;
   const h = Math.floor(secs / 3600) % 24;
   const d = Math.floor(secs / 86400);
-  if (d > 0) return `${d}д ${h}ч ${m}м`;
-  if (h > 0) return `${h}ч ${m}м`;
-  return `${m}м`;
+  if (d > 0) return `${d}${uD} ${h}${uH} ${m}${uM}`;
+  if (h > 0) return `${h}${uH} ${m}${uM}`;
+  return `${m}${uM}`;
 }
 
 interface FleetRow {
@@ -66,6 +66,10 @@ interface InitialDst { g: number; s: number; pos: number; isMoon: boolean; missi
 export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst?: InitialDst }) {
   const { t } = useTranslation('fleetUi');
   const { t: tg } = useTranslation('global');
+  const uS = tg('timeUnitSec');
+  const uM = tg('timeUnitMin');
+  const uH = tg('timeUnitHour');
+  const uD = tg('timeUnitDay');
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -331,8 +335,8 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
 
         {fleetPreview && (
           <div style={{ marginTop: 16, padding: '10px 14px', background: 'var(--ox-surface)', borderRadius: 6, border: '1px solid var(--ox-border)', display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 14, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)' }}>
-            <span>⏱ {fmtDuration(fleetPreview.secs)}</span>
-            <span>↩ {fmtDuration(fleetPreview.secs * 2)}</span>
+            <span>⏱ {fmtDuration(fleetPreview.secs, uS, uM, uH, uD)}</span>
+            <span>↩ {fmtDuration(fleetPreview.secs * 2, uS, uM, uH, uD)}</span>
             {fleetPreview.totalFuel > 0 && <span>💧 {fleetPreview.totalFuel.toLocaleString('ru-RU')} ({t('fuelOneWay')})</span>}
           </div>
         )}

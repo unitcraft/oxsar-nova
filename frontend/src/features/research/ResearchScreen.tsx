@@ -7,14 +7,14 @@ import type { Planet, QueueItem, ResearchState } from '@/api/types';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
 
-function fmtDuration(secs: number): string {
-  if (secs < 60) return `${secs}с`;
+function fmtDuration(secs: number, uS: string, uM: string, uH: string, uD: string): string {
+  if (secs < 60) return `${secs}${uS}`;
   const m = Math.floor(secs / 60) % 60;
   const h = Math.floor(secs / 3600) % 24;
   const d = Math.floor(secs / 86400);
-  if (d > 0) return `${d}д ${h}ч ${m}м`;
-  if (h > 0) return `${h}ч ${m}м`;
-  return `${m}м`;
+  if (d > 0) return `${d}${uD} ${h}${uH} ${m}${uM}`;
+  if (h > 0) return `${h}${uH} ${m}${uM}`;
+  return `${m}${uM}`;
 }
 
 function fmtSecs(sec: number): string {
@@ -48,6 +48,10 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
   const { t } = useTranslation('researchUi');
   const { t: tg } = useTranslation('global');
   const levelAbbr = t('levelAbbr');
+  const uS = tg('timeUnitSec');
+  const uM = tg('timeUnitMin');
+  const uH = tg('timeUnitHour');
+  const uD = tg('timeUnitDay');
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -184,7 +188,7 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
                       )}
                       {secs > 0 && (
                         <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
-                          ⏱ {fmtDuration(secs)}
+                          ⏱ {fmtDuration(secs, uS, uM, uH, uD)}
                         </div>
                       )}
                     </>
