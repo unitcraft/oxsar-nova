@@ -1545,6 +1545,25 @@ adminUi:
   reportBattle: "⚔ Бой"
   reportEspionage: "🔭 Шпионаж"
   reportExpedition: "🌌 Экспедиция"
+  colName: Имя
+  colCoords: Координаты
+  colMission: Миссия
+  colDest: Куда
+  colArrival: Прилёт
+  officerUntil: до
+  colSells: Продаёт
+  colWants: Хочет
+  colArtefact: Артефакт
+  colPrice: Цена
+  colDate: Дата
+  colPackage: Пакет
+  colCreditsShort: "+Кр"
+  colStatus: Статус
+  colAdmin: Админ
+  colAction: Действие
+  colFolder: Folder
+  colSubject: Тема
+  colRead: Read
 
 artMarketUi:
   title: "🏷 Рынок артефактов"
