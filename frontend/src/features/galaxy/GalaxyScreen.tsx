@@ -56,14 +56,14 @@ function flightSecs(dist: number, minSpeed: number, speedPct: number): number {
   return Math.max(1, raw / GAME_SPEED);
 }
 
-function fmtDuration(secs: number): string {
-  if (secs < 60) return `${Math.ceil(secs)}с`;
+function fmtDuration(secs: number, uS: string, uM: string, uH: string, uD: string): string {
+  if (secs < 60) return `${Math.ceil(secs)}${uS}`;
   const m = Math.floor(secs / 60) % 60;
   const h = Math.floor(secs / 3600) % 24;
   const d = Math.floor(secs / 86400);
-  if (d > 0) return `${d}д ${h}ч ${m}м`;
-  if (h > 0) return `${h}ч ${m}м`;
-  return `${m}м`;
+  if (d > 0) return `${d}${uD} ${h}${uH} ${m}${uM}`;
+  if (h > 0) return `${h}${uH} ${m}${uM}`;
+  return `${m}${uM}`;
 }
 
 
@@ -123,6 +123,11 @@ function RocketPanel({
 }) {
   const toast = useToast();
   const { t } = useTranslation('galaxyUi');
+  const { t: tg } = useTranslation('global');
+  const uS = tg('timeUnitSec');
+  const uM = tg('timeUnitMin');
+  const uH = tg('timeUnitHour');
+  const uD = tg('timeUnitDay');
   const [srcPlanetId, setSrcPlanetId] = useState(srcPlanets[0]?.id ?? '');
   const [count, setCount] = useState(1);
 
@@ -156,7 +161,7 @@ function RocketPanel({
     { galaxy: srcPlanet.galaxy, system: srcPlanet.system, position: srcPlanet.position },
     { galaxy: g, system: s, position: pos },
   ) : 0;
-  const flightTime = dist > 0 ? fmtDuration(flightSecs(dist, 1000, 100)) : '—';
+  const flightTime = dist > 0 ? fmtDuration(flightSecs(dist, 1000, 100), uS, uM, uH, uD) : '—';
 
   return (
     <div style={{ marginTop: 6, padding: '8px 10px', background: 'var(--ox-bg-panel)', border: '1px solid var(--ox-border)', borderRadius: 6, fontSize: 14 }}>
@@ -216,6 +221,11 @@ function MissionButtons({
   onMission: (mission: number, position: number, isMoon: boolean) => void;
 }) {
   const { t } = useTranslation('galaxyUi');
+  const { t: tg } = useTranslation('global');
+  const uS = tg('timeUnitSec');
+  const uM = tg('timeUnitMin');
+  const uH = tg('timeUnitHour');
+  const uD = tg('timeUnitDay');
   const [showRockets, setShowRockets] = useState(false);
 
   if (!cell.has_planet) return null;
@@ -226,7 +236,7 @@ function MissionButtons({
     { galaxy: g, system: s, position: cell.position },
   );
   const minSpeed = Math.min(...SHIPS.filter((s) => s.fuel !== undefined).map((s) => s.speed ?? Infinity).filter(isFinite));
-  const flightTime = minSpeed > 0 ? fmtDuration(flightSecs(dist, minSpeed, 100)) : '—';
+  const flightTime = minSpeed > 0 ? fmtDuration(flightSecs(dist, minSpeed, 100), uS, uM, uH, uD) : '—';
   const fuelHint = t('fuelHint', { dist: String(dist), time: flightTime });
 
   return (
@@ -462,7 +472,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
                   const moonTitle = c.has_moon
                     ? [
                         c.moon_name ?? t('moonFallback'),
-                        c.moon_diameter ? `${c.moon_diameter} км` : '',
+                        c.moon_diameter ? `${c.moon_diameter}${t('kmUnit')}` : '',
                         c.moon_temp_min != null && c.moon_temp_max != null
                           ? `${c.moon_temp_min}..${c.moon_temp_max}°C`
                           : '',

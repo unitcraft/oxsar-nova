@@ -763,6 +763,7 @@ galaxyUi:
   statusInactive7: ""
   statusInactive21: ""
   friendTitle: ""
+  kmUnit: "" # TODO: en
 
 # TODO: en
 battlestatsUi:
@@ -1928,9 +1929,10 @@ global:
   adminTitle: "" # TODO: en
   searchTitle: "" # TODO: en
   profileTitle: "" # TODO: en
-  timeUnitDay: "" # TODO: en
-  timeUnitHour: "" # TODO: en
+  timeUnitSec: "" # TODO: en
   timeUnitMin: "" # TODO: en
+  timeUnitHour: "" # TODO: en
+  timeUnitDay: "" # TODO: en
 info:
   abort: ""
   alienTech: ""
