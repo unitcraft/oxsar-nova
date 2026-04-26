@@ -8235,3 +8235,35 @@ benefit/lifetime), добавить поле tKey для i18n-маппинга, 
 - TestI18nConsistency PASS, TestNoCyrillicLiterals PASS.
 
 **Коммиты**: 2 (Ф.1 план + Ф.2 изменения).
+
+
+---
+
+## Итерация 36 (2026-04-26)
+
+**Задача**: Разработать архитектурный план портала мира Oxsar — мультивселенная,
+единая аутентификация, OAuth, лента предложений игроков (план 36).
+
+**Исследование**: проанализированы текущая auth-система (HS256 JWT, монолит),
+структура frontend, release-roadmap, планы 30–35. Выявлено: portal, OAuth,
+multi-universe, feedback — всё отсутствует, требует новых компонентов.
+
+**Архитектурное решение**: «модульный монолит + выделенный Auth Service»
+вместо полного микросервисного распила. Причины: небольшая команда, неизвестный
+трафик, операционная сложность не окупится на старте.
+
+**Ключевые решения**:
+1. Auth Service — отдельный бинарник `backend/cmd/auth-service`, RSA-256 токены.
+2. Universe Registry — YAML-конфиг `configs/universes.yaml` + API списка.
+3. Portal Frontend — отдельное Vite-приложение `frontend/portal/`.
+4. Global credits (Вариант B) — баланс кредитов в Auth Service, не в game DB.
+5. OAuth через `golang.org/x/oauth2`: ВКонтакте, Mail.ru, Яндекс.
+6. Лента предложений: `feedback_posts` + `feedback_votes` + Selectel Object Storage
+   для скриншотов; рейтинг по `vote_count DESC`.
+
+**Файлы**: `docs/plans/36-portal-multiverse.md` (новый),
+`docs/release-roadmap.md` (добавлена секция «Пост-запуск v2»).
+
+**Оценка**: 16–22 рабочих дня, старт после стабилизации v1.
+
+**Коммиты**: 1 (план + roadmap).
