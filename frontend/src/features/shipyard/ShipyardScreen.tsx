@@ -10,7 +10,7 @@ import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
 
 export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo?: (kind: 'ship' | 'defense', id: number) => void }) {
-  const { t } = useTranslation('shipyardUi');
+  const { t } = useTranslation('shipyard');
   const { t: tg } = useTranslation('global');
   const { t: ti } = useTranslation('info');
   const qc = useQueryClient();
@@ -141,7 +141,7 @@ function UnitCards({
   onShowAll: () => void;
   onOpenInfo?: (kind: 'ship' | 'defense', id: number) => void;
 }) {
-  const { t } = useTranslation('shipyardUi');
+  const { t } = useTranslation('shipyard');
   const { t: ti } = useTranslation('info');
   const [drafts, setDrafts] = useState<Record<number, number>>({});
 
@@ -258,7 +258,7 @@ function UnitCards({
 }
 
 function ShipQueueRow({ item, isActive, onCancel }: { item: ShipyardQueueItem; isActive: boolean; onCancel: () => void }) {
-  const { t } = useTranslation('shipyardUi');
+  const { t } = useTranslation('shipyard');
   const { t: ti } = useTranslation('info');
   const total = new Date(item.end_at).getTime() - new Date(item.start_at).getTime();
   const elapsed = Date.now() - new Date(item.start_at).getTime();

@@ -42,6 +42,13 @@ achievements:
   tenTransportDesc: Для перевозок грузов между планетами, а так же для сбора ресурсов с других планет лучше всего подходят Транспорты. Еще транспорты могут везти дополнительные запасы топлива, тем самым увеличивая дальность полета флота.
   tutorialEnd: Конец курса молодого бойца.
   tutorialEndDesc: Перед тем как закончить курс молодого бойца, закончите обустраивать свою империю.
+  title: 🎖 Достижения
+  unlocked: "Открыто:"
+  points: "Очки:"
+  catAll: 📋 Все
+  catStarter: 🎓 Старт
+  catPassive: 🥇 Достижения
+  gotAt: "Получено"
 administrator:
   addRequirement: Добавить требования
   basicEnergy: Энергия
@@ -167,6 +174,44 @@ alliance:
   approved.body: "Ваша заявка на вступление в альянс [{{allianceName}}] одобрена."
   rejected.title: Заявка отклонена
   rejected.body: "Ваша заявка на вступление в альянс [{{allianceName}}] отклонена."
+  title: Альянс
+  noAlliance: Вы не состоите в альянсе
+  createTitle: Создать альянс
+  createNamePlaceholder: Название альянса
+  createTagPlaceholder: Тег [3-5 букв]
+  createBtn: Создать
+  createErr: Ошибка создания
+  tabMine: Мой альянс
+  tabList: Список
+  sectionInfo: Информация
+  labelTag: Тег
+  labelRank: Позиция
+  labelMembers: "{{count}} из {{max}}"
+  labelOpen: Открытый набор
+  labelClosed: Закрытый набор
+  toggleOpenBtn: Открыть набор
+  toggleCloseBtn: Закрыть набор
+  leaveBtn: Покинуть альянс
+  disbandBtn: Распустить альянс
+  leaveConfirm: "Покинуть альянс {{name}}?"
+  disbandConfirm: "Распустить альянс {{name}}? Действие необратимо."
+  confirmBtn: Подтвердить
+  cancelBtn: Отмена
+  sectionApplications: Заявки
+  noApplications: Нет заявок
+  applyBtn: Подать заявку
+  alreadyApplied: Заявка отправлена
+  acceptBtn: Принять
+  rejectBtn: Отклонить
+  sectionRelations: Дипломатия
+  relNap: НЕН
+  relWar: ВОЙНА
+  relAlly: СОЮЗ
+  colMember: Игрок
+  colRole: Роль
+  colPoints: Очки
+  colRelation: Отношение
+  colActions: Действия
 artefactInfo:
   action: Действие
   activate: Активировать
@@ -503,6 +548,35 @@ buildings:
   startIn: "<nobr>Старт через</nobr>"
   started: Запустилось
   upgradeToLevel: Построить уровень
+  title: "Постройки — {{planetName}}"
+  levelAbbr: "ур."
+  details: Подробнее
+  enqueued: В очередь
+  enqueuedBody: "{{name}} добавлена в очередь строительства"
+  errQueueBusy: Очередь занята, дождитесь завершения постройки
+  errNotEnough: Недостаточно ресурсов
+  errMoonOnly: Это здание доступно только на луне
+  errNotOnMoon: Это здание недоступно на луне
+  errDefault: Не удалось добавить в очередь
+  cancelled: Отменено
+  cancelledBody: Строительство отменено, ресурсы возвращены
+  cancelErr: Не удалось отменить
+  buildBonus: строительство
+  produceBonus: добыча
+  queueCount: "В очереди: {{count}}"
+  showAll: Все здания
+  showAvailable: Только доступные
+  activeQueue: Активная очередь
+  level: "Уровень {{n}}"
+  notBuilt: Не построено
+  youHave: "у вас:"
+  inQueue: В очереди
+  locked: Заблокировано
+  cancelConfirm: Отменить?
+  confirmYes: Да
+  confirmNo: Нет
+  cancelTitle: "Отменить (ресурсы вернутся)"
+  fieldsFull: Занято / максимум полей на планете
 colonize:
   success.title: "Основана колония {{coords}}"
   success.body: "Новая планета «{{planetName}}» на координатах [{{coords}}]. Стартовые ресурсы: {{metal}} M / {{silicon}} Si / {{hydrogen}} H."
@@ -550,10 +624,38 @@ alien:
   holding.giftBody: "Инопланетяне выгрузили на вашу планету ресурсы: металл +{{metal}}, кремний +{{silicon}}, водород +{{hydrogen}}."
   holding.scatteredSubject: Пришельцы рассеялись
   holding.scatteredBody: Инопланетяне постепенно покинули вашу планету — их флот рассеялся.
+  title: Планеты под захватом пришельцев
+  departsLabel: "Уйдут:"
+  fleetLabel: "Флот:"
+  paidLabel: "Уже заплачено:"
+  payBtn: Заплатить (продлить)
+  payHint: "50 кр = 2 часа"
+  expiresLabel: истекает
+  empty: Нет захваченных планет
+  tierLabel: тир
+  payMinutes: "{{n}} мин"
 
 referral:
   bonus.title: Реферальный бонус
   bonus.body: "Ваш реферал {{username}} совершил покупку. На ваш счёт зачислено {{credits}} кредитов."
+  title: "🎁 Реферальная программа"
+  sectionLink: Ваша ссылка
+  copyBtn: "📋 Копировать"
+  copiedBtn: "✓ Скопировано"
+  shareBtn: "📤 Поделиться"
+  shareGameTitle: "oxsar — космическая стратегия"
+  copyError: Не удалось скопировать
+  refDesc: "Отправьте эту ссылку друзьям. Когда они зарегистрируются и начнут играть — вы получите {{pct}}% от всех их покупок кредитов и очки за каждого активного реферала."
+  statInvited: Приглашено
+  statBonusPoints: Бонусные очки
+  statBonusMax: "макс. {{max}}"
+  statBonus: Бонус от покупок
+  statBonusHint: с каждой покупки кредитов реферала
+  sectionReferred: Приглашённые игроки
+  emptyReferred: Пока никого. Поделитесь ссылкой — бонусы приходят сразу после регистрации.
+  colPlayer: Игрок
+  colPoints: Очки
+  colRegistered: Зарегистрирован
 
 payment:
   credited.title: Кредиты зачислены
@@ -566,12 +668,51 @@ payment:
 settings:
   deletionCode.title: Код для удаления аккаунта
   deletionCode.body: "Код подтверждения удаления аккаунта: {{code}}\nДействителен до {{expiresAt}}.\n\nЕсли это не вы — просто проигнорируйте."
+  title: Настройки аккаунта
+  sectionProfile: Профиль
+  labelEmail: Email
+  saveBtn: Сохранить
+  emailSaved: "✓ Email обновлён"
+  labelLanguage: Язык
+  langRu: Русский
+  langEn: English
+  labelTimezone: Часовой пояс
+  sectionSecurity: Безопасность
+  labelCurrentPw: Текущий пароль
+  labelNewPw: Новый пароль
+  labelConfirmPw: Повторите новый пароль
+  changePwBtn: Сменить пароль
+  pwSaved: "✓ Пароль изменён"
+  pwMismatch: Пароли не совпадают
+  pwTooShort: Минимум 8 символов
+  pwWrongCurrent: Неверный текущий пароль
+  pwSaveError: Ошибка сохранения
+  sectionVacation: Режим отпуска
+  vacationDesc: "В режиме отпуска вы защищены от атак, но не можете строить, исследовать, отправлять флот или торговать. Минимальный интервал между отпусками — 20 дней."
+  vacationActive: "✈ Отпуск активен с {{date}}"
+  leaveVacationBtn: Выйти из отпуска
+  startVacationBtn: Включить режим отпуска
+  vacationWarning: "⚠ Вы уверены? Вся активность будет заморожена."
+  vacationConfirmBtn: Да, уйти в отпуск
+  vacationCancelBtn: Отмена
+  sectionPlanetOrder: Порядок планет
+  planetOrderDesc: Перетащите, чтобы изменить порядок. Этот порядок используется в переключателе планет.
+  planetOrderSaving: "💾 Сохранение…"
+  sectionDanger: "⚠ Опасная зона"
+  deleteAccountBtn: "🗑 Удалить аккаунт…"
+  deleteAccountDesc: "Аккаунт будет удалён навсегда: планеты, флоты, сообщения и участие в альянсе исчезнут. Восстановление невозможно. Для подтверждения требуется одноразовый код, который будет отправлен вам в системные сообщения."
+  requestCodeBtn: Получить код подтверждения
+  requestCodeErr: Ошибка запроса кода
+  codeSentMsg: "Код отправлен в сообщения (папка «Система»). Действителен до {{time}}."
+  confirmDeleteBtn: "🗑 Удалить аккаунт навсегда"
+  confirmDeleteErr: Неверный код
+  cancelBtn: Отмена
 
 artefact:
   expired.title: Артефакт истёк
   expired.body: "Действие артефакта «{{artefactName}}» завершилось. Эффекты отменены."
 
-overviewUi:
+overview:
   noPlanets: Нет планет. Попробуйте перезагрузить страницу.
   unreadPrefix: "У вас"
   unreadSingle: непрочитанное сообщение
@@ -612,53 +753,7 @@ overviewUi:
   levelAbbr: "ур."
   perHourSuffix: /ч
 
-resourceUi:
-  title: "Производство — {{planetName}}"
-  loadError: Ошибка загрузки
-  saving: сохраняю…
-  turnOffAll: Выключить всё
-  turnOnAll: Включить всё
-  colBuilding: Здание
-  natural: Естественное
-  storage: Вместимость хранилищ
-  perHour: За час
-  perDay: За сутки
-  perWeek: За неделю
-  levelAbbr: "ур."
-
-buildingsUi:
-  title: "Постройки — {{planetName}}"
-  levelAbbr: "ур."
-  details: Подробнее
-  enqueued: В очередь
-  enqueuedBody: "{{name}} добавлена в очередь строительства"
-  errQueueBusy: Очередь занята, дождитесь завершения постройки
-  errNotEnough: Недостаточно ресурсов
-  errMoonOnly: Это здание доступно только на луне
-  errNotOnMoon: Это здание недоступно на луне
-  errDefault: Не удалось добавить в очередь
-  cancelled: Отменено
-  cancelledBody: Строительство отменено, ресурсы возвращены
-  cancelErr: Не удалось отменить
-  buildBonus: строительство
-  produceBonus: добыча
-  queueCount: "В очереди: {{count}}"
-  showAll: Все здания
-  showAvailable: Только доступные
-  activeQueue: Активная очередь
-  level: "Уровень {{n}}"
-  notBuilt: Не построено
-  youHave: "у вас:"
-  inQueue: В очереди
-  locked: Заблокировано
-  build: Построить
-  cancelConfirm: Отменить?
-  confirmYes: Да
-  confirmNo: Нет
-  cancelTitle: "Отменить (ресурсы вернутся)"
-  fieldsFull: Занято / максимум полей на планете
-
-researchUi:
+research:
   title: Исследования
   levelAbbr: "ур."
   details: Подробнее
@@ -675,7 +770,7 @@ researchUi:
   busy: Занято
   study: Изучить
 
-shipyardUi:
+shipyard:
   title: "Верфь — {{planetName}}"
   details: Подробнее о
   cancelled: Отменено
@@ -696,7 +791,7 @@ shipyardUi:
   build: Строить
   cancelTitle: Отменить
 
-fleetUi:
+fleet:
   title: "Флот — {{planetName}}"
   metalPh: Металл
   siliconPh: Кремний
@@ -738,61 +833,7 @@ fleetUi:
   missionSpy: Шпионаж
   missionExpedition: Экспедиция
 
-galaxyUi:
-  title: Галактика
-  moonFallback: Луна
-  watchAdd: Добавить в наблюдение
-  watchRemove: Убрать из наблюдения
-  watchAdded: Система добавлена в наблюдение
-  watchRemoved: Система удалена из наблюдения
-  watchLabel: "Наблюдение:"
-  colPos: "#"
-  colPlanet: Планета
-  colPlayer: Игрок
-  colAlliance: Альянс
-  colDebris: Обломки
-  colMissions: Миссии
-  infiniteDeep: "🌌 Бесконечные дали"
-  debrisTitle: "Обломки\nМеталл: {{metal}}\nКремний: {{silicon}}"
-  expedition: Экспедиция
-  expeditionTitle: Отправить экспедицию
-  expeditionThisTitle: Отправить экспедицию с этой планеты
-  expeditionDeepTitle: Отправить экспедицию в Бесконечные дали
-  rocketStrike: Ракетный удар
-  spyTitle: Шпионаж
-  attackTitle: Атака
-  transportTitle: Транспорт
-  recycleTitle: Переработка обломков
-  moonSpyTitle: Шпионаж на луну
-  fuelHint: "Расстояние: {{dist}}\nВремя (мин. скорость): {{time}}"
-  errUnknown: неизвестная ошибка
-  legendActive: только что
-  legendInactive7: "неактивный (7+ дн)"
-  legendInactive21: "очень неактивный (21+ дн)"
-  legendBanned: забанен
-  legendVacation: отпуск
-  legendRocket: ракетный удар
-  legendExpedition: экспедиция
-  legendWatch: наблюдение
-  legendAlly: союзник
-  legendNap: НЕН
-  legendWar: война
-  rocketTitle: "🚀 Ракетный удар [{{g}}:{{s}}:{{pos}}]"
-  rocketSource: Источник
-  rocketCount: Количество
-  rocketAvail: "Доступно:"
-  rocketTime: "Время:"
-  rocketLaunch: Запустить
-  rocketCancel: Отмена
-  rocketLaunched: Ракеты запущены
-  statusBanned: Забанен
-  statusVacation: Режим отпуска
-  statusInactive7: "Неактивный (7+ дн)"
-  statusInactive21: "Очень неактивный (21+ дн)"
-  friendTitle: В друзьях
-  kmUnit: " км"
-
-battlestatsUi:
+battlestats:
   title: ⚔ История боёв
   statTotal: Всего боёв
   statWins: Побед
@@ -824,7 +865,7 @@ battlestatsUi:
   resultDraw: ⚖ Ничья
   resultLoss: 💀 Поражение
 
-artefactsUi:
+artefacts:
   title: ✨ Артефакты
   empty: Инвентарь пуст. Артефакты появляются как награда за бой/экспедицию или покупаются в Рынке артефактов.
   groupActive: Активные
@@ -849,7 +890,7 @@ artefactsUi:
   toastSellErr: Ошибка продажи
   toastError: Ошибка
 
-repairUi:
+repair:
   title: "Ремонтный ангар — {{planetName}}"
   storage: Хранилище
   queueTitle: Очередь ангара
@@ -876,7 +917,7 @@ repairUi:
   toastDisassErr: Ошибка разбора
   toastCancelErr: Не удалось отменить
 
-rocketsUi:
+rockets:
   title: "Ракеты — {{planetName}}"
   stockLabel: межпланетарных ракет
   siloInfo: "Шахта ур. {{level}} — макс. {{max}} в загрузке"
@@ -896,16 +937,7 @@ rocketsUi:
   toastError: Ошибка
   toastErrBody: Не удалось запустить
 
-achievementsUi:
-  title: 🎖 Достижения
-  unlocked: "Открыто:"
-  points: "Очки:"
-  catAll: 📋 Все
-  catStarter: 🎓 Старт
-  catPassive: 🥇 Достижения
-  gotAt: "Получено"
-
-officersUi:
+officers:
   title: 🎖 Офицеры
   balance: "Баланс:"
   empty: Нет доступных офицеров.
@@ -925,7 +957,7 @@ officersUi:
   toastActivated: "{{name}} активирован на {{days}} дн."
   toastError: Ошибка
 
-messagesUi:
+messages:
   title: Сообщения
   unread: "({count} новых)"
   deleteAll: Удалить все
@@ -994,7 +1026,7 @@ messagesUi:
   expedLoss: Потери
   expedNothing: Ничего не найдено
 
-marketUi:
+market:
   title: "Рынок — {{planetName}}"
   yourRate: "Ваш курс:"
   tabExchange: ⇄ Обмен
@@ -1045,7 +1077,7 @@ marketUi:
   fleetNoLots: Нет открытых лотов флота
   fleetLotCreated: Лот флота выставлен
 
-scoreUi:
+score:
   title: "🏆 Рейтинг"
   tabPlayers: "👤 Игроки"
   tabAlliances: "🤝 Альянсы"
@@ -1082,7 +1114,7 @@ scoreUi:
   colTotal: "Всего (у.е.)"
   emptyTransfers: Нет данных
 
-chatUi:
+chat:
   tabGlobal: "🌐 Глобальный"
   tabAlliance: "⚔️ Альянс"
   reconnecting: Переподключение…
@@ -1096,68 +1128,7 @@ chatUi:
   inputPlaceholder: "Сообщение… (Enter — отправить)"
   sendBtn: Отправить
 
-settingsUi:
-  title: Настройки аккаунта
-  sectionProfile: Профиль
-  labelEmail: Email
-  saveBtn: Сохранить
-  emailSaved: "✓ Email обновлён"
-  labelLanguage: Язык
-  langRu: Русский
-  langEn: English
-  labelTimezone: Часовой пояс
-  sectionSecurity: Безопасность
-  labelCurrentPw: Текущий пароль
-  labelNewPw: Новый пароль
-  labelConfirmPw: Повторите новый пароль
-  changePwBtn: Сменить пароль
-  pwSaved: "✓ Пароль изменён"
-  pwMismatch: Пароли не совпадают
-  pwTooShort: Минимум 8 символов
-  pwWrongCurrent: Неверный текущий пароль
-  pwSaveError: Ошибка сохранения
-  sectionVacation: Режим отпуска
-  vacationDesc: "В режиме отпуска вы защищены от атак, но не можете строить, исследовать, отправлять флот или торговать. Минимальный интервал между отпусками — 20 дней."
-  vacationActive: "✈ Отпуск активен с {{date}}"
-  leaveVacationBtn: Выйти из отпуска
-  startVacationBtn: Включить режим отпуска
-  vacationWarning: "⚠ Вы уверены? Вся активность будет заморожена."
-  vacationConfirmBtn: Да, уйти в отпуск
-  vacationCancelBtn: Отмена
-  sectionPlanetOrder: Порядок планет
-  planetOrderDesc: Перетащите, чтобы изменить порядок. Этот порядок используется в переключателе планет.
-  planetOrderSaving: "💾 Сохранение…"
-  sectionDanger: "⚠ Опасная зона"
-  deleteAccountBtn: "🗑 Удалить аккаунт…"
-  deleteAccountDesc: "Аккаунт будет удалён навсегда: планеты, флоты, сообщения и участие в альянсе исчезнут. Восстановление невозможно. Для подтверждения требуется одноразовый код, который будет отправлен вам в системные сообщения."
-  requestCodeBtn: Получить код подтверждения
-  requestCodeErr: Ошибка запроса кода
-  codeSentMsg: "Код отправлен в сообщения (папка «Система»). Действителен до {{time}}."
-  confirmDeleteBtn: "🗑 Удалить аккаунт навсегда"
-  confirmDeleteErr: Неверный код
-  cancelBtn: Отмена
-
-referralUi:
-  title: "🎁 Реферальная программа"
-  sectionLink: Ваша ссылка
-  copyBtn: "📋 Копировать"
-  copiedBtn: "✓ Скопировано"
-  shareBtn: "📤 Поделиться"
-  shareGameTitle: "oxsar — космическая стратегия"
-  copyError: Не удалось скопировать
-  refDesc: "Отправьте эту ссылку друзьям. Когда они зарегистрируются и начнут играть — вы получите {{pct}}% от всех их покупок кредитов и очки за каждого активного реферала."
-  statInvited: Приглашено
-  statBonusPoints: Бонусные очки
-  statBonusMax: "макс. {{max}}"
-  statBonus: Бонус от покупок
-  statBonusHint: с каждой покупки кредитов реферала
-  sectionReferred: Приглашённые игроки
-  emptyReferred: Пока никого. Поделитесь ссылкой — бонусы приходят сразу после регистрации.
-  colPlayer: Игрок
-  colPoints: Очки
-  colRegistered: Зарегистрирован
-
-empireUi:
+empire:
   title: Империя
   totalResources: "Всего ресурсов:"
   colParam: Параметр
@@ -1179,7 +1150,7 @@ empireUi:
   groupDefense: Оборона
   noPlanets: Нет планет.
 
-notepadUi:
+notepad:
   title: "📝 Блокнот"
   hint: Заметки видите только вы. Изменения сохраняются автоматически.
   placeholder: "Координаты целей, заметки по разведке, планы…\n\nПоддерживаются многострочные записи и простой текст."
@@ -1189,7 +1160,7 @@ notepadUi:
   statusSaved: "✓ Сохранено"
   statusError: "⚠ Ошибка сохранения"
 
-planetOptionsUi:
+planetOptions:
   backBtn: "← Назад"
   titlePrefix: "Параметры:"
   sectionRename: Переименовать
@@ -1220,82 +1191,7 @@ planetOptionsUi:
   toastAbandonBody: "{{name}} была удалена"
   toastAbandonErr: Ошибка при удалении
 
-unitInfoUi:
-  levelCol: Ур.
-  timeCol: "⏱"
-  currentLevel: "Уровень {{level}}"
-  requires: "🔒 Требуется:"
-  timeWithFactory: Время следующего уровня с учётом фабрики роботов и нано-фабрики.
-  timeWithoutFactory: Время указано без учёта фабрики роботов и нано-фабрики.
-  timeWithoutLab: Время указано без учёта уровня исследовательской лаборатории.
-  sectionCombat: Боевые характеристики
-  colParam: Параметр
-  colInAttack: В атаке
-  colInDefense: В обороне
-  colValue: Значение
-  statAttack: "⚔ Атака"
-  statShield: "🛡 Щит"
-  statShell: "❤ Броня"
-  statFront: "🎯 Приоритет цели"
-  statBallistics: "🎲 Баллистика"
-  statMasking: "👻 Маскировка"
-  sectionOther: Другие характеристики
-  statCargo: "📦 Грузоподъёмность"
-  statSpeed: "🚀 Скорость"
-  statFuel: "⛽ Расход топлива"
-  statFuelUnit: "/ед."
-  statStructure: "🔩 Конструкция"
-  statMetal: "🟠 Металл"
-  statSilicon: "💎 Кремний"
-  statHydrogen: "💧 Водород"
-  statBuildTime: "⏱ Время постройки (базовое)"
-  sectionRapidfire: Быстрый огонь (rapidfire)
-  rfColTarget: Цель
-  rfColShots: Выстрелов за раунд
-  sectionVulnerable: Уязвим к быстрому огню
-  rfColAttacker: Атакующий
-
-allianceUi:
-  title: Альянс
-  noAlliance: Вы не состоите в альянсе
-  createTitle: Создать альянс
-  createNamePlaceholder: Название альянса
-  createTagPlaceholder: Тег [3-5 букв]
-  createBtn: Создать
-  createErr: Ошибка создания
-  tabMine: Мой альянс
-  tabList: Список
-  sectionInfo: Информация
-  labelTag: Тег
-  labelRank: Позиция
-  labelMembers: "{{count}} из {{max}}"
-  labelOpen: Открытый набор
-  labelClosed: Закрытый набор
-  toggleOpenBtn: Открыть набор
-  toggleCloseBtn: Закрыть набор
-  leaveBtn: Покинуть альянс
-  disbandBtn: Распустить альянс
-  leaveConfirm: "Покинуть альянс {{name}}?"
-  disbandConfirm: "Распустить альянс {{name}}? Действие необратимо."
-  confirmBtn: Подтвердить
-  cancelBtn: Отмена
-  sectionApplications: Заявки
-  noApplications: Нет заявок
-  applyBtn: Подать заявку
-  alreadyApplied: Заявка отправлена
-  acceptBtn: Принять
-  rejectBtn: Отклонить
-  sectionRelations: Дипломатия
-  relNap: НЕН
-  relWar: ВОЙНА
-  relAlly: СОЮЗ
-  colMember: Игрок
-  colRole: Роль
-  colPoints: Очки
-  colRelation: Отношение
-  colActions: Действия
-
-dailyquestUi:
+dailyquest:
   title: Ежедневные задания
   hint: "Сбрасываются в 00:00 UTC. Выполняйте задания для получения наград."
   loading: Загрузка…
@@ -1308,7 +1204,7 @@ dailyquestUi:
   rewardSilicon: Si
   rewardHydrogen: H
 
-friendsUi:
+friends:
   title: Друзья
   loading: Загрузка…
   empty: Список друзей пуст
@@ -1323,7 +1219,7 @@ friendsUi:
   statusHourAgo: "{{n}} ч назад"
   statusDayAgo: "{{n}} дн назад"
 
-galaxyEventUi:
+galaxyEvent:
   untilEnd: "До конца:"
   defaultTitle: Особое событие
   defaultDescr: Действует особый эффект
@@ -1336,13 +1232,13 @@ galaxyEventUi:
   kind.star_nebula.title: Звёздная туманность
   kind.star_nebula.descr: "+15% к мощи экспедиций"
 
-forecastUi:
+forecast:
   forecastIn: "Прогноз через:"
   hourUnit: ч
   capWarning: cap
   capTooltip: Достигнут лимит хранилища
 
-creditsUi:
+credits:
   title: Кредиты
   balanceLabel: "Баланс:"
   creditsUnit: кр
@@ -1380,7 +1276,7 @@ creditsUi:
   priceHintArtefact.label: "Покупка артефактов на бирже"
   priceHintArtefact.value: "зависит от лота"
 
-recordsUi:
+records:
   title: Рекорды
   filterAll: "📊 Все"
   filterPlaceholder: Поиск…
@@ -1397,7 +1293,7 @@ recordsUi:
   catBattle: Боевой рейтинг
   catAchievements: Достижения
 
-searchUi:
+search:
   placeholder: Поиск…
   hint: "минимум 2 символа · Esc — закрыть"
   searching: Поиск…
@@ -1408,13 +1304,13 @@ searchUi:
   sectionPlanets: Планеты
   membersCount: "{{n}} чел."
 
-wikiUi:
+wiki:
   sidebarTitle: Вики
   loading: Загрузка…
   articleLoading: Загрузка статьи…
   articleError: Не удалось загрузить статью.
 
-techtreeUi:
+techtree:
   title: Дерево технологий
   filterAll: Все
   filterAvailable: "✓ Доступно"
@@ -1430,7 +1326,7 @@ techtreeUi:
   kindShips: Флот
   kindDefense: Оборона
 
-professionUi:
+profession:
   title: Профессия
   active: активна
   currentLabel: Текущая профессия
@@ -1451,19 +1347,7 @@ professionUi:
   bonusShipHull: Броня кораблей
   bonusEspionage: Шпионаж
 
-alienUi:
-  title: Планеты под захватом пришельцев
-  departsLabel: "Уйдут:"
-  fleetLabel: "Флот:"
-  paidLabel: "Уже заплачено:"
-  payBtn: Заплатить (продлить)
-  payHint: "50 кр = 2 часа"
-  expiresLabel: истекает
-  empty: Нет захваченных планет
-  tierLabel: тир
-  payMinutes: "{{n}} мин"
-
-adminUi:
+admin:
   title: Панель администратора
   tabUsers: "👥 Игроки"
   tabEvents: "⚡ События"
@@ -1595,7 +1479,7 @@ adminUi:
   colSubject: Тема
   colRead: Read
 
-artMarketUi:
+artMarket:
   title: "🏷 Рынок артефактов"
   balanceLabel: "Баланс:"
   tabAll: "📋 Все офферы"
@@ -1614,7 +1498,7 @@ artMarketUi:
   toastBuyErrTitle: Ошибка покупки
   toastCancelledTitle: Оффер отменён
 
-authUi:
+auth:
   tagline: космическая стратегия
   loginTab: Войти
   registerTab: Регистрация
@@ -1717,7 +1601,59 @@ galaxy:
   tradeUnion: Торговый договор
   upperInactive: Неактивен 21 день
   vacationMode: Отпуск
-confirmUi:
+  title: Галактика
+  moonFallback: Луна
+  watchAdd: Добавить в наблюдение
+  watchRemove: Убрать из наблюдения
+  watchAdded: Система добавлена в наблюдение
+  watchRemoved: Система удалена из наблюдения
+  watchLabel: "Наблюдение:"
+  colPos: "#"
+  colPlanet: Планета
+  colPlayer: Игрок
+  colAlliance: Альянс
+  colDebris: Обломки
+  colMissions: Миссии
+  infiniteDeep: "🌌 Бесконечные дали"
+  debrisTitle: "Обломки\nМеталл: {{metal}}\nКремний: {{silicon}}"
+  expedition: Экспедиция
+  expeditionTitle: Отправить экспедицию
+  expeditionThisTitle: Отправить экспедицию с этой планеты
+  expeditionDeepTitle: Отправить экспедицию в Бесконечные дали
+  rocketStrike: Ракетный удар
+  spyTitle: Шпионаж
+  attackTitle: Атака
+  transportTitle: Транспорт
+  recycleTitle: Переработка обломков
+  moonSpyTitle: Шпионаж на луну
+  fuelHint: "Расстояние: {{dist}}\nВремя (мин. скорость): {{time}}"
+  errUnknown: неизвестная ошибка
+  legendActive: только что
+  legendInactive7: "неактивный (7+ дн)"
+  legendInactive21: "очень неактивный (21+ дн)"
+  legendBanned: забанен
+  legendVacation: отпуск
+  legendRocket: ракетный удар
+  legendExpedition: экспедиция
+  legendWatch: наблюдение
+  legendAlly: союзник
+  legendNap: НЕН
+  legendWar: война
+  rocketTitle: "🚀 Ракетный удар [{{g}}:{{s}}:{{pos}}]"
+  rocketSource: Источник
+  rocketCount: Количество
+  rocketAvail: "Доступно:"
+  rocketTime: "Время:"
+  rocketLaunch: Запустить
+  rocketCancel: Отмена
+  rocketLaunched: Ракеты запущены
+  statusBanned: Забанен
+  statusVacation: Режим отпуска
+  statusInactive7: "Неактивный (7+ дн)"
+  statusInactive21: "Очень неактивный (21+ дн)"
+  friendTitle: В друзьях
+  kmUnit: " км"
+confirm:
   defaultTitle: Подтверждение
   defaultConfirm: Подтвердить
   defaultCancel: Отмена
@@ -2655,6 +2591,18 @@ resource:
   sum: Всего
   weeklyPrdouction: За неделю
   weeklyProduction: За неделю
+  title: "Производство — {{planetName}}"
+  loadError: Ошибка загрузки
+  saving: сохраняю…
+  turnOffAll: Выключить всё
+  turnOnAll: Включить всё
+  colBuilding: Здание
+  natural: Естественное
+  storage: Вместимость хранилищ
+  perHour: За час
+  perDay: За сутки
+  perWeek: За неделю
+  levelAbbr: "ур."
 statistics:
   alliances: Альянс
   attackerLost: Потери атаки
@@ -2749,6 +2697,39 @@ unitInfo:
   shell: Броня
   shield: Щит
   structure: Структура
+  levelCol: Ур.
+  timeCol: "⏱"
+  currentLevel: "Уровень {{level}}"
+  requires: "🔒 Требуется:"
+  timeWithFactory: Время следующего уровня с учётом фабрики роботов и нано-фабрики.
+  timeWithoutFactory: Время указано без учёта фабрики роботов и нано-фабрики.
+  timeWithoutLab: Время указано без учёта уровня исследовательской лаборатории.
+  sectionCombat: Боевые характеристики
+  colParam: Параметр
+  colInAttack: В атаке
+  colInDefense: В обороне
+  colValue: Значение
+  statAttack: "⚔ Атака"
+  statShield: "🛡 Щит"
+  statShell: "❤ Броня"
+  statFront: "🎯 Приоритет цели"
+  statBallistics: "🎲 Баллистика"
+  statMasking: "👻 Маскировка"
+  sectionOther: Другие характеристики
+  statCargo: "📦 Грузоподъёмность"
+  statSpeed: "🚀 Скорость"
+  statFuel: "⛽ Расход топлива"
+  statFuelUnit: "/ед."
+  statStructure: "🔩 Конструкция"
+  statMetal: "🟠 Металл"
+  statSilicon: "💎 Кремний"
+  statHydrogen: "💧 Водород"
+  statBuildTime: "⏱ Время постройки (базовое)"
+  sectionRapidfire: Быстрый огонь (rapidfire)
+  rfColTarget: Цель
+  rfColShots: Выстрелов за раунд
+  sectionVulnerable: Уязвим к быстрому огню
+  rfColAttacker: Атакующий
 userAgreement:
   userAgreementNewPreText: "<span class='true'>Чтобы продолжить игру, подтвердите Соглашение (кнопочка в конце этой страницы).</span>"
   userAgreementPostText: ""

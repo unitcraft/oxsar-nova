@@ -31,7 +31,7 @@ type Role = 'any' | 'attacker' | 'defender';
 type Result = 'any' | 'win' | 'loss' | 'draw';
 
 export function BattlestatsScreen() {
-  const { t } = useTranslation('battlestatsUi');
+  const { t } = useTranslation('battlestats');
   const [role, setRole] = useState<Role>('any');
   const [result, setResult] = useState<Result>('any');
   const [from, setFrom] = useState('');

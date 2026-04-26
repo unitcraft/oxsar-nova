@@ -39,7 +39,7 @@ type Res = 'metal' | 'silicon' | 'hydrogen';
 const RES_KEYS: Res[] = ['metal', 'silicon', 'hydrogen'];
 
 export function MarketScreen({ planet }: { planet: Planet }) {
-  const { t } = useTranslation('marketUi');
+  const { t } = useTranslation('market');
   const qc = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState<'exchange' | 'lots' | 'credit'>('exchange');
@@ -204,7 +204,7 @@ export function MarketScreen({ planet }: { planet: Planet }) {
 }
 
 function LotsPanel({ planet, userId }: { planet: Planet; userId: string }) {
-  const { t } = useTranslation('marketUi');
+  const { t } = useTranslation('market');
   const qc = useQueryClient();
   const toast = useToast();
   const [subTab, setSubTab] = useState<'resource' | 'fleet'>('resource');
@@ -342,7 +342,7 @@ interface CreditExchangeResult {
 // ресурсов за кредиты, бывшее "to_credit") удалено 2026-04-26 — было
 // уязвимостью (бесконечный фарминг premium-валюты через производство).
 function CreditPanel({ planet, userRate }: { planet: Planet; userRate: number }) {
-  const { t } = useTranslation('marketUi');
+  const { t } = useTranslation('market');
   const qc = useQueryClient();
   const toast = useToast();
   const [resource, setResource] = useState<Res>('metal');
@@ -424,7 +424,7 @@ interface FleetLot {
 }
 
 function FleetLotsPanel({ planet, userId }: { planet: Planet; userId: string }) {
-  const { t } = useTranslation('marketUi');
+  const { t } = useTranslation('market');
   const { t: ti } = useTranslation('info');
   const qc = useQueryClient();
   const toast = useToast();

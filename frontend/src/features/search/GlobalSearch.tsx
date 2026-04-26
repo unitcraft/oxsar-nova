@@ -34,7 +34,7 @@ export function GlobalSearch({ open, onClose, onNavigate }: {
   onClose: () => void;
   onNavigate?: (target: { kind: 'player' | 'alliance' | 'planet'; data: PlayerResult | AllianceResult | PlanetResult }) => void;
 }) {
-  const { t } = useTranslation('searchUi');
+  const { t } = useTranslation('search');
   const [q, setQ] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 

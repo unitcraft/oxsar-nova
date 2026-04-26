@@ -16,7 +16,7 @@ interface LaunchResult {
 }
 
 export function RocketsScreen({ planet }: { planet: Planet }) {
-  const { t } = useTranslation('rocketsUi');
+  const { t } = useTranslation('rockets');
   const qc = useQueryClient();
   const toast = useToast();
 

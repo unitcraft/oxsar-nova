@@ -88,7 +88,7 @@ function isInactiveDays(lastSeen: string | null | undefined, days: number): bool
 }
 
 function PlayerStatuses({ cell }: { cell: CellView }) {
-  const { t } = useTranslation('galaxyUi');
+  const { t } = useTranslation('galaxy');
   if (!cell.owner_id) return null;
   const parts: React.ReactNode[] = [];
   if (cell.owner_banned) {
@@ -122,7 +122,7 @@ function RocketPanel({
   onClose: () => void;
 }) {
   const toast = useToast();
-  const { t } = useTranslation('galaxyUi');
+  const { t } = useTranslation('galaxy');
   const { t: tg } = useTranslation('global');
   const uS = tg('timeUnitSec');
   const uM = tg('timeUnitMin');
@@ -220,7 +220,7 @@ function MissionButtons({
   srcPlanets: Planet[];
   onMission: (mission: number, position: number, isMoon: boolean) => void;
 }) {
-  const { t } = useTranslation('galaxyUi');
+  const { t } = useTranslation('galaxy');
   const { t: tg } = useTranslation('global');
   const uS = tg('timeUnitSec');
   const uM = tg('timeUnitMin');
@@ -340,7 +340,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
       setS(initialCoords.system);
     }
   }, [initialCoords?.galaxy, initialCoords?.system]);
-  const { t } = useTranslation('galaxyUi');
+  const { t } = useTranslation('galaxy');
   const [watchLabel, setWatchLabel] = useState<string | null>(null);
   const surveillance = useSurveillance();
 

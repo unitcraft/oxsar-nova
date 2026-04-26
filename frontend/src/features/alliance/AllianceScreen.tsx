@@ -48,7 +48,7 @@ const REL_LABEL_KEY: Record<string, string> = { nap: 'relNap', war: 'relWar', al
 const REL_COLOR: Record<string, string> = { nap: 'var(--ox-fg-dim)', war: 'var(--ox-danger)', ally: 'var(--ox-success)' };
 
 export function AllianceScreen() {
-  const { t } = useTranslation('allianceUi');
+  const { t } = useTranslation('alliance');
   const qc = useQueryClient();
   const toast = useToast();
   const [view, setView] = useState<'mine' | 'list' | 'create'>('mine');
@@ -212,7 +212,7 @@ function MyAlliancePanel({
   leavePending: boolean;
   disbandPending: boolean;
 }) {
-  const { t } = useTranslation('allianceUi');
+  const { t } = useTranslation('alliance');
   const qc = useQueryClient();
   const toast = useToast();
   const [confirmDisband, setConfirmDisband] = useState(false);
@@ -337,7 +337,7 @@ function AllianceDetail({
   joining: boolean;
   onJoin: (message: string) => void;
 }) {
-  const { t } = useTranslation('allianceUi');
+  const { t } = useTranslation('alliance');
   const [message, setMessage] = useState('');
   return (
     <div className="ox-panel" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -389,7 +389,7 @@ function AllianceDetail({
 }
 
 function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: () => void }) {
-  const { t } = useTranslation('allianceUi');
+  const { t } = useTranslation('alliance');
   const toast = useToast();
   const [tag, setTag] = useState('');
   const [name, setName] = useState('');
@@ -445,7 +445,7 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
 }
 
 function RelationsPanel({ allianceID }: { allianceID: string }) {
-  const { t } = useTranslation('allianceUi');
+  const { t } = useTranslation('alliance');
   const qc = useQueryClient();
   const toast = useToast();
   const [targetID, setTargetID] = useState('');
@@ -551,7 +551,7 @@ function MembersTable({
   members: Member[];
   isOwner: boolean;
 }) {
-  const { t } = useTranslation('allianceUi');
+  const { t } = useTranslation('alliance');
   const qc = useQueryClient();
   const toast = useToast();
   const [editingUID, setEditingUID] = useState<string | null>(null);

@@ -32,7 +32,7 @@ const CATEGORY_KEY: Record<Category, string> = {
 };
 
 export function RecordsScreen() {
-  const { t } = useTranslation('recordsUi');
+  const { t } = useTranslation('records');
   const { t: ti } = useTranslation('info');
   const [cat, setCat] = useState<Category | 'all'>('all');
   const [search, setSearch] = useState('');

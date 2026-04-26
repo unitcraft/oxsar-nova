@@ -45,7 +45,7 @@ function useLiveProgress(startAt: string, endAt: string): { pct: number; secsLef
 }
 
 export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo: (id: number, level: number) => void }) {
-  const { t } = useTranslation('researchUi');
+  const { t } = useTranslation('research');
   const { t: tg } = useTranslation('global');
   const { t: ti } = useTranslation('info');
   const levelAbbr = t('levelAbbr');
@@ -214,7 +214,7 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
 }
 
 function ActiveResearchBanner({ item }: { item: QueueItem }) {
-  const { t } = useTranslation('researchUi');
+  const { t } = useTranslation('research');
   const { pct, secsLeft } = useLiveProgress(item.start_at, item.end_at);
   const name = RESEARCH.find((r) => r.id === item.unit_id)?.name ?? `#${item.unit_id}`;
 

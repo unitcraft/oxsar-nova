@@ -32,7 +32,7 @@ function parseWikiHash(): { cat: string; slug: string } {
 }
 
 export function WikiScreen() {
-  const { t } = useTranslation('wikiUi');
+  const { t } = useTranslation('wiki');
   const { t: ti } = useTranslation('info');
   const initial = parseWikiHash();
   const [activeCat, setActiveCat] = useState<string>(initial.cat);

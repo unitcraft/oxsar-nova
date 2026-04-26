@@ -33,7 +33,7 @@ interface AutomsgDef {
 type AdminTab = 'users' | 'events' | 'audit';
 
 export function AdminScreen() {
-  const { t } = useTranslation('adminUi');
+  const { t } = useTranslation('admin');
   const qc = useQueryClient();
   const [tab, setTab] = useState<AdminTab>('users');
   const [creditUserID, setCreditUserID] = useState('');
@@ -272,7 +272,7 @@ export function AdminScreen() {
 }
 
 function AutomsgsPanel() {
-  const { t } = useTranslation('adminUi');
+  const { t } = useTranslation('admin');
   const qc = useQueryClient();
   const [editing, setEditing] = useState<AutomsgDef | null>(null);
 
@@ -398,7 +398,7 @@ interface EventsStats {
 }
 
 function AdminEventsMonitor() {
-  const { t } = useTranslation('adminUi');
+  const { t } = useTranslation('admin');
   const qc = useQueryClient();
   const [stateFilter, setStateFilter] = useState<'all' | 'wait' | 'error' | 'ok'>('error');
 
@@ -544,7 +544,7 @@ interface DeadEvent {
 }
 
 function AdminEventsTab() {
-  const { t } = useTranslation('adminUi');
+  const { t } = useTranslation('admin');
   const qc = useQueryClient();
   const dead = useQuery({
     queryKey: ['admin-events-dead'],
@@ -645,7 +645,7 @@ interface AuditResponse {
 }
 
 function AdminAuditTab() {
-  const { t } = useTranslation('adminUi');
+  const { t } = useTranslation('admin');
   const [actionFilter, setActionFilter] = useState('');
   const [targetFilter, setTargetFilter] = useState('');
 

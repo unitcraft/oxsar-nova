@@ -55,7 +55,7 @@ const MISSION_KEYS: Record<number, string> = {
 };
 
 export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: () => void } = {}) {
-  const { t } = useTranslation('overviewUi');
+  const { t } = useTranslation('overview');
   const planets = useQuery({
     queryKey: ['planets'],
     queryFn: () => api.get<{ planets: Planet[] }>('/api/planets'),
@@ -313,7 +313,7 @@ function StatItem({ label, value, accent }: { label: string; value: string; acce
 function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const { t } = useTranslation('overviewUi');
+  const { t } = useTranslation('overview');
   const { t: tg } = useTranslation('global');
   const { t: ti } = useTranslation('info');
 
@@ -404,7 +404,7 @@ function useNow(intervalMs = 1000) {
 }
 
 function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter?: number; used_fields?: number; temp_min?: number; temp_max?: number }; onOptions: () => void }) {
-  const { t } = useTranslation('overviewUi');
+  const { t } = useTranslation('overview');
   const { t: ti } = useTranslation('info');
   const now = useNow();
   const qc = useQueryClient();
@@ -576,7 +576,7 @@ function ResourceCell({
   value: number;
   ratePerSec: number;
 }) {
-  const { t } = useTranslation('overviewUi');
+  const { t } = useTranslation('overview');
   const perHour = Math.round(ratePerSec * 3600);
   return (
     <div style={{
@@ -602,7 +602,7 @@ function ResourceCell({
 
 function RefLinkBanner({ userId }: { userId: string }) {
   const [copied, setCopied] = useState(false);
-  const { t } = useTranslation('overviewUi');
+  const { t } = useTranslation('overview');
   const url = `${window.location.origin}/?ref=${userId}`;
 
   function copy() {

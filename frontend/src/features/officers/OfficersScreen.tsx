@@ -29,7 +29,7 @@ function fmtEffect(effect: Record<string, number> | null | undefined, effectLabe
 }
 
 export function OfficersScreen() {
-  const { t } = useTranslation('officersUi');
+  const { t } = useTranslation('officers');
   const qc = useQueryClient();
   const toast = useToast();
   const [autoRenewKeys, setAutoRenewKeys] = useState<Set<string>>(new Set());

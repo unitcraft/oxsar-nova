@@ -54,7 +54,7 @@ interface UserProfile {
 }
 
 export function AdminUserProfilePanel({ userID, onClose }: { userID: string; onClose: () => void }) {
-  const { t } = useTranslation('adminUi');
+  const { t } = useTranslation('admin');
   const qc = useQueryClient();
   const [granularity, setGranularity] = useState<'summary' | 'economy' | 'combat' | 'audit'>('summary');
 
@@ -117,7 +117,7 @@ export function AdminUserProfilePanel({ userID, onClose }: { userID: string; onC
 }
 
 function SummaryTab({ p, userID, onChanged }: { p: UserProfile; userID: string; onChanged: () => void }) {
-  const { t } = useTranslation('adminUi');
+  const { t } = useTranslation('admin');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Section title={`${t('sectionPlanets')} (${p.planets.length})`}>
@@ -177,7 +177,7 @@ function SummaryTab({ p, userID, onChanged }: { p: UserProfile; userID: string; 
 }
 
 function EconomyTab({ p }: { p: UserProfile }) {
-  const { t } = useTranslation('adminUi');
+  const { t } = useTranslation('admin');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Section title={`${t('sectionMarketLots')} (${p.market_lots.length})`}>
@@ -256,7 +256,7 @@ function EconomyTab({ p }: { p: UserProfile }) {
 }
 
 function CombatTab({ p }: { p: UserProfile }) {
-  const { t } = useTranslation('adminUi');
+  const { t } = useTranslation('admin');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Section title={`${t('sectionReports')} (${p.reports_recent.length})`}>
@@ -293,7 +293,7 @@ function CombatTab({ p }: { p: UserProfile }) {
 }
 
 function AuditTab({ userID }: { userID: string }) {
-  const { t } = useTranslation('adminUi');
+  const { t } = useTranslation('admin');
   const q = useQuery({
     queryKey: ['admin-audit-target', userID],
     queryFn: () => api.get<{ entries: Array<{ id: string; action: string; admin_name: string; created_at: string; status: number }> }>(
@@ -323,7 +323,7 @@ function AuditTab({ userID }: { userID: string }) {
 }
 
 function ResourceGranter({ userID, planets, onDone }: { userID: string; planets: Planet[]; onDone: () => void }) {
-  const { t } = useTranslation('adminUi');
+  const { t } = useTranslation('admin');
   const [planetID, setPlanetID] = useState(planets[0]?.id ?? '');
   const [m, setM] = useState(0);
   const [s, setS] = useState(0);
@@ -362,7 +362,7 @@ function ResourceGranter({ userID, planets, onDone }: { userID: string; planets:
 }
 
 function ArtefactsBlock({ userID, items, onChanged }: { userID: string; items: ArtefactItem[]; onChanged: () => void }) {
-  const { t } = useTranslation('adminUi');
+  const { t } = useTranslation('admin');
   const [unitID, setUnitID] = useState(0);
   const grant = useMutation({
     mutationFn: () => api.post(`/api/admin/users/${userID}/artefacts/grant`, { unit_id: unitID }),

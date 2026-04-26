@@ -39,7 +39,7 @@ function formatRemaining(endsAt: string, expires: string, unitDay: string, unitH
  * кнопку оплаты продления.
  */
 export function AlienHoldingPanel() {
-  const { t } = useTranslation('alienUi');
+  const { t } = useTranslation('alien');
   const { t: ti } = useTranslation('info');
   const qc = useQueryClient();
   const toast = useToast();

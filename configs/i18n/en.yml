@@ -42,6 +42,13 @@ achievements:
   tenTransportDesc: ""
   tutorialEnd: ""
   tutorialEndDesc: ""
+  title: 🎖 Achievements
+  unlocked: "Unlocked:"
+  points: "Points:"
+  catAll: 📋 All
+  catStarter: 🎓 Starter
+  catPassive: 🥇 Achievements
+  gotAt: "Received"
 administrator:
   addRequirement: ""
   basicEnergy: ""
@@ -167,6 +174,44 @@ alliance:
   approved.body: ""
   rejected.title: ""
   rejected.body: ""
+  title: Alliance
+  noAlliance: You are not in an alliance
+  createTitle: Create alliance
+  createNamePlaceholder: Alliance name
+  createTagPlaceholder: Tag [3-5 letters]
+  createBtn: Create
+  createErr: Creation error
+  tabMine: My alliance
+  tabList: List
+  sectionInfo: Information
+  labelTag: Tag
+  labelRank: Position
+  labelMembers: "{{count}} of {{max}}"
+  labelOpen: Open recruitment
+  labelClosed: Closed recruitment
+  toggleOpenBtn: Open recruitment
+  toggleCloseBtn: Close recruitment
+  leaveBtn: Leave alliance
+  disbandBtn: Disband alliance
+  leaveConfirm: "Leave alliance {{name}}?"
+  disbandConfirm: "Disband alliance {{name}}? This action is irreversible."
+  confirmBtn: Confirm
+  cancelBtn: Cancel
+  sectionApplications: Applications
+  noApplications: No applications
+  applyBtn: Apply
+  alreadyApplied: Application sent
+  acceptBtn: Accept
+  rejectBtn: Reject
+  sectionRelations: Diplomacy
+  relNap: NAP
+  relWar: WAR
+  relAlly: ALLY
+  colMember: Player
+  colRole: Role
+  colPoints: Points
+  colRelation: Relation
+  colActions: Actions
 artefactInfo:
   action: ""
   activate: ""
@@ -504,6 +549,35 @@ buildings:
   startIn: ""
   started: ""
   upgradeToLevel: ""
+  title: "Buildings — {{planetName}}"
+  levelAbbr: "lv."
+  details: Details
+  enqueued: Queued
+  enqueuedBody: "{{name}} added to construction queue"
+  errQueueBusy: Queue is busy, wait for current build to finish
+  errNotEnough: Not enough resources
+  errMoonOnly: This building is only available on a moon
+  errNotOnMoon: This building is not available on a moon
+  errDefault: Failed to add to queue
+  cancelled: Cancelled
+  cancelledBody: Construction cancelled, resources refunded
+  cancelErr: Failed to cancel
+  buildBonus: construction
+  produceBonus: production
+  queueCount: "In queue: {{count}}"
+  showAll: All buildings
+  showAvailable: Available only
+  activeQueue: Active queue
+  level: "Level {{n}}"
+  notBuilt: Not built
+  youHave: "you have:"
+  inQueue: In queue
+  locked: Locked
+  cancelConfirm: Cancel?
+  confirmYes: Yes
+  confirmNo: No
+  cancelTitle: "Cancel (resources will be refunded)"
+  fieldsFull: Occupied / max planet fields
 # TODO: en
 colonize:
   success.title: ""
@@ -552,10 +626,38 @@ alien:
   holding.giftBody: ""
   holding.scatteredSubject: ""
   holding.scatteredBody: ""
+  title: Planets under alien occupation
+  departsLabel: "Departs:"
+  fleetLabel: "Fleet:"
+  paidLabel: "Already paid:"
+  payBtn: Pay (extend)
+  payHint: "50 cr = 2 hours"
+  expiresLabel: expires
+  empty: No captured planets
+  tierLabel: tier
+  payMinutes: "{{n}} min"
 
 referral:
   bonus.title: ""
   bonus.body: ""
+  title: "🎁 Referral program"
+  sectionLink: Your link
+  copyBtn: "📋 Copy"
+  copiedBtn: "✓ Copied"
+  shareBtn: "📤 Share"
+  shareGameTitle: "oxsar — space strategy"
+  copyError: Failed to copy
+  refDesc: "Send this link to friends. When they register and start playing you will earn {{pct}}% of all their credit purchases and points for each active referral."
+  statInvited: Invited
+  statBonusPoints: Bonus points
+  statBonusMax: "max. {{max}}"
+  statBonus: Purchase bonus
+  statBonusHint: from each referral credit purchase
+  sectionReferred: Referred players
+  emptyReferred: None yet. Share the link — bonuses arrive right after registration.
+  colPlayer: Player
+  colPoints: Points
+  colRegistered: Registered
 
 payment:
   credited.title: ""
@@ -568,13 +670,52 @@ payment:
 settings:
   deletionCode.title: ""
   deletionCode.body: ""
+  title: Account settings
+  sectionProfile: Profile
+  labelEmail: Email
+  saveBtn: Save
+  emailSaved: "✓ Email updated"
+  labelLanguage: Language
+  langRu: Русский
+  langEn: English
+  labelTimezone: Timezone
+  sectionSecurity: Security
+  labelCurrentPw: Current password
+  labelNewPw: New password
+  labelConfirmPw: Confirm new password
+  changePwBtn: Change password
+  pwSaved: "✓ Password changed"
+  pwMismatch: Passwords do not match
+  pwTooShort: Minimum 8 characters
+  pwWrongCurrent: Incorrect current password
+  pwSaveError: Save error
+  sectionVacation: Vacation mode
+  vacationDesc: "In vacation mode you are protected from attacks but cannot build, research, send fleets or trade. Minimum interval between vacations — 20 days."
+  vacationActive: "✈ Vacation active since {{date}}"
+  leaveVacationBtn: Leave vacation mode
+  startVacationBtn: Enable vacation mode
+  vacationWarning: "⚠ Are you sure? All activity will be frozen."
+  vacationConfirmBtn: Yes, go on vacation
+  vacationCancelBtn: Cancel
+  sectionPlanetOrder: Planet order
+  planetOrderDesc: Drag to reorder. This order is used in the planet switcher.
+  planetOrderSaving: "💾 Saving…"
+  sectionDanger: "⚠ Danger zone"
+  deleteAccountBtn: "🗑 Delete account…"
+  deleteAccountDesc: "The account will be permanently deleted: planets, fleets, messages and alliance membership will be gone. Cannot be undone. A one-time code sent to your system messages is required to confirm."
+  requestCodeBtn: Request confirmation code
+  requestCodeErr: Code request error
+  codeSentMsg: "Code sent to messages (System folder). Valid until {{time}}."
+  confirmDeleteBtn: "🗑 Delete account permanently"
+  confirmDeleteErr: Invalid code
+  cancelBtn: Cancel
 
 artefact:
   expired.title: ""
   expired.body: ""
 
 # TODO: en
-overviewUi:
+overview:
   noPlanets: No planets. Try refreshing the page.
   unreadPrefix: "You have"
   unreadSingle: unread message
@@ -615,53 +756,7 @@ overviewUi:
   levelAbbr: "lv."
   perHourSuffix: /h
 
-resourceUi:
-  title: "Production — {{planetName}}"
-  loadError: Load error
-  saving: saving…
-  turnOffAll: Turn off all
-  turnOnAll: Turn on all
-  colBuilding: Building
-  natural: Natural
-  storage: Storage capacity
-  perHour: Per hour
-  perDay: Per day
-  perWeek: Per week
-  levelAbbr: "lv."
-
-buildingsUi:
-  title: "Buildings — {{planetName}}"
-  levelAbbr: "lv."
-  details: Details
-  enqueued: Queued
-  enqueuedBody: "{{name}} added to construction queue"
-  errQueueBusy: Queue is busy, wait for current build to finish
-  errNotEnough: Not enough resources
-  errMoonOnly: This building is only available on a moon
-  errNotOnMoon: This building is not available on a moon
-  errDefault: Failed to add to queue
-  cancelled: Cancelled
-  cancelledBody: Construction cancelled, resources refunded
-  cancelErr: Failed to cancel
-  buildBonus: construction
-  produceBonus: production
-  queueCount: "In queue: {{count}}"
-  showAll: All buildings
-  showAvailable: Available only
-  activeQueue: Active queue
-  level: "Level {{n}}"
-  notBuilt: Not built
-  youHave: "you have:"
-  inQueue: In queue
-  locked: Locked
-  build: Build
-  cancelConfirm: Cancel?
-  confirmYes: Yes
-  confirmNo: No
-  cancelTitle: "Cancel (resources will be refunded)"
-  fieldsFull: Occupied / max planet fields
-
-researchUi:
+research:
   title: Research
   levelAbbr: "lv."
   details: Details
@@ -678,7 +773,7 @@ researchUi:
   busy: Busy
   study: Research
 
-shipyardUi:
+shipyard:
   title: "Shipyard — {{planetName}}"
   details: Details for
   cancelled: Cancelled
@@ -699,7 +794,7 @@ shipyardUi:
   build: Build
   cancelTitle: Cancel
 
-fleetUi:
+fleet:
   title: "Fleet — {{planetName}}"
   metalPh: Metal
   siliconPh: Silicon
@@ -741,61 +836,7 @@ fleetUi:
   missionSpy: Espionage
   missionExpedition: Expedition
 
-galaxyUi:
-  title: Galaxy
-  moonFallback: Moon
-  watchAdd: Add to watchlist
-  watchRemove: Remove from watchlist
-  watchAdded: System added to watchlist
-  watchRemoved: System removed from watchlist
-  watchLabel: "Watching:"
-  colPos: "#"
-  colPlanet: Planet
-  colPlayer: Player
-  colAlliance: Alliance
-  colDebris: Debris
-  colMissions: Missions
-  infiniteDeep: "🌌 Deep Space"
-  debrisTitle: "Debris\nMetal: {{metal}}\nSilicon: {{silicon}}"
-  expedition: Expedition
-  expeditionTitle: Send expedition
-  expeditionThisTitle: Send expedition from this planet
-  expeditionDeepTitle: Send expedition to Deep Space
-  rocketStrike: Rocket strike
-  spyTitle: Espionage
-  attackTitle: Attack
-  transportTitle: Transport
-  recycleTitle: Collect debris
-  moonSpyTitle: Spy on moon
-  fuelHint: "Distance: {{dist}}\nTime (min. speed): {{time}}"
-  errUnknown: unknown error
-  legendActive: just now
-  legendInactive7: "inactive (7+ d)"
-  legendInactive21: "very inactive (21+ d)"
-  legendBanned: banned
-  legendVacation: vacation
-  legendRocket: rocket strike
-  legendExpedition: expedition
-  legendWatch: watching
-  legendAlly: ally
-  legendNap: NAP
-  legendWar: war
-  rocketTitle: "🚀 Rocket strike [{{g}}:{{s}}:{{pos}}]"
-  rocketSource: Source
-  rocketCount: Count
-  rocketAvail: "Available:"
-  rocketTime: "Time:"
-  rocketLaunch: Launch
-  rocketCancel: Cancel
-  rocketLaunched: Rockets launched
-  statusBanned: Banned
-  statusVacation: Vacation mode
-  statusInactive7: "Inactive (7+ d)"
-  statusInactive21: "Very inactive (21+ d)"
-  friendTitle: Friend
-  kmUnit: " km"
-
-battlestatsUi:
+battlestats:
   title: ⚔ Battle history
   statTotal: Total battles
   statWins: Wins
@@ -827,7 +868,7 @@ battlestatsUi:
   resultDraw: ⚖ Draw
   resultLoss: 💀 Loss
 
-artefactsUi:
+artefacts:
   title: ✨ Artefacts
   empty: Inventory is empty. Artefacts appear as battle/expedition rewards or can be bought on the Artefact Market.
   groupActive: Active
@@ -852,7 +893,7 @@ artefactsUi:
   toastSellErr: Sale error
   toastError: Error
 
-repairUi:
+repair:
   title: "Repair Hangar — {{planetName}}"
   storage: Storage
   queueTitle: Hangar queue
@@ -879,7 +920,7 @@ repairUi:
   toastDisassErr: Disassembly error
   toastCancelErr: Failed to cancel
 
-rocketsUi:
+rockets:
   title: "Rockets — {{planetName}}"
   stockLabel: interplanetary missiles
   siloInfo: "Silo lv. {{level}} — max {{max}} loaded"
@@ -899,16 +940,7 @@ rocketsUi:
   toastError: Error
   toastErrBody: Failed to launch
 
-achievementsUi:
-  title: 🎖 Achievements
-  unlocked: "Unlocked:"
-  points: "Points:"
-  catAll: 📋 All
-  catStarter: 🎓 Starter
-  catPassive: 🥇 Achievements
-  gotAt: "Received"
-
-officersUi:
+officers:
   title: 🎖 Officers
   balance: "Balance:"
   empty: No officers available.
@@ -928,7 +960,7 @@ officersUi:
   toastActivated: "{{name}} activated for {{days}} d."
   toastError: Error
 
-messagesUi:
+messages:
   title: Messages
   unread: "({count} new)"
   deleteAll: Delete all
@@ -997,7 +1029,7 @@ messagesUi:
   expedLoss: Losses
   expedNothing: Nothing found
 
-marketUi:
+market:
   title: "Market — {{planetName}}"
   yourRate: "Your rate:"
   tabExchange: ⇄ Exchange
@@ -1048,7 +1080,7 @@ marketUi:
   fleetNoLots: No open fleet lots
   fleetLotCreated: Fleet lot listed
 
-scoreUi:
+score:
   title: "🏆 Leaderboard"
   tabPlayers: "👤 Players"
   tabAlliances: "🤝 Alliances"
@@ -1085,7 +1117,7 @@ scoreUi:
   colTotal: "Total (eq.)"
   emptyTransfers: No data
 
-chatUi:
+chat:
   tabGlobal: "🌐 Global"
   tabAlliance: "⚔️ Alliance"
   reconnecting: Reconnecting…
@@ -1099,68 +1131,7 @@ chatUi:
   inputPlaceholder: "Message… (Enter to send)"
   sendBtn: Send
 
-settingsUi:
-  title: Account settings
-  sectionProfile: Profile
-  labelEmail: Email
-  saveBtn: Save
-  emailSaved: "✓ Email updated"
-  labelLanguage: Language
-  langRu: Русский
-  langEn: English
-  labelTimezone: Timezone
-  sectionSecurity: Security
-  labelCurrentPw: Current password
-  labelNewPw: New password
-  labelConfirmPw: Confirm new password
-  changePwBtn: Change password
-  pwSaved: "✓ Password changed"
-  pwMismatch: Passwords do not match
-  pwTooShort: Minimum 8 characters
-  pwWrongCurrent: Incorrect current password
-  pwSaveError: Save error
-  sectionVacation: Vacation mode
-  vacationDesc: "In vacation mode you are protected from attacks but cannot build, research, send fleets or trade. Minimum interval between vacations — 20 days."
-  vacationActive: "✈ Vacation active since {{date}}"
-  leaveVacationBtn: Leave vacation mode
-  startVacationBtn: Enable vacation mode
-  vacationWarning: "⚠ Are you sure? All activity will be frozen."
-  vacationConfirmBtn: Yes, go on vacation
-  vacationCancelBtn: Cancel
-  sectionPlanetOrder: Planet order
-  planetOrderDesc: Drag to reorder. This order is used in the planet switcher.
-  planetOrderSaving: "💾 Saving…"
-  sectionDanger: "⚠ Danger zone"
-  deleteAccountBtn: "🗑 Delete account…"
-  deleteAccountDesc: "The account will be permanently deleted: planets, fleets, messages and alliance membership will be gone. Cannot be undone. A one-time code sent to your system messages is required to confirm."
-  requestCodeBtn: Request confirmation code
-  requestCodeErr: Code request error
-  codeSentMsg: "Code sent to messages (System folder). Valid until {{time}}."
-  confirmDeleteBtn: "🗑 Delete account permanently"
-  confirmDeleteErr: Invalid code
-  cancelBtn: Cancel
-
-referralUi:
-  title: "🎁 Referral program"
-  sectionLink: Your link
-  copyBtn: "📋 Copy"
-  copiedBtn: "✓ Copied"
-  shareBtn: "📤 Share"
-  shareGameTitle: "oxsar — space strategy"
-  copyError: Failed to copy
-  refDesc: "Send this link to friends. When they register and start playing you will earn {{pct}}% of all their credit purchases and points for each active referral."
-  statInvited: Invited
-  statBonusPoints: Bonus points
-  statBonusMax: "max. {{max}}"
-  statBonus: Purchase bonus
-  statBonusHint: from each referral credit purchase
-  sectionReferred: Referred players
-  emptyReferred: None yet. Share the link — bonuses arrive right after registration.
-  colPlayer: Player
-  colPoints: Points
-  colRegistered: Registered
-
-empireUi:
+empire:
   title: Empire
   totalResources: "Total resources:"
   colParam: Parameter
@@ -1182,7 +1153,7 @@ empireUi:
   groupDefense: Defense
   noPlanets: No planets.
 
-notepadUi:
+notepad:
   title: "📝 Notepad"
   hint: Notes are visible only to you. Changes are saved automatically.
   placeholder: "Target coordinates, scouting notes, plans…\n\nMulti-line entries and plain text supported."
@@ -1192,7 +1163,7 @@ notepadUi:
   statusSaved: "✓ Saved"
   statusError: "⚠ Save error"
 
-planetOptionsUi:
+planetOptions:
   backBtn: "← Back"
   titlePrefix: "Settings:"
   sectionRename: Rename
@@ -1223,82 +1194,7 @@ planetOptionsUi:
   toastAbandonBody: "{{name}} has been deleted"
   toastAbandonErr: Deletion error
 
-unitInfoUi:
-  levelCol: Lv.
-  timeCol: "⏱"
-  currentLevel: "Level {{level}}"
-  requires: "🔒 Requires:"
-  timeWithFactory: Time for next level accounting for robotic factory and nano factory.
-  timeWithoutFactory: Time shown without robotic factory and nano factory.
-  timeWithoutLab: Time shown without research lab level.
-  sectionCombat: Combat stats
-  colParam: Parameter
-  colInAttack: In attack
-  colInDefense: In defense
-  colValue: Value
-  statAttack: "⚔ Attack"
-  statShield: "🛡 Shield"
-  statShell: "❤ Hull"
-  statFront: "🎯 Target priority"
-  statBallistics: "🎲 Ballistics"
-  statMasking: "👻 Masking"
-  sectionOther: Other stats
-  statCargo: "📦 Cargo"
-  statSpeed: "🚀 Speed"
-  statFuel: "⛽ Fuel consumption"
-  statFuelUnit: "/unit"
-  statStructure: "🔩 Structure"
-  statMetal: "🟠 Metal"
-  statSilicon: "💎 Silicon"
-  statHydrogen: "💧 Hydrogen"
-  statBuildTime: "⏱ Build time (base)"
-  sectionRapidfire: Rapidfire
-  rfColTarget: Target
-  rfColShots: Shots per round
-  sectionVulnerable: Vulnerable to rapidfire
-  rfColAttacker: Attacker
-
-allianceUi:
-  title: Alliance
-  noAlliance: You are not in an alliance
-  createTitle: Create alliance
-  createNamePlaceholder: Alliance name
-  createTagPlaceholder: Tag [3-5 letters]
-  createBtn: Create
-  createErr: Creation error
-  tabMine: My alliance
-  tabList: List
-  sectionInfo: Information
-  labelTag: Tag
-  labelRank: Position
-  labelMembers: "{{count}} of {{max}}"
-  labelOpen: Open recruitment
-  labelClosed: Closed recruitment
-  toggleOpenBtn: Open recruitment
-  toggleCloseBtn: Close recruitment
-  leaveBtn: Leave alliance
-  disbandBtn: Disband alliance
-  leaveConfirm: "Leave alliance {{name}}?"
-  disbandConfirm: "Disband alliance {{name}}? This action is irreversible."
-  confirmBtn: Confirm
-  cancelBtn: Cancel
-  sectionApplications: Applications
-  noApplications: No applications
-  applyBtn: Apply
-  alreadyApplied: Application sent
-  acceptBtn: Accept
-  rejectBtn: Reject
-  sectionRelations: Diplomacy
-  relNap: NAP
-  relWar: WAR
-  relAlly: ALLY
-  colMember: Player
-  colRole: Role
-  colPoints: Points
-  colRelation: Relation
-  colActions: Actions
-
-dailyquestUi:
+dailyquest:
   title: Daily quests
   hint: "Resets at 00:00 UTC. Complete quests to earn rewards."
   loading: Loading…
@@ -1311,7 +1207,7 @@ dailyquestUi:
   rewardSilicon: Si
   rewardHydrogen: H
 
-friendsUi:
+friends:
   title: Friends
   loading: Loading…
   empty: Friends list is empty
@@ -1326,7 +1222,7 @@ friendsUi:
   statusHourAgo: "{{n}} h ago"
   statusDayAgo: "{{n}} d ago"
 
-galaxyEventUi:
+galaxyEvent:
   untilEnd: "Until end:"
   defaultTitle: Special event
   defaultDescr: A special effect is active
@@ -1339,13 +1235,13 @@ galaxyEventUi:
   kind.star_nebula.title: Star Nebula
   kind.star_nebula.descr: "+15% expedition power"
 
-forecastUi:
+forecast:
   forecastIn: "Forecast in:"
   hourUnit: h
   capWarning: cap
   capTooltip: Storage capacity reached
 
-creditsUi:
+credits:
   title: Credits
   balanceLabel: "Balance:"
   creditsUnit: cr
@@ -1383,7 +1279,7 @@ creditsUi:
   priceHintArtefact.label: "Buy artefacts on the market"
   priceHintArtefact.value: "depends on lot"
 
-recordsUi:
+records:
   title: Records
   filterAll: "📊 All"
   filterPlaceholder: Search…
@@ -1400,7 +1296,7 @@ recordsUi:
   catBattle: Battle score
   catAchievements: Achievements
 
-searchUi:
+search:
   placeholder: Search…
   hint: "at least 2 characters · Esc to close"
   searching: Searching…
@@ -1411,13 +1307,13 @@ searchUi:
   sectionPlanets: Planets
   membersCount: "{{n}} members"
 
-wikiUi:
+wiki:
   sidebarTitle: Wiki
   loading: Loading…
   articleLoading: Loading article…
   articleError: Failed to load article.
 
-techtreeUi:
+techtree:
   title: Technology tree
   filterAll: All
   filterAvailable: "✓ Available"
@@ -1433,7 +1329,7 @@ techtreeUi:
   kindShips: Fleet
   kindDefense: Defense
 
-professionUi:
+profession:
   title: Profession
   active: active
   currentLabel: Current profession
@@ -1454,19 +1350,7 @@ professionUi:
   bonusShipHull: Ship hull
   bonusEspionage: Espionage
 
-alienUi:
-  title: Planets under alien occupation
-  departsLabel: "Departs:"
-  fleetLabel: "Fleet:"
-  paidLabel: "Already paid:"
-  payBtn: Pay (extend)
-  payHint: "50 cr = 2 hours"
-  expiresLabel: expires
-  empty: No captured planets
-  tierLabel: tier
-  payMinutes: "{{n}} min"
-
-adminUi:
+admin:
   title: Admin panel
   tabUsers: "👥 Players"
   tabEvents: "⚡ Events"
@@ -1598,7 +1482,7 @@ adminUi:
   colSubject: Subject
   colRead: Read
 
-artMarketUi:
+artMarket:
   title: "🏷 Artefact Market"
   balanceLabel: "Balance:"
   tabAll: "📋 All offers"
@@ -1617,7 +1501,7 @@ artMarketUi:
   toastBuyErrTitle: Purchase error
   toastCancelledTitle: Offer cancelled
 
-authUi:
+auth:
   tagline: space strategy
   loginTab: Sign in
   registerTab: Register
@@ -1720,7 +1604,59 @@ galaxy:
   tradeUnion: ""
   upperInactive: ""
   vacationMode: ""
-confirmUi:
+  title: Galaxy
+  moonFallback: Moon
+  watchAdd: Add to watchlist
+  watchRemove: Remove from watchlist
+  watchAdded: System added to watchlist
+  watchRemoved: System removed from watchlist
+  watchLabel: "Watching:"
+  colPos: "#"
+  colPlanet: Planet
+  colPlayer: Player
+  colAlliance: Alliance
+  colDebris: Debris
+  colMissions: Missions
+  infiniteDeep: "🌌 Deep Space"
+  debrisTitle: "Debris\nMetal: {{metal}}\nSilicon: {{silicon}}"
+  expedition: Expedition
+  expeditionTitle: Send expedition
+  expeditionThisTitle: Send expedition from this planet
+  expeditionDeepTitle: Send expedition to Deep Space
+  rocketStrike: Rocket strike
+  spyTitle: Espionage
+  attackTitle: Attack
+  transportTitle: Transport
+  recycleTitle: Collect debris
+  moonSpyTitle: Spy on moon
+  fuelHint: "Distance: {{dist}}\nTime (min. speed): {{time}}"
+  errUnknown: unknown error
+  legendActive: just now
+  legendInactive7: "inactive (7+ d)"
+  legendInactive21: "very inactive (21+ d)"
+  legendBanned: banned
+  legendVacation: vacation
+  legendRocket: rocket strike
+  legendExpedition: expedition
+  legendWatch: watching
+  legendAlly: ally
+  legendNap: NAP
+  legendWar: war
+  rocketTitle: "🚀 Rocket strike [{{g}}:{{s}}:{{pos}}]"
+  rocketSource: Source
+  rocketCount: Count
+  rocketAvail: "Available:"
+  rocketTime: "Time:"
+  rocketLaunch: Launch
+  rocketCancel: Cancel
+  rocketLaunched: Rockets launched
+  statusBanned: Banned
+  statusVacation: Vacation mode
+  statusInactive7: "Inactive (7+ d)"
+  statusInactive21: "Very inactive (21+ d)"
+  friendTitle: Friend
+  kmUnit: " km"
+confirm:
   defaultTitle: Confirmation
   defaultConfirm: Confirm
   defaultCancel: Cancel
@@ -2658,6 +2594,18 @@ resource:
   sum: ""
   weeklyPrdouction: ""
   weeklyProduction: ""
+  title: "Production — {{planetName}}"
+  loadError: Load error
+  saving: saving…
+  turnOffAll: Turn off all
+  turnOnAll: Turn on all
+  colBuilding: Building
+  natural: Natural
+  storage: Storage capacity
+  perHour: Per hour
+  perDay: Per day
+  perWeek: Per week
+  levelAbbr: "lv."
 statistics:
   alliances: ""
   attackerLost: ""
@@ -2752,6 +2700,39 @@ unitInfo:
   shell: ""
   shield: ""
   structure: ""
+  levelCol: Lv.
+  timeCol: "⏱"
+  currentLevel: "Level {{level}}"
+  requires: "🔒 Requires:"
+  timeWithFactory: Time for next level accounting for robotic factory and nano factory.
+  timeWithoutFactory: Time shown without robotic factory and nano factory.
+  timeWithoutLab: Time shown without research lab level.
+  sectionCombat: Combat stats
+  colParam: Parameter
+  colInAttack: In attack
+  colInDefense: In defense
+  colValue: Value
+  statAttack: "⚔ Attack"
+  statShield: "🛡 Shield"
+  statShell: "❤ Hull"
+  statFront: "🎯 Target priority"
+  statBallistics: "🎲 Ballistics"
+  statMasking: "👻 Masking"
+  sectionOther: Other stats
+  statCargo: "📦 Cargo"
+  statSpeed: "🚀 Speed"
+  statFuel: "⛽ Fuel consumption"
+  statFuelUnit: "/unit"
+  statStructure: "🔩 Structure"
+  statMetal: "🟠 Metal"
+  statSilicon: "💎 Silicon"
+  statHydrogen: "💧 Hydrogen"
+  statBuildTime: "⏱ Build time (base)"
+  sectionRapidfire: Rapidfire
+  rfColTarget: Target
+  rfColShots: Shots per round
+  sectionVulnerable: Vulnerable to rapidfire
+  rfColAttacker: Attacker
 userAgreement:
   userAgreementNewPreText: ""
   userAgreementPostText: ""

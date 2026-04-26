@@ -19,7 +19,7 @@ interface ReferralData {
 }
 
 export function ReferralScreen() {
-  const { t } = useTranslation('referralUi');
+  const { t } = useTranslation('referral');
   const me = useQuery({
     queryKey: ['me'],
     queryFn: () => api.get<{ user_id: string }>('/api/me'),

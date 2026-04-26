@@ -31,7 +31,7 @@ function formatRemaining(endsAt: string, unitHour: string, unitMin: string): str
  * Возвращает null если событий нет (204 No Content от backend).
  */
 export function GalaxyEventBanner() {
-  const { t, tf } = useTranslation('galaxyEventUi');
+  const { t, tf } = useTranslation('galaxyEvent');
   const unitHour = t('global', 'timeUnitHour');
   const unitMin  = t('global', 'timeUnitMin');
   const q = useQuery({
@@ -43,8 +43,8 @@ export function GalaxyEventBanner() {
   const e = q.data;
   if (!e) return null;
   const icon = KIND_ICON[e.kind] ?? '✨';
-  const title = tf('galaxyEventUi', `kind.${e.kind}.title`, t('defaultTitle'));
-  const descr = tf('galaxyEventUi', `kind.${e.kind}.descr`, t('defaultDescr'));
+  const title = tf('galaxyEvent', `kind.${e.kind}.title`, t('defaultTitle'));
+  const descr = tf('galaxyEvent', `kind.${e.kind}.descr`, t('defaultDescr'));
   return (
     <div
       className="ox-panel"

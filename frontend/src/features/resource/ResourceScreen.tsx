@@ -35,7 +35,7 @@ const TR_BASE: React.CSSProperties = {
 };
 
 export function ResourceScreen({ planetId }: { planetId: string }) {
-  const { t } = useTranslation('resourceUi');
+  const { t } = useTranslation('resource');
   const { t: tg } = useTranslation('global');
   const qc = useQueryClient();
   const toast = useToast();

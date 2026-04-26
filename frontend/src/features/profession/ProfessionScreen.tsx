@@ -60,7 +60,7 @@ function timeUntil(iso: string, avail: string, unitDay: string, unitHour: string
 }
 
 export function ProfessionScreen() {
-  const { t } = useTranslation('professionUi');
+  const { t } = useTranslation('profession');
   const qc = useQueryClient();
   const toast = useToast();
   const unitDay  = t('global', 'timeUnitDay');

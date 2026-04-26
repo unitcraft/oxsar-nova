@@ -64,7 +64,7 @@ const STATE_TKEYS: Record<string, string> = {
 interface InitialDst { g: number; s: number; pos: number; isMoon: boolean; mission: number }
 
 export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst?: InitialDst }) {
-  const { t } = useTranslation('fleetUi');
+  const { t } = useTranslation('fleet');
   const { t: tg } = useTranslation('global');
   const { t: ti } = useTranslation('info');
   const uS = tg('timeUnitSec');

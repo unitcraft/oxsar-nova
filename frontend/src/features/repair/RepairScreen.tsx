@@ -40,7 +40,7 @@ interface DamagedUnit {
 }
 
 export function RepairScreen({ planet }: { planet: Planet }) {
-  const { t } = useTranslation('repairUi');
+  const { t } = useTranslation('repair');
   const { t: ti } = useTranslation('info');
   const qc = useQueryClient();
   const toast = useToast();
@@ -249,7 +249,7 @@ function DisassembleList({
   onGo: (unitId: number, count: number) => void;
   pending: boolean;
 }) {
-  const { t } = useTranslation('repairUi');
+  const { t } = useTranslation('repair');
   const { t: ti } = useTranslation('info');
   const [drafts, setDrafts] = useState<Record<number, number>>({});
   const isShip = (id: number) => SHIPS.some((s) => s.id === id);

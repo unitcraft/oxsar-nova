@@ -22,7 +22,7 @@ function formatActivity(lastSeen: string | null | undefined, t: (k: string, v?: 
 }
 
 export function FriendsScreen() {
-  const { t } = useTranslation('friendsUi');
+  const { t } = useTranslation('friends');
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ['friends'],

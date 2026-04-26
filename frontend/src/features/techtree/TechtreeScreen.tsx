@@ -42,7 +42,7 @@ const KIND_KEY: Record<NodeKind, string> = {
 type Filter = 'all' | 'unlocked' | 'locked';
 
 export function TechtreeScreen() {
-  const { t } = useTranslation('techtreeUi');
+  const { t } = useTranslation('techtree');
   const { t: ti } = useTranslation('info');
   const q = useQuery({
     queryKey: ['techtree'],
@@ -125,7 +125,7 @@ export function TechtreeScreen() {
 }
 
 function TechCard({ node }: { node: TechNode }) {
-  const { t } = useTranslation('techtreeUi');
+  const { t } = useTranslation('techtree');
   const { t: ti } = useTranslation('info');
   const name = nameOf(node.id, ti) || node.key;
   const showLevel = node.kind === 'building' || node.kind === 'research';

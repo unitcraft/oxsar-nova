@@ -62,7 +62,7 @@ const cell: React.CSSProperties = { padding: '6px 12px', textAlign: 'right', fon
 const cellLeft: React.CSSProperties = { ...cell, textAlign: 'left' };
 
 export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) {
-  const { t } = useTranslation('unitInfoUi');
+  const { t } = useTranslation('unitInfo');
   const { t: ti } = useTranslation('info');
   const buildingsQ = useQuery({
     queryKey: ['buildings', planetId],
@@ -173,7 +173,7 @@ function combatBuildTimeSecs(metal: number, silicon: number): number {
 }
 
 function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: number }) {
-  const { t } = useTranslation('unitInfoUi');
+  const { t } = useTranslation('unitInfo');
   const { t: ti } = useTranslation('info');
   const unitCatalog = kind === 'ship' ? SHIPS : DEFENSE;
   const allUnits = [...SHIPS, ...DEFENSE];

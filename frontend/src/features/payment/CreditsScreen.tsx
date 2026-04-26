@@ -49,7 +49,7 @@ function packageHint(total: number, t: (key: string) => string): string | null {
 }
 
 export function CreditsScreen() {
-  const { t } = useTranslation('creditsUi');
+  const { t } = useTranslation('credits');
   const qc = useQueryClient();
   const { show: showToast } = useToast();
 

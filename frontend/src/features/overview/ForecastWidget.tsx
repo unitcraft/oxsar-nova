@@ -24,7 +24,7 @@ function fmt(n: number): string {
  * (план 17 G1). Показывает компактную таблицу.
  */
 export function ForecastWidget({ planetID }: { planetID: string }) {
-  const { t } = useTranslation('forecastUi');
+  const { t } = useTranslation('forecast');
   const [hours, setHours] = useState(4);
 
   const q = useQuery({
