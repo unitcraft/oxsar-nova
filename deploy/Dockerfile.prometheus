@@ -1,0 +1,4 @@
+# Bind-mount prometheus.yml падает на Docker Desktop / Windows
+# (баг с d:\ в /run/desktop/mnt/host/d). Копируем конфиг внутрь образа.
+FROM prom/prometheus:v2.53.0
+COPY prometheus.yml /etc/prometheus/prometheus.yml

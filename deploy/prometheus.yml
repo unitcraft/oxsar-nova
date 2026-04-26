@@ -10,9 +10,17 @@ scrape_configs:
       - targets: ["backend:8080"]
     metrics_path: /metrics
 
+  # При replicas>1 docker compose v2 НЕ создаёт DNS-запись tasks.<service>
+  # (это swarm-feature). Имена вида deploy-worker-1, deploy-worker-2
+  # резолвятся напрямую — перечисляем явно. Если поменяешь имя проекта
+  # docker-compose (по умолчанию "deploy" по имени директории) или
+  # увеличишь replicas — обнови список.
+  # Порт 9091 = WORKER_METRICS_ADDR в backend/cmd/worker/main.go.
   - job_name: worker
     static_configs:
-      - targets: ["worker:9090"]
+      - targets:
+          - "deploy-worker-1:9091"
+          - "deploy-worker-2:9091"
     metrics_path: /metrics
 
   - job_name: postgres

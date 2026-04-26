@@ -1,26 +1,32 @@
 # Мониторинг-overlay: Prometheus + Grafana.
 #
-# Запуск вместе с основным стеком:
+# Локальный dev-запуск (с одним backend + 2 worker'а):
 #   docker compose \
 #     -f deploy/docker-compose.yml \
-#     -f deploy/docker-compose.prod.yml \
+#     -f deploy/docker-compose.scaling.yml \
 #     -f deploy/docker-compose.monitoring.yml \
-#     up -d
+#     up -d --build
+#
+# Прод-вариант: заменить scaling.yml на prod.yml.
 #
 # Доступ:
 #   Prometheus: http://localhost:9090
-#   Grafana:    http://localhost:3000  (admin / admin, сменить в .env)
+#   Grafana:    http://localhost:3000  (admin / admin, переопределить
+#               через GRAFANA_PASSWORD env)
 #
 # Метрики:
 #   backend:  http://backend:8080/metrics
-#   worker:   http://worker:9090/metrics
+#   worker:   http://worker:9091/metrics  (WORKER_METRICS_ADDR)
 #   postgres: через postgres-exporter (порт 9187)
 
 services:
   prometheus:
-    image: prom/prometheus:v2.53.0
+    # Конфиг копируется внутрь образа (Dockerfile.prometheus) — обход
+    # бага Docker Desktop с bind-mount файла из d:\ на Windows.
+    build:
+      context: .
+      dockerfile: Dockerfile.prometheus
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -30,14 +36,15 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:11.1.0
+    # Provisioning копируется внутрь образа (см. Dockerfile.grafana).
+    build:
+      context: .
+      dockerfile: Dockerfile.grafana
     environment:
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:-admin}"
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
     ports: ["3000:3000"]
     depends_on: [prometheus]
     restart: unless-stopped
@@ -45,7 +52,12 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     environment:
-      DATA_SOURCE_NAME: "${DB_URL}"
+      # Захардкожено как в base compose; для прода переопределяется через
+      # ${DB_URL} в .env.
+      DATA_SOURCE_NAME: "postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable"
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports: ["9187:9187"]
     restart: unless-stopped
 
