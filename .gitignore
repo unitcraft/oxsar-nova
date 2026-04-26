@@ -38,7 +38,6 @@ projects/game-nova/frontend/test-results/
 projects/game-nova/configs/*_generated.yml
 
 # Остатки старых папок до реструктуризации (переехали в projects/)
-/portal/
 /frontend/
 /backend/
 /migrations/
