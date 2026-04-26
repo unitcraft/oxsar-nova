@@ -122,14 +122,84 @@ services:
     environment:
       VITE_PROXY_TARGET: http://backend:8080
     ports: ["5173:5173"]
-    # Bind-mount временно отключён — проблема с Docker Desktop на Windows
-    # (mkdir /run/desktop/mnt/host/d: file exists). Включить обратно когда
-    # Docker Desktop будет исправлен или при работе на Linux.
-    # volumes:
-    #   - ../frontend:/app
-    #   - frontend-node-modules:/app/node_modules
+    volumes:
+      - ../frontend:/app
+      - frontend-node-modules:/app/node_modules
+
+  # ── Portal stack ─────────────────────────────────────────────────────────
+
+  portal-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: portal
+      POSTGRES_PASSWORD: portal
+      POSTGRES_DB: portal
+    ports: ["5434:5432"]
+    volumes:
+      - portal-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portal"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  portal-migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.migrate
+    command: ["sh", "-c", "goose -dir /migrations/portal postgres \"$DB_URL\" up"]
+    depends_on:
+      portal-db:
+        condition: service_healthy
+    environment:
+      DB_URL: postgres://portal:portal@portal-db:5432/portal?sslmode=disable
+    restart: "no"
+
+  portal-backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    entrypoint: ["/app/portal"]
+    depends_on:
+      portal-db:
+        condition: service_healthy
+      portal-migrate:
+        condition: service_completed_successfully
+    environment:
+      PORTAL_ADDR: ":8090"
+      PORTAL_DB_URL: postgres://portal:portal@portal-db:5432/portal?sslmode=disable
+      # В dev-режиме без auth-service используем заглушку JWKS_URL.
+      # portal стартует с предупреждением если не удаётся загрузить ключ —
+      # это нормально для локального запуска без auth-service.
+      AUTH_JWKS_URL: http://backend:8080/.well-known/jwks.json
+      AUTH_SERVICE_URL: ""
+      UNIVERSES_CONFIG: /app/configs/universes.yaml
+      LOG_LEVEL: info
+    ports: ["8090:8090"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8090/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+  portal-frontend:
+    build:
+      context: ..
+      dockerfile: frontend/portal/Dockerfile
+    depends_on:
+      portal-backend:
+        condition: service_started
+    environment:
+      VITE_PORTAL_API: http://portal-backend:8090
+    ports: ["5174:5174"]
+    volumes:
+      - ../frontend/portal:/app
+      - portal-frontend-node-modules:/app/node_modules
 
 volumes:
   pg-data:
   redis-data:
+  portal-db-data:
   frontend-node-modules:
+  portal-frontend-node-modules:
