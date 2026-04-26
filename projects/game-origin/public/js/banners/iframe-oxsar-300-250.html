@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+	<script type="text/javascript" src="https://yastatic.net/jquery/3.1.1/jquery.min.js"></script>
+	<script type="text/javascript">
+		var items = [
+			'/js/banners/images/1.jpg',
+			'/js/banners/images/2.jpg',
+			'/js/banners/images/3.jpg',
+			'/js/banners/images/4.jpg',
+			'/js/banners/images/5.jpg'
+		];
+
+		var item = items[Math.floor(Math.random()*items.length)];
+		$(function(){
+			$('#myContent').append($('<img>').attr('src', item));
+		});
+	</script>
+	<style>
+		body {
+			overflow: hidden;
+		}
+	</style>
+</head>
+<body>
+	<a id="myContent" href="http://oxsar.ru" target="_blank"></a>
+</body>
+</html>

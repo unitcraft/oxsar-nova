@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+	<script type="text/javascript" src="/js/lib/swfobject.js"></script>
+	<script type="text/javascript">
+		var items = [
+			'/js/banners/ok-but-inf-animated/mix.swf',
+			'/js/banners/ok-but-inf-animated/002.swf',
+			'/js/banners/ok-but-inf-animated/banner2_009_300x250_clickTAG.swf'
+		];
+
+		var item = items[Math.floor(Math.random()*items.length)] + '?clickTAG=http://oxsar.ru';
+		swfobject.embedSWF(item, "myContent", "300", "250", "9.0.0", "expressInstall.swf");
+	</script>
+	<style>
+		body {
+			overflow: hidden;
+		}
+	</style>
+</head>
+<body>
+	<div id="myContent"></div>
+</body>
+</html>

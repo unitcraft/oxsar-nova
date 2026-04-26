@@ -1,0 +1,6 @@
+DirectoryIndex index.php
+
+RewriteEngine On
+
+#RewriteRule ^(\d+)\.jpg$ banner.php?id=$1 [L]  
+RewriteRule ^(\d+)\.jpg$ /new_game/?r=user/userbar&id=$1 [L]  

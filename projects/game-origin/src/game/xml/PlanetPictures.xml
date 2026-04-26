@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pictures>
+	<trockenplanet from="1" to="4">10</trockenplanet>
+	<wuestenplanet from="1" to="3">4</wuestenplanet>
+	<dschjungelplanet from="3" to="7">10</dschjungelplanet>
+	<normaltempplanet from="6" to="10">7</normaltempplanet>
+	<wasserplanet from="9" to="13">9</wasserplanet>
+	<eisplanet from="12" to="15">10</eisplanet>
+	<gasplanet from="13" to="15">8</gasplanet>
+</pictures>
