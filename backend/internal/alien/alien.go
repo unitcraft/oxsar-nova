@@ -20,6 +20,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/battle"
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/event"
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/pkg/ids"
 	"github.com/oxsar/nova/backend/pkg/rng"
@@ -47,12 +48,25 @@ type alienPayload struct {
 
 // Service — сервис инопланетян: спавн событий + обработка атаки.
 type Service struct {
-	db  repo.Exec
-	cat *config.Catalog
+	db     repo.Exec
+	cat    *config.Catalog
+	bundle *i18n.Bundle
 }
 
 func NewService(db repo.Exec, cat *config.Catalog) *Service {
 	return &Service{db: db, cat: cat}
+}
+
+func (s *Service) WithBundle(b *i18n.Bundle) *Service {
+	s.bundle = b
+	return s
+}
+
+func (s *Service) tr(group, key string, vars map[string]string) string {
+	if s.bundle == nil {
+		return "[" + group + "." + key + "]"
+	}
+	return s.bundle.Tr(i18n.LangRu, group, key, vars)
 }
 
 // Spawn выбирает случайных активных игроков и создаёт события
@@ -223,7 +237,7 @@ func (s *Service) AttackHandler() event.Handler {
 		}
 		atkSide := battle.Side{
 			UserID:   "aliens",
-			Username: "Инопланетяне",
+			Username: s.tr("alien", "raceName", nil),
 			IsAliens: true,
 			Units:    scaledAlienFleet(defPower, seed, s.cat, bonusScale),
 		}
@@ -307,26 +321,37 @@ func (s *Service) AttackHandler() event.Handler {
 		}
 
 		// Сообщение защитнику.
-		result := "атаковали и победили"
-		if report.Winner == "defenders" {
-			result = "атаковали, но были отбиты"
-		} else if report.Winner == "draw" {
-			result = "атаковали — ничья"
+		var resultKey string
+		switch report.Winner {
+		case "defenders":
+			resultKey = "attack.defeat"
+		case "draw":
+			resultKey = "attack.draw"
+		default:
+			resultKey = "attack.victory"
 		}
-		body := fmt.Sprintf("Инопланетяне (тир %d) %s вашу планету.", pl.Tier, result)
+		tierStr := fmt.Sprintf("%d", pl.Tier)
+		body := s.tr("alien", "attack.body", map[string]string{
+			"tier":   tierStr,
+			"result": s.tr("alien", resultKey, nil),
+		})
 		if grabCredit > 0 {
-			body += fmt.Sprintf(" Похищено %d кредитов.", grabCredit)
+			body += s.tr("alien", "attack.creditStolen", map[string]string{
+				"credits": fmt.Sprintf("%d", grabCredit),
+			})
 		}
 		if giftCredit > 0 {
-			body += fmt.Sprintf(" Инопланетяне оставили %d кредитов в знак уважения.", giftCredit)
+			body += s.tr("alien", "attack.creditGifted", map[string]string{
+				"credits": fmt.Sprintf("%d", giftCredit),
+			})
 		}
 		if haltSpawned {
-			body += " Их флот остался на орбите — ждите отдельного сообщения об удержании."
+			body += s.tr("alien", "attack.haltNote", nil)
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
-			VALUES ($1, $2, NULL, 1, 'Атака инопланетян', $3)
-		`, ids.New(), defUserID, body); err != nil {
+			VALUES ($1, $2, NULL, 1, $3, $4)
+		`, ids.New(), defUserID, s.tr("alien", "attack.title", nil), body); err != nil {
 			return fmt.Errorf("alien attack: message: %w", err)
 		}
 

@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/repo"
 )
 
@@ -31,6 +32,7 @@ type AutoMsgSender interface {
 type Service struct {
 	db      repo.Exec
 	automsg AutoMsgSender
+	bundle  *i18n.Bundle
 }
 
 func NewService(db repo.Exec) *Service { return &Service{db: db} }
@@ -39,6 +41,18 @@ func NewService(db repo.Exec) *Service { return &Service{db: db} }
 func (s *Service) WithAutoMsg(a AutoMsgSender) *Service {
 	s.automsg = a
 	return s
+}
+
+func (s *Service) WithBundle(b *i18n.Bundle) *Service {
+	s.bundle = b
+	return s
+}
+
+func (s *Service) tr(group, key string, vars map[string]string) string {
+	if s.bundle == nil {
+		return "[" + group + "." + key + "]"
+	}
+	return s.bundle.Tr(i18n.LangRu, group, key, vars)
 }
 
 // notifyAlliance (folder=6 MSG_FOLDER_ALLIANCE) — помощник для рассылки
@@ -305,12 +319,15 @@ func (s *Service) Join(ctx context.Context, userID, allianceID, message string) 
 	// Уведомления — вне транзакции (best-effort).
 	if joined {
 		s.notifyAlliance(ctx, userID,
-			"Вы вступили в альянс",
-			fmt.Sprintf("Вы стали членом альянса [%s].", allianceTag))
+			s.tr("alliance", "joined.title", nil),
+			s.tr("alliance", "joined.body", map[string]string{"allianceName": allianceTag}))
 	} else {
 		s.notifyAlliance(ctx, ownerID,
-			"Заявка на вступление в альянс",
-			fmt.Sprintf("Игрок %s подал заявку на вступление в ваш альянс [%s].", applicantName, allianceTag))
+			s.tr("alliance", "application.title", nil),
+			s.tr("alliance", "application.body", map[string]string{
+				"username":     applicantName,
+				"allianceName": allianceTag,
+			}))
 	}
 	return joined, nil
 }
@@ -420,8 +437,8 @@ func (s *Service) Approve(ctx context.Context, ownerID, applicationID string) er
 		return err
 	}
 	s.notifyAlliance(ctx, applicantID,
-		"Заявка одобрена",
-		fmt.Sprintf("Ваша заявка на вступление в альянс [%s] одобрена.", allianceTag))
+		s.tr("alliance", "approved.title", nil),
+		s.tr("alliance", "approved.body", map[string]string{"allianceName": allianceTag}))
 	return nil
 }
 
@@ -454,8 +471,8 @@ func (s *Service) Reject(ctx context.Context, ownerID, applicationID string) err
 		return err
 	}
 	s.notifyAlliance(ctx, applicantID,
-		"Заявка отклонена",
-		fmt.Sprintf("Ваша заявка на вступление в альянс [%s] отклонена.", allianceTag))
+		s.tr("alliance", "rejected.title", nil),
+		s.tr("alliance", "rejected.body", map[string]string{"allianceName": allianceTag}))
 	return nil
 }
 

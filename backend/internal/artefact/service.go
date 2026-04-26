@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/oxsar/nova/backend/internal/config"
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/pkg/ids"
 )
@@ -54,6 +55,7 @@ type Service struct {
 	db      repo.Exec
 	catalog *config.Catalog
 	automsg AutoMsgSender
+	bundle  *i18n.Bundle
 }
 
 func NewService(db repo.Exec, cat *config.Catalog) *Service {
@@ -64,6 +66,18 @@ func NewService(db repo.Exec, cat *config.Catalog) *Service {
 func (s *Service) WithAutoMsg(a AutoMsgSender) *Service {
 	s.automsg = a
 	return s
+}
+
+func (s *Service) WithBundle(b *i18n.Bundle) *Service {
+	s.bundle = b
+	return s
+}
+
+func (s *Service) tr(group, key string, vars map[string]string) string {
+	if s.bundle == nil {
+		return "[" + group + "." + key + "]"
+	}
+	return s.bundle.Tr(i18n.LangRu, group, key, vars)
 }
 
 // Grant кладёт артефакт в инвентарь пользователя.

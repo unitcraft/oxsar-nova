@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
@@ -71,10 +72,12 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 		if state != "outbound" {
 			return nil
 		}
+		coords := fmt.Sprintf("%d:%d:%d", g, sys, pos)
+		failedSubj := s.tr("colonize", "failed.title", map[string]string{"coords": coords})
+
 		if isMoon {
-			// На луну колонизировать нельзя — это не планета.
-			return abortReturning(ctx, tx, pl.FleetID,
-				ownerUserID, "Колонизация луны невозможна", g, sys, pos)
+			return abortReturning(ctx, tx, pl.FleetID, ownerUserID,
+				failedSubj, s.tr("colonize", "error.moonOnly", nil))
 		}
 
 		// colony_ship есть?
@@ -85,8 +88,8 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 			return fmt.Errorf("colonize: read colony ship: %w", err)
 		}
 		if colonyCount <= 0 {
-			return abortReturning(ctx, tx, pl.FleetID,
-				ownerUserID, "Нет колониального корабля во флоте", g, sys, pos)
+			return abortReturning(ctx, tx, pl.FleetID, ownerUserID,
+				failedSubj, s.tr("colonize", "error.noColonyShip", nil))
 		}
 
 		// Координата пуста?
@@ -97,8 +100,8 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 			  AND destroyed_at IS NULL
 		`, g, sys, pos).Scan(&existingID)
 		if err == nil {
-			return abortReturning(ctx, tx, pl.FleetID,
-				ownerUserID, "Координата занята", g, sys, pos)
+			return abortReturning(ctx, tx, pl.FleetID, ownerUserID,
+				failedSubj, s.tr("colonize", "error.occupied", nil))
 		}
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("colonize: check empty: %w", err)
@@ -125,9 +128,10 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 		}
 		if curPlanets >= maxPlanets {
 			return abortReturning(ctx, tx, pl.FleetID, ownerUserID,
-				fmt.Sprintf("Достигнут лимит планет (%d/%d). Улучшите computer_tech.",
-					curPlanets, maxPlanets),
-				g, sys, pos)
+				failedSubj, s.tr("colonize", "error.planetLimit", map[string]string{
+					"current": strconv.Itoa(curPlanets),
+					"max":     strconv.Itoa(maxPlanets),
+				}))
 		}
 
 		// Создаём планету. diameter/temp по детерминированному seed от
@@ -183,9 +187,14 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 		}
 
 		// Сообщение игроку.
-		subj := fmt.Sprintf("Основана колония %d:%d:%d", g, sys, pos)
-		body := fmt.Sprintf("Новая планета «%s» на координатах [%d:%d:%d]. "+
-			"Стартовые ресурсы: %d M / %d Si / %d H.", colonyName, g, sys, pos, cm, csil, ch)
+		subj := s.tr("colonize", "success.title", map[string]string{"coords": coords})
+		body := s.tr("colonize", "success.body", map[string]string{
+			"planetName": colonyName,
+			"coords":     coords,
+			"metal":      strconv.FormatInt(cm, 10),
+			"silicon":    strconv.FormatInt(csil, 10),
+			"hydrogen":   strconv.FormatInt(ch, 10),
+		})
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 			VALUES ($1, $2, NULL, 2, $3, $4)
@@ -198,13 +207,11 @@ func (s *TransportService) ColonizeHandler() event.Handler {
 
 // abortReturning — причина неудачи → message + state='returning' с
 // сохранением carry (флот возвращает груз).
-func abortReturning(ctx context.Context, tx pgx.Tx, fleetID, userID, reason string,
-	g, sys, pos int) error {
+func abortReturning(ctx context.Context, tx pgx.Tx, fleetID, userID, subj, reason string) error {
 	if _, err := tx.Exec(ctx,
 		`UPDATE fleets SET state='returning' WHERE id=$1`, fleetID); err != nil {
 		return fmt.Errorf("abort: update fleet: %w", err)
 	}
-	subj := fmt.Sprintf("Колонизация %d:%d:%d провалена", g, sys, pos)
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 		VALUES ($1, $2, NULL, 2, $3, $4)

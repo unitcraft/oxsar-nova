@@ -478,6 +478,71 @@ buildings:
   startIn: ""
   started: ""
   upgradeToLevel: ""
+# TODO: en
+colonize:
+  success.title: ""
+  success.body: ""
+  failed.title: ""
+  error.moonOnly: ""
+  error.noColonyShip: ""
+  error.occupied: ""
+  error.planetLimit: ""
+
+spy:
+  intercepted.title: ""
+  intercepted.body: ""
+  report.title: ""
+  report.body: ""
+  targetNotified.title: ""
+  targetNotified.body: ""
+
+rocket:
+  failed.title: ""
+  failed.body: ""
+  impact.title: ""
+  impact.allIntercepted: ""
+  impact.noDefense: ""
+  impact.body: ""
+  impact.abmNote: ""
+  impact.unitLoss: ""
+
+alien:
+  attack.title: ""
+  attack.victory: ""
+  attack.defeat: ""
+  attack.draw: ""
+  attack.body: ""
+  attack.creditStolen: ""
+  attack.creditGifted: ""
+  attack.haltNote: ""
+  raceName: ""
+
+alliance:
+  joined.title: ""
+  joined.body: ""
+  application.title: ""
+  application.body: ""
+  approved.title: ""
+  approved.body: ""
+  rejected.title: ""
+  rejected.body: ""
+
+referral:
+  bonus.title: ""
+  bonus.body: ""
+
+payment:
+  credited.title: ""
+  credited.body: ""
+
+settings:
+  deletionCode.title: ""
+  deletionCode.body: ""
+
+artefact:
+  expired.title: ""
+  expired.body: ""
+
 error:
   accountActivation: ""
   accountActivationMail: ""

@@ -28,6 +28,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/event"
 	"github.com/oxsar/nova/backend/internal/galaxy"
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/pkg/ids"
 )
@@ -41,6 +42,7 @@ type TransportService struct {
 	catalog           *config.Catalog
 	speed             float64 // GAMESPEED
 	artefact          *artefact.Service
+	bundle            *i18n.Bundle
 	maxPlanets        int // MAX_PLANETS override (0 = computer_tech+1)
 	protectionPeriod  int // seconds new player is protected
 	bashingPeriod     int // seconds window for bashing count (legacy BASHING_PERIOD)
@@ -73,6 +75,21 @@ func NewTransportServiceWithConfig(db repo.Exec, cat *config.Catalog, gameSpeed 
 	svc.maxPlanets = maxPlanets
 	svc.protectionPeriod = protectionPeriod
 	return svc
+}
+
+// WithBundle подключает i18n-бандл для текстов сообщений.
+func (s *TransportService) WithBundle(b *i18n.Bundle) *TransportService {
+	s.bundle = b
+	return s
+}
+
+// tr — helper: возвращает перевод на русском (язык пользователя пока не
+// читается в event-хендлерах; пользуемся fallback-ru до реализации Ф.3.x).
+func (s *TransportService) tr(group, key string, vars map[string]string) string {
+	if s.bundle == nil {
+		return "[" + group + "." + key + "]"
+	}
+	return s.bundle.Tr(i18n.LangRu, group, key, vars)
 }
 
 // SetBashingLimits — настройки антибашинга (план 17 A1).

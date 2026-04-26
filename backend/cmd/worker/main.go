@@ -27,8 +27,9 @@ import (
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/event"
 	"github.com/oxsar/nova/backend/internal/features"
-	"github.com/oxsar/nova/backend/internal/health"
 	"github.com/oxsar/nova/backend/internal/fleet"
+	"github.com/oxsar/nova/backend/internal/health"
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/officer"
 	"github.com/oxsar/nova/backend/internal/planet"
 	"github.com/oxsar/nova/backend/internal/repair"
@@ -108,8 +109,18 @@ func run() error {
 		MaxBatch:    parseIntEnv("WORKER_MAX_BATCH", 1000),
 		MaxAttempts: parseIntEnv("WORKER_MAX_ATTEMPTS", 3),
 	})
-	artefactSvc := artefact.NewService(db, cat)
-	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod)
+
+	i18nDir := filepath.Join(catalogDir, "i18n")
+	var i18nBundle *i18n.Bundle
+	if bundle, err := i18n.Load(i18nDir, i18n.LangRu); err != nil {
+		log.WarnContext(ctx, "i18n load failed, messages will use key placeholders",
+			slog.String("path", i18nDir), slog.String("err", err.Error()))
+	} else {
+		i18nBundle = bundle
+	}
+
+	artefactSvc := artefact.NewService(db, cat).WithBundle(i18nBundle)
+	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod).WithBundle(i18nBundle)
 
 	// repair.Service нужен только ради DisassembleHandler; сами
 	// enqueue-операции идут через server. Конструктор требует полный
@@ -118,7 +129,7 @@ func run() error {
 	planetSvc := planet.NewServiceWithFactors(db, planetRepo, cat, cfg.Game.StorageFactor, cfg.Game.EnergyProductionFactor)
 	reqs := requirements.New(cat)
 	repairSvc := repair.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
-	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed)
+	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed).WithBundle(i18nBundle)
 	officerSvc := officer.NewService(db)
 
 	scoreSvc := score.NewServiceWithCoeffs(db, cat, cfg.Game.Points)
@@ -217,13 +228,13 @@ func run() error {
 	w.Register(event.KindOfficerExpire, officerSvc.ExpireHandler())
 	w.Register(event.KindExpirePlanet, event.HandleExpirePlanet)
 
-	alienSvc := alien.NewService(db, cat)
+	alienSvc := alien.NewService(db, cat).WithBundle(i18nBundle)
 	w.Register(event.KindAlienAttack, alienSvc.AttackHandler())
 	w.Register(event.KindAlienHalt, alienSvc.HaltHandler())
 	w.Register(event.KindAlienHolding, alienSvc.HoldingHandler())
 	w.Register(event.KindAlienHoldingAI, alienSvc.HoldingAIHandler())
 
-	automsgSvc := automsg.NewService(db)
+	automsgSvc := automsg.NewService(db).WithBundle(i18nBundle)
 
 	// План 32: периодические задачи через scheduler с advisory lock.
 	// При N≥2 worker'ах ровно один инстанс выполняет каждую job, остальные

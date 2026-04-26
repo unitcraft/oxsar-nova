@@ -173,7 +173,7 @@ func run() error {
 	// поэтому инициализируем до auth.NewService.
 	automsgSvc := automsg.NewService(db).WithBundle(i18nBundle)
 
-	referralSvc := referral.NewService(db).WithAutoMsg(automsgSvc)
+	referralSvc := referral.NewService(db).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
 	authSvc := auth.NewService(db, jwt, starter, automsgSvc).WithReferral(referralSvc)
 	authH := auth.NewHandler(authSvc, pool)
 
@@ -191,7 +191,7 @@ func run() error {
 	repairSvc := repair.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
 	repairH := repair.NewHandler(repairSvc)
 
-	artefactSvc := artefact.NewService(db, cat).WithAutoMsg(automsgSvc)
+	artefactSvc := artefact.NewService(db, cat).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
 	artefactH := artefact.NewHandler(artefactSvc)
 
 	galaxyH := galaxy.NewHandler(galaxy.NewRepository(pool))
@@ -199,7 +199,7 @@ func run() error {
 	dailyQuestSvc := dailyquest.New(pool)
 	dailyQuestH := dailyquest.NewHandler(dailyQuestSvc)
 
-	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod)
+	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod).WithBundle(i18nBundle)
 	transportSvc.SetBashingLimits(cfg.Game.BashingPeriod, cfg.Game.BashingMaxAttacks)
 	transportSvc.SetDailyQuestSvc(dailyQuestSvc)
 	fleetH := fleet.NewHandler(transportSvc, rdb)
@@ -210,7 +210,7 @@ func run() error {
 	marketSvc := market.NewService(db)
 	marketH := market.NewHandler(marketSvc, rdb)
 
-	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed)
+	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed).WithBundle(i18nBundle)
 	rocketH := rocket.NewHandler(rocketSvc)
 
 	artMarketSvc := artmarket.NewService(db)
@@ -225,7 +225,7 @@ func run() error {
 	scoreSvc := score.NewServiceWithCoeffs(db, cat, cfg.Game.Points)
 	scoreH := score.NewHandlerWithDB(scoreSvc, db)
 
-	allianceSvc := alliance.NewService(db).WithAutoMsg(automsgSvc)
+	allianceSvc := alliance.NewService(db).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
 	allianceH := alliance.NewHandler(allianceSvc)
 
 	professionSvc := profession.NewService(db, cat)
@@ -234,11 +234,11 @@ func run() error {
 	aiAdvisorSvc := aiadvisor.NewService(db, cfg.AIAdvisor)
 	aiAdvisorH := aiadvisor.NewHandler(aiAdvisorSvc)
 
-	paymentSvc := payment.NewService(db, cfg.Payment).WithReferral(referralSvc).WithAutoMsg(automsgSvc)
+	paymentSvc := payment.NewService(db, cfg.Payment).WithReferral(referralSvc).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
 	paymentH := payment.NewHandler(paymentSvc)
 
 	empireH := empire.NewHandler(pool)
-	settingsH := settings.NewHandler(pool).WithAutoMsg(automsgSvc)
+	settingsH := settings.NewHandler(pool).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
 	referralH := referral.NewHandler(pool)
 	notepadH := notepad.NewHandler(pool)
 	searchH := search.NewHandler(pool)

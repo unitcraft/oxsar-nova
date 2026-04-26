@@ -64,13 +64,13 @@ func (s *Service) ImpactHandler() event.Handler {
 			if err == pgx.ErrNoRows {
 				// Цели нет — ракеты «улетели в пустоту». Пишем сообщение
 				// атакующему и выходим.
+				coords := fmt.Sprintf("%d:%d:%d", pl.Dst.Galaxy, pl.Dst.System, pl.Dst.Position)
 				_, _ = tx.Exec(ctx, `
 					INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 					VALUES ($1, $2, NULL, 2, $3, $4)
 				`, ids.New(), pl.AttackerID,
-					fmt.Sprintf("Ракетный удар %d:%d:%d провалился",
-						pl.Dst.Galaxy, pl.Dst.System, pl.Dst.Position),
-					"Цель не найдена (уничтожена или не существовала).")
+					s.tr("rocket", "failed.title", map[string]string{"coords": coords}),
+					s.tr("rocket", "failed.body", nil))
 				return nil
 			}
 			return fmt.Errorf("rocket impact: find target: %w", err)
@@ -129,16 +129,21 @@ func (s *Service) ImpactHandler() event.Handler {
 
 		totalDamage := survivingRockets * int64(missileDamage)
 
+		coords := fmt.Sprintf("%d:%d:%d", pl.Dst.Galaxy, pl.Dst.System, pl.Dst.Position)
 		if len(stacks) == 0 || survivingRockets == 0 {
 			// Все ракеты сбиты или нет defense — пишем сообщение.
-			subj := fmt.Sprintf("Ракетный удар %d:%d:%d", pl.Dst.Galaxy, pl.Dst.System, pl.Dst.Position)
+			subj := s.tr("rocket", "impact.title", map[string]string{"coords": coords})
 			var body string
 			if survivingRockets == 0 {
-				body = fmt.Sprintf("%d ракет перехвачено антиракетами (%d ABM). Урон отсутствует.",
-					abmIntercepted, abmIntercepted)
+				body = s.tr("rocket", "impact.allIntercepted", map[string]string{
+					"intercepted": fmt.Sprintf("%d", abmIntercepted),
+					"abm":         fmt.Sprintf("%d", abmIntercepted),
+				})
 			} else {
-				body = fmt.Sprintf("%d ракет долетели. Оборона отсутствует — урон %d пропал.",
-					survivingRockets, totalDamage)
+				body = s.tr("rocket", "impact.noDefense", map[string]string{
+					"count":  fmt.Sprintf("%d", survivingRockets),
+					"damage": fmt.Sprintf("%d", totalDamage),
+				})
 			}
 			return notifyBoth(ctx, tx, pl.AttackerID, targetOwner, subj, body)
 		}
@@ -164,17 +169,27 @@ func (s *Service) ImpactHandler() event.Handler {
 		}
 
 		// Сообщение обеим сторонам.
-		subj := fmt.Sprintf("Ракетный удар %d:%d:%d", pl.Dst.Galaxy, pl.Dst.System, pl.Dst.Position)
+		subj := s.tr("rocket", "impact.title", map[string]string{"coords": coords})
 		lossStr := ""
 		for _, l := range losses {
-			lossStr += fmt.Sprintf("\n- юнит #%d: -%d", l.UnitID, l.Lost)
+			lossStr += s.tr("rocket", "impact.unitLoss", map[string]string{
+				"unitId": fmt.Sprintf("%d", l.UnitID),
+				"lost":   fmt.Sprintf("%d", l.Lost),
+			})
 		}
 		abmNote := ""
 		if abmIntercepted > 0 {
-			abmNote = fmt.Sprintf(" (%d сбито ABM)", abmIntercepted)
+			abmNote = s.tr("rocket", "impact.abmNote", map[string]string{
+				"count": fmt.Sprintf("%d", abmIntercepted),
+			})
 		}
-		body := fmt.Sprintf("%d/%d ракет долетели%s (урон %d). Потери обороны:%s",
-			survivingRockets, pl.Count, abmNote, totalDamage, lossStr)
+		body := s.tr("rocket", "impact.body", map[string]string{
+			"surviving": fmt.Sprintf("%d", survivingRockets),
+			"total":     fmt.Sprintf("%d", pl.Count),
+			"abmNote":   abmNote,
+			"damage":    fmt.Sprintf("%d", totalDamage),
+			"losses":    lossStr,
+		})
 		return notifyBoth(ctx, tx, pl.AttackerID, targetOwner, subj, body)
 	}
 }

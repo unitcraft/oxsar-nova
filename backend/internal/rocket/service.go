@@ -23,6 +23,7 @@ import (
 
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/galaxy"
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/pkg/ids"
 )
@@ -45,6 +46,7 @@ type Service struct {
 	db      repo.Exec
 	catalog *config.Catalog
 	speed   float64 // GAMESPEED
+	bundle  *i18n.Bundle
 }
 
 func NewService(db repo.Exec, cat *config.Catalog, gameSpeed float64) *Service {
@@ -52,6 +54,18 @@ func NewService(db repo.Exec, cat *config.Catalog, gameSpeed float64) *Service {
 		gameSpeed = 1
 	}
 	return &Service{db: db, catalog: cat, speed: gameSpeed}
+}
+
+func (s *Service) WithBundle(b *i18n.Bundle) *Service {
+	s.bundle = b
+	return s
+}
+
+func (s *Service) tr(group, key string, vars map[string]string) string {
+	if s.bundle == nil {
+		return "[" + group + "." + key + "]"
+	}
+	return s.bundle.Tr(i18n.LangRu, group, key, vars)
 }
 
 var (

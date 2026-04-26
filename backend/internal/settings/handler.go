@@ -13,6 +13,7 @@ import (
 
 	"github.com/oxsar/nova/backend/internal/auth"
 	"github.com/oxsar/nova/backend/internal/httpx"
+	"github.com/oxsar/nova/backend/internal/i18n"
 )
 
 var validTimezones = map[string]bool{
@@ -25,9 +26,22 @@ var validTimezones = map[string]bool{
 type Handler struct {
 	pool    *pgxpool.Pool
 	automsg AutoMsgSender
+	bundle  *i18n.Bundle
 }
 
 func NewHandler(pool *pgxpool.Pool) *Handler { return &Handler{pool: pool} }
+
+func (h *Handler) WithBundle(b *i18n.Bundle) *Handler {
+	h.bundle = b
+	return h
+}
+
+func (h *Handler) tr(group, key string, vars map[string]string) string {
+	if h.bundle == nil {
+		return "[" + group + "." + key + "]"
+	}
+	return h.bundle.Tr(i18n.LangRu, group, key, vars)
+}
 
 type settingsResponse struct {
 	Email        string  `json:"email"`
