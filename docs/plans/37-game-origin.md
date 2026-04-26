@@ -7,6 +7,87 @@
 них: оригинальная игра oxsar2 без переделки геймплея и дизайна, встроенная в портал
 как одна из вселенных. Индексная страница не нужна — точка входа идёт с портала.
 
+## Подключение к legacy для сверки и копирования данных
+
+Legacy oxsar2 запущена в Docker (`d:\Sources\oxsar2`). Использовать как
+**эталон поведения и источник данных** при отладке game-origin.
+
+### Доступ к UI legacy
+
+- URL: http://localhost:8080/game.php/Main
+- Логин: `test`, пароль: `quoYaMe1wHo4xaci` (универсальный)
+- Логин делается через `/login.php` (не Yii-роут):
+
+```bash
+curl -s -c /tmp/legacy.cookies -X POST "http://localhost:8080/login.php" \
+  -d "username=test&password=quoYaMe1wHo4xaci&login=OK" \
+  -L -o /dev/null -w "HTTP %{http_code}\n"
+curl -s -b /tmp/legacy.cookies "http://localhost:8080/game.php/Main"
+```
+
+### Доступ к БД legacy
+
+```bash
+# Контейнер MySQL 5.7
+docker exec oxsar2-mysql-1 mysql -uroot -proot oxsar_db -e "<query>"
+
+# Дамп таблицы (только структура)
+docker exec oxsar2-mysql-1 mysqldump -uroot -proot oxsar_db <table> --no-data 2>/dev/null
+
+# Дамп данных по условию (например, всё для test-юзера userid=1)
+docker exec oxsar2-mysql-1 mysqldump -uroot -proot oxsar_db \
+  --no-create-info --skip-extended-insert --skip-comments --hex-blob \
+  --where="userid=1" \
+  na_user na_planet na_research2user 2>/dev/null
+```
+
+**Важно**:
+- `2>/dev/null` обязателен — иначе stderr (`Using a password...` warning)
+  попадает в SQL-файл и ломает применение.
+- Никогда не подключать game-origin к БД legacy для запуска — только для
+  чтения/копирования данных в `migrations/` нашего проекта.
+- Параллельные сессии могут изменять данные test-юзера; перед копированием —
+  убедиться что никто не играет.
+
+### Что брать из legacy
+
+- **Структура таблиц**: `mysqldump --no-data` (для актуальной DM-схемы)
+- **Справочники**: `na_phrases`, `na_construction`, `na_ship_datasheet`,
+  `na_artefact_datasheet`, `na_requirements`, `na_languages`, `na_config`,
+  `na_tutorial_states`, `na_achievement_datasheet`
+- **Тестовые данные**: данные `test`-юзера (userid=1) с планетами/постройками/
+  исследованиями для dev-окружения oxsar-nova
+
+### Различия схемы game-origin vs legacy
+
+**Принцип**: схема legacy — источник истины, мы её НЕ модифицируем
+(не меняем типы, не добавляем DEFAULT, не делаем nullable). Единственное
+расхождение — наша надстройка для JWT auth:
+
+- `na_user.global_user_id VARCHAR(36) UNIQUE` — добавлено в нашу схему
+  (см. `migrations/003_add_global_user_id.sql`).
+
+При импорте дампа `na_user` из legacy: указывать колонки явно или
+дамп с пропуском `global_user_id` (NULL по умолчанию).
+
+Если код требует «удобных» дефолтов которых нет в legacy — добавлять
+их в коде (INSERT с явными значениями), а НЕ через миграции `ALTER TABLE`.
+
+### Сверка страниц game-origin vs legacy
+
+Чтобы проверить что страница в game-origin рендерится так же как в legacy
+(контент, баланс, формулы, права) — импортировать полный дамп legacy:
+
+```bash
+bash projects/game-origin/tools/import-legacy-dump.sh
+```
+
+Дамп `legacy_dump.sql` (~1.5 GB) **в .gitignore**, не коммитится.
+Это **отладочный инструмент**, а не часть штатного запуска. Штатно БД
+наполняется через миграции `001+002+003` (схема + справочники + JWT-колонка).
+
+---
+
 ## Зафиксированные решения
 
 | Вопрос | Решение |

@@ -3,3 +3,7 @@ src/cache/
 public/assets/
 docker/mysql_data/
 *.log
+
+# Полный дамп legacy БД для dev — тяжёлый, не для коммита
+legacy_dump.sql
+*.dump.sql

@@ -54,7 +54,9 @@ define("BASE_FULL_URL", HTTP_HOST);
 define("BASE_DM_FULL_URL", HTTP_HOST);
 define("GAME_ROOT_URL", HTTP_HOST . (defined("USE_FACEBOOK_SKIN") && USE_FACEBOOK_SKIN ? "oxsar-fb/" : ""));
 define("IPADDRESS", isset($_SERVER["REMOTE_ADDR"]) ? $_SERVER["REMOTE_ADDR"] : "0.0.0.0");
-define("ERROR_REPORTING_TYPE", E_ALL & ~E_NOTICE);
+// PHP 8: «Undefined array key» теперь Warning (раньше был Notice).
+// Подавляем Warning/Notice/Deprecated — legacy писала их в error_log, не в HTML.
+define("ERROR_REPORTING_TYPE", E_ALL & ~E_NOTICE & ~E_WARNING & ~E_DEPRECATED & ~E_USER_DEPRECATED);
 if(1 || $_SERVER['REMOTE_ADDR'] != '95.171.1.55')
 {
 	defined("FORCE_REWRITE") or define("FORCE_REWRITE", defined("FORCE_REWRITE_OVERRIDE") ? FORCE_REWRITE_OVERRIDE : true);
