@@ -78,8 +78,9 @@ services:
     # SetDraining возвращает 503 → docker помечает контейнер unhealthy
     # → orchestrator/балансировщик может убрать инстанс из ротации.
     # start_period 10s даёт время на инициализацию (LoadCatalog, БД).
+    # GET вместо --spider (HEAD): auth middleware режет HEAD на /api/*.
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/ready"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/ready"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -105,7 +106,7 @@ services:
     # Worker публикует /api/health и /api/ready на metrics-порту :9091
     # (см. cmd/worker/main.go). План 31 Ф.1.
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9091/api/ready"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9091/api/ready"]
       interval: 10s
       timeout: 3s
       retries: 3
