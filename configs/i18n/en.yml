@@ -1973,6 +1973,7 @@ info:
   artefactsTech: ""
   artefactsTechDesc: ""
   artefactsTechFullDesc: ""
+  astroTech: "" # TODO: en
   assaultReportTitle: ""
   assemblyModule3110: ""
   assemblyModule3110Desc: ""
@@ -2085,6 +2086,7 @@ info:
   hyperspaceTech: ""
   hyperspaceTechDesc: ""
   hyperspaceTechFullDesc: ""
+  igrTech: "" # TODO: en
   ign: ""
   ignDesc: ""
   ignFullDesc: ""
@@ -2347,6 +2349,31 @@ main:
   starSurMsg: ""
   starSurMsgReturn: ""
   temperature: ""
+  battleSimAttackers: "" # TODO: en
+  battleSimDefenders: "" # TODO: en
+  battleSimSeed: "" # TODO: en
+  battleSimNumsim: "" # TODO: en
+  battleSimCalculating: "" # TODO: en
+  battleSimRun: "" # TODO: en
+  battleSimResult: "" # TODO: en
+  battleSimRuns: "" # TODO: en
+  battleWinRate: "" # TODO: en
+  battleDrawRate: "" # TODO: en
+  battleAvgRounds: "" # TODO: en
+  battleWinner: "" # TODO: en
+  battleWinAtt: "" # TODO: en
+  battleWinDef: "" # TODO: en
+  battleDraw: "" # TODO: en
+  battleRounds: "" # TODO: en
+  seed: "" # TODO: en
+  attackers: "" # TODO: en
+  defenders: "" # TODO: en
+  battleLosses: "" # TODO: en
+  unitId: "" # TODO: en
+  before: "" # TODO: en
+  after: "" # TODO: en
+  damaged: "" # TODO: en
+  noLosses: "" # TODO: en
 message:
   action: ""
   allMembers: ""

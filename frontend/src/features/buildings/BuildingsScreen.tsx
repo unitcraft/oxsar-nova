@@ -213,11 +213,6 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
                 />
               <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                 <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => onOpenInfo(b.id, level)}>{b.name}</div>
-                {b.description && (
-                  <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
-                    {b.description}
-                  </div>
-                )}
                 <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
                   {level > 0 ? t('level', { n: String(level) }) : t('notBuilt')}
                 </div>

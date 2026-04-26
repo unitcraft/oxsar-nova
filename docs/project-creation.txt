@@ -8063,9 +8063,65 @@ bilingual (English/Russian) — класс-компонент рендеритс
 
 ### Что осталось (Ф.4 не завершена)
 
-- catalog.ts: name/description/fullDesc — это game content, приходит с backend,
-  не нуждается в frontend i18n.
 - JSX block comments {/* */} — не строки, просто комментарии в коде.
 - api/types.ts, flags.ts, stores/auth.ts — только code comments, нет строк.
-- Ф.5 (backend i18n): Bundle.Tr() для оставшихся сообщений ошибок.
 - EN переводы: все TODO: en записи ждут перевода.
+
+
+================================================================================
+ИТЕРАЦИЯ 33-batch-7 (2026-04-26) — Ф.5 Cleanup: catalog.ts tKey migration
+================================================================================
+
+### Задача
+
+Ф.5 плана 33: очистить catalog.ts от русских строк (name/description/fullDesc/
+benefit/lifetime), добавить поле tKey для i18n-маппинга, обновить затронутые экраны.
+
+### Что сделано
+
+**catalog.ts** — полный рефакторинг:
+- Добавлено поле `tKey: string` к `UnitEntry` (и всем расширяющим интерфейсам).
+- Удалены поля: `description?`, `fullDesc?`, `benefit`, `lifetime` из всех
+  интерфейсов (BuildingEntry, CombatEntry, ResearchEntry, ArtefactEntry).
+- `ArtefactEntry.lifetime` (строка '7 дней') заменена на `lifetimeDays: number`.
+- Все массивы (BUILDINGS, MOON_BUILDINGS, RESEARCH, SHIPS, DEFENSE, ARTEFACTS)
+  переписаны: русские `name` заменены на snake_case ключи, добавлен tKey.
+- tKey-маппинг учитывает irregularities legacy YAML (metalmine, rocketStation,
+  interplanetaryRocket и т.д.).
+
+**App.tsx**: shortcut descriptions переведены на английский (не видны игрокам).
+
+**BattleSimScreen.tsx**: tf() с русскими fallback заменён на t(); добавлено
+26 ключей в main группу en.yml / ru.yml.
+
+**Удалены renders устаревших полей**:
+- ResearchScreen.tsx: {r.benefit}
+- ArtefactsScreen.tsx: {meta.benefit}
+- ArtefactMarketScreen.tsx: {meta.benefit} + неиспользуемый ARTEFACTS импорт
+- BuildingsScreen.tsx: {b.description}
+- ShipyardScreen.tsx: {u.description}
+- UnitInfoScreen.tsx: {entry.fullDesc}, {entry.description}
+
+**i18n YAML** (en.yml + ru.yml): добавлено по 2 ключа в group `info`
+(astroTech, igrTech) и 26 ключей в group `main` (battle sim UI).
+
+### Технические решения
+
+1. **tKey vs live t() в catalog**: catalog.ts — статический справочник вне
+   компонентного дерева. tKey хранит YAML-ключ, а screen-компоненты делают
+   `t('info', entry.tKey)` сами. Это разделяет каталог и i18n-runtime.
+
+2. **name = snake_case**: поле `name` сохранено для обратной совместимости
+   (nameOf(), buildingName(), fmtReqs() возвращают его как fallback). После
+   полного перехода экранов на tKey поле можно будет удалить.
+
+3. **benefit/fullDesc удалены безвозвратно**: эти строки были только UI-hint,
+   не игровой механикой. Будущий аналог — отдельная wiki-страница юнита.
+
+### Что осталось в Ф.5
+
+- Экраны ещё рендерят `entry.name` (snake_case) вместо `t('info', entry.tKey)`.
+  Это следующий шаг: обновить BuildingsScreen, ResearchScreen, ShipyardScreen,
+  RepairScreen, UnitInfoScreen, BattleSimScreen (nameOf calls).
+- fmtReqs() возвращает snake_case имена — нужно передать t-функцию.
+- EN переводы для новых ключей.
