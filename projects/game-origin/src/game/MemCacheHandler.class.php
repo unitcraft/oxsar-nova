@@ -68,7 +68,7 @@ class MemCacheHandler
 	{
 		if( $this->yii_way )
 		{
-			$value = // cache disabled
+			$value = null; // cache disabled
 		}
 		elseif(isset($this->memcache))
 		{
@@ -80,7 +80,7 @@ class MemCacheHandler
 	{
 		if( $this->yii_way )
 		{
-			return // cache disabled
+			return null; // cache disabled
 		}
 		elseif(isset($this->memcache))
 		{

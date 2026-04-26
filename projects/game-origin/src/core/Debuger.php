@@ -2,8 +2,19 @@
 /**
 * Oxsar http://oxsar.ru
 *
-* 
+*
 */
+
+// Fallback syslog constants for environments without the syslog extension
+defined('LOG_EMERG')   || define('LOG_EMERG',   0);
+defined('LOG_ALERT')   || define('LOG_ALERT',   1);
+defined('LOG_CRIT')    || define('LOG_CRIT',    2);
+defined('LOG_ERR')     || define('LOG_ERR',     3);
+defined('LOG_ERROR')   || define('LOG_ERROR',   3);
+defined('LOG_WARNING') || define('LOG_WARNING', 4);
+defined('LOG_NOTICE')  || define('LOG_NOTICE',  5);
+defined('LOG_INFO')    || define('LOG_INFO',    6);
+defined('LOG_DEBUG')   || define('LOG_DEBUG',   7);
 
 $GLOBALS['debug_params'] = array('outputFormat' => 'html');
 
@@ -402,7 +413,7 @@ function debug_output_internal($level, $error, $code, $helpCode, $description, $
   global $debug_params;
 
   $files = debug_export_trace(array('start' => 2, 'format' => 'points'));
-  $listing = debug_excerpt($files[0]['file'], $files[0]['line'] - 1, 1);
+  $listing = debug_excerpt($files[0]['file'], (int)$files[0]['line'] - 1, 1);
   $trace = debug_export_trace(array('start' => 2, 'depth' => '20'));
   $context = array();
 

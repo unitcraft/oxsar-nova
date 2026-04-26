@@ -94,21 +94,7 @@ class Main extends Page
 		Core::getTPL()->assign("donated", $donated);
         Core::getTPL()->assign("universe_name_full", (defined('UNIVERSE_NAME_FULL') ? UNIVERSE_NAME_FULL : 'Origin'));
 
-        if(!defined('SN')){
-            $image_width = 50;
-            $row_posts = 13;
-            $rows = 1;
-            $iframe = CHtml::tag('iframe', array(
-                // 'class' => 'app-container',
-                'src' => 'http://7j7.ru/index.php/post/iframeList?count='.($row_posts * $rows),
-                'style' => 'border: none; margin: 0; padding: 0',
-                'width' => ($div_width = $image_width * $row_posts),
-                'height' => $image_width * $rows,
-                'seamless' => 'seamless',
-                'scrolling' => 'no',
-            ), '');
-            // Core::getTPL()->assign("mini_games", $iframe);
-        }
+        // mini_games iframe (7j7.ru) удалён — внешний сервис не используется в oxsar-nova
 
 		if( NS::getPlanet()->getPlanetId() )
 		{

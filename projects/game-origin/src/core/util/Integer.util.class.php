@@ -164,7 +164,7 @@ class Integer extends Type
   */
   public function getString($decPoint = ".", $thousandsSep = ",")
   {
-    return new String($this->toString($decPoint, $thousandsSep));
+    return new OxsarString($this->toString($decPoint, $thousandsSep));
   }
 
   /**

@@ -159,13 +159,13 @@ class User extends Collection
 		{
 			// Прямой SQL-запрос вместо Yii ActiveRecord
 			$uid = (int)$_SESSION["userid"];
-			$sql = "SELECT u.*, a.allyid, a.ally_name, a.ally_tag"
-			     . " FROM `" . PREFIX . "users` u"
+			$sql = "SELECT u.*, a.aid AS allyid, a.name AS ally_name, a.tag AS ally_tag"
+			     . " FROM `" . PREFIX . "user` u"
 			     . " LEFT JOIN `" . PREFIX . "user2ally` ua ON ua.userid = u.userid"
-			     . " LEFT JOIN `" . PREFIX . "alliance` a ON a.allyid = ua.allyid"
+			     . " LEFT JOIN `" . PREFIX . "alliance` a ON a.aid = ua.aid"
 			     . " WHERE u.userid = " . $uid . " LIMIT 1";
-			$result = Core::getQuery()->query($sql);
-			$user_record = Core::getQuery()->fetch($result);
+			$result = Core::getDB()->query($sql);
+			$user_record = Core::getDB()->fetch($result);
 			if( $user_record )
 			{
 				$this->item = $user_record;

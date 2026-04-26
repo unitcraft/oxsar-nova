@@ -140,7 +140,8 @@ define("ARTEFACT_BUG", 365); // mode - 6
 
 define("ACHIEVEMENT_NEWBIE_END", 343); // mode - 7 ???
 
-require_once(dirname(__FILE__)."/../../../bd_connect_info.php");
+// bd_connect_info загружается в game.php до global.inc.php
+defined('DB_HOST') || require_once(dirname(__FILE__)."/../src/bd_connect_info.php");
 // @include_once(dirname(__FILE__)."/../../../global.local.php");
 
 @include_once(dirname(__FILE__)."/consts.local.php");

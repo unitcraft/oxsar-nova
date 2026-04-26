@@ -137,7 +137,7 @@ class LanguageCompiler
   */
   public function shutdown()
   {
-    unset($this);
+    // PHP 8: unset($this) запрещён — каждый caller сам unset'ит ссылку
     return;
   }
 
@@ -150,13 +150,13 @@ class LanguageCompiler
   */
   public function setPhrase($phrase)
   {
-    if($phrase instanceof String)
+    if($phrase instanceof OxsarString)
     {
       $this->phrase = $phrase;
     }
     else
     {
-      $this->phrase = new String($phrase);
+      $this->phrase = new OxsarString($phrase);
     }
     $this->compile();
     return $this;

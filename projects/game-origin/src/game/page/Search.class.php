@@ -54,7 +54,7 @@ class Search extends Page
 	protected function seek($what, $where)
 	{
 		Core::getLanguage()->load("Statistics");
-		$this->searchItem = new String($what);
+		$this->searchItem = new OxsarString($what);
 		$this->searchItem->trim()->prepareForSearch();
 		if(!$this->searchItem->validSearchString)
 		{

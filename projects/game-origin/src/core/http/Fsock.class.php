@@ -118,7 +118,7 @@ class Fsock extends Request_Adapter
   public function close()
   {
     fclose($this->resource);
-    unset($this);
+    // PHP 8: unset($this) запрещён
     return;
   }
 }

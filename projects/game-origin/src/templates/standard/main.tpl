@@ -7,7 +7,7 @@
 		{/if}
 		{if[0]}<span style="float:left">{lang}PLANET{/lang} "{@planetNameLink}" ({user}username{/user})</span>{/if}
         {if[isAdmin()]}
-		<span style="float:right">Сейчас играют: <span class="false"><?php $online = User_YII::showOnline(); echo fNumber($online['online_15']); ?></span> | За 24 часа: <span class="false"><?php echo fNumber($online['core_1']); ?></span></span>
+		<span style="float:right"><?php /* online stats: User_YII::showOnline() убран, заменим в plan-37 */ ?></span>
         {/if}
         </th>
 	</tr>
@@ -23,7 +23,8 @@
 		<td>{lang}MENU_PROFESSION{/lang}</td>
 		<td colspan="2">
             <?php
-                echo CHtml::link(NS::getProfessionName(), socialUrl(RELATIVE_URL . 'game.php/Profession'));
+                $u = htmlspecialchars(socialUrl(RELATIVE_URL . 'game.php/Profession'));
+                echo '<a href="' . $u . '">' . htmlspecialchars(NS::getProfessionName()) . '</a>';
             ?>
         </td>
 	</tr>
@@ -31,13 +32,7 @@
 		<td>{lang}SERVER_TIME{/lang}</td>
 		<td colspan="2">
             <span style="float:right">
-                <?php
-                    if(UNIVERSE_NAME != 'Niro'){
-                        echo CHtml::link('Перейти в Niro', 'http://oxsar.ru');
-                    }elseif(!defined('SN')){
-                    echo CHtml::link('Перейти в <b class="false">Dominator</b>', 'http://dm.oxsar.ru');
-                    }
-                ?>
+                <?php /* Universe switcher: убран — заменим в plan-37.5 на vanilla JS */ ?>
             </span>
             <span id="serverwatch">{@serverClock}</span>
         </td>
@@ -207,7 +202,7 @@ $(function(){
 			<td colspan="3" align="center">
 			  <p /><img src="{const=FULL_URL}userbar/{user=userid}.jpg" alt="Oxsar - новая космическая онлайн стратегия" {if[isMobileSkin()]}width="95%"{/if} />
 			  <p /><b>BBCODE юзербара</b>:
-			  <br /><textarea id="userbar_bbcode_text" cols="50" rows="3">[url=<?=Yii::app()->socialAPI->gameUrl?>][img]{const=FULL_URL}userbar/{user=userid}.jpg[/img][/url]</textarea>
+			  <br /><textarea id="userbar_bbcode_text" cols="50" rows="3">[url={const=BASE_FULL_URL}][img]{const=FULL_URL}userbar/{user=userid}.jpg[/img][/url]</textarea>
 			  <br />Разместите Ваш юзербар в своем блоке или в подписи на форумах.
 			</td>
 		</tr>

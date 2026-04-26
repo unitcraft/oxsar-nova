@@ -35,18 +35,10 @@ var has_top_menu = false;
 var has_left_menu = false;
 {/if}
 var menu_done = false;
-var galaxy_distance_mult = <?php echo intval(Yii::app()->params['galaxy_distance_mult']);?>;
+var galaxy_distance_mult = 1;
 </script>
 <script type="text/javascript" src="{const=RELATIVE_URL}js/main.js?{const=CLIENT_VERSION}"></script>
-{if[defined('SN') && !Yii::app()->socialAPI->isExternal]}
-	{if[ SN == ODNK_SN_ID ]}
-		<?php Yii::app()->controller->widget('JSAPI_OdnoklassnikiWidjet', array( 'steam' => Yii::app()->controller->odnoklassnikiSteam ));?>
-	{else if[ SN == VKNT_SN_ID ]}
-		<?php Yii::app()->controller->widget('JSAPI_VkontakteWidjet');?>
-	{else if[ SN == MAILRU_SN_ID ]}
-		<?php Yii::app()->controller->widget('JSAPI_MailruWidjet');?>
-	{/if}
-{/if}
+{if[0]}{* OAuth социальных сетей убран из oxsar-nova *}{/if}
 
 {if[0]}<script type="text/javascript" src="http://jquery-ui.googlecode.com/svn/tags/latest/external/bgiframe/jquery.bgiframe.min.js"></script>{/if}
 <link class="ui-theme" rel="Stylesheet" type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.14/themes/ui-darkness/jquery-ui.css" />
@@ -72,7 +64,7 @@ var galaxy_distance_mult = <?php echo intval(Yii::app()->params['galaxy_distance
 
 </head>
 <body>
-<?php $ctrl = Yii::app()->controller;?>
+
 {if[defined('SN') && !defined('SN_FULLSCREEN')]}
 <div id='SN_warper' style='overflow-y: auto;'>
 {/if}
@@ -162,7 +154,7 @@ var galaxy_distance_mult = <?php echo intval(Yii::app()->params['galaxy_distance
 			{/if}
 		{/foreach}
 		{if[defined('SN') && !defined('SN_FULLSCREEN')]}
-			<td><a href="{if[1]}<?php echo Yii::app()->socialAPI->fullscreenUrl; ?>{else}{@formaction}&sn_fullscreen=1{/if}" target="_blank">{image[FULLSCREEN]}fullscreen-icon.png{/image}</a></td>
+			<td><a href="{if[1]}{else}{@formaction}&sn_fullscreen=1{/if}" target="_blank">{image[FULLSCREEN]}fullscreen-icon.png{/image}</a></td>
 		{else if[defined('SN') && defined('SN_FULLSCREEN')]}
 			<td><a href="#" onclick="window.close(); return false" target="_blank">{image[FULLSCREEN_CLOSE]}fullscreen-close-icon.png{/image}</a></td>
 		{/if}
@@ -366,45 +358,7 @@ var galaxy_distance_mult = <?php echo intval(Yii::app()->params['galaxy_distance
 				<table cellpadding=0 cellspacing=0 border=0>
 					<tr>
 						<td align="left">
-                            <?php
-                                if(!defined('SN')){
-                                    Yii::app()->controller->widget('PrizeWidget');
-                                }
-                            ?>
-							<?php
-								if(NS::getPlanet()->getPlanetId() && !DEATHMATCH && NS::getUser()->get("points") < 1000)
-								{
-									if(ACHIEVEMENTS_ENABLED
-                                        && mt_rand(1, 100) <= (NS::getUser()->get("points") < 100 ? 70 : 30)
-										&& !preg_match("#^(Achievements)$#is", Core::getRequest()->getGET("go")))
-									{
-										Yii::app()->controller->widget('NewbieWidget');
-									}
-								}
-								else if(NS::getPlanet()->getPlanetId() && NS::getUser()->get("regtime") < (time() - 60*60*2)
-									&& (!mt_rand(0, SUPER_CREDIT_BONUS_ENABLED ? 10 : 50) || preg_match("#^(Main|Payment)$#is", Core::getRequest()->getGET("go"))))
-								{
-									Yii::app()->controller->widget('NewsWidget');
-								}
-							?>
-							<?php if( !empty(Yii::app()->controller->notifications) )
-							{
-								foreach( Yii::app()->controller->notifications as $notification )
-								{
-
-									if( isset($notification['skip_pages']) && in_array(Core::getRequest()->getGET("go", 'Main'), $notification['skip_pages']) )
-									{
-										continue;
-									}
-									elseif( isset($notification['skip_pages']) )
-									{
-										unset($notification['skip_pages']);
-									}
-									Yii::app()->controller->widget('NotifyWidget', $notification);
-									echo '<br />';
-								}
-							}
-							?>
+                            <?php /* Yii-виджеты (Prize/Newbie/News/Notify) убраны — заменим в plan-37 на нативные блоки */ ?>
 							{include}'technicalWorks'{/include}
 							{hook}ContentStarts{/hook}
 							{if[{var}delete{/var}]}<div class="warning">{@delete}</div>{/if}
@@ -491,16 +445,7 @@ var galaxy_distance_mult = <?php echo intval(Yii::app()->params['galaxy_distance
 {if[defined('SN') && !defined('SN_FULLSCREEN')]}
 </div>
 {/if}
-<?php
-if( TUTORIAL_ENABLED && (1 || defined('LOCAL') || $_SERVER['REMOTE_ADDR'] == '95.171.1.55' || Yii::app()->user->username == 'craft') )
-{
-	$data = $ctrl->tutorial;
-	$ctrl->widget('TutorialDialog', $data);
-};
-?>
-<?php if( 0 && (defined('LOCAL') || $_SERVER['REMOTE_ADDR'] == '95.171.1.55' || Yii::app()->user->username == 'craft') ) { ?>
-<input type="button" id="testing_button" name="test" value="test"/>
-<?php }?>
+<?php /* TutorialDialog widget убран — заменим в plan-37 на нативный блок */ ?>
 </body>
 </html>
 {if[0]}

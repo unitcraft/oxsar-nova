@@ -211,9 +211,9 @@ class Email
   */
   public function setMessage($message)
   {
-    if(!($message instanceof String))
+    if(!($message instanceof OxsarString))
     {
-      $message = new String($message);
+      $message = new OxsarString($message);
     }
     $this->message = $message->trim()->regEx("#(\r\n|\r|\n)#", $this->headerSeparator);
     return $this;

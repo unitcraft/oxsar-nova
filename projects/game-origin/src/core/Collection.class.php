@@ -11,8 +11,19 @@
 
 if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
 
-abstract class Collection
+abstract class Collection implements Countable, IteratorAggregate
 {
+  // PHP 8: count() требует Countable; делегируем в size()
+  public function count(): int
+  {
+    return $this->size();
+  }
+
+  // PHP 8: foreach по объекту требует Iterator; даём ArrayIterator над $item
+  public function getIterator(): Iterator
+  {
+    return new ArrayIterator(is_array($this->item) ? $this->item : [$this->item]);
+  }
   // public abstract function __construct();
   public abstract function get($var);
   public abstract function set($var, $value);

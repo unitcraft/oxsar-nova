@@ -398,7 +398,7 @@ abstract class Page
 	protected function checkForTW()
 	{
 		$curr_time = time();
-		$TW$TW = false;
+		$TW = []; // technical works отключены (legacy: Yii::app()->params['technicalWorks'])
 		$start = 99999999999;
 		$f_key = null;
 		foreach( $TW as $key => $TWdata )

@@ -1113,3 +1113,68 @@ ResearchLab=12. Поправлено в этом же commit (см. план 29)
 если в Go-коде есть `spec.Mode == 3` сравнения.
 
 **Tests**: `go test ./... -count=1` — все 26 пакетов зелёные.
+
+---
+
+## 2026-04-27 — game-origin: упрощения первого запуска (план 37)
+
+При первом запуске PHP-клона oxsar2 в `projects/game-origin/` было принято
+несколько trade-offs ради быстрой работоспособности главной страницы.
+Все они помечены `// TODO plan-37` в коде или комментариями `/* убрано */`.
+
+### 1. Yii-виджеты в шаблонах закомментированы
+**Где**: `src/templates/standard/layout.tpl`, `main.tpl`
+**Что убрано**: `PrizeWidget`, `NewbieWidget`, `NewsWidget`, `NotifyWidget`,
+`TutorialDialog` (все через `Yii::app()->controller->widget(...)`).
+**Почему**: Это ContentBox'ы поверх основного UI (плашки про премиум, новичков,
+новости, нотификации). Не критичны для рендера страницы.
+**План возврата**: 37.5 — заменить на нативные PHP-блоки или включить в Universe Switcher.
+
+### 2. socialUrl() — stub, возвращает URL как есть
+**Где**: `src/core/Functions.php` + 9 использований в Stock/MSG/Battlestats и т.д.
+**Почему**: Был для соц.сетей (VK/OK/MailRu iframe), у нас OAuth убран в plan-36.
+**План возврата**: не требуется — функция корректна как identity для не-социального flow.
+
+### 3. mini_games iframe (7j7.ru) удалён
+**Где**: `src/game/page/Main.class.php`
+**Почему**: Внешний сервис, к oxsar-nova отношения не имеет.
+**План возврата**: не требуется.
+
+### 4. CHtml::link() заменён на нативный <a href>
+**Где**: `src/templates/standard/main.tpl`
+**Почему**: CHtml — Yii helper, мы Yii убрали.
+**План возврата**: не требуется (функционально эквивалентно).
+
+### 5. Universe Switcher — placeholder
+**Где**: `src/templates/standard/main.tpl` (бывшая ссылка "Перейти в Niro/Dominator")
+**Почему**: Vanilla JS виджет — отдельная задача 37.5 в плане.
+**План возврата**: 37.5 — реализовать виджет с балансом кредитов из auth-service.
+
+### 6. Online stats (User_YII::showOnline) убран
+**Где**: `src/templates/standard/main.tpl` (под `isAdmin()`)
+**Почему**: Yii AR метод. Виден только админам, низкий приоритет.
+**План возврата**: 37.6 — простой SQL `SELECT COUNT(DISTINCT userid) FROM na_user WHERE last > UNIX_TIMESTAMP() - 900`.
+
+### 7. View `na_galaxy_new_pos_union2` отключён
+**Где**: `migrations/001_schema.sql` (закомментирован)
+**Почему**: Использует `UNION ... LIMIT 40 UNION ... LIMIT 50` без скобок —
+валидно в MySQL 5.5, ломает MySQL 5.7+. В PHP-коде oxsar-nova этот VIEW не используется.
+**План возврата**: при необходимости переписать с подзапросами `(SELECT ... LIMIT 40) UNION (SELECT ... LIMIT 50)`.
+
+### 8. JwtAuth INSERT — только обязательные поля
+**Где**: `src/core/JwtAuth.php::lazyJoin()` (16 NOT NULL полей na_user)
+**Что**: Создаёт пользователя без планеты, alliance, achievements, stats.
+**Почему**: Минимальный INSERT для работы Login flow; полная регистрация —
+отдельный шаг (создание стартовой планеты по `Login.util.class.php` legacy).
+**План возврата**: 37.6 — порт `UserSetup` (создание планеты, заполнение defaults, начало tutorial).
+
+### 9. `Options` читает только из `na_config` (не из `Config.xml`)
+**Где**: `src/core/Options.class.php::loadConfigFile()` отключён
+**Почему**: XML-файл `Config.xml` мы не копировали (в legacy он переопределялся БД).
+**План возврата**: не требуется (БД — единый источник истины для опций).
+
+### 10. ENGINE=MyISAM/InnoDB FK миграция 003
+**Где**: `na_user.global_user_id VARCHAR(36) UNIQUE`
+**Почему**: VARBINARY(36) после ALTER в legacy схеме (наследие cp1251 → utf8 миграции),
+наш ALTER даёт корректный VARBINARY автоматически.
+**План возврата**: не требуется.

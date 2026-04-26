@@ -1167,7 +1167,7 @@ class Alliance extends Page
 	{
 		$result = null;
 		$searchItem = Str::validateXHTML($searchItem);
-		$searchObj = new String($searchItem);
+		$searchObj = new OxsarString($searchItem);
 		$searchObj->setMinSearchLenght(1)
 			->prepareForSearch();
 		Core::getTPL()->assign("searchitem", $searchItem);

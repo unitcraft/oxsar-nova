@@ -13,7 +13,8 @@ if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
 
 require_once(RECIPE_ROOT_DIR."util/Type.abstract_class.php");
 
-class String extends Type
+// String — зарезервированное имя в PHP 8 → переименован в OxsarString
+class OxsarString extends Type
 {
   /**
   * This is the actual string.
@@ -62,7 +63,7 @@ class String extends Type
   */
   public function __destruct()
   {
-    unset($this);
+    // PHP 8: unset($this) запрещён
     return;
   }
 

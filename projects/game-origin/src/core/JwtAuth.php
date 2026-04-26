@@ -26,8 +26,17 @@ class JwtAuth
      * Verify JWT from Authorization header or cookie, populate $_SESSION.
      * Returns true if authenticated, false if guest.
      */
+    /**
+     * Этап 1: Проверка JWT (без БД). Кладёт payload в $_SESSION['jwt_payload'].
+     * Вызывается из global.inc.php до Core init.
+     */
     public static function authenticate(): bool
     {
+        // Если payload уже разобран в текущей сессии — пропускаем повторную проверку
+        if (!empty($_SESSION['jwt_payload']) && !empty($_SESSION['userid'])) {
+            return true;
+        }
+
         $token = self::extractToken();
         if (!$token) {
             return false;
@@ -38,29 +47,43 @@ class JwtAuth
             return false;
         }
 
-        // Map JWT claims → $_SESSION fields the game expects
         $globalUserId = $payload['sub'] ?? null;
         if (!$globalUserId) {
             return false;
         }
 
-        // Lazy join: найти или создать локальную запись пользователя по global_user_id
+        $_SESSION['jwt_payload']    = $payload;
+        $_SESSION['global_user_id'] = $globalUserId;
+        return true;
+    }
+
+    /**
+     * Этап 2: Lazy join с локальной БД. Вызывается после Core::setDatabase().
+     */
+    public static function resolveUser(): bool
+    {
+        if (!empty($_SESSION['userid'])) {
+            return true;
+        }
+        $payload      = $_SESSION['jwt_payload']    ?? null;
+        $globalUserId = $_SESSION['global_user_id'] ?? null;
+        if (!$payload || !$globalUserId) {
+            return false;
+        }
+
         $localUser = self::lazyJoin($globalUserId, $payload);
         if (!$localUser) {
             return false;
         }
 
-        $_SESSION['userid']         = $localUser['userid'];
-        $_SESSION['username']       = $payload['username']  ?? $localUser['username'];
-        $_SESSION['email']          = $localUser['email']   ?? '';
-        $_SESSION['activation']     = $localUser['activation'] ?? 1;
-        $_SESSION['is_admin']       = in_array('admin', $payload['roles'] ?? []);
-        $_SESSION['skin_type']      = $localUser['templatepackage'] ?? 'standard';
-        $_SESSION['curplanet']      = $localUser['current_planet'] ?? 0;
-        $_SESSION['global_user_id'] = $globalUserId;
-        // sid не нужен при JWT — оставляем пустым
-        $_SESSION['sid']            = '';
-
+        $_SESSION['userid']     = $localUser['userid'];
+        $_SESSION['username']   = $payload['username']           ?? $localUser['username'];
+        $_SESSION['email']      = $localUser['email']            ?? '';
+        $_SESSION['activation'] = $localUser['activation']       ?? 1;
+        $_SESSION['is_admin']   = in_array('admin', $payload['roles'] ?? []);
+        $_SESSION['skin_type']  = $localUser['templatepackage']  ?? 'standard';
+        $_SESSION['curplanet']  = $localUser['curplanet']        ?? 0;
+        $_SESSION['sid']        = '';
         return true;
     }
 
@@ -160,25 +183,33 @@ class JwtAuth
         $gid = $db->quote_db_value($globalUserId);
 
         $row = $db->queryRow(
-            "SELECT * FROM `" . PREFIX . "users` WHERE global_user_id = $gid LIMIT 1"
+            "SELECT * FROM `" . PREFIX . "user` WHERE global_user_id = $gid LIMIT 1"
         );
 
         if ($row) {
             return $row;
         }
 
-        // Создаём нового пользователя (минимальный набор полей)
+        // Создаём нового пользователя (минимальный набор полей).
+        // Пароль не нужен — аутентификация через JWT (auth-service plan-36).
         $username = $db->quote_db_value($payload['username'] ?? 'player_' . substr($globalUserId, 0, 8));
+        $email    = $db->quote_db_value($payload['email']    ?? '');
         $now      = time();
 
+        // Все NOT NULL без default из legacy-схемы na_user (16 полей).
+        // activation — varbinary(32), пустая строка = «активирован» (нет ожидающего токена).
         $db->query(
-            "INSERT INTO `" . PREFIX . "users`"
-            . " (global_user_id, username, email, `password`, register_time, onlinetime, current_planet, templatepackage)"
-            . " VALUES ($gid, $username, '', '', $now, $now, 0, 'standard')"
+            "INSERT INTO `" . PREFIX . "user`"
+            . " (global_user_id, username, email, temp_email, languageid, timezone,"
+            . "  templatepackage, theme, dm_points, activation, regtime, last,"
+            . "  asteroid, umode, umodemin, planetorder, `delete`)"
+            . " VALUES ($gid, $username, $email, '', 0, '',"
+            . "         'standard', '', 0, '', $now, $now,"
+            . "         0, 0, 0, 0, 0)"
         );
 
         $newId = $db->insert_id();
-        return $db->queryRow("SELECT * FROM `" . PREFIX . "users` WHERE userid = $newId LIMIT 1");
+        return $db->queryRow("SELECT * FROM `" . PREFIX . "user` WHERE userid = $newId LIMIT 1");
     }
 
     private static function base64UrlDecode(string $input): string

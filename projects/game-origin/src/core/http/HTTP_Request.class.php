@@ -93,7 +93,7 @@ class HTTP_Request
   public function kill()
   {
     $this->session->close();
-    unset($this);
+    // PHP 8: unset($this) запрещён
     return;
   }
 }

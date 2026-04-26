@@ -232,7 +232,7 @@ class Float extends Type
   */
   public function getString($decimals = 0, $decPoint = ".", $thousandsSep = ",")
   {
-    return new String($this->toString($decimals, $decPoint, $thousandsSep));
+    return new OxsarString($this->toString($decimals, $decPoint, $thousandsSep));
   }
 
   /**

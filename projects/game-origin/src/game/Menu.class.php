@@ -9,7 +9,7 @@
 
 if(!defined("APP_ROOT_DIR")) { die("Hacking attempt detected."); }
 
-class Menu implements IteratorAggregate
+class Menu implements IteratorAggregate, Countable
 {
   /**
   * The main XML menu element.
@@ -386,9 +386,15 @@ class Menu implements IteratorAggregate
   *
   * @return ArrayIterator
   */
-  public function getIterator()
+  public function getIterator(): Iterator
   {
     return new ArrayIterator($this->getMenu());
+  }
+
+  public function count(): int
+  {
+    $menu = $this->getMenu();
+    return is_array($menu) ? count($menu) : 0;
   }
 
   /**
@@ -398,7 +404,7 @@ class Menu implements IteratorAggregate
   */
   public function kill()
   {
-    unset($this);
+    // PHP 8: unset($this) запрещён
     return;
   }
 

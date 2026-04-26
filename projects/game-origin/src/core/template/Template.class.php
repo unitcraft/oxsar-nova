@@ -428,7 +428,11 @@ class Template
   {
     if(is_null($template))
     {
-      $template = Core::getConfig()->maintemplate;
+      // legacy: maintemplate из Yii params; default — 'layout'
+      $template = Core::getConfig()->get('maintemplate');
+      if (!$template || $template === 'maintemplate') {
+        $template = 'layout';
+      }
     }
     $this->mainTemplateFile = $template;
     return $this;
@@ -445,7 +449,11 @@ class Template
   {
     if(is_null($extension))
     {
-      $extension = Core::getConfig()->templateextension;
+      // legacy: брал из Yii::app()->params; default — tpl
+      $extension = Core::getConfig()->get('templateextension');
+      if (!$extension || $extension === 'templateextension') {
+        $extension = 'tpl';
+      }
     }
     if(Str::substring($extension, 0, 1) != ".")
     {
@@ -466,7 +474,10 @@ class Template
   {
     if(is_null($package))
     {
-      $package = Core::getConfig()->templatepackage;
+      $package = Core::getConfig()->get('templatepackage');
+      if (!$package || $package === 'templatepackage') {
+        $package = 'standard';
+      }
     }
     if(Str::substring($package, 0, Str::length($package) - 1) != "/")
     {
