@@ -8442,3 +8442,40 @@ VK-платежей в нём остался невалидный синтакс
 EVENT_COLONIZE_NEW_USER_PLANET при первом логине.
 
 **Коммиты**: 1.
+
+---
+
+## Итерация 37.5c.2 (2026-04-27) — OnboardingService + триггер в Core::setUser
+
+**Задача**: Реализовать триггер планирования колонизации стартовой
+планеты для нового юзера. Идемпотентно, безопасно вызывать на каждом
+HTTP-запросе.
+
+**Контекст**: в legacy это делал `BaseWebUser::checkAndCreateHomePlanet`
+(Yii-фильтр). Yii выкинут — нужен прямой эквивалент. Само создание
+планеты — асинхронно, через `EVENT_COLONIZE_NEW_USER_PLANET` и
+`EventHandler::colonize()` (запускается воркером 37.5c.3).
+
+**Изменения**:
+- `projects/game-origin/src/game/OnboardingService.class.php` — новый
+  файл, статический метод `ensureColonizationScheduled($userid)`:
+  - Проверка `na_user.hp IS NULL`.
+  - **Защита от race**: MySQL advisory lock `GET_LOCK("oxsar_colonize:$uid", 0)`
+    с `timeout=0` (legacy использовал Yii cache->add, у нас аналог через
+    БД). При параллельных запросах второй просто получит false и выйдет.
+  - Под локом — повторная проверка что событие ещё не вставлено.
+  - INSERT в `na_events` с `mode = EVENT_COLONIZE_NEW_USER_PLANET`,
+    `time = now() + COLONIZE_NEW_USER_PLANET_TIME (3 сек)`, ship-payload
+    с UNIT_COLONY_SHIP (как в legacy).
+  - `try/finally` гарантирует RELEASE_LOCK даже при exception.
+- `projects/game-origin/src/core/Core.class.php`: после `new User($sid)`
+  в `setUser()` — вызов `OnboardingService::ensureColonizationScheduled($_SESSION["userid"])`
+  для авторизованного юзера.
+
+**Что дальше (37.5c.3)**: воркер event-monitor.php — без него событие
+просто висит в `na_events` без обработки.
+
+**Проверка**: `php -l` обоих файлов — без syntax errors. End-to-end
+проверка после запуска воркера.
+
+**Коммиты**: 1.

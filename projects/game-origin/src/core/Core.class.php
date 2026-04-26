@@ -411,6 +411,14 @@ class Core
 			$sid = (self::getRequest()->getCOOKIE("sid")) ? self::getRequest()->getCOOKIE("sid") : "";
 		}
 		self::$UserObj = new User($sid);
+
+		// План 37.5c: для авторизованного юзера без home planet
+		// планируем колонизацию (асинхронно, обработает event-monitor).
+		if(!empty($_SESSION["userid"]) && class_exists('OnboardingService', true))
+		{
+			OnboardingService::ensureColonizationScheduled($_SESSION["userid"]);
+		}
+
 		return $this;
 	}
 
