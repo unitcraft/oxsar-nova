@@ -20,6 +20,7 @@ class XMLObj extends SimpleXMLElement
   *
   * @return XMLObj	The children
   */
+  #[\ReturnTypeWillChange]
   public function getChildren($name = null)
   {
     if(is_null($name))
