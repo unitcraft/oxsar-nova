@@ -194,69 +194,6 @@ func (h *Handler) SetRole(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// AutomsgDef — шаблон системного сообщения.
-type AutomsgDef struct {
-	Key          string `json:"key"`
-	Title        string `json:"title"`
-	BodyTemplate string `json:"body_template"`
-	Folder       int    `json:"folder"`
-}
-
-// ListAutomsgs GET /api/admin/automsgs
-func (h *Handler) ListAutomsgs(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.db.Pool().Query(r.Context(),
-		`SELECT key, title, body_template, folder FROM automsg_defs ORDER BY key`)
-	if err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
-		return
-	}
-	defer rows.Close()
-	var out []AutomsgDef
-	for rows.Next() {
-		var d AutomsgDef
-		if err := rows.Scan(&d.Key, &d.Title, &d.BodyTemplate, &d.Folder); err != nil {
-			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
-			return
-		}
-		out = append(out, d)
-	}
-	if err := rows.Err(); err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
-		return
-	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"defs": out})
-}
-
-// UpdateAutomsg PUT /api/admin/automsgs/{key}
-// Body: {"title":"...","body_template":"...","folder":2}
-func (h *Handler) UpdateAutomsg(w http.ResponseWriter, r *http.Request) {
-	key := chi.URLParam(r, "key")
-	var body struct {
-		Title        string `json:"title"`
-		BodyTemplate string `json:"body_template"`
-		Folder       int    `json:"folder"`
-	}
-	if err := decodeJSON(r, &body); err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
-		return
-	}
-	if body.Title == "" || body.BodyTemplate == "" {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "title and body_template required"))
-		return
-	}
-	tag, err := h.db.Pool().Exec(r.Context(), `
-		UPDATE automsg_defs SET title=$1, body_template=$2, folder=$3 WHERE key=$4
-	`, body.Title, body.BodyTemplate, body.Folder, key)
-	if err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
-		return
-	}
-	if tag.RowsAffected() == 0 {
-		httpx.WriteError(w, r, httpx.ErrNotFound)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
 
 func decodeJSON(r *http.Request, into any) error {
 	dec := json.NewDecoder(io.LimitReader(r.Body, 1<<20))

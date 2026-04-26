@@ -4,32 +4,55 @@
 // no-op. Это важно для welcome-сообщения: повторный вызов (например
 // при resend после сбоя) не плодит дубликаты.
 //
-// Шаблонизация — примитивная: strings.ReplaceAll для каждой пары
-// из vars. Синтаксис {{name}}. Нет условных блоков, форматирования
-// или i18n-ветвления (legacy AutoMsg.class.php имел 1228 LOC,
-// нам такой объём не нужен).
+// Тексты шаблонов хранятся в configs/i18n/<lang>.yml группа autoMessages.
+// Пары ключей: "<name>.title" и "<name>.body".
+// Язык получателя читается из users.language при каждом Send.
+//
+// Папки inbox (folder): 2 — системные сообщения (legacy consts).
 package automsg
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/pkg/ids"
 )
 
+// KnownKeys — допустимые ключи automsg. Проверяется в Send (defensive).
+var KnownKeys = []string{
+	"welcome",
+	"starterGuide",
+	"firstAttackReceived",
+	"inactivityReminder",
+}
+
+// Folder — inbox-папка для автомесседжей (legacy consts.php).
+const Folder = 2
+
 type Service struct {
-	db repo.Exec
+	db     repo.Exec
+	bundle *i18n.Bundle
 }
 
 func NewService(db repo.Exec) *Service { return &Service{db: db} }
 
-var ErrDefNotFound = errors.New("automsg: def not found")
+// WithBundle подключает i18n-бандл для получения текстов шаблонов.
+// Если не вызван — Send возвращает ErrNoBundle.
+func (s *Service) WithBundle(b *i18n.Bundle) *Service {
+	s.bundle = b
+	return s
+}
+
+var (
+	ErrDefNotFound = errors.New("automsg: def not found")
+	ErrNoBundle    = errors.New("automsg: i18n bundle not configured")
+)
 
 // Send отправляет automsg по key, подставляя vars. Идемпотентен по
 // (userID, key): повторный вызов ничего не делает.
@@ -38,49 +61,21 @@ var ErrDefNotFound = errors.New("automsg: def not found")
 // критические триггеры) передаётся существующий tx, чтобы отправка
 // была атомарна с основной операцией.
 func (s *Service) Send(ctx context.Context, tx pgx.Tx, userID, key string, vars map[string]string) error {
-	exec := txOrPool(s, tx)
-
-	// Def.
-	var title, body string
-	var folder int
-	if err := exec.QueryRow(ctx, `
-		SELECT title, body_template, folder FROM automsg_defs WHERE key = $1
-	`, key).Scan(&title, &body, &folder); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrDefNotFound
-		}
-		return fmt.Errorf("read def: %w", err)
+	if s.bundle == nil {
+		return ErrNoBundle
 	}
 
-	// Подстановка vars в title и body.
-	for k, v := range vars {
-		placeholder := "{{" + k + "}}"
-		title = strings.ReplaceAll(title, placeholder, v)
-		body = strings.ReplaceAll(body, placeholder, v)
+	// Язык получателя.
+	lang := s.userLang(ctx, userID)
+
+	title := s.bundle.Tr(lang, "autoMessages", key+".title", vars)
+	body := s.bundle.Tr(lang, "autoMessages", key+".body", vars)
+
+	if title == "[autoMessages."+key+".title]" {
+		return fmt.Errorf("%w: %s", ErrDefNotFound, key)
 	}
 
-	// Фиксируем отправку: INSERT ON CONFLICT DO NOTHING. Если
-	// RowsAffected()==0 — уже отправляли, выходим.
-	tag, err := exec.Exec(ctx, `
-		INSERT INTO automsg_sent (user_id, key)
-		VALUES ($1, $2)
-		ON CONFLICT (user_id, key) DO NOTHING
-	`, userID, key)
-	if err != nil {
-		return fmt.Errorf("mark sent: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return nil
-	}
-
-	// Message в inbox.
-	if _, err := exec.Exec(ctx, `
-		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
-		VALUES ($1, $2, NULL, $3, $4, $5)
-	`, ids.New(), userID, folder, title, body); err != nil {
-		return fmt.Errorf("insert message: %w", err)
-	}
-	return nil
+	return s.insertMsg(ctx, tx, userID, key, Folder, title, body)
 }
 
 // SendDirect вставляет сообщение без шаблона и без идемпотентности.
@@ -98,14 +93,17 @@ func (s *Service) SendDirect(ctx context.Context, tx pgx.Tx, userID string, fold
 	return nil
 }
 
-// SendInactivityReminders отправляет INACTIVITY_REMINDER всем игрокам,
+// SendInactivityReminders отправляет inactivityReminder всем игрокам,
 // которые не заходили более inactiveDays дней. Использует week-суффикс
-// в ключе idempotency (INACTIVITY_REMINDER_<year>W<week>), чтобы при
-// ежедневном вызове письмо уходило не чаще раза в неделю.
-// Возвращает кол-во отправленных писем.
+// в ключе idempotency, чтобы при ежедневном вызове письмо уходило
+// не чаще раза в неделю. Возвращает кол-во отправленных писем.
 func (s *Service) SendInactivityReminders(ctx context.Context, inactiveDays int, weekSuffix string) (int, error) {
+	if s.bundle == nil {
+		return 0, ErrNoBundle
+	}
+
 	rows, err := s.db.Pool().Query(ctx, `
-		SELECT id, username FROM users
+		SELECT id, username, language FROM users
 		WHERE last_seen_at < now() - ($1 * interval '1 day')
 	`, inactiveDays)
 	if err != nil {
@@ -113,18 +111,18 @@ func (s *Service) SendInactivityReminders(ctx context.Context, inactiveDays int,
 	}
 	defer rows.Close()
 
-	sentKey := "INACTIVITY_REMINDER_" + weekSuffix
+	sentKey := "inactivityReminder_" + weekSuffix
 	var sent int
 	for rows.Next() {
-		var uid, username string
-		if err := rows.Scan(&uid, &username); err != nil {
+		var uid, username, lang string
+		if err := rows.Scan(&uid, &username, &lang); err != nil {
 			return sent, err
 		}
-		if err := s.sendWithKey(ctx, uid, sentKey, "INACTIVITY_REMINDER",
-			map[string]string{"username": username}); err != nil {
-			if errors.Is(err, ErrDefNotFound) {
-				return 0, nil // шаблон не добавлен в БД — пропускаем всё
-			}
+		l := i18n.Lang(lang)
+		vars := map[string]string{"username": username}
+		title := s.bundle.Tr(l, "autoMessages", "inactivityReminder.title", vars)
+		body := s.bundle.Tr(l, "autoMessages", "inactivityReminder.body", vars)
+		if err := s.insertMsg(ctx, nil, uid, sentKey, Folder, title, body); err != nil {
 			return sent, fmt.Errorf("inactivity send %s: %w", uid, err)
 		}
 		sent++
@@ -132,36 +130,22 @@ func (s *Service) SendInactivityReminders(ctx context.Context, inactiveDays int,
 	return sent, rows.Err()
 }
 
-// sendWithKey — как Send, но idempotency-ключ задаётся явно (не key шаблона).
-func (s *Service) sendWithKey(ctx context.Context, userID, sentKey, defKey string, vars map[string]string) error {
-	exec := txOrPool(s, nil)
+// insertMsg — идемпотентная вставка сообщения через automsg_sent.
+func (s *Service) insertMsg(ctx context.Context, tx pgx.Tx, userID, key string, folder int, title, body string) error {
+	exec := txOrPool(s, tx)
 
-	var title, body string
-	var folder int
-	if err := exec.QueryRow(ctx, `
-		SELECT title, body_template, folder FROM automsg_defs WHERE key = $1
-	`, defKey).Scan(&title, &body, &folder); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrDefNotFound
-		}
-		return fmt.Errorf("read def: %w", err)
-	}
-	for k, v := range vars {
-		placeholder := "{{" + k + "}}"
-		title = strings.ReplaceAll(title, placeholder, v)
-		body = strings.ReplaceAll(body, placeholder, v)
-	}
 	tag, err := exec.Exec(ctx, `
 		INSERT INTO automsg_sent (user_id, key)
 		VALUES ($1, $2)
 		ON CONFLICT (user_id, key) DO NOTHING
-	`, userID, sentKey)
+	`, userID, key)
 	if err != nil {
 		return fmt.Errorf("mark sent: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
 		return nil
 	}
+
 	if _, err := exec.Exec(ctx, `
 		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 		VALUES ($1, $2, NULL, $3, $4, $5)
@@ -171,11 +155,19 @@ func (s *Service) sendWithKey(ctx context.Context, userID, sentKey, defKey strin
 	return nil
 }
 
+// userLang читает язык пользователя из БД. При ошибке — fallback ru.
+func (s *Service) userLang(ctx context.Context, userID string) i18n.Lang {
+	var lang string
+	_ = s.db.Pool().QueryRow(ctx,
+		`SELECT language FROM users WHERE id = $1`, userID,
+	).Scan(&lang)
+	if lang == "" {
+		return i18n.LangRu
+	}
+	return i18n.Lang(lang)
+}
+
 // --- tx/pool switch ---
-//
-// Повторяется из achievement/service.go (такой же execer). Могли бы
-// вынести в shared helper, но это две короткие обёртки — пока
-// дублирование дешевле общего пакета.
 
 type execer interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
