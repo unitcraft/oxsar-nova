@@ -27,6 +27,9 @@ help:
 	@echo "  lint            - run all linters"
 	@echo "  gen             - regenerate sqlc + openapi clients"
 	@echo "  import-datasheets - generate configs/construction.yml from legacy dump (OXSAR2_DUMP)"
+	@echo "  i18n-audit        - scan codebase for hardcoded Cyrillic strings, write report"
+	@echo "  i18n-rename       - rename i18n keys SCREAMING_SNAKE→lowerCamelCase (one-time, point of no return)"
+	@echo "  i18n-check        - run all i18n CI checks (no-printf test)"
 
 .PHONY: dev-up
 dev-up:
@@ -157,6 +160,30 @@ import-datasheets:
 	cd $(BACKEND) && go run ./cmd/tools/import-datasheets \
 		--input="$(OXSAR2_DUMP)" \
 		--output="$(ROOT)/configs"
+
+# i18n-audit: сканирует frontend/src и backend на хардкод-кириллицу.
+# Выход: docs/plans/33-i18n-audit-report.md
+.PHONY: i18n-audit
+i18n-audit:
+	cd $(BACKEND) && go run ./cmd/tools/i18n-audit \
+		--root="$(ROOT)" \
+		--dict="$(ROOT)/configs/i18n/ru.yml" \
+		--out="$(ROOT)/docs/plans/33-i18n-audit-report.md"
+
+# i18n-rename: переименовывает ключи/группы в configs/i18n/*.yml
+# SCREAMING_SNAKE_CASE → lowerCamelCase и %s/%d → {{name}}.
+# Запускать ОДИН РАЗ, после — закоммитить и поднять LOCALE_VERSION.
+.PHONY: i18n-rename
+i18n-rename:
+	cd $(BACKEND) && go run ./cmd/tools/i18n-rename \
+		--dir="$(ROOT)/configs/i18n" \
+		--glossary="$(ROOT)/docs/plans/33-i18n-placeholder-glossary.yml" \
+		--map-out="$(ROOT)/configs/i18n/i18n-rename-map.json"
+
+# i18n-check: CI-проверки i18n (нет %s/%d в YAML, консистентность ключей).
+.PHONY: i18n-check
+i18n-check:
+	cd $(BACKEND) && go test ./internal/i18n/... -run TestNoPrintf -v
 
 # wiki-gen: генерирует docs/wiki/ru/{buildings,ships,defense,research}/*.md
 # из configs/. План 19 (game-wiki). Запускать после каждого изменения

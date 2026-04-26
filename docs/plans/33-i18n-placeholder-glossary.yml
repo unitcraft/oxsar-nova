@@ -1,0 +1,175 @@
+# Glossary именованных параметров для конвертации %s/%d → {{name}}.
+# Формат ключа: "GROUP.KEY.N" (N — позиция плейсхолдера, 1-based).
+# Используется инструментом i18n-rename --glossary.
+#
+# Стандартные имена параметров (не плодить синонимы):
+#   username   — имя пользователя
+#   allianceName — название альянса
+#   planetName — название планеты
+#   coords     — координаты вида "1:2:3" или объект
+#   metal / silicon / hydrogen — ресурсы
+#   total      — суммарное значение (ресурсов и т.п.)
+#   count      — количество чего-либо
+#   unitName   — название юнита
+#   fleetName  — состав/название флота
+#   time       — время/дата строкой
+#   percent    — процент числом
+#   credits    — кредиты
+#   days / min / max — числовые диапазоны
+#   artefactName — название артефакта
+#   rank       — место в рейтинге
+#   attackerName / defenderName — имена сторон боя
+
+# Alliance
+Alliance.CANDIDATES.1: allianceName
+Alliance.MEMBER_KICKED.1: username
+Alliance.MEMBER_LEFT.1: username
+Alliance.NEW_MEMBER_JOINED.1: username
+Alliance.MEMBER_RECEIPTED.1: allianceName
+Alliance.MEMBER_REFUSED.1: allianceName
+Alliance.ALLIANCE_ABANDONED.1: allianceName
+
+# AssaultReport — боевые отчёты
+AssaultReport.ASSAULT_TIME.1: time
+AssaultReport.ATTACKER_EXPERIENCE.1: count
+AssaultReport.ATTACKER_LOST_RES.1: total
+AssaultReport.ATTACKER_LOST_RES.2: metal
+AssaultReport.ATTACKER_LOST_RES.3: silicon
+AssaultReport.ATTACKER_LOST_RES_4.1: total
+AssaultReport.ATTACKER_LOST_RES_4.2: metal
+AssaultReport.ATTACKER_LOST_RES_4.3: silicon
+AssaultReport.ATTACKER_LOST_RES_4.4: hydrogen
+AssaultReport.ATTACKER_LOST_UNITS.1: unitName
+AssaultReport.ATTACKER_POWER.1: power
+AssaultReport.ATTACKER_SHIELD.1: shield
+AssaultReport.ATTACKER_SHOTS.1: count
+AssaultReport.BMAT_ATTER_DAMAGE.1: attackerUnit
+AssaultReport.BMAT_ATTER_DAMAGE.2: defenderUnit
+AssaultReport.BMAT_ATTER_HIT.1: attackerUnit
+AssaultReport.BMAT_ATTER_HIT.2: defenderUnit
+AssaultReport.BMAT_ATTER_PERCENT.1: attackerUnit
+AssaultReport.BMAT_ATTER_PERCENT.2: defenderUnit
+AssaultReport.BMAT_DEFENDER_DAMAGE.1: defenderUnit
+AssaultReport.BMAT_DEFENDER_DAMAGE.2: attackerUnit
+AssaultReport.BMAT_DEFENDER_HIT.1: defenderUnit
+AssaultReport.BMAT_DEFENDER_HIT.2: attackerUnit
+AssaultReport.BMAT_DEFENDER_PERCENT.1: defenderUnit
+AssaultReport.BMAT_DEFENDER_PERCENT.2: attackerUnit
+AssaultReport.DEBRIS_METAL_AND_SILICON.1: metal
+AssaultReport.DEBRIS_METAL_AND_SILICON.2: silicon
+AssaultReport.DEFENDER_EXPERIENCE.1: count
+AssaultReport.DEFENDER_LOST_RES.1: total
+AssaultReport.DEFENDER_LOST_RES.2: metal
+AssaultReport.DEFENDER_LOST_RES.3: silicon
+AssaultReport.DEFENDER_LOST_RES_4.1: total
+AssaultReport.DEFENDER_LOST_RES_4.2: metal
+AssaultReport.DEFENDER_LOST_RES_4.3: silicon
+AssaultReport.DEFENDER_LOST_RES_4.4: hydrogen
+AssaultReport.DEFENDER_LOST_UNITS.1: unitName
+AssaultReport.DEFENDER_POWER.1: power
+AssaultReport.DEFENDER_SHIELD.1: shield
+AssaultReport.DEFENDER_SHOTS.1: count
+AssaultReport.DESTROYED_BUILDING_PLANET_METAL_AND_SILICON.1: metal
+AssaultReport.DESTROYED_BUILDING_PLANET_METAL_AND_SILICON.2: silicon
+AssaultReport.MOON_ARTEFACT_CHANCE.1: percent
+AssaultReport.MOON_ARTEFACT_CHANCE_LOW.1: percent
+AssaultReport.MOON_CHANCE.1: percent
+AssaultReport.ROCKET_ATTACK_TIME.1: time
+
+# Message — inbox сообщения о флоте и событиях
+Message.ASTEROID_IMPACT.1: planetName
+Message.ASTEROID_IMPACT.2: coords
+Message.ASTEROID_IMPACT.3: metal
+Message.ASTEROID_IMPACT.4: silicon
+Message.DELIVERY_UNITS_REPORT.1: fleetName
+Message.DELIVERY_UNITS_REPORT.2: planetName
+Message.DELIVERY_UNITS_REPORT.3: coords
+Message.DELIVERY_UNITS_REPORT.4: metal
+Message.DELIVERY_UNITS_REPORT.5: silicon
+Message.DELIVERY_UNITS_REPORT.6: hydrogen
+Message.ESPIOANGE_COMMITTED.1: fleetName
+Message.ESPIOANGE_COMMITTED.2: planetName
+Message.ESPIOANGE_COMMITTED.3: coords
+Message.ESPIOANGE_COMMITTED.4: targetPlanetName
+Message.ESPIOANGE_COMMITTED.5: targetCoords
+Message.ESPIOANGE_COMMITTED.6: percent
+Message.ESPIOANGE_COMMITTED.7: result
+Message.FLEET_RETURNED.1: fleetName
+Message.FLEET_RETURNED.2: fromPlanetName
+Message.FLEET_RETURNED.3: toPlanetName
+Message.FLEET_RETURNED.4: toCoords
+Message.FLEET_RETURNED.5: metal
+Message.FLEET_RETURNED.6: silicon
+Message.FLEET_RETURNED.7: hydrogen
+Message.PLANET_COLONIZED.1: coords
+Message.PLANET_OCCUPIED.1: coords
+Message.POSITION_REPORT.1: fleetName
+Message.POSITION_REPORT.2: planetName
+Message.POSITION_REPORT.3: coords
+Message.POSITION_REPORT.4: metal
+Message.POSITION_REPORT.5: silicon
+Message.POSITION_REPORT.6: hydrogen
+Message.RECYLCING_REPORT.1: count
+Message.RECYLCING_REPORT.2: total
+Message.RECYLCING_REPORT.3: metalBefore
+Message.RECYLCING_REPORT.4: siliconBefore
+Message.RECYLCING_REPORT.5: metal
+Message.RECYLCING_REPORT.6: silicon
+Message.RECYLCING_REPORT_SUBJECT.1: coords
+Message.TOO_MANY_PLANETS.1: coords
+Message.TRANSPORT_ACCOMPLISHED.1: planetName
+Message.TRANSPORT_ACCOMPLISHED.2: coords
+Message.TRANSPORT_ACCOMPLISHED.3: metal
+Message.TRANSPORT_ACCOMPLISHED.4: silicon
+Message.TRANSPORT_ACCOMPLISHED.5: hydrogen
+Message.TRANSPORT_ACCOMPLISHED_ARTEFACT.1: artefactName
+Message.TRANSPORT_ACCOMPLISHED_OTHER.1: fromPlanetName
+Message.TRANSPORT_ACCOMPLISHED_OTHER.2: fromCoords
+Message.TRANSPORT_ACCOMPLISHED_OTHER.3: senderName
+Message.TRANSPORT_ACCOMPLISHED_OTHER.4: toPlanetName
+Message.TRANSPORT_ACCOMPLISHED_OTHER.5: toCoords
+Message.TRANSPORT_ACCOMPLISHED_OTHER.6: metal
+Message.TRANSPORT_ACCOMPLISHED_OTHER.7: silicon
+Message.TRANSPORT_ACCOMPLISHED_OTHER.8: hydrogen
+Message.TRANSPORT_ACCOMPLISHED_TO_OTHER.1: fromPlanetName
+Message.TRANSPORT_ACCOMPLISHED_TO_OTHER.2: fromCoords
+Message.TRANSPORT_ACCOMPLISHED_TO_OTHER.3: toPlanetName
+Message.TRANSPORT_ACCOMPLISHED_TO_OTHER.4: toCoords
+Message.TRANSPORT_ACCOMPLISHED_TO_OTHER.5: metal
+Message.TRANSPORT_ACCOMPLISHED_TO_OTHER.6: silicon
+Message.TRANSPORT_ACCOMPLISHED_TO_OTHER.7: hydrogen
+Message.FLEET_MESSAGE_FORMATION.1: username
+Message.FLEET_MESSAGE_FORMATION.2: planetName
+Message.FLEET_MESSAGE_FORMATION.3: coords
+Message.FLEET_MESSAGE_FORMATION.4: fleetName
+
+# EspionageReport
+EspionageReport.ESP_DEFENDING_CHANCE.1: percent
+EspionageReport.ESP_REPORT_RESSOURCE_HEADLINE.1: planetName
+EspionageReport.ESP_REPORT_RESSOURCE_HEADLINE.2: coords
+EspionageReport.ESP_REPORT_RESSOURCE_HEADLINE.3: username
+EspionageReport.ESPS_SENT.1: count
+EspionageReport.ESPS_SENT.2: galaxy
+EspionageReport.ESPS_SENT.3: system
+EspionageReport.ESPS_SENT.4: position
+
+# Galaxy
+Galaxy.GALAXY_ALLY_HEADLINE.1: allianceName
+Galaxy.GALAXY_ALLY_HEADLINE.2: rank
+Galaxy.MOON_DESC.1: planetName
+
+# Main / Prefs / Registration / UnitInfo
+Main.DELETE_DATE.1: date
+Main.UMODE_DATE.1: date
+Main.F_NEW_MESSAGES.1: count
+Registration.PASSWORD_CHECK.1: min
+Registration.PASSWORD_CHECK.2: max
+Registration.USER_CHECK.1: min
+Registration.USER_CHECK.2: max
+Statistics.DATE_INTERVAL_COMMENT.1: days
+
+# UnitInfo — RapidFire, корабли
+UnitInfo.RAPIDFIRE_FROM.1: unitName
+UnitInfo.RAPIDFIRE_TO.1: unitName
+UnitInfo.SHIPS_EXIST.1: count
+UnitInfo.START_IMM.1: credits
