@@ -8218,3 +8218,20 @@ benefit/lifetime), добавить поле tKey для i18n-маппинга, 
    идентификатор в battle report, не inbox-message; i18n на этом уровне не нужен.
 3. **aiadvisor + payment/packages исключены из теста**: AI-промпт и Label пакетов
    кредитов — не user-facing runtime strings через Bundle.Tr.
+
+---
+
+## Итерация 35 (2026-04-26)
+
+**Задача**: Убрать суффикс `Ui` из всех групп в i18n YAML-файлах (план 35).
+
+**Ф.1 — инвентаризация**:
+- Найдено 39 групп с суффиксом `Ui`, 8 конфликтов имён, 1 дубль ключа.
+- Составлена таблица маппинга в docs/plans/35-i18n-key-rename.md.
+
+**Ф.2 — переименование**:
+- ru.yml и en.yml: все `fooUi:` → `foo:`, 9 пар слиты, дубль `buildings.build` устранён.
+- 42 frontend-файла: `useTranslation('fooUi')` → `useTranslation('foo')`.
+- TestI18nConsistency PASS, TestNoCyrillicLiterals PASS.
+
+**Коммиты**: 2 (Ф.1 план + Ф.2 изменения).
