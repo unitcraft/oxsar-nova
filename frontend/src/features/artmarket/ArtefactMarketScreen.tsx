@@ -17,6 +17,7 @@ interface Offer {
 
 export function ArtefactMarketScreen() {
   const { t } = useTranslation('artMarketUi');
+  const { t: ti } = useTranslation('info');
   const qc = useQueryClient();
   const toast = useToast();
   const [filter, setFilter] = useState<'all' | 'mine'>('all');
@@ -108,7 +109,7 @@ export function ArtefactMarketScreen() {
                   return (
                     <tr key={o.id}>
                       <td data-label={t('colArtefact')}>
-                        <div>{nameOf(o.unit_id)}</div>
+                        <div>{nameOf(o.unit_id, ti)}</div>
                       </td>
                       <td data-label={t('colSeller')}>{o.seller_name ?? '—'}</td>
                       <td data-label={t('colPrice')} className="num" style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>

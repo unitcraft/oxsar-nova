@@ -63,6 +63,7 @@ const cellLeft: React.CSSProperties = { ...cell, textAlign: 'left' };
 
 export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) {
   const { t } = useTranslation('unitInfoUi');
+  const { t: ti } = useTranslation('info');
   const buildingsQ = useQuery({
     queryKey: ['buildings', planetId],
     queryFn: () => api.get<{ build_seconds: Record<string, number> }>(`/api/planets/${planetId}/buildings`),
@@ -97,7 +98,7 @@ export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) 
           style={{ imageRendering: 'pixelated', borderRadius: 8, background: 'rgba(0,0,0,0.3)', padding: 4, flexShrink: 0 }}
         />
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>{entry.name}</h2>
+          <h2 style={{ margin: 0, fontSize: 20, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>{ti(entry.tKey)}</h2>
           {currentLevel > 0 && (
             <div style={{ fontSize: 15, color: 'var(--ox-accent)', marginTop: 4, fontFamily: 'var(--ox-mono)' }}>{t('currentLevel', { level: String(currentLevel) })}</div>
           )}
@@ -173,6 +174,7 @@ function combatBuildTimeSecs(metal: number, silicon: number): number {
 
 function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: number }) {
   const { t } = useTranslation('unitInfoUi');
+  const { t: ti } = useTranslation('info');
   const unitCatalog = kind === 'ship' ? SHIPS : DEFENSE;
   const allUnits = [...SHIPS, ...DEFENSE];
   const entry = unitCatalog.find((x) => x.id === unitId);
@@ -197,7 +199,7 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
           style={{ imageRendering: 'pixelated', borderRadius: 8, background: 'rgba(0,0,0,0.3)', padding: 4, flexShrink: 0 }}
         />
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>{entry.name}</h2>
+          <h2 style={{ margin: 0, fontSize: 20, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>{ti(entry.tKey)}</h2>
         </div>
       </div>
 
@@ -293,7 +295,7 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
               {Object.entries(entry.rapidfire).map(([targetId, shots]) => (
                 <tr key={targetId} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                   <td style={{ ...cellLeft, color: 'var(--ox-fg)' }}>
-                    {nameOf(Number(targetId))}
+                    {nameOf(Number(targetId), ti)}
                   </td>
                   <td style={{ ...cell, color: 'var(--ox-accent)', fontWeight: 600 }}>{shots}×</td>
                 </tr>

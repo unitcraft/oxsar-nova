@@ -41,6 +41,7 @@ interface DamagedUnit {
 
 export function RepairScreen({ planet }: { planet: Planet }) {
   const { t } = useTranslation('repairUi');
+  const { t: ti } = useTranslation('info');
   const qc = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState<'repair' | 'disassemble'>('repair');
@@ -68,7 +69,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
       void qc.invalidateQueries({ queryKey: ['repair-damaged', planet.id] });
       void qc.invalidateQueries({ queryKey: ['shipyard-inventory', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('success', t('toastRepairTitle'), t('toastRepaired', { name: nameOf(unitId) }));
+      toast.show('success', t('toastRepairTitle'), t('toastRepaired', { name: nameOf(unitId, ti) }));
     },
     onError: (err) => { toast.show('danger', t('toastError'), err instanceof Error ? err.message : t('toastRepairErr')); },
   });
@@ -80,7 +81,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
       void qc.invalidateQueries({ queryKey: ['repair-queue', planet.id] });
       void qc.invalidateQueries({ queryKey: ['shipyard-inventory', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('success', t('toastDisassTitle'), t('toastDisassembled', { name: nameOf(unitId), count: String(count) }));
+      toast.show('success', t('toastDisassTitle'), t('toastDisassembled', { name: nameOf(unitId, ti), count: String(count) }));
     },
     onError: (err) => { toast.show('danger', t('toastError'), err instanceof Error ? err.message : t('toastDisassErr')); },
   });
@@ -137,7 +138,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15 }}>
                   <span>{i === 0 ? icon : '⏳'}</span>
                   <span style={{ flex: 1, fontWeight: i === 0 ? 600 : 400 }}>
-                    {q.mode === 'repair' ? t('modeRepair') : t('modeDisassemble')}: {nameOf(q.unit_id)} × {q.count}
+                    {q.mode === 'repair' ? t('modeRepair') : t('modeDisassemble')}: {nameOf(q.unit_id, ti)} × {q.count}
                   </span>
                   {i === 0 ? <Countdown finishAt={q.end_at} /> : (
                     <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
@@ -185,12 +186,12 @@ export function RepairScreen({ planet }: { planet: Planet }) {
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     {unitMeta && (
                       <img
-                        src={imageOf(unitMeta.key)} alt={nameOf(d.unit_id)} width={64} height={64}
+                        src={imageOf(unitMeta.key)} alt={nameOf(d.unit_id, ti)} width={64} height={64}
                         style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4 }}
                       />
                     )}
                     <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                      <div className="ox-unit-card-name">{nameOf(d.unit_id)}</div>
+                      <div className="ox-unit-card-name">{nameOf(d.unit_id, ti)}</div>
                       <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>{t('inStock')} {d.count}</div>
                       <div style={{ fontSize: 14, color: 'var(--ox-danger)' }}>{t('damaged')} {d.damaged}</div>
                       <div style={{ marginTop: 4 }}>
@@ -249,6 +250,7 @@ function DisassembleList({
   pending: boolean;
 }) {
   const { t } = useTranslation('repairUi');
+  const { t: ti } = useTranslation('info');
   const [drafts, setDrafts] = useState<Record<number, number>>({});
   const isShip = (id: number) => SHIPS.some((s) => s.id === id);
 
@@ -272,7 +274,7 @@ function DisassembleList({
                 style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4 }}
               />
               <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                <div className="ox-unit-card-name">{u.name}</div>
+                <div className="ox-unit-card-name">{ti(u.tKey)}</div>
                 <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>{t('inStock')} {have}</div>
                 {(u.speed != null || (u.fuel != null && u.fuel > 0)) && (
                   <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', display: 'flex', gap: 8, marginTop: 2 }}>

@@ -425,6 +425,7 @@ interface FleetLot {
 
 function FleetLotsPanel({ planet, userId }: { planet: Planet; userId: string }) {
   const { t } = useTranslation('marketUi');
+  const { t: ti } = useTranslation('info');
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -481,7 +482,7 @@ function FleetLotsPanel({ planet, userId }: { planet: Planet; userId: string }) 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
           {SHIPS.map((s) => (
             <div key={s.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <span style={{ flex: 1, fontSize: 14 }}>🛸 {s.name}</span>
+              <span style={{ flex: 1, fontSize: 14 }}>🛸 {ti(s.tKey)}</span>
               <input
                 type="number"
                 min={0}
@@ -543,7 +544,7 @@ function FleetLotsPanel({ planet, userId }: { planet: Planet; userId: string }) 
                     <td style={{ fontWeight: 600 }}>{isOwn ? t('fleetYou') : l.seller_name}</td>
                     <td style={{ fontSize: 14 }}>
                       {Object.entries(l.sell_fleet).map(([idStr, cnt]) => (
-                        <div key={idStr}>🛸 {nameOf(Number(idStr))} × {cnt}</div>
+                        <div key={idStr}>🛸 {nameOf(Number(idStr), ti)} × {cnt}</div>
                       ))}
                     </td>
                     <td className="num" style={{ fontFamily: 'var(--ox-mono)' }}>

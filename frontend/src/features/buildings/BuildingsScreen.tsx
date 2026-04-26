@@ -46,6 +46,7 @@ const PROD_STAT: Record<string, ProdStat> = {
 export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo: (id: number, level: number) => void }) {
   const { t } = useTranslation('buildingsUi');
   const { t: tg } = useTranslation('global');
+  const { t: ti } = useTranslation('info');
   const uS = tg('timeUnitSec');
   const uM = tg('timeUnitMin');
   const uH = tg('timeUnitHour');
@@ -212,7 +213,7 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
                   title={t('details')}
                 />
               <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => onOpenInfo(b.id, level)}>{b.name}</div>
+                <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => onOpenInfo(b.id, level)}>{ti(b.tKey)}</div>
                 <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
                   {level > 0 ? t('level', { n: String(level) }) : t('notBuilt')}
                 </div>

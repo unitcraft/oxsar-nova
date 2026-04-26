@@ -70,6 +70,7 @@ const RAPIDFIRE_TABLE = buildRapidfire(ALL_COMBAT);
 
 export function BattleSimScreen() {
   const { t } = useTranslation();
+  const { t: ti } = useTranslation('info');
   const [attackers, setAttackers] = useState<UnitMap>({});
   const [defenders, setDefenders] = useState<UnitMap>({});
   const [seed, setSeed] = useState<number>(42);
@@ -113,12 +114,14 @@ export function BattleSimScreen() {
           units={COMBAT_SHIPS}
           value={attackers}
           onChange={setAttackers}
+          tInfo={ti}
         />
         <UnitPicker
           title={t('main', 'battleSimDefenders')}
           units={[...COMBAT_SHIPS, ...COMBAT_DEFENSE]}
           value={defenders}
           onChange={setDefenders}
+          tInfo={ti}
         />
       </div>
 
@@ -227,6 +230,7 @@ function LossesTable({
   original: UnitMap;
 }) {
   const { t } = useTranslation();
+  const { t: ti } = useTranslation('info');
   const changed = side.units.filter((u) => u.quantity_end !== u.quantity_start || u.damaged_end);
   return (
     <div>
@@ -252,7 +256,7 @@ function LossesTable({
                 <tr key={u.unit_id}>
                   <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {unitKey && <img src={imageOf(unitKey)} alt="" width={32} height={32} style={{ imageRendering: 'pixelated' }} />}
-                    {nameOf(u.unit_id)}
+                    {nameOf(u.unit_id, ti)}
                   </td>
                   <td className="num">{original[u.unit_id] ?? u.quantity_start}</td>
                   <td className="num">{u.quantity_end}</td>
@@ -270,12 +274,13 @@ function LossesTable({
 }
 
 function UnitPicker({
-  title, units, value, onChange,
+  title, units, value, onChange, tInfo,
 }: {
   title: string;
   units: CombatEntry[];
   value: UnitMap;
   onChange: (v: UnitMap) => void;
+  tInfo: (key: string) => string;
 }) {
   return (
     <div style={{ minWidth: 260 }}>
@@ -284,7 +289,7 @@ function UnitPicker({
         {units.map((u) => (
           <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <img src={imageOf(u.key)} alt="" width={32} height={32} style={{ imageRendering: 'pixelated', flexShrink: 0 }} />
-            <span style={{ flex: 1, fontSize: 15 }}>{nameOf(u.id)}</span>
+            <span style={{ flex: 1, fontSize: 15 }}>{nameOf(u.id, tInfo)}</span>
             <input
               type="number"
               min={0}

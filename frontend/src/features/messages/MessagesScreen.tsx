@@ -467,6 +467,7 @@ function EspionageReportView({ data }: { data: EspionageReportFull }) {
 }
 
 function UnitMapBlock({ title, data }: { title: string; data: Record<string, number> }) {
+  const { t: ti } = useTranslation('info');
   const entries = Object.entries(data);
   if (entries.length === 0) return null;
   return (
@@ -475,7 +476,7 @@ function UnitMapBlock({ title, data }: { title: string; data: Record<string, num
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {entries.map(([id, n]) => (
           <span key={id} style={{ fontSize: 14, background: 'var(--ox-bg-hover)', padding: '2px 8px', borderRadius: 4 }}>
-            {nameOf(Number(id))}: {n.toLocaleString('ru-RU')}
+            {nameOf(Number(id), ti)}: {n.toLocaleString('ru-RU')}
           </span>
         ))}
       </div>
@@ -573,6 +574,7 @@ function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; on
 
 function SideLosses({ title, side, accentColor }: { title: string; side: SideResult; accentColor: string }) {
   const { t } = useTranslation('messagesUi');
+  const { t: ti } = useTranslation('info');
   const lost = side.lost_metal + side.lost_silicon + side.lost_hydrogen;
   return (
     <div style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${accentColor}`, background: `${accentColor}0d` }}>
@@ -590,7 +592,7 @@ function SideLosses({ title, side, accentColor }: { title: string; side: SideRes
           return (
             <div key={u.unit_id} style={{ display: 'flex', gap: 6, fontSize: 13, fontFamily: 'var(--ox-mono)', alignItems: 'center' }}>
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--ox-fg-dim)' }}>
-                {nameOf(u.unit_id)}
+                {nameOf(u.unit_id, ti)}
               </span>
               <span>{u.quantity_start} → {u.quantity_end}</span>
               {lost_ > 0 && <span style={{ color: 'var(--ox-danger)' }}>−{lost_}</span>}

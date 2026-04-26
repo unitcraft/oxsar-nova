@@ -33,6 +33,7 @@ function parseWikiHash(): { cat: string; slug: string } {
 
 export function WikiScreen() {
   const { t } = useTranslation('wikiUi');
+  const { t: ti } = useTranslation('info');
   const initial = parseWikiHash();
   const [activeCat, setActiveCat] = useState<string>(initial.cat);
   const [activeSlug, setActiveSlug] = useState<string>(initial.slug || 'index');
@@ -99,11 +100,11 @@ export function WikiScreen() {
   // resolveUnit: id → { name, image } для md-рендерера.
   const resolveUnit = useMemo(
     () => (id: number) => {
-      const name = nameOf(id);
+      const name = nameOf(id, ti);
       const image = imageOfId(id);
       return { name, image };
     },
-    []
+    [ti]
   );
 
   // Делегированный click на ссылках [[unit:N]].
@@ -148,7 +149,7 @@ export function WikiScreen() {
     const fm = page.data?.frontmatter ?? {};
     const unitID = fm.unit_id ? Number(fm.unit_id) : 0;
     if (unitID > 0) {
-      const name = nameOf(unitID);
+      const name = nameOf(unitID, ti);
       const img = imageOfId(unitID);
       return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -204,7 +205,7 @@ export function WikiScreen() {
                 if (slug !== 'index') return true;
                 const fm = p.frontmatter ?? {};
                 const unitID = fm.unit_id ? Number(fm.unit_id) : 0;
-                const title = unitID > 0 ? nameOf(unitID) : (fm.title ?? slug);
+                const title = unitID > 0 ? nameOf(unitID, ti) : (fm.title ?? slug);
                 return title !== c.title;
               });
               if (pageList.length === 0) return null;
@@ -214,7 +215,7 @@ export function WikiScreen() {
                     const slug = p.path.split('/')[1] ?? 'index';
                     const fm = p.frontmatter ?? {};
                     const unitID = fm.unit_id ? Number(fm.unit_id) : 0;
-                    const title = unitID > 0 ? nameOf(unitID) : (fm.title ?? slug);
+                    const title = unitID > 0 ? nameOf(unitID, ti) : (fm.title ?? slug);
                     const img = unitID > 0 ? imageOfId(unitID) : '';
                     return (
                       <button
