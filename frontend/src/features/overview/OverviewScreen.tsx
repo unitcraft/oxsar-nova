@@ -10,6 +10,7 @@ import { useToast } from '@/ui/Toast';
 import { GalaxyEventBanner } from '../galaxyevent/GalaxyEventBanner';
 import { AlienHoldingPanel } from '../alien/AlienHoldingPanel';
 import { ForecastWidget } from './ForecastWidget';
+import { useTranslation } from '@/i18n/i18n';
 
 interface FleetRow {
   id: string;
@@ -33,11 +34,6 @@ interface MyRank {
   e_points?: number;
 }
 
-const MISSION_LABELS: Record<number, string> = {
-  7: 'Транспорт', 8: 'Колонизация', 9: 'Переработка',
-  10: 'Атака', 11: 'Шпионаж', 15: 'Экспедиция',
-};
-
 const MISSION_ICONS: Record<number, string> = {
   7: '📦', 8: '🌍', 9: '♻️', 10: '⚔️', 11: '🔭', 15: '🚀',
 };
@@ -53,7 +49,13 @@ function fmtRes(v: number): string {
 }
 
 
+const MISSION_KEYS: Record<number, string> = {
+  7: 'missionTransport', 8: 'missionColonize', 9: 'missionRecycle',
+  10: 'missionAttack', 11: 'missionSpy', 15: 'missionExpedition',
+};
+
 export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: () => void } = {}) {
+  const { t } = useTranslation('overviewUi');
   const planets = useQuery({
     queryKey: ['planets'],
     queryFn: () => api.get<{ planets: Planet[] }>('/api/planets'),
@@ -128,7 +130,7 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
   if (!list.length) {
     return (
       <div style={{ padding: 24 }}>
-        <div className="ox-alert ox-alert-warning">Нет планет. Попробуйте перезагрузить страницу.</div>
+        <div className="ox-alert ox-alert-warning">{t('noPlanets')}</div>
       </div>
     );
   }
@@ -155,26 +157,26 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
           alignItems: 'center',
           gap: 8,
         }}>
-          ✉️ У вас <b>{unreadCount}</b> {unreadCount === 1 ? 'непрочитанное сообщение' : 'непрочитанных сообщений'}
+          ✉️ {t('unreadPrefix')} <b>{unreadCount}</b> {unreadCount === 1 ? t('unreadSingle') : t('unreadPlural')}
         </div>
       )}
 
       {/* Статистика игрока и онлайна */}
       {me.data && (
         <div className="ox-panel" style={{ padding: '12px 20px', display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'center' }}>
-          <StatItem label="Очки" value={Math.floor(me.data.points).toLocaleString('ru-RU')} />
-          <StatItem label="Место в рейтинге" value={`#${me.data.rank}`} accent />
+          <StatItem label={t('statPoints')} value={Math.floor(me.data.points).toLocaleString('ru-RU')} />
+          <StatItem label={t('statRank')} value={`#${me.data.rank}`} accent />
           {(me.data.e_points ?? 0) > 0 && (
-            <StatItem label="Боевой опыт" value={Math.floor(me.data.e_points!).toLocaleString('ru-RU')} />
+            <StatItem label={t('statBattleExp')} value={Math.floor(me.data.e_points!).toLocaleString('ru-RU')} />
           )}
           {profession.data?.label && profession.data.profession !== 'none' && (
-            <StatItem label="Профессия" value={profession.data.label} />
+            <StatItem label={t('statProfession')} value={profession.data.label} />
           )}
           {stats.data && (
             <>
               <div style={{ width: 1, height: 40, background: 'var(--ox-border)' }} />
-              <StatItem label="Сейчас играют" value={stats.data.online_now.toString()} />
-              <StatItem label="За 24 часа" value={stats.data.online_24h.toString()} />
+              <StatItem label={t('statOnlineNow')} value={stats.data.online_now.toString()} />
+              <StatItem label={t('statOnline24h')} value={stats.data.online_24h.toString()} />
             </>
           )}
         </div>
@@ -197,10 +199,10 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
           <span style={{ fontSize: 20, flexShrink: 0 }}>⚠️</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ox-danger)' }}>
-              Входящая атака!
+              {t('incomingAttack')}
             </div>
             <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
-              Цель: [{f.dst_galaxy}:{f.dst_system}:{f.dst_position}]{f.dst_is_moon ? ' 🌑' : ''}
+              {t('incomingTarget')} [{f.dst_galaxy}:{f.dst_system}:{f.dst_position}]{f.dst_is_moon ? ' 🌑' : ''}
             </div>
           </div>
           <Countdown finishAt={f.arrive_at} />
@@ -211,7 +213,7 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
       {activeFleets.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-dim)', paddingLeft: 2 }}>
-            Флоты в пути
+            {t('fleetsInFlight')}
           </div>
           {activeFleets.map((f) => (
             <FleetEventRow key={f.id} fleet={f} />
@@ -280,9 +282,9 @@ export function OverviewScreen({ onShowPlanetOptions }: { onShowPlanetOptions?: 
                     [{p.galaxy}:{p.system}:{p.position}]
                   </span>
                   <div style={{ display: 'flex', gap: 3, marginTop: 3, fontSize: 9, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)' }}>
-                    <span title="Металл">🟠{fmtRes(p.metal)}</span>
-                    <span title="Кремний">💎{fmtRes(p.silicon)}</span>
-                    <span title="Водород">💧{fmtRes(p.hydrogen)}</span>
+                    <span title={t('resMetalLabel')}>🟠{fmtRes(p.metal)}</span>
+                    <span title={t('resSiliconLabel')}>💎{fmtRes(p.silicon)}</span>
+                    <span title={t('resHydrogenLabel')}>💧{fmtRes(p.hydrogen)}</span>
                   </div>
                 </button>
               );
@@ -311,14 +313,16 @@ function StatItem({ label, value, accent }: { label: string; value: string; acce
 function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const { t } = useTranslation('overviewUi');
+  const { t: tg } = useTranslation('global');
 
   const recall = useMutation({
     mutationFn: (id: string) => api.post<unknown>(`/api/fleet/${id}/recall`),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['fleets'] });
-      toast.show('success', 'Флот отозван', '');
+      toast.show('success', t('recallSuccess'), '');
     },
-    onError: () => toast.show('danger', 'Ошибка', 'Не удалось отозвать флот'),
+    onError: () => toast.show('danger', tg('error'), t('recallError')),
   });
 
   const isOutbound = f.state === 'outbound';
@@ -330,9 +334,10 @@ function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
   const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
 
   const icon = MISSION_ICONS[f.mission] ?? '🚀';
-  const label = MISSION_LABELS[f.mission] ?? `#${f.mission}`;
+  const mKey = MISSION_KEYS[f.mission];
+  const label = mKey ? t(mKey) : `#${f.mission}`;
   const target = `[${f.dst_galaxy}:${f.dst_system}:${f.dst_position}]${f.dst_is_moon ? ' 🌑' : ''}`;
-  const stateLabel = isReturning ? '← Возврат' : '→ В пути';
+  const stateLabel = isReturning ? t('fleetReturning') : t('fleetOutbound');
 
   return (
     <div className="ox-panel" style={{ padding: '10px 16px' }}>
@@ -360,7 +365,7 @@ function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
             disabled={recall.isPending}
             style={{ fontSize: 13, padding: '3px 10px', flexShrink: 0 }}
           >
-            Отозвать
+            {t('recallButton')}
           </button>
         )}
       </div>
@@ -398,6 +403,7 @@ function useNow(intervalMs = 1000) {
 }
 
 function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter?: number; used_fields?: number; temp_min?: number; temp_max?: number }; onOptions: () => void }) {
+  const { t } = useTranslation('overviewUi');
   const now = useNow();
   const qc = useQueryClient();
   const invalidateQueues = () => {
@@ -451,21 +457,21 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 16, fontFamily: 'var(--ox-font)' }}>
             {planet.name}
-            {planet.is_moon && <span style={{ marginLeft: 6, fontSize: 13, color: 'var(--ox-fg-dim)', fontWeight: 400 }}>луна</span>}
+            {planet.is_moon && <span style={{ marginLeft: 6, fontSize: 13, color: 'var(--ox-fg-dim)', fontWeight: 400 }}>{t('planetMoon')}</span>}
           </div>
           <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
             {formatCoords(planet)}
           </div>
         </div>
         {hasActivity && (
-          <span className="ox-badge ox-badge-accent" style={{ fontSize: 10 }}>активность</span>
+          <span className="ox-badge ox-badge-accent" style={{ fontSize: 10 }}>{t('planetActivity')}</span>
         )}
         <button
           type="button"
           className="btn btn-ghost btn-sm"
           onClick={onOptions}
           style={{ fontSize: 16, padding: '6px 10px', flexShrink: 0 }}
-          title="Параметры планеты"
+          title={t('planetOptions')}
         >
           ⚙️
         </button>
@@ -479,13 +485,13 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
           background: 'rgba(255,255,255,0.02)',
         }}>
           {diameter && (
-            <PlanetStat icon="📐" label="Диаметр" value={`${diameter.toLocaleString('ru-RU')} км`} />
+            <PlanetStat icon="📐" label={t('planetDiameter')} value={`${diameter.toLocaleString('ru-RU')} ${t('diameterKm')}`} />
           )}
           {maxF !== null && (
-            <PlanetStat icon="🔲" label="Поля" value={`${usedFields} / ${maxF}`} />
+            <PlanetStat icon="🔲" label={t('planetFields')} value={`${usedFields} / ${maxF}`} />
           )}
           {tempMin !== undefined && tempMax !== undefined && (
-            <PlanetStat icon="🌡️" label="Температура" value={`${tempMin}°C … ${tempMax}°C`} />
+            <PlanetStat icon="🌡️" label={t('planetTemp')} value={`${tempMin}°C … ${tempMax}°C`} />
           )}
         </div>
       )}
@@ -498,9 +504,9 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
         background: 'var(--ox-border)',
         borderBottom: hasActivity ? '1px solid var(--ox-border)' : undefined,
       }}>
-        <ResourceCell icon="🟠" label="Металл" value={planet.metal} ratePerSec={planet.metal_per_sec ?? 0} />
-        <ResourceCell icon="💎" label="Кремний" value={planet.silicon} ratePerSec={planet.silicon_per_sec ?? 0} />
-        <ResourceCell icon="💧" label="Водород" value={planet.hydrogen} ratePerSec={planet.hydrogen_per_sec ?? 0} />
+        <ResourceCell icon="🟠" label={t('resMetalLabel')} value={planet.metal} ratePerSec={planet.metal_per_sec ?? 0} />
+        <ResourceCell icon="💎" label={t('resSiliconLabel')} value={planet.silicon} ratePerSec={planet.silicon_per_sec ?? 0} />
+        <ResourceCell icon="💧" label={t('resHydrogenLabel')} value={planet.hydrogen} ratePerSec={planet.hydrogen_per_sec ?? 0} />
       </div>
 
       {/* План 17 G1: прогноз ресурсов через N часов */}
@@ -513,7 +519,7 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
             <ActiveQueueItem
               key={item.id}
               icon="🏗"
-              label={`${buildingName(item.unit_id)} → ур. ${item.target_level}`}
+              label={`${buildingName(item.unit_id)} → ${t('levelAbbr')} ${item.target_level}`}
               startAt={item.start_at}
               endAt={item.end_at}
               onDone={invalidateQueues}
@@ -533,7 +539,7 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
             <ActiveQueueItem
               key={item.id}
               icon="🔬"
-              label={`${nameOf(item.unit_id)} → ур. ${item.target_level}`}
+              label={`${nameOf(item.unit_id)} → ${t('levelAbbr')} ${item.target_level}`}
               startAt={item.start_at}
               endAt={item.end_at}
               onDone={invalidateQueues}
@@ -568,6 +574,7 @@ function ResourceCell({
   value: number;
   ratePerSec: number;
 }) {
+  const { t } = useTranslation('overviewUi');
   const perHour = Math.round(ratePerSec * 3600);
   return (
     <div style={{
@@ -583,7 +590,7 @@ function ResourceCell({
         <ResourceTicker value={value} ratePerSec={ratePerSec} />
         {perHour > 0 && (
           <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)', marginTop: 1 }}>
-            {perHour.toLocaleString('ru-RU')}/ч
+            {perHour.toLocaleString('ru-RU')}{t('perHourSuffix')}
           </div>
         )}
       </div>
@@ -593,6 +600,7 @@ function ResourceCell({
 
 function RefLinkBanner({ userId }: { userId: string }) {
   const [copied, setCopied] = useState(false);
+  const { t } = useTranslation('overviewUi');
   const url = `${window.location.origin}/?ref=${userId}`;
 
   function copy() {
@@ -604,12 +612,12 @@ function RefLinkBanner({ userId }: { userId: string }) {
 
   return (
     <div className="ox-panel" style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-      <span style={{ fontSize: 15, color: 'var(--ox-fg-dim)', flexShrink: 0 }}>🔗 Реферальная ссылка:</span>
+      <span style={{ fontSize: 15, color: 'var(--ox-fg-dim)', flexShrink: 0 }}>🔗 {t('refLink')}</span>
       <code style={{ fontSize: 14, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {url}
       </code>
       <button type="button" className="btn btn-sm" onClick={copy} style={{ flexShrink: 0 }}>
-        {copied ? '✅ Скопировано' : 'Скопировать'}
+        {copied ? t('refCopied') : t('refCopy')}
       </button>
     </div>
   );

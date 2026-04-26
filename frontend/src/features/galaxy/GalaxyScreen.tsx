@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { useTranslation } from '@/i18n/i18n';
 import { planetImageOf, formatNum, SHIPS } from '@/api/catalog';
 import type { Planet } from '@/api/types';
 import { useToast } from '@/ui/Toast';
@@ -87,17 +88,18 @@ function isInactiveDays(lastSeen: string | null | undefined, days: number): bool
 }
 
 function PlayerStatuses({ cell }: { cell: CellView }) {
+  const { t } = useTranslation('galaxyUi');
   if (!cell.owner_id) return null;
   const parts: React.ReactNode[] = [];
   if (cell.owner_banned) {
-    parts.push(<abbr key="b" title="Забанен" style={{ color: 'var(--ox-danger)', cursor: 'help' }}>b</abbr>);
+    parts.push(<abbr key="b" title={t('statusBanned')} style={{ color: 'var(--ox-danger)', cursor: 'help' }}>b</abbr>);
   } else if (cell.owner_vacation) {
-    parts.push(<abbr key="v" title="Режим отпуска" style={{ color: 'var(--ox-accent)', cursor: 'help' }}>v</abbr>);
+    parts.push(<abbr key="v" title={t('statusVacation')} style={{ color: 'var(--ox-accent)', cursor: 'help' }}>v</abbr>);
   }
   if (isInactiveDays(cell.owner_last_seen, 21)) {
-    parts.push(<abbr key="I" title="Очень неактивный (21+ дн)" style={{ cursor: 'help' }}>I</abbr>);
+    parts.push(<abbr key="I" title={t('statusInactive21')} style={{ cursor: 'help' }}>I</abbr>);
   } else if (isInactiveDays(cell.owner_last_seen, 7)) {
-    parts.push(<abbr key="i" title="Неактивный (7+ дн)" style={{ cursor: 'help' }}>i</abbr>);
+    parts.push(<abbr key="i" title={t('statusInactive7')} style={{ cursor: 'help' }}>i</abbr>);
   }
   if (parts.length === 0) return null;
   return (
@@ -120,6 +122,7 @@ function RocketPanel({
   onClose: () => void;
 }) {
   const toast = useToast();
+  const { t } = useTranslation('galaxyUi');
   const [srcPlanetId, setSrcPlanetId] = useState(srcPlanets[0]?.id ?? '');
   const [count, setCount] = useState(1);
 
@@ -140,10 +143,10 @@ function RocketPanel({
         target_unit_id: 0,
       }),
     onSuccess: () => {
-      toast.show('Ракеты запущены', 'success');
+      toast.show('success', t('rocketLaunched'));
       onClose();
     },
-    onError: (e: Error) => toast.show(e.message, 'error'),
+    onError: (e: Error) => toast.show('danger', e.message),
   });
 
   const maxRockets = rockets.data?.count ?? 0;
@@ -157,11 +160,11 @@ function RocketPanel({
 
   return (
     <div style={{ marginTop: 6, padding: '8px 10px', background: 'var(--ox-bg-panel)', border: '1px solid var(--ox-border)', borderRadius: 6, fontSize: 14 }}>
-      <div style={{ fontWeight: 600, marginBottom: 6 }}>🚀 Ракетный удар [{g}:{s}:{pos}]</div>
+      <div style={{ fontWeight: 600, marginBottom: 6 }}>{t('rocketTitle', { g: String(g), s: String(s), pos: String(pos) })}</div>
 
       {srcPlanets.length > 1 && (
         <div style={{ marginBottom: 6 }}>
-          <label style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>Источник</label>
+          <label style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>{t('rocketSource')}</label>
           <select value={srcPlanetId} onChange={(e) => setSrcPlanetId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2 }}>
             {srcPlanets.map((p) => (
               <option key={p.id} value={p.id}>{p.name} [{p.galaxy}:{p.system}:{p.position}]</option>
@@ -172,7 +175,7 @@ function RocketPanel({
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
         <div>
-          <label style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>Количество</label>
+          <label style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>{t('rocketCount')}</label>
           <input
             type="number" min={1} max={maxRockets || 1} value={count}
             onChange={(e) => setCount(clamp(Number(e.target.value), 1, maxRockets || 1))}
@@ -180,8 +183,8 @@ function RocketPanel({
           />
         </div>
         <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>
-          <div>Доступно: {rockets.isLoading ? '...' : maxRockets}</div>
-          <div>Время: {flightTime}</div>
+          <div>{t('rocketAvail')} {rockets.isLoading ? '...' : maxRockets}</div>
+          <div>{t('rocketTime')} {flightTime}</div>
         </div>
       </div>
 
@@ -191,8 +194,8 @@ function RocketPanel({
           className="btn-primary btn-sm"
           disabled={launch.isPending || count < 1 || count > maxRockets}
           onClick={() => launch.mutate()}
-        >Запустить</button>
-        <button type="button" className="btn-ghost btn-sm" onClick={onClose}>Отмена</button>
+        >{t('rocketLaunch')}</button>
+        <button type="button" className="btn-ghost btn-sm" onClick={onClose}>{t('rocketCancel')}</button>
       </div>
     </div>
   );
@@ -212,6 +215,7 @@ function MissionButtons({
   srcPlanets: Planet[];
   onMission: (mission: number, position: number, isMoon: boolean) => void;
 }) {
+  const { t } = useTranslation('galaxyUi');
   const [showRockets, setShowRockets] = useState(false);
 
   if (!cell.has_planet) return null;
@@ -223,7 +227,7 @@ function MissionButtons({
   );
   const minSpeed = Math.min(...SHIPS.filter((s) => s.fuel !== undefined).map((s) => s.speed ?? Infinity).filter(isFinite));
   const flightTime = minSpeed > 0 ? fmtDuration(flightSecs(dist, minSpeed, 100)) : '—';
-  const fuelHint = `Расстояние: ${dist}\nВремя (мин. скорость): ${flightTime}`;
+  const fuelHint = t('fuelHint', { dist: String(dist), time: flightTime });
 
   return (
     <div>
@@ -232,21 +236,21 @@ function MissionButtons({
           type="button"
           className="btn-ghost btn-sm"
           style={{ fontSize: 13, padding: '2px 7px' }}
-          title={`Шпионаж\n${fuelHint}`}
+          title={`${t('spyTitle')}\n${fuelHint}`}
           onClick={() => onMission(11, cell.position, false)}
         >🔭</button>
         <button
           type="button"
           className="btn-ghost btn-sm"
           style={{ fontSize: 13, padding: '2px 7px' }}
-          title={`Атака\n${fuelHint}`}
+          title={`${t('attackTitle')}\n${fuelHint}`}
           onClick={() => onMission(10, cell.position, false)}
         >⚔️</button>
         <button
           type="button"
           className="btn-ghost btn-sm"
           style={{ fontSize: 13, padding: '2px 7px' }}
-          title={`Транспорт\n${fuelHint}`}
+          title={`${t('transportTitle')}\n${fuelHint}`}
           onClick={() => onMission(7, cell.position, false)}
         >📦</button>
         {(cell.debris_metal > 0 || cell.debris_silicon > 0) && (
@@ -254,7 +258,7 @@ function MissionButtons({
             type="button"
             className="btn-ghost btn-sm"
             style={{ fontSize: 13, padding: '2px 7px' }}
-            title={`Переработка обломков\n${fuelHint}`}
+            title={`${t('recycleTitle')}\n${fuelHint}`}
             onClick={() => onMission(9, cell.position, false)}
           >♻️</button>
         )}
@@ -263,7 +267,7 @@ function MissionButtons({
             type="button"
             className="btn-ghost btn-sm"
             style={{ fontSize: 13, padding: '2px 7px' }}
-            title={`Шпионаж на луну\n${fuelHint}`}
+            title={`${t('moonSpyTitle')}\n${fuelHint}`}
             onClick={() => onMission(11, cell.position, true)}
           >🌑🔭</button>
         )}
@@ -271,7 +275,7 @@ function MissionButtons({
           type="button"
           className="btn-ghost btn-sm"
           style={{ fontSize: 13, padding: '2px 7px', color: showRockets ? 'var(--ox-danger)' : undefined }}
-          title="Ракетный удар"
+          title={t('rocketStrike')}
           onClick={() => setShowRockets((v) => !v)}
         >🚀</button>
       </div>
@@ -326,6 +330,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
       setS(initialCoords.system);
     }
   }, [initialCoords?.galaxy, initialCoords?.system]);
+  const { t } = useTranslation('galaxyUi');
   const [watchLabel, setWatchLabel] = useState<string | null>(null);
   const surveillance = useSurveillance();
 
@@ -341,7 +346,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
 
   function handleWatch() {
     const watching = surveillance.toggle(g, s);
-    setWatchLabel(watching ? 'Система добавлена в наблюдение' : 'Система удалена из наблюдения');
+    setWatchLabel(watching ? t('watchAdded') : t('watchRemoved'));
     setTimeout(() => setWatchLabel(null), 2000);
   }
 
@@ -357,7 +362,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
       {/* Nav bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700, flex: 1 }}>
-          Галактика&nbsp;
+          {t('title')}&nbsp;
           <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>
             [{g}:{s}]
           </span>
@@ -390,7 +395,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
           <button
             type="button"
             className="btn-ghost btn-sm"
-            title={isWatching ? 'Убрать из наблюдения' : 'Добавить в наблюдение'}
+            title={isWatching ? t('watchRemove') : t('watchAdd')}
             style={{ fontSize: 15, color: isWatching ? 'var(--ox-accent)' : 'var(--ox-fg-muted)' }}
             onClick={handleWatch}
           >{isWatching ? '👁‍🗨' : '👁'}</button>
@@ -407,7 +412,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
       {/* Watched systems */}
       {watched.length > 0 && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>Наблюдение:</span>
+          <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>{t('watchLabel')}</span>
           {watched.map(({ g: wg, s: ws }) => (
             <button
               key={`${wg}:${ws}`}
@@ -433,7 +438,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
         {sys.error && (
           <div style={{ padding: 20 }}>
             <div className="ox-alert ox-alert-danger">
-              Ошибка: {sys.error instanceof Error ? sys.error.message : 'неизвестная ошибка'}
+              {sys.error instanceof Error ? sys.error.message : t('errUnknown')}
             </div>
           </div>
         )}
@@ -443,12 +448,12 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
             <table className="ox-table" style={{ margin: 0 }}>
               <thead>
                 <tr>
-                  <th style={{ width: 36 }}>#</th>
-                  <th>Планета</th>
-                  <th>Игрок</th>
-                  <th>Альянс</th>
-                  <th>Обломки</th>
-                  <th style={{ width: 160 }}>Миссии</th>
+                  <th style={{ width: 36 }}>{t('colPos')}</th>
+                  <th>{t('colPlanet')}</th>
+                  <th>{t('colPlayer')}</th>
+                  <th>{t('colAlliance')}</th>
+                  <th>{t('colDebris')}</th>
+                  <th style={{ width: 160 }}>{t('colMissions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -456,7 +461,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
                   const isOwn = !!c.owner_id && c.owner_id === userId;
                   const moonTitle = c.has_moon
                     ? [
-                        c.moon_name ?? 'Луна',
+                        c.moon_name ?? t('moonFallback'),
                         c.moon_diameter ? `${c.moon_diameter} км` : '',
                         c.moon_temp_min != null && c.moon_temp_max != null
                           ? `${c.moon_temp_min}..${c.moon_temp_max}°C`
@@ -464,7 +469,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
                       ].filter(Boolean).join(' | ')
                     : '';
                   const debrisTitle = (c.debris_metal > 0 || c.debris_silicon > 0)
-                    ? `Обломки\nМеталл: ${c.debris_metal.toLocaleString('ru-RU')}\nКремний: ${c.debris_silicon.toLocaleString('ru-RU')}`
+                    ? t('debrisTitle', { metal: c.debris_metal.toLocaleString('ru-RU'), silicon: c.debris_silicon.toLocaleString('ru-RU') })
                     : '';
                   const activity = formatActivity(c.owner_last_seen);
                   return (
@@ -489,9 +494,9 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
                       <td data-label="#" className="num" style={{ fontFamily: 'var(--ox-mono)', color: c.position === 16 ? 'var(--ox-accent)' : 'var(--ox-fg-muted)' }}>
                         {c.position}
                       </td>
-                      <td data-label="Планета">
+                      <td data-label={t('colPlanet')}>
                         {c.position === 16 ? (
-                          <span style={{ color: 'var(--ox-accent)', fontStyle: 'italic', fontSize: 15 }}>🌌 Бесконечные дали</span>
+                          <span style={{ color: 'var(--ox-accent)', fontStyle: 'italic', fontSize: 15 }}>{t('infiniteDeep')}</span>
                         ) : c.has_planet ? (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                             {c.planet_id && (
@@ -511,10 +516,10 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
                           <span style={{ color: 'var(--ox-fg-muted)' }}>—</span>
                         )}
                       </td>
-                      <td data-label="Игрок">
+                      <td data-label={t('colPlayer')}>
                         {c.owner_username ? (
                           <span>
-                            {c.is_friend && <span style={{ marginRight: 4, color: 'var(--ox-accent)' }} title="В друзьях">⭐</span>}
+                            {c.is_friend && <span style={{ marginRight: 4, color: 'var(--ox-accent)' }} title={t('friendTitle')}>⭐</span>}
                             <span style={{ fontWeight: 600 }}>{c.owner_username}</span>
                             <PlayerStatuses cell={c} />
                             {c.owner_rank !== undefined && c.owner_rank !== null && (
@@ -533,18 +538,18 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
                             type="button"
                             className="btn-ghost btn-sm"
                             style={{ fontSize: 13, padding: '2px 7px', color: 'var(--ox-fg-muted)' }}
-                            title="Отправить экспедицию"
+                            title={t('expeditionTitle')}
                             onClick={() => onFleetMission?.(g, s, c.position, false, 15)}
-                          >🌌 Экспедиция</button>
+                          >🌌 {t('expedition')}</button>
                         ) : null}
                       </td>
-                      <td data-label="Альянс">
+                      <td data-label={t('colAlliance')}>
                         {c.alliance_tag
                           ? <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 14, color: 'var(--ox-accent)' }}>[{c.alliance_tag}]</span>
                           : <span style={{ color: 'var(--ox-fg-muted)' }}>—</span>
                         }
                       </td>
-                      <td data-label="Обломки" className="num">
+                      <td data-label={t('colDebris')} className="num">
                         {c.debris_metal > 0 || c.debris_silicon > 0 ? (
                           <span
                             title={debrisTitle}
@@ -554,15 +559,15 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
                           </span>
                         ) : '—'}
                       </td>
-                      <td data-label="Миссии">
+                      <td data-label={t('colMissions')}>
                         {c.position === 16 && (
                           <button
                             type="button"
                             className="btn-ghost btn-sm"
                             style={{ fontSize: 13, padding: '2px 7px', color: 'var(--ox-accent)' }}
-                            title="Отправить экспедицию в Бесконечные дали"
+                            title={t('expeditionDeepTitle')}
                             onClick={() => onFleetMission?.(g, s, 16, false, 15)}
-                          >🌌 Экспедиция</button>
+                          >🌌 {t('expedition')}</button>
                         )}
                         {c.position !== 16 && !isOwn && c.has_planet && (
                           <MissionButtons
@@ -579,7 +584,7 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
                             type="button"
                             className="btn-ghost btn-sm"
                             style={{ fontSize: 13, padding: '2px 7px', color: 'var(--ox-fg-muted)' }}
-                            title="Отправить экспедицию с этой планеты"
+                            title={t('expeditionThisTitle')}
                             onClick={() => onFleetMission?.(g, s, c.position, false, 15)}
                           >🌌</button>
                         )}
@@ -591,18 +596,18 @@ export function GalaxyScreen({ homePlanet, userId, onFleetMission, planets, init
               <tfoot>
                 <tr>
                   <td colSpan={6} style={{ fontSize: 10, color: 'var(--ox-fg-muted)', padding: '8px 12px', fontFamily: 'var(--ox-mono)', borderTop: '1px solid var(--ox-border)' }}>
-                    <b>(*)</b> только что&nbsp;&nbsp;
-                    <b>i</b> неактивный (7+ дн)&nbsp;&nbsp;
-                    <b>I</b> очень неактивный (21+ дн)&nbsp;&nbsp;
-                    <b style={{ color: 'var(--ox-danger)' }}>b</b> забанен&nbsp;&nbsp;
-                    <b style={{ color: 'var(--ox-accent)' }}>v</b> отпуск&nbsp;&nbsp;
-                    <b>🚀</b> ракетный удар&nbsp;&nbsp;
-                    <b>🌌</b> экспедиция&nbsp;&nbsp;
-                    <b>👁</b> наблюдение
+                    <b>(*)</b> {t('legendActive')}&nbsp;&nbsp;
+                    <b>i</b> {t('legendInactive7')}&nbsp;&nbsp;
+                    <b>I</b> {t('legendInactive21')}&nbsp;&nbsp;
+                    <b style={{ color: 'var(--ox-danger)' }}>b</b> {t('legendBanned')}&nbsp;&nbsp;
+                    <b style={{ color: 'var(--ox-accent)' }}>v</b> {t('legendVacation')}&nbsp;&nbsp;
+                    <b>🚀</b> {t('legendRocket')}&nbsp;&nbsp;
+                    <b>🌌</b> {t('legendExpedition')}&nbsp;&nbsp;
+                    <b>👁</b> {t('legendWatch')}
                     <br />
-                    <span style={{ display: 'inline-block', width: 10, height: 10, background: 'rgba(34,197,94,0.8)', marginRight: 4, verticalAlign: 'middle' }} />союзник&nbsp;&nbsp;
-                    <span style={{ display: 'inline-block', width: 10, height: 10, background: 'rgba(245,158,11,0.8)', marginRight: 4, verticalAlign: 'middle' }} />НЕН&nbsp;&nbsp;
-                    <span style={{ display: 'inline-block', width: 10, height: 10, background: 'rgba(239,68,68,0.8)', marginRight: 4, verticalAlign: 'middle' }} />война
+                    <span style={{ display: 'inline-block', width: 10, height: 10, background: 'rgba(34,197,94,0.8)', marginRight: 4, verticalAlign: 'middle' }} />{t('legendAlly')}&nbsp;&nbsp;
+                    <span style={{ display: 'inline-block', width: 10, height: 10, background: 'rgba(245,158,11,0.8)', marginRight: 4, verticalAlign: 'middle' }} />{t('legendNap')}&nbsp;&nbsp;
+                    <span style={{ display: 'inline-block', width: 10, height: 10, background: 'rgba(239,68,68,0.8)', marginRight: 4, verticalAlign: 'middle' }} />{t('legendWar')}
                   </td>
                 </tr>
               </tfoot>

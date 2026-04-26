@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { useTranslation } from '@/i18n/i18n';
 import { SHIPS, nameOf, imageOf, imageOfId } from '@/api/catalog';
 import type { Planet } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
@@ -51,25 +52,20 @@ interface FleetRow {
   ships?: Record<string, number>;
 }
 
-const MISSION_LABELS: Record<number, string> = {
-  6: 'Перебазирование',
-  7: 'Транспорт',
-  8: 'Колонизация',
-  9: 'Переработка',
-  10: 'Атака',
-  11: 'Шпионаж',
-  15: 'Экспедиция',
+const MISSION_IDS = [6, 7, 8, 9, 10, 11, 15] as const;
+const MISSION_TKEYS: Record<number, string> = {
+  6: 'missionRebase', 7: 'missionTransport', 8: 'missionColonize',
+  9: 'missionRecycle', 10: 'missionAttack', 11: 'missionSpy', 15: 'missionExpedition',
 };
-
-const STATE_LABELS: Record<string, string> = {
-  outbound: '→ В пути',
-  returning: '← Возврат',
-  arrived: '✓ Прибыл',
+const STATE_TKEYS: Record<string, string> = {
+  outbound: 'stateOutbound', returning: 'stateReturning', arrived: 'stateArrived',
 };
 
 interface InitialDst { g: number; s: number; pos: number; isMoon: boolean; mission: number }
 
 export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst?: InitialDst }) {
+  const { t } = useTranslation('fleetUi');
+  const { t: tg } = useTranslation('global');
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -111,10 +107,12 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
       void qc.invalidateQueries({ queryKey: ['planets'] });
       setShips({});
       setMetal(0); setSilicon(0); setHydrogen(0);
-      toast.show('success', 'Флот отправлен', `${MISSION_LABELS[mission] ?? 'Миссия'} → [${g}:${s}:${pos}]`);
+      const missionKey = MISSION_TKEYS[mission];
+      const missionLabel = missionKey ? t(missionKey) : t('missionFallback');
+      toast.show('success', t('sent'), t('sentBody', { mission: missionLabel, coords: `${g}:${s}:${pos}` }));
     },
     onError: (err) => {
-      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось отправить');
+      toast.show('danger', tg('error'), err instanceof Error ? err.message : t('sendErr'));
     },
   });
 
@@ -122,10 +120,10 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
     mutationFn: (id: string) => api.post<unknown>(`/api/fleet/${id}/recall`),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['fleets'] });
-      toast.show('info', 'Флот отозван');
+      toast.show('info', t('recalled'));
     },
     onError: (err) => {
-      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось отозвать');
+      toast.show('danger', tg('error'), err instanceof Error ? err.message : t('recallErr'));
     },
   });
 
@@ -158,16 +156,16 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-        Флот — {planet.name}
+        {t('title', { planetName: planet.name })}
       </h2>
 
       {/* Fleet slots indicator (план 20 Ф.2) */}
       {typeof fleets.data?.slots_max === 'number' && (
         <div className="ox-panel" style={{ padding: '8px 16px', fontSize: 13, color: 'var(--ox-fg-muted)' }}>
-          Слоты флота: <strong style={{ color: (fleets.data.slots_used ?? 0) >= fleets.data.slots_max ? 'var(--ox-danger, #ff6b6b)' : 'var(--ox-fg)' }}>
+          {t('slots')} <strong style={{ color: (fleets.data.slots_used ?? 0) >= fleets.data.slots_max ? 'var(--ox-danger, #ff6b6b)' : 'var(--ox-fg)' }}>
             {fleets.data.slots_used ?? 0} / {fleets.data.slots_max}
           </strong>
-          {' '}<span style={{ opacity: 0.7 }}>(увеличивается с computer_tech)</span>
+          {' '}<span style={{ opacity: 0.7 }}>{t('slotsHint')}</span>
         </div>
       )}
 
@@ -175,24 +173,24 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
       {list.length > 0 && (
         <div className="ox-panel" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '10px 16px 8px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', borderBottom: '1px solid var(--ox-border)' }}>
-            Активные флоты ({list.length})
+            {t('activeFleets', { count: String(list.length) })}
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table className="ox-table" style={{ margin: 0 }}>
               <thead>
                 <tr>
-                  <th>Миссия</th>
-                  <th>Назначение</th>
-                  <th>Состав</th>
-                  <th>Статус</th>
-                  <th>Прилёт / Возврат</th>
+                  <th>{t('colMission')}</th>
+                  <th>{t('colDestination')}</th>
+                  <th>{t('colComposition')}</th>
+                  <th>{t('colStatus')}</th>
+                  <th>{t('colArrival')}</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
                 {list.map((f) => (
                   <tr key={f.id}>
-                    <td>{MISSION_LABELS[f.mission] ?? `#${f.mission}`}</td>
+                    <td>{(() => { const k = MISSION_TKEYS[f.mission]; return k ? t(k) : `#${f.mission}`; })()}</td>
                     <td style={{ fontFamily: 'var(--ox-mono)', fontSize: 14 }}>
                       [{f.dst_galaxy}:{f.dst_system}:{f.dst_position}{f.dst_is_moon ? '🌑' : ''}]
                     </td>
@@ -214,7 +212,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
                     </td>
                     <td>
                       <span className={`ox-badge${f.state === 'outbound' ? ' ox-badge-accent' : ''}`}>
-                        {STATE_LABELS[f.state] ?? f.state}
+                        {(() => { const k = STATE_TKEYS[f.state]; return k ? t(k) : f.state; })()}
                       </span>
                     </td>
                     <td style={{ fontFamily: 'var(--ox-mono)', fontSize: 14 }}>
@@ -228,7 +226,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
                           disabled={recall.isPending}
                           onClick={() => recall.mutate(f.id)}
                         >
-                          Отозвать
+                          {t('recall')}
                         </button>
                       )}
                     </td>
@@ -243,23 +241,24 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
       {/* Send form */}
       <div className="ox-panel" style={{ padding: 20 }}>
         <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 16 }}>
-          Новая миссия
+          {t('newMission')}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
           {/* Mission & destination */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Миссия</label>
+              <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>{t('missionLabel')}</label>
               <select value={mission} onChange={(e) => setMission(Number(e.target.value))} style={{ width: '100%' }}>
-                {Object.entries(MISSION_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
+                {MISSION_IDS.map((id) => {
+                  const key = MISSION_TKEYS[id] ?? 'missionFallback';
+                  return <option key={id} value={id}>{t(key)}</option>;
+                })}
               </select>
             </div>
 
             <div>
-              <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Координаты назначения</label>
+              <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>{t('destination')}</label>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>G</span>
                 <input type="number" min={1} max={16} value={g} onChange={(e) => setG(Number(e.target.value))} style={{ width: 56 }} />
@@ -276,7 +275,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
 
             {mission === 8 && (
               <div>
-                <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Название колонии</label>
+                <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>{t('colonyName')}</label>
                 <input type="text" value={colonyName} onChange={(e) => setColonyName(e.target.value)} placeholder="Colony" maxLength={40} style={{ width: '100%' }} />
               </div>
             )}
@@ -284,24 +283,24 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
             {(mission === 6 || mission === 7 || mission === 8) && (
               <div>
                 <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>
-                  Груз
+                  {t('cargo')}
                   {totalCargo > 0 && (
                     <span style={{ marginLeft: 8, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-muted)' }}>
-                      📦 макс. {totalCargo.toLocaleString('ru-RU')}
+                      📦 {t('cargoMax')} {totalCargo.toLocaleString('ru-RU')}
                     </span>
                   )}
                 </label>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <input type="number" min={0} value={metal} onChange={(e) => setMetal(Number(e.target.value))} placeholder="Металл" style={{ flex: 1, minWidth: 80 }} />
-                  <input type="number" min={0} value={silicon} onChange={(e) => setSilicon(Number(e.target.value))} placeholder="Кремний" style={{ flex: 1, minWidth: 80 }} />
-                  <input type="number" min={0} value={hydrogen} onChange={(e) => setHydrogen(Number(e.target.value))} placeholder="Водород" style={{ flex: 1, minWidth: 80 }} />
+                  <input type="number" min={0} value={metal} onChange={(e) => setMetal(Number(e.target.value))} placeholder={t('metalPh')} style={{ flex: 1, minWidth: 80 }} />
+                  <input type="number" min={0} value={silicon} onChange={(e) => setSilicon(Number(e.target.value))} placeholder={t('siliconPh')} style={{ flex: 1, minWidth: 80 }} />
+                  <input type="number" min={0} value={hydrogen} onChange={(e) => setHydrogen(Number(e.target.value))} placeholder={t('hydrogenPh')} style={{ flex: 1, minWidth: 80 }} />
                 </div>
               </div>
             )}
 
             <div>
               <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>
-                Скорость: {speed}%
+                {t('speedPct', { pct: String(speed) })}
               </label>
               <input type="range" min={10} max={100} step={10} value={speed} onChange={(e) => setSpeed(Number(e.target.value))} style={{ width: '100%' }} />
             </div>
@@ -310,7 +309,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
           {/* Ships selection */}
           <div>
             <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 8 }}>
-              Корабли {totalShips > 0 && <span style={{ color: 'var(--ox-accent)', fontWeight: 700 }}>({totalShips} выбрано)</span>}
+              {t('ships')} {totalShips > 0 && <span style={{ color: 'var(--ox-accent)', fontWeight: 700 }}>({t('selectedCount', { count: String(totalShips) })})</span>}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {SHIPS.map((ship) => (
@@ -334,7 +333,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
           <div style={{ marginTop: 16, padding: '10px 14px', background: 'var(--ox-surface)', borderRadius: 6, border: '1px solid var(--ox-border)', display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 14, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)' }}>
             <span>⏱ {fmtDuration(fleetPreview.secs)}</span>
             <span>↩ {fmtDuration(fleetPreview.secs * 2)}</span>
-            {fleetPreview.totalFuel > 0 && <span>💧 {fleetPreview.totalFuel.toLocaleString('ru-RU')} (туда)</span>}
+            {fleetPreview.totalFuel > 0 && <span>💧 {fleetPreview.totalFuel.toLocaleString('ru-RU')} ({t('fuelOneWay')})</span>}
           </div>
         )}
 
@@ -345,7 +344,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
             disabled={send.isPending || totalShips === 0}
             onClick={() => send.mutate()}
           >
-            {send.isPending ? '…' : `🚀 Отправить флот`}
+            {send.isPending ? '…' : `🚀 ${t('sendButton')}`}
           </button>
         </div>
       </div>

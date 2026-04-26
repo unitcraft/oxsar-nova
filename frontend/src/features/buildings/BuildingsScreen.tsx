@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { useTranslation } from '@/i18n/i18n';
 import { ScreenSkeleton } from '@/ui/Skeleton';
 
 function fmtDuration(secs: number): string {
@@ -30,20 +31,21 @@ type EnergyField = 'energy_prod';
 
 interface ProdStat {
   icon: string;
-  label: string;
   field: ProdField | EnergyField;
   isEnergy?: boolean;
 }
 
 const PROD_STAT: Record<string, ProdStat> = {
-  metal_mine:     { icon: '🟠', label: 'Добыча', field: 'metal_per_sec' },
-  silicon_lab:    { icon: '💎', label: 'Добыча', field: 'silicon_per_sec' },
-  hydrogen_lab:   { icon: '💧', label: 'Добыча', field: 'hydrogen_per_sec' },
-  solar_plant:    { icon: '⚡', label: 'Энергия', field: 'energy_prod', isEnergy: true },
-  hydrogen_plant: { icon: '⚡', label: 'Энергия', field: 'energy_prod', isEnergy: true },
+  metal_mine:     { icon: '🟠', field: 'metal_per_sec' },
+  silicon_lab:    { icon: '💎', field: 'silicon_per_sec' },
+  hydrogen_lab:   { icon: '💧', field: 'hydrogen_per_sec' },
+  solar_plant:    { icon: '⚡', field: 'energy_prod', isEnergy: true },
+  hydrogen_plant: { icon: '⚡', field: 'energy_prod', isEnergy: true },
 };
 
 export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo: (id: number, level: number) => void }) {
+  const { t } = useTranslation('buildingsUi');
+  const { t: tg } = useTranslation('global');
   const qc = useQueryClient();
   const toast = useToast();
   const [showLocked, setShowLocked] = useState<boolean>(
@@ -72,16 +74,16 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
       void qc.invalidateQueries({ queryKey: ['buildings-queue', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
       const name = ([...BUILDINGS, ...MOON_BUILDINGS]).find((b) => b.id === unitId)?.name ?? `#${unitId}`;
-      toast.show('success', 'В очередь', `${name} добавлена в очередь строительства`);
+      toast.show('success', t('enqueued'), t('enqueuedBody', { name }));
     },
     onError: (err) => {
       const msg = err instanceof Error ? err.message : '';
-      const text = msg.includes('queue busy') ? 'Очередь занята, дождитесь завершения постройки'
-        : msg.includes('not enough') ? 'Недостаточно ресурсов'
-        : msg.includes('moon-only') ? 'Это здание доступно только на луне'
-        : msg.includes('not available on moon') ? 'Это здание недоступно на луне'
-        : msg || 'Не удалось добавить в очередь';
-      toast.show('danger', 'Ошибка', text);
+      const text = msg.includes('queue busy') ? t('errQueueBusy')
+        : msg.includes('not enough') ? t('errNotEnough')
+        : msg.includes('moon-only') ? t('errMoonOnly')
+        : msg.includes('not available on moon') ? t('errNotOnMoon')
+        : msg || t('errDefault');
+      toast.show('danger', tg('error'), text);
     },
   });
 
@@ -91,10 +93,10 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['buildings-queue', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('info', 'Отменено', 'Строительство отменено, ресурсы возвращены');
+      toast.show('info', t('cancelled'), t('cancelledBody'));
     },
     onError: (err) => {
-      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось отменить');
+      toast.show('danger', tg('error'), err instanceof Error ? err.message : t('cancelErr'));
     },
   });
 
@@ -113,7 +115,7 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-          Постройки — {planet.name}
+          {t('title', { planetName: planet.name })}
         </h2>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           {planet.max_fields != null && (
@@ -128,24 +130,24 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
                       ? 'var(--ox-warn, #f59e0b)'
                       : 'var(--ox-fg-dim)',
               }}
-              title="Занято / максимум полей на планете"
+              title={t('fieldsFull')}
             >
               🔲 {planet.used_fields ?? 0} / {planet.max_fields}
             </span>
           )}
           {planet.build_factor != null && planet.build_factor > 1 && (
             <span style={{ fontSize: 14, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
-              🏗 +{Math.round((planet.build_factor - 1) * 100)}% строительство
+              🏗 +{Math.round((planet.build_factor - 1) * 100)}% {t('buildBonus')}
             </span>
           )}
           {planet.produce_factor != null && planet.produce_factor > 1 && (
             <span style={{ fontSize: 14, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
-              🟠 +{Math.round((planet.produce_factor - 1) * 100)}% добыча
+              🟠 +{Math.round((planet.produce_factor - 1) * 100)}% {t('produceBonus')}
             </span>
           )}
           {queueItems.length > 0 && (
             <span style={{ fontSize: 15, color: 'var(--ox-fg-dim)' }}>
-              В очереди: {queueItems.length}
+              {t('queueCount', { count: String(queueItems.length) })}
             </span>
           )}
           <button
@@ -158,7 +160,7 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
               localStorage.setItem('buildings-show-locked', String(next));
             }}
           >
-            {showLocked ? '👁 Все здания' : '🔒 Только доступные'}
+            {showLocked ? `👁 ${t('showAll')}` : `🔒 ${t('showAvailable')}`}
           </button>
         </div>
       </div>
@@ -167,7 +169,7 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
       {queueItems.length > 0 && (
         <div className="ox-panel" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 2 }}>
-            Активная очередь
+            {t('activeQueue')}
           </div>
           {queueItems.map((item, i) => (
             <QueueRow key={item.id} item={item} isActive={i === 0} onCancel={() => cancel.mutate(item.id)} cancelPending={cancel.isPending} />
@@ -202,7 +204,7 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
                   src={imageOf(b.key)} alt={b.name} width={64} height={64}
                   style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4, cursor: 'pointer' }}
                   onClick={() => onOpenInfo(b.id, level)}
-                  title="Подробнее"
+                  title={t('details')}
                 />
               <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                 <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => onOpenInfo(b.id, level)}>{b.name}</div>
@@ -212,13 +214,13 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
                   </div>
                 )}
                 <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
-                  {level > 0 ? `Уровень ${level}` : 'Не построено'}
+                  {level > 0 ? t('level', { n: String(level) }) : t('notBuilt')}
                 </div>
                 {isLocked && (
                   <div style={{ fontSize: 13, color: 'var(--ox-danger)', marginBottom: 4 }}>
                     {unmet.map((r) => (
                       <div key={`${r.kind}-${r.key}`}>
-                        🔒 {r.key} ур.{r.required} (у вас: {r.current})
+                        🔒 {r.key} {t('levelAbbr')}{r.required} ({t('youHave')} {r.current})
                       </div>
                     ))}
                   </div>
@@ -284,7 +286,7 @@ export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpen
                     disabled={enqueue.isPending || inQueue || isLocked || !canAfford}
                     onClick={() => enqueue.mutate(b.id)}
                   >
-                    {inQueue ? '⏳ В очереди' : isLocked ? '🔒 Заблокировано' : level === 0 ? 'Построить' : `→ ур. ${level + 1}`}
+                    {inQueue ? `⏳ ${t('inQueue')}` : isLocked ? `🔒 ${t('locked')}` : level === 0 ? t('build') : `→ ${t('levelAbbr')} ${level + 1}`}
                   </button>
                 )}
               </div>
@@ -325,6 +327,7 @@ function fmtSecs(sec: number): string {
 }
 
 function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem; isActive: boolean; onCancel: () => void; cancelPending: boolean }) {
+  const { t } = useTranslation('buildingsUi');
   const { pct, secsLeft } = useBuildProgress(item.start_at, item.end_at);
   const [confirming, setConfirming] = useState(false);
   const name = ([...BUILDINGS, ...MOON_BUILDINGS]).find((b) => b.id === item.unit_id)?.name ?? `#${item.unit_id}`;
@@ -345,7 +348,7 @@ function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15 }}>
         <span style={{ fontSize: 16 }}>{isActive ? '🏗' : '⏳'}</span>
         <span style={{ flex: 1, fontWeight: isActive ? 600 : 400 }}>
-          {name} → ур. {item.target_level}
+          {name} → {t('levelAbbr')} {item.target_level}
         </span>
         {isActive
           ? <span className={`ox-timer${secsLeft < 60 ? ' urgent' : ''}`}>{fmtSecs(secsLeft)}</span>
@@ -355,7 +358,7 @@ function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem
         }
         {confirming ? (
           <>
-            <span style={{ fontSize: 13, color: 'var(--ox-danger)', flexShrink: 0 }}>Отменить?</span>
+            <span style={{ fontSize: 13, color: 'var(--ox-danger)', flexShrink: 0 }}>{t('cancelConfirm')}</span>
             <button
               type="button"
               className="btn-sm"
@@ -363,7 +366,7 @@ function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem
               disabled={cancelPending}
               onClick={handleConfirm}
             >
-              Да
+              {t('confirmYes')}
             </button>
             <button
               type="button"
@@ -371,7 +374,7 @@ function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem
               style={{ fontSize: 13, padding: '2px 8px', flexShrink: 0 }}
               onClick={() => setConfirming(false)}
             >
-              Нет
+              {t('confirmNo')}
             </button>
           </>
         ) : (
@@ -380,7 +383,7 @@ function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem
             className="btn-ghost btn-sm"
             disabled={cancelPending || secsLeft === 0}
             onClick={handleCancelClick}
-            title="Отменить (ресурсы вернутся)"
+            title={t('cancelTitle')}
             style={{ fontSize: 13, padding: '2px 8px', flexShrink: 0 }}
           >
             ✕

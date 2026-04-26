@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { catalog, BUILDINGS } from '@/api/catalog';
+import { useTranslation } from '@/i18n/i18n';
 
 const BUILDING_NAMES: Record<number, string> = Object.fromEntries(
   BUILDINGS.map((b) => [b.id, b.name]),
@@ -34,6 +35,8 @@ const TR_BASE: React.CSSProperties = {
 };
 
 export function ResourceScreen({ planetId }: { planetId: string }) {
+  const { t } = useTranslation('resourceUi');
+  const { t: tg } = useTranslation('global');
   const qc = useQueryClient();
   const toast = useToast();
   const [factors, setFactors] = useState<Record<string, number>>({});
@@ -62,7 +65,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
       }),
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['resource-report', planetId] }); },
     onError: (err) => {
-      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось сохранить');
+      toast.show('danger', tg('error'), err instanceof Error ? err.message : t('loadError'));
     },
   });
 
@@ -81,7 +84,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
   };
 
   if (isLoading) return <ScreenSkeleton />;
-  if (!report) return <div style={{ color: 'var(--ox-danger)', padding: 24 }}>Ошибка загрузки</div>;
+  if (!report) return <div style={{ color: 'var(--ox-danger)', padding: 24 }}>{t('loadError')}</div>;
 
   const buildings = report.buildings.filter((b) => b.level > 0);
 
@@ -98,12 +101,12 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-          Производство — {report.planet_name}
+          {t('title', { planetName: report.planet_name })}
         </h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {save.isPending && <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>сохраняю…</span>}
-          <button type="button" className="btn btn-sm btn-ghost" disabled={save.isPending} onClick={() => setAll(0)}>Выключить всё</button>
-          <button type="button" className="btn btn-sm btn-ghost" disabled={save.isPending} onClick={() => setAll(100)}>Включить всё</button>
+          {save.isPending && <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>{t('saving')}</span>}
+          <button type="button" className="btn btn-sm btn-ghost" disabled={save.isPending} onClick={() => setAll(0)}>{t('turnOffAll')}</button>
+          <button type="button" className="btn btn-sm btn-ghost" disabled={save.isPending} onClick={() => setAll(100)}>{t('turnOnAll')}</button>
         </div>
       </div>
 
@@ -119,7 +122,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--ox-border)' }}>
-              <th style={{ textAlign: 'left', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', paddingLeft: 12, paddingTop: 8, paddingBottom: 8 }}>Здание</th>
+              <th style={{ textAlign: 'left', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', paddingLeft: 12, paddingTop: 8, paddingBottom: 8 }}>{t('colBuilding')}</th>
               <th style={{ ...TD_NUM, fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>🟠</th>
               <th style={{ ...TD_NUM, fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>💎</th>
               <th style={{ ...TD_NUM, fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>💧</th>
@@ -129,7 +132,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
           <tbody>
             {/* Natural */}
             <tr style={{ ...TR_BASE, background: 'var(--ox-bg-2)' }}>
-              <td style={{ paddingLeft: 12, fontSize: 15, paddingTop: 8, paddingBottom: 8, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>Естественное</td>
+              <td style={{ paddingLeft: 12, fontSize: 15, paddingTop: 8, paddingBottom: 8, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>{t('natural')}</td>
               <td style={{ ...TD_NUM, color: numColor(report.basic_metal) }}>{fmt(report.basic_metal)}</td>
               <td style={{ ...TD_NUM, color: numColor(report.basic_silicon) }}>{fmt(report.basic_silicon)}</td>
               <td style={{ ...TD_NUM, color: 'var(--ox-fg-dim)' }}>—</td>
@@ -152,7 +155,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
                   <td style={{ paddingLeft: 12, paddingTop: 8, paddingBottom: 8, overflow: 'hidden' }}>
                     <span style={{ fontWeight: 500, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                       {BUILDING_NAMES[b.unit_id] ?? b.name}
-                      <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginLeft: 4 }}>ур. {b.level}</span>
+                      <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginLeft: 4 }}>{t('levelAbbr')} {b.level}</span>
                       {b.allow_factor && (
                         <span style={{ fontSize: 13, fontFamily: 'var(--ox-mono)', marginLeft: 4, color: factor < 100 ? 'var(--ox-warn, #f59e0b)' : 'var(--ox-fg-dim)' }}>
                           {factor}%
@@ -169,10 +172,10 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
             })}
 
             {/* Storage */}
-            <SummaryRow label="Вместимость хранилищ" metal={report.storage_metal} silicon={report.storage_silicon} hydrogen={report.storage_hydrogen} energy={null} topBorder dim />
-            <SummaryRow label="За час"    metal={ph}          silicon={sh}          hydrogen={hh}          energy={te}   topBorder />
-            <SummaryRow label="За сутки"  metal={ph * 24}     silicon={sh * 24}     hydrogen={hh * 24}     energy={null} />
-            <SummaryRow label="За неделю" metal={ph * 24 * 7} silicon={sh * 24 * 7} hydrogen={hh * 24 * 7} energy={null} />
+            <SummaryRow label={t('storage')} metal={report.storage_metal} silicon={report.storage_silicon} hydrogen={report.storage_hydrogen} energy={null} topBorder dim />
+            <SummaryRow label={t('perHour')}   metal={ph}          silicon={sh}          hydrogen={hh}          energy={te}   topBorder />
+            <SummaryRow label={t('perDay')}    metal={ph * 24}     silicon={sh * 24}     hydrogen={hh * 24}     energy={null} />
+            <SummaryRow label={t('perWeek')}   metal={ph * 24 * 7} silicon={sh * 24 * 7} hydrogen={hh * 24 * 7} energy={null} />
           </tbody>
         </table>
       </div>
@@ -190,7 +193,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div>
               <span style={{ fontWeight: 700, fontSize: 16 }}>{BUILDING_NAMES[modalBuilding.unit_id] ?? modalBuilding.name}</span>
-              <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', marginLeft: 8 }}>ур. {modalBuilding.level}</span>
+              <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', marginLeft: 8 }}>{t('levelAbbr')} {modalBuilding.level}</span>
             </div>
             <button type="button" className="btn-ghost btn-sm" onClick={() => setModalBuilding(null)}>✕</button>
           </div>
