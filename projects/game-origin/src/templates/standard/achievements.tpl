@@ -64,7 +64,7 @@ $(document).ready(function() {
 </script>
 {/if}
 
-{if[ NS::getUser()->get("points") < 1000 && !Achievements::isGrantedAchievement(Yii::app()->user->id, ACHIEVEMENT_NEWBIE_END) && Core::getRequest()->getGET("go") == "Achievements" ]}
+{if[ NS::getUser()->get("points") < 1000 && !AchievementsService::isGrantedAchievement(Yii::app()->user->id, ACHIEVEMENT_NEWBIE_END) && Core::getRequest()->getGET("go") == "Achievements" ]}
 <div class="content_width">
 	<div class="ui-state-error ui-corner-all" style="padding: 5px 20px; margin: 10px auto;">
 		<table>

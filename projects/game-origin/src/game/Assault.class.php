@@ -346,7 +346,7 @@ class Assault
 	{
 		if($user_id && $planet_id)
 		{
-			Achievements::processAchievements($user_id, $planet_id);
+			AchievementsService::processAchievements($user_id, $planet_id);
 		}
 	}
 

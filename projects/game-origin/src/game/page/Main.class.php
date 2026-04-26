@@ -81,6 +81,21 @@ class Main extends Page
 	*/
 	protected function index()
 	{
+		// Из ExtMain: инициализация jclock + serverClock TPL var
+		Core::getTPL()->addHTMLHeaderFile("lib/jquery.jclock.js?".CLIENT_VERSION, "js");
+		$clock = "<script type=\"text/javascript\">
+			//<![CDATA[
+			$(function($) {
+				var options = {
+					seedTime: ".time()." * 1000
+				}
+				$('.jclock').jclock(options);
+			});
+			//]]>
+			</script>
+			<span class=\"jclock\"></span>";
+		Core::getTPL()->assign("serverClock", date("d.m.Y", time())." ".$clock);
+
 		Core::getTPL()->addHTMLHeaderFile("lib/jquery.countdown.js?".CLIENT_VERSION, "js");
 		$this->buildingEvent = NS::getEH()->getFirstBuildingEvent();
 

@@ -16,7 +16,7 @@ define("SIM_DEF_SIMS_NUMBER", 1);
 
 if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
 
-class ExtSimulator extends Page
+class Simulator extends Page
 {
 	var $ut_prefix = array("a_", "d_");
 
@@ -285,7 +285,7 @@ class ExtSimulator extends Page
 		{
 			Logger::dieMessage(Core::getLang()->getItem('TW_SIMULATOR'));
 		}
-		if(!NS::isFirstRun("ExtSimulator::simulate:".md5(serialize($ships))."-" . $_SESSION["userid"] ?? 0))
+		if(!NS::isFirstRun("Simulator::simulate:".md5(serialize($ships))."-" . $_SESSION["userid"] ?? 0))
 		{
 			Logger::dieMessage('TOO_MANY_REQUESTS');
 		}

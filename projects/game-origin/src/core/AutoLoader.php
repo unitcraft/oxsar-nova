@@ -82,20 +82,7 @@ spl_autoload_register(function($class) {
       }
     }
   }
-  // ext/ переопределяет/дополняет game/ (Ext-классы наследуют базовые)
-  if(!$include && defined('AUTOLOAD_PATH_APP_EXT'))
-  {
-    $extDirs = explode(",", AUTOLOAD_PATH_APP_EXT);
-    foreach($extDirs as $dir)
-    {
-      $classFile = APP_ROOT_DIR.$dir.$class.".class.php";
-      if(file_exists($classFile))
-      {
-        $include = $classFile;
-        break;
-      }
-    }
-  }
+  // План 37.5b: ext/ слой удалён, ExtX-классы смержены в базовые
   if(!$include)
   {
     $include = RECIPE_ROOT_DIR."util/".$class.".util.class.php";

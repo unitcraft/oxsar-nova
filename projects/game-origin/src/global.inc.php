@@ -43,7 +43,7 @@ define("APP_ROOT_DIR",    str_replace("\\", "/", dirname(__FILE__))."/");
 // GAME_ORIGIN_DIR — корень всего проекта game-origin/
 define("GAME_ORIGIN_DIR", str_replace("\\", "/", dirname(__FILE__, 2))."/");
 define("RECIPE_ROOT_DIR", APP_ROOT_DIR."core/");
-define("CRONJOB_DIR",     APP_ROOT_DIR."ext/cronjobs/");
+define("CRONJOB_DIR",     APP_ROOT_DIR."core/cronjobs/");
 define("MAINTAIN_DIR",    RECIPE_ROOT_DIR."maintenance/");
 define("HTTP_HOST", "http://".(!empty($_SERVER["HTTP_HOST"]) ? $_SERVER["HTTP_HOST"] : (!empty($_SERVER["SERVER_NAME"]) ? $_SERVER["SERVER_NAME"] : "oxsar.ru"))."/");
 define("REQUEST_DIR", __get_request_dir__());
@@ -68,7 +68,7 @@ else
 define("DATABASE_SUBDOMAIN", false);
 define("AUTOLOAD_PATH_CORE", "/,template/,database/,http/,maintenance/");
 define("AUTOLOAD_PATH_APP", "game/,game/page/,game/models/");
-define("AUTOLOAD_PATH_APP_EXT", "ext/,ext/page/,ext/models/");
+// AUTOLOAD_PATH_APP_EXT убран — ext/ смержен в game/ (см. план 37, итерация 37.5)
 define("REQUEST_LEVEL_NAMES", "go,id,1,2,3,4,5");
 // YII_GAME_DIR убран — Yii не используется
 
@@ -93,7 +93,9 @@ require_once(GAME_ORIGIN_DIR."config/consts.php");
 @include_once(GAME_ORIGIN_DIR."config/consts." . $_universe . ".local.php");
 unset($_universe);
 
-@include_once(APP_ROOT_DIR."ext/global.inc.php");
+// ext/global.inc.php убран — содержимое (только платежи WM/RK/A1) перенесено
+// в src/core/legacy_payment/ext_global.inc.php; платежи отключены до 37.6+
+// @include_once(APP_ROOT_DIR."core/legacy_payment/ext_global.inc.php");
 
 /* if(!empty($_GET["taram"]))
 {
