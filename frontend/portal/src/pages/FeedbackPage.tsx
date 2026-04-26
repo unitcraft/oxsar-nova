@@ -95,7 +95,7 @@ export function FeedbackNewPage() {
             required
           />
         </label>
-        {error && <div className={styles.error}>{error}</div>}
+        {error && <div className={styles.formError}>{error}</div>}
         <button className={styles.submit} type="submit" disabled={mut.isPending}>
           {mut.isPending ? 'Отправка…' : 'Отправить на рассмотрение'}
         </button>

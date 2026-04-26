@@ -1,10 +1,36 @@
-.page { max-width: 500px; margin: 2rem auto; padding: 0 1rem; }
-.title { font-size: 1.8rem; font-weight: 700; margin-bottom: 1.5rem; color: var(--color-text); }
-.prompt { color: var(--color-muted); }
-.card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
-.row { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--color-border); }
+.page { max-width: 500px; margin: 2rem auto; padding: 0 1.25rem; }
+
+.title {
+  font-size: 1.1rem; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ox-fg-dim);
+  border-left: 3px solid var(--ox-accent); padding-left: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.prompt { color: var(--ox-fg-muted); font-size: 0.9rem; }
+
+.card {
+  background: var(--ox-bg-panel); border: 1px solid var(--ox-border);
+  border-radius: var(--ox-r-lg); padding: 1.5rem;
+  margin-bottom: 1.5rem; backdrop-filter: blur(8px);
+  box-shadow: var(--ox-shadow);
+}
+
+.row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.6rem 0; border-bottom: 1px solid var(--ox-border);
+}
 .row:last-child { border-bottom: none; }
-.label { font-size: 0.875rem; color: var(--color-muted); }
-.value { font-size: 0.95rem; font-weight: 500; color: var(--color-text); }
-.logout { padding: 0.6rem 1.2rem; background: transparent; border: 1px solid var(--color-border); border-radius: 4px; cursor: pointer; color: var(--color-muted); font-size: 0.9rem; }
-.logout:hover { border-color: #e53e3e; color: #e53e3e; }
+
+.label { font-size: 0.825rem; color: var(--ox-fg-muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.value { font-size: 0.95rem; font-weight: 500; color: var(--ox-fg); font-family: var(--ox-mono); }
+
+.logout {
+  padding: 0.55rem 1.2rem;
+  background: transparent; border: 1px solid var(--ox-border);
+  border-radius: var(--ox-r); cursor: pointer;
+  color: var(--ox-fg-muted); font-size: 0.875rem;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  transition: var(--ox-tr);
+}
+.logout:hover { border-color: var(--ox-danger); color: var(--ox-danger); }
