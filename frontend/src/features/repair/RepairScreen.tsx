@@ -199,7 +199,7 @@ export function RepairScreen({ planet }: { planet: Planet }) {
                       </div>
                       {hasReqs && unitMeta?.requires && (
                         <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginTop: 4, fontFamily: 'var(--ox-mono)' }}>
-                          🔒 {fmtReqs(unitMeta.requires)}
+                          🔒 {fmtReqs(unitMeta.requires, ti)}
                         </div>
                       )}
                     </div>

@@ -107,7 +107,7 @@ export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) 
 
       {requires && requires.length > 0 && (
         <div className="ox-panel" style={{ padding: '10px 14px', fontSize: 15, color: 'var(--ox-fg-muted)' }}>
-          {t('requires')} {fmtReqs(requires)}
+          {t('requires')} {fmtReqs(requires, ti)}
         </div>
       )}
 
@@ -205,7 +205,7 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
 
       {entry.requires && entry.requires.length > 0 && (
         <div className="ox-panel" style={{ padding: '10px 14px', fontSize: 15, color: 'var(--ox-fg-muted)' }}>
-          {t('requires')} {fmtReqs(entry.requires)}
+          {t('requires')} {fmtReqs(entry.requires, ti)}
         </div>
       )}
 
