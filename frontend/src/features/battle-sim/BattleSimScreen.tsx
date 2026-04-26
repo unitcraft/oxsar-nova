@@ -105,17 +105,17 @@ export function BattleSimScreen() {
 
   return (
     <section>
-      <h2>{t('global', 'MENU_SIMULATOR')}</h2>
+      <h2>{t('global', 'menuSimulator')}</h2>
 
       <div style={{ display: 'flex', gap: 24, marginBottom: 16, flexWrap: 'wrap' }}>
         <UnitPicker
-          title={tf('Main', 'BATTLE_SIM_ATTACKERS', 'Атакующий флот')}
+          title={tf('main', 'battleSimAttackers', 'Атакующий флот')}
           units={COMBAT_SHIPS}
           value={attackers}
           onChange={setAttackers}
         />
         <UnitPicker
-          title={tf('Main', 'BATTLE_SIM_DEFENDERS', 'Защита + флот')}
+          title={tf('main', 'battleSimDefenders', 'Защита + флот')}
           units={[...COMBAT_SHIPS, ...COMBAT_DEFENSE]}
           value={defenders}
           onChange={setDefenders}
@@ -124,7 +124,7 @@ export function BattleSimScreen() {
 
       <div style={{ display: 'flex', gap: 24, marginBottom: 12 }}>
         <label>
-          {tf('Main', 'BATTLE_SIM_SEED', 'Seed:')}&nbsp;
+          {tf('main', 'battleSimSeed', 'Seed:')}&nbsp;
           <input
             type="number"
             value={seed}
@@ -133,7 +133,7 @@ export function BattleSimScreen() {
           />
         </label>
         <label>
-          {tf('Main', 'BATTLE_SIM_NUMSIM', 'Прогонов (1–20):')}&nbsp;
+          {tf('main', 'battleSimNumsim', 'Прогонов (1–20):')}&nbsp;
           <input
             type="number"
             min={1}
@@ -147,29 +147,29 @@ export function BattleSimScreen() {
 
       <button type="button" disabled={sim.isPending} onClick={runSim}>
         {sim.isPending
-          ? tf('Main', 'BATTLE_SIM_CALCULATING', 'Считаем…')
-          : tf('Main', 'BATTLE_SIM_RUN', 'Рассчитать')}
+          ? tf('main', 'battleSimCalculating', 'Считаем…')
+          : tf('main', 'battleSimRun', 'Рассчитать')}
       </button>
 
       {sim.isError && (
         <div className="ox-error" style={{ marginTop: 8 }}>
-          {sim.error instanceof Error ? sim.error.message : t('global', 'ERROR')}
+          {sim.error instanceof Error ? sim.error.message : t('global', 'error')}
         </div>
       )}
 
       {isStats && (
         <div style={{ marginTop: 16 }}>
-          <h3>{tf('Main', 'BATTLE_SIM_RESULT', 'Результат')}</h3>
+          <h3>{tf('main', 'battleSimResult', 'Результат')}</h3>
           <p>
-            <b>{tf('Main', 'BATTLE_SIM_RUNS', 'Прогонов')}:</b> {(r as SimStats).num_sim}
+            <b>{tf('main', 'battleSimRuns', 'Прогонов')}:</b> {(r as SimStats).num_sim}
             {' · '}
-            <b>{tf('Main', 'BATTLE_WIN_RATE', 'Победы атак.')}:</b>{' '}
+            <b>{tf('main', 'battleWinRate', 'Победы атак.')}:</b>{' '}
             {((r as SimStats).win_rate * 100).toFixed(1)}%
             {' · '}
-            <b>{tf('Main', 'BATTLE_DRAW_RATE', 'Ничьи')}:</b>{' '}
+            <b>{tf('main', 'battleDrawRate', 'Ничьи')}:</b>{' '}
             {((r as SimStats).draw_rate * 100).toFixed(1)}%
             {' · '}
-            <b>{tf('Main', 'BATTLE_AVG_ROUNDS', 'Ср. раундов')}:</b>{' '}
+            <b>{tf('main', 'battleAvgRounds', 'Ср. раундов')}:</b>{' '}
             {(r as SimStats).avg_rounds.toFixed(1)}
           </p>
         </div>
@@ -177,22 +177,22 @@ export function BattleSimScreen() {
 
       {!isStats && r && (
         <div style={{ marginTop: 16 }}>
-          <h3>{tf('Main', 'BATTLE_SIM_RESULT', 'Результат')}</h3>
+          <h3>{tf('main', 'battleSimResult', 'Результат')}</h3>
           <p>
-            <b>{tf('Main', 'BATTLE_WINNER', 'Победитель')}:</b>{' '}
+            <b>{tf('main', 'battleWinner', 'Победитель')}:</b>{' '}
             {(r as SimReport).winner === 'attackers'
-              ? tf('Main', 'BATTLE_WIN_ATT', 'Атакующие')
+              ? tf('main', 'battleWinAtt', 'Атакующие')
               : (r as SimReport).winner === 'defenders'
-                ? tf('Main', 'BATTLE_WIN_DEF', 'Защитники')
-                : tf('Main', 'BATTLE_DRAW', 'Ничья')}
+                ? tf('main', 'battleWinDef', 'Защитники')
+                : tf('main', 'battleDraw', 'Ничья')}
             {' · '}
-            <b>{tf('Main', 'BATTLE_ROUNDS', 'Раундов')}:</b> {(r as SimReport).rounds}
+            <b>{tf('main', 'battleRounds', 'Раундов')}:</b> {(r as SimReport).rounds}
             {' · '}
-            <b>{tf('Main', 'SEED', 'Сид')}:</b> {(r as SimReport).seed}
+            <b>{tf('main', 'seed', 'Сид')}:</b> {(r as SimReport).seed}
           </p>
           {((r as SimReport).debris_metal > 0 || (r as SimReport).debris_silicon > 0) && (
             <p>
-              <b>{tf('Main', 'DEBRIS', 'Обломки')}:</b>{' '}
+              <b>{tf('main', 'debris', 'Обломки')}:</b>{' '}
               {(r as SimReport).debris_metal} M / {(r as SimReport).debris_silicon} Si
             </p>
           )}
@@ -200,14 +200,14 @@ export function BattleSimScreen() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 8 }}>
             {(r as SimReport).attackers[0] && (
               <LossesTable
-                title={tf('Main', 'ATTACKERS', 'Атакующие')}
+                title={tf('main', 'attackers', 'Атакующие')}
                 side={(r as SimReport).attackers[0]!}
                 original={attackers}
               />
             )}
             {(r as SimReport).defenders[0] && (
               <LossesTable
-                title={tf('Main', 'DEFENDERS', 'Защитники')}
+                title={tf('main', 'defenders', 'Защитники')}
                 side={(r as SimReport).defenders[0]!}
                 original={defenders}
               />
@@ -232,17 +232,17 @@ function LossesTable({
     <div>
       <h4>{title}</h4>
       <p>
-        {tf('Main', 'BATTLE_LOSSES', 'Потери')}:{' '}
+        {tf('main', 'battleLosses', 'Потери')}:{' '}
         <b>{side.lost_metal}</b> M / <b>{side.lost_silicon}</b> Si
       </p>
       {changed.length > 0 ? (
         <table className="ox-table">
           <thead>
             <tr>
-              <th>{tf('Main', 'UNIT_ID', 'Юнит')}</th>
-              <th>{tf('Main', 'BEFORE', 'Было')}</th>
-              <th>{tf('Main', 'AFTER', 'Стало')}</th>
-              <th>{tf('Main', 'DAMAGED', 'Повреждено')}</th>
+              <th>{tf('main', 'unitId', 'Юнит')}</th>
+              <th>{tf('main', 'before', 'Было')}</th>
+              <th>{tf('main', 'after', 'Стало')}</th>
+              <th>{tf('main', 'damaged', 'Повреждено')}</th>
             </tr>
           </thead>
           <tbody>
@@ -263,7 +263,7 @@ function LossesTable({
           </tbody>
         </table>
       ) : (
-        <p>{tf('Main', 'NO_LOSSES', 'Потерь нет.')}</p>
+        <p>{tf('main', 'noLosses', 'Потерь нет.')}</p>
       )}
     </div>
   );

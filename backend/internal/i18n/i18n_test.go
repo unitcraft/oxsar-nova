@@ -25,9 +25,9 @@ func loadTestBundle(t *testing.T, files map[string]string) *Bundle {
 func TestTr_Hit(t *testing.T) {
 	t.Parallel()
 	b := loadTestBundle(t, map[string]string{
-		"ru.yml": "global:\n  ATTACK: \"Атака\"\n",
+		"ru.yml": "global:\n  attack: \"Атака\"\n",
 	})
-	if got := b.Tr(LangRu, "global", "ATTACK"); got != "Атака" {
+	if got := b.Tr(LangRu, "global", "attack", nil); got != "Атака" {
 		t.Fatalf("got %q", got)
 	}
 }
@@ -35,10 +35,10 @@ func TestTr_Hit(t *testing.T) {
 func TestTr_FallbackToRu(t *testing.T) {
 	t.Parallel()
 	b := loadTestBundle(t, map[string]string{
-		"ru.yml": "global:\n  ATTACK: \"Атака\"\n",
+		"ru.yml": "global:\n  attack: \"Атака\"\n",
 		"en.yml": "global: {}\n",
 	})
-	if got := b.Tr(LangEn, "global", "ATTACK"); got != "Атака" {
+	if got := b.Tr(LangEn, "global", "attack", nil); got != "Атака" {
 		t.Fatalf("expected ru fallback, got %q", got)
 	}
 }
@@ -48,17 +48,20 @@ func TestTr_MissingKeyMarker(t *testing.T) {
 	b := loadTestBundle(t, map[string]string{
 		"ru.yml": "global: {}\n",
 	})
-	if got := b.Tr(LangRu, "global", "MISSING"); got != "[global.MISSING]" {
+	if got := b.Tr(LangRu, "global", "missing", nil); got != "[global.missing]" {
 		t.Fatalf("got %q", got)
 	}
 }
 
-func TestTr_Sprintf(t *testing.T) {
+func TestTr_Interpolate(t *testing.T) {
 	t.Parallel()
 	b := loadTestBundle(t, map[string]string{
-		"ru.yml": "mission:\n  ARRIVED: \"Флот прибыл на %s в %d:%d:%d\"\n",
+		"ru.yml": "mission:\n  arrived: \"Флот прибыл на {{planetName}} в {{coords}}\"\n",
 	})
-	got := b.Tr(LangRu, "mission", "ARRIVED", "Moon", 1, 42, 8)
+	got := b.Tr(LangRu, "mission", "arrived", map[string]string{
+		"planetName": "Moon",
+		"coords":     "1:42:8",
+	})
 	want := "Флот прибыл на Moon в 1:42:8"
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
@@ -80,12 +83,12 @@ func TestLoad_NoFallbackError(t *testing.T) {
 func TestHas(t *testing.T) {
 	t.Parallel()
 	b := loadTestBundle(t, map[string]string{
-		"ru.yml": "a:\n  X: \"x\"\n",
+		"ru.yml": "a:\n  myKey: \"x\"\n",
 	})
-	if !b.Has(LangRu, "a", "X") {
+	if !b.Has(LangRu, "a", "myKey") {
 		t.Fatalf("Has returned false for existing key")
 	}
-	if b.Has(LangRu, "a", "Y") {
+	if b.Has(LangRu, "a", "missing") {
 		t.Fatalf("Has returned true for missing key")
 	}
 }
@@ -105,28 +108,28 @@ func TestLanguages(t *testing.T) {
 func TestLocale_KnownLang(t *testing.T) {
 	t.Parallel()
 	b := loadTestBundle(t, map[string]string{
-		"ru.yml": "grp:\n  KEY: \"значение\"\n",
+		"ru.yml": "grp:\n  myKey: \"значение\"\n",
 	})
 	d := b.Locale(LangRu)
 	if d == nil {
 		t.Fatal("Locale(LangRu) returned nil")
 	}
-	if d["grp"]["KEY"] != "значение" {
-		t.Errorf("Locale value = %q, want значение", d["grp"]["KEY"])
+	if d["grp"]["myKey"] != "значение" {
+		t.Errorf("Locale value = %q, want значение", d["grp"]["myKey"])
 	}
 }
 
 func TestLocale_UnknownLangFallsBack(t *testing.T) {
 	t.Parallel()
 	b := loadTestBundle(t, map[string]string{
-		"ru.yml": "grp:\n  KEY: \"значение\"\n",
+		"ru.yml": "grp:\n  myKey: \"значение\"\n",
 	})
 	// LangEn not loaded → fallback to LangRu.
 	d := b.Locale(LangEn)
 	if d == nil {
 		t.Fatal("Locale fallback returned nil")
 	}
-	if d["grp"]["KEY"] != "значение" {
-		t.Errorf("Locale fallback value = %q, want значение", d["grp"]["KEY"])
+	if d["grp"]["myKey"] != "значение" {
+		t.Errorf("Locale fallback value = %q, want значение", d["grp"]["myKey"])
 	}
 }
