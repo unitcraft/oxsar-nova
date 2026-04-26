@@ -139,7 +139,20 @@ func run() error {
 
 	db := repo.New(pool)
 
-	jwt := auth.NewJWTIssuer(cfg.Auth.JWTSecret, cfg.Auth.AccessTTL, cfg.Auth.RefreshTTL)
+	// Режим аутентификации: RSA-256 через Auth Service (AUTH_JWKS_URL)
+	// или legacy HS256 (JWT_SECRET) для локальной разработки без auth-service.
+	var jwt *auth.JWTIssuer
+	useJWKS := cfg.Auth.JWKSUrl != ""
+	if useJWKS {
+		log.InfoContext(ctx, "auth mode: RSA-256 via JWKS",
+			slog.String("jwks_url", cfg.Auth.JWKSUrl),
+			slog.String("universe_id", cfg.Auth.UniverseID))
+	} else {
+		log.InfoContext(ctx, "auth mode: legacy HS256 (dev)",
+			slog.String("universe_id", cfg.Auth.UniverseID))
+		jwt = auth.NewJWTIssuer(cfg.Auth.JWTSecret, cfg.Auth.AccessTTL, cfg.Auth.RefreshTTL)
+	}
+
 
 	planetRepo := planet.NewRepository(pool)
 	planetSvc := planet.NewServiceWithFactors(db, planetRepo, cat, cfg.Game.StorageFactor, cfg.Game.EnergyProductionFactor)
@@ -174,8 +187,22 @@ func run() error {
 	automsgSvc := automsg.NewService(db).WithBundle(i18nBundle)
 
 	referralSvc := referral.NewService(db).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
+	// В режиме JWKS auth-сервис не нужен игровому серверу: регистрация/логин
+	// живут в auth-service. Здесь оставляем только vacation-эндпоинты и /api/me.
 	authSvc := auth.NewService(db, jwt, starter, automsgSvc).WithReferral(referralSvc)
 	authH := auth.NewHandler(authSvc, pool)
+
+	// authMiddleware — единая функция выбора middleware по режиму.
+	var authMiddlewareFn func(http.Handler) http.Handler
+	if useJWKS {
+		rsaVer, loadErr := auth.LoadVerifier(ctx, cfg.Auth.JWKSUrl)
+		if loadErr != nil {
+			return loadErr
+		}
+		authMiddlewareFn = auth.RSAMiddleware(rsaVer)
+	} else {
+		authMiddlewareFn = auth.Middleware(jwt)
+	}
 
 	reqs := requirements.New(cat)
 
@@ -268,15 +295,20 @@ func run() error {
 	// загрузке решает, какой UI рисовать. План 31 Ф.2.
 	r.Get("/api/features", featureH.List)
 
-	r.With(authRL.Middleware).Post("/api/auth/register", authH.Register)
-	r.With(authRL.Middleware).Post("/api/auth/login", authH.Login)
-	r.With(authRL.Middleware).Post("/api/auth/refresh", authH.Refresh)
-	r.With(auth.Middleware(jwt)).Get("/api/me", authH.Me)
-	r.With(auth.Middleware(jwt)).Post("/api/me/vacation", authH.SetVacation)
-	r.With(auth.Middleware(jwt)).Delete("/api/me/vacation", authH.UnsetVacation)
+	// Auth-эндпоинты регистрации/логина живут здесь только в legacy-режиме (без auth-service).
+	// В режиме JWKS регистрацию/логин обслуживает auth-service, игровой сервер принимает
+	// готовые JWT.
+	if !useJWKS {
+		r.With(authRL.Middleware).Post("/api/auth/register", authH.Register)
+		r.With(authRL.Middleware).Post("/api/auth/login", authH.Login)
+		r.With(authRL.Middleware).Post("/api/auth/refresh", authH.Refresh)
+	}
+	r.With(authMiddlewareFn).Get("/api/me", authH.Me)
+	r.With(authMiddlewareFn).Post("/api/me/vacation", authH.SetVacation)
+	r.With(authMiddlewareFn).Delete("/api/me/vacation", authH.UnsetVacation)
 	r.Post("/api/battle-sim", battleSimHandler)
 	r.Get("/api/stats", scoreH.Stats)
-	r.With(auth.Middleware(jwt)).Get("/api/stats/resource-transfers", scoreH.ResourceTransfers)
+	r.With(authMiddlewareFn).Get("/api/stats/resource-transfers", scoreH.ResourceTransfers)
 	r.Get("/api/payment/packages", paymentH.Packages)
 	r.Post("/api/payment/webhook", paymentH.Webhook)
 	if cfg.Payment.Provider == "mock" {
@@ -307,7 +339,7 @@ func run() error {
 	r.Get("/api/galaxy-event", galaxyEventH.Active)
 
 	r.Route("/api", func(pr chi.Router) {
-		pr.Use(auth.Middleware(jwt))
+		pr.Use(authMiddlewareFn)
 		pr.Use(auth.LastSeenMiddleware(pool))
 		pr.Get("/empire", empireH.GetAll)
 		pr.Get("/settings", settingsH.Get)
