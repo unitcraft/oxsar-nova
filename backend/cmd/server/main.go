@@ -152,9 +152,26 @@ func run() error {
 	planetH := planet.NewHandler(planetSvc)
 	starter := planet.NewStarter(db)
 
-	// automsg нужен auth (WELCOME/STARTER_GUIDE при регистрации),
+	// i18n bundle — загружаем до сервисов, чтобы automsg мог читать
+	// тексты шаблонов. Если директория не найдена — bundle=nil,
+	// automsg.Send вернёт ErrNoBundle (нет критического падения).
+	i18nDir := os.Getenv("I18N_DIR")
+	if i18nDir == "" {
+		i18nDir = filepath.Join(catalogDir, "i18n")
+	}
+	var i18nBundle *i18n.Bundle
+	var i18nH *i18n.Handler
+	if bundle, err := i18n.Load(i18nDir, i18n.LangRu); err != nil {
+		log.WarnContext(ctx, "i18n not loaded", slog.String("dir", i18nDir), slog.String("err", err.Error()))
+	} else {
+		log.InfoContext(ctx, "i18n loaded", slog.Any("langs", bundle.Languages()))
+		i18nBundle = bundle
+		i18nH = i18n.NewHandler(bundle)
+	}
+
+	// automsg нужен auth (welcome/starterGuide при регистрации),
 	// поэтому инициализируем до auth.NewService.
-	automsgSvc := automsg.NewService(db)
+	automsgSvc := automsg.NewService(db).WithBundle(i18nBundle)
 
 	referralSvc := referral.NewService(db).WithAutoMsg(automsgSvc)
 	authSvc := auth.NewService(db, jwt, starter, automsgSvc).WithReferral(referralSvc)
@@ -238,21 +255,6 @@ func run() error {
 	chatHub := chat.NewHubWithRedis(ctx, rdb, log)
 	defer chatHub.Close()
 	chatH := chat.NewHandler(chatHub, db)
-
-	// i18n: папка необязательна — если её нет или пустая, i18n просто
-	// пропускается, HTTP-эндпоинты не регистрируются. Это ожидаемо
-	// до первого прогона cmd/tools/import-phrases (§10.3 ТЗ).
-	i18nDir := os.Getenv("I18N_DIR")
-	if i18nDir == "" {
-		i18nDir = filepath.Join(catalogDir, "i18n")
-	}
-	var i18nH *i18n.Handler
-	if bundle, err := i18n.Load(i18nDir, i18n.LangRu); err != nil {
-		log.WarnContext(ctx, "i18n not loaded", slog.String("dir", i18nDir), slog.String("err", err.Error()))
-	} else {
-		log.InfoContext(ctx, "i18n loaded", slog.Any("langs", bundle.Languages()))
-		i18nH = i18n.NewHandler(bundle)
-	}
 
 	r := httpx.NewRouter(httpx.RouterDeps{Log: log})
 
@@ -465,7 +467,6 @@ func run() error {
 			ar.Get("/users/{id}", adminH.GetUserProfile)
 			ar.Post("/users/{id}/ban", adminH.Ban)
 			ar.Post("/users/{id}/unban", adminH.Unban)
-			ar.Get("/automsgs", adminH.ListAutomsgs)
 			ar.Get("/events", adminH.EventsList)
 			ar.Get("/events/stats", adminH.EventsStats)
 			ar.Get("/events/dead", adminH.ListDeadEvents)
@@ -476,7 +477,6 @@ func run() error {
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/users/{id}/resources", adminH.GrantResources)
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/users/{id}/artefacts/grant", adminH.GrantArtefact)
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Delete("/users/{id}/artefacts/{aid}", adminH.DeleteArtefact)
-			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Put("/automsgs/{key}", adminH.UpdateAutomsg)
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/events/{id}/retry", adminH.EventRetry)
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/events/{id}/cancel", adminH.EventCancel)
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/events/dead/{id}/resurrect", adminH.ResurrectDeadEvent)

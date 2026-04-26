@@ -148,8 +148,8 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (User, Tokens,
 			"planet_name": planetName,
 			"coords":      planetCoords,
 		}
-		_ = s.automsg.Send(ctx, nil, userID, "WELCOME", vars)
-		_ = s.automsg.Send(ctx, nil, userID, "STARTER_GUIDE", nil)
+		_ = s.automsg.Send(ctx, nil, userID, "welcome", vars)
+		_ = s.automsg.Send(ctx, nil, userID, "starterGuide", nil)
 	}
 
 	toks, err := s.jwt.Issue(userID)
