@@ -761,6 +761,259 @@ galaxyUi:
   statusInactive21: "Очень неактивный (21+ дн)"
   friendTitle: В друзьях
 
+battlestatsUi:
+  title: ⚔ История боёв
+  statTotal: Всего боёв
+  statWins: Побед
+  statLosses: Поражений
+  statDraws: Ничьих
+  filterRole: Роль
+  filterRoleAny: Любая
+  filterRoleAttacker: Атакующий
+  filterRoleDefender: Защитник
+  filterResult: Результат
+  filterResultAny: Любой
+  filterResultWin: Победа
+  filterResultLoss: Поражение
+  filterResultDraw: Ничья
+  filterFrom: С даты
+  filterTo: По дату
+  empty: Нет боёв по выбранным фильтрам
+  colDate: Дата
+  colRole: Роль
+  colOpponent: Противник
+  colPlanet: Планета
+  colRounds: Раундов
+  colResult: Результат
+  colLoot: Добыча
+  colDebris: Обломки
+  roleAttack: ⚔ Атака
+  roleDefend: 🛡 Защита
+  resultWin: 🏆 Победа
+  resultDraw: ⚖ Ничья
+  resultLoss: 💀 Поражение
+
+artefactsUi:
+  title: ✨ Артефакты
+  empty: Инвентарь пуст. Артефакты появляются как награда за бой/экспедицию или покупаются в Рынке артефактов.
+  groupActive: Активные
+  groupHeld: В инвентаре
+  groupOther: Прочие
+  stateHeld: 📦 В инвентаре
+  stateActive: ✅ Активен
+  stateDelayed: ⏳ Активируется
+  stateListed: 🏷 На продаже
+  stateExpired: 💀 Истёк
+  stateConsumed: ⚡ Использован
+  expires: "Истекает:"
+  activate: Активировать
+  sell: Продать
+  deactivate: Деактивировать
+  expired: 💀 Истёк
+  toastActivated: "{{name}} активирован"
+  toastArtefact: Артефакт
+  toastDeactivated: Артефакт деактивирован
+  toastListed: Артефакт выставлен на продажу
+  toastActivateErr: Ошибка активации
+  toastSellErr: Ошибка продажи
+  toastError: Ошибка
+
+repairUi:
+  title: "Ремонтный ангар — {{planetName}}"
+  storage: Хранилище
+  queueTitle: Очередь ангара
+  modeRepair: Ремонт
+  modeDisassemble: Разбор
+  cancelTitle: Отменить
+  tabRepair: "🔧 Ремонт ({{count}})"
+  tabDisassemble: ♻️ Разбор
+  noDamaged: 🔧 Нет повреждённых кораблей
+  inStock: "В наличии:"
+  damaged: "Повреждено:"
+  repairAll: Починить все
+  disassembleHint: Разбор здоровых юнитов возвращает ~70% стоимости.
+  disassembleBtn: Разобрать
+  fuelPer: /ед.
+  toastRepairTitle: Ремонт
+  toastRepaired: "{{name}} отправлен на ремонт"
+  toastDisassTitle: Разбор
+  toastDisassembled: "{{name}} × {{count}} отправлено на разбор"
+  toastCancelledTitle: Отменено
+  toastCancelled: Задание отменено, ресурсы возвращены
+  toastError: Ошибка
+  toastRepairErr: Ошибка ремонта
+  toastDisassErr: Ошибка разбора
+  toastCancelErr: Не удалось отменить
+
+rocketsUi:
+  title: "Ракеты — {{planetName}}"
+  stockLabel: межпланетарных ракет
+  siloInfo: "Шахта ур. {{level}} — макс. {{max}} в загрузке"
+  siloMissing: Постройте Ракетную шахту для активации лимита
+  launchTitle: Запуск
+  coordsLabel: Координаты цели
+  moonLabel: 🌑 Луна
+  countLabel: "Количество (макс. {{max}})"
+  hintText: Ракеты летят без возврата и уничтожают оборону цели. 1 ракета = 12 000 урона по pool(defense × shell).
+  launchBtn: "💥 Запустить {{count}} {{rocketWord}}"
+  rocketOne: ракету
+  rocketFew: ракеты
+  rocketMany: ракет
+  lastLaunch: "Последний пуск: {{count}} ракет → прилёт {{at}}"
+  toastTitle: Ракеты запущены
+  toastBody: "{{count}} ракет → [{{g}}:{{s}}:{{pos}}]"
+  toastError: Ошибка
+  toastErrBody: Не удалось запустить
+
+achievementsUi:
+  title: 🎖 Достижения
+  unlocked: "Открыто:"
+  points: "Очки:"
+  catAll: 📋 Все
+  catStarter: 🎓 Старт
+  catPassive: 🥇 Достижения
+  gotAt: "Получено"
+
+officersUi:
+  title: 🎖 Офицеры
+  balance: "Баланс:"
+  empty: Нет доступных офицеров.
+  daysAndCost: "{{days}} дн. · {{cost}} cr"
+  expires: "Истекает:"
+  active: ✅ Активен
+  autoRenew: Авто-продление
+  activateBtn: "Активировать ({{cost}} cr)"
+  notEnoughCr: Мало cr
+  notEnoughTitle: Недостаточно кредитов
+  effectProduce: Производство
+  effectBuild: Строительство
+  effectResearch: Исследования
+  effectEnergy: Энергия
+  effectStorage: Склад
+  toastTitle: Офицер
+  toastActivated: "{{name}} активирован на {{days}} дн."
+  toastError: Ошибка
+
+messagesUi:
+  title: Сообщения
+  unread: "({count} новых)"
+  deleteAll: Удалить все
+  compose: Написать
+  empty: Нет сообщений
+  senderSystem: Система
+  deleteTitle: Удалить
+  confirmDelAllTitle: Удалить сообщения
+  confirmDelAllAll: Удалить все сообщения?
+  confirmDelAllFolder: Удалить все сообщения в этой папке?
+  confirmDelLabel: Удалить
+  toastDeleted: Сообщение удалено
+  toastDeletedAll: Все сообщения удалены
+  toastSent: Отправлено
+  folderAll: Все
+  folderPersonal: Личные
+  folderBattle: Бой
+  folderSpy: Шпионаж
+  folderExpedition: Экспедиции
+  folderPhalanx: Фаланга
+  folderAlliance: Альянс
+  folderArtefacts: Артефакты
+  folderCredits: Кредиты
+  folderSystem: Система
+  folderSent: Отправленные
+  composeTitle: Написать сообщение
+  composeTo: Кому
+  composeToPh: имя игрока
+  composeSubject: Тема
+  composeSubjectPh: тема сообщения
+  composeBodyPh: текст сообщения…
+  composeError: Ошибка
+  composeSend: Отправить
+  composeCancel: Отмена
+  from: "От:"
+  reply: ↩ Ответить
+  loading: Загрузка отчёта…
+  loadingShort: Загрузка…
+  attackBtn: ⚔️ Атаковать
+  rounds: "Раундов:"
+  winnerAttackers: ⚔️ Победа атакующих
+  winnerDefenders: 🛡 Победа защитников
+  winnerDraw: ⚖️ Ничья
+  labelAttacker: АТАКУЮЩИЙ
+  labelDefender: ЗАЩИТНИК
+  labelLoot: ДОБЫЧА
+  sidesAttackers: Атакующие
+  sidesDefenders: Защитники
+  sideLosses: "Потери:"
+  roundsTrace: Раунды по раундам
+  thRound: "#"
+  thAttackers: Атакующих
+  thDefenders: Защитников
+  spyTitle: 🔭 Шпионский отчёт
+  spyRatio: Соотношение
+  spyProbes: Зонды
+  spyShips: Корабли
+  spyDefense: Оборона
+  spyBuildings: Здания
+  expedTitle: 🌌 Отчёт экспедиции
+  expedResult: "Результат:"
+  expedResources: Найдены ресурсы
+  expedArtefact: Найден артефакт
+  expedExtraPlanet: Обнаружена новая планета
+  expedPirates: Столкновение с пиратами
+  expedLoss: Потери
+  expedNothing: Ничего не найдено
+
+marketUi:
+  title: "Рынок — {{planetName}}"
+  yourRate: "Ваш курс:"
+  tabExchange: ⇄ Обмен
+  tabCredit: 💳 Кредиты
+  tabLots: 📋 Ордерная книга
+  globalRate: "🌐 Глобальный курс: 1 металл = {{siRatio}} кремния = {{hRatio}} водорода"
+  exchangeHint: "Курс M:Si:H = 1:2:4. Чем выше ваш personal rate, тем меньше получаете при обмене."
+  labelFrom: Отдать
+  labelTo: Получить
+  labelAmount: Количество
+  youWillGet: "Вы получите:"
+  exchangeBtn: Обменять
+  lastExchange: "Последний обмен: {{fa}} {{fr}} → {{ta}} {{tr}} (курс {{rate}})"
+  resLabelMetal: 🟠 Металл
+  resLabelSilicon: 💎 Кремний
+  resLabelHydrogen: 💧 Водород
+  lotsTabRes: 💱 Ресурсы
+  lotsTabFleet: 🛸 Флот
+  createLotTitle: Выставить лот
+  labelSell: Продать
+  labelGet: Получить
+  submitLot: Выставить
+  colSeller: Продавец
+  colSells: Продаёт
+  colWants: Хочет
+  noLots: Нет открытых лотов
+  cancelLot: Отмена
+  buyLot: Купить
+  toastLotCreated: Лот выставлен
+  toastError: Ошибка
+  toastLotCancelled: Лот отменён
+  toastDeal: Сделка выполнена
+  creditHint: "Покупка ресурсов за кредиты. 1 кредит = {{rate}} единиц металла. Курс учитывает ваш personal rate ({{userRate}})."
+  creditResLabel: Ресурс
+  creditAmountLabel: Количество кредитов
+  creditYouGet: "Вы получите:"
+  creditBuy: Купить
+  creditToast: "{{amount}} кред. → {{delta}} {{res}}"
+  fleetLotTitle: Выставить флот на продажу
+  fleetWantLabel: Хочу получить
+  fleetSubmit: "Выставить ({{count}} кораблей)"
+  fleetColSeller: Продавец
+  fleetColFleet: Состав
+  fleetColPrice: Цена
+  fleetYou: "(вы)"
+  fleetCancelLot: Отменить
+  fleetBuyLot: Купить
+  fleetNoLots: Нет открытых лотов флота
+  fleetLotCreated: Лот флота выставлен
+
 authUi:
   tagline: космическая стратегия
   loginTab: Войти

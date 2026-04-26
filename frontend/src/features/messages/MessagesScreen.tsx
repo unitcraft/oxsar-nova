@@ -4,6 +4,7 @@ import { api } from '@/api/client';
 import { nameOf } from '@/api/catalog';
 import { Confirm } from '@/ui/Confirm';
 import { useToast } from '@/ui/Toast';
+import { useTranslation } from '@/i18n/i18n';
 
 interface Message {
   id: string;
@@ -108,23 +109,24 @@ interface ReplyInit {
 }
 
 type FolderKey = number | null | 'sent';
-const FOLDERS: { folder: FolderKey; label: string; icon: string }[] = [
-  { folder: null,   label: 'Все',          icon: '📬' },
-  { folder: 1,      label: 'Личные',       icon: '✉️' },
-  { folder: 2,      label: 'Бой',          icon: '⚔️' },
-  { folder: 3,      label: 'Шпионаж',      icon: '🔭' },
-  { folder: 4,      label: 'Экспедиции',   icon: '🌌' },
-  { folder: 11,     label: 'Фаланга',      icon: '📡' },
-  { folder: 6,      label: 'Альянс',       icon: '🤝' },
-  { folder: 7,      label: 'Артефакты',    icon: '💎' },
-  { folder: 8,      label: 'Кредиты',      icon: '💳' },
-  { folder: 13,     label: 'Система',      icon: '⚙️' },
-  { folder: 'sent', label: 'Отправленные', icon: '📤' },
+const FOLDER_DEFS: { folder: FolderKey; tkey: string; icon: string }[] = [
+  { folder: null,   tkey: 'folderAll',       icon: '📬' },
+  { folder: 1,      tkey: 'folderPersonal',  icon: '✉️' },
+  { folder: 2,      tkey: 'folderBattle',    icon: '⚔️' },
+  { folder: 3,      tkey: 'folderSpy',       icon: '🔭' },
+  { folder: 4,      tkey: 'folderExpedition',icon: '🌌' },
+  { folder: 11,     tkey: 'folderPhalanx',   icon: '📡' },
+  { folder: 6,      tkey: 'folderAlliance',  icon: '🤝' },
+  { folder: 7,      tkey: 'folderArtefacts', icon: '💎' },
+  { folder: 8,      tkey: 'folderCredits',   icon: '💳' },
+  { folder: 13,     tkey: 'folderSystem',    icon: '⚙️' },
+  { folder: 'sent', tkey: 'folderSent',      icon: '📤' },
 ];
 
 type FleetMissionCb = (g: number, s: number, pos: number, isMoon: boolean, mission: number) => void;
 
 export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissionCb }) {
+  const { t } = useTranslation('messagesUi');
   const qc = useQueryClient();
   const toast = useToast();
   const [selectedID, setSelectedID] = useState<string | null>(null);
@@ -158,7 +160,7 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
       setSelectedID(null);
       void qc.invalidateQueries({ queryKey: ['messages'] });
       void qc.invalidateQueries({ queryKey: ['messages-unread'] });
-      toast.show('info', 'Сообщение удалено');
+      toast.show('info', t('toastDeleted'));
     },
   });
 
@@ -171,7 +173,7 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
       setSelectedID(null);
       void qc.invalidateQueries({ queryKey: ['messages'] });
       void qc.invalidateQueries({ queryKey: ['messages-unread'] });
-      toast.show('info', 'Все сообщения удалены');
+      toast.show('info', t('toastDeletedAll'));
     },
   });
 
@@ -205,7 +207,7 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-          Сообщения {unreadCount > 0 && <span style={{ fontSize: 16, color: 'var(--ox-accent)' }}>({unreadCount} новых)</span>}
+          {t('title')} {unreadCount > 0 && <span style={{ fontSize: 16, color: 'var(--ox-accent)' }}>{t('unread', { count: String(unreadCount) })}</span>}
         </h2>
         <div style={{ display: 'flex', gap: 8 }}>
           {msgs.length > 0 && (
@@ -216,18 +218,19 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
               disabled={delAll.isPending}
               onClick={() => setConfirmDelAll(true)}
             >
-              🗑 Удалить все
+              🗑 {t('deleteAll')}
             </button>
           )}
           <button type="button" className="btn btn-sm" onClick={() => { setComposing(true); setSelectedID(null); }}>
-            ✉ Написать
+            ✉ {t('compose')}
           </button>
         </div>
       </div>
 
       {/* Folder tabs */}
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        {FOLDERS.map(({ folder, label, icon }) => {
+        {FOLDER_DEFS.map(({ folder, tkey, icon }) => {
+          const label = t(tkey);
           const isActive = activeFolder === folder;
           const count = folder === null
             ? allMsgs.length
@@ -256,14 +259,14 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
             setComposing(false);
             setReplyInit(undefined);
             void qc.invalidateQueries({ queryKey: ['messages'] });
-            toast.show('success', 'Отправлено');
+            toast.show('success', t('toastSent'));
           }}
           onCancel={() => { setComposing(false); setReplyInit(undefined); }}
         />
       )}
 
       {!composing && msgs.length === 0 && (
-        <div style={{ color: 'var(--ox-fg-dim)', fontSize: 16, padding: '16px 0' }}>📭 Нет сообщений</div>
+        <div style={{ color: 'var(--ox-fg-dim)', fontSize: 16, padding: '16px 0' }}>📭 {t('empty')}</div>
       )}
 
       {!composing && msgs.length > 0 && (
@@ -291,7 +294,7 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
                       {m.subject}
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
-                      {m.from_username || 'Система'} · {new Date(m.created_at).toLocaleString('ru-RU')}
+                      {m.from_username || t('senderSystem')} · {new Date(m.created_at).toLocaleString('ru-RU')}
                     </div>
                   </div>
                   {unread && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ox-accent)', flexShrink: 0 }} />}
@@ -301,7 +304,7 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
                     style={{ flexShrink: 0, opacity: 0.5 }}
                     disabled={del.isPending}
                     onClick={(e) => { e.stopPropagation(); del.mutate(m.id); }}
-                    title="Удалить"
+                    title={t('deleteTitle')}
                   >
                     ✕
                   </button>
@@ -321,9 +324,9 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
 
       {confirmDelAll && (
         <Confirm
-          title="Удалить сообщения"
-          message={activeFolder === null ? 'Удалить все сообщения?' : 'Удалить все сообщения в этой папке?'}
-          confirmLabel="Удалить"
+          title={t('confirmDelAllTitle')}
+          message={activeFolder === null ? t('confirmDelAllAll') : t('confirmDelAllFolder')}
+          confirmLabel={t('confirmDelLabel')}
           danger
           onConfirm={() => { setConfirmDelAll(false); delAll.mutate(); }}
           onCancel={() => setConfirmDelAll(false)}
@@ -334,6 +337,7 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
 }
 
 function ComposeForm({ init, onSent, onCancel }: { init?: ReplyInit | undefined; onSent: () => void; onCancel: () => void }) {
+  const { t } = useTranslation('messagesUi');
   const [to, setTo] = useState(init?.to ?? '');
   const [subject, setSubject] = useState(init?.subject ?? '');
   const [body, setBody] = useState('');
@@ -342,35 +346,36 @@ function ComposeForm({ init, onSent, onCancel }: { init?: ReplyInit | undefined;
   const send = useMutation({
     mutationFn: () => api.post<void>('/api/messages', { to, subject, body }),
     onSuccess: onSent,
-    onError: (e) => setError(e instanceof Error ? e.message : 'Ошибка'),
+    onError: (e) => setError(e instanceof Error ? e.message : t('composeError')),
   });
 
   return (
     <div className="ox-panel" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ fontSize: 15, fontWeight: 700 }}>Написать сообщение</div>
+      <div style={{ fontSize: 15, fontWeight: 700 }}>{t('composeTitle')}</div>
       <div>
-        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Кому</label>
-        <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="имя игрока" style={{ width: '100%' }} />
+        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>{t('composeTo')}</label>
+        <input value={to} onChange={(e) => setTo(e.target.value)} placeholder={t('composeToPh')} style={{ width: '100%' }} />
       </div>
       <div>
-        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>Тема</label>
-        <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="тема сообщения" style={{ width: '100%' }} />
+        <label style={{ fontSize: 14, color: 'var(--ox-fg-dim)', display: 'block', marginBottom: 4 }}>{t('composeSubject')}</label>
+        <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('composeSubjectPh')} style={{ width: '100%' }} />
       </div>
       <div>
-        <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={5} style={{ width: '100%', boxSizing: 'border-box' }} placeholder="текст сообщения…" />
+        <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={5} style={{ width: '100%', boxSizing: 'border-box' }} placeholder={t('composeBodyPh')} />
       </div>
       {error && <div className="ox-alert ox-alert-danger">{error}</div>}
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" className="btn" disabled={send.isPending || !to || !subject} onClick={() => send.mutate()}>
-          {send.isPending ? '…' : 'Отправить'}
+          {send.isPending ? '…' : t('composeSend')}
         </button>
-        <button type="button" className="btn-ghost" onClick={onCancel}>Отмена</button>
+        <button type="button" className="btn-ghost" onClick={onCancel}>{t('composeCancel')}</button>
       </div>
     </div>
   );
 }
 
 function MessageDetail({ message, onReply, onFleetMission }: { message: Message; onReply: (m: Message) => void; onFleetMission?: FleetMissionCb }) {
+  const { t } = useTranslation('messagesUi');
   const report = useQuery({
     queryKey: ['battle-report', message.battle_report_id],
     queryFn: () => api.get<BattleReportFull>(`/api/battle-reports/${message.battle_report_id}`),
@@ -391,7 +396,7 @@ function MessageDetail({ message, onReply, onFleetMission }: { message: Message;
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <h3 style={{ margin: 0, fontSize: 15 }}>{message.subject}</h3>
       <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>
-        От: <span style={{ color: 'var(--ox-fg-dim)' }}>{message.from_username || 'Система'}</span>
+        {t('from')} <span style={{ color: 'var(--ox-fg-dim)' }}>{message.from_username || t('senderSystem')}</span>
         {' · '}
         {new Date(message.created_at).toLocaleString('ru-RU')}
       </div>
@@ -399,26 +404,26 @@ function MessageDetail({ message, onReply, onFleetMission }: { message: Message;
       {message.from_user_id && (
         <div>
           <button type="button" className="btn-ghost btn-sm" onClick={() => onReply(message)}>
-            ↩ Ответить
+            {t('reply')}
           </button>
         </div>
       )}
 
       {message.battle_report_id && (
         <div style={{ borderTop: '1px solid var(--ox-border)', paddingTop: 12 }}>
-          {report.isLoading && <div style={{ color: 'var(--ox-fg-muted)' }}>Загрузка отчёта…</div>}
+          {report.isLoading && <div style={{ color: 'var(--ox-fg-muted)' }}>{t('loading')}</div>}
           {report.data && <BattleReportView data={report.data} onFleetMission={onFleetMission} />}
         </div>
       )}
       {message.espionage_report_id && (
         <div style={{ borderTop: '1px solid var(--ox-border)', paddingTop: 12 }}>
-          {espionage.isLoading && <div style={{ color: 'var(--ox-fg-muted)' }}>Загрузка…</div>}
+          {espionage.isLoading && <div style={{ color: 'var(--ox-fg-muted)' }}>{t('loadingShort')}</div>}
           {espionage.data && <EspionageReportView data={espionage.data} />}
         </div>
       )}
       {message.expedition_report_id && (
         <div style={{ borderTop: '1px solid var(--ox-border)', paddingTop: 12 }}>
-          {expedition.isLoading && <div style={{ color: 'var(--ox-fg-muted)' }}>Загрузка…</div>}
+          {expedition.isLoading && <div style={{ color: 'var(--ox-fg-muted)' }}>{t('loadingShort')}</div>}
           {expedition.data && <ExpeditionReportView data={expedition.data} />}
         </div>
       )}
@@ -427,15 +432,16 @@ function MessageDetail({ message, onReply, onFleetMission }: { message: Message;
 }
 
 function ExpeditionReportView({ data }: { data: ExpeditionReportFull }) {
+  const { t } = useTranslation('messagesUi');
   const outcomeText: Record<string, string> = {
-    resources: 'Найдены ресурсы', artefact: 'Найден артефакт',
-    extra_planet: 'Обнаружена новая планета', pirates: 'Столкновение с пиратами',
-    loss: 'Потери', nothing: 'Ничего не найдено',
+    resources: t('expedResources'), artefact: t('expedArtefact'),
+    extra_planet: t('expedExtraPlanet'), pirates: t('expedPirates'),
+    loss: t('expedLoss'), nothing: t('expedNothing'),
   };
   return (
     <div>
-      <div style={{ fontWeight: 700, marginBottom: 8 }}>🌌 Отчёт экспедиции</div>
-      <div style={{ marginBottom: 8 }}>Результат: <b>{outcomeText[data.outcome] ?? data.outcome}</b></div>
+      <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('expedTitle')}</div>
+      <div style={{ marginBottom: 8 }}>{t('expedResult')} <b>{outcomeText[data.outcome] ?? data.outcome}</b></div>
       <pre style={{ background: 'var(--ox-bg-hover)', padding: 10, borderRadius: 6, fontSize: 14, overflow: 'auto' }}>
         {JSON.stringify(data.report, null, 2)}
       </pre>
@@ -444,17 +450,18 @@ function ExpeditionReportView({ data }: { data: ExpeditionReportFull }) {
 }
 
 function EspionageReportView({ data }: { data: EspionageReportFull }) {
+  const { t } = useTranslation('messagesUi');
   const r = data.report;
   return (
     <div>
-      <div style={{ fontWeight: 700, marginBottom: 8 }}>🔭 Шпионский отчёт</div>
-      <div style={{ fontSize: 15, marginBottom: 4 }}>Соотношение: {r.ratio} · Зонды: {r.probes}</div>
+      <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('spyTitle')}</div>
+      <div style={{ fontSize: 15, marginBottom: 4 }}>{t('spyRatio')}: {r.ratio} · {t('spyProbes')}: {r.probes}</div>
       <div style={{ fontSize: 15, marginBottom: 8 }}>
         🟠 {r.metal.toLocaleString('ru-RU')} · 💎 {r.silicon.toLocaleString('ru-RU')} · 💧 {r.hydrogen.toLocaleString('ru-RU')}
       </div>
-      {r.ships && <UnitMapBlock title="Корабли" data={r.ships} />}
-      {r.defense && <UnitMapBlock title="Оборона" data={r.defense} />}
-      {r.buildings && <UnitMapBlock title="Здания" data={r.buildings} />}
+      {r.ships && <UnitMapBlock title={t('spyShips')} data={r.ships} />}
+      {r.defense && <UnitMapBlock title={t('spyDefense')} data={r.defense} />}
+      {r.buildings && <UnitMapBlock title={t('spyBuildings')} data={r.buildings} />}
     </div>
   );
 }
@@ -477,6 +484,7 @@ function UnitMapBlock({ title, data }: { title: string; data: Record<string, num
 }
 
 function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; onFleetMission?: FleetMissionCb }) {
+  const { t } = useTranslation('messagesUi');
   const r = data.report;
   const isAttackerWin = r.winner === 'attackers';
   const isDefenderWin = r.winner === 'defenders';
@@ -484,16 +492,16 @@ function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; on
   const hasLoot = data.loot_metal > 0 || data.loot_silicon > 0 || data.loot_hydrogen > 0;
 
   const winnerColor = isAttackerWin ? 'var(--ox-accent)' : isDefenderWin ? 'var(--ox-success)' : 'var(--ox-warning)';
-  const winnerText = isAttackerWin ? '⚔️ Победа атакующих'
-    : isDefenderWin ? '🛡 Победа защитников'
-    : '⚖️ Ничья';
+  const winnerText = isAttackerWin ? t('winnerAttackers')
+    : isDefenderWin ? t('winnerDefenders')
+    : t('winnerDraw');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: winnerColor }}>{winnerText}</div>
-        <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>Раундов: {r.rounds}</span>
+        <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>{t('rounds')} {r.rounds}</span>
         {hasDst && (
           <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
             [{data.dst_galaxy}:{data.dst_system}:{data.dst_position}]
@@ -506,7 +514,7 @@ function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; on
             style={{ fontSize: 13 }}
             onClick={() => onFleetMission(data.dst_galaxy!, data.dst_system!, data.dst_position!, false, 10)}
           >
-            ⚔️ Атаковать
+            {t('attackBtn')}
           </button>
         )}
       </div>
@@ -514,11 +522,11 @@ function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; on
       {/* Participants */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--ox-accent)', background: 'rgba(99,217,255,0.05)' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ox-accent)', letterSpacing: '0.08em', marginBottom: 4 }}>АТАКУЮЩИЙ</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ox-accent)', letterSpacing: '0.08em', marginBottom: 4 }}>{t('labelAttacker')}</div>
           <div style={{ fontSize: 15 }}>{data.attacker_username || '—'}</div>
         </div>
         <div style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--ox-success)', background: 'rgba(80,200,120,0.05)' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ox-success)', letterSpacing: '0.08em', marginBottom: 4 }}>ЗАЩИТНИК</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ox-success)', letterSpacing: '0.08em', marginBottom: 4 }}>{t('labelDefender')}</div>
           <div style={{ fontSize: 15 }}>{data.defender_username || '—'}</div>
         </div>
       </div>
@@ -526,7 +534,7 @@ function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; on
       {/* Loot */}
       {hasLoot && (
         <div style={{ padding: '8px 14px', background: 'var(--ox-surface)', borderRadius: 6, border: '1px solid var(--ox-border)' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', marginRight: 12 }}>ДОБЫЧА</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', marginRight: 12 }}>{t('labelLoot')}</span>
           {data.loot_metal > 0 && <span style={{ marginRight: 10, fontSize: 15 }}>🟠 {data.loot_metal.toLocaleString('ru-RU')}</span>}
           {data.loot_silicon > 0 && <span style={{ marginRight: 10, fontSize: 15 }}>💎 {data.loot_silicon.toLocaleString('ru-RU')}</span>}
           {data.loot_hydrogen > 0 && <span style={{ fontSize: 15 }}>💧 {data.loot_hydrogen.toLocaleString('ru-RU')}</span>}
@@ -535,17 +543,17 @@ function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; on
 
       {/* Sides */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        {r.attackers?.[0] && <SideLosses title="Атакующие" side={r.attackers[0]} accentColor="var(--ox-accent)" />}
-        {r.defenders?.[0] && <SideLosses title="Защитники" side={r.defenders[0]} accentColor="var(--ox-success)" />}
+        {r.attackers?.[0] && <SideLosses title={t('sidesAttackers')} side={r.attackers[0]} accentColor="var(--ox-accent)" />}
+        {r.defenders?.[0] && <SideLosses title={t('sidesDefenders')} side={r.defenders[0]} accentColor="var(--ox-success)" />}
       </div>
 
       {/* Rounds trace */}
       {r.rounds_trace && r.rounds_trace.length > 0 && (
         <details style={{ fontSize: 14 }}>
-          <summary style={{ cursor: 'pointer', color: 'var(--ox-fg-muted)', marginBottom: 6 }}>Раунды по раундам</summary>
+          <summary style={{ cursor: 'pointer', color: 'var(--ox-fg-muted)', marginBottom: 6 }}>{t('roundsTrace')}</summary>
           <div style={{ overflowX: 'auto' }}>
             <table className="ox-table" style={{ margin: 0 }}>
-              <thead><tr><th>#</th><th style={{ color: 'var(--ox-accent)' }}>Атакующих</th><th style={{ color: 'var(--ox-success)' }}>Защитников</th></tr></thead>
+              <thead><tr><th>{t('thRound')}</th><th style={{ color: 'var(--ox-accent)' }}>{t('thAttackers')}</th><th style={{ color: 'var(--ox-success)' }}>{t('thDefenders')}</th></tr></thead>
               <tbody>
                 {r.rounds_trace.map((row) => (
                   <tr key={row.index}>
@@ -564,13 +572,14 @@ function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; on
 }
 
 function SideLosses({ title, side, accentColor }: { title: string; side: SideResult; accentColor: string }) {
+  const { t } = useTranslation('messagesUi');
   const lost = side.lost_metal + side.lost_silicon + side.lost_hydrogen;
   return (
     <div style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${accentColor}`, background: `${accentColor}0d` }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: accentColor, letterSpacing: '0.08em', marginBottom: 6 }}>{title.toUpperCase()}</div>
       {lost > 0 && (
         <div style={{ fontSize: 13, color: 'var(--ox-danger)', marginBottom: 6, fontFamily: 'var(--ox-mono)' }}>
-          Потери: {side.lost_metal > 0 && `🟠${side.lost_metal.toLocaleString('ru-RU')} `}
+          {t('sideLosses')} {side.lost_metal > 0 && `🟠${side.lost_metal.toLocaleString('ru-RU')} `}
           {side.lost_silicon > 0 && `💎${side.lost_silicon.toLocaleString('ru-RU')} `}
           {side.lost_hydrogen > 0 && `💧${side.lost_hydrogen.toLocaleString('ru-RU')}`}
         </div>

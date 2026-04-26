@@ -6,17 +6,10 @@ import type { Artefact } from '@/api/types';
 import { useToast } from '@/ui/Toast';
 import { Countdown } from '@/ui/Countdown';
 import { ScreenSkeleton } from '@/ui/Skeleton';
-
-const STATE_LABEL: Record<string, string> = {
-  held: '📦 В инвентаре',
-  active: '✅ Активен',
-  delayed: '⏳ Активируется',
-  listed: '🏷 На продаже',
-  expired: '💀 Истёк',
-  consumed: '⚡ Использован',
-};
+import { useTranslation } from '@/i18n/i18n';
 
 export function ArtefactsScreen() {
+  const { t } = useTranslation('artefactsUi');
   const qc = useQueryClient();
   const toast = useToast();
   const [sellingID, setSellingID] = useState<string | null>(null);
@@ -41,11 +34,11 @@ export function ArtefactsScreen() {
     onSuccess: (a) => {
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('success', 'Артефакт', `${nameOf(a.unit_id)} активирован`);
+      toast.show('success', t('toastArtefact'), t('toastActivated', { name: nameOf(a.unit_id) }));
     },
     onError: (err, _id, ctx) => {
       if (ctx?.prev) qc.setQueryData(['artefacts'], ctx.prev);
-      toast.show('danger', 'Ошибка активации', err instanceof Error ? err.message : '');
+      toast.show('danger', t('toastActivateErr'), err instanceof Error ? err.message : '');
     },
   });
   const deactivate = useMutation({
@@ -61,11 +54,11 @@ export function ArtefactsScreen() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('info', 'Артефакт деактивирован');
+      toast.show('info', t('toastDeactivated'));
     },
     onError: (err, _id, ctx) => {
       if (ctx?.prev) qc.setQueryData(['artefacts'], ctx.prev);
-      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : '');
+      toast.show('danger', t('toastError'), err instanceof Error ? err.message : '');
     },
   });
   const sell = useMutation({
@@ -83,11 +76,11 @@ export function ArtefactsScreen() {
       setSellingID(null);
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
       void qc.invalidateQueries({ queryKey: ['artefact-market'] });
-      toast.show('success', 'Артефакт выставлен на продажу');
+      toast.show('success', t('toastListed'));
     },
     onError: (err, _p, ctx) => {
       if (ctx?.prev) qc.setQueryData(['artefacts'], ctx.prev);
-      toast.show('danger', 'Ошибка продажи', err instanceof Error ? err.message : '');
+      toast.show('danger', t('toastSellErr'), err instanceof Error ? err.message : '');
     },
   });
 
@@ -107,37 +100,50 @@ export function ArtefactsScreen() {
     return <ScreenSkeleton />;
   }
 
+  const stateLabel = (state: string): string => {
+    if (state === 'held') return t('stateHeld');
+    if (state === 'active') return t('stateActive');
+    if (state === 'delayed') return t('stateDelayed');
+    if (state === 'listed') return t('stateListed');
+    if (state === 'expired') return t('stateExpired');
+    if (state === 'consumed') return t('stateConsumed');
+    return state;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-        ✨ Артефакты
+        {t('title')}
       </h2>
 
       {items.length === 0 && (
         <div className="ox-panel" style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-dim)' }}>
-          Инвентарь пуст. Артефакты появляются как награда за бой/экспедицию или покупаются в Рынке артефактов.
+          {t('empty')}
         </div>
       )}
 
       {active.length > 0 && (
-        <ArtefactGroup title="Активные" items={active} sellingID={sellingID} priceInput={priceInput}
+        <ArtefactGroup title={t('groupActive')} items={active} sellingID={sellingID} priceInput={priceInput}
           setPriceInput={setPriceInput} openSellForm={openSellForm} confirmSell={confirmSell}
           onActivate={(id) => activate.mutate(id)} onDeactivate={(id) => deactivate.mutate(id)}
           pending={activate.isPending || deactivate.isPending || sell.isPending}
+          stateLabel={stateLabel} t={t}
         />
       )}
       {held.length > 0 && (
-        <ArtefactGroup title="В инвентаре" items={held} sellingID={sellingID} priceInput={priceInput}
+        <ArtefactGroup title={t('groupHeld')} items={held} sellingID={sellingID} priceInput={priceInput}
           setPriceInput={setPriceInput} openSellForm={openSellForm} confirmSell={confirmSell}
           onActivate={(id) => activate.mutate(id)} onDeactivate={(id) => deactivate.mutate(id)}
           pending={activate.isPending || deactivate.isPending || sell.isPending}
+          stateLabel={stateLabel} t={t}
         />
       )}
       {other.length > 0 && (
-        <ArtefactGroup title="Прочие" items={other} sellingID={sellingID} priceInput={priceInput}
+        <ArtefactGroup title={t('groupOther')} items={other} sellingID={sellingID} priceInput={priceInput}
           setPriceInput={setPriceInput} openSellForm={openSellForm} confirmSell={confirmSell}
           onActivate={(id) => activate.mutate(id)} onDeactivate={(id) => deactivate.mutate(id)}
           pending={activate.isPending || deactivate.isPending || sell.isPending}
+          stateLabel={stateLabel} t={t}
         />
       )}
     </div>
@@ -146,7 +152,7 @@ export function ArtefactsScreen() {
 
 function ArtefactGroup({
   title, items, sellingID, priceInput, setPriceInput,
-  openSellForm, confirmSell, onActivate, onDeactivate, pending,
+  openSellForm, confirmSell, onActivate, onDeactivate, pending, stateLabel, t,
 }: {
   title: string;
   items: Artefact[];
@@ -158,6 +164,8 @@ function ArtefactGroup({
   onActivate: (id: string) => void;
   onDeactivate: (id: string) => void;
   pending: boolean;
+  stateLabel: (state: string) => string;
+  t: (key: string, params?: Record<string, string>) => string;
 }) {
   return (
     <div>
@@ -182,7 +190,7 @@ function ArtefactGroup({
             <div className="ox-unit-card-body">
               <div className="ox-unit-card-name">{nameOf(a.unit_id)}</div>
               <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
-                {STATE_LABEL[a.state] ?? a.state}
+                {stateLabel(a.state)}
               </div>
               {(() => {
                 const meta = ARTEFACTS.find((x) => x.id === a.unit_id);
@@ -194,7 +202,7 @@ function ArtefactGroup({
               })()}
               {a.expire_at && a.state === 'active' && (
                 <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>
-                  Истекает: <Countdown finishAt={a.expire_at} />
+                  {t('expires')} <Countdown finishAt={a.expire_at} />
                 </div>
               )}
             </div>
@@ -202,10 +210,10 @@ function ArtefactGroup({
               {a.state === 'held' && sellingID !== a.id && (
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button type="button" className="btn btn-sm" style={{ flex: 1 }} disabled={pending} onClick={() => onActivate(a.id)}>
-                    Активировать
+                    {t('activate')}
                   </button>
                   <button type="button" className="btn-ghost btn-sm" disabled={pending} onClick={() => openSellForm(a.id)}>
-                    Продать
+                    {t('sell')}
                   </button>
                 </div>
               )}
@@ -224,11 +232,11 @@ function ArtefactGroup({
               )}
               {a.state === 'active' && (
                 <button type="button" className="btn-ghost btn-sm" style={{ width: '100%' }} disabled={pending} onClick={() => onDeactivate(a.id)}>
-                  Деактивировать
+                  {t('deactivate')}
                 </button>
               )}
               {a.state === 'expired' && (
-                <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', textAlign: 'center' }}>💀 Истёк</div>
+                <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', textAlign: 'center' }}>{t('expired')}</div>
               )}
             </div>
           </div>

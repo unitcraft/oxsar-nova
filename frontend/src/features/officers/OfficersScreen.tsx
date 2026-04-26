@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { useToast } from '@/ui/Toast';
 import { Countdown } from '@/ui/Countdown';
+import { useTranslation } from '@/i18n/i18n';
 
 interface Entry {
   key: string;
@@ -15,20 +16,12 @@ interface Entry {
   expires_at?: string | null;
 }
 
-const EFFECT_LABELS: Record<string, string> = {
-  produce_factor:  'Производство',
-  build_factor:    'Строительство',
-  research_factor: 'Исследования',
-  energy_factor:   'Энергия',
-  storage_factor:  'Склад',
-};
-
-function fmtEffect(effect: Record<string, number> | null | undefined): string | null {
+function fmtEffect(effect: Record<string, number> | null | undefined, effectLabel: (k: string) => string): string | null {
   if (!effect) return null;
   return Object.entries(effect)
     .filter(([, v]) => v !== 1)
     .map(([k, v]) => {
-      const label = EFFECT_LABELS[k] ?? k;
+      const label = effectLabel(k);
       const pct = Math.round((v - 1) * 100);
       return `${label} ${pct > 0 ? '+' : ''}${pct}%`;
     })
@@ -36,9 +29,19 @@ function fmtEffect(effect: Record<string, number> | null | undefined): string | 
 }
 
 export function OfficersScreen() {
+  const { t } = useTranslation('officersUi');
   const qc = useQueryClient();
   const toast = useToast();
   const [autoRenewKeys, setAutoRenewKeys] = useState<Set<string>>(new Set());
+
+  const effectLabel = (k: string): string => {
+    if (k === 'produce_factor') return t('effectProduce');
+    if (k === 'build_factor') return t('effectBuild');
+    if (k === 'research_factor') return t('effectResearch');
+    if (k === 'energy_factor') return t('effectEnergy');
+    if (k === 'storage_factor') return t('effectStorage');
+    return k;
+  };
 
   const officers = useQuery({
     queryKey: ['officers'],
@@ -75,12 +78,12 @@ export function OfficersScreen() {
       void qc.invalidateQueries({ queryKey: ['officers'] });
       void qc.invalidateQueries({ queryKey: ['artefact-market'] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('success', 'Офицер', `${e.title} активирован на ${e.duration_days} дн.`);
+      toast.show('success', t('toastTitle'), t('toastActivated', { name: e.title, days: String(e.duration_days) }));
     },
     onError: (err, _vars, ctx) => {
       if (ctx?.prevOfficers) qc.setQueryData(['officers'], ctx.prevOfficers);
       if (ctx?.prevCredit) qc.setQueryData(['artefact-market', 'credit'], ctx.prevCredit);
-      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : '');
+      toast.show('danger', t('toastError'), err instanceof Error ? err.message : '');
     },
   });
 
@@ -97,10 +100,10 @@ export function OfficersScreen() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-          🎖 Офицеры
+          {t('title')}
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>Баланс:</span>
+          <span style={{ fontSize: 14, color: 'var(--ox-fg-dim)' }}>{t('balance')}</span>
           <span style={{ fontFamily: 'var(--ox-mono)', fontWeight: 700, color: 'var(--ox-accent)', fontSize: 15 }}>
             {creditVal} cr
           </span>
@@ -108,7 +111,7 @@ export function OfficersScreen() {
       </div>
 
       {list.length === 0 ? (
-        <div style={{ color: 'var(--ox-fg-dim)', fontSize: 16 }}>Нет доступных офицеров.</div>
+        <div style={{ color: 'var(--ox-fg-dim)', fontSize: 16 }}>{t('empty')}</div>
       ) : (
         <div className="ox-cards-grid">
           {list.map((e) => {
@@ -128,23 +131,23 @@ export function OfficersScreen() {
                   <div className="ox-unit-card-name">{e.title}</div>
                   <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 4 }}>{e.description}</div>
                   <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>
-                    {e.duration_days} дн. · {e.cost_credit} cr
+                    {t('daysAndCost', { days: String(e.duration_days), cost: String(e.cost_credit) })}
                   </div>
-                  {fmtEffect(e.effect) && (
+                  {fmtEffect(e.effect, effectLabel) && (
                     <div style={{ fontSize: 13, color: 'var(--ox-success, #22c55e)', marginTop: 3 }}>
-                      ✦ {fmtEffect(e.effect)}
+                      ✦ {fmtEffect(e.effect, effectLabel)}
                     </div>
                   )}
                   {active && e.expires_at && (
                     <div style={{ fontSize: 14, color: 'var(--ox-success)', marginTop: 4 }}>
-                      Истекает: <Countdown finishAt={e.expires_at} />
+                      {t('expires')} <Countdown finishAt={e.expires_at} />
                     </div>
                   )}
                 </div>
                 <div className="ox-unit-card-footer" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {active ? (
                     <div style={{ fontSize: 14, color: 'var(--ox-success)', textAlign: 'center', fontWeight: 600 }}>
-                      ✅ Активен
+                      {t('active')}
                     </div>
                   ) : (
                     <>
@@ -154,17 +157,17 @@ export function OfficersScreen() {
                           checked={autoRenew}
                           onChange={(ev) => toggleAutoRenew(e.key, ev.target.checked)}
                         />
-                        Авто-продление
+                        {t('autoRenew')}
                       </label>
                       <button
                         type="button"
                         className={`btn btn-sm${!canAfford ? ' btn-ghost' : ''}`}
                         style={{ width: '100%' }}
                         disabled={activate.isPending || !canAfford}
-                        title={!canAfford ? 'Недостаточно кредитов' : undefined}
+                        title={!canAfford ? t('notEnoughTitle') : undefined}
                         onClick={() => activate.mutate({ key: e.key, autoRenew })}
                       >
-                        {canAfford ? `Активировать (${e.cost_credit} cr)` : 'Мало cr'}
+                        {canAfford ? t('activateBtn', { cost: String(e.cost_credit) }) : t('notEnoughCr')}
                       </button>
                     </>
                   )}
