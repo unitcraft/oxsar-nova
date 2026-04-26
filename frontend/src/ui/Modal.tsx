@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from '@/i18n/i18n';
 
 interface ModalProps {
   title: string;
@@ -9,6 +10,7 @@ interface ModalProps {
 }
 
 export function Modal({ title, onClose, children, actions, maxWidth = 480 }: ModalProps) {
+  const { t } = useTranslation('confirmUi');
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export function Modal({ title, onClose, children, actions, maxWidth = 480 }: Mod
     >
       <div className="ox-modal" style={{ maxWidth }}>
         <div className="ox-modal-title">{title}</div>
-        <button className="ox-modal-close" onClick={onClose} type="button" aria-label="Закрыть">✕</button>
+        <button className="ox-modal-close" onClick={onClose} type="button" aria-label={t('closeLabel')}>✕</button>
         <div>{children}</div>
         {actions && <div className="ox-modal-actions">{actions}</div>}
       </div>

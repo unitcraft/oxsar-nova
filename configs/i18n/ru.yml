@@ -1668,6 +1668,11 @@ galaxy:
   tradeUnion: Торговый договор
   upperInactive: Неактивен 21 день
   vacationMode: Отпуск
+confirmUi:
+  defaultTitle: Подтверждение
+  defaultConfirm: Подтвердить
+  defaultCancel: Отмена
+  closeLabel: Закрыть
 global:
   accountWillBeDeleted: Аккаунт будет удалён!
   achievement: Достижение

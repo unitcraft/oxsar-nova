@@ -2,18 +2,11 @@
 //
 // Открывается кликом по строке в таблице игроков (AdminScreen).
 // Backend: GET /api/admin/users/{id} — один агрегированный запрос.
-//
-// Из drawer'а можно:
-//   - изменить ресурсы на планете (POST /api/admin/users/{id}/resources)
-//   - выдать артефакт (POST /api/admin/users/{id}/artefacts/grant)
-//   - отобрать артефакт (DELETE /api/admin/users/{id}/artefacts/{aid})
-//
-// Все write-действия автоматически пишутся в admin_audit_log
-// через middleware на backend.
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { useTranslation } from '@/i18n/i18n';
 
 interface Planet {
   id: string; name: string; galaxy: number; system: number; position: number;
@@ -61,6 +54,7 @@ interface UserProfile {
 }
 
 export function AdminUserProfilePanel({ userID, onClose }: { userID: string; onClose: () => void }) {
+  const { t } = useTranslation('adminUi');
   const qc = useQueryClient();
   const [granularity, setGranularity] = useState<'summary' | 'economy' | 'combat' | 'audit'>('summary');
 
@@ -84,30 +78,30 @@ export function AdminUserProfilePanel({ userID, onClose }: { userID: string; onC
     >
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16, gap: 12 }}>
         <h3 style={{ margin: 0, flex: 1 }}>
-          {p ? (<>👤 {p.username} <span style={{ color: 'var(--ox-fg-muted)', fontWeight: 400, fontSize: 15 }}>{p.email}</span></>) : 'Загрузка…'}
+          {p ? (<>👤 {p.username} <span style={{ color: 'var(--ox-fg-muted)', fontWeight: 400, fontSize: 15 }}>{p.email}</span></>) : t('profileLoading')}
         </h3>
-        <button type="button" className="btn-ghost btn-sm" onClick={onClose}>✕ Закрыть</button>
+        <button type="button" className="btn-ghost btn-sm" onClick={onClose}>{t('profileCloseBtn')}</button>
       </div>
 
-      {profile.isLoading && <p>Загрузка профиля…</p>}
-      {profile.isError && <p style={{ color: 'var(--ox-danger)' }}>Ошибка загрузки</p>}
+      {profile.isLoading && <p>{t('profileLoading')}</p>}
+      {profile.isError && <p style={{ color: 'var(--ox-danger)' }}>{t('profileLoadErr')}</p>}
 
       {p && (
         <>
           <div style={{ display: 'flex', gap: 16, marginBottom: 12, flexWrap: 'wrap', fontSize: 14 }}>
-            <span><b>Роль:</b> {p.role || 'player'}</span>
-            <span><b>💳 Кредитов:</b> {p.credit.toLocaleString('ru-RU')}</span>
-            <span><b>🏆 Очков:</b> {p.score.toLocaleString('ru-RU')}</span>
-            <span><b>Зарегистрирован:</b> {fmtDate(p.created_at)}</span>
-            <span><b>Был онлайн:</b> {fmtDate(p.last_seen_at)}</span>
-            {p.banned_at && <span style={{ color: 'var(--ox-danger)' }}>⛔ Забанен {fmtDate(p.banned_at)}</span>}
+            <span><b>{t('profileLabelRole')}</b> {p.role || 'player'}</span>
+            <span><b>{t('profileLabelCredits')}</b> {p.credit.toLocaleString('ru-RU')}</span>
+            <span><b>{t('profileLabelScore')}</b> {p.score.toLocaleString('ru-RU')}</span>
+            <span><b>{t('profileLabelReg')}</b> {fmtDate(p.created_at)}</span>
+            <span><b>{t('profileLabelOnline')}</b> {fmtDate(p.last_seen_at)}</span>
+            {p.banned_at && <span style={{ color: 'var(--ox-danger)' }}>{t('profileBanned')} {fmtDate(p.banned_at)}</span>}
           </div>
 
           <div className="ox-tabs" style={{ marginBottom: 16 }}>
-            <button type="button" aria-pressed={granularity === 'summary'} onClick={() => setGranularity('summary')}>Общее</button>
-            <button type="button" aria-pressed={granularity === 'economy'} onClick={() => setGranularity('economy')}>Экономика</button>
-            <button type="button" aria-pressed={granularity === 'combat'} onClick={() => setGranularity('combat')}>Бои / отчёты</button>
-            <button type="button" aria-pressed={granularity === 'audit'} onClick={() => setGranularity('audit')}>Журнал</button>
+            <button type="button" aria-pressed={granularity === 'summary'} onClick={() => setGranularity('summary')}>{t('profileTabSummary')}</button>
+            <button type="button" aria-pressed={granularity === 'economy'} onClick={() => setGranularity('economy')}>{t('profileTabEconomy')}</button>
+            <button type="button" aria-pressed={granularity === 'combat'} onClick={() => setGranularity('combat')}>{t('profileTabCombat')}</button>
+            <button type="button" aria-pressed={granularity === 'audit'} onClick={() => setGranularity('audit')}>{t('profileTabAudit')}</button>
           </div>
 
           {granularity === 'summary' && (
@@ -123,9 +117,10 @@ export function AdminUserProfilePanel({ userID, onClose }: { userID: string; onC
 }
 
 function SummaryTab({ p, userID, onChanged }: { p: UserProfile; userID: string; onChanged: () => void }) {
+  const { t } = useTranslation('adminUi');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Section title={`🪐 Планеты (${p.planets.length})`}>
+      <Section title={`${t('sectionPlanets')} (${p.planets.length})`}>
         {p.planets.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
             <thead>
@@ -146,18 +141,18 @@ function SummaryTab({ p, userID, onChanged }: { p: UserProfile; userID: string; 
         )}
       </Section>
 
-      <Section title="⚙️ Изменить ресурсы (delta, может быть отрицательным)">
+      <Section title={t('sectionResources')}>
         <ResourceGranter userID={userID} planets={p.planets} onDone={onChanged} />
       </Section>
 
-      <Section title={`🛸 Флоты в полёте (${p.fleets.length})`}>
+      <Section title={`${t('sectionFleets')} (${p.fleets.length})`}>
         {p.fleets.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
             <thead><tr><Th>Миссия</Th><Th>State</Th><Th>Куда</Th><Th>Прилёт</Th></tr></thead>
             <tbody>
               {p.fleets.map((f) => (
                 <tr key={f.id}>
-                  <Td>{MISSION_LABEL[f.mission] ?? f.mission}</Td>
+                  <Td>{missionLabel(f.mission, t)}</Td>
                   <Td>{f.state}</Td>
                   <Td><code>[{f.dst_galaxy}:{f.dst_system}:{f.dst_position}]{f.dst_is_moon ? ' 🌑' : ''}</code></Td>
                   <Td>{fmtDate(f.arrive_at)}</Td>
@@ -168,13 +163,13 @@ function SummaryTab({ p, userID, onChanged }: { p: UserProfile; userID: string; 
         )}
       </Section>
 
-      <Section title={`⭐ Офицеры (${p.officers.length})`}>
+      <Section title={`${t('sectionOfficers')} (${p.officers.length})`}>
         {p.officers.length === 0 ? <Empty /> : (
           <ul>{p.officers.map((o) => <li key={o.key}><b>{o.key}</b> до {fmtDate(o.expires_at)}</li>)}</ul>
         )}
       </Section>
 
-      <Section title={`💎 Артефакты (${p.artefacts.length})`}>
+      <Section title={`${t('sectionArtefacts')} (${p.artefacts.length})`}>
         <ArtefactsBlock userID={userID} items={p.artefacts} onChanged={onChanged} />
       </Section>
     </div>
@@ -182,9 +177,10 @@ function SummaryTab({ p, userID, onChanged }: { p: UserProfile; userID: string; 
 }
 
 function EconomyTab({ p }: { p: UserProfile }) {
+  const { t } = useTranslation('adminUi');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Section title={`📈 Лоты рынка (${p.market_lots.length})`}>
+      <Section title={`${t('sectionMarketLots')} (${p.market_lots.length})`}>
         {p.market_lots.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
             <thead><tr><Th>Продаёт</Th><Th>Хочет</Th><Th>State</Th></tr></thead>
@@ -201,7 +197,7 @@ function EconomyTab({ p }: { p: UserProfile }) {
         )}
       </Section>
 
-      <Section title={`🏪 Лоты арт-рынка (${p.artefact_lots.length})`}>
+      <Section title={`${t('sectionArtefactLots')} (${p.artefact_lots.length})`}>
         {p.artefact_lots.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
             <thead><tr><Th>Артефакт</Th><Th>unit_id</Th><Th>Цена</Th></tr></thead>
@@ -218,7 +214,7 @@ function EconomyTab({ p }: { p: UserProfile }) {
         )}
       </Section>
 
-      <Section title={`💰 Последние транзакции ресурсов (${p.res_log.length})`}>
+      <Section title={`${t('sectionResLog')} (${p.res_log.length})`}>
         {p.res_log.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
             <thead><tr><Th>Дата</Th><Th>Reason</Th><Th>🟠</Th><Th>💎</Th><Th>💧</Th></tr></thead>
@@ -237,7 +233,7 @@ function EconomyTab({ p }: { p: UserProfile }) {
         )}
       </Section>
 
-      <Section title={`💳 Покупки кредитов (${p.purchases.length})`}>
+      <Section title={`${t('sectionPurchases')} (${p.purchases.length})`}>
         {p.purchases.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
             <thead><tr><Th>Дата</Th><Th>Пакет</Th><Th>+Кр</Th><Th>Цена</Th><Th>Статус</Th></tr></thead>
@@ -260,21 +256,22 @@ function EconomyTab({ p }: { p: UserProfile }) {
 }
 
 function CombatTab({ p }: { p: UserProfile }) {
+  const { t } = useTranslation('adminUi');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Section title={`📜 Последние отчёты (${p.reports_recent.length})`}>
+      <Section title={`${t('sectionReports')} (${p.reports_recent.length})`}>
         {p.reports_recent.length === 0 ? <Empty /> : (
           <ul>
             {p.reports_recent.map((r) => (
               <li key={`${r.kind}-${r.id}`}>
-                <b>{REPORT_LABEL[r.kind]}</b> <code>{r.id.slice(0, 8)}</code> — {fmtDate(r.created_at)}
+                <b>{reportLabel(r.kind, t)}</b> <code>{r.id.slice(0, 8)}</code> — {fmtDate(r.created_at)}
               </li>
             ))}
           </ul>
         )}
       </Section>
 
-      <Section title={`📬 Последние сообщения (${p.messages_recent.length})`}>
+      <Section title={`${t('sectionMessages')} (${p.messages_recent.length})`}>
         {p.messages_recent.length === 0 ? <Empty /> : (
           <table style={tableStyle}>
             <thead><tr><Th>Дата</Th><Th>Folder</Th><Th>Тема</Th><Th>Read</Th></tr></thead>
@@ -296,6 +293,7 @@ function CombatTab({ p }: { p: UserProfile }) {
 }
 
 function AuditTab({ userID }: { userID: string }) {
+  const { t } = useTranslation('adminUi');
   const q = useQuery({
     queryKey: ['admin-audit-target', userID],
     queryFn: () => api.get<{ entries: Array<{ id: string; action: string; admin_name: string; created_at: string; status: number }> }>(
@@ -304,7 +302,7 @@ function AuditTab({ userID }: { userID: string }) {
   });
   const entries = q.data?.entries ?? [];
   return (
-    <Section title={`🗒 Админские действия над этим игроком (${entries.length})`}>
+    <Section title={`${t('sectionAdminAudit')} (${entries.length})`}>
       {entries.length === 0 ? <Empty /> : (
         <table style={tableStyle}>
           <thead><tr><Th>Дата</Th><Th>Админ</Th><Th>Действие</Th><Th>Статус</Th></tr></thead>
@@ -325,6 +323,7 @@ function AuditTab({ userID }: { userID: string }) {
 }
 
 function ResourceGranter({ userID, planets, onDone }: { userID: string; planets: Planet[]; onDone: () => void }) {
+  const { t } = useTranslation('adminUi');
   const [planetID, setPlanetID] = useState(planets[0]?.id ?? '');
   const [m, setM] = useState(0);
   const [s, setS] = useState(0);
@@ -354,15 +353,16 @@ function ResourceGranter({ userID, planets, onDone }: { userID: string; planets:
       <NumInput label="💧" value={h} onChange={setH} />
       <button type="button" disabled={mut.isPending || (m === 0 && s === 0 && h === 0) || !planetID}
         onClick={() => mut.mutate()}>
-        Применить
+        {t('resourceApplyBtn')}
       </button>
       {mut.isSuccess && <span style={{ color: 'var(--ox-success)' }}>✓</span>}
-      {mut.isError && <span style={{ color: 'var(--ox-danger)' }}>Ошибка</span>}
+      {mut.isError && <span style={{ color: 'var(--ox-danger)' }}>✗</span>}
     </div>
   );
 }
 
 function ArtefactsBlock({ userID, items, onChanged }: { userID: string; items: ArtefactItem[]; onChanged: () => void }) {
+  const { t } = useTranslation('adminUi');
   const [unitID, setUnitID] = useState(0);
   const grant = useMutation({
     mutationFn: () => api.post(`/api/admin/users/${userID}/artefacts/grant`, { unit_id: unitID }),
@@ -377,7 +377,7 @@ function ArtefactsBlock({ userID, items, onChanged }: { userID: string; items: A
     <div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
         <NumInput label="unit_id" value={unitID} onChange={setUnitID} />
-        <button type="button" disabled={grant.isPending || unitID <= 0} onClick={() => grant.mutate()}>+ Выдать</button>
+        <button type="button" disabled={grant.isPending || unitID <= 0} onClick={() => grant.mutate()}>{t('artefactGrantBtn')}</button>
       </div>
       {items.length === 0 ? <Empty /> : (
         <table style={tableStyle}>
@@ -449,11 +449,20 @@ function sign(n: number): string {
   return n > 0 ? `+${s}` : s;
 }
 
-const MISSION_LABEL: Record<number, string> = {
-  1: 'Атака', 2: 'Разведка', 7: 'Транспорт', 8: 'Колонизация',
-  9: 'Сбор обломков', 10: 'Экспедиция', 11: 'Вторжение',
+const MISSION_KEYS: Record<number, string> = {
+  1: 'missionAttack', 2: 'missionEspionage', 7: 'missionTransport', 8: 'missionColonize',
+  9: 'missionHarvest', 10: 'missionExpedition', 11: 'missionInvasion',
 };
 
-const REPORT_LABEL: Record<ReportShort['kind'], string> = {
-  battle: '⚔ Бой', espionage: '🔭 Шпионаж', expedition: '🌌 Экспедиция',
+function missionLabel(mission: number, t: (key: string) => string): string {
+  const key = MISSION_KEYS[mission];
+  return key ? t(key) : String(mission);
+}
+
+const REPORT_KEYS: Record<ReportShort['kind'], string> = {
+  battle: 'reportBattle', espionage: 'reportEspionage', expedition: 'reportExpedition',
 };
+
+function reportLabel(kind: ReportShort['kind'], t: (key: string) => string): string {
+  return t(REPORT_KEYS[kind]);
+}

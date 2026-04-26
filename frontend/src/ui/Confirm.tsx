@@ -1,3 +1,4 @@
+import { useTranslation } from '@/i18n/i18n';
 import { Modal } from './Modal';
 
 interface ConfirmProps {
@@ -11,27 +12,28 @@ interface ConfirmProps {
 }
 
 export function Confirm({
-  title = 'Подтверждение',
+  title,
   message,
-  confirmLabel = 'Подтвердить',
-  cancelLabel = 'Отмена',
+  confirmLabel,
+  cancelLabel,
   danger = false,
   onConfirm,
   onCancel,
 }: ConfirmProps) {
+  const { t } = useTranslation('confirmUi');
   return (
     <Modal
-      title={title}
+      title={title ?? t('defaultTitle')}
       onClose={onCancel}
       actions={
         <>
-          <button type="button" className="btn-ghost" onClick={onCancel}>{cancelLabel}</button>
+          <button type="button" className="btn-ghost" onClick={onCancel}>{cancelLabel ?? t('defaultCancel')}</button>
           <button
             type="button"
             className={danger ? 'btn-danger' : ''}
             onClick={onConfirm}
           >
-            {confirmLabel}
+            {confirmLabel ?? t('defaultConfirm')}
           </button>
         </>
       }

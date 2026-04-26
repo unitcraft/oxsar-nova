@@ -1695,6 +1695,11 @@ galaxy:
   tradeUnion: ""
   upperInactive: ""
   vacationMode: ""
+confirmUi:
+  defaultTitle: "" # TODO: en
+  defaultConfirm: "" # TODO: en
+  defaultCancel: "" # TODO: en
+  closeLabel: "" # TODO: en
 global:
   accountWillBeDeleted: ""
   achievement: ""

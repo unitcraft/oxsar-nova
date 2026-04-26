@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { useTranslation } from '@/i18n/i18n';
 import { Confirm } from '@/ui/Confirm';
 import { AdminUserProfilePanel } from './AdminUserProfilePanel';
 
@@ -32,15 +33,14 @@ interface AutomsgDef {
 type AdminTab = 'users' | 'events' | 'audit';
 
 export function AdminScreen() {
+  const { t } = useTranslation('adminUi');
   const qc = useQueryClient();
   const [tab, setTab] = useState<AdminTab>('users');
   const [creditUserID, setCreditUserID] = useState('');
   const [creditAmount, setCreditAmount] = useState(0);
   const [roleUserID, setRoleUserID] = useState('');
   const [roleValue, setRoleValue] = useState('');
-  // План 14 Ф.2: drawer с карточкой игрока, открывается по кнопке в строке.
   const [profileUserID, setProfileUserID] = useState<string | null>(null);
-  // План 14 Ф.8.3: Confirm для destructive операций.
   const [pendingConfirm, setPendingConfirm] = useState<{
     message: string;
     danger: boolean;
@@ -93,17 +93,17 @@ export function AdminScreen() {
 
   return (
     <section>
-      <h2>Панель администратора</h2>
+      <h2>{t('title')}</h2>
 
       <div className="ox-tabs" style={{ marginBottom: 16 }}>
         <button type="button" aria-pressed={tab === 'users'} onClick={() => setTab('users')}>
-          👥 Игроки
+          {t('tabUsers')}
         </button>
         <button type="button" aria-pressed={tab === 'events'} onClick={() => setTab('events')}>
-          ⚡ События
+          {t('tabEvents')}
         </button>
         <button type="button" aria-pressed={tab === 'audit'} onClick={() => setTab('audit')}>
-          📜 Журнал действий
+          {t('tabAudit')}
         </button>
       </div>
 
@@ -113,17 +113,17 @@ export function AdminScreen() {
 
       {stats.data && (
         <div style={{ display: 'flex', gap: 24, marginBottom: 16, flexWrap: 'wrap' }}>
-          <StatCard label="Пользователей" value={stats.data.users} />
-          <StatCard label="Планет" value={stats.data.planets} />
-          <StatCard label="Флотов в пути" value={stats.data.fleets_active} />
-          <StatCard label="Событий в очереди" value={stats.data.events_pending} />
+          <StatCard label={t('statUsers')} value={stats.data.users} />
+          <StatCard label={t('statPlanets')} value={stats.data.planets} />
+          <StatCard label={t('statFleets')} value={stats.data.fleets_active} />
+          <StatCard label={t('statEvents')} value={stats.data.events_pending} />
         </div>
       )}
 
-      <h3>Действия</h3>
+      <h3>{t('sectionActions')}</h3>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
         <div style={{ border: '1px solid #444', padding: 12, borderRadius: 4 }}>
-          <b>Начислить кредиты</b>
+          <b>{t('creditTitle')}</b>
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <input
               placeholder="user_id"
@@ -133,7 +133,7 @@ export function AdminScreen() {
             />
             <input
               type="number"
-              placeholder="сумма"
+              placeholder={t('creditAmountPlaceholder')}
               value={creditAmount}
               onChange={(e) => setCreditAmount(Number(e.target.value))}
               style={{ width: 80 }}
@@ -143,19 +143,19 @@ export function AdminScreen() {
               disabled={!creditUserID || credit.isPending}
               onClick={() =>
                 ask(
-                  `Начислить ${creditAmount} кредитов игроку ${creditUserID.slice(0, 8)}…?`,
+                  t('creditConfirm', { amount: String(creditAmount), id: creditUserID.slice(0, 8) }),
                   () => credit.mutate({ id: creditUserID, amount: creditAmount }),
                   creditAmount < 0,
                 )
               }
             >
-              ОК
+              {t('okBtn')}
             </button>
           </div>
         </div>
 
         <div style={{ border: '1px solid #444', padding: 12, borderRadius: 4 }}>
-          <b>Установить роль</b>
+          <b>{t('roleTitle')}</b>
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <input
               placeholder="user_id"
@@ -174,12 +174,12 @@ export function AdminScreen() {
               disabled={!roleUserID || setRole.isPending}
               onClick={() =>
                 ask(
-                  `Назначить роль "${roleValue || 'user'}" игроку ${roleUserID.slice(0, 8)}…? Смена роли меняет его возможности в игре.`,
+                  t('roleConfirm', { role: roleValue || 'user', id: roleUserID.slice(0, 8) }),
                   () => setRole.mutate({ id: roleUserID, role: roleValue }),
                 )
               }
             >
-              ОК
+              {t('okBtn')}
             </button>
           </div>
         </div>
@@ -187,18 +187,18 @@ export function AdminScreen() {
 
       <AutomsgsPanel />
 
-      <h3>Пользователи</h3>
+      <h3>{t('sectionUsers')}</h3>
       {users.isLoading && <p>…</p>}
       {users.data && (
         <table className="ox-table">
           <thead>
             <tr>
-              <th>Игрок</th>
-              <th>Роль</th>
-              <th>Кредиты</th>
-              <th>Очки</th>
-              <th>Создан</th>
-              <th>Действия</th>
+              <th>{t('colPlayer')}</th>
+              <th>{t('colRole')}</th>
+              <th>{t('colCredits')}</th>
+              <th>{t('colScore')}</th>
+              <th>{t('colCreated')}</th>
+              <th>{t('colActions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -217,25 +217,25 @@ export function AdminScreen() {
                     type="button"
                     className="btn-ghost btn-sm"
                     onClick={() => setProfileUserID(u.id)}
-                    title="Открыть полный профиль игрока"
+                    title={t('profileBtn')}
                   >
-                    🔍 Профиль
+                    {t('profileBtn')}
                   </button>
                   {u.banned_at ? (
                     <button
                       type="button"
                       disabled={unban.isPending}
-                      onClick={() => ask(`Снять бан с игрока ${u.username}?`, () => unban.mutate(u.id), false)}
+                      onClick={() => ask(t('unbanConfirm', { name: u.username }), () => unban.mutate(u.id), false)}
                     >
-                      Разбан
+                      {t('unbanBtn')}
                     </button>
                   ) : (
                     <button
                       type="button"
                       disabled={ban.isPending}
-                      onClick={() => ask(`Забанить игрока ${u.username}? Он не сможет войти в игру, пока бан не будет снят.`, () => ban.mutate(u.id))}
+                      onClick={() => ask(t('banConfirm', { name: u.username }), () => ban.mutate(u.id))}
                     >
-                      Бан
+                      {t('banBtn')}
                     </button>
                   )}
                 </td>
@@ -255,9 +255,10 @@ export function AdminScreen() {
 
       {pendingConfirm && (
         <Confirm
-          title="Подтверждение админского действия"
+          title={t('confirmTitle')}
           message={pendingConfirm.message}
-          confirmLabel="Выполнить"
+          confirmLabel={t('confirmBtn')}
+          cancelLabel={t('cancelBtn')}
           danger={pendingConfirm.danger}
           onConfirm={() => {
             pendingConfirm.action();
@@ -271,6 +272,7 @@ export function AdminScreen() {
 }
 
 function AutomsgsPanel() {
+  const { t } = useTranslation('adminUi');
   const qc = useQueryClient();
   const [editing, setEditing] = useState<AutomsgDef | null>(null);
 
@@ -296,15 +298,15 @@ function AutomsgsPanel() {
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <h3>Шаблоны сообщений</h3>
+      <h3>{t('sectionAutomsgs')}</h3>
       {defs.isLoading && <p>…</p>}
       {list.length > 0 && (
         <table className="ox-table" style={{ marginBottom: 8 }}>
           <thead>
             <tr>
-              <th>Ключ</th>
-              <th>Заголовок</th>
-              <th>Папка</th>
+              <th>{t('automsgColKey')}</th>
+              <th>{t('automsgColTitle')}</th>
+              <th>{t('automsgColFolder')}</th>
               <th />
             </tr>
           </thead>
@@ -316,7 +318,7 @@ function AutomsgsPanel() {
                 <td>{d.folder}</td>
                 <td>
                   <button type="button" onClick={() => setEditing({ ...d })}>
-                    Правка
+                    {t('automsgEditBtn')}
                   </button>
                 </td>
               </tr>
@@ -329,7 +331,7 @@ function AutomsgsPanel() {
           <b style={{ fontFamily: 'monospace' }}>{editing.key}</b>
           <div style={{ marginTop: 8 }}>
             <label>
-              Заголовок:{' '}
+              {t('automsgTitleLabel')}{' '}
               <input
                 value={editing.title}
                 onChange={(e) => setEditing({ ...editing, title: e.target.value })}
@@ -339,7 +341,7 @@ function AutomsgsPanel() {
           </div>
           <div style={{ marginTop: 8 }}>
             <label>
-              Папка:{' '}
+              {t('automsgFolderLabel')}{' '}
               <input
                 type="number"
                 value={editing.folder}
@@ -349,7 +351,7 @@ function AutomsgsPanel() {
             </label>
           </div>
           <div style={{ marginTop: 8 }}>
-            <div style={{ marginBottom: 4 }}>Шаблон тела (поддерживает {'{{variable}}'})</div>
+            <div style={{ marginBottom: 4 }}>{t('automsgBodyLabel')}</div>
             <textarea
               value={editing.body_template}
               onChange={(e) => setEditing({ ...editing, body_template: e.target.value })}
@@ -359,15 +361,15 @@ function AutomsgsPanel() {
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button type="button" disabled={save.isPending} onClick={() => save.mutate(editing)}>
-              Сохранить
+              {t('automsgSaveBtn')}
             </button>
             <button type="button" onClick={() => setEditing(null)}>
-              Отмена
+              {t('automsgCancelBtn')}
             </button>
           </div>
           {save.isError && (
             <p className="ox-error">
-              {save.error instanceof Error ? save.error.message : 'ошибка'}
+              {save.error instanceof Error ? save.error.message : t('automsgSaveErr')}
             </p>
           )}
         </div>
@@ -396,6 +398,7 @@ interface EventsStats {
 }
 
 function AdminEventsMonitor() {
+  const { t } = useTranslation('adminUi');
   const qc = useQueryClient();
   const [stateFilter, setStateFilter] = useState<'all' | 'wait' | 'error' | 'ok'>('error');
 
@@ -428,7 +431,7 @@ function AdminEventsMonitor() {
 
   return (
     <section style={{ marginBottom: 16 }}>
-      <h3>Монитор событий</h3>
+      <h3>{t('eventsMonitorTitle')}</h3>
 
       {stats.data && (
         <div style={{ display: 'flex', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -444,7 +447,7 @@ function AdminEventsMonitor() {
 
       {stats.data && stats.data.top_errors_24h?.length > 0 && (
         <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--ox-fg-dim)' }}>
-          Топ ошибок за 24ч:
+          {t('eventsTopErrors')}
           {' '}
           {stats.data.top_errors_24h.map((e) => (
             <span key={e.kind} style={{ marginRight: 8, fontFamily: 'var(--ox-mono)' }}>
@@ -467,21 +470,21 @@ function AdminEventsMonitor() {
         ))}
       </div>
 
-      {events.isLoading && <div>Загрузка…</div>}
+      {events.isLoading && <div>{t('eventsLoading')}</div>}
       {events.data && events.data.events.length === 0 && (
-        <div style={{ color: 'var(--ox-fg-muted)', fontSize: 14 }}>нет событий</div>
+        <div style={{ color: 'var(--ox-fg-muted)', fontSize: 14 }}>{t('eventsEmpty')}</div>
       )}
       {events.data && events.data.events.length > 0 && (
         <div style={{ overflowX: 'auto' }}>
           <table className="ox-table" style={{ fontSize: 14 }}>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Kind</th>
-                <th>State</th>
-                <th>Att</th>
-                <th>Fire</th>
-                <th>Last error</th>
+                <th>{t('eventsColId')}</th>
+                <th>{t('eventsColKind')}</th>
+                <th>{t('eventsColState')}</th>
+                <th>{t('eventsColAtt')}</th>
+                <th>{t('eventsColFire')}</th>
+                <th>{t('eventsColLastErr')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -528,10 +531,6 @@ function StatCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-// ── Events tab (план 14 Ф.3) ────────────────────────────────────────
-// Объединяет существующий AdminEventsMonitor (активная очередь wait/error)
-// с dead-letter explorer'ом.
-
 interface DeadEvent {
   id: string;
   user_id?: string | null;
@@ -545,6 +544,7 @@ interface DeadEvent {
 }
 
 function AdminEventsTab() {
+  const { t } = useTranslation('adminUi');
   const qc = useQueryClient();
   const dead = useQuery({
     queryKey: ['admin-events-dead'],
@@ -567,21 +567,21 @@ function AdminEventsTab() {
       <AdminEventsMonitor />
 
       <div>
-        <h3 style={{ margin: '0 0 8px 0' }}>☠ Dead-letter ({list.length})</h3>
-        {dead.isLoading && <p>Загрузка…</p>}
-        {dead.isError && <p style={{ color: 'var(--ox-danger)' }}>Ошибка загрузки dead-letter</p>}
+        <h3 style={{ margin: '0 0 8px 0' }}>{t('deadTitle')} ({list.length})</h3>
+        {dead.isLoading && <p>{t('deadLoading')}</p>}
+        {dead.isError && <p style={{ color: 'var(--ox-danger)' }}>{t('deadLoadErr')}</p>}
         {list.length === 0 && !dead.isLoading && (
-          <p style={{ color: 'var(--ox-fg-muted)' }}>Пусто. События попадают сюда после N неудачных попыток.</p>
+          <p style={{ color: 'var(--ox-fg-muted)' }}>{t('deadEmpty')}</p>
         )}
         {list.length > 0 && (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '1px solid #444' }}>
-                <th style={{ padding: '6px 8px' }}>failed_at</th>
-                <th style={{ padding: '6px 8px' }}>kind</th>
-                <th style={{ padding: '6px 8px' }}>attempt</th>
-                <th style={{ padding: '6px 8px' }}>Ошибка</th>
-                <th style={{ padding: '6px 8px' }}>user/planet</th>
+                <th style={{ padding: '6px 8px' }}>{t('deadColFailed')}</th>
+                <th style={{ padding: '6px 8px' }}>{t('deadColKind')}</th>
+                <th style={{ padding: '6px 8px' }}>{t('deadColAttempt')}</th>
+                <th style={{ padding: '6px 8px' }}>{t('deadColError')}</th>
+                <th style={{ padding: '6px 8px' }}>{t('deadColTarget')}</th>
                 <th style={{ padding: '6px 8px' }} />
               </tr>
             </thead>
@@ -606,7 +606,7 @@ function AdminEventsTab() {
                       className="btn-sm"
                       disabled={resurrect.isPending}
                       onClick={() => {
-                        if (confirm(`Вернуть событие ${e.id.slice(0, 8)} в активную очередь?`)) {
+                        if (confirm(t('deadRetryConfirm', { id: e.id.slice(0, 8) }))) {
                           resurrect.mutate(e.id);
                         }
                       }}
@@ -623,10 +623,6 @@ function AdminEventsTab() {
     </div>
   );
 }
-
-// ── Audit log tab ───────────────────────────────────────────────────
-// План 14 Ф.1.2: журнал деструктивных действий в /api/admin/*.
-// Middleware в backend пишет записи после каждого успешного write-запроса.
 
 interface AuditEntry {
   id: string;
@@ -649,6 +645,7 @@ interface AuditResponse {
 }
 
 function AdminAuditTab() {
+  const { t } = useTranslation('adminUi');
   const [actionFilter, setActionFilter] = useState('');
   const [targetFilter, setTargetFilter] = useState('');
 
@@ -670,36 +667,36 @@ function AdminAuditTab() {
     <div>
       <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
         <input
-          placeholder="action (users.ban, events.retry, …)"
+          placeholder={t('auditActionPlaceholder')}
           value={actionFilter}
           onChange={(e) => setActionFilter(e.target.value)}
           style={{ minWidth: 220 }}
         />
         <input
-          placeholder="target_id"
+          placeholder={t('auditTargetPlaceholder')}
           value={targetFilter}
           onChange={(e) => setTargetFilter(e.target.value)}
           style={{ minWidth: 220 }}
         />
-        <button type="button" onClick={() => q.refetch()}>↻ Обновить</button>
+        <button type="button" onClick={() => q.refetch()}>{t('auditRefreshBtn')}</button>
       </div>
 
-      {q.isLoading && <p>Загрузка…</p>}
-      {q.isError && <p style={{ color: 'var(--ox-danger)' }}>Ошибка загрузки журнала</p>}
+      {q.isLoading && <p>{t('auditLoading')}</p>}
+      {q.isError && <p style={{ color: 'var(--ox-danger)' }}>{t('auditLoadErr')}</p>}
       {q.data && entries.length === 0 && (
-        <p style={{ color: 'var(--ox-fg-muted)' }}>Журнал пуст. Выполните любое write-действие в админке — запись появится здесь.</p>
+        <p style={{ color: 'var(--ox-fg-muted)' }}>{t('auditEmpty')}</p>
       )}
 
       {entries.length > 0 && (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ textAlign: 'left', borderBottom: '1px solid #444' }}>
-              <th style={{ padding: '6px 8px' }}>Дата</th>
-              <th style={{ padding: '6px 8px' }}>Админ</th>
-              <th style={{ padding: '6px 8px' }}>Действие</th>
-              <th style={{ padding: '6px 8px' }}>Цель</th>
-              <th style={{ padding: '6px 8px' }}>Payload</th>
-              <th style={{ padding: '6px 8px' }}>IP</th>
+              <th style={{ padding: '6px 8px' }}>{t('auditColDate')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('auditColAdmin')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('auditColAction')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('auditColTarget')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('auditColPayload')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('auditColIp')}</th>
             </tr>
           </thead>
           <tbody>
