@@ -197,7 +197,8 @@ class JwtAuth
         $now      = time();
 
         // Все NOT NULL без default из legacy-схемы na_user (16 полей).
-        // activation — varbinary(32), пустая строка = «активирован» (нет ожидающего токена).
+        // activation — varbinary(32) (хеш email-токена), пустая строка = «активирован».
+        // dm_points/regtime/last/etc — числовые, передаём 0/$now.
         $db->query(
             "INSERT INTO `" . PREFIX . "user`"
             . " (global_user_id, username, email, temp_email, languageid, timezone,"
