@@ -901,3 +901,51 @@ Frontend-only: `unitMeta.requires` из catalog, `fmtReqs()` для формат
 - **Таблицы**: cell padding 6→8px, th font-size уменьшен до 13.5px с letter-spacing
 - **Контейнер**: padding `16px` → `20px 28px`
 - **Убран inline `lineHeight: 1.6`** в JSX WikiScreen, который перекрывал CSS
+
+---
+
+## Итерация 37 — game-origin: legacy-вселенная (2026-04-26)
+
+**Контекст**: запуск второй вселенной на базе оригинальной игры oxsar2 (PHP/MySQL).
+Цель — сохранить игру без переделки геймплея и дизайна, убрать только Yii и интегрировать
+с порталом (plan-36).
+
+### Что сделано
+
+**37.1–37.2 — Копирование и ревизия**
+- Слепое копирование `d:\Sources\oxsar2\www\` → `projects/game-origin/`
+- Ревизия: Yii-зависимостей 106+23 места, все управляемы
+- БД-слой уже PDO через Yii; два файла с `mysql_*` — один отключается (платежи)
+
+**37.3 — Удаление Yii без изменения логики**
+- Все `Yii::log()` → `error_log()`
+- `Yii::app()->end()` → `exit()`
+- `Yii::app()->user->*` → `$_SESSION[...]`
+- `Yii::app()->cache->*` → заглушки `false`
+- `Yii::app()->socialAPI->getSuffix()` → `''`
+- `DB_MYSQL_PDO::init()` переписан: `Yii::app()->db` → `new PDO("mysql:...")`
+- Удалены: `src_yii_protected/`, `src_pear/`, OAuth-компоненты, платежи
+
+**37.4 — Перекомпоновка структуры**
+- Новая структура: `public/` (веб-корень), `src/` (game+ext+core), `config/`, `templates/`
+- `global.inc.php`: `RECIPE_ROOT_DIR` → `src/core/`, `GAME_ORIGIN_DIR` для конфигов
+- `game.php` переписан: чистый bootstrap без Yii
+- ENV-based конфиг: DB_HOST, DB_USER, GAME_UNIVERSE, UNIVERSE_NAME_FULL, PORTAL_URL
+
+**37.5 — Docker**
+- `docker-compose.yml`: mysql:8.0 + php:8.3-fpm + nginx:alpine
+- `nginx.conf`: `try_files → game.php`, запрет доступа к `.class.php`
+- Миграции: 001_schema.sql, 002_data.sql + справочные таблицы из legacy
+
+**37.12 — JWT auth-service**
+- `JwtAuth.php`: RS256 проверка JWT, lazy join по `global_user_id`
+- `User.class.php::getData()`: `User_YII::model()` → прямой SQL
+- `migrations/003_add_global_user_id.sql`: поле для связи с auth-service
+- В dev-режиме (AUTH_JWKS_URL пустой) — проверка подписи пропускается
+
+### Источник Java для боя
+- `d:\Sources\oxsar2-java\assault\` — исходный Java-проект (Assault.jar скомпилирован отсюда)
+- При портировании Assault на Go будем использовать Java-исходники как спецификацию
+
+### Коммит
+`de4f56e31` feat(game-origin): план 37 + копирование legacy oxsar2 без Yii
