@@ -159,6 +159,14 @@ alliance:
   war: Война
   welcome: Добро пожаловать в альянс!
   writeGlobalMail: Написать всему альянсу
+  joined.title: Вы вступили в альянс
+  joined.body: "Вы стали членом альянса [{{allianceName}}]."
+  application.title: Заявка на вступление в альянс
+  application.body: "Игрок {{username}} подал заявку на вступление в ваш альянс [{{allianceName}}]."
+  approved.title: Заявка одобрена
+  approved.body: "Ваша заявка на вступление в альянс [{{allianceName}}] одобрена."
+  rejected.title: Заявка отклонена
+  rejected.body: "Ваша заявка на вступление в альянс [{{allianceName}}] отклонена."
 artefactInfo:
   action: Действие
   activate: Активировать
@@ -515,16 +523,6 @@ alien:
   attack.haltNote: " Их флот остался на орбите — ждите отдельного сообщения об удержании."
   raceName: Инопланетяне
 
-alliance:
-  joined.title: Вы вступили в альянс
-  joined.body: "Вы стали членом альянса [{{allianceName}}]."
-  application.title: Заявка на вступление в альянс
-  application.body: "Игрок {{username}} подал заявку на вступление в ваш альянс [{{allianceName}}]."
-  approved.title: Заявка одобрена
-  approved.body: "Ваша заявка на вступление в альянс [{{allianceName}}] одобрена."
-  rejected.title: Заявка отклонена
-  rejected.body: "Ваша заявка на вступление в альянс [{{allianceName}}] отклонена."
-
 referral:
   bonus.title: Реферальный бонус
   bonus.body: "Ваш реферал {{username}} совершил покупку. На ваш счёт зачислено {{credits}} кредитов."
@@ -532,6 +530,10 @@ referral:
 payment:
   credited.title: Кредиты зачислены
   credited.body: "На ваш счёт зачислено {{credits}} кредитов (заказ #{{orderId}}). Спасибо за поддержку!"
+  snOkCredits: "{@credit} Кредитов"
+  snOkCreditsString: "<span class='confederation'>{@total}</span> кредитов<br/>( {@raw} <span class='true'>+ {@bonus} в подарок</span> )"
+  snOkDesc: Описание приема платежей одноклассников
+  snOkTitle: Прием платежей одноклассники
 
 settings:
   deletionCode.title: Код для удаления аккаунта
@@ -2461,11 +2463,6 @@ mission:
   unkownMission: Задание не известно или не доступно.
   unkownPlanet: Неизвестная планета
   waiting: Готово
-payment:
-  snOkCredits: "{@credit} Кредитов"
-  snOkCreditsString: "<span class='confederation'>{@total}</span> кредитов<br/>( {@raw} <span class='true'>+ {@bonus} в подарок</span> )"
-  snOkDesc: Описание приема платежей одноклассников
-  snOkTitle: Прием платежей одноклассники
 prefs:
   activated: Активен
   advancedPreferences: Дополнительно

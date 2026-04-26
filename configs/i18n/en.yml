@@ -159,6 +159,14 @@ alliance:
   war: ""
   welcome: ""
   writeGlobalMail: ""
+  joined.title: ""
+  joined.body: ""
+  application.title: ""
+  application.body: ""
+  approved.title: ""
+  approved.body: ""
+  rejected.title: ""
+  rejected.body: ""
 artefactInfo:
   action: ""
   activate: ""
@@ -517,16 +525,6 @@ alien:
   attack.haltNote: ""
   raceName: ""
 
-alliance:
-  joined.title: ""
-  joined.body: ""
-  application.title: ""
-  application.body: ""
-  approved.title: ""
-  approved.body: ""
-  rejected.title: ""
-  rejected.body: ""
-
 referral:
   bonus.title: ""
   bonus.body: ""
@@ -534,6 +532,10 @@ referral:
 payment:
   credited.title: ""
   credited.body: ""
+  snOkCredits: ""
+  snOkCreditsString: ""
+  snOkDesc: ""
+  snOkTitle: ""
 
 settings:
   deletionCode.title: ""
@@ -545,1086 +547,1062 @@ artefact:
 
 # TODO: en
 overviewUi:
-  noPlanets: ""
-  unreadPrefix: ""
-  unreadSingle: ""
-  unreadPlural: ""
-  statPoints: ""
-  statRank: ""
-  statBattleExp: ""
-  statProfession: ""
-  statOnlineNow: ""
-  statOnline24h: ""
-  incomingAttack: ""
-  incomingTarget: ""
-  fleetsInFlight: ""
-  fleetReturning: ""
-  fleetOutbound: ""
-  recallButton: ""
-  recallSuccess: ""
-  recallError: ""
-  planetMoon: ""
-  planetActivity: ""
-  planetOptions: ""
-  planetDiameter: ""
-  planetFields: ""
-  planetTemp: ""
-  refLink: ""
-  refCopy: ""
-  refCopied: ""
-  missionTransport: ""
-  missionColonize: ""
-  missionRecycle: ""
-  missionAttack: ""
-  missionSpy: ""
-  missionExpedition: ""
-  resMetalLabel: ""
-  resSiliconLabel: ""
-  resHydrogenLabel: ""
-  diameterKm: ""
-  levelAbbr: ""
-  perHourSuffix: ""
+  noPlanets: No planets. Try refreshing the page.
+  unreadPrefix: "You have"
+  unreadSingle: unread message
+  unreadPlural: unread messages
+  statPoints: Points
+  statRank: Rank
+  statBattleExp: Battle exp
+  statProfession: Profession
+  statOnlineNow: Online now
+  statOnline24h: Last 24 hours
+  incomingAttack: Incoming attack!
+  incomingTarget: "Target:"
+  fleetsInFlight: Fleets in flight
+  fleetReturning: "← Returning"
+  fleetOutbound: "→ Outbound"
+  recallButton: Recall
+  recallSuccess: Fleet recalled
+  recallError: Failed to recall fleet
+  planetMoon: moon
+  planetActivity: activity
+  planetOptions: Planet settings
+  planetDiameter: Diameter
+  planetFields: Fields
+  planetTemp: Temperature
+  refLink: "Referral link:"
+  refCopy: Copy
+  refCopied: "✅ Copied"
+  missionTransport: Transport
+  missionColonize: Colonize
+  missionRecycle: Recycle
+  missionAttack: Attack
+  missionSpy: Espionage
+  missionExpedition: Expedition
+  resMetalLabel: Metal
+  resSiliconLabel: Silicon
+  resHydrogenLabel: Hydrogen
+  diameterKm: km
+  levelAbbr: "lv."
+  perHourSuffix: /h
 
 resourceUi:
-  title: ""
-  loadError: ""
-  saving: ""
-  turnOffAll: ""
-  turnOnAll: ""
-  colBuilding: ""
-  natural: ""
-  storage: ""
-  perHour: ""
-  perDay: ""
-  perWeek: ""
-  levelAbbr: ""
+  title: "Production — {{planetName}}"
+  loadError: Load error
+  saving: saving…
+  turnOffAll: Turn off all
+  turnOnAll: Turn on all
+  colBuilding: Building
+  natural: Natural
+  storage: Storage capacity
+  perHour: Per hour
+  perDay: Per day
+  perWeek: Per week
+  levelAbbr: "lv."
 
 buildingsUi:
-  title: ""
-  levelAbbr: ""
-  details: ""
-  enqueued: ""
-  enqueuedBody: ""
-  errQueueBusy: ""
-  errNotEnough: ""
-  errMoonOnly: ""
-  errNotOnMoon: ""
-  errDefault: ""
-  cancelled: ""
-  cancelledBody: ""
-  cancelErr: ""
-  buildBonus: ""
-  produceBonus: ""
-  queueCount: ""
-  showAll: ""
-  showAvailable: ""
-  activeQueue: ""
-  level: ""
-  notBuilt: ""
-  youHave: ""
-  inQueue: ""
-  locked: ""
-  build: ""
-  cancelConfirm: ""
-  confirmYes: ""
-  confirmNo: ""
-  cancelTitle: ""
-  fieldsFull: ""
+  title: "Buildings — {{planetName}}"
+  levelAbbr: "lv."
+  details: Details
+  enqueued: Queued
+  enqueuedBody: "{{name}} added to construction queue"
+  errQueueBusy: Queue is busy, wait for current build to finish
+  errNotEnough: Not enough resources
+  errMoonOnly: This building is only available on a moon
+  errNotOnMoon: This building is not available on a moon
+  errDefault: Failed to add to queue
+  cancelled: Cancelled
+  cancelledBody: Construction cancelled, resources refunded
+  cancelErr: Failed to cancel
+  buildBonus: construction
+  produceBonus: production
+  queueCount: "In queue: {{count}}"
+  showAll: All buildings
+  showAvailable: Available only
+  activeQueue: Active queue
+  level: "Level {{n}}"
+  notBuilt: Not built
+  youHave: "you have:"
+  inQueue: In queue
+  locked: Locked
+  build: Build
+  cancelConfirm: Cancel?
+  confirmYes: Yes
+  confirmNo: No
+  cancelTitle: "Cancel (resources will be refunded)"
+  fieldsFull: Occupied / max planet fields
 
 researchUi:
-  title: ""
-  levelAbbr: ""
-  details: ""
-  researchBonus: ""
-  labFree: ""
-  started: ""
-  startedBody: ""
-  errQueueBusy: ""
-  errNotEnough: ""
-  errDefault: ""
-  level: ""
-  notStudied: ""
-  inProgress: ""
-  busy: ""
-  study: ""
+  title: Research
+  levelAbbr: "lv."
+  details: Details
+  researchBonus: research
+  labFree: Lab is free — choose a technology to research
+  started: Research
+  startedBody: "{{name}} started"
+  errQueueBusy: Lab is busy
+  errNotEnough: Not enough resources
+  errDefault: Failed to start
+  level: "Level {{n}}"
+  notStudied: Not researched
+  inProgress: In progress
+  busy: Busy
+  study: Research
 
 shipyardUi:
-  title: ""
-  details: ""
-  cancelled: ""
-  cancelledBody: ""
-  cancelErr: ""
-  enqueued: ""
-  enqueuedBody: ""
-  enqueuedErr: ""
-  queue: ""
-  tabShips: ""
-  tabDefense: ""
-  hideLocked: ""
-  showAll: ""
-  allLocked: ""
-  cargo: ""
-  fuelPer: ""
-  inStock: ""
-  build: ""
-  cancelTitle: ""
+  title: "Shipyard — {{planetName}}"
+  details: Details for
+  cancelled: Cancelled
+  cancelledBody: Order cancelled, resources refunded
+  cancelErr: Failed to cancel
+  enqueued: Queued
+  enqueuedBody: "{{name}} × {{count}} added to shipyard"
+  enqueuedErr: Failed to add
+  queue: Shipyard queue
+  tabShips: Ships
+  tabDefense: Defense
+  hideLocked: Hide unavailable
+  showAll: Show all
+  allLocked: All units require prerequisites.
+  cargo: Cargo capacity
+  fuelPer: /unit
+  inStock: "In stock: {{count}}"
+  build: Build
+  cancelTitle: Cancel
 
 fleetUi:
-  title: ""
-  metalPh: ""
-  siliconPh: ""
-  hydrogenPh: ""
-  slots: ""
-  slotsHint: ""
-  activeFleets: ""
-  colMission: ""
-  colDestination: ""
-  colComposition: ""
-  colStatus: ""
-  colArrival: ""
-  recall: ""
-  newMission: ""
-  missionLabel: ""
-  destination: ""
-  colonyName: ""
-  cargo: ""
-  cargoMax: ""
-  speedPct: ""
-  ships: ""
-  selectedCount: ""
-  fuelOneWay: ""
-  sent: ""
-  sentBody: ""
-  missionFallback: ""
-  recalled: ""
-  sendButton: ""
-  sendErr: ""
-  recallErr: ""
-  stateOutbound: ""
-  stateReturning: ""
-  stateArrived: ""
-  missionRebase: ""
-  missionTransport: ""
-  missionColonize: ""
-  missionRecycle: ""
-  missionAttack: ""
-  missionSpy: ""
-  missionExpedition: ""
+  title: "Fleet — {{planetName}}"
+  metalPh: Metal
+  siliconPh: Silicon
+  hydrogenPh: Hydrogen
+  slots: "Fleet slots:"
+  slotsHint: "(increases with computer_tech)"
+  activeFleets: "Active fleets ({{count}})"
+  colMission: Mission
+  colDestination: Destination
+  colComposition: Composition
+  colStatus: Status
+  colArrival: "Arrival / Return"
+  recall: Recall
+  newMission: New mission
+  missionLabel: Mission
+  destination: Target coordinates
+  colonyName: Colony name
+  cargo: Cargo
+  cargoMax: "max."
+  speedPct: "Speed: {{pct}}%"
+  ships: Ships
+  selectedCount: "{{count}} selected"
+  fuelOneWay: one-way
+  sent: Fleet sent
+  sentBody: "{{mission}} → [{{coords}}]"
+  missionFallback: Mission
+  recalled: Fleet recalled
+  sendButton: Send fleet
+  sendErr: Failed to send
+  recallErr: Failed to recall
+  stateOutbound: "→ Outbound"
+  stateReturning: "← Returning"
+  stateArrived: "✓ Arrived"
+  missionRebase: Rebase
+  missionTransport: Transport
+  missionColonize: Colonize
+  missionRecycle: Recycle
+  missionAttack: Attack
+  missionSpy: Espionage
+  missionExpedition: Expedition
 
 galaxyUi:
-  title: ""
-  moonFallback: ""
-  watchAdd: ""
-  watchRemove: ""
-  watchAdded: ""
-  watchRemoved: ""
-  watchLabel: ""
-  colPos: ""
-  colPlanet: ""
-  colPlayer: ""
-  colAlliance: ""
-  colDebris: ""
-  colMissions: ""
-  infiniteDeep: ""
-  debrisTitle: ""
-  expedition: ""
-  expeditionTitle: ""
-  expeditionThisTitle: ""
-  expeditionDeepTitle: ""
-  rocketStrike: ""
-  spyTitle: ""
-  attackTitle: ""
-  transportTitle: ""
-  recycleTitle: ""
-  moonSpyTitle: ""
-  fuelHint: ""
-  errUnknown: ""
-  legendActive: ""
-  legendInactive7: ""
-  legendInactive21: ""
-  legendBanned: ""
-  legendVacation: ""
-  legendRocket: ""
-  legendExpedition: ""
-  legendWatch: ""
-  legendAlly: ""
-  legendNap: ""
-  legendWar: ""
-  rocketTitle: ""
-  rocketSource: ""
-  rocketCount: ""
-  rocketAvail: ""
-  rocketTime: ""
-  rocketLaunch: ""
-  rocketCancel: ""
-  rocketLaunched: ""
-  statusBanned: ""
-  statusVacation: ""
-  statusInactive7: ""
-  statusInactive21: ""
-  friendTitle: ""
-  kmUnit: "" # TODO: en
+  title: Galaxy
+  moonFallback: Moon
+  watchAdd: Add to watchlist
+  watchRemove: Remove from watchlist
+  watchAdded: System added to watchlist
+  watchRemoved: System removed from watchlist
+  watchLabel: "Watching:"
+  colPos: "#"
+  colPlanet: Planet
+  colPlayer: Player
+  colAlliance: Alliance
+  colDebris: Debris
+  colMissions: Missions
+  infiniteDeep: "🌌 Deep Space"
+  debrisTitle: "Debris\nMetal: {{metal}}\nSilicon: {{silicon}}"
+  expedition: Expedition
+  expeditionTitle: Send expedition
+  expeditionThisTitle: Send expedition from this planet
+  expeditionDeepTitle: Send expedition to Deep Space
+  rocketStrike: Rocket strike
+  spyTitle: Espionage
+  attackTitle: Attack
+  transportTitle: Transport
+  recycleTitle: Collect debris
+  moonSpyTitle: Spy on moon
+  fuelHint: "Distance: {{dist}}\nTime (min. speed): {{time}}"
+  errUnknown: unknown error
+  legendActive: just now
+  legendInactive7: "inactive (7+ d)"
+  legendInactive21: "very inactive (21+ d)"
+  legendBanned: banned
+  legendVacation: vacation
+  legendRocket: rocket strike
+  legendExpedition: expedition
+  legendWatch: watching
+  legendAlly: ally
+  legendNap: NAP
+  legendWar: war
+  rocketTitle: "🚀 Rocket strike [{{g}}:{{s}}:{{pos}}]"
+  rocketSource: Source
+  rocketCount: Count
+  rocketAvail: "Available:"
+  rocketTime: "Time:"
+  rocketLaunch: Launch
+  rocketCancel: Cancel
+  rocketLaunched: Rockets launched
+  statusBanned: Banned
+  statusVacation: Vacation mode
+  statusInactive7: "Inactive (7+ d)"
+  statusInactive21: "Very inactive (21+ d)"
+  friendTitle: Friend
+  kmUnit: " km"
 
-# TODO: en
 battlestatsUi:
-  title: ""
-  statTotal: ""
-  statWins: ""
-  statLosses: ""
-  statDraws: ""
-  filterRole: ""
-  filterRoleAny: ""
-  filterRoleAttacker: ""
-  filterRoleDefender: ""
-  filterResult: ""
-  filterResultAny: ""
-  filterResultWin: ""
-  filterResultLoss: ""
-  filterResultDraw: ""
-  filterFrom: ""
-  filterTo: ""
-  empty: ""
-  colDate: ""
-  colRole: ""
-  colOpponent: ""
-  colPlanet: ""
-  colRounds: ""
-  colResult: ""
-  colLoot: ""
-  colDebris: ""
-  roleAttack: ""
-  roleDefend: ""
-  resultWin: ""
-  resultDraw: ""
-  resultLoss: ""
+  title: ⚔ Battle history
+  statTotal: Total battles
+  statWins: Wins
+  statLosses: Losses
+  statDraws: Draws
+  filterRole: Role
+  filterRoleAny: Any
+  filterRoleAttacker: Attacker
+  filterRoleDefender: Defender
+  filterResult: Result
+  filterResultAny: Any
+  filterResultWin: Win
+  filterResultLoss: Loss
+  filterResultDraw: Draw
+  filterFrom: From date
+  filterTo: To date
+  empty: No battles match the selected filters
+  colDate: Date
+  colRole: Role
+  colOpponent: Opponent
+  colPlanet: Planet
+  colRounds: Rounds
+  colResult: Result
+  colLoot: Loot
+  colDebris: Debris
+  roleAttack: ⚔ Attack
+  roleDefend: 🛡 Defense
+  resultWin: 🏆 Win
+  resultDraw: ⚖ Draw
+  resultLoss: 💀 Loss
 
-# TODO: en
 artefactsUi:
-  title: ""
-  empty: ""
-  groupActive: ""
-  groupHeld: ""
-  groupOther: ""
-  stateHeld: ""
-  stateActive: ""
-  stateDelayed: ""
-  stateListed: ""
-  stateExpired: ""
-  stateConsumed: ""
-  expires: ""
-  activate: ""
-  sell: ""
-  deactivate: ""
-  expired: ""
-  toastActivated: ""
-  toastArtefact: ""
-  toastDeactivated: ""
-  toastListed: ""
-  toastActivateErr: ""
-  toastSellErr: ""
-  toastError: ""
+  title: ✨ Artefacts
+  empty: Inventory is empty. Artefacts appear as battle/expedition rewards or can be bought on the Artefact Market.
+  groupActive: Active
+  groupHeld: In inventory
+  groupOther: Other
+  stateHeld: 📦 In inventory
+  stateActive: ✅ Active
+  stateDelayed: ⏳ Activating
+  stateListed: 🏷 For sale
+  stateExpired: 💀 Expired
+  stateConsumed: ⚡ Used
+  expires: "Expires:"
+  activate: Activate
+  sell: Sell
+  deactivate: Deactivate
+  expired: 💀 Expired
+  toastActivated: "{{name}} activated"
+  toastArtefact: Artefact
+  toastDeactivated: Artefact deactivated
+  toastListed: Artefact listed for sale
+  toastActivateErr: Activation error
+  toastSellErr: Sale error
+  toastError: Error
 
-# TODO: en
 repairUi:
-  title: ""
-  storage: ""
-  queueTitle: ""
-  modeRepair: ""
-  modeDisassemble: ""
-  cancelTitle: ""
-  tabRepair: ""
-  tabDisassemble: ""
-  noDamaged: ""
-  inStock: ""
-  damaged: ""
-  repairAll: ""
-  disassembleHint: ""
-  disassembleBtn: ""
-  fuelPer: ""
-  toastRepairTitle: ""
-  toastRepaired: ""
-  toastDisassTitle: ""
-  toastDisassembled: ""
-  toastCancelledTitle: ""
-  toastCancelled: ""
-  toastError: ""
-  toastRepairErr: ""
-  toastDisassErr: ""
-  toastCancelErr: ""
+  title: "Repair Hangar — {{planetName}}"
+  storage: Storage
+  queueTitle: Hangar queue
+  modeRepair: Repair
+  modeDisassemble: Disassemble
+  cancelTitle: Cancel
+  tabRepair: "🔧 Repair ({{count}})"
+  tabDisassemble: ♻️ Disassemble
+  noDamaged: 🔧 No damaged ships
+  inStock: "In stock:"
+  damaged: "Damaged:"
+  repairAll: Repair all
+  disassembleHint: Disassembling healthy units returns ~70% of their cost.
+  disassembleBtn: Disassemble
+  fuelPer: /unit
+  toastRepairTitle: Repair
+  toastRepaired: "{{name}} sent for repair"
+  toastDisassTitle: Disassemble
+  toastDisassembled: "{{name}} × {{count}} sent for disassembly"
+  toastCancelledTitle: Cancelled
+  toastCancelled: Order cancelled, resources refunded
+  toastError: Error
+  toastRepairErr: Repair error
+  toastDisassErr: Disassembly error
+  toastCancelErr: Failed to cancel
 
-# TODO: en
 rocketsUi:
-  title: ""
-  stockLabel: ""
-  siloInfo: ""
-  siloMissing: ""
-  launchTitle: ""
-  coordsLabel: ""
-  moonLabel: ""
-  countLabel: ""
-  hintText: ""
-  launchBtn: ""
-  rocketOne: ""
-  rocketFew: ""
-  rocketMany: ""
-  lastLaunch: ""
-  toastTitle: ""
-  toastBody: ""
-  toastError: ""
-  toastErrBody: ""
+  title: "Rockets — {{planetName}}"
+  stockLabel: interplanetary missiles
+  siloInfo: "Silo lv. {{level}} — max {{max}} loaded"
+  siloMissing: Build a Missile Silo to activate the limit
+  launchTitle: Launch
+  coordsLabel: Target coordinates
+  moonLabel: 🌑 Moon
+  countLabel: "Count (max {{max}})"
+  hintText: Rockets fly without return and destroy target defenses. 1 rocket = 12,000 damage to pool(defense × shell).
+  launchBtn: "💥 Launch {{count}} {{rocketWord}}"
+  rocketOne: rocket
+  rocketFew: rockets
+  rocketMany: rockets
+  lastLaunch: "Last launch: {{count}} rockets → arrival {{at}}"
+  toastTitle: Rockets launched
+  toastBody: "{{count}} rockets → [{{g}}:{{s}}:{{pos}}]"
+  toastError: Error
+  toastErrBody: Failed to launch
 
-# TODO: en
 achievementsUi:
-  title: ""
-  unlocked: ""
-  points: ""
-  catAll: ""
-  catStarter: ""
-  catPassive: ""
-  gotAt: ""
+  title: 🎖 Achievements
+  unlocked: "Unlocked:"
+  points: "Points:"
+  catAll: 📋 All
+  catStarter: 🎓 Starter
+  catPassive: 🥇 Achievements
+  gotAt: "Received"
 
-# TODO: en
 officersUi:
-  title: ""
-  balance: ""
-  empty: ""
-  daysAndCost: ""
-  expires: ""
-  active: ""
-  autoRenew: ""
-  activateBtn: ""
-  notEnoughCr: ""
-  notEnoughTitle: ""
-  effectProduce: ""
-  effectBuild: ""
-  effectResearch: ""
-  effectEnergy: ""
-  effectStorage: ""
-  toastTitle: ""
-  toastActivated: ""
-  toastError: ""
+  title: 🎖 Officers
+  balance: "Balance:"
+  empty: No officers available.
+  daysAndCost: "{{days}} d · {{cost}} cr"
+  expires: "Expires:"
+  active: ✅ Active
+  autoRenew: Auto-renew
+  activateBtn: "Activate ({{cost}} cr)"
+  notEnoughCr: Not enough cr
+  notEnoughTitle: Insufficient credits
+  effectProduce: Production
+  effectBuild: Construction
+  effectResearch: Research
+  effectEnergy: Energy
+  effectStorage: Storage
+  toastTitle: Officer
+  toastActivated: "{{name}} activated for {{days}} d."
+  toastError: Error
 
-# TODO: en
 messagesUi:
-  title: ""
-  unread: ""
-  deleteAll: ""
-  compose: ""
-  empty: ""
-  senderSystem: ""
-  deleteTitle: ""
-  confirmDelAllTitle: ""
-  confirmDelAllAll: ""
-  confirmDelAllFolder: ""
-  confirmDelLabel: ""
-  toastDeleted: ""
-  toastDeletedAll: ""
-  toastSent: ""
-  folderAll: ""
-  folderPersonal: ""
-  folderBattle: ""
-  folderSpy: ""
-  folderExpedition: ""
-  folderPhalanx: ""
-  folderAlliance: ""
-  folderArtefacts: ""
-  folderCredits: ""
-  folderSystem: ""
-  folderSent: ""
-  composeTitle: ""
-  composeTo: ""
-  composeToPh: ""
-  composeSubject: ""
-  composeSubjectPh: ""
-  composeBodyPh: ""
-  composeError: ""
-  composeSend: ""
-  composeCancel: ""
-  from: ""
-  reply: ""
-  loading: ""
-  loadingShort: ""
-  attackBtn: ""
-  rounds: ""
-  winnerAttackers: ""
-  winnerDefenders: ""
-  winnerDraw: ""
-  labelAttacker: ""
-  labelDefender: ""
-  labelLoot: ""
-  sidesAttackers: ""
-  sidesDefenders: ""
-  sideLosses: ""
-  roundsTrace: ""
-  thRound: ""
-  thAttackers: ""
-  thDefenders: ""
-  spyTitle: ""
-  spyRatio: ""
-  spyProbes: ""
-  spyShips: ""
-  spyDefense: ""
-  spyBuildings: ""
-  expedTitle: ""
-  expedResult: ""
-  expedResources: ""
-  expedArtefact: ""
-  expedExtraPlanet: ""
-  expedPirates: ""
-  expedLoss: ""
-  expedNothing: ""
+  title: Messages
+  unread: "({count} new)"
+  deleteAll: Delete all
+  compose: Compose
+  empty: No messages
+  senderSystem: System
+  deleteTitle: Delete
+  confirmDelAllTitle: Delete messages
+  confirmDelAllAll: Delete all messages?
+  confirmDelAllFolder: Delete all messages in this folder?
+  confirmDelLabel: Delete
+  toastDeleted: Message deleted
+  toastDeletedAll: All messages deleted
+  toastSent: Sent
+  folderAll: All
+  folderPersonal: Personal
+  folderBattle: Battle
+  folderSpy: Espionage
+  folderExpedition: Expeditions
+  folderPhalanx: Phalanx
+  folderAlliance: Alliance
+  folderArtefacts: Artefacts
+  folderCredits: Credits
+  folderSystem: System
+  folderSent: Sent
+  composeTitle: Write message
+  composeTo: To
+  composeToPh: player name
+  composeSubject: Subject
+  composeSubjectPh: message subject
+  composeBodyPh: message text…
+  composeError: Error
+  composeSend: Send
+  composeCancel: Cancel
+  from: "From:"
+  reply: ↩ Reply
+  loading: Loading report…
+  loadingShort: Loading…
+  attackBtn: ⚔️ Attack
+  rounds: "Rounds:"
+  winnerAttackers: ⚔️ Attackers win
+  winnerDefenders: 🛡 Defenders win
+  winnerDraw: ⚖️ Draw
+  labelAttacker: ATTACKER
+  labelDefender: DEFENDER
+  labelLoot: LOOT
+  sidesAttackers: Attackers
+  sidesDefenders: Defenders
+  sideLosses: "Losses:"
+  roundsTrace: Round by round
+  thRound: "#"
+  thAttackers: Attackers
+  thDefenders: Defenders
+  spyTitle: 🔭 Espionage report
+  spyRatio: Ratio
+  spyProbes: Probes
+  spyShips: Ships
+  spyDefense: Defense
+  spyBuildings: Buildings
+  expedTitle: 🌌 Expedition report
+  expedResult: "Result:"
+  expedResources: Resources found
+  expedArtefact: Artefact found
+  expedExtraPlanet: New planet discovered
+  expedPirates: Pirate encounter
+  expedLoss: Losses
+  expedNothing: Nothing found
 
-# TODO: en
 marketUi:
-  title: ""
-  yourRate: ""
-  tabExchange: ""
-  tabCredit: ""
-  tabLots: ""
-  globalRate: ""
-  exchangeHint: ""
-  labelFrom: ""
-  labelTo: ""
-  labelAmount: ""
-  youWillGet: ""
-  exchangeBtn: ""
-  lastExchange: ""
-  resLabelMetal: ""
-  resLabelSilicon: ""
-  resLabelHydrogen: ""
-  lotsTabRes: ""
-  lotsTabFleet: ""
-  createLotTitle: ""
-  labelSell: ""
-  labelGet: ""
-  submitLot: ""
-  colSeller: ""
-  colSells: ""
-  colWants: ""
-  noLots: ""
-  cancelLot: ""
-  buyLot: ""
-  toastLotCreated: ""
-  toastError: ""
-  toastLotCancelled: ""
-  toastDeal: ""
-  creditHint: ""
-  creditResLabel: ""
-  creditAmountLabel: ""
-  creditYouGet: ""
-  creditBuy: ""
-  creditToast: ""
-  fleetLotTitle: ""
-  fleetWantLabel: ""
-  fleetSubmit: ""
-  fleetColSeller: ""
-  fleetColFleet: ""
-  fleetColPrice: ""
-  fleetYou: ""
-  fleetCancelLot: ""
-  fleetBuyLot: ""
-  fleetNoLots: ""
-  fleetLotCreated: ""
+  title: "Market — {{planetName}}"
+  yourRate: "Your rate:"
+  tabExchange: ⇄ Exchange
+  tabCredit: 💳 Credits
+  tabLots: 📋 Order book
+  globalRate: "🌐 Global rate: 1 metal = {{siRatio}} silicon = {{hRatio}} hydrogen"
+  exchangeHint: "Rate M:Si:H = 1:2:4. The higher your personal rate, the less you receive."
+  labelFrom: Give
+  labelTo: Receive
+  labelAmount: Amount
+  youWillGet: "You will get:"
+  exchangeBtn: Exchange
+  lastExchange: "Last exchange: {{fa}} {{fr}} → {{ta}} {{tr}} (rate {{rate}})"
+  resLabelMetal: 🟠 Metal
+  resLabelSilicon: 💎 Silicon
+  resLabelHydrogen: 💧 Hydrogen
+  lotsTabRes: 💱 Resources
+  lotsTabFleet: 🛸 Fleet
+  createLotTitle: Create lot
+  labelSell: Sell
+  labelGet: Want
+  submitLot: List
+  colSeller: Seller
+  colSells: Sells
+  colWants: Wants
+  noLots: No open lots
+  cancelLot: Cancel
+  buyLot: Buy
+  toastLotCreated: Lot listed
+  toastError: Error
+  toastLotCancelled: Lot cancelled
+  toastDeal: Deal completed
+  creditHint: "Buy resources for credits. 1 credit = {{rate}} metal units. Rate accounts for your personal rate ({{userRate}})."
+  creditResLabel: Resource
+  creditAmountLabel: Credits amount
+  creditYouGet: "You will get:"
+  creditBuy: Buy
+  creditToast: "{{amount}} cr → {{delta}} {{res}}"
+  fleetLotTitle: List fleet for sale
+  fleetWantLabel: I want
+  fleetSubmit: "List ({{count}} ships)"
+  fleetColSeller: Seller
+  fleetColFleet: Composition
+  fleetColPrice: Price
+  fleetYou: "(you)"
+  fleetCancelLot: Cancel
+  fleetBuyLot: Buy
+  fleetNoLots: No open fleet lots
+  fleetLotCreated: Fleet lot listed
 
-# TODO: en
 scoreUi:
-  title: "" # TODO: en
-  tabPlayers: "" # TODO: en
-  tabAlliances: "" # TODO: en
-  tabVacation: "" # TODO: en
-  tabTransfers: "" # TODO: en
-  scoreTypeTotal: "" # TODO: en
-  scoreTypeBuildings: "" # TODO: en
-  scoreTypeResearch: "" # TODO: en
-  scoreTypeFleet: "" # TODO: en
-  scoreTypeAchievements: "" # TODO: en
-  scoreTypeBattle: "" # TODO: en
-  myRankLabel: "" # TODO: en
-  filterPlaceholder: "" # TODO: en
-  emptyPlayers: "" # TODO: en
-  colPlayer: "" # TODO: en
-  colAlliance: "" # TODO: en
-  colCoords: "" # TODO: en
-  colPoints: "" # TODO: en
-  colCount: "" # TODO: en
-  goToGalaxy: "" # TODO: en
-  emptyAlliances: "" # TODO: en
-  emptyVacation: "" # TODO: en
-  colVacationSince: "" # TODO: en
-  dirReceived: "" # TODO: en
-  dirSent: "" # TODO: en
-  periodAll: "" # TODO: en
-  periodMonth: "" # TODO: en
-  periodWeek: "" # TODO: en
-  colReceiver: "" # TODO: en
-  colSender: "" # TODO: en
-  colMetal: "" # TODO: en
-  colSilicon: "" # TODO: en
-  colHydrogen: "" # TODO: en
-  colTotal: "" # TODO: en
-  emptyTransfers: "" # TODO: en
+  title: "🏆 Leaderboard"
+  tabPlayers: "👤 Players"
+  tabAlliances: "🤝 Alliances"
+  tabVacation: "✈ On vacation"
+  tabTransfers: "📦 Trades"
+  scoreTypeTotal: Total
+  scoreTypeBuildings: Buildings
+  scoreTypeResearch: Research
+  scoreTypeFleet: Fleet
+  scoreTypeAchievements: Achievements
+  scoreTypeBattle: Battle
+  myRankLabel: "Your rank in «{{typeLabel}}»"
+  filterPlaceholder: "🔍 Filter by name…"
+  emptyPlayers: Leaderboard is empty — start building!
+  colPlayer: Player
+  colAlliance: Alliance
+  colCoords: Coordinates
+  colPoints: Points
+  colCount: Players
+  goToGalaxy: Go to galaxy
+  emptyAlliances: No alliances with players
+  emptyVacation: No players on vacation
+  colVacationSince: On vacation since
+  dirReceived: "📥 Recipients"
+  dirSent: "📤 Senders"
+  periodAll: All time
+  periodMonth: Month
+  periodWeek: Week
+  colReceiver: Recipient
+  colSender: Sender
+  colMetal: Metal
+  colSilicon: Silicon
+  colHydrogen: Hydrogen
+  colTotal: "Total (eq.)"
+  emptyTransfers: No data
 
 chatUi:
-  tabGlobal: "" # TODO: en
-  tabAlliance: "" # TODO: en
-  reconnecting: "" # TODO: en
-  editTitle: "" # TODO: en
-  deleteTitle: "" # TODO: en
-  editedMark: "" # TODO: en
-  deleteConfirmTitle: "" # TODO: en
-  deleteConfirmMsg: "" # TODO: en
-  deleteConfirmBtn: "" # TODO: en
-  emojiTitle: "" # TODO: en
-  inputPlaceholder: "" # TODO: en
-  sendBtn: "" # TODO: en
+  tabGlobal: "🌐 Global"
+  tabAlliance: "⚔️ Alliance"
+  reconnecting: Reconnecting…
+  editTitle: Edit
+  deleteTitle: Delete
+  editedMark: edited
+  deleteConfirmTitle: Delete message?
+  deleteConfirmMsg: The message will be permanently deleted.
+  deleteConfirmBtn: Delete
+  emojiTitle: Emoji
+  inputPlaceholder: "Message… (Enter to send)"
+  sendBtn: Send
 
 settingsUi:
-  title: "" # TODO: en
-  sectionProfile: "" # TODO: en
-  labelEmail: "" # TODO: en
-  saveBtn: "" # TODO: en
-  emailSaved: "" # TODO: en
-  labelLanguage: "" # TODO: en
-  langRu: "" # TODO: en
-  langEn: "" # TODO: en
-  labelTimezone: "" # TODO: en
-  sectionSecurity: "" # TODO: en
-  labelCurrentPw: "" # TODO: en
-  labelNewPw: "" # TODO: en
-  labelConfirmPw: "" # TODO: en
-  changePwBtn: "" # TODO: en
-  pwSaved: "" # TODO: en
-  pwMismatch: "" # TODO: en
-  pwTooShort: "" # TODO: en
-  pwWrongCurrent: "" # TODO: en
-  pwSaveError: "" # TODO: en
-  sectionVacation: "" # TODO: en
-  vacationDesc: "" # TODO: en
-  vacationActive: "" # TODO: en
-  leaveVacationBtn: "" # TODO: en
-  startVacationBtn: "" # TODO: en
-  vacationWarning: "" # TODO: en
-  vacationConfirmBtn: "" # TODO: en
-  vacationCancelBtn: "" # TODO: en
-  sectionPlanetOrder: "" # TODO: en
-  planetOrderDesc: "" # TODO: en
-  planetOrderSaving: "" # TODO: en
-  sectionDanger: "" # TODO: en
-  deleteAccountBtn: "" # TODO: en
-  deleteAccountDesc: "" # TODO: en
-  requestCodeBtn: "" # TODO: en
-  requestCodeErr: "" # TODO: en
-  codeSentMsg: "" # TODO: en
-  confirmDeleteBtn: "" # TODO: en
-  confirmDeleteErr: "" # TODO: en
-  cancelBtn: "" # TODO: en
+  title: Account settings
+  sectionProfile: Profile
+  labelEmail: Email
+  saveBtn: Save
+  emailSaved: "✓ Email updated"
+  labelLanguage: Language
+  langRu: Русский
+  langEn: English
+  labelTimezone: Timezone
+  sectionSecurity: Security
+  labelCurrentPw: Current password
+  labelNewPw: New password
+  labelConfirmPw: Confirm new password
+  changePwBtn: Change password
+  pwSaved: "✓ Password changed"
+  pwMismatch: Passwords do not match
+  pwTooShort: Minimum 8 characters
+  pwWrongCurrent: Incorrect current password
+  pwSaveError: Save error
+  sectionVacation: Vacation mode
+  vacationDesc: "In vacation mode you are protected from attacks but cannot build, research, send fleets or trade. Minimum interval between vacations — 20 days."
+  vacationActive: "✈ Vacation active since {{date}}"
+  leaveVacationBtn: Leave vacation mode
+  startVacationBtn: Enable vacation mode
+  vacationWarning: "⚠ Are you sure? All activity will be frozen."
+  vacationConfirmBtn: Yes, go on vacation
+  vacationCancelBtn: Cancel
+  sectionPlanetOrder: Planet order
+  planetOrderDesc: Drag to reorder. This order is used in the planet switcher.
+  planetOrderSaving: "💾 Saving…"
+  sectionDanger: "⚠ Danger zone"
+  deleteAccountBtn: "🗑 Delete account…"
+  deleteAccountDesc: "The account will be permanently deleted: planets, fleets, messages and alliance membership will be gone. Cannot be undone. A one-time code sent to your system messages is required to confirm."
+  requestCodeBtn: Request confirmation code
+  requestCodeErr: Code request error
+  codeSentMsg: "Code sent to messages (System folder). Valid until {{time}}."
+  confirmDeleteBtn: "🗑 Delete account permanently"
+  confirmDeleteErr: Invalid code
+  cancelBtn: Cancel
 
 referralUi:
-  title: "" # TODO: en
-  sectionLink: "" # TODO: en
-  copyBtn: "" # TODO: en
-  copiedBtn: "" # TODO: en
-  shareBtn: "" # TODO: en
-  shareGameTitle: "" # TODO: en
-  copyError: "" # TODO: en
-  refDesc: "" # TODO: en
-  statInvited: "" # TODO: en
-  statBonusPoints: "" # TODO: en
-  statBonusMax: "" # TODO: en
-  statBonus: "" # TODO: en
-  statBonusHint: "" # TODO: en
-  sectionReferred: "" # TODO: en
-  emptyReferred: "" # TODO: en
-  colPlayer: "" # TODO: en
-  colPoints: "" # TODO: en
-  colRegistered: "" # TODO: en
+  title: "🎁 Referral program"
+  sectionLink: Your link
+  copyBtn: "📋 Copy"
+  copiedBtn: "✓ Copied"
+  shareBtn: "📤 Share"
+  shareGameTitle: "oxsar — space strategy"
+  copyError: Failed to copy
+  refDesc: "Send this link to friends. When they register and start playing you will earn {{pct}}% of all their credit purchases and points for each active referral."
+  statInvited: Invited
+  statBonusPoints: Bonus points
+  statBonusMax: "max. {{max}}"
+  statBonus: Purchase bonus
+  statBonusHint: from each referral credit purchase
+  sectionReferred: Referred players
+  emptyReferred: None yet. Share the link — bonuses arrive right after registration.
+  colPlayer: Player
+  colPoints: Points
+  colRegistered: Registered
 
 empireUi:
-  title: "" # TODO: en
-  totalResources: "" # TODO: en
-  colParam: "" # TODO: en
-  groupPlanet: "" # TODO: en
-  rowDiameter: "" # TODO: en
-  rowFields: "" # TODO: en
-  rowTemp: "" # TODO: en
-  groupResources: "" # TODO: en
-  rowMetal: "" # TODO: en
-  rowSilicon: "" # TODO: en
-  rowHydrogen: "" # TODO: en
-  groupMining: "" # TODO: en
-  groupEnergy: "" # TODO: en
-  groupStorages: "" # TODO: en
-  groupProduction: "" # TODO: en
-  groupSpecial: "" # TODO: en
-  groupOtherBuildings: "" # TODO: en
-  groupFleet: "" # TODO: en
-  groupDefense: "" # TODO: en
-  noPlanets: "" # TODO: en
+  title: Empire
+  totalResources: "Total resources:"
+  colParam: Parameter
+  groupPlanet: Planet
+  rowDiameter: "📐 Diameter"
+  rowFields: "🔲 Fields"
+  rowTemp: "🌡️ Temperature"
+  groupResources: Resources
+  rowMetal: "🟠 Metal"
+  rowSilicon: "💎 Silicon"
+  rowHydrogen: "💧 Hydrogen"
+  groupMining: Mining
+  groupEnergy: Energy
+  groupStorages: Storages
+  groupProduction: Production
+  groupSpecial: Special
+  groupOtherBuildings: Other buildings
+  groupFleet: Fleet
+  groupDefense: Defense
+  noPlanets: No planets.
 
 notepadUi:
-  title: "" # TODO: en
-  hint: "" # TODO: en
-  placeholder: "" # TODO: en
-  charCount: "" # TODO: en
-  updatedAt: "" # TODO: en
-  statusSaving: "" # TODO: en
-  statusSaved: "" # TODO: en
-  statusError: "" # TODO: en
+  title: "📝 Notepad"
+  hint: Notes are visible only to you. Changes are saved automatically.
+  placeholder: "Target coordinates, scouting notes, plans…\n\nMulti-line entries and plain text supported."
+  charCount: "{{count}} / {{max}} characters"
+  updatedAt: "Updated:"
+  statusSaving: "💾 Saving…"
+  statusSaved: "✓ Saved"
+  statusError: "⚠ Save error"
 
 planetOptionsUi:
-  backBtn: "" # TODO: en
-  titlePrefix: "" # TODO: en
-  sectionRename: "" # TODO: en
-  renamePlaceholder: "" # TODO: en
-  saveBtn: "" # TODO: en
-  sectionHome: "" # TODO: en
-  currentHome: "" # TODO: en
-  setHomeBtn: "" # TODO: en
-  isHomeMsg: "" # TODO: en
-  moonNoHomeMsg: "" # TODO: en
-  setHomeConfirm: "" # TODO: en
-  setHomeConfirmBtn: "" # TODO: en
-  sectionAbandon: "" # TODO: en
-  abandonDesc: "" # TODO: en
-  abandonCodeLabel: "" # TODO: en
-  abandonBtn: "" # TODO: en
-  moonAbandonMsg: "" # TODO: en
-  abandonConfirm: "" # TODO: en
-  abandonConfirmBtn: "" # TODO: en
-  cancelBtn: "" # TODO: en
-  toastRenameTitle: "" # TODO: en
-  toastRenameBody: "" # TODO: en
-  toastRenameErr: "" # TODO: en
-  toastHomeTitle: "" # TODO: en
-  toastHomeBody: "" # TODO: en
-  toastHomeErr: "" # TODO: en
-  toastAbandonTitle: "" # TODO: en
-  toastAbandonBody: "" # TODO: en
-  toastAbandonErr: "" # TODO: en
+  backBtn: "← Back"
+  titlePrefix: "Settings:"
+  sectionRename: Rename
+  renamePlaceholder: New name
+  saveBtn: Save
+  sectionHome: Home planet
+  currentHome: "Current home: {{name}}"
+  setHomeBtn: Set as home
+  isHomeMsg: "✓ This is your home planet"
+  moonNoHomeMsg: "ℹ Moons cannot be the home planet"
+  setHomeConfirm: "Set \"{{name}}\" as home planet?"
+  setHomeConfirmBtn: Yes
+  sectionAbandon: Abandon planet
+  abandonDesc: This action is irreversible. Enter the confirmation code to delete.
+  abandonCodeLabel: "Code:"
+  abandonBtn: Abandon
+  moonAbandonMsg: "ℹ Moons are automatically removed when the planet is destroyed"
+  abandonConfirm: "Are you sure? Planet \"{{name}}\" will be deleted permanently."
+  abandonConfirmBtn: Delete
+  cancelBtn: Cancel
+  toastRenameTitle: Planet renamed
+  toastRenameBody: "New name: {{name}}"
+  toastRenameErr: Rename error
+  toastHomeTitle: Home planet
+  toastHomeBody: "{{name}} is now your home planet"
+  toastHomeErr: Error
+  toastAbandonTitle: Planet abandoned
+  toastAbandonBody: "{{name}} has been deleted"
+  toastAbandonErr: Deletion error
 
 unitInfoUi:
-  levelCol: "" # TODO: en
-  timeCol: "" # TODO: en
-  currentLevel: "" # TODO: en
-  requires: "" # TODO: en
-  timeWithFactory: "" # TODO: en
-  timeWithoutFactory: "" # TODO: en
-  timeWithoutLab: "" # TODO: en
-  sectionCombat: "" # TODO: en
-  colParam: "" # TODO: en
-  colInAttack: "" # TODO: en
-  colInDefense: "" # TODO: en
-  colValue: "" # TODO: en
-  statAttack: "" # TODO: en
-  statShield: "" # TODO: en
-  statShell: "" # TODO: en
-  statFront: "" # TODO: en
-  statBallistics: "" # TODO: en
-  statMasking: "" # TODO: en
-  sectionOther: "" # TODO: en
-  statCargo: "" # TODO: en
-  statSpeed: "" # TODO: en
-  statFuel: "" # TODO: en
-  statFuelUnit: "" # TODO: en
-  statStructure: "" # TODO: en
-  statMetal: "" # TODO: en
-  statSilicon: "" # TODO: en
-  statHydrogen: "" # TODO: en
-  statBuildTime: "" # TODO: en
-  sectionRapidfire: "" # TODO: en
-  rfColTarget: "" # TODO: en
-  rfColShots: "" # TODO: en
-  sectionVulnerable: "" # TODO: en
-  rfColAttacker: "" # TODO: en
+  levelCol: Lv.
+  timeCol: "⏱"
+  currentLevel: "Level {{level}}"
+  requires: "🔒 Requires:"
+  timeWithFactory: Time for next level accounting for robotic factory and nano factory.
+  timeWithoutFactory: Time shown without robotic factory and nano factory.
+  timeWithoutLab: Time shown without research lab level.
+  sectionCombat: Combat stats
+  colParam: Parameter
+  colInAttack: In attack
+  colInDefense: In defense
+  colValue: Value
+  statAttack: "⚔ Attack"
+  statShield: "🛡 Shield"
+  statShell: "❤ Hull"
+  statFront: "🎯 Target priority"
+  statBallistics: "🎲 Ballistics"
+  statMasking: "👻 Masking"
+  sectionOther: Other stats
+  statCargo: "📦 Cargo"
+  statSpeed: "🚀 Speed"
+  statFuel: "⛽ Fuel consumption"
+  statFuelUnit: "/unit"
+  statStructure: "🔩 Structure"
+  statMetal: "🟠 Metal"
+  statSilicon: "💎 Silicon"
+  statHydrogen: "💧 Hydrogen"
+  statBuildTime: "⏱ Build time (base)"
+  sectionRapidfire: Rapidfire
+  rfColTarget: Target
+  rfColShots: Shots per round
+  sectionVulnerable: Vulnerable to rapidfire
+  rfColAttacker: Attacker
 
-# TODO: en
 allianceUi:
-  title: "" # TODO: en
-  noAlliance: "" # TODO: en
-  createTitle: "" # TODO: en
-  createNamePlaceholder: "" # TODO: en
-  createTagPlaceholder: "" # TODO: en
-  createBtn: "" # TODO: en
-  createErr: "" # TODO: en
-  tabMine: "" # TODO: en
-  tabList: "" # TODO: en
-  sectionInfo: "" # TODO: en
-  labelTag: "" # TODO: en
-  labelRank: "" # TODO: en
-  labelMembers: "" # TODO: en
-  labelOpen: "" # TODO: en
-  labelClosed: "" # TODO: en
-  toggleOpenBtn: "" # TODO: en
-  toggleCloseBtn: "" # TODO: en
-  leaveBtn: "" # TODO: en
-  disbandBtn: "" # TODO: en
-  leaveConfirm: "" # TODO: en
-  disbandConfirm: "" # TODO: en
-  confirmBtn: "" # TODO: en
-  cancelBtn: "" # TODO: en
-  sectionApplications: "" # TODO: en
-  noApplications: "" # TODO: en
-  applyBtn: "" # TODO: en
-  alreadyApplied: "" # TODO: en
-  acceptBtn: "" # TODO: en
-  rejectBtn: "" # TODO: en
-  sectionRelations: "" # TODO: en
-  relNap: "" # TODO: en
-  relWar: "" # TODO: en
-  relAlly: "" # TODO: en
-  colMember: "" # TODO: en
-  colRole: "" # TODO: en
-  colPoints: "" # TODO: en
-  colRelation: "" # TODO: en
-  colActions: "" # TODO: en
+  title: Alliance
+  noAlliance: You are not in an alliance
+  createTitle: Create alliance
+  createNamePlaceholder: Alliance name
+  createTagPlaceholder: Tag [3-5 letters]
+  createBtn: Create
+  createErr: Creation error
+  tabMine: My alliance
+  tabList: List
+  sectionInfo: Information
+  labelTag: Tag
+  labelRank: Position
+  labelMembers: "{{count}} of {{max}}"
+  labelOpen: Open recruitment
+  labelClosed: Closed recruitment
+  toggleOpenBtn: Open recruitment
+  toggleCloseBtn: Close recruitment
+  leaveBtn: Leave alliance
+  disbandBtn: Disband alliance
+  leaveConfirm: "Leave alliance {{name}}?"
+  disbandConfirm: "Disband alliance {{name}}? This action is irreversible."
+  confirmBtn: Confirm
+  cancelBtn: Cancel
+  sectionApplications: Applications
+  noApplications: No applications
+  applyBtn: Apply
+  alreadyApplied: Application sent
+  acceptBtn: Accept
+  rejectBtn: Reject
+  sectionRelations: Diplomacy
+  relNap: NAP
+  relWar: WAR
+  relAlly: ALLY
+  colMember: Player
+  colRole: Role
+  colPoints: Points
+  colRelation: Relation
+  colActions: Actions
 
-# TODO: en
 dailyquestUi:
-  title: "" # TODO: en
-  hint: "" # TODO: en
-  loading: "" # TODO: en
-  empty: "" # TODO: en
-  received: "" # TODO: en
-  claimBtn: "" # TODO: en
-  rewardLabel: "" # TODO: en
-  rewardCredits: "" # TODO: en
-  rewardMetal: "" # TODO: en
-  rewardSilicon: "" # TODO: en
-  rewardHydrogen: "" # TODO: en
+  title: Daily quests
+  hint: "Resets at 00:00 UTC. Complete quests to earn rewards."
+  loading: Loading…
+  empty: No quests yet.
+  received: Received
+  claimBtn: Claim reward
+  rewardLabel: "Reward:"
+  rewardCredits: cr
+  rewardMetal: M
+  rewardSilicon: Si
+  rewardHydrogen: H
 
-# TODO: en
 friendsUi:
-  title: "" # TODO: en
-  loading: "" # TODO: en
-  empty: "" # TODO: en
-  addPlaceholder: "" # TODO: en
-  addBtn: "" # TODO: en
-  removeBtn: "" # TODO: en
-  colPlayer: "" # TODO: en
-  colStatus: "" # TODO: en
-  colActions: "" # TODO: en
-  statusOnline: "" # TODO: en
-  statusMinAgo: "" # TODO: en
-  statusHourAgo: "" # TODO: en
-  statusDayAgo: "" # TODO: en
+  title: Friends
+  loading: Loading…
+  empty: Friends list is empty
+  addPlaceholder: Player name
+  addBtn: Add
+  removeBtn: Remove
+  colPlayer: Player
+  colStatus: Status
+  colActions: Actions
+  statusOnline: online
+  statusMinAgo: "{{n}} min ago"
+  statusHourAgo: "{{n}} h ago"
+  statusDayAgo: "{{n}} d ago"
 
-# TODO: en
 galaxyEventUi:
-  untilEnd: "" # TODO: en
-  defaultTitle: "" # TODO: en
-  defaultDescr: "" # TODO: en
-  kind.meteor_storm.title: "" # TODO: en
-  kind.meteor_storm.descr: "" # TODO: en
-  kind.solar_flare.title: "" # TODO: en
-  kind.solar_flare.descr: "" # TODO: en
-  kind.trade_forum.title: "" # TODO: en
-  kind.trade_forum.descr: "" # TODO: en
-  kind.star_nebula.title: "" # TODO: en
-  kind.star_nebula.descr: "" # TODO: en
+  untilEnd: "Until end:"
+  defaultTitle: Special event
+  defaultDescr: A special effect is active
+  kind.meteor_storm.title: Meteor Storm
+  kind.meteor_storm.descr: "+30% metal production"
+  kind.solar_flare.title: Solar Flare
+  kind.solar_flare.descr: "−20% energy"
+  kind.trade_forum.title: Trade Forum
+  kind.trade_forum.descr: Favourable market rates
+  kind.star_nebula.title: Star Nebula
+  kind.star_nebula.descr: "+15% expedition power"
 
-# TODO: en
 forecastUi:
-  forecastIn: "" # TODO: en
-  hourUnit: "" # TODO: en
-  capWarning: "" # TODO: en
-  capTooltip: "" # TODO: en
+  forecastIn: "Forecast in:"
+  hourUnit: h
+  capWarning: cap
+  capTooltip: Storage capacity reached
 
-# TODO: en
 creditsUi:
-  title: "" # TODO: en
-  balanceLabel: "" # TODO: en
-  creditsUnit: "" # TODO: en
-  testModeBanner: "" # TODO: en
-  sectionPackages: "" # TODO: en
-  sectionHistory: "" # TODO: en
-  historyEmpty: "" # TODO: en
-  colDate: "" # TODO: en
-  colPackage: "" # TODO: en
-  colCredits: "" # TODO: en
-  colPrice: "" # TODO: en
-  colStatus: "" # TODO: en
-  statusPending: "" # TODO: en
-  statusPaid: "" # TODO: en
-  statusFailed: "" # TODO: en
-  statusCancelled: "" # TODO: en
-  buyBtn: "" # TODO: en
-  hintSmall: "" # TODO: en
-  hintMedium: "" # TODO: en
-  hintLarge: "" # TODO: en
-  packageHintCustom: "" # TODO: en
-  bonusLabel: "" # TODO: en
-  sectionSpendHints: "" # TODO: en
-  hint5000: "" # TODO: en
-  hint2000: "" # TODO: en
-  hint1000: "" # TODO: en
-  hint500: "" # TODO: en
-  hint100: "" # TODO: en
-  priceHintOfficer.label: "" # TODO: en
-  priceHintOfficer.value: "" # TODO: en
-  priceHintProfession.label: "" # TODO: en
-  priceHintProfession.value: "" # TODO: en
-  priceHintRename.label: "" # TODO: en
-  priceHintRename.value: "" # TODO: en
-  priceHintArtefact.label: "" # TODO: en
-  priceHintArtefact.value: "" # TODO: en
+  title: Credits
+  balanceLabel: "Balance:"
+  creditsUnit: cr
+  testModeBanner: Test mode — real payments disabled
+  sectionPackages: Top up balance
+  sectionHistory: Purchase history
+  historyEmpty: No purchases
+  colDate: Date
+  colPackage: Package
+  colCredits: Credits
+  colPrice: Price
+  colStatus: Status
+  statusPending: pending
+  statusPaid: paid
+  statusFailed: failed
+  statusCancelled: cancelled
+  buyBtn: Buy
+  hintSmall: "Small reserve"
+  hintMedium: "Best value"
+  hintLarge: "Maximum savings"
+  packageHintCustom: "{{count}} credits"
+  bonusLabel: "bonus"
+  sectionSpendHints: "💡 What to spend credits on?"
+  hint5000: "💼 All 4 officers for a month + artefact budget"
+  hint2000: "⭐ All 4 officers for 2 weeks"
+  hint1000: "👔 A couple of officers for a month or profession change"
+  hint500: "🎖 One officer for 2 weeks"
+  hint100: "🔧 Small purchases (rename, artefact)"
+  priceHintOfficer.label: "Admiral / Engineer / Geologist / Mercure"
+  priceHintOfficer.value: "50 cr/day (1500 cr / month)"
+  priceHintProfession.label: "Profession change (after 7 days)"
+  priceHintProfession.value: "1000 cr"
+  priceHintRename.label: "Planet rename"
+  priceHintRename.value: free
+  priceHintArtefact.label: "Buy artefacts on the market"
+  priceHintArtefact.value: "depends on lot"
 
-# TODO: en
 recordsUi:
-  title: "" # TODO: en
-  filterAll: "" # TODO: en
-  filterPlaceholder: "" # TODO: en
-  empty: "" # TODO: en
-  colCategory: "" # TODO: en
-  colRank: "" # TODO: en
-  colHolder: "" # TODO: en
-  colRecord: "" # TODO: en
-  colMine: "" # TODO: en
-  catTotal: "" # TODO: en
-  catBuildings: "" # TODO: en
-  catResearch: "" # TODO: en
-  catFleet: "" # TODO: en
-  catBattle: "" # TODO: en
-  catAchievements: "" # TODO: en
+  title: Records
+  filterAll: "📊 All"
+  filterPlaceholder: Search…
+  empty: No records
+  colCategory: Category
+  colRank: Position
+  colHolder: Holder
+  colRecord: Record
+  colMine: My result
+  catTotal: Total score
+  catBuildings: Buildings
+  catResearch: Research
+  catFleet: Fleet
+  catBattle: Battle score
+  catAchievements: Achievements
 
-# TODO: en
 searchUi:
-  placeholder: "" # TODO: en
-  hint: "" # TODO: en
-  searching: "" # TODO: en
-  promptEmpty: "" # TODO: en
-  notFound: "" # TODO: en
-  sectionPlayers: "" # TODO: en
-  sectionAlliances: "" # TODO: en
-  sectionPlanets: "" # TODO: en
-  membersCount: "" # TODO: en
+  placeholder: Search…
+  hint: "at least 2 characters · Esc to close"
+  searching: Searching…
+  promptEmpty: Enter a query to search
+  notFound: Nothing found
+  sectionPlayers: Players
+  sectionAlliances: Alliances
+  sectionPlanets: Planets
+  membersCount: "{{n}} members"
 
-# TODO: en
 wikiUi:
-  sidebarTitle: "" # TODO: en
-  loading: "" # TODO: en
-  articleLoading: "" # TODO: en
-  articleError: "" # TODO: en
+  sidebarTitle: Wiki
+  loading: Loading…
+  articleLoading: Loading article…
+  articleError: Failed to load article.
 
-# TODO: en
 techtreeUi:
-  title: "" # TODO: en
-  filterAll: "" # TODO: en
-  filterAvailable: "" # TODO: en
-  filterLocked: "" # TODO: en
-  viewCards: "" # TODO: en
-  viewGraph: "" # TODO: en
-  levelAbbr: "" # TODO: en
-  available: "" # TODO: en
-  locked: "" # TODO: en
-  noRequirements: "" # TODO: en
-  kindBuildings: "" # TODO: en
-  kindResearch: "" # TODO: en
-  kindShips: "" # TODO: en
-  kindDefense: "" # TODO: en
+  title: Technology tree
+  filterAll: All
+  filterAvailable: "✓ Available"
+  filterLocked: "🔒 Locked"
+  viewCards: "🗂 Cards"
+  viewGraph: "🌐 Graph"
+  levelAbbr: Lv.
+  available: available
+  locked: locked
+  noRequirements: No prerequisites
+  kindBuildings: Buildings
+  kindResearch: Research
+  kindShips: Fleet
+  kindDefense: Defense
 
-# TODO: en
 professionUi:
-  title: "" # TODO: en
-  active: "" # TODO: en
-  currentLabel: "" # TODO: en
-  available: "" # TODO: en
-  chooseBtn: "" # TODO: en
-  confirmChoose: "" # TODO: en
-  confirmBtn: "" # TODO: en
-  cancelBtn: "" # TODO: en
-  bonusUnknown: "" # TODO: en
-  bonusProductionMetal: "" # TODO: en
-  bonusProductionSilicon: "" # TODO: en
-  bonusProductionHydrogen: "" # TODO: en
-  bonusFleetSpeed: "" # TODO: en
-  bonusResearchSpeed: "" # TODO: en
-  bonusBuildSpeed: "" # TODO: en
-  bonusShipAttack: "" # TODO: en
-  bonusShipShield: "" # TODO: en
-  bonusShipHull: "" # TODO: en
-  bonusEspionage: "" # TODO: en
+  title: Profession
+  active: active
+  currentLabel: Current profession
+  available: available
+  chooseBtn: Choose
+  confirmChoose: "Choose profession «{{name}}»? Change is possible once every {{days}} days."
+  confirmBtn: Confirm
+  cancelBtn: Cancel
+  bonusUnknown: Bonus
+  bonusProductionMetal: Metal production
+  bonusProductionSilicon: Silicon production
+  bonusProductionHydrogen: Hydrogen production
+  bonusFleetSpeed: Fleet speed
+  bonusResearchSpeed: Research speed
+  bonusBuildSpeed: Build speed
+  bonusShipAttack: Ship attack
+  bonusShipShield: Ship shield
+  bonusShipHull: Ship hull
+  bonusEspionage: Espionage
 
-# TODO: en
 alienUi:
-  title: "" # TODO: en
-  departsLabel: "" # TODO: en
-  fleetLabel: "" # TODO: en
-  paidLabel: "" # TODO: en
-  payBtn: "" # TODO: en
-  payHint: "" # TODO: en
-  expiresLabel: "" # TODO: en
-  empty: "" # TODO: en
-  tierLabel: "" # TODO: en
-  payMinutes: "" # TODO: en
+  title: Planets under alien occupation
+  departsLabel: "Departs:"
+  fleetLabel: "Fleet:"
+  paidLabel: "Already paid:"
+  payBtn: Pay (extend)
+  payHint: "50 cr = 2 hours"
+  expiresLabel: expires
+  empty: No captured planets
+  tierLabel: tier
+  payMinutes: "{{n}} min"
 
-# TODO: en
 adminUi:
-  title: "" # TODO: en
-  tabUsers: "" # TODO: en
-  tabEvents: "" # TODO: en
-  tabAudit: "" # TODO: en
-  sectionActions: "" # TODO: en
-  sectionUsers: "" # TODO: en
-  sectionAutomsgs: "" # TODO: en
-  statUsers: "" # TODO: en
-  statPlanets: "" # TODO: en
-  statFleets: "" # TODO: en
-  statEvents: "" # TODO: en
-  creditTitle: "" # TODO: en
-  creditAmountPlaceholder: "" # TODO: en
-  creditConfirm: "" # TODO: en
-  roleTitle: "" # TODO: en
-  roleConfirm: "" # TODO: en
-  okBtn: "" # TODO: en
-  profileBtn: "" # TODO: en
-  banBtn: "" # TODO: en
-  unbanBtn: "" # TODO: en
-  banConfirm: "" # TODO: en
-  unbanConfirm: "" # TODO: en
-  confirmTitle: "" # TODO: en
-  confirmBtn: "" # TODO: en
-  cancelBtn: "" # TODO: en
-  colPlayer: "" # TODO: en
-  colRole: "" # TODO: en
-  colCredits: "" # TODO: en
-  colScore: "" # TODO: en
-  colCreated: "" # TODO: en
-  colActions: "" # TODO: en
-  automsgColKey: "" # TODO: en
-  automsgColTitle: "" # TODO: en
-  automsgColFolder: "" # TODO: en
-  automsgEditBtn: "" # TODO: en
-  automsgSaveBtn: "" # TODO: en
-  automsgCancelBtn: "" # TODO: en
-  automsgTitleLabel: "" # TODO: en
-  automsgFolderLabel: "" # TODO: en
-  automsgBodyLabel: "" # TODO: en
-  automsgSaveErr: "" # TODO: en
-  eventsMonitorTitle: "" # TODO: en
-  eventsTopErrors: "" # TODO: en
-  eventsLoading: "" # TODO: en
-  eventsEmpty: "" # TODO: en
-  eventsColId: "" # TODO: en
-  eventsColKind: "" # TODO: en
-  eventsColState: "" # TODO: en
-  eventsColAtt: "" # TODO: en
-  eventsColFire: "" # TODO: en
-  eventsColLastErr: "" # TODO: en
-  deadTitle: "" # TODO: en
-  deadLoading: "" # TODO: en
-  deadLoadErr: "" # TODO: en
-  deadEmpty: "" # TODO: en
-  deadRetryConfirm: "" # TODO: en
-  deadColFailed: "" # TODO: en
-  deadColKind: "" # TODO: en
-  deadColAttempt: "" # TODO: en
-  deadColError: "" # TODO: en
-  deadColTarget: "" # TODO: en
-  auditTitle: "" # TODO: en
-  auditActionPlaceholder: "" # TODO: en
-  auditTargetPlaceholder: "" # TODO: en
-  auditRefreshBtn: "" # TODO: en
-  auditLoading: "" # TODO: en
-  auditLoadErr: "" # TODO: en
-  auditEmpty: "" # TODO: en
-  auditColDate: "" # TODO: en
-  auditColAdmin: "" # TODO: en
-  auditColAction: "" # TODO: en
-  auditColTarget: "" # TODO: en
-  auditColPayload: "" # TODO: en
-  auditColIp: "" # TODO: en
-  profileCloseBtn: "" # TODO: en
-  profileLoading: "" # TODO: en
-  profileLoadErr: "" # TODO: en
-  profileLabelRole: "" # TODO: en
-  profileLabelCredits: "" # TODO: en
-  profileLabelScore: "" # TODO: en
-  profileLabelReg: "" # TODO: en
-  profileLabelOnline: "" # TODO: en
-  profileBanned: "" # TODO: en
-  profileTabSummary: "" # TODO: en
-  profileTabEconomy: "" # TODO: en
-  profileTabCombat: "" # TODO: en
-  profileTabAudit: "" # TODO: en
-  sectionPlanets: "" # TODO: en
-  sectionResources: "" # TODO: en
-  sectionFleets: "" # TODO: en
-  sectionOfficers: "" # TODO: en
-  sectionArtefacts: "" # TODO: en
-  sectionMarketLots: "" # TODO: en
-  sectionArtefactLots: "" # TODO: en
-  sectionResLog: "" # TODO: en
-  sectionPurchases: "" # TODO: en
-  sectionReports: "" # TODO: en
-  sectionMessages: "" # TODO: en
-  sectionAdminAudit: "" # TODO: en
-  resourceApplyBtn: "" # TODO: en
-  artefactGrantBtn: "" # TODO: en
-  missionAttack: "" # TODO: en
-  missionEspionage: "" # TODO: en
-  missionTransport: "" # TODO: en
-  missionColonize: "" # TODO: en
-  missionHarvest: "" # TODO: en
-  missionExpedition: "" # TODO: en
-  missionInvasion: "" # TODO: en
-  reportBattle: "" # TODO: en
-  reportEspionage: "" # TODO: en
-  reportExpedition: "" # TODO: en
-  colName: "" # TODO: en
-  colCoords: "" # TODO: en
-  colMission: "" # TODO: en
-  colDest: "" # TODO: en
-  colArrival: "" # TODO: en
-  officerUntil: "" # TODO: en
-  colSells: "" # TODO: en
-  colWants: "" # TODO: en
-  colArtefact: "" # TODO: en
-  colPrice: "" # TODO: en
-  colDate: "" # TODO: en
-  colPackage: "" # TODO: en
-  colCreditsShort: "" # TODO: en
-  colStatus: "" # TODO: en
-  colAdmin: "" # TODO: en
-  colAction: "" # TODO: en
-  colFolder: "" # TODO: en
-  colSubject: "" # TODO: en
-  colRead: "" # TODO: en
+  title: Admin panel
+  tabUsers: "👥 Players"
+  tabEvents: "⚡ Events"
+  tabAudit: "📜 Action log"
+  sectionActions: Actions
+  sectionUsers: Users
+  sectionAutomsgs: Message templates
+  statUsers: Users
+  statPlanets: Planets
+  statFleets: Fleets in transit
+  statEvents: Events in queue
+  creditTitle: Grant credits
+  creditAmountPlaceholder: amount
+  creditConfirm: "Grant {{amount}} credits to player {{id}}…?"
+  roleTitle: Set role
+  roleConfirm: "Assign role «{{role}}» to player {{id}}…? Changing the role alters their game capabilities."
+  okBtn: OK
+  profileBtn: "🔍 Profile"
+  banBtn: Ban
+  unbanBtn: Unban
+  banConfirm: "Ban player {{name}}? They will not be able to log in until the ban is lifted."
+  unbanConfirm: "Lift ban from player {{name}}?"
+  confirmTitle: Confirm admin action
+  confirmBtn: Execute
+  cancelBtn: Cancel
+  colPlayer: Player
+  colRole: Role
+  colCredits: Credits
+  colScore: Score
+  colCreated: Created
+  colActions: Actions
+  automsgColKey: Key
+  automsgColTitle: Title
+  automsgColFolder: Folder
+  automsgEditBtn: Edit
+  automsgSaveBtn: Save
+  automsgCancelBtn: Cancel
+  automsgTitleLabel: "Title:"
+  automsgFolderLabel: "Folder:"
+  automsgBodyLabel: "Body template (supports {{variable}})"
+  automsgSaveErr: error
+  eventsMonitorTitle: Events monitor
+  eventsTopErrors: "Top errors (24h):"
+  eventsLoading: Loading…
+  eventsEmpty: no events
+  eventsColId: ID
+  eventsColKind: Kind
+  eventsColState: State
+  eventsColAtt: Att
+  eventsColFire: Fire
+  eventsColLastErr: Last error
+  deadTitle: "☠ Dead-letter"
+  deadLoading: Loading…
+  deadLoadErr: Dead-letter load error
+  deadEmpty: "Empty. Events end up here after N failed attempts."
+  deadRetryConfirm: "Return event {{id}} to active queue?"
+  deadColFailed: failed_at
+  deadColKind: kind
+  deadColAttempt: attempt
+  deadColError: Error
+  deadColTarget: user/planet
+  auditTitle: Audit log
+  auditActionPlaceholder: "action (users.ban, events.retry, …)"
+  auditTargetPlaceholder: target_id
+  auditRefreshBtn: "↻ Refresh"
+  auditLoading: Loading…
+  auditLoadErr: Audit log load error
+  auditEmpty: "Log is empty. Perform any write action in the admin panel — entries will appear here."
+  auditColDate: Date
+  auditColAdmin: Admin
+  auditColAction: Action
+  auditColTarget: Target
+  auditColPayload: Payload
+  auditColIp: IP
+  profileCloseBtn: "✕ Close"
+  profileLoading: Loading profile…
+  profileLoadErr: Load error
+  profileLabelRole: "Role:"
+  profileLabelCredits: "💳 Credits:"
+  profileLabelScore: "🏆 Score:"
+  profileLabelReg: "Registered:"
+  profileLabelOnline: "Last online:"
+  profileBanned: "⛔ Banned"
+  profileTabSummary: Summary
+  profileTabEconomy: Economy
+  profileTabCombat: "Battles / reports"
+  profileTabAudit: Audit
+  sectionPlanets: "🪐 Planets"
+  sectionResources: "⚙️ Adjust resources (delta, can be negative)"
+  sectionFleets: "🛸 Fleets in flight"
+  sectionOfficers: "⭐ Officers"
+  sectionArtefacts: "💎 Artefacts"
+  sectionMarketLots: "📈 Market lots"
+  sectionArtefactLots: "🏪 Artefact market lots"
+  sectionResLog: "💰 Recent resource transactions"
+  sectionPurchases: "💳 Credit purchases"
+  sectionReports: "📜 Recent reports"
+  sectionMessages: "📬 Recent messages"
+  sectionAdminAudit: "🗒 Admin actions on this player"
+  resourceApplyBtn: Apply
+  artefactGrantBtn: "+ Grant"
+  missionAttack: Attack
+  missionEspionage: Espionage
+  missionTransport: Transport
+  missionColonize: Colonize
+  missionHarvest: Collect debris
+  missionExpedition: Expedition
+  missionInvasion: Invasion
+  reportBattle: "⚔ Battle"
+  reportEspionage: "🔭 Espionage"
+  reportExpedition: "🌌 Expedition"
+  colName: Name
+  colCoords: Coordinates
+  colMission: Mission
+  colDest: Destination
+  colArrival: Arrival
+  officerUntil: until
+  colSells: Sells
+  colWants: Wants
+  colArtefact: Artefact
+  colPrice: Price
+  colDate: Date
+  colPackage: Package
+  colCreditsShort: "+Cr"
+  colStatus: Status
+  colAdmin: Admin
+  colAction: Action
+  colFolder: Folder
+  colSubject: Subject
+  colRead: Read
 
-# TODO: en
 artMarketUi:
-  title: "" # TODO: en
-  balanceLabel: "" # TODO: en
-  tabAll: "" # TODO: en
-  tabMine: "" # TODO: en
-  empty: "" # TODO: en
-  colArtefact: "" # TODO: en
-  colSeller: "" # TODO: en
-  colPrice: "" # TODO: en
-  colDate: "" # TODO: en
-  buyBtn: "" # TODO: en
-  buyBtnCantAfford: "" # TODO: en
-  cancelBtn: "" # TODO: en
-  tooltipNoCredits: "" # TODO: en
-  toastBoughtTitle: "" # TODO: en
-  toastBoughtBody: "" # TODO: en
-  toastBuyErrTitle: "" # TODO: en
-  toastCancelledTitle: "" # TODO: en
+  title: "🏷 Artefact Market"
+  balanceLabel: "Balance:"
+  tabAll: "📋 All offers"
+  tabMine: "👤 Mine"
+  empty: No offers.
+  colArtefact: Artefact
+  colSeller: Seller
+  colPrice: Price
+  colDate: Date
+  buyBtn: Buy
+  buyBtnCantAfford: Not enough cr
+  cancelBtn: Cancel
+  tooltipNoCredits: Not enough credits
+  toastBoughtTitle: Purchased
+  toastBoughtBody: Artefact added to inventory
+  toastBuyErrTitle: Purchase error
+  toastCancelledTitle: Offer cancelled
 
-# TODO: en
 authUi:
-  tagline: ""
-  loginTab: ""
-  registerTab: ""
-  usernameLabel: ""
-  usernamePlaceholder: ""
-  emailOrLogin: ""
-  emailLabel: ""
-  loginPlaceholder: ""
-  emailPlaceholder: ""
-  passwordLabel: ""
-  passwordPlaceholder: ""
-  loginButton: ""
-  registerButton: ""
+  tagline: space strategy
+  loginTab: Sign in
+  registerTab: Register
+  usernameLabel: Username
+  usernamePlaceholder: 3 to 24 characters
+  emailOrLogin: E-Mail or login
+  emailLabel: E-Mail
+  loginPlaceholder: "example@mail.com or alice"
+  emailPlaceholder: example@mail.com
+  passwordLabel: Password
+  passwordPlaceholder: minimum 8 characters
+  loginButton: Sign in
+  registerButton: Register
 
 error:
   accountActivation: ""
@@ -1715,248 +1693,265 @@ galaxy:
   upperInactive: ""
   vacationMode: ""
 confirmUi:
-  defaultTitle: "" # TODO: en
-  defaultConfirm: "" # TODO: en
-  defaultCancel: "" # TODO: en
-  closeLabel: "" # TODO: en
+  defaultTitle: Confirmation
+  defaultConfirm: Confirm
+  defaultCancel: Cancel
+  closeLabel: Close
 global:
-  accountWillBeDeleted: ""
-  achievement: ""
-  addToBuddylist: ""
-  agree: ""
-  all: ""
-  alliance: ""
-  allianceAttack: ""
-  allianceDestroyAttack: ""
-  allianceMoonDestroyAttack: ""
-  artefactPackedBuildingFullDesc: ""
-  artefacts: ""
-  attack: ""
-  back: ""
-  basicProduction: ""
-  bigLot: ""
-  bsInSpace: ""
-  bsMoonPost: ""
-  buy: ""
-  buyFailed: ""
-  buySecceed: ""
-  buySucceed: ""
-  cantRecallYet: ""
-  characters: ""
-  colonize: ""
-  colonizeRandomPlanet: ""
-  colony: ""
-  commit: ""
-  confirmProceeding: ""
-  countdownTw: ""
-  countdownWait: ""
-  cr: ""
-  credit: ""
-  creditPay: ""
-  credits: ""
-  dateFormat: ""
-  decimalPoint: ""
-  deliveryArtefacts: ""
-  deliveryResourses: ""
-  deliveryUnits: ""
-  deliveryUnitsSeller: ""
-  destroyAttack: ""
-  distance: ""
-  edit: ""
-  email: ""
-  energy: ""
-  error: ""
-  errorousParam: ""
-  exchBan: ""
-  exchCanntRetreatTransport: ""
-  exchComission: ""
-  exchComissionNote: ""
-  exchCost: ""
-  exchDeliveryMsg: ""
-  exchDeliveryStr: ""
-  exchDiscount: ""
-  exchDistance: ""
-  exchDistancePaid: ""
-  exchExpiryDate: ""
-  exchFilterComment: ""
-  exchGroupExch: ""
-  exchLotDetails: ""
-  exchLotMinAmount: ""
-  exchLotOptions: ""
-  exchLotPriceCommission: ""
-  exchLotType: ""
-  exchLots: ""
-  exchMaxPriceErr: ""
-  exchMetEquiv: ""
-  exchMinPriceErr: ""
-  exchMustBeMultiple: ""
-  exchMyExch: ""
-  exchMyLots: ""
-  exchNewLot: ""
-  exchNewlotS1: ""
-  exchNoSlots: ""
-  exchPurchase: ""
-  exchQuant: ""
-  exchRealPrice: ""
-  exchSlots: ""
-  exchTitle: ""
-  exchTtl: ""
-  expedition: ""
-  externLink: ""
-  fNewMessage: ""
-  fNewMessages: ""
-  failure: ""
-  fleet: ""
-  gameName: ""
-  halt: ""
-  homePlanet: ""
-  hydrogen: ""
-  imagePackage: ""
-  level: ""
-  loonPost: ""
-  maximum: ""
-  menuAchievements: ""
-  menuAlliance: ""
-  menuArtefacts: ""
-  menuBattlestats: ""
-  menuConstructions: ""
-  menuDefense: ""
-  menuDisassemble: ""
-  menuEmpire: ""
-  menuExchange: ""
-  menuFleet: ""
-  menuForums: ""
-  menuFriends: ""
-  menuGalaxy: ""
-  menuLogout: ""
-  menuMain: ""
-  menuMessages: ""
-  menuAdmin: "" # TODO: en
-  menuChat: "" # TODO: en
-  menuDailyQuests: "" # TODO: en
-  menuNotepad: ""
-  menuPlanetOptions: ""
-  menuPreferences: ""
-  menuProfession: "" # TODO: en
-  menuRanking: ""
-  menuRecords: ""
-  menuReferal: ""
-  menuReferral: "" # TODO: en
-  menuSettings: "" # TODO: en
-  menuWiki: "" # TODO: en
-  navGroupPlanet: "" # TODO: en
-  navGroupSpace: "" # TODO: en
-  navGroupSocial: "" # TODO: en
-  navGroupTrade: "" # TODO: en
-  navGroupStats: "" # TODO: en
-  navMore: "" # TODO: en
-  navNavigation: "" # TODO: en
-  navGalaxy: "" # TODO: en
-  navMessages: "" # TODO: en
-  resMetalAbbr: "" # TODO: en
-  resSiliconAbbr: "" # TODO: en
-  resHydrogenAbbr: "" # TODO: en
-  btnLogout: "" # TODO: en
-  btnAdmin: "" # TODO: en
-  btnSearch: "" # TODO: en
-  paymentFail: "" # TODO: en
-  paymentSuccess: "" # TODO: en
-  reloadBtn: "" # TODO: en
-  menuRepair: ""
-  menuResearch: ""
-  menuResource: ""
-  menuRestransfers: ""
-  menuSearch: ""
-  menuShipyard: ""
-  menuSimulator: ""
-  menuStock: ""
-  menuSupport: ""
-  menuTechtree: ""
-  menuTutorial: ""
-  menuUserAgreement: ""
-  metal: ""
-  moon: ""
-  moonDestroyAttack: ""
-  mustLogin: ""
-  neutralPlanetName: ""
-  next: ""
-  nextPage: ""
-  noMatchesFound: ""
-  notEnoughExchangeRange: ""
-  notepad: ""
-  ok: ""
-  or: ""
-  other: ""
-  page: ""
-  password: ""
-  payMainText: ""
-  paySupportText: ""
-  planet: ""
-  planetFree: ""
-  prev: ""
-  prevPage: ""
-  proceed: ""
-  production: ""
-  quantity: ""
-  raisingDate: ""
-  recall: ""
-  reciever: ""
-  recycling: ""
-  referralCreditMessage: ""
-  referralCreditSubject: ""
-  relatedMsg: ""
-  requiredConstructions: ""
-  requiredListTitle: ""
-  researchExpoTech: ""
-  resetButton: ""
-  resource: ""
-  resources: ""
-  returnFly: ""
-  rocketAttack: ""
-  sender: ""
-  seqNum: ""
-  showUnavailable: ""
-  showUnavailableUnits: ""
-  silicon: ""
-  spy: ""
-  stargateTransport: ""
-  stationate: ""
-  statistics: ""
-  tf: ""
-  thousandsSeperator: ""
-  timeFormat: ""
-  today: ""
-  tooManyExpos: ""
-  topMenu: ""
-  topMenuBuyCredit: ""
-  topMenuPlanets: ""
-  transport: ""
-  twInProgress: ""
-  twUpcoming: ""
-  twUpcomingBlock: ""
-  umodeEnabled: ""
-  unformedPlanetName: ""
-  unitFields: ""
-  unkown: ""
-  user: ""
-  userAgreement: ""
-  userBackgroundStyle: ""
-  userTableStyle: ""
-  username: ""
-  wiki: ""
-  writeMessage: ""
-  yesterday: ""
-  loadingUniverse: "" # TODO: en
-  incomingAttackWarning: "" # TODO: en
-  incomingAttackWarningMoon: "" # TODO: en
-  creditsTitle: "" # TODO: en
-  adminTitle: "" # TODO: en
-  searchTitle: "" # TODO: en
-  profileTitle: "" # TODO: en
-  timeUnitSec: "" # TODO: en
-  timeUnitMin: "" # TODO: en
-  timeUnitHour: "" # TODO: en
-  timeUnitDay: "" # TODO: en
+  accountWillBeDeleted: Account will be deleted!
+  achievement: Achievement
+  addToBuddylist: Add to friends
+  agree: Agree
+  all: All
+  alliance: Alliance
+  allianceAttack: Alliance attack
+  allianceDestroyAttack: Alliance destroy building
+  allianceMoonDestroyAttack: Alliance destroy moon
+  artefactPackedBuildingFullDesc: Allows you to instantly construct the building inside.
+  artefacts: Artefacts
+  attack: Attack
+  back: Back
+  basicProduction: Natural production
+  bigLot: Insufficient assets for reservation.
+  bsInSpace: Somewhere in space
+  bsMoonPost: ' (moon)'
+  buy: Buy
+  buyFailed: Unable to complete purchase.
+  buySecceed: Thank you for your purchase on the Intergalactic Exchange!
+  buySucceed: Purchase completed.
+  cantRecallYet: Cannot recall the lot this early.
+  characters: characters
+  colonize: Colonize
+  colonizeRandomPlanet: Colonize uncharted space
+  colony: Colony
+  commit: Ok
+  confirmProceeding: Are you sure?
+  countdownTw: MW
+  countdownWait: In progress
+  cr: cr.
+  credit: Credit
+  creditPay: Top up
+  credits: Credits
+  dateFormat: d.m.Y
+  decimalPoint: ','
+  deliveryArtefacts: Delivery of purchased artefacts
+  deliveryResourses: Delivery of purchased resources
+  deliveryUnits: Delivery of purchased fleet
+  deliveryUnitsSeller: Delivery of sold fleet
+  destroyAttack: Destroy building
+  distance: Distance
+  edit: Edit
+  email: E-Mail
+  energy: Energy
+  error: Error
+  errorousParam: Invalid parameter
+  exchBan: You have been banned by the exchange owner
+  exchCanntRetreatTransport: You cannot cancel the transaction and recall the transport.
+  exchComission: Listing fee
+  exchComissionNote: One-time fee charged to the seller when listing (not refunded on cancellation).
+  exchCost: Lot price
+  exchDeliveryMsg: Delivery
+  exchDeliveryStr: "Seller pays {@percent}% of fuel, up to {@hydro}"
+  exchDiscount: Discount for trade alliances, %
+  exchDistance: Exchange range, star systems
+  exchDistancePaid: Paid distance
+  exchExpiryDate: Lot auto-cancel date
+  exchFilterComment: Filter
+  exchGroupExch: Group by exchange
+  exchLotDetails: Lot
+  exchLotMinAmount: Min. batch
+  exchLotOptions: Add listing
+  exchLotPriceCommission: Including exchange commission
+  exchLotType: Lot type
+  exchLots: Lots on exchange (used/max)
+  exchMaxPriceErr: Lot price cannot be that high.
+  exchMetEquiv: '"Metal" equivalent'
+  exchMinPriceErr: Lot price cannot be that low.
+  exchMustBeMultiple: Quantity must be a multiple of min. batch
+  exchMyExch: Lots on my exchange
+  exchMyLots: My lots
+  exchNewLot: Submit listing
+  exchNewlotS1: Available exchanges
+  exchNoSlots: No free slots for listing.
+  exchPurchase: Buy lot
+  exchQuant: Minimum batch
+  exchRealPrice: Cost price
+  exchSlots: Infrastructure capacity (used/max)
+  exchTitle: Exchange name
+  exchTtl: Lot lifetime, days
+  expedition: Expedition
+  externLink: "You are leaving {config}pagetitle{/config}. Note that {config}pagetitle{/config} is not responsible for the content of external websites."
+  fNewMessage: (1 new message)
+  fNewMessages: "({{num1}} new messages)"
+  failure: Error!
+  fleet: Fleet
+  gameName: Oxsar©Niro
+  halt: Hold
+  homePlanet: Planet
+  hydrogen: Hydrogen
+  imagePackage: Style
+  level: Level
+  loonPost: ' (moon)'
+  maximum: Max.
+  menuAchievements: Achievements
+  menuAlliance: Alliance
+  menuArtefacts: Artefacts
+  menuArtMarket: Artefact market
+  menuBattlestats: Battles
+  menuConstructions: Buildings
+  menuDefense: Defense
+  menuDisassemble: Disassemble
+  menuEmpire: Empire
+  menuExchange: My Exchange (manage)
+  menuFleet: Fleet
+  menuForums: Forum
+  menuFriends: Friends
+  menuGalaxy: Galaxy
+  menuHighscore: Rankings
+  menuLogout: Logout
+  menuMain: Overview
+  menuMarket: Market
+  menuMessages: Messages
+  menuAdmin: Admin
+  menuChat: Chat
+  menuDailyQuests: Daily quests
+  menuNotepad: Notepad
+  menuOfficers: Officers
+  menuPlanetOptions: Planet
+  menuPreferences: Settings
+  menuProfession: Profession
+  menuRanking: Statistics
+  menuRecords: Records
+  menuReferal: Referrals
+  menuReferral: Referrals
+  menuRockets: Rockets
+  menuSettings: Settings
+  menuWiki: Wiki
+  navGroupPlanet: Planet
+  navGroupSpace: Space
+  navGroupSocial: Social
+  navGroupTrade: Trade
+  navGroupStats: Stats
+  navMore: More
+  navNavigation: Navigation
+  navGalaxy: Galaxy
+  navMessages: Messages
+  resMetalAbbr: Met
+  resSiliconAbbr: Sil
+  resHydrogenAbbr: Hyd
+  btnLogout: Logout
+  btnAdmin: Admin
+  btnSearch: Search
+  paymentFail: Payment failed, please try again
+  paymentSuccess: Payment successful, credits credited
+  reloadBtn: Refresh
+  menuRepair: Repair
+  menuResearch: Research
+  menuResource: Resources
+  menuRestransfers: Resource transfers
+  menuSearch: Search
+  menuShipyard: Shipyard
+  menuSimulator: Battle simulator
+  menuStock: Exchange
+  menuSupport: Support
+  menuTechtree: Technologies
+  menuTutorial: Tutorial
+  menuUserAgreement: Terms
+  metal: Metal
+  moon: Moon
+  moonDestroyAttack: Destroy moon
+  mustLogin: Login required
+  neutralPlanetName: UFO-251
+  next: Next
+  nextPage: Next
+  noMatchesFound: Not found
+  notEnoughExchangeRange: Insufficient exchange range.
+  notepad: Notepad
+  ok: Ok
+  or: or
+  other: Other
+  page: Page
+  password: Password
+  payMainText: By purchasing credits you support the Oxsar world. The funds go towards development of new versions and game updates.
+  paySupportText: "In case of a problem write to support at <b>support@oxsar.ru</b>, specify the date and time of payment, your game login, payment system, payment amount and the credits amount not credited."
+  planet: Planet
+  planetFree: no tasks
+  prev: Prev
+  prevPage: Prev
+  proceed: Apply
+  production: Production
+  quantity: Quantity
+  raisingDate: Application date
+  recall: Cancel
+  reciever: Recipient
+  recycling: Collect debris
+  referralCreditMessage: "A bonus of {@credits} credits has been credited for your referral {@ref_username}."
+  referralCreditSubject: Credits credited
+  relatedMsg: Messages related to this player.
+  requiredConstructions: Unmet requirements
+  requiredListTitle: Requirements
+  researchExpoTech: Expedition technology must be researched
+  resetButton: Cancel changes
+  resource: Resource
+  resources: Resources
+  returnFly: Returning
+  rocketAttack: Rocket attack
+  sender: Sender
+  seqNum: "#"
+  showUnavailable: Show unavailable
+  showUnavailableUnits: Show unavailable units
+  silicon: Silicon
+  spy: Espionage
+  stargateTransport: Hyperspace jump
+  stationate: Leave
+  statistics: Statistics
+  tf: Debris
+  thousandsSeperator: ","
+  timeFormat: "H:i:s"
+  today: "<strong>Today</strong>"
+  tooManyExpos: Expedition technology level does not allow sending this many expeditions.
+  topMenu: Menu
+  topMenuBuyCredit: Top up credits
+  topMenuPlanets: Planets
+  transport: Transport
+  twInProgress: Maintenance is currently in progress (MW).
+  twUpcoming: "Maintenance is coming soon (MW). Tasks completing during MW will be paused. The order of task resumption will be preserved. MW ends at {@tw_end_time} (Moscow time)."
+  twUpcomingBlock: "Maintenance is coming soon (MW). During maintenance you will not be able to log in. MW ends at {@tw_end_time} (Moscow time)."
+  umodeEnabled: Account is in vacation mode.
+  unformedPlanetName: Nebula
+  unitFields: Occupies fields
+  unkown: Unknown
+  user: Player
+  userAgreement: Terms of service
+  userBackgroundStyle: Background style
+  userTableStyle: Table style
+  username: Username
+  wiki: Wiki
+  writeMessage: Write message
+  yesterday: "<strong>Yesterday</strong>"
+  loadingUniverse: "Loading universe…"
+  incomingAttackWarning: "Attack on [{{coords}}]"
+  incomingAttackWarningMoon: "Attack on [{{coords}}] 🌑"
+  creditsTitle: Credits
+  adminTitle: Admin panel
+  searchTitle: "Search (Ctrl+K)"
+  profileTitle: "Profile / settings"
+  timeUnitSec: "s"
+  timeUnitMin: "m"
+  timeUnitHour: "h"
+  timeUnitDay: "d"
+  tutorialStep1Desc: ""
+  tutorialStep1Title: ""
+  tutorialStep2Desc: ""
+  tutorialStep2Title: ""
+  tutorialStep3Desc: ""
+  tutorialStep3Title: ""
+  tutorialStep4Desc: ""
+  tutorialStep4Title: ""
+  tutorialStep5Desc: ""
+  tutorialStep5Title: ""
+  tutorialStep6Desc: ""
+  tutorialStep6Title: ""
 info:
   abort: ""
   alienTech: ""
@@ -2308,72 +2303,72 @@ info:
   useNewAssault: ""
   wrongLeavePhrase: ""
 main:
-  abandonPlanet: ""
-  anigilationTimer: ""
-  approx: ""
-  availableVersion: ""
-  battleActiveExperience: ""
-  battleExperience: ""
-  changes: ""
-  curHomePlanet: ""
-  debris: ""
-  events: ""
-  fleetMessageColonizeNewUserPlanet: ""
-  fleetMessageDeliveryArtefacts: ""
-  fleetMessageDeliveryArtefactsSeller: ""
-  fleetMessageDeliveryUnits: ""
-  fleetMessageDeliveryUnitsSeller: ""
-  fleetMessageFormation: ""
-  fleetMessageHolding1: ""
-  fleetMessageHolding2: ""
-  fleetMessageOther: ""
-  fleetMessageOtherRes: ""
-  fleetMessageOwn: ""
-  fleetMessageReturn: ""
-  fleetMessageRocketAttack: ""
-  fleetMessageRocketAttackForeign: ""
-  invalidPlanetName: ""
-  newPlanetName: ""
-  planetAnigilation: ""
-  planetIsNotFormedYet: ""
-  planetOccupiedFields: ""
-  planetOptions: ""
-  planetdiameter: ""
-  planetdiameterKm: ""
-  points: ""
-  position: ""
-  rankOfUsers: ""
-  release: ""
-  serverTime: ""
-  setNewHomePlanet: ""
-  starSurMsg: ""
-  starSurMsgReturn: ""
-  temperature: ""
-  battleSimAttackers: "" # TODO: en
-  battleSimDefenders: "" # TODO: en
-  battleSimSeed: "" # TODO: en
-  battleSimNumsim: "" # TODO: en
-  battleSimCalculating: "" # TODO: en
-  battleSimRun: "" # TODO: en
-  battleSimResult: "" # TODO: en
-  battleSimRuns: "" # TODO: en
-  battleWinRate: "" # TODO: en
-  battleDrawRate: "" # TODO: en
-  battleAvgRounds: "" # TODO: en
-  battleWinner: "" # TODO: en
-  battleWinAtt: "" # TODO: en
-  battleWinDef: "" # TODO: en
-  battleDraw: "" # TODO: en
-  battleRounds: "" # TODO: en
-  seed: "" # TODO: en
-  attackers: "" # TODO: en
-  defenders: "" # TODO: en
-  battleLosses: "" # TODO: en
-  unitId: "" # TODO: en
-  before: "" # TODO: en
-  after: "" # TODO: en
-  damaged: "" # TODO: en
-  noLosses: "" # TODO: en
+  abandonPlanet: Abandon planet
+  anigilationTimer: Time until annihilation
+  approx: approx.
+  availableVersion: Available version
+  battleActiveExperience: Active battle experience
+  battleExperience: Battle experience
+  changes: Changes
+  curHomePlanet: Current home planet
+  debris: Debris
+  events: Events
+  fleetMessageColonizeNewUserPlanet: Colonize new planet
+  fleetMessageDeliveryArtefacts: Artefact delivery
+  fleetMessageDeliveryArtefactsSeller: Artefact delivery (seller)
+  fleetMessageDeliveryUnits: Fleet delivery
+  fleetMessageDeliveryUnitsSeller: Fleet delivery (seller)
+  fleetMessageFormation: Formation
+  fleetMessageHolding1: Holding position
+  fleetMessageHolding2: Holding (2)
+  fleetMessageOther: Other fleet
+  fleetMessageOtherRes: Other fleet resources
+  fleetMessageOwn: Own fleet
+  fleetMessageReturn: Fleet returning
+  fleetMessageRocketAttack: Rocket attack
+  fleetMessageRocketAttackForeign: Foreign rocket attack
+  invalidPlanetName: Invalid planet name
+  newPlanetName: New planet name
+  planetAnigilation: Planet annihilation
+  planetIsNotFormedYet: Planet is not formed yet
+  planetOccupiedFields: Occupied fields
+  planetOptions: Planet options
+  planetdiameter: Planet diameter
+  planetdiameterKm: km
+  points: Points
+  position: Position
+  rankOfUsers: Player rank
+  release: Release
+  serverTime: Server time
+  setNewHomePlanet: Set new home planet
+  starSurMsg: Star surveillance message
+  starSurMsgReturn: Star surveillance return
+  temperature: Temperature
+  battleSimAttackers: Attackers
+  battleSimDefenders: Defenders
+  battleSimSeed: Seed
+  battleSimNumsim: Simulations
+  battleSimCalculating: Calculating…
+  battleSimRun: Run simulation
+  battleSimResult: Simulation results
+  battleSimRuns: "runs"
+  battleWinRate: Win rate
+  battleDrawRate: Draw rate
+  battleAvgRounds: Avg. rounds
+  battleWinner: Winner
+  battleWinAtt: Attacker wins
+  battleWinDef: Defender wins
+  battleDraw: Draw
+  battleRounds: Rounds
+  seed: Seed
+  attackers: Attackers
+  defenders: Defenders
+  battleLosses: Losses
+  unitId: Unit
+  before: Before
+  after: After
+  damaged: Damaged
+  noLosses: No losses
 message:
   action: ""
   allMembers: ""
@@ -2471,11 +2466,6 @@ mission:
   unkownMission: ""
   unkownPlanet: ""
   waiting: ""
-payment:
-  snOkCredits: ""
-  snOkCreditsString: ""
-  snOkDesc: ""
-  snOkTitle: ""
 prefs:
   activated: ""
   advancedPreferences: ""
@@ -2556,6 +2546,7 @@ registration:
   noAccess: ""
   noActivation: ""
   openSource: ""
+  password: ""
   passwordChanged: ""
   passwordCheck: ""
   passwordForgotten: ""
