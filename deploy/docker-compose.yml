@@ -51,6 +51,7 @@ services:
         condition: service_healthy
     environment:
       DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
+      MIGRATE_DIR: /migrations/game-nova
     restart: "no"
 
   backend:
@@ -147,12 +148,12 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.migrate
-    command: ["sh", "-c", "goose -dir /migrations/portal postgres \"$DB_URL\" up"]
     depends_on:
       portal-db:
         condition: service_healthy
     environment:
       DB_URL: postgres://portal:portal@portal-db:5432/portal?sslmode=disable
+      MIGRATE_DIR: /migrations/portal
     restart: "no"
 
   portal-backend:

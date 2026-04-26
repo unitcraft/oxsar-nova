@@ -82,7 +82,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npx --yes @redocly/cli lint api/openapi.yaml
+      - run: npx --yes @redocly/cli lint projects/game-nova/api/openapi.yaml
 
   api-coverage:
     name: API coverage (UI → OpenAPI)

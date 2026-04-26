@@ -5,7 +5,7 @@ ROOT := $(shell pwd)
 BACKEND := $(ROOT)/projects/game-nova/backend
 FRONTEND := $(ROOT)/projects/game-nova/frontend
 PORTAL_FRONTEND := $(ROOT)/projects/portal/frontend
-MIGRATIONS := $(ROOT)/migrations
+MIGRATIONS := $(ROOT)/projects/game-nova/migrations
 
 GOOSE_DRIVER := postgres
 GOOSE_DBSTRING ?= postgres://oxsar:oxsar@localhost:5432/oxsar?sslmode=disable
@@ -28,7 +28,7 @@ help:
 	@echo "  test            - run all tests"
 	@echo "  lint            - run all linters"
 	@echo "  gen             - regenerate sqlc + openapi clients"
-	@echo "  import-datasheets - generate configs/construction.yml from legacy dump (OXSAR2_DUMP)"
+	@echo "  import-datasheets - generate projects/game-nova/configs/construction.yml from legacy dump (OXSAR2_DUMP)"
 	@echo "  i18n-audit        - scan codebase for hardcoded Cyrillic strings, write report"
 	@echo "  i18n-rename       - rename i18n keys SCREAMING_SNAKE→lowerCamelCase (one-time, point of no return)"
 	@echo "  i18n-check        - run all i18n CI checks (no-printf + consistency ru↔en)"
@@ -158,14 +158,14 @@ gen:
 	cd $(BACKEND) && go generate ./...
 	cd $(FRONTEND) && npm run gen:api
 
-# import-datasheets генерирует configs/construction.yml из legacy SQL-дампа.
+# import-datasheets генерирует projects/game-nova/configs/construction.yml из legacy SQL-дампа.
 # Запускать вручную после получения дампа или при обновлении баланса.
 # Требует: OXSAR2_DUMP указывает на каталог с na_construction.sql и др.
 .PHONY: import-datasheets
 import-datasheets:
 	cd $(BACKEND) && go run ./cmd/tools/import-datasheets \
 		--input="$(OXSAR2_DUMP)" \
-		--output="$(ROOT)/configs"
+		--output="$(ROOT)/projects/game-nova/configs"
 
 # i18n-audit: сканирует frontend/src и backend на хардкод-кириллицу.
 # Выход: docs/plans/33-i18n-audit-report.md
@@ -173,18 +173,18 @@ import-datasheets:
 i18n-audit:
 	cd $(BACKEND) && go run ./cmd/tools/i18n-audit \
 		--root="$(ROOT)" \
-		--dict="$(ROOT)/configs/i18n/ru.yml" \
+		--dict="$(ROOT)/projects/game-nova/configs/i18n/ru.yml" \
 		--out="$(ROOT)/docs/plans/33-i18n-audit-report.md"
 
-# i18n-rename: переименовывает ключи/группы в configs/i18n/*.yml
+# i18n-rename: переименовывает ключи/группы в projects/game-nova/configs/i18n/*.yml
 # SCREAMING_SNAKE_CASE → lowerCamelCase и %s/%d → {{name}}.
 # Запускать ОДИН РАЗ, после — закоммитить и поднять LOCALE_VERSION.
 .PHONY: i18n-rename
 i18n-rename:
 	cd $(BACKEND) && go run ./cmd/tools/i18n-rename \
-		--dir="$(ROOT)/configs/i18n" \
+		--dir="$(ROOT)/projects/game-nova/configs/i18n" \
 		--glossary="$(ROOT)/docs/plans/33-i18n-placeholder-glossary.yml" \
-		--map-out="$(ROOT)/configs/i18n/i18n-rename-map.json"
+		--map-out="$(ROOT)/projects/game-nova/configs/i18n/i18n-rename-map.json"
 
 # i18n-check: CI-проверки i18n (нет %s/%d в YAML, консистентность ключей ru↔en).
 .PHONY: i18n-check
@@ -197,5 +197,5 @@ i18n-check:
 .PHONY: wiki-gen
 wiki-gen:
 	cd $(BACKEND) && go run ./cmd/tools/wiki-gen \
-		--configs="$(ROOT)/configs" \
+		--configs="$(ROOT)/projects/game-nova/configs" \
 		--out="$(ROOT)/docs/wiki/ru"
