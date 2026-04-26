@@ -53,7 +53,7 @@
 
 `battle` — единственный домен, где тестов почти столько же, сколько кода. Это
 соответствует требованию CLAUDE.md: боевой движок покрывается property-based
-+ golden-файлами. Но `testdata/battle/*.json` сейчас **пустая** (0 файлов) —
++ golden-файлами. Но `projects/game-nova/backend/internal/battle/testdata/*.json` сейчас **пустая** (0 файлов) —
 golden-слой ещё не начат.
 
 ### Frontend: топ-10 экранов
@@ -144,7 +144,7 @@ golden-слой ещё не начат.
   пунктов — golden-тесты боя, recall для outbound, expExtraPlanet
   cleanup, Market в рамках планеты, welcome вне tx, Alien AI,
   Payment custom-сумма, i18n en stub, phalanx-producer.
-- **Golden-файлы боя**: 0 в `testdata/battle/`. Gap: нужно инициализировать
+- **Golden-файлы боя**: 0 в `projects/game-nova/backend/internal/battle/testdata/`. Gap: нужно инициализировать
   набор сценариев (требование из oxsar-spec §14.4).
 
 ## История разработки

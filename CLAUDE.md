@@ -84,7 +84,7 @@ make lint          # все линтеры
 
 - Покрытие изменённых строк: ≥ 70% для обычного кода, ≥ 85% для
   `battle`/`economy`/`event`.
-- Бой: property-based (rapid) + golden-файлы в `testdata/battle/*.json` +
+- Бой: property-based (rapid) + golden-файлы в `projects/game-nova/backend/internal/battle/testdata/*.json` +
   сравнение с `oxsar2-java/assault/dist/oxsar2-java.jar` (см. §14.4 ТЗ).
 - Флаки-тесты запрещены. Нестабильный тест — карантин + тикет.
 

@@ -6923,7 +6923,7 @@ configs/units.yml: добавлена строка Shadow Ship (id=325) в fleet
 (catalog_validate_test раскрыл пропуск — Shadow использовался в ships.yml
 и construction.yml, но не был зарегистрирован в реестре units).
 
-Тесты: все зелёные (backend ./...). golden-файлов в testdata/battle/
+Тесты: все зелёные (backend ./...). golden-файлов в projects/game-nova/backend/internal/battle/testdata/
 нет (только README), пересобирать нечего.
 
 Обновлено:

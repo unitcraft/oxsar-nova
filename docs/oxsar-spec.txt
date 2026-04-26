@@ -1602,7 +1602,7 @@ moon_creation_stats, событие EVENT_MOON_DESTRUCTION_RESULT (не пута
   формуле луны и новым OGame-механикам — только там, где это явно
   указано в разделе 12.
 - Фикстуры входов готовятся как JSON (флоты, технологии, артефакты,
-  оборона, признак ismoon, seed) и коммитятся в testdata/battle/.
+  оборона, признак ismoon, seed) и коммитятся в projects/game-nova/backend/internal/battle/testdata/.
 - Java-jar вызывается из Go-теста как внешний процесс (exec) с
   stdin-JSON и stdout-JSON; адаптер к Database.java не нужен.
 
@@ -1814,7 +1814,7 @@ PHP из new_game/. После обнаружения game/ + ext/ (см. §1.3)
   одинаковым результатом. Flaky-тесты квотируются — retry 3 раза,
   если не стабилизировался за сутки, карантин + тикет.
 - Тесты боя — property-based (gopter/rapid) + golden files
-  (testdata/battle/*.json).
+  (projects/game-nova/backend/internal/battle/testdata/*.json).
 - Нет shared mutable state между тестами. t.Parallel() по умолчанию.
 - Seed в тестах боя фиксированный для репродьюса.
 
