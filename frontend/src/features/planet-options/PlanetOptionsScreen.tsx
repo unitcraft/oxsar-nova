@@ -19,7 +19,7 @@ export function PlanetOptionsScreen({
   homePlanetId,
   onBack,
 }: PlanetOptionsScreenProps) {
-  const { t } = useTranslation('planetOptionsUi');
+  const { t } = useTranslation('planetOptions');
   const qc = useQueryClient();
   const toast = useToast();
 

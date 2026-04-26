@@ -20,7 +20,7 @@ export function Confirm({
   onConfirm,
   onCancel,
 }: ConfirmProps) {
-  const { t } = useTranslation('confirmUi');
+  const { t } = useTranslation('confirm');
   return (
     <Modal
       title={title ?? t('defaultTitle')}

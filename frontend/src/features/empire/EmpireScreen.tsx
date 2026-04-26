@@ -93,7 +93,7 @@ function SectionHeader({
 }
 
 export function EmpireScreen() {
-  const { t } = useTranslation('empireUi');
+  const { t } = useTranslation('empire');
   const { t: ti } = useTranslation('info');
   const { data, isLoading } = useQuery({
     queryKey: ['empire'],

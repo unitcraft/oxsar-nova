@@ -44,7 +44,7 @@ const PROD_STAT: Record<string, ProdStat> = {
 };
 
 export function BuildingsScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo: (id: number, level: number) => void }) {
-  const { t } = useTranslation('buildingsUi');
+  const { t } = useTranslation('buildings');
   const { t: tg } = useTranslation('global');
   const { t: ti } = useTranslation('info');
   const uS = tg('timeUnitSec');
@@ -328,7 +328,7 @@ function fmtSecs(sec: number): string {
 }
 
 function QueueRow({ item, isActive, onCancel, cancelPending }: { item: QueueItem; isActive: boolean; onCancel: () => void; cancelPending: boolean }) {
-  const { t } = useTranslation('buildingsUi');
+  const { t } = useTranslation('buildings');
   const { pct, secsLeft } = useBuildProgress(item.start_at, item.end_at);
   const [confirming, setConfirming] = useState(false);
   const name = ([...BUILDINGS, ...MOON_BUILDINGS]).find((b) => b.id === item.unit_id)?.name ?? `#${item.unit_id}`;

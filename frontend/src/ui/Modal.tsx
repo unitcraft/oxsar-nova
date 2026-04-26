@@ -10,7 +10,7 @@ interface ModalProps {
 }
 
 export function Modal({ title, onClose, children, actions, maxWidth = 480 }: ModalProps) {
-  const { t } = useTranslation('confirmUi');
+  const { t } = useTranslation('confirm');
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

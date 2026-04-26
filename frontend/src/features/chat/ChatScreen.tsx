@@ -21,7 +21,7 @@ const EMOJIS = ['😀','😂','😍','🤔','👍','👎','❤️','🔥','🎉'
 const EDIT_WINDOW_MS = 5 * 60 * 1000; // 5 минут
 
 export function ChatScreen() {
-  const { t } = useTranslation('chatUi');
+  const { t } = useTranslation('chat');
   const [kind, setKind] = useState<ChannelKind>('global');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');

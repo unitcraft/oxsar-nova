@@ -11,7 +11,7 @@ interface NotepadData {
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export function NotepadScreen() {
-  const { t } = useTranslation('notepadUi');
+  const { t } = useTranslation('notepad');
   const q = useQuery({
     queryKey: ['notepad'],
     queryFn: () => api.get<NotepadData>('/api/notepad'),
@@ -95,7 +95,7 @@ export function NotepadScreen() {
 }
 
 function StatusBadge({ status }: { status: SaveStatus }) {
-  const { t } = useTranslation('notepadUi');
+  const { t } = useTranslation('notepad');
   if (status === 'saving') return <span style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>{t('statusSaving')}</span>;
   if (status === 'saved') return <span style={{ fontSize: 14, color: 'var(--ox-success)' }}>{t('statusSaved')}</span>;
   if (status === 'error') return <span style={{ fontSize: 14, color: 'var(--ox-danger)' }}>{t('statusError')}</span>;

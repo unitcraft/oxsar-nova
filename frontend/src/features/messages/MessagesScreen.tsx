@@ -126,7 +126,7 @@ const FOLDER_DEFS: { folder: FolderKey; tkey: string; icon: string }[] = [
 type FleetMissionCb = (g: number, s: number, pos: number, isMoon: boolean, mission: number) => void;
 
 export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissionCb }) {
-  const { t } = useTranslation('messagesUi');
+  const { t } = useTranslation('messages');
   const qc = useQueryClient();
   const toast = useToast();
   const [selectedID, setSelectedID] = useState<string | null>(null);
@@ -337,7 +337,7 @@ export function MessagesScreen({ onFleetMission }: { onFleetMission?: FleetMissi
 }
 
 function ComposeForm({ init, onSent, onCancel }: { init?: ReplyInit | undefined; onSent: () => void; onCancel: () => void }) {
-  const { t } = useTranslation('messagesUi');
+  const { t } = useTranslation('messages');
   const [to, setTo] = useState(init?.to ?? '');
   const [subject, setSubject] = useState(init?.subject ?? '');
   const [body, setBody] = useState('');
@@ -375,7 +375,7 @@ function ComposeForm({ init, onSent, onCancel }: { init?: ReplyInit | undefined;
 }
 
 function MessageDetail({ message, onReply, onFleetMission }: { message: Message; onReply: (m: Message) => void; onFleetMission?: FleetMissionCb }) {
-  const { t } = useTranslation('messagesUi');
+  const { t } = useTranslation('messages');
   const report = useQuery({
     queryKey: ['battle-report', message.battle_report_id],
     queryFn: () => api.get<BattleReportFull>(`/api/battle-reports/${message.battle_report_id}`),
@@ -432,7 +432,7 @@ function MessageDetail({ message, onReply, onFleetMission }: { message: Message;
 }
 
 function ExpeditionReportView({ data }: { data: ExpeditionReportFull }) {
-  const { t } = useTranslation('messagesUi');
+  const { t } = useTranslation('messages');
   const outcomeText: Record<string, string> = {
     resources: t('expedResources'), artefact: t('expedArtefact'),
     extra_planet: t('expedExtraPlanet'), pirates: t('expedPirates'),
@@ -450,7 +450,7 @@ function ExpeditionReportView({ data }: { data: ExpeditionReportFull }) {
 }
 
 function EspionageReportView({ data }: { data: EspionageReportFull }) {
-  const { t } = useTranslation('messagesUi');
+  const { t } = useTranslation('messages');
   const r = data.report;
   return (
     <div>
@@ -485,7 +485,7 @@ function UnitMapBlock({ title, data }: { title: string; data: Record<string, num
 }
 
 function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; onFleetMission?: FleetMissionCb }) {
-  const { t } = useTranslation('messagesUi');
+  const { t } = useTranslation('messages');
   const r = data.report;
   const isAttackerWin = r.winner === 'attackers';
   const isDefenderWin = r.winner === 'defenders';
@@ -573,7 +573,7 @@ function BattleReportView({ data, onFleetMission }: { data: BattleReportFull; on
 }
 
 function SideLosses({ title, side, accentColor }: { title: string; side: SideResult; accentColor: string }) {
-  const { t } = useTranslation('messagesUi');
+  const { t } = useTranslation('messages');
   const { t: ti } = useTranslation('info');
   const lost = side.lost_metal + side.lost_silicon + side.lost_hydrogen;
   return (

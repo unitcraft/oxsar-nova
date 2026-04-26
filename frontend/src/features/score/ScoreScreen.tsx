@@ -80,7 +80,7 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
   initialQuery?: string;
   onPlanetClick?: (g: number, s: number) => void;
 }) {
-  const { t } = useTranslation('scoreUi');
+  const { t } = useTranslation('score');
   const [filter, setFilter] = useState(initialQuery ?? '');
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
@@ -224,7 +224,7 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
 }
 
 function AlliancesTab() {
-  const { t } = useTranslation('scoreUi');
+  const { t } = useTranslation('score');
   const q = useQuery({
     queryKey: ['highscore', 'alliances'],
     queryFn: () => api.get<{ alliances: AllianceEntry[] | null }>('/api/highscore/alliances'),
@@ -275,7 +275,7 @@ function AlliancesTab() {
 }
 
 function VacationTab() {
-  const { t } = useTranslation('scoreUi');
+  const { t } = useTranslation('score');
   const q = useQuery({
     queryKey: ['highscore', 'vacation'],
     queryFn: () => api.get<{ players: VacationEntry[] | null }>('/api/highscore/vacation'),
@@ -338,7 +338,7 @@ interface TransferRow {
 }
 
 function TransfersTab() {
-  const { t } = useTranslation('scoreUi');
+  const { t } = useTranslation('score');
   const [direction, setDirection] = useState<'received' | 'sent'>('received');
   const [period, setPeriod] = useState<'all' | 'week' | 'month'>('all');
 
@@ -410,7 +410,7 @@ export function ScoreScreen({ initialQuery, onPlanetClick }: {
   initialQuery?: string;
   onPlanetClick?: (g: number, s: number) => void;
 } = {}) {
-  const { t } = useTranslation('scoreUi');
+  const { t } = useTranslation('score');
   const [mainTab, setMainTab] = useState<MainTab>('players');
   const [scoreType, setScoreType] = useState<ScoreType>('total');
 

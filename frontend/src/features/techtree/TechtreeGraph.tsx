@@ -35,7 +35,7 @@ const GAP_X = 60;
 const GAP_Y = 16;
 
 export function TechtreeGraph({ nodes, kind }: { nodes: TechNode[]; kind: NodeKind }) {
-  const { t } = useTranslation('techtreeUi');
+  const { t } = useTranslation('techtree');
   const { t: ti } = useTranslation('info');
   const [hover, setHover] = useState<string | null>(null);
 

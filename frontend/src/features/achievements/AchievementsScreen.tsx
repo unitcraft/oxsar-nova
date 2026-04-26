@@ -18,7 +18,7 @@ interface Entry {
 type CategoryFilter = 'all' | 'starter' | 'passive';
 
 function AchievementCard({ e }: { e: Entry }) {
-  const { t } = useTranslation('achievementsUi');
+  const { t } = useTranslation('achievements');
   const done = !!e.unlocked_at;
   const hasProg = e.progress_max != null && !done;
   const pct = hasProg ? Math.min(100, ((e.progress ?? 0) / e.progress_max!) * 100) : 0;
@@ -60,7 +60,7 @@ function AchievementCard({ e }: { e: Entry }) {
 }
 
 export function AchievementsScreen() {
-  const { t } = useTranslation('achievementsUi');
+  const { t } = useTranslation('achievements');
   const [filter, setFilter] = useState<CategoryFilter>('all');
 
   const q = useQuery({

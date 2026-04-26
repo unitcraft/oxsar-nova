@@ -37,7 +37,7 @@ const TIMEZONES = [
 ];
 
 export function SettingsScreen() {
-  const { t } = useTranslation('settingsUi');
+  const { t } = useTranslation('settings');
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -393,7 +393,7 @@ export function SettingsScreen() {
 }
 
 function PlanetOrderSection() {
-  const { t } = useTranslation('settingsUi');
+  const { t } = useTranslation('settings');
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ['planets'],

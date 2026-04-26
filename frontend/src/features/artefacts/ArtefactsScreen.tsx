@@ -9,7 +9,7 @@ import { ScreenSkeleton } from '@/ui/Skeleton';
 import { useTranslation } from '@/i18n/i18n';
 
 export function ArtefactsScreen() {
-  const { t } = useTranslation('artefactsUi');
+  const { t } = useTranslation('artefacts');
   const { t: ti } = useTranslation('info');
   const qc = useQueryClient();
   const toast = useToast();

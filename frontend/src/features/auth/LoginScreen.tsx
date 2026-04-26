@@ -14,7 +14,7 @@ export function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { t } = useTranslation('authUi');
+  const { t } = useTranslation('auth');
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

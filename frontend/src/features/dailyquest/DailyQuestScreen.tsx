@@ -20,7 +20,7 @@ type Quest = {
 };
 
 export function DailyQuestScreen() {
-  const { t } = useTranslation('dailyquestUi');
+  const { t } = useTranslation('dailyquest');
   const qc = useQueryClient();
   const toast = useToast();
 

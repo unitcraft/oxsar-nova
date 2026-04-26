@@ -16,7 +16,7 @@ interface Offer {
 }
 
 export function ArtefactMarketScreen() {
-  const { t } = useTranslation('artMarketUi');
+  const { t } = useTranslation('artMarket');
   const { t: ti } = useTranslation('info');
   const qc = useQueryClient();
   const toast = useToast();
