@@ -1,5 +1,5 @@
-// Command auth-service — единая аутентификация для всех вселенных oxsar-nova.
-// Выпускает RSA-256 JWT, обслуживает OAuth, управляет global credits.
+// Command portal — HTTP-сервер портала oxsar-nova.ru.
+// Обслуживает список вселенных, новости и систему предложений (feedback).
 package main
 
 import (
@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -18,11 +17,11 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
-	"github.com/oxsar/nova/backend/internal/authsvc"
+	"github.com/oxsar/nova/backend/internal/auth"
 	"github.com/oxsar/nova/backend/internal/httpx"
+	"github.com/oxsar/nova/backend/internal/portalsvc"
 	"github.com/oxsar/nova/backend/internal/storage"
 	"github.com/oxsar/nova/backend/internal/universe"
-	"github.com/oxsar/nova/backend/pkg/jwtrs"
 	"github.com/oxsar/nova/backend/pkg/metrics"
 )
 
@@ -30,7 +29,7 @@ const drainDelay = 10 * time.Second
 
 func main() {
 	if err := run(); err != nil {
-		slog.Error("auth-service exit", slog.String("err", err.Error()))
+		slog.Error("portal exit", slog.String("err", err.Error()))
 		os.Exit(1)
 	}
 }
@@ -39,19 +38,17 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	addr := envStr("AUTH_ADDR", ":9000")
-	dbURL := mustEnv("AUTH_DB_URL")
-	redisURL := envStr("REDIS_URL", "redis://localhost:6379/0")
-	keyPath := envStr("RSA_KEY_PATH", "/run/secrets/auth_rsa_key.pem")
+	addr := envStr("PORTAL_ADDR", ":8090")
+	dbURL := mustEnv("PORTAL_DB_URL")
+	jwksURL := mustEnv("AUTH_JWKS_URL")
+	authServiceURL := envStr("AUTH_SERVICE_URL", "")
 	universesPath := envStr("UNIVERSES_CONFIG", "configs/universes.yaml")
-	accessTTL := envDur("JWT_ACCESS_TTL", 60*time.Minute)
-	refreshTTL := envDur("JWT_REFRESH_TTL", 30*24*time.Hour)
 	allowedOrigins := strings.Split(envStr("ALLOWED_ORIGINS",
-		"http://localhost:5173,http://localhost:3000"), ",")
+		"http://localhost:5174,http://localhost:3000"), ",")
 
 	log := newLogger(envStr("LOG_LEVEL", "info"))
 	slog.SetDefault(log)
-	log.InfoContext(ctx, "starting auth-service", slog.String("addr", addr))
+	log.InfoContext(ctx, "starting portal", slog.String("addr", addr))
 
 	pool, err := storage.OpenPostgres(ctx, dbURL)
 	if err != nil {
@@ -59,17 +56,10 @@ func run() error {
 	}
 	defer pool.Close()
 
-	rdb, err := storage.OpenRedis(ctx, redisURL)
-	if err != nil {
-		log.WarnContext(ctx, "redis unavailable", slog.String("err", err.Error()))
-	}
-
-	rsaKey, err := jwtrs.LoadOrGenerateKey(keyPath)
+	ver, err := auth.LoadVerifier(ctx, jwksURL)
 	if err != nil {
 		return err
 	}
-	iss := jwtrs.NewIssuer(rsaKey, accessTTL, refreshTTL)
-	ver := jwtrs.NewVerifierFromKey(iss.PublicKey())
 
 	reg, err := universe.NewRegistry(universesPath)
 	if err != nil {
@@ -77,8 +67,8 @@ func run() error {
 		reg, _ = universe.NewRegistryFromSlice(nil)
 	}
 
-	svc := authsvc.New(pool, iss)
-	h := authsvc.NewHandler(svc, iss, rdb)
+	svc := portalsvc.New(pool)
+	h := portalsvc.NewHandlerWithCredits(svc, reg, authServiceURL)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -99,30 +89,26 @@ func run() error {
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, r, http.StatusOK, map[string]string{"status": "ok"})
 	})
-	r.Get("/.well-known/jwks.json", h.JWKS)
-	r.Get("/auth/universes", func(w http.ResponseWriter, r *http.Request) {
-		httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"universes": reg.All()})
-	})
+	r.Get("/api/universes", h.ListUniverses)
+	r.Get("/api/news", h.ListNews)
+	r.Get("/api/news/{id}", h.GetNews)
+	r.Get("/api/feedback", h.ListFeedback)
+	r.Get("/api/feedback/{id}", h.GetFeedback)
+	r.Get("/api/feedback/{id}/comments", h.ListComments)
 
-	// Auth endpoints (публичные + rate-limited)
-	r.Post("/auth/register", h.Register)
-	r.Post("/auth/login", h.Login)
-	r.Post("/auth/refresh", h.Refresh)
-
-	// Обмен handoff-токена → JWT (вызывается игровым сервером)
-	r.Post("/auth/token/exchange", h.TokenExchange)
-
-	// Внутренние endpoints (между сервисами, закрыты firewall-ом)
-	r.Post("/auth/credits/spend", h.SpendCredits)
-	r.Post("/auth/universes/register", h.RegisterUniverse)
-
-	// Защищённые endpoints (требуют JWT)
+	// Защищённые endpoints (требуют JWT от auth-service)
 	r.Group(func(pr chi.Router) {
-		pr.Use(authsvc.Middleware(ver))
-		pr.Get("/auth/me", h.Me)
-		pr.Get("/auth/credits/balance", h.CreditBalance)
-		pr.Get("/auth/credits/history", h.CreditHistory)
-		pr.Post("/auth/universe-token", h.UniverseToken)
+		pr.Use(portalsvc.Middleware(ver))
+		pr.Post("/api/feedback", h.CreateFeedback)
+		pr.Post("/api/feedback/{id}/vote", h.VoteFeedback)
+		pr.Post("/api/feedback/{id}/comments", h.AddComment)
+
+		// Admin-only
+		pr.Group(func(ar chi.Router) {
+			ar.Use(portalsvc.AdminMiddleware)
+			ar.Post("/api/news", h.CreateNews)
+			ar.Patch("/api/feedback/{id}/status", h.ModerateFeedback)
+		})
 	})
 
 	// Prometheus metrics
@@ -184,23 +170,3 @@ func mustEnv(key string) string {
 	}
 	return v
 }
-
-func envDur(key string, def time.Duration) time.Duration {
-	if v := os.Getenv(key); v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			return d
-		}
-	}
-	return def
-}
-
-func envInt(key string, def int) int {
-	if v := os.Getenv(key); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			return n
-		}
-	}
-	return def
-}
-
-var _ = envInt // used by future OAuth handlers

@@ -19,8 +19,10 @@ RUN cd backend && go mod download
 # Копируем исходники и собираем оба бинаря.
 COPY backend ./backend
 RUN cd backend && \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server && \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/worker ./cmd/worker
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server       ./cmd/server && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/worker       ./cmd/worker && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/auth-service ./cmd/auth-service && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/portal       ./cmd/portal
 
 FROM alpine:3.20 AS runtime
 # wget — для docker healthcheck (--no-check-certificate не нужен,
@@ -28,8 +30,10 @@ FROM alpine:3.20 AS runtime
 RUN apk add --no-cache ca-certificates tzdata wget
 WORKDIR /app
 
-COPY --from=build /out/server /app/server
-COPY --from=build /out/worker /app/worker
+COPY --from=build /out/server       /app/server
+COPY --from=build /out/worker       /app/worker
+COPY --from=build /out/auth-service /app/auth-service
+COPY --from=build /out/portal       /app/portal
 COPY configs /app/configs
 # План 19: вики читается на runtime — копируем сгенерированные .md.
 COPY docs/wiki /app/wiki

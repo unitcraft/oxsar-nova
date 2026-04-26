@@ -1,0 +1,42 @@
+.root { min-height: 100vh; display: flex; flex-direction: column; }
+
+.header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky; top: 0; z-index: 100;
+}
+
+.headerInner {
+  max-width: 1100px; margin: 0 auto; padding: 0 1rem;
+  height: 56px; display: flex; align-items: center; gap: 1.5rem;
+}
+
+.logo {
+  font-size: 1.2rem; font-weight: 700; color: var(--color-accent);
+  text-decoration: none; letter-spacing: 0.03em;
+}
+
+.nav { display: flex; gap: 1rem; flex: 1; }
+
+.navLink { color: var(--color-text); text-decoration: none; font-size: 0.9rem; opacity: 0.85; }
+.navLink:hover { opacity: 1; color: var(--color-accent); }
+
+.actions { display: flex; align-items: center; gap: 0.75rem; }
+
+.registerBtn {
+  padding: 0.4rem 0.9rem; background: var(--color-accent); color: #fff;
+  border-radius: 4px; text-decoration: none; font-size: 0.875rem; font-weight: 600;
+}
+
+.logoutBtn {
+  background: none; border: 1px solid var(--color-border); border-radius: 4px;
+  padding: 0.3rem 0.7rem; cursor: pointer; font-size: 0.85rem; color: var(--color-muted);
+}
+.logoutBtn:hover { border-color: #e53e3e; color: #e53e3e; }
+
+.main { flex: 1; }
+
+.footer {
+  border-top: 1px solid var(--color-border); padding: 1.5rem 1rem;
+  text-align: center; font-size: 0.8rem; color: var(--color-muted);
+}

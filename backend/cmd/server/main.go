@@ -60,6 +60,8 @@ import (
 	"github.com/oxsar/nova/backend/internal/features"
 	"github.com/oxsar/nova/backend/internal/galaxyevent"
 	"github.com/oxsar/nova/backend/internal/health"
+	"github.com/oxsar/nova/backend/internal/universe"
+	"github.com/oxsar/nova/backend/internal/universeswitcher"
 	"github.com/oxsar/nova/backend/internal/wiki"
 	"github.com/oxsar/nova/backend/pkg/metrics"
 )
@@ -99,6 +101,13 @@ func run() error {
 	if catalogDir == "" {
 		catalogDir = "../configs"
 	}
+
+	univReg, univRegErr := universe.NewRegistry(filepath.Join(catalogDir, "universes.yaml"))
+	if univRegErr != nil {
+		log.WarnContext(ctx, "universes.yaml not loaded", slog.String("err", univRegErr.Error()))
+		univReg, _ = universe.NewRegistryFromSlice(nil)
+	}
+
 	cat, err := config.LoadCatalog(catalogDir)
 	if err != nil {
 		return err
@@ -203,6 +212,8 @@ func run() error {
 	} else {
 		authMiddlewareFn = auth.Middleware(jwt)
 	}
+
+	switcherH := universeswitcher.New(cfg.Auth.AuthServiceURL, cfg.Auth.UniverseID, univReg)
 
 	reqs := requirements.New(cat)
 
@@ -337,6 +348,12 @@ func run() error {
 
 	// План 17 F: galaxy events — public read, admin create/cancel.
 	r.Get("/api/galaxy-event", galaxyEventH.Active)
+
+	// Universe list (публичный) и handoff-receiver (публичный — вызывается браузером при редиректе).
+	r.Get("/api/universes", switcherH.ListUniverses)
+	r.Get("/auth/handoff", switcherH.HandoffReceive)
+	// Переключение вселенной — требует аутентификации.
+	r.With(authMiddlewareFn).Get("/api/universes/switch", switcherH.SwitchUniverse)
 
 	r.Route("/api", func(pr chi.Router) {
 		pr.Use(authMiddlewareFn)

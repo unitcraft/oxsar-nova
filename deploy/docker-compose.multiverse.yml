@@ -1,0 +1,278 @@
+# Продакшн-стек oxsar-nova с двумя вселенными.
+#
+# Архитектура:
+#   auth-service  (:9000) — единая аутентификация, global credits, JWKS
+#   portal        (:8090) — новости, предложения, список вселенных
+#   uni01-backend (:8081) + uni01-worker — вселенная Nova (speed×0.75)
+#   uni02-backend (:8082) + uni02-worker — вселенная Speed (speed×4)
+#
+# Каждый сервис читает секреты из .env-файлов (не коммитятся).
+# RSA-ключ auth-service монтируется из /run/secrets/auth_rsa_key.pem.
+#
+# Запуск:
+#   docker compose -f deploy/docker-compose.multiverse.yml up -d
+#
+# DNS (настраивается на VPS):
+#   auth.oxsar-nova.ru    → :9000  (или через nginx-proxy)
+#   oxsar-nova.ru         → :8090  (portal)
+#   uni01.oxsar-nova.ru   → :8081
+#   uni02.oxsar-nova.ru   → :8082
+
+x-backend-common: &backend-common
+  build:
+    context: ..
+    dockerfile: backend/Dockerfile
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/ready"]
+    interval: 10s
+    timeout: 3s
+    retries: 5
+    start_period: 15s
+
+x-worker-common: &worker-common
+  build:
+    context: ..
+    dockerfile: backend/Dockerfile
+  entrypoint: ["/app/worker"]
+  restart: unless-stopped
+
+services:
+  # ─── Shared infrastructure ────────────────────────────────────────────────
+
+  auth-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: authsvc
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+      POSTGRES_DB: authsvc
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authsvc"]
+      interval: 5s; timeout: 3s; retries: 10
+    restart: unless-stopped
+
+  portal-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: portal
+      POSTGRES_PASSWORD: ${PORTAL_DB_PASSWORD}
+      POSTGRES_DB: portal
+    volumes:
+      - portal-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portal"]
+      interval: 5s; timeout: 3s; retries: 10
+    restart: unless-stopped
+
+  uni01-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: uni01
+      POSTGRES_PASSWORD: ${UNI01_DB_PASSWORD}
+      POSTGRES_DB: uni01
+    volumes:
+      - uni01-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uni01"]
+      interval: 5s; timeout: 3s; retries: 10
+    restart: unless-stopped
+
+  uni02-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: uni02
+      POSTGRES_PASSWORD: ${UNI02_DB_PASSWORD}
+      POSTGRES_DB: uni02
+    volumes:
+      - uni02-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uni02"]
+      interval: 5s; timeout: 3s; retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s; timeout: 3s; retries: 10
+    restart: unless-stopped
+
+  # ─── Migrations ───────────────────────────────────────────────────────────
+
+  auth-migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.migrate
+    command: ["goose", "-dir", "/migrations/auth", "postgres", "${AUTH_DB_URL}", "up"]
+    depends_on:
+      auth-db: { condition: service_healthy }
+    restart: "no"
+
+  portal-migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.migrate
+    command: ["goose", "-dir", "/migrations/portal", "postgres", "${PORTAL_DB_URL}", "up"]
+    depends_on:
+      portal-db: { condition: service_healthy }
+    restart: "no"
+
+  uni01-migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.migrate
+    depends_on:
+      uni01-db: { condition: service_healthy }
+    environment:
+      DB_URL: ${UNI01_DB_URL}
+    restart: "no"
+
+  uni02-migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.migrate
+    depends_on:
+      uni02-db: { condition: service_healthy }
+    environment:
+      DB_URL: ${UNI02_DB_URL}
+    restart: "no"
+
+  # ─── Auth Service ─────────────────────────────────────────────────────────
+
+  auth-service:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    entrypoint: ["/app/auth-service"]
+    depends_on:
+      auth-db:      { condition: service_healthy }
+      redis:        { condition: service_healthy }
+      auth-migrate: { condition: service_completed_successfully }
+    environment:
+      AUTH_ADDR:       ":9000"
+      AUTH_DB_URL:     ${AUTH_DB_URL}
+      REDIS_URL:       redis://redis:6379/0
+      RSA_KEY_PATH:    /run/secrets/auth_rsa_key.pem
+      JWT_ACCESS_TTL:  60m
+      JWT_REFRESH_TTL: 720h
+      LOG_LEVEL:       info
+      ALLOWED_ORIGINS: "https://oxsar-nova.ru,https://uni01.oxsar-nova.ru,https://uni02.oxsar-nova.ru"
+      UNIVERSES_CONFIG: /app/configs/universes.yaml
+    volumes:
+      - /run/secrets:/run/secrets:ro
+    ports: ["9000:9000"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9000/healthz"]
+      interval: 10s; timeout: 3s; retries: 5; start_period: 10s
+
+  # ─── Portal ───────────────────────────────────────────────────────────────
+
+  portal:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    entrypoint: ["/app/portal"]
+    depends_on:
+      portal-db:      { condition: service_healthy }
+      auth-service:   { condition: service_healthy }
+      portal-migrate: { condition: service_completed_successfully }
+    environment:
+      PORTAL_ADDR:      ":8090"
+      PORTAL_DB_URL:    ${PORTAL_DB_URL}
+      AUTH_JWKS_URL:    http://auth-service:9000
+      AUTH_SERVICE_URL: http://auth-service:9000
+      UNIVERSES_CONFIG: /app/configs/universes.yaml
+      LOG_LEVEL:        info
+      ALLOWED_ORIGINS:  "https://oxsar-nova.ru"
+    ports: ["8090:8090"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8090/healthz"]
+      interval: 10s; timeout: 3s; retries: 5; start_period: 10s
+
+  # ─── Universe 01: Nova (speed×0.75) ──────────────────────────────────────
+
+  uni01-backend:
+    <<: *backend-common
+    depends_on:
+      uni01-db:       { condition: service_healthy }
+      redis:          { condition: service_healthy }
+      auth-service:   { condition: service_healthy }
+      uni01-migrate:  { condition: service_completed_successfully }
+    environment:
+      SERVER_ADDR:       ":8080"
+      SERVER_ENV:        prod
+      DB_URL:            ${UNI01_DB_URL}
+      REDIS_URL:         redis://redis:6379/1
+      AUTH_JWKS_URL:     http://auth-service:9000
+      AUTH_SERVICE_URL:  http://auth-service:9000
+      UNIVERSE_ID:       uni01
+      CATALOG_DIR:       /app/configs
+      I18N_DIR:          /app/configs/i18n
+      WIKI_ROOT:         /app/wiki/ru
+      GAMESPEED:         "0.75"
+      NUM_GALAXIES:      "8"
+      NUM_SYSTEMS:       "600"
+      UNIVERSES_CONFIG:  /app/configs/universes.yaml
+    ports: ["8081:8080"]
+
+  uni01-worker:
+    <<: *worker-common
+    depends_on:
+      uni01-backend: { condition: service_started }
+    environment:
+      DB_URL:        ${UNI01_DB_URL}
+      REDIS_URL:     redis://redis:6379/1
+      CATALOG_DIR:   /app/configs
+
+  # ─── Universe 02: Speed (speed×4) ────────────────────────────────────────
+
+  uni02-backend:
+    <<: *backend-common
+    depends_on:
+      uni02-db:       { condition: service_healthy }
+      redis:          { condition: service_healthy }
+      auth-service:   { condition: service_healthy }
+      uni02-migrate:  { condition: service_completed_successfully }
+    environment:
+      SERVER_ADDR:       ":8080"
+      SERVER_ENV:        prod
+      DB_URL:            ${UNI02_DB_URL}
+      REDIS_URL:         redis://redis:6379/2
+      AUTH_JWKS_URL:     http://auth-service:9000
+      AUTH_SERVICE_URL:  http://auth-service:9000
+      UNIVERSE_ID:       uni02
+      CATALOG_DIR:       /app/configs
+      I18N_DIR:          /app/configs/i18n
+      WIKI_ROOT:         /app/wiki/ru
+      GAMESPEED:         "4.0"
+      NUM_GALAXIES:      "4"
+      NUM_SYSTEMS:       "300"
+      PROTECTION_PERIOD: "43200"
+      UNIVERSES_CONFIG:  /app/configs/universes.yaml
+    ports: ["8082:8080"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/ready"]
+      interval: 10s; timeout: 3s; retries: 5; start_period: 15s
+
+  uni02-worker:
+    <<: *worker-common
+    depends_on:
+      uni02-backend: { condition: service_started }
+    environment:
+      DB_URL:        ${UNI02_DB_URL}
+      REDIS_URL:     redis://redis:6379/2
+      CATALOG_DIR:   /app/configs
+
+volumes:
+  auth-db-data:
+  portal-db-data:
+  uni01-db-data:
+  uni02-db-data:
+  redis-data:

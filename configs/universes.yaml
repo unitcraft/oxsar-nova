@@ -1,0 +1,34 @@
+# Реестр вселенных oxsar-nova.
+# Каждая вселенная — отдельный игровой сервер со своими настройками.
+# Добавление новой вселенной: вписать запись + поднять docker-compose.uni0N.yml
+
+universes:
+  - id: uni01
+    name: "Nova"
+    description: "Основная вселенная. Скорость ×1, без дефматча."
+    subdomain: "uni01"            # uni01.oxsar-nova.ru
+    status: "active"              # active | maintenance | upcoming | retired
+    speed: 0.75
+    deathmatch: false
+    max_planets: 0                # 0 = computer_tech+1
+    bashing_period: 18000         # 5 часов
+    bashing_max_attacks: 4
+    protection_period: 86400      # 24 часа
+    num_galaxies: 8
+    num_systems: 600
+    launched_at: "2026-01-01T00:00:00Z"
+
+  - id: uni02
+    name: "Speed"
+    description: "Быстрая вселенная. Скорость ×4, ускоренные исследования."
+    subdomain: "uni02"            # uni02.oxsar-nova.ru
+    status: "upcoming"
+    speed: 4.0
+    deathmatch: false
+    max_planets: 0
+    bashing_period: 18000
+    bashing_max_attacks: 4
+    protection_period: 43200      # 12 часов
+    num_galaxies: 4
+    num_systems: 300
+    launched_at: "2026-06-01T00:00:00Z"
