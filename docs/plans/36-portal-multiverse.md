@@ -582,6 +582,60 @@ game/
 - `tsconfig.json`, `vite.config.ts`, `package.json` — если есть относительные пути
 - Go-импорты — module path остаётся `github.com/oxsar/nova/backend`, только физические пути меняются
 
+### Ф.10 — Разделение Go-модулей (½–1 день)
+
+После Ф.9 код auth-service и portal-backend физически живёт внутри
+`projects/game-nova/backend/` (общий `go.mod`, бинарники собираются вместе).
+Это нарушает доменную независимость: изменения в game-nova триггерят пересборку
+auth/portal, и наоборот.
+
+**Цель:** разнести по самостоятельным Go-модулям:
+
+```
+projects/auth/backend/        ← свой go.mod, бинарь auth-service
+  cmd/server/main.go          (← было cmd/auth-service/main.go)
+  internal/authsvc/           (← было internal/authsvc/)
+  pkg/jwtrs/                  (копия с маркером DUPLICATE)
+projects/portal/backend/      ← свой go.mod, бинарь portal
+  cmd/server/main.go          (← было cmd/portal/main.go)
+  internal/portalsvc/         (← было internal/portalsvc/)
+  pkg/jwtrs/                  (копия с маркером DUPLICATE)
+projects/game-nova/backend/   ← БЕЗ cmd/auth-service, cmd/portal, internal/authsvc, internal/portalsvc
+```
+
+**Решение по shared-коду — вариант (b): дублировать минимум.**
+Без go workspace, без отдельного shared-модуля. `pkg/jwtrs` (~150 строк) копируется
+во все три домена. Каждый файл-копия начинается с маркера:
+
+```go
+// DUPLICATE: этот пакет скопирован между доменами.
+// При изменении синхронизировать ВСЕ копии:
+//   - projects/game-nova/backend/pkg/jwtrs/
+//   - projects/auth/backend/pkg/jwtrs/
+//   - projects/portal/backend/pkg/jwtrs/
+// Причина дубля: каждый домен — отдельный go.mod, без shared-модуля.
+```
+
+**Почему не workspace/shared-модуль:** проект разрабатывается одним человеком,
+версионирование общего кода не нужно, `pkg/jwtrs` стабилен. Дубль из 3 файлов
+проще ментально, чем `replace`-директивы и workspace-режим в Docker-сборках.
+
+**Что обновляется:**
+- 3 новых `go.mod` (auth, portal, game-nova остаётся как был)
+- `deploy/docker-compose.yml` — `dockerfile: projects/auth/backend/Dockerfile`,
+  `projects/portal/backend/Dockerfile`
+- 2 новых Dockerfile (auth/backend, portal/backend) — копия game-nova/backend/Dockerfile
+  с поправленными путями
+- Удалить из game-nova/backend: `cmd/auth-service/`, `cmd/portal/`,
+  `internal/authsvc/`, `internal/portalsvc/`
+- Проверить, что game-nova/backend не импортирует `internal/authsvc` или `internal/portalsvc`
+  (если импортирует — это баг архитектуры, чинить отдельно)
+
+**Acceptance:**
+- `go build ./...` зелёный во всех трёх модулях
+- `docker compose up --build` поднимает все сервисы
+- `grep -r "DUPLICATE" projects/` показывает синхронные комментарии во всех копиях
+
 ### Ops: нагрузочный тест (отдельный тикет, ~1–2 дня)
 
 После Ф.8, до публичного анонса. Обновить [ops/vps-sizing.md](../ops/vps-sizing.md)
