@@ -8011,3 +8011,61 @@ docker-compose.scaling.yml как ручной шаг достаточен.
 - Smoke-тест с двумя worker'ами в docker-compose.scaling.yml (manual).
 - Catch-up пропущенных запусков — отдельный план если понадобится
   (сейчас в simplifications с приоритетом L).
+
+
+================================================================================
+ИТЕРАЦИЯ: ПЛАН 33 — ИНТЕРНАЦИОНАЛИЗАЦИЯ (Ф.4 FRONTEND STRING EXTRACTION)
+================================================================================
+
+Дата: 2026-04-26
+Объём: 6 batch-коммитов, ~500 строк diff
+
+### Задача
+
+Извлечь все hardcoded Cyrillic строки из frontend (.tsx/.ts) в i18n-словари
+(configs/i18n/ru.yml + en.yml) через систему `useTranslation(group)` / `t(key)`.
+
+### Что сделано
+
+**batch-3** (предыдущая сессия): App.tsx, Header, AlienHolding, Alliance,
+ArtMarket, Credits, Search, Profession, Techtree, Wiki — все screen-level
+строки через t().
+
+**batch-4** (эта сессия): Buildings, Research, Fleet, Galaxy — hardcoded
+time unit chars (с/м/ч/д/д) вынесены в global.timeUnitSec/Min/Hour/Day.
+Функции fmtDuration(secs) → fmtDuration(secs, uS, uM, uH, uD). Galaxy
+получил galaxyUi.kmUnit для отображения диаметра луны.
+
+**batch-5**: AdminScreen + AdminUserProfilePanel (78 + 64 Cyrillic строки)
+подключены к уже существующим adminUi ключам. Confirm.tsx defaults
+(Подтверждение / Подтвердить / Отмена) и Modal.tsx aria-label вынесены
+в новый confirmUi group.
+
+**batch-6**: Оставшиеся заголовки таблиц в AdminUserProfilePanel (colName,
+colMission, colDate и т.д.). RootErrorBoundary в main.tsx переведён в
+bilingual (English/Russian) — класс-компонент рендерится до i18n-провайдера.
+
+### Паттерны
+
+1. **Time units как параметры**: функции fmtDuration/timeUntil/formatRemaining
+   принимают строковые единицы (uS, uM, uH, uD) — не t() напрямую. Это
+   позволяет держать функции вне компонента и избежать сложных сигнатур.
+
+2. **Sub-components с несколькими useTranslation**: компоненты внутри файла
+   (RocketPanel, MissionButtons) получают собственный `const { t: tg } =
+   useTranslation('global')` для единиц времени.
+
+3. **ErrorBoundary без i18n**: класс-компонент не имеет доступа к хукам и
+   рендерится вне провайдера — оставлен bilingual fallback-текст.
+
+4. **# TODO: en marker**: все en.yml записи заполнены пустыми строками с
+   комментарием для будущего перевода.
+
+### Что осталось (Ф.4 не завершена)
+
+- catalog.ts: name/description/fullDesc — это game content, приходит с backend,
+  не нуждается в frontend i18n.
+- JSX block comments {/* */} — не строки, просто комментарии в коде.
+- api/types.ts, flags.ts, stores/auth.ts — только code comments, нет строк.
+- Ф.5 (backend i18n): Bundle.Tr() для оставшихся сообщений ошибок.
+- EN переводы: все TODO: en записи ждут перевода.
