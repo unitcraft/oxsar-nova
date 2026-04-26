@@ -18,20 +18,20 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: game/backend
+        working-directory: projects/game-nova/backend
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
-          cache-dependency-path: game/backend/go.sum
+          cache-dependency-path: projects/game-nova/backend/go.sum
 
       - name: Lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61
-          working-directory: game/backend
+          working-directory: projects/game-nova/backend
 
       - name: Test
         env:
@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: game/frontend
+        working-directory: projects/game-nova/frontend
     steps:
       - uses: actions/checkout@v4
 
@@ -60,7 +60,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: game/frontend/package-lock.json
+          cache-dependency-path: projects/game-nova/frontend/package-lock.json
 
       - name: Install
         run: npm ci --no-audit --no-fund
@@ -89,14 +89,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: game/frontend
+        working-directory: projects/game-nova/frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: game/frontend/package-lock.json
+          cache-dependency-path: projects/game-nova/frontend/package-lock.json
       - run: npm ci --no-audit --no-fund
       - run: npm run api:coverage
 
@@ -114,7 +114,7 @@ jobs:
       - name: gosec
         uses: securego/gosec@master
         with:
-          args: -severity medium ./game/backend/...
+          args: -severity medium ./projects/game-nova/backend/...
 
   e2e:
     name: E2E (Playwright in Docker)
@@ -180,7 +180,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: game/frontend/playwright-report
+          path: projects/game-nova/frontend/playwright-report
           retention-days: 14
           if-no-files-found: ignore
 
@@ -189,7 +189,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-test-results
-          path: game/frontend/test-results
+          path: projects/game-nova/frontend/test-results
           retention-days: 14
           if-no-files-found: ignore
 
