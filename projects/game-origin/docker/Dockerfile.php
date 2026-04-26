@@ -2,11 +2,13 @@ FROM php:8.3-fpm-alpine
 
 RUN docker-php-ext-install pdo pdo_mysql
 
-# Memcache extension (legacy uses old `class Memcache` API, see MemCacheHandler.class.php).
-# pecl memcache 8.2 supports PHP 8.x.
-RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS zlib-dev \
-    && pecl install memcache-8.2 \
-    && docker-php-ext-enable memcache \
+# Memcached extension (new API, recommended for PHP 8.x).
+# Legacy used old `class Memcache` API, but PECL memcache не поддерживается
+# для PHP 8.3 — MemCacheHandler обновлён на новое `class Memcached` (37.5c.1).
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS libmemcached-dev zlib-dev \
+    && apk add --no-cache libmemcached \
+    && pecl install memcached \
+    && docker-php-ext-enable memcached \
     && apk del .build-deps
 
 WORKDIR /var/www
