@@ -22,16 +22,19 @@ make lint          # все линтеры
 
 ## Структура
 
-- `backend/cmd/server`   — HTTP/WS entry point
-- `backend/cmd/worker`   — фоновый обработчик events
-- `backend/cmd/tools`    — CLI-утилиты (reseed, ресинк артефактов)
-- `backend/internal/*`   — домены (auth, planet, fleet, battle, …)
-- `backend/pkg/*`        — общие утилиты (rng, proto, ids)
-- `frontend/src/api`     — сгенерированный клиент из OpenAPI
-- `frontend/src/features/<domain>` — вертикальные срезы UI
-- `migrations/`          — goose SQL-миграции
-- `configs/`             — YAML-справочники (источник истины для юнитов/зданий)
-- `api/openapi.yaml`     — источник истины для REST-контрактов
+- `game/backend/cmd/server`   — HTTP/WS entry point
+- `game/backend/cmd/worker`   — фоновый обработчик events
+- `game/backend/cmd/tools`    — CLI-утилиты (reseed, ресинк артефактов)
+- `game/backend/internal/*`   — домены (auth, planet, fleet, battle, …)
+- `game/backend/pkg/*`        — общие утилиты (rng, proto, ids)
+- `game/frontend/src/api`     — сгенерированный клиент из OpenAPI
+- `game/frontend/src/features/<domain>` — вертикальные срезы UI
+- `portal/frontend/`          — портал oxsar-nova.ru (Vite/React)
+- `portal/backend/` (plan 36) — portal API (новости, предложения)
+- `auth/backend/` (plan 36)   — auth-service (JWT, OAuth, credits)
+- `migrations/`               — goose SQL-миграции
+- `configs/`                  — YAML-справочники (источник истины для юнитов/зданий)
+- `api/openapi.yaml`          — источник истины для REST-контрактов
 
 ## Правила кода (обязательно)
 
@@ -44,7 +47,7 @@ make lint          # все линтеры
 - Ошибки заворачиваются через `fmt.Errorf("context: %w", err)`; между слоями —
   типизированные sentinel-ошибки (`battle.ErrInvalidInput`).
 - Логирование: `log/slog` с полями `user_id`, `planet_id`, `event_id`, `trace_id`.
-- БД: только через `sqlc`-сгенерированные методы + сырой SQL в `backend/queries/`
+- БД: только через `sqlc`-сгенерированные методы + сырой SQL в `game/backend/queries/`
   для сложной агрегации. Транзакции — `repo.InTx(ctx, fn)`.
 - Запрещено: `init()` с побочными эффектами, глобальные изменяемые переменные
   (кроме конфига, загруженного при старте), `panic` в прод-коде (кроме bootstrap),

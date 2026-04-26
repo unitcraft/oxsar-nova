@@ -18,20 +18,20 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: game/backend
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: game/backend/go.sum
 
       - name: Lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61
-          working-directory: backend
+          working-directory: game/backend
 
       - name: Test
         env:
@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend
+        working-directory: game/frontend
     steps:
       - uses: actions/checkout@v4
 
@@ -60,7 +60,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: game/frontend/package-lock.json
 
       - name: Install
         run: npm ci --no-audit --no-fund
@@ -89,14 +89,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend
+        working-directory: game/frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: game/frontend/package-lock.json
       - run: npm ci --no-audit --no-fund
       - run: npm run api:coverage
 
@@ -114,7 +114,7 @@ jobs:
       - name: gosec
         uses: securego/gosec@master
         with:
-          args: -severity medium ./backend/...
+          args: -severity medium ./game/backend/...
 
   e2e:
     name: E2E (Playwright in Docker)
@@ -126,10 +126,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      # Ф.3: билдим образы по группам, чтобы видеть тайминги этапов
-      # в UI Actions. GHA cache (type=gha) шарится между всеми шагами,
-      # промахи кеша видны по отдельности.
 
       - name: Build backend images (server + worker + testseed + migrate)
         uses: docker/bake-action@v5
@@ -162,7 +158,6 @@ jobs:
           load: true
 
       - name: Up E2E stack
-        # --build уже отработал через bake — здесь compose берёт готовые image'ы.
         run: docker compose -f deploy/docker-compose.e2e.yml up -d
 
       - name: Wait for Playwright to finish
@@ -185,7 +180,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: frontend/playwright-report
+          path: game/frontend/playwright-report
           retention-days: 14
           if-no-files-found: ignore
 
@@ -194,7 +189,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-test-results
-          path: frontend/test-results
+          path: game/frontend/test-results
           retention-days: 14
           if-no-files-found: ignore
 
@@ -211,8 +206,6 @@ jobs:
         if: always()
         run: docker compose -f deploy/docker-compose.e2e.yml down -v --remove-orphans
 
-  # Ф.4: прогрев кеша на main — после merge чистый кеш ложится в GHA,
-  # PR-запуски получают свежий hit'абельный baseline.
   cache-warm:
     name: Cache warm (docker buildx → gha)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

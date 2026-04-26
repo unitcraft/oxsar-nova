@@ -21,7 +21,7 @@
 x-backend-common: &backend-common
   build:
     context: ..
-    dockerfile: backend/Dockerfile
+    dockerfile: game/backend/Dockerfile
   restart: unless-stopped
   healthcheck:
     test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/ready"]
@@ -33,7 +33,7 @@ x-backend-common: &backend-common
 x-worker-common: &worker-common
   build:
     context: ..
-    dockerfile: backend/Dockerfile
+    dockerfile: game/backend/Dockerfile
   entrypoint: ["/app/worker"]
   restart: unless-stopped
 
@@ -147,7 +147,7 @@ services:
   auth-service:
     build:
       context: ..
-      dockerfile: backend/Dockerfile
+      dockerfile: game/backend/Dockerfile
     entrypoint: ["/app/auth-service"]
     depends_on:
       auth-db:      { condition: service_healthy }
@@ -176,7 +176,7 @@ services:
   portal:
     build:
       context: ..
-      dockerfile: backend/Dockerfile
+      dockerfile: game/backend/Dockerfile
     entrypoint: ["/app/portal"]
     depends_on:
       portal-db:      { condition: service_healthy }
@@ -275,7 +275,7 @@ services:
   portal-frontend:
     build:
       context: ..
-      dockerfile: frontend/portal/Dockerfile
+      dockerfile: portal/frontend/Dockerfile
     depends_on:
       portal: { condition: service_healthy }
     environment:

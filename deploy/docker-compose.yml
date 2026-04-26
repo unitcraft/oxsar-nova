@@ -56,7 +56,7 @@ services:
   backend:
     build:
       context: ..
-      dockerfile: backend/Dockerfile
+      dockerfile: game/backend/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,7 +89,7 @@ services:
   worker:
     build:
       context: ..
-      dockerfile: backend/Dockerfile
+      dockerfile: game/backend/Dockerfile
     # Переопределяем ENTRYPOINT из backend/Dockerfile (там по умолчанию
     # /app/server). Если бы использовали command — Docker склеил бы его
     # как аргументы к server, а не заменил бинарь.
@@ -115,7 +115,7 @@ services:
   frontend:
     build:
       context: ..
-      dockerfile: frontend/Dockerfile
+      dockerfile: game/frontend/Dockerfile
     depends_on:
       backend:
         condition: service_healthy
@@ -123,7 +123,7 @@ services:
       VITE_PROXY_TARGET: http://backend:8080
     ports: ["5173:5173"]
     volumes:
-      - ../frontend:/app
+      - ../game/frontend:/app
       - frontend-node-modules:/app/node_modules
 
   # ── Portal stack ─────────────────────────────────────────────────────────
@@ -158,7 +158,7 @@ services:
   portal-backend:
     build:
       context: ..
-      dockerfile: backend/Dockerfile
+      dockerfile: game/backend/Dockerfile
     entrypoint: ["/app/portal"]
     depends_on:
       portal-db:
@@ -186,7 +186,7 @@ services:
   portal-frontend:
     build:
       context: ..
-      dockerfile: frontend/portal/Dockerfile
+      dockerfile: portal/frontend/Dockerfile
     depends_on:
       portal-backend:
         condition: service_started
@@ -197,7 +197,7 @@ services:
       VITE_UNIVERSE_PORT_uni02: "5175"
     ports: ["5174:5174"]
     volumes:
-      - ../frontend/portal:/app
+      - ../portal/frontend:/app
       - portal-frontend-node-modules:/app/node_modules
 
 volumes:
