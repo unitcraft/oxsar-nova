@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { useTranslation } from '@/i18n/i18n';
 import { BUILDINGS, MOON_BUILDINGS, RESEARCH, imageOf, costForLevel, fmtReqs } from '@/api/catalog';
 import type { Planet, QueueItem, ResearchState } from '@/api/types';
 import { ProgressBar } from '@/ui/ProgressBar';
@@ -44,6 +45,9 @@ function useLiveProgress(startAt: string, endAt: string): { pct: number; secsLef
 }
 
 export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo: (id: number, level: number) => void }) {
+  const { t } = useTranslation('researchUi');
+  const { t: tg } = useTranslation('global');
+  const levelAbbr = t('levelAbbr');
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -66,14 +70,14 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
       void qc.invalidateQueries({ queryKey: ['research'] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
       const name = RESEARCH.find((r) => r.id === unitId)?.name ?? `#${unitId}`;
-      toast.show('success', 'Исследование', `${name} запущено`);
+      toast.show('success', t('started'), t('startedBody', { name }));
     },
     onError: (err) => {
       const msg = err instanceof Error ? err.message : '';
-      const text = msg.includes('queue busy') ? 'Лаборатория занята'
-        : msg.includes('not enough') ? 'Недостаточно ресурсов'
-        : msg || 'Не удалось запустить';
-      toast.show('danger', 'Ошибка', text);
+      const text = msg.includes('queue busy') ? t('errQueueBusy')
+        : msg.includes('not enough') ? t('errNotEnough')
+        : msg || t('errDefault');
+      toast.show('danger', tg('error'), text);
     },
   });
 
@@ -100,11 +104,11 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-          Исследования
+          {t('title')}
         </h2>
         {planet.research_factor != null && planet.research_factor > 1 && (
           <span style={{ fontSize: 14, color: 'var(--ox-success)', fontFamily: 'var(--ox-mono)' }}>
-            🔬 +{Math.round((planet.research_factor - 1) * 100)}% исследование
+            🔬 +{Math.round((planet.research_factor - 1) * 100)}% {t('researchBonus')}
           </span>
         )}
       </div>
@@ -113,7 +117,7 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
         <ActiveResearchBanner item={active} />
       ) : (
         <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', padding: '8px 0' }}>
-          🔬 Лаборатория свободна — выберите технологию для исследования
+          🔬 {t('labFree')}
         </div>
       )}
 
@@ -135,12 +139,12 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
                   src={imageOf(r.key)} alt={r.name} width={64} height={64}
                   style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4, cursor: 'pointer' }}
                   onClick={() => onOpenInfo(r.id, level)}
-                  title="Подробнее"
+                  title={t('details')}
                 />
                 <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                   <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => onOpenInfo(r.id, level)}>{r.name}</div>
                   <div style={{ fontSize: 14, color: level > 0 ? 'var(--ox-fg-dim)' : 'var(--ox-fg-muted)', marginBottom: 2 }}>
-                    {level > 0 ? `Уровень ${level}` : 'Не изучено'}
+                    {level > 0 ? t('level', { n: String(level) }) : t('notStudied')}
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginBottom: 2, fontStyle: 'italic' }}>
                     {r.benefit}
@@ -195,7 +199,7 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
                   disabled={enqueue.isPending || isBusy || isActive || !canAfford || isLocked}
                   onClick={() => enqueue.mutate(r.id)}
                 >
-                  {isActive ? '🔬 Изучается' : isBusy ? '⏳ Занято' : level === 0 ? 'Изучить' : `→ ур. ${level + 1}`}
+                  {isActive ? `🔬 ${t('inProgress')}` : isBusy ? `⏳ ${t('busy')}` : level === 0 ? t('study') : `→ ${levelAbbr} ${level + 1}`}
                 </button>
               </div>
             </div>
@@ -208,6 +212,7 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
 }
 
 function ActiveResearchBanner({ item }: { item: QueueItem }) {
+  const { t } = useTranslation('researchUi');
   const { pct, secsLeft } = useLiveProgress(item.start_at, item.end_at);
   const name = RESEARCH.find((r) => r.id === item.unit_id)?.name ?? `#${item.unit_id}`;
 
@@ -215,7 +220,7 @@ function ActiveResearchBanner({ item }: { item: QueueItem }) {
     <div className="ox-panel" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15 }}>
         <span style={{ fontSize: 20 }}>🔬</span>
-        <span style={{ flex: 1, fontWeight: 600 }}>{name} → ур. {item.target_level}</span>
+        <span style={{ flex: 1, fontWeight: 600 }}>{name} → {t('levelAbbr')} {item.target_level}</span>
         <span className={`ox-timer${secsLeft < 60 ? ' urgent' : ''}`}>{fmtSecs(secsLeft)}</span>
       </div>
       <ProgressBar pct={pct} height={5} variant="default" />

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuthStore } from '@/stores/auth';
 import { api } from '@/api/client';
 import type { AuthResponse } from '@/api/types';
+import { useTranslation } from '@/i18n/i18n';
 
 type Mode = 'login' | 'register';
 
@@ -13,6 +14,7 @@ export function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation('authUi');
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,24 +60,24 @@ export function LoginScreen() {
             OXSAR
           </div>
           <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', marginTop: 4 }}>
-            космическая стратегия
+            {t('tagline')}
           </div>
         </div>
 
         <div className="ox-panel" style={{ padding: '28px 32px' }}>
           <div className="ox-tabs" style={{ marginBottom: 24 }}>
             <button type="button" aria-pressed={mode === 'login'} onClick={() => setMode('login')}>
-              Войти
+              {t('loginTab')}
             </button>
             <button type="button" aria-pressed={mode === 'register'} onClick={() => setMode('register')}>
-              Регистрация
+              {t('registerTab')}
             </button>
           </div>
 
           <form className="ox-form" onSubmit={submit}>
             {mode === 'register' && (
               <label>
-                <span>Имя пользователя</span>
+                <span>{t('usernameLabel')}</span>
                 <input
                   required
                   minLength={3}
@@ -83,23 +85,23 @@ export function LoginScreen() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
-                  placeholder="от 3 до 24 символов"
+                  placeholder={t('usernamePlaceholder')}
                 />
               </label>
             )}
             <label>
-              <span>{mode === 'login' ? 'E-Mail или логин' : 'E-Mail'}</span>
+              <span>{mode === 'login' ? t('emailOrLogin') : t('emailLabel')}</span>
               <input
                 required
                 type={mode === 'login' ? 'text' : 'email'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
-                placeholder={mode === 'login' ? 'example@mail.com или alice' : 'example@mail.com'}
+                placeholder={mode === 'login' ? t('loginPlaceholder') : t('emailPlaceholder')}
               />
             </label>
             <label>
-              <span>Пароль</span>
+              <span>{t('passwordLabel')}</span>
               <input
                 required
                 minLength={8}
@@ -107,12 +109,12 @@ export function LoginScreen() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                placeholder="минимум 8 символов"
+                placeholder={t('passwordPlaceholder')}
               />
             </label>
             {error && <div className="ox-error">{error}</div>}
             <button type="submit" className="btn" disabled={loading} style={{ width: '100%', marginTop: 8 }}>
-              {loading ? '…' : mode === 'login' ? 'Войти' : 'Зарегистрироваться'}
+              {loading ? '…' : mode === 'login' ? t('loginButton') : t('registerButton')}
             </button>
           </form>
         </div>

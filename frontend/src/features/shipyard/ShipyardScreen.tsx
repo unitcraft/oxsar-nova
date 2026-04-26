@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { useTranslation } from '@/i18n/i18n';
 import { SHIPS, DEFENSE, nameOf, imageOf, fmtReqs } from '@/api/catalog';
 import type { CombatEntry } from '@/api/catalog';
 import type { Inventory, Planet, ShipyardQueueItem } from '@/api/types';
@@ -9,6 +10,8 @@ import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
 
 export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo?: (kind: 'ship' | 'defense', id: number) => void }) {
+  const { t } = useTranslation('shipyardUi');
+  const { t: tg } = useTranslation('global');
   const qc = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState<'ships' | 'defense'>('ships');
@@ -33,10 +36,10 @@ export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['shipyard-queue', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('success', 'Отменено', 'Задание отменено, ресурсы возвращены');
+      toast.show('success', t('cancelled'), t('cancelledBody'));
     },
     onError: (err) => {
-      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось отменить');
+      toast.show('danger', tg('error'), err instanceof Error ? err.message : t('cancelErr'));
     },
   });
 
@@ -50,10 +53,10 @@ export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
       void qc.invalidateQueries({ queryKey: ['shipyard-queue', planet.id] });
       void qc.invalidateQueries({ queryKey: ['shipyard-inventory', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('success', 'В очередь', `${nameOf(unitId)} × ${count} добавлено в верфь`);
+      toast.show('success', t('enqueued'), t('enqueuedBody', { name: nameOf(unitId), count: String(count) }));
     },
     onError: (err) => {
-      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось добавить');
+      toast.show('danger', tg('error'), err instanceof Error ? err.message : t('enqueuedErr'));
     },
   });
 
@@ -65,7 +68,7 @@ export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--ox-font)', fontWeight: 700 }}>
-          Верфь — {planet.name}
+          {t('title', { planetName: planet.name })}
         </h2>
       </div>
 
@@ -73,7 +76,7 @@ export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
       {queueItems.length > 0 && (
         <div className="ox-panel" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 2 }}>
-            Очередь верфи
+            {t('queue')}
           </div>
           {queueItems.map((item, i) => (
             <ShipQueueRow key={item.id} item={item} isActive={i === 0} onCancel={() => cancel.mutate(item.id)} />
@@ -85,10 +88,10 @@ export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <div className="ox-tabs" style={{ flex: 1 }}>
           <button type="button" aria-pressed={tab === 'ships'} onClick={() => setTab('ships')}>
-            🛸 Корабли
+            🛸 {t('tabShips')}
           </button>
           <button type="button" aria-pressed={tab === 'defense'} onClick={() => setTab('defense')}>
-            🛡 Оборона
+            🛡 {t('tabDefense')}
           </button>
         </div>
         <button
@@ -101,7 +104,7 @@ export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
             localStorage.setItem('shipyard-show-locked', String(next));
           }}
         >
-          {showLocked ? '🔒 Скрыть недоступные' : '👁 Показать все'}
+          {showLocked ? `🔒 ${t('hideLocked')}` : `👁 ${t('showAll')}`}
         </button>
       </div>
 
@@ -137,6 +140,7 @@ function UnitCards({
   onShowAll: () => void;
   onOpenInfo?: (kind: 'ship' | 'defense', id: number) => void;
 }) {
+  const { t } = useTranslation('shipyardUi');
   const [drafts, setDrafts] = useState<Record<number, number>>({});
 
   const visibleUnits = showLocked ? units : units.filter((u) => !u.requires?.length);
@@ -144,9 +148,9 @@ function UnitCards({
   if (visibleUnits.length === 0) {
     return (
       <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--ox-fg-muted)', fontSize: 15 }}>
-        Все юниты требуют выполнения условий.{' '}
+        {t('allLocked')}{' '}
         <button type="button" className="btn-ghost btn-sm" style={{ fontSize: 15 }} onClick={onShowAll}>
-          Показать все
+          {t('showAll')}
         </button>
       </div>
     );
@@ -175,7 +179,7 @@ function UnitCards({
                 src={imageOf(u.key)} alt={u.name} width={64} height={64}
                 style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4, cursor: onOpenInfo ? 'pointer' : undefined }}
                 onClick={onOpenInfo ? () => onOpenInfo(unitKind, u.id) : undefined}
-                title={onOpenInfo ? `Подробнее о ${u.name}` : undefined}
+                title={onOpenInfo ? `${t('details')} ${u.name}` : undefined}
               />
               <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                 <div
@@ -192,12 +196,12 @@ function UnitCards({
                   <span>⚔ {u.attack.toLocaleString('ru-RU')}</span>
                   <span>🛡 {u.shield.toLocaleString('ru-RU')}</span>
                   <span>❤ {u.shell.toLocaleString('ru-RU')}</span>
-                  {u.cargo != null && u.cargo > 0 && <span title="Грузоподъёмность">📦 {u.cargo.toLocaleString('ru-RU')}</span>}
+                  {u.cargo != null && u.cargo > 0 && <span title={t('cargo')}>📦 {u.cargo.toLocaleString('ru-RU')}</span>}
                 </div>
                 {(u.speed != null || u.fuel != null) && (
                   <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
                     {u.speed != null && <span>🚀 {u.speed.toLocaleString('ru-RU')}</span>}
-                    {u.fuel != null && u.fuel > 0 && <span>⛽ {u.fuel}/ед.</span>}
+                    {u.fuel != null && u.fuel > 0 && <span>⛽ {u.fuel}{t('fuelPer')}</span>}
                   </div>
                 )}
                 {u.requires && u.requires.length > 0 && (
@@ -207,7 +211,7 @@ function UnitCards({
                 )}
                 {inStock > 0 && (
                   <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', marginTop: 4 }}>
-                    В наличии: {inStock.toLocaleString('ru-RU')}
+                    {t('inStock', { count: inStock.toLocaleString('ru-RU') })}
                   </div>
                 )}
                 {c && (
@@ -246,7 +250,7 @@ function UnitCards({
                 disabled={pending || !canAfford || !!(u.requires?.length)}
                 onClick={() => onBuild(u.id, count)}
               >
-                Строить
+                {t('build')}
               </button>
             </div>
           </div>
@@ -257,6 +261,7 @@ function UnitCards({
 }
 
 function ShipQueueRow({ item, isActive, onCancel }: { item: ShipyardQueueItem; isActive: boolean; onCancel: () => void }) {
+  const { t } = useTranslation('shipyardUi');
   const total = new Date(item.end_at).getTime() - new Date(item.start_at).getTime();
   const elapsed = Date.now() - new Date(item.start_at).getTime();
   const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
@@ -279,7 +284,7 @@ function ShipQueueRow({ item, isActive, onCancel }: { item: ShipyardQueueItem; i
           className="btn-ghost btn-sm"
           style={{ fontSize: 13, padding: '2px 6px', color: 'var(--ox-fg-muted)' }}
           onClick={onCancel}
-          title="Отменить"
+          title={t('cancelTitle')}
         >
           ✕
         </button>

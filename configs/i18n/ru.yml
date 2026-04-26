@@ -541,6 +541,241 @@ artefact:
   expired.title: Артефакт истёк
   expired.body: "Действие артефакта «{{artefactName}}» завершилось. Эффекты отменены."
 
+overviewUi:
+  noPlanets: Нет планет. Попробуйте перезагрузить страницу.
+  unreadPrefix: "У вас"
+  unreadSingle: непрочитанное сообщение
+  unreadPlural: непрочитанных сообщений
+  statPoints: Очки
+  statRank: Место в рейтинге
+  statBattleExp: Боевой опыт
+  statProfession: Профессия
+  statOnlineNow: Сейчас играют
+  statOnline24h: За 24 часа
+  incomingAttack: Входящая атака!
+  incomingTarget: "Цель:"
+  fleetsInFlight: Флоты в пути
+  fleetReturning: "← Возврат"
+  fleetOutbound: "→ В пути"
+  recallButton: Отозвать
+  recallSuccess: Флот отозван
+  recallError: Не удалось отозвать флот
+  planetMoon: луна
+  planetActivity: активность
+  planetOptions: Параметры планеты
+  planetDiameter: Диаметр
+  planetFields: Поля
+  planetTemp: Температура
+  refLink: "Реферальная ссылка:"
+  refCopy: Скопировать
+  refCopied: "✅ Скопировано"
+  missionTransport: Транспорт
+  missionColonize: Колонизация
+  missionRecycle: Переработка
+  missionAttack: Атака
+  missionSpy: Шпионаж
+  missionExpedition: Экспедиция
+  resMetalLabel: Металл
+  resSiliconLabel: Кремний
+  resHydrogenLabel: Водород
+  diameterKm: км
+  levelAbbr: "ур."
+  perHourSuffix: /ч
+
+resourceUi:
+  title: "Производство — {{planetName}}"
+  loadError: Ошибка загрузки
+  saving: сохраняю…
+  turnOffAll: Выключить всё
+  turnOnAll: Включить всё
+  colBuilding: Здание
+  natural: Естественное
+  storage: Вместимость хранилищ
+  perHour: За час
+  perDay: За сутки
+  perWeek: За неделю
+  levelAbbr: "ур."
+
+buildingsUi:
+  title: "Постройки — {{planetName}}"
+  levelAbbr: "ур."
+  details: Подробнее
+  enqueued: В очередь
+  enqueuedBody: "{{name}} добавлена в очередь строительства"
+  errQueueBusy: Очередь занята, дождитесь завершения постройки
+  errNotEnough: Недостаточно ресурсов
+  errMoonOnly: Это здание доступно только на луне
+  errNotOnMoon: Это здание недоступно на луне
+  errDefault: Не удалось добавить в очередь
+  cancelled: Отменено
+  cancelledBody: Строительство отменено, ресурсы возвращены
+  cancelErr: Не удалось отменить
+  buildBonus: строительство
+  produceBonus: добыча
+  queueCount: "В очереди: {{count}}"
+  showAll: Все здания
+  showAvailable: Только доступные
+  activeQueue: Активная очередь
+  level: "Уровень {{n}}"
+  notBuilt: Не построено
+  youHave: "у вас:"
+  inQueue: В очереди
+  locked: Заблокировано
+  build: Построить
+  cancelConfirm: Отменить?
+  confirmYes: Да
+  confirmNo: Нет
+  cancelTitle: "Отменить (ресурсы вернутся)"
+  fieldsFull: Занято / максимум полей на планете
+
+researchUi:
+  title: Исследования
+  levelAbbr: "ур."
+  details: Подробнее
+  researchBonus: исследование
+  labFree: Лаборатория свободна — выберите технологию для исследования
+  started: Исследование
+  startedBody: "{{name}} запущено"
+  errQueueBusy: Лаборатория занята
+  errNotEnough: Недостаточно ресурсов
+  errDefault: Не удалось запустить
+  level: "Уровень {{n}}"
+  notStudied: Не изучено
+  inProgress: Изучается
+  busy: Занято
+  study: Изучить
+
+shipyardUi:
+  title: "Верфь — {{planetName}}"
+  details: Подробнее о
+  cancelled: Отменено
+  cancelledBody: Задание отменено, ресурсы возвращены
+  cancelErr: Не удалось отменить
+  enqueued: В очередь
+  enqueuedBody: "{{name}} × {{count}} добавлено в верфь"
+  enqueuedErr: Не удалось добавить
+  queue: Очередь верфи
+  tabShips: Корабли
+  tabDefense: Оборона
+  hideLocked: Скрыть недоступные
+  showAll: Показать все
+  allLocked: Все юниты требуют выполнения условий.
+  cargo: Грузоподъёмность
+  fuelPer: /ед.
+  inStock: "В наличии: {{count}}"
+  build: Строить
+  cancelTitle: Отменить
+
+fleetUi:
+  title: "Флот — {{planetName}}"
+  metalPh: Металл
+  siliconPh: Кремний
+  hydrogenPh: Водород
+  slots: "Слоты флота:"
+  slotsHint: "(увеличивается с computer_tech)"
+  activeFleets: "Активные флоты ({{count}})"
+  colMission: Миссия
+  colDestination: Назначение
+  colComposition: Состав
+  colStatus: Статус
+  colArrival: "Прилёт / Возврат"
+  recall: Отозвать
+  newMission: Новая миссия
+  missionLabel: Миссия
+  destination: Координаты назначения
+  colonyName: Название колонии
+  cargo: Груз
+  cargoMax: "макс."
+  speedPct: "Скорость: {{pct}}%"
+  ships: Корабли
+  selectedCount: "{{count}} выбрано"
+  fuelOneWay: туда
+  sent: Флот отправлен
+  sentBody: "{{mission}} → [{{coords}}]"
+  missionFallback: Миссия
+  recalled: Флот отозван
+  sendButton: Отправить флот
+  sendErr: Не удалось отправить
+  recallErr: Не удалось отозвать
+  stateOutbound: "→ В пути"
+  stateReturning: "← Возврат"
+  stateArrived: "✓ Прибыл"
+  missionRebase: Перебазирование
+  missionTransport: Транспорт
+  missionColonize: Колонизация
+  missionRecycle: Переработка
+  missionAttack: Атака
+  missionSpy: Шпионаж
+  missionExpedition: Экспедиция
+
+galaxyUi:
+  title: Галактика
+  moonFallback: Луна
+  watchAdd: Добавить в наблюдение
+  watchRemove: Убрать из наблюдения
+  watchAdded: Система добавлена в наблюдение
+  watchRemoved: Система удалена из наблюдения
+  watchLabel: "Наблюдение:"
+  colPos: "#"
+  colPlanet: Планета
+  colPlayer: Игрок
+  colAlliance: Альянс
+  colDebris: Обломки
+  colMissions: Миссии
+  infiniteDeep: "🌌 Бесконечные дали"
+  debrisTitle: "Обломки\nМеталл: {{metal}}\nКремний: {{silicon}}"
+  expedition: Экспедиция
+  expeditionTitle: Отправить экспедицию
+  expeditionThisTitle: Отправить экспедицию с этой планеты
+  expeditionDeepTitle: Отправить экспедицию в Бесконечные дали
+  rocketStrike: Ракетный удар
+  spyTitle: Шпионаж
+  attackTitle: Атака
+  transportTitle: Транспорт
+  recycleTitle: Переработка обломков
+  moonSpyTitle: Шпионаж на луну
+  fuelHint: "Расстояние: {{dist}}\nВремя (мин. скорость): {{time}}"
+  errUnknown: неизвестная ошибка
+  legendActive: только что
+  legendInactive7: "неактивный (7+ дн)"
+  legendInactive21: "очень неактивный (21+ дн)"
+  legendBanned: забанен
+  legendVacation: отпуск
+  legendRocket: ракетный удар
+  legendExpedition: экспедиция
+  legendWatch: наблюдение
+  legendAlly: союзник
+  legendNap: НЕН
+  legendWar: война
+  rocketTitle: "🚀 Ракетный удар [{{g}}:{{s}}:{{pos}}]"
+  rocketSource: Источник
+  rocketCount: Количество
+  rocketAvail: "Доступно:"
+  rocketTime: "Время:"
+  rocketLaunch: Запустить
+  rocketCancel: Отмена
+  rocketLaunched: Ракеты запущены
+  statusBanned: Забанен
+  statusVacation: Режим отпуска
+  statusInactive7: "Неактивный (7+ дн)"
+  statusInactive21: "Очень неактивный (21+ дн)"
+  friendTitle: В друзьях
+
+authUi:
+  tagline: космическая стратегия
+  loginTab: Войти
+  registerTab: Регистрация
+  usernameLabel: Имя пользователя
+  usernamePlaceholder: от 3 до 24 символов
+  emailOrLogin: E-Mail или логин
+  emailLabel: E-Mail
+  loginPlaceholder: "example@mail.com или alice"
+  emailPlaceholder: example@mail.com
+  passwordLabel: Пароль
+  passwordPlaceholder: минимум 8 символов
+  loginButton: Войти
+  registerButton: Зарегистрироваться
+
 error:
   accountActivation: Аккаунт еще на активирован.
   accountActivationMail: Аккаунт еще не активирован. Мы послали вам еще одно письмо с ссылкой на активацию.
