@@ -29,7 +29,7 @@ help:
 	@echo "  import-datasheets - generate configs/construction.yml from legacy dump (OXSAR2_DUMP)"
 	@echo "  i18n-audit        - scan codebase for hardcoded Cyrillic strings, write report"
 	@echo "  i18n-rename       - rename i18n keys SCREAMING_SNAKE→lowerCamelCase (one-time, point of no return)"
-	@echo "  i18n-check        - run all i18n CI checks (no-printf test)"
+	@echo "  i18n-check        - run all i18n CI checks (no-printf + consistency ru↔en)"
 
 .PHONY: dev-up
 dev-up:
@@ -180,10 +180,10 @@ i18n-rename:
 		--glossary="$(ROOT)/docs/plans/33-i18n-placeholder-glossary.yml" \
 		--map-out="$(ROOT)/configs/i18n/i18n-rename-map.json"
 
-# i18n-check: CI-проверки i18n (нет %s/%d в YAML, консистентность ключей).
+# i18n-check: CI-проверки i18n (нет %s/%d в YAML, консистентность ключей ru↔en).
 .PHONY: i18n-check
 i18n-check:
-	cd $(BACKEND) && go test ./internal/i18n/... -run TestNoPrintf -v
+	cd $(BACKEND) && go test ./internal/i18n/... -run 'TestNoPrintf|TestI18nConsistency' -v
 
 # wiki-gen: генерирует docs/wiki/ru/{buildings,ships,defense,research}/*.md
 # из configs/. План 19 (game-wiki). Запускать после каждого изменения
