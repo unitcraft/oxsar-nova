@@ -1,0 +1,14 @@
+/**
+ * Oxsar http://oxsar.ru
+ *
+ * 
+ */
+
+body
+{
+  background-image: url( "../images/bg/a-bg-131.jpg" );
+  background-repeat:no-repeat;
+  background-attachment: fixed;
+  background-position: center center;
+  background-color: #000;
+}

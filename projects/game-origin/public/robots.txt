@@ -1,0 +1,12 @@
+Host: oxsar.ru
+
+User-Agent: Yandex
+Disallow:
+Host: oxsar.ru
+
+User-Agent: *
+Disallow:
+Crawl-Delay: 2
+
+User-agent: *
+Disallow: /sideinf.html

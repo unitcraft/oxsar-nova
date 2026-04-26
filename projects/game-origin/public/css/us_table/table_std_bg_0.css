@@ -1,0 +1,23 @@
+/**
+ * Oxsar http://oxsar.ru
+ *
+ * 
+ */
+
+.ntable td, .atable td
+{
+  background: transparent none;
+}
+
+.ntable th, .atable th
+{
+  background: transparent none;
+}
+#leftMenu li a, #leftMenu li a:hover
+{
+  background: transparent none;
+}
+.odd td
+{
+  background: transparent none;
+}

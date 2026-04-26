@@ -1,0 +1,20 @@
+.brblock {
+        background: orange;
+}
+
+.ui360 {
+        line-height: 50px;
+}
+.brblock {
+        width: 100%;
+        display: -moz-inline-stack;
+        display: inline-block;
+        line-height: 1.2;
+        vertical-align: middle;
+}
+.brblock span {
+        display: block;
+}
+.iefix {
+        display: none;
+}

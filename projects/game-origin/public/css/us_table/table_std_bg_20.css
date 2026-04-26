@@ -1,0 +1,26 @@
+/**
+ * Oxsar http://oxsar.ru
+ *
+ * 
+ */
+
+.ntable td, .atable td
+{
+    background-color: transparent;
+    background-image:url("../../images/table_std_bg_20.png");
+}
+
+.ntable th, .atable th
+{
+    background-color: transparent;
+    background-image:url("../../images/table_sth_bg_20.png");
+}
+#leftMenu li a, #leftMenu li a:hover
+{
+    background-color: transparent;
+    background-image:url("../../images/menu_std_bg_20.png");
+}
+.odd td
+{
+    background-image: url("../../images/table_std_bg_odd_20.png");
+}

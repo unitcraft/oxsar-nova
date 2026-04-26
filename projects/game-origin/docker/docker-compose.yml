@@ -1,0 +1,59 @@
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_DATABASE: ${DB_NAME:-oxsar_db}
+      MYSQL_USER: ${DB_USER:-oxsar_user}
+      MYSQL_PASSWORD: ${DB_PWD:-oxsar_pass}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile.php
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-oxsar_db}
+      DB_USER: ${DB_USER:-oxsar_user}
+      DB_PWD: ${DB_PWD:-oxsar_pass}
+      DB_PREFIX: ${DB_PREFIX:-na_}
+      TIMEZONE: ${TIMEZONE:-Europe/Moscow}
+      GAME_UNIVERSE: ${GAME_UNIVERSE:-dm}
+      UNIVERSE_NAME_FULL: ${UNIVERSE_NAME_FULL:-Origin}
+      PORTAL_URL: ${PORTAL_URL:-}
+      AUTH_JWKS_URL: ${AUTH_JWKS_URL:-}
+    volumes:
+      - ../src:/var/www/src:ro
+      - ../public:/var/www/public:ro
+      - ../templates:/var/www/templates:ro
+      - ../config:/var/www/config:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-8090}:80"
+    volumes:
+      - ../public:/var/www/public:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+
+volumes:
+  mysql_data:

@@ -1,0 +1,53 @@
+/**
+ * Oxsar http://oxsar.ru
+ *
+ * 
+ */
+
+#planets
+{
+  position: absolute;
+}
+#content
+{
+  width: auto;
+  margin: 20px 0;
+}
+#leftMenu
+{
+  position: fixed;
+  top: 5px;
+  left: 5px;
+  width: 160px;
+}
+#leftMenu ul, #leftMenu li
+{
+  margin: 0;
+}
+#topHeader
+{
+  margin: 10px;
+  padding:2px;
+  width:auto;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+#topHeader li
+{
+  float: left;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+#planets
+{
+  top: 0px;
+  right: 20px;
+  width: 150px;
+}
+
+.poweredby
+{
+  width:100%;
+  text-align:center;
+  font-size:smaller;
+  margin-top:10px;
+}

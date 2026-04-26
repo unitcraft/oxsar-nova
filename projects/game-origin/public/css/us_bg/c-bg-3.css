@@ -1,0 +1,119 @@
+/**
+ * Oxsar http://oxsar.ru
+ *
+ * 
+ */
+
+body
+{
+  background: #ffffff;
+  color: #000000;
+}
+
+#leftMenu ul
+{
+  border: #000000;
+}
+
+.menu-prod, .menu-user, .menu-other, .menu-info, 
+.menu-prod:hover, .menu-user:hover, .menu-other:hover, .menu-info:hover
+{
+  background-color: #ffffff;
+}
+
+a, a:link, a:hover, a:active, a:visited
+{
+  border: #000000;
+  color: #000000;
+}
+
+.ntable th, .ttable th, .atable th, .th
+{
+  background-color: #ffffff;
+  color: #000000;
+}
+.ntable td, .atable td, .ttable td, .strongBorderTop, fieldset, #log, #forward, .topbox, .td
+{
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.button, .SignButton, input, select, textarea, input:focus, textarea:focus
+{
+  background-color: #ffffff ;
+  color: #000000;
+}
+
+table.info_table th
+{
+  background-color: #ffffff;
+  color:#000000;
+}
+
+table.info_table td
+{
+  color:#000000;
+}
+
+#leftMenu ul
+{
+  border: #000000;
+}
+
+.ownPosition
+{
+  color: #009900 !important;
+}
+
+.friend
+{
+  color: #919120 !important;
+}
+
+.available, .true
+{
+  color: #009900 !important;
+}
+
+.false, .rep_quantity_diff, .rep_quantity_damage
+{
+  color: #990000 !important;
+}
+.rep_quantity_damage_low
+{
+  color: #935606 !important;
+}
+.rep_quantity_grasped
+{
+  color: #009900 !important;
+}
+
+.strong-player
+{
+  color: #BB5050 !important;
+}
+
+.weak-player
+{
+  color: #3c8c3c !important;
+}
+
+.vacation-mode
+{
+  color: #1f90bf !important;
+}
+
+.assault-drawn
+{
+  color:#333333 !important;
+}
+
+.assault-victory
+{
+  color:#009900 !important;
+}
+
+.assault-defeat
+{
+  color:#aa1111 !important;
+}

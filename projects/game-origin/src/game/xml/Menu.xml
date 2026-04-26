@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<menu>
+	<info title-min="Планета">
+		<main href="Main">MENU_MAIN</main>
+		<resource href="Resource">MENU_RESOURCE</resource>
+		<construction href="Constructions" id='menu_build'>MENU_CONSTRUCTIONS</construction>
+		<research href="Research" id='menu_research'>MENU_RESEARCH</research>
+		<shipyard href="Shipyard">MENU_SHIPYARD</shipyard>
+		<defense href="Defense">MENU_DEFENSE</defense>
+		<fleet href="Mission" id='menu_fleet'>MENU_FLEET</fleet>
+		<artefacts href="Artefacts">MENU_ARTEFACTS</artefacts>
+		<repair href="Repair">MENU_REPAIR</repair>
+		<disassemble href="Disassemble">MENU_DISASSEMBLE</disassemble>
+		<stock href="Stock">MENU_STOCK</stock>
+		<exchange href="ExchangeOpts">MENU_EXCHANGE</exchange>
+	</info>
+
+	<info2 class="menu-info" class-max="menu2-max" class-min="menu2-min" title-min="Коммуникации">
+		<chat href="Chat" nolangvar="1" id='menu_chat'>Чат</chat>
+		<messages href="MSG">MENU_MESSAGES</messages>
+		<notepad href="Notepad">MENU_NOTEPAD</notepad>
+		<alliance href="Alliance">MENU_ALLIANCE</alliance>
+		<friends href="Friends">MENU_FRIENDS</friends>
+		<referral href="Referral">MENU_REFERAL</referral>
+		<search href="Search">MENU_SEARCH</search>
+	</info2>
+
+	<info3 class="menu-info" class-max="menu3-max" class-min="menu3-min" title-min="Галактика">
+		<galaxy href="Galaxy" id='menu_galaxy'>MENU_GALAXY</galaxy>
+		<empire href="Empire">MENU_EMPIRE</empire>
+		<techtree href="Techtree">MENU_TECHTREE</techtree>
+		<achievements href="Achievements" id='menu_achievements'>MENU_ACHIEVEMENTS</achievements>
+		<achievements href="Profession" id='menu_profession'>MENU_PROFESSION</achievements>
+	</info3>
+
+	<info4 class="menu-info" class-max="menu4-max" class-min="menu4-min" title-min="Статистика">
+		<ranking href="Ranking">MENU_RANKING</ranking>
+		<records href="Records">MENU_RECORDS</records>
+		<battlestats href="Battlestats">MENU_BATTLESTATS</battlestats>
+		<restrans href="ResTransferStats">MENU_RESTRANSFERS</restrans>
+		<simulator href="Simulator" id='menu_simulator'>MENU_SIMULATOR</simulator>
+		<!-- <tech_sim href="AdvTechCalculator">Калькулятор специализации</tech_sim> -->
+	</info4>
+
+	<info5 class="menu-info" class-max="menu5-max" class-min="menu5-min" title-min="Рынок ресурсов">
+		<market href="Market" nolangvar="1">Обменник</market>
+		<artefactmarket href="ArtefactMarket" nolangvar="1">Магазин артефактов</artefactmarket>
+		<pay href="Payment" nolangvar="1">Пополнить кредиты</pay>
+	</info5>
+
+	<info6 class="menu-info" class-max="menu6-max" class-min="menu6-min" title-min="Поиск">
+		<forums href="http://cakeuniverse.ru/" external="1" target="_blank">MENU_FORUMS</forums>
+		<forums href="http://cakeuniverse.ru/index.php?showforum=34" external="1" target="_blank">MENU_TUTORIAL</forums>
+	</info6>
+
+	<info7 class="menu-info" class-max="menu7-max" class-min="menu7-min" title-min="Настройки">
+		<planet href="PlanetOptions">MENU_PLANET_OPTIONS</planet>
+		<preferences href="Prefs">MENU_PREFERENCES</preferences>
+		<agreement href="UserAgreement">MENU_USER_AGREEMENT</agreement>
+		<support href="Support">MENU_SUPPORT</support>
+		<widgets href="Widgets">MENU_WIDGETS</widgets>
+	</info7>
+
+	<info8 class="menu-info" class-max="menu8-max" class-min="menu8-min">
+		<logout href="Logout">MENU_LOGOUT</logout>
+	</info8>
+</menu>
+<!--
+	List of attributes for menu items:
+	* external
+		"0" - Link is internal (default)
+		"1" - Lin is external
+	* nolangvar
+		"0" - Display name as language variable (default)
+		"1" - Item name is no language variable
+	* refdir
+		"0" - Open external links with redirection page
+		"1" - Ommit redirection page
+	* target
+		Declares target frame to open link
+	* class
+		Defines CSS-class
+	* func
+		Deploys a special function on the field
+-->

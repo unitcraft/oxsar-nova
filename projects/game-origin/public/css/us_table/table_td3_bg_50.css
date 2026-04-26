@@ -1,0 +1,49 @@
+/**
+ * Oxsar http://oxsar.ru
+ *
+ *
+ */
+
+.button, .SignButton, input, select, textarea, input:focus, textarea:focus
+{
+  background-color: #201000;
+  color: #E5E5E5;
+  border: 2px solid #302010;
+}
+
+.ntable th, .ttable th, .atable th, .th
+{
+    background-color: #301C00;
+    border: 1px solid #403030;
+    color: #E5E5E5;
+}
+
+.ntable td, .atable td, .ttable td, .strongBorderTop, fieldset, #log, #forward, .topbox, .td {
+    color: #D0D0E0;
+}
+
+a, a:link, a:hover, a:active, a:visited {
+    color: #D0D0E0;
+}
+
+.ntable td, .atable td
+{
+    background-color: transparent;
+    background-image:url("../../images/table_td3_bg_50.png");
+}
+
+.ntable th, .atable th
+{
+    background-color: transparent;
+    background-image:url("../../images/table_sth3_bg_50.png");
+}
+
+#leftMenu li a, #leftMenu li a:hover
+{
+    background-color: transparent;
+    background-image:url("../../images/menu_std_bg_50.png");
+}
+.odd td
+{
+    background-image: url("../../images/table_std_bg_odd_50.png");
+}

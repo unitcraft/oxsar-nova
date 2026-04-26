@@ -1,0 +1,24 @@
+<form method="post" action="{@formaction}">
+<input type="hidden" name="moon" value="{request[get]}moon{/request}" />
+<table class="ntable">
+	<tr>
+		<th colspan="2">{lang}ROCKET_ATTACK{/lang}: {@target}</th>
+	</tr>
+	<tr>
+		<td>{lang}QUANTITY{/lang} ({lang}MAX{/lang} {@rockets})</td>
+		<td><input type="text" name="quantity" value="0" /></td>
+	</tr>
+	<tr>
+		<td>{lang}PRIMARY_TARGET{/lang}</td>
+		<td><select name="target"><option>{lang}ALL{/lang}</option>{foreach[destionations]}<option value="{loop}unitid{/loop}">{loop}name{/loop}</option>{/foreach}</select></td>
+	</tr>
+	<tr>
+		<td colspan="2" class="center"><input type="submit" name="start" value="{lang}ATTACK{/lang}" class="button" /></td>
+	</tr>
+</table>
+</form>
+{if[0]}
+ Oxsar http://oxsar.ru
+ Copyright (c) 2009-2010 UnitPoint <support@unitpoint.ru>
+  
+{/if}

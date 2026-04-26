@@ -1,0 +1,5 @@
+.env
+src/cache/
+public/assets/
+docker/mysql_data/
+*.log

@@ -1,0 +1,89 @@
+/**
+ * Oxsar http://oxsar.ru
+ *
+ * 
+ */
+
+body, input, select, textarea, pre, cite
+{
+  font-size:9px;
+}
+
+#contentHtml
+{
+}
+
+.main_content
+{
+  width:400px;
+}
+
+#leftMenu
+{
+  width:80px;
+}
+
+#leftMenu li
+{
+  font-size:8px;
+}
+
+#contentTopAndBody
+{
+  margin-left:81px;
+  width:318px;
+}
+
+#content
+{
+  margin:2px 0;
+}
+
+.ntable, fieldset, .idiv, #forward, .topbox, .content_width
+{
+  width:318px;
+}
+
+.ntable th, .ntable td {
+  padding:0px 2px;
+}
+
+.galaxy-browser  {
+  width:35px;
+}
+
+#topHeader  {
+  margin:1px;
+}
+
+table.top_header_res td.header-resource {
+  padding-top:1px;
+  font-size:8px;
+}
+
+table.top_header_res td {
+  padding:0 4px;
+}
+
+/* ========================== */
+
+#header
+{
+  display:none;
+}
+
+.front_left_small {
+  width:320px;
+  background-color:transparent;
+  background-image:url("../../images/table_std_bg_80.png");
+}
+
+.login_panel
+{
+  background-color:transparent;
+  border:none;
+}
+
+.front_right  {
+  display:none;
+}

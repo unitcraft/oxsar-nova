@@ -1,0 +1,115 @@
+/**
+ * Oxsar http://oxsar.ru
+ *
+ * 
+ */
+
+body, input, select, textarea, pre, cite
+{
+  background-attachment: scroll;
+  background-position: center top;
+  font-size:14px;
+}
+
+#contentHtml
+{
+}
+
+.main_content
+{
+  width:790px;
+}
+
+#content
+{
+  margin: 0;
+}
+
+#leftMenu
+{
+  width:130px;
+}
+
+#leftMenu li
+{
+  font-size:12px;
+}
+
+#contentTopAndBody
+{
+  margin-left:135px;
+  margin-top: 45px;
+  width:650px;
+}
+
+.ntable, fieldset, .idiv, #forward, .topbox, .content_width
+{
+  width:650px;
+}
+
+.galaxy-browser  {
+  width:75px;
+}
+
+#topHeader  {
+  margin:5px;
+  /* background-color: rgba(0, 0, 0, 0.4); */
+}
+
+table.top_header_res td.header-resource {
+  padding-top:2px;
+}
+
+table.top_header_res td {
+  padding:0 10px;
+}
+
+/* ========================== */
+
+.front_left_small {
+  width:720px;
+  background-color:transparent;
+  background-image:url("../../images/table_std_bg_80.png");
+}
+
+.login_panel
+{
+  background-color:transparent;
+  border:none;
+}
+
+.front_right  {
+  display:none;
+}
+
+#topMenu
+{
+	margin-left: 135px;
+	position: fixed;
+	top: 5px;
+	width: 650px;
+}
+
+table.top_menu
+{
+	background-color: transparent;
+	text-align: center;
+	width: 100%;
+	border: 1px solid #B6C6E5;
+}
+
+table.top_menu td
+{
+	background: #1F273C;
+}
+
+
+#chat_div
+{
+	margin: 2px; 
+	vertical-align: text-top; 
+	text-align:left; 
+	height: 230px; 
+	overflow:auto; 
+	max-width: 650px;	
+}

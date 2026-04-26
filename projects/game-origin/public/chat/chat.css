@@ -1,0 +1,14 @@
+#panel {
+	height: 700px;
+	display: none;
+}
+#panel2 {
+	display: none;
+}
+.slide {
+	margin: 0;
+	padding: 0;
+}
+.active {
+	background-position: right 12px;
+}
