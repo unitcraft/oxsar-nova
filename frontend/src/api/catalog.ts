@@ -182,16 +182,16 @@ export function imageOfId(id: number): string {
 }
 
 // nameByKey возвращает отображаемое имя юнита по ключу (fallback на key).
-function nameByKey(key: string): string {
+function nameByKey(key: string, t?: (k: string) => string): string {
   for (const c of [...BUILDINGS, ...MOON_BUILDINGS, ...RESEARCH, ...SHIPS, ...DEFENSE]) {
-    if (c.key === key) return c.name;
+    if (c.key === key) return t ? t(c.tKey) : c.name;
   }
   return key;
 }
 
 // fmtReqs форматирует список требований в читаемую строку.
-export function fmtReqs(reqs: Req[]): string {
-  return reqs.map((r) => `${nameByKey(r.key)} ур.${r.level}`).join(' + ');
+export function fmtReqs(reqs: Req[], t?: (k: string) => string): string {
+  return reqs.map((r) => `${nameByKey(r.key, t)} ур.${r.level}`).join(' + ');
 }
 
 // Тип планеты по позиции в системе (из PlanetPictures.xml legacy).

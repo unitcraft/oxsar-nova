@@ -153,7 +153,7 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
                   </div>
                   {level === 0 && r.requires && r.requires.length > 0 && (
                     <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginBottom: 2, fontFamily: 'var(--ox-mono)' }}>
-                      🔒 {fmtReqs(r.requires)}
+                      🔒 {fmtReqs(r.requires, ti)}
                     </div>
                   )}
                   {!isActive && (

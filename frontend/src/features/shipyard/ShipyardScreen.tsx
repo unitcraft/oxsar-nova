@@ -203,7 +203,7 @@ function UnitCards({
                 )}
                 {u.requires && u.requires.length > 0 && (
                   <div style={{ fontSize: 10, color: 'var(--ox-fg-muted)', marginTop: 4, fontFamily: 'var(--ox-mono)' }}>
-                    🔒 {fmtReqs(u.requires)}
+                    🔒 {fmtReqs(u.requires, ti)}
                   </div>
                 )}
                 {inStock > 0 && (
