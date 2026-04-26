@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { nameOf } from '@/api/catalog';
+import { useTranslation } from '@/i18n/i18n';
 
 type Category = 'building' | 'research' | 'ship' | 'defense' | 'score';
 
@@ -15,15 +16,23 @@ interface ServerRecord {
   my_value: number;
 }
 
-const CATEGORY_META: Record<Category, { label: string; icon: string }> = {
-  building: { label: 'Постройки',    icon: '🏗' },
-  research: { label: 'Исследования', icon: '🔬' },
-  ship:     { label: 'Флот',         icon: '🛸' },
-  defense:  { label: 'Оборона',      icon: '🛡' },
-  score:    { label: 'Очки',         icon: '🏆' },
+const CATEGORY_ICON: Record<Category, string> = {
+  building: '🏗',
+  research: '🔬',
+  ship:     '🛸',
+  defense:  '🛡',
+  score:    '🏆',
+};
+const CATEGORY_KEY: Record<Category, string> = {
+  building: 'catBuildings',
+  research: 'catResearch',
+  ship:     'catFleet',
+  defense:  'catBattle',
+  score:    'catTotal',
 };
 
 export function RecordsScreen() {
+  const { t } = useTranslation('recordsUi');
   const [cat, setCat] = useState<Category | 'all'>('all');
   const [search, setSearch] = useState('');
 
@@ -43,26 +52,26 @@ export function RecordsScreen() {
         return name.toLowerCase().includes(search.toLowerCase()) ||
           r.holder_name.toLowerCase().includes(search.toLowerCase());
       })
-      .sort((a, b) => (CATEGORY_META[a.category]?.label ?? a.category).localeCompare(CATEGORY_META[b.category]?.label ?? b.category));
+      .sort((a, b) => (CATEGORY_KEY[a.category] ?? a.category).localeCompare(CATEGORY_KEY[b.category] ?? b.category));
   }, [q.data, cat, search]);
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>🏅 Рекорды сервера</h2>
+      <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>🏅 {t('title')}</h2>
       <p style={{ margin: 0, fontSize: 14, color: 'var(--ox-fg-dim)' }}>
-        Топ-1 игрок по каждой категории + ваш текущий показатель.
+        {t('colHolder')}
       </p>
 
       <div className="ox-tabs">
-        <button type="button" aria-pressed={cat === 'all'} onClick={() => setCat('all')}>📊 Все</button>
-        {(Object.entries(CATEGORY_META) as [Category, typeof CATEGORY_META[Category]][]).map(([k, m]) => (
-          <button key={k} type="button" aria-pressed={cat === k} onClick={() => setCat(k)}>{m.icon} {m.label}</button>
+        <button type="button" aria-pressed={cat === 'all'} onClick={() => setCat('all')}>{t('filterAll')}</button>
+        {(Object.keys(CATEGORY_ICON) as Category[]).map((k) => (
+          <button key={k} type="button" aria-pressed={cat === k} onClick={() => setCat(k)}>{CATEGORY_ICON[k]} {t(CATEGORY_KEY[k]!)}</button>
         ))}
       </div>
 
       <input
         type="text"
-        placeholder="🔍 Поиск…"
+        placeholder={`🔍 ${t('filterPlaceholder')}`}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         style={{ padding: '6px 10px', maxWidth: 300 }}
@@ -72,7 +81,7 @@ export function RecordsScreen() {
         {q.isLoading && <div style={{ padding: 20 }}><div className="ox-skeleton" style={{ height: 200 }} /></div>}
         {!q.isLoading && filtered.length === 0 && (
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-muted)' }}>
-            Рекордов пока нет
+            {t('empty')}
           </div>
         )}
         {filtered.length > 0 && (
@@ -80,21 +89,21 @@ export function RecordsScreen() {
             <table className="ox-table" style={{ margin: 0 }}>
               <thead>
                 <tr>
-                  <th style={{ width: 80 }}>Категория</th>
-                  <th>Позиция</th>
-                  <th>Держатель</th>
-                  <th className="num">Рекорд</th>
-                  <th className="num">Мой результат</th>
+                  <th style={{ width: 80 }}>{t('colCategory')}</th>
+                  <th>{t('colRank')}</th>
+                  <th>{t('colHolder')}</th>
+                  <th className="num">{t('colRecord')}</th>
+                  <th className="num">{t('colMine')}</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r) => {
                   const name = r.unit_id ? nameOf(r.unit_id) : r.key;
-                  const meta = CATEGORY_META[r.category];
+                  const catKey = CATEGORY_KEY[r.category];
                   const ratio = r.value > 0 ? r.my_value / r.value : 0;
                   return (
                     <tr key={`${r.category}-${r.key}`}>
-                      <td style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>{meta?.icon} {meta?.label}</td>
+                      <td style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>{CATEGORY_ICON[r.category]} {catKey ? t(catKey) : r.category}</td>
                       <td style={{ fontWeight: 500 }}>{name}</td>
                       <td style={{ fontWeight: 600 }}>🏆 {r.holder_name}</td>
                       <td className="num" style={{ color: 'var(--ox-accent)', fontWeight: 700 }}>

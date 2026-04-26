@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { useToast } from '@/ui/Toast';
+import { useTranslation } from '@/i18n/i18n';
 
 interface ProfessionDTO {
   key: string;
@@ -15,23 +16,23 @@ interface CurrentInfo {
   next_change_allowed?: string | null;
 }
 
-const BONUS_LABELS: Record<string, string> = {
-  metalmine: 'Рудник металла',
-  silicon_lab: 'Рудник кремния',
-  solar_plant: 'Солнечная электростанция',
-  shipyard: 'Верфь',
-  gun: 'Оружейная технология',
-  shield_weapon: 'Щитовая технология',
-  shell_weapon: 'Броневая технология',
-  ballistics: 'Баллистика',
-  masking: 'Маскировка',
-  defense_factory: 'Оборонный завод',
-  rocket_station: 'Ракетная шахта',
-  computer_tech: 'Компьютерная технология',
-  gravi: 'Гравитационная технология',
-  combustion_drive: 'Реактивный двигатель',
-  impulse_drive: 'Импульсный двигатель',
-  hyperspace_drive: 'Гиперпространственный двигатель',
+const BONUS_KEY: Record<string, string> = {
+  metalmine: 'bonusProductionMetal',
+  silicon_lab: 'bonusProductionSilicon',
+  solar_plant: 'bonusProductionHydrogen',
+  shipyard: 'bonusBuildSpeed',
+  gun: 'bonusShipAttack',
+  shield_weapon: 'bonusShipShield',
+  shell_weapon: 'bonusShipHull',
+  ballistics: 'bonusFleetSpeed',
+  masking: 'bonusEspionage',
+  defense_factory: 'bonusBuildSpeed',
+  rocket_station: 'bonusBuildSpeed',
+  computer_tech: 'bonusResearchSpeed',
+  gravi: 'bonusResearchSpeed',
+  combustion_drive: 'bonusFleetSpeed',
+  impulse_drive: 'bonusFleetSpeed',
+  hyperspace_drive: 'bonusFleetSpeed',
 };
 
 const PROFESSION_ICONS: Record<string, string> = {
@@ -48,19 +49,23 @@ function fmtDelta(v: number): string {
   return v > 0 ? `+${v}` : String(v);
 }
 
-function timeUntil(iso: string): string {
+function timeUntil(iso: string, avail: string, unitDay: string, unitHour: string, unitMin: string): string {
   const ms = new Date(iso).getTime() - Date.now();
-  if (ms <= 0) return 'доступно';
+  if (ms <= 0) return avail;
   const d = Math.floor(ms / 86400000);
   const h = Math.floor((ms % 86400000) / 3600000);
-  if (d > 0) return `${d}д ${h}ч`;
+  if (d > 0) return `${d}${unitDay} ${h}${unitHour}`;
   const m = Math.floor((ms % 3600000) / 60000);
-  return `${h}ч ${m}м`;
+  return `${h}${unitHour} ${m}${unitMin}`;
 }
 
 export function ProfessionScreen() {
+  const { t } = useTranslation('professionUi');
   const qc = useQueryClient();
   const toast = useToast();
+  const unitDay  = t('global', 'timeUnitDay');
+  const unitHour = t('global', 'timeUnitHour');
+  const unitMin  = t('global', 'timeUnitMin');
 
   const list = useQuery({
     queryKey: ['professions'],
@@ -80,17 +85,11 @@ export function ProfessionScreen() {
       void qc.invalidateQueries({ queryKey: ['professions', 'me'] });
       void qc.invalidateQueries({ queryKey: ['me'] });
       const prof = list.data?.professions.find((p) => p.key === key);
-      toast.show('success', 'Профессия изменена', prof ? `Теперь вы ${prof.label}` : '');
+      toast.show('success', t('title'), prof?.label ?? '');
     },
     onError: (err: unknown) => {
-      const msg = (err as { message?: string })?.message ?? 'Ошибка';
-      if (msg.includes('cooldown') || msg.includes('too soon')) {
-        toast.show('danger', 'Слишком рано', 'Смена профессии доступна раз в 14 дней');
-      } else if (msg.includes('credit')) {
-        toast.show('danger', 'Недостаточно кредитов', 'Смена профессии стоит 1000 кредитов');
-      } else {
-        toast.show('danger', 'Ошибка', msg);
-      }
+      const msg = (err as { message?: string })?.message ?? '';
+      toast.show('danger', t('title'), msg);
     },
   });
 
@@ -106,7 +105,7 @@ export function ProfessionScreen() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '16px 0' }}>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Профессия</h2>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{t('title')}</h2>
         {current.data && (
           <span style={{
             padding: '3px 10px', borderRadius: 20,
@@ -114,26 +113,20 @@ export function ProfessionScreen() {
             border: '1px solid var(--ox-border)',
             fontSize: 15, color: 'var(--ox-fg-dim)',
           }}>
-            {PROFESSION_ICONS[currentKey] ?? '⚪'} Сейчас: <b style={{ color: 'var(--ox-fg)' }}>{current.data.label || 'Нет профессии'}</b>
+            {PROFESSION_ICONS[currentKey] ?? '⚪'} {t('currentLabel')}: <b style={{ color: 'var(--ox-fg)' }}>{current.data.label || t('available')}</b>
           </span>
         )}
       </div>
 
       {/* Информация о смене */}
       <div className="ox-panel" style={{ padding: '12px 16px', fontSize: 15, color: 'var(--ox-fg-dim)', display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
-        <span>
-          💳 Стоимость смены: <b style={{ color: 'var(--ox-accent)' }}>1 000 кредитов</b>
-        </span>
-        <span>
-          ⏱ Кулдаун: <b>14 дней</b>
-        </span>
         {canChangeFree ? (
           <span style={{ color: 'var(--ox-success, #22c55e)', fontWeight: 600 }}>
-            ✅ Смена сейчас бесплатна
+            ✅ {t('available')}
           </span>
         ) : nextChange ? (
           <span style={{ color: 'var(--ox-warn, #f59e0b)' }}>
-            🕐 Бесплатная смена через: <b>{timeUntil(nextChange)}</b>
+            🕐 <b>{timeUntil(nextChange, t('available'), unitDay, unitHour, unitMin)}</b>
           </span>
         ) : null}
       </div>
@@ -168,7 +161,7 @@ export function ProfessionScreen() {
                 <div className="ox-unit-card-body" style={{ flex: 1 }}>
                   <div className="ox-unit-card-name" style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
                     {p.label}
-                    {isActive && <span style={{ fontSize: 13, marginLeft: 6, color: 'var(--ox-success, #22c55e)', fontWeight: 400 }}>● активна</span>}
+                    {isActive && <span style={{ fontSize: 13, marginLeft: 6, color: 'var(--ox-success, #22c55e)', fontWeight: 400 }}>● {t('active')}</span>}
                   </div>
 
                   {/* Бонусы */}
@@ -176,7 +169,7 @@ export function ProfessionScreen() {
                     <div style={{ marginBottom: 6 }}>
                       {Object.entries(p.bonus).map(([k, v]) => (
                         <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, padding: '2px 0' }}>
-                          <span style={{ color: 'var(--ox-fg-dim)' }}>{BONUS_LABELS[k] ?? k}</span>
+                          <span style={{ color: 'var(--ox-fg-dim)' }}>{BONUS_KEY[k] ? t(BONUS_KEY[k]!) : k}</span>
                           <span style={{ color: 'var(--ox-success, #22c55e)', fontWeight: 700, fontFamily: 'var(--ox-mono)', minWidth: 28, textAlign: 'right' }}>
                             {fmtDelta(v)}
                           </span>
@@ -190,7 +183,7 @@ export function ProfessionScreen() {
                     <div>
                       {Object.entries(p.malus).map(([k, v]) => (
                         <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, padding: '2px 0' }}>
-                          <span style={{ color: 'var(--ox-fg-muted)' }}>{BONUS_LABELS[k] ?? k}</span>
+                          <span style={{ color: 'var(--ox-fg-muted)' }}>{BONUS_KEY[k] ? t(BONUS_KEY[k]!) : k}</span>
                           <span style={{ color: 'var(--ox-danger)', fontWeight: 700, fontFamily: 'var(--ox-mono)', minWidth: 28, textAlign: 'right' }}>
                             {fmtDelta(v)}
                           </span>
@@ -203,7 +196,7 @@ export function ProfessionScreen() {
                 <div className="ox-unit-card-footer" style={{ paddingTop: 10 }}>
                   {isActive ? (
                     <div style={{ textAlign: 'center', fontSize: 14, color: 'var(--ox-success, #22c55e)', fontWeight: 600 }}>
-                      ✅ Текущая профессия
+                      ✅ {t('currentLabel')}
                     </div>
                   ) : (
                     <button
@@ -212,13 +205,12 @@ export function ProfessionScreen() {
                       style={{ width: '100%' }}
                       disabled={change.isPending}
                       onClick={() => {
-                        const label = canChangeFree ? '' : ' (1 000 кредитов)';
-                        if (confirm(`Сменить профессию на "${p.label}"?${label}`)) {
+                        if (confirm(t('confirmChoose', { name: p.label, days: '14' }))) {
                           change.mutate(p.key);
                         }
                       }}
                     >
-                      {isChanging ? 'Смена…' : `Выбрать${canChangeFree ? '' : ' (1000 💳)'}`}
+                      {isChanging ? '…' : t('chooseBtn')}
                     </button>
                   )}
                 </div>

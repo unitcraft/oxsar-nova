@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '@/api/client';
+import { useTranslation } from '@/i18n/i18n';
 
 type Forecast = {
   hours: number;
@@ -23,6 +24,7 @@ function fmt(n: number): string {
  * (план 17 G1). Показывает компактную таблицу.
  */
 export function ForecastWidget({ planetID }: { planetID: string }) {
+  const { t } = useTranslation('forecastUi');
   const [hours, setHours] = useState(4);
 
   const q = useQuery({
@@ -45,7 +47,7 @@ export function ForecastWidget({ planetID }: { planetID: string }) {
         flexWrap: 'wrap',
       }}
     >
-      <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>Прогноз через:</span>
+      <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>{t('forecastIn')}</span>
       {HOURS_OPTIONS.map((h) => (
         <button
           key={h}
@@ -53,7 +55,7 @@ export function ForecastWidget({ planetID }: { planetID: string }) {
           className={hours === h ? 'ox-btn ox-btn-primary' : 'ox-btn'}
           style={{ padding: '2px 10px', fontSize: 13 }}
         >
-          {h}ч
+          {h}{t('hourUnit')}
         </button>
       ))}
       {f && (
@@ -62,8 +64,8 @@ export function ForecastWidget({ planetID }: { planetID: string }) {
           <span>🔵 <strong>{fmt(f.silicon)}</strong></span>
           <span>🟢 <strong>{fmt(f.hydrogen)}</strong></span>
           {f.capped && (
-            <span style={{ color: 'var(--ox-warning, #f5a623)' }} title="Достигнут лимит хранилища">
-              ⚠️ cap
+            <span style={{ color: 'var(--ox-warning, #f5a623)' }} title={t('capTooltip')}>
+              ⚠️ {t('capWarning')}
             </span>
           )}
         </div>

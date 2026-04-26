@@ -101,11 +101,11 @@ function AuthenticatedApp() {
     const params = new URLSearchParams(window.location.search);
     const payment = params.get('payment');
     if (payment === 'success') {
-      showToast('success', 'Оплата прошла успешно, кредиты зачислены');
+      showToast('success', t('global', 'paymentSuccess'));
       void qc.invalidateQueries({ queryKey: ['me'] });
       void qc.invalidateQueries({ queryKey: ['payment', 'history'] });
     } else if (payment === 'fail') {
-      showToast('danger', 'Оплата не прошла, попробуйте снова');
+      showToast('danger', t('global', 'paymentFail'));
     }
     if (payment) {
       params.delete('payment');
@@ -218,8 +218,8 @@ function AuthenticatedApp() {
   if (planets.isError) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16 }}>
       <div style={{ fontSize: 40 }}>⚠️</div>
-      <div style={{ color: 'var(--ox-fg-dim)' }}>Ошибка загрузки. Попробуйте обновить страницу.</div>
-      <button type="button" className="btn" onClick={() => window.location.reload()}>Обновить</button>
+      <div style={{ color: 'var(--ox-fg-dim)' }}>{t('global', 'loadError')}</div>
+      <button type="button" className="btn" onClick={() => window.location.reload()}>{t('global', 'reloadBtn')}</button>
     </div>
   );
   if (!planet) return <LoadingSkeleton />;
@@ -256,7 +256,7 @@ function AuthenticatedApp() {
               fontSize: 15,
             }}>
               <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
-              <span style={{ color: 'var(--ox-danger)', fontWeight: 600, flex: 1 }}>Атака на [{f.dst_galaxy}:{f.dst_system}:{f.dst_position}]{f.dst_is_moon ? ' 🌑' : ''}</span>
+              <span style={{ color: 'var(--ox-danger)', fontWeight: 600, flex: 1 }}>{f.dst_is_moon ? t('global', 'incomingAttackWarningMoon', { coords: `${f.dst_galaxy}:${f.dst_system}:${f.dst_position}` }) : t('global', 'incomingAttackWarning', { coords: `${f.dst_galaxy}:${f.dst_system}:${f.dst_position}` })}</span>
               <span style={{ fontSize: 14, fontFamily: 'var(--ox-mono)', color: 'var(--ox-fg-dim)', flexShrink: 0 }}>
                 <Countdown finishAt={f.arrive_at} />
               </span>
@@ -397,6 +397,7 @@ function Header({
   credit?: number | undefined;
   isAdmin: boolean;
 }) {
+  const { t } = useTranslation();
   const metal    = planet.metal    ?? 0;
   const silicon  = planet.silicon  ?? 0;
   const hydrogen = planet.hydrogen ?? 0;
@@ -432,7 +433,7 @@ function Header({
       <div className="ox-header-resources">
         <div className="ox-res-item">
           <span className="icon">🟠</span>
-          <span className="label-sm">Мет</span>
+          <span className="label-sm">{t('global', 'resMetalAbbr')}</span>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
             <ResourceTicker value={metal} ratePerSec={metalRate} cap={metalCap} />
             {metalCap > 0 && <span style={{ fontSize: 10, color: capColor(metal, metalCap), fontFamily: 'var(--ox-mono)' }}>{fmtCap(metalCap)}</span>}
@@ -440,7 +441,7 @@ function Header({
         </div>
         <div className="ox-res-item">
           <span className="icon">💎</span>
-          <span className="label-sm">Крем</span>
+          <span className="label-sm">{t('global', 'resSiliconAbbr')}</span>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
             <ResourceTicker value={silicon} ratePerSec={siliconRate} cap={siliconCap} />
             {siliconCap > 0 && <span style={{ fontSize: 10, color: capColor(silicon, siliconCap), fontFamily: 'var(--ox-mono)' }}>{fmtCap(siliconCap)}</span>}
@@ -448,7 +449,7 @@ function Header({
         </div>
         <div className="ox-res-item">
           <span className="icon">💧</span>
-          <span className="label-sm">Водор</span>
+          <span className="label-sm">{t('global', 'resHydrogenAbbr')}</span>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
             <ResourceTicker value={hydrogen} ratePerSec={hydrogenRate} cap={hydrogenCap} />
             {hydrogenCap > 0 && <span style={{ fontSize: 10, color: capColor(hydrogen, hydrogenCap), fontFamily: 'var(--ox-mono)' }}>{fmtCap(hydrogenCap)}</span>}
@@ -469,7 +470,7 @@ function Header({
 
       <div className="ox-header-right">
         {credit !== undefined && (
-          <div className="ox-res-item" title="Кредиты">
+          <div className="ox-res-item" title={t('global', 'creditsTitle')}>
             <span className="icon">💳</span>
             <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 15, fontWeight: 600, color: 'var(--ox-accent)' }}>
               {credit % 1 === 0 ? credit : credit.toFixed(2)}
@@ -483,7 +484,7 @@ function Header({
           type="button"
           className="btn-ghost btn-sm"
           onClick={onSearch}
-          title="Поиск (Ctrl+K)"
+          title={t('global', 'searchTitle')}
           style={{ fontFamily: 'var(--ox-mono)', fontSize: 14 }}
         >
           🔍 <span style={{ fontSize: 10, opacity: 0.6 }}>Ctrl+K</span>
@@ -492,7 +493,7 @@ function Header({
         {username && (
           <a
             href="#settings"
-            title="Профиль / настройки"
+            title={t('global', 'profileTitle')}
             style={{
               fontSize: 14,
               color: 'var(--ox-fg-dim)',
@@ -509,14 +510,14 @@ function Header({
         {isAdmin && (
           <a
             href="#admin"
-            title="Панель администратора"
+            title={t('global', 'adminTitle')}
             className="btn-ghost btn-sm"
             style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
           >
-            🛠 Админ
+            🛠 {t('global', 'btnAdmin')}
           </a>
         )}
-        <button type="button" className="btn-ghost btn-sm" onClick={onLogout}>Выйти</button>
+        <button type="button" className="btn-ghost btn-sm" onClick={onLogout}>{t('global', 'btnLogout')}</button>
       </div>
     </header>
   );
@@ -624,19 +625,20 @@ function PlanetSwitcher({
 }
 
 /* ── Bottom Nav (mobile) ── */
-const BOTTOM_ITEMS: Array<{ key: Tab; icon: string; label: string }> = [
-  { key: 'overview',  icon: '🏠', label: 'Обзор' },
-  { key: 'galaxy',    icon: '🌌', label: 'Галакт.' },
-  { key: 'fleet',     icon: '🛸', label: 'Флот' },
-  { key: 'messages',  icon: '📨', label: 'Сообщ.' },
-];
 
 function BottomNav({ tab, setTab, unreadCount }: { tab: Tab; setTab: (t: Tab) => void; unreadCount: number }) {
+  const { t } = useTranslation();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const bottomItems: Array<{ key: Tab; icon: string; label: string }> = [
+    { key: 'overview',  icon: '🏠', label: t('global', 'menuMain') },
+    { key: 'galaxy',    icon: '🌌', label: t('global', 'navGalaxy') },
+    { key: 'fleet',     icon: '🛸', label: t('global', 'menuFleet') },
+    { key: 'messages',  icon: '📨', label: t('global', 'navMessages') },
+  ];
   return (
     <>
       <nav className="ox-bottom-nav">
-        {BOTTOM_ITEMS.map((item) => (
+        {bottomItems.map((item) => (
           <button
             key={item.key}
             type="button"
@@ -653,7 +655,7 @@ function BottomNav({ tab, setTab, unreadCount }: { tab: Tab; setTab: (t: Tab) =>
         ))}
         <button type="button" className="ox-bottom-nav-btn" onClick={() => setSheetOpen(true)}>
           <span className="nav-icon">⋯</span>
-          <span>Ещё</span>
+          <span>{t('global', 'navMore')}</span>
         </button>
       </nav>
 
@@ -665,7 +667,7 @@ function BottomNav({ tab, setTab, unreadCount }: { tab: Tab; setTab: (t: Tab) =>
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ padding: '0 16px 12px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
-              Навигация
+              {t('global', 'navNavigation')}
             </div>
             <MoreSheet tab={tab} setTab={(t) => { setTab(t); setSheetOpen(false); }} />
           </div>
@@ -675,43 +677,43 @@ function BottomNav({ tab, setTab, unreadCount }: { tab: Tab; setTab: (t: Tab) =>
   );
 }
 
-const ALL_NAV: Array<{ key: Tab; icon: string; label: string }> = [
-  { key: 'overview',    icon: '🏠', label: 'Обзор' },
-  { key: 'resource',    icon: '⚙️', label: 'Сырьё' },
-  { key: 'buildings',   icon: '🏗', label: 'Постройки' },
-  { key: 'research',    icon: '🔬', label: 'Исследования' },
-  { key: 'shipyard',    icon: '🚀', label: 'Верфь' },
-  { key: 'repair',      icon: '🔧', label: 'Ремонт' },
-  { key: 'profession',  icon: '🎖', label: 'Профессия' },
-  { key: 'empire',      icon: '🌐', label: 'Империя' },
-  { key: 'techtree',    icon: '🌳', label: 'Техдерево' },
-  { key: 'settings',    icon: '⚙️', label: 'Настройки' },
-  { key: 'galaxy',      icon: '🌌', label: 'Галактика' },
-  { key: 'fleet',       icon: '🛸', label: 'Флот' },
-  { key: 'rockets',     icon: '💥', label: 'Ракеты' },
-  { key: 'messages',    icon: '📨', label: 'Сообщения' },
-  { key: 'chat',        icon: '💬', label: 'Чат' },
-  { key: 'alliance',    icon: '🤝', label: 'Альянс' },
-  { key: 'market',      icon: '💱', label: 'Рынок' },
-  { key: 'artefacts',   icon: '💎', label: 'Артефакты' },
-  { key: 'art-market',  icon: '🏪', label: 'Арт-рынок' },
-  { key: 'officers',    icon: '⭐', label: 'Офицеры' },
-  { key: 'score',       icon: '🏆', label: 'Рейтинг' },
-  { key: 'achievements',icon: '🥇', label: 'Достижения' },
-  { key: 'daily-quests',icon: '📋', label: 'Задания дня' },
-  { key: 'wiki',        icon: '📖', label: 'Вики' },
-  { key: 'battlestats', icon: '⚔', label: 'История боёв' },
-  { key: 'records',     icon: '🏅', label: 'Рекорды' },
-  { key: 'sim',         icon: '⚔️', label: 'Симулятор' },
-  { key: 'notepad',     icon: '📝', label: 'Блокнот' },
-  { key: 'referral',    icon: '🎁', label: 'Рефералы' },
-  { key: 'friends',     icon: '⭐', label: 'Друзья' },
-];
-
 function MoreSheet({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
+  const { t } = useTranslation();
+  const allNav: Array<{ key: Tab; icon: string; label: string }> = [
+    { key: 'overview',    icon: '🏠', label: t('global', 'menuMain') },
+    { key: 'resource',    icon: '⚙️', label: t('global', 'menuResource') },
+    { key: 'buildings',   icon: '🏗', label: t('global', 'menuConstructions') },
+    { key: 'research',    icon: '🔬', label: t('global', 'menuResearch') },
+    { key: 'shipyard',    icon: '🚀', label: t('global', 'menuShipyard') },
+    { key: 'repair',      icon: '🔧', label: t('global', 'menuRepair') },
+    { key: 'profession',  icon: '🎖', label: t('global', 'menuProfession') },
+    { key: 'empire',      icon: '🌐', label: t('global', 'menuEmpire') },
+    { key: 'techtree',    icon: '🌳', label: t('global', 'menuTechtree') },
+    { key: 'settings',    icon: '⚙️', label: t('global', 'menuSettings') },
+    { key: 'galaxy',      icon: '🌌', label: t('global', 'menuGalaxy') },
+    { key: 'fleet',       icon: '🛸', label: t('global', 'menuFleet') },
+    { key: 'rockets',     icon: '💥', label: t('global', 'menuRockets') },
+    { key: 'messages',    icon: '📨', label: t('global', 'menuMessages') },
+    { key: 'chat',        icon: '💬', label: t('global', 'menuChat') },
+    { key: 'alliance',    icon: '🤝', label: t('global', 'menuAlliance') },
+    { key: 'market',      icon: '💱', label: t('global', 'menuMarket') },
+    { key: 'artefacts',   icon: '💎', label: t('global', 'menuArtefacts') },
+    { key: 'art-market',  icon: '🏪', label: t('global', 'menuArtMarket') },
+    { key: 'officers',    icon: '⭐', label: t('global', 'menuOfficers') },
+    { key: 'score',       icon: '🏆', label: t('global', 'menuHighscore') },
+    { key: 'achievements',icon: '🥇', label: t('global', 'menuAchievements') },
+    { key: 'daily-quests',icon: '📋', label: t('global', 'menuDailyQuests') },
+    { key: 'wiki',        icon: '📖', label: t('global', 'menuWiki') },
+    { key: 'battlestats', icon: '⚔',  label: t('global', 'menuBattlestats') },
+    { key: 'records',     icon: '🏅', label: t('global', 'menuRecords') },
+    { key: 'sim',         icon: '⚔️', label: t('global', 'menuSimulator') },
+    { key: 'notepad',     icon: '📝', label: t('global', 'menuNotepad') },
+    { key: 'referral',    icon: '🎁', label: t('global', 'menuReferral') },
+    { key: 'friends',     icon: '⭐', label: t('global', 'menuFriends') },
+  ];
   return (
     <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-      {ALL_NAV.map((item) => (
+      {allNav.map((item) => (
         <button
           key={item.key}
           type="button"
@@ -737,61 +739,62 @@ function MoreSheet({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
 /* ── Навигационные пункты ── */
 function buildNavItems(t: (ns: string, key: string) => string, unreadCount: number, isAdmin: boolean) {
   return [
-    { key: 'planet', groupLabel: 'Планета' },
+    { key: 'planet', groupLabel: t('global', 'navGroupPlanet') },
     { key: 'overview',   icon: '🏠', label: t('global', 'menuMain') },
     { key: 'resource',   icon: '⚙️', label: t('global', 'menuResource') },
     { key: 'buildings',  icon: '🏗', label: t('global', 'menuConstructions') },
     { key: 'research',   icon: '🔬', label: t('global', 'menuResearch') },
     { key: 'shipyard',   icon: '🚀', label: t('global', 'menuShipyard') },
     { key: 'repair',     icon: '🔧', label: t('global', 'menuRepair') },
-    { key: 'profession', icon: '🎖', label: 'Профессия' },
-    { key: 'empire',     icon: '🌐', label: 'Империя' },
-    { key: 'techtree',   icon: '🌳', label: 'Техдерево' },
-    { key: 'settings',   icon: '⚙️', label: 'Настройки' },
+    { key: 'profession', icon: '🎖', label: t('global', 'menuProfession') },
+    { key: 'empire',     icon: '🌐', label: t('global', 'menuEmpire') },
+    { key: 'techtree',   icon: '🌳', label: t('global', 'menuTechtree') },
+    { key: 'settings',   icon: '⚙️', label: t('global', 'menuSettings') },
     { key: 's1', sep: true },
-    { key: 'space', groupLabel: 'Космос' },
+    { key: 'space', groupLabel: t('global', 'navGroupSpace') },
     { key: 'galaxy',     icon: '🌌', label: t('global', 'menuGalaxy') },
     { key: 'fleet',      icon: '🛸', label: t('global', 'menuFleet') },
     { key: 'rockets',    icon: '💥', label: t('global', 'menuRockets') },
     { key: 's2', sep: true },
-    { key: 'social', groupLabel: 'Общение' },
+    { key: 'social', groupLabel: t('global', 'navGroupSocial') },
     { key: 'messages',   icon: '📨', label: t('global', 'menuMessages'), badge: unreadCount || undefined },
-    { key: 'chat',       icon: '💬', label: 'Чат' },
+    { key: 'chat',       icon: '💬', label: t('global', 'menuChat') },
     { key: 'alliance',   icon: '🤝', label: t('global', 'menuAlliance') },
-    { key: 'notepad',    icon: '📝', label: 'Блокнот' },
-    { key: 'referral',   icon: '🎁', label: 'Рефералы' },
-    { key: 'friends',    icon: '⭐', label: 'Друзья' },
+    { key: 'notepad',    icon: '📝', label: t('global', 'menuNotepad') },
+    { key: 'referral',   icon: '🎁', label: t('global', 'menuReferral') },
+    { key: 'friends',    icon: '⭐', label: t('global', 'menuFriends') },
     { key: 's3', sep: true },
-    { key: 'trade', groupLabel: 'Торговля' },
+    { key: 'trade', groupLabel: t('global', 'navGroupTrade') },
     { key: 'market',     icon: '💱', label: t('global', 'menuMarket') },
     { key: 'artefacts',  icon: '💎', label: t('global', 'menuArtefacts') },
     { key: 'art-market', icon: '🏪', label: t('global', 'menuArtMarket') },
     { key: 'officers',   icon: '⭐', label: t('global', 'menuOfficers') },
     { key: 's4', sep: true },
-    { key: 'stats', groupLabel: 'Статистика' },
+    { key: 'stats', groupLabel: t('global', 'navGroupStats') },
     { key: 'score',      icon: '🏆', label: t('global', 'menuHighscore') },
     { key: 'achievements',icon:'🥇', label: t('global', 'menuAchievements') },
-    { key: 'daily-quests',icon: '📋', label: 'Задания дня' },
-    { key: 'wiki',       icon: '📖', label: 'Вики' },
-    { key: 'battlestats',icon: '⚔', label: 'История боёв' },
-    { key: 'records',    icon: '🏅', label: 'Рекорды' },
+    { key: 'daily-quests',icon: '📋', label: t('global', 'menuDailyQuests') },
+    { key: 'wiki',       icon: '📖', label: t('global', 'menuWiki') },
+    { key: 'battlestats',icon: '⚔', label: t('global', 'menuBattlestats') },
+    { key: 'records',    icon: '🏅', label: t('global', 'menuRecords') },
     { key: 'sim',        icon: '⚔️', label: t('global', 'menuSimulator') },
     ...(isAdmin ? [
       { key: 's5', sep: true },
-      { key: 'admin', icon: '🛠', label: 'Админ' },
+      { key: 'admin', icon: '🛠', label: t('global', 'menuAdmin') },
     ] : []),
   ];
 }
 
 /* ── Скелетоны загрузки ── */
 function LoadingSkeleton() {
+  const { t } = useTranslation();
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 16 }}>
       <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--ox-accent)', textShadow: '0 0 30px rgba(56,189,248,0.4)', animation: 'ox-float 2s ease-in-out infinite' }}>
         ✦ OXSAR
       </div>
       <div style={{ color: 'var(--ox-fg-muted)', fontSize: 15, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-        Загрузка вселенной…
+        {t('global', 'loadingUniverse')}
       </div>
     </div>
   );

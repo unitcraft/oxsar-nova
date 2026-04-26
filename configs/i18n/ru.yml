@@ -1224,6 +1224,346 @@ unitInfoUi:
   sectionVulnerable: Уязвим к быстрому огню
   rfColAttacker: Атакующий
 
+allianceUi:
+  title: Альянс
+  noAlliance: Вы не состоите в альянсе
+  createTitle: Создать альянс
+  createNamePlaceholder: Название альянса
+  createTagPlaceholder: Тег [3-5 букв]
+  createBtn: Создать
+  createErr: Ошибка создания
+  tabMine: Мой альянс
+  tabList: Список
+  sectionInfo: Информация
+  labelTag: Тег
+  labelRank: Позиция
+  labelMembers: "{{count}} из {{max}}"
+  labelOpen: Открытый набор
+  labelClosed: Закрытый набор
+  toggleOpenBtn: Открыть набор
+  toggleCloseBtn: Закрыть набор
+  leaveBtn: Покинуть альянс
+  disbandBtn: Распустить альянс
+  leaveConfirm: "Покинуть альянс {{name}}?"
+  disbandConfirm: "Распустить альянс {{name}}? Действие необратимо."
+  confirmBtn: Подтвердить
+  cancelBtn: Отмена
+  sectionApplications: Заявки
+  noApplications: Нет заявок
+  applyBtn: Подать заявку
+  alreadyApplied: Заявка отправлена
+  acceptBtn: Принять
+  rejectBtn: Отклонить
+  sectionRelations: Дипломатия
+  relNap: НЕН
+  relWar: ВОЙНА
+  relAlly: СОЮЗ
+  colMember: Игрок
+  colRole: Роль
+  colPoints: Очки
+  colRelation: Отношение
+  colActions: Действия
+
+dailyquestUi:
+  title: Ежедневные задания
+  hint: "Сбрасываются в 00:00 UTC. Выполняйте задания для получения наград."
+  loading: Загрузка…
+  empty: Заданий пока нет.
+  received: Получено
+  claimBtn: Забрать награду
+  rewardLabel: "Награда:"
+  rewardCredits: кр
+  rewardMetal: M
+  rewardSilicon: Si
+  rewardHydrogen: H
+
+friendsUi:
+  title: Друзья
+  loading: Загрузка…
+  empty: Список друзей пуст
+  addPlaceholder: Имя игрока
+  addBtn: Добавить
+  removeBtn: Удалить
+  colPlayer: Игрок
+  colStatus: Статус
+  colActions: Действия
+  statusOnline: онлайн
+  statusMinAgo: "{{n}} мин назад"
+  statusHourAgo: "{{n}} ч назад"
+  statusDayAgo: "{{n}} дн назад"
+
+galaxyEventUi:
+  untilEnd: "До конца:"
+  defaultTitle: Особое событие
+  defaultDescr: Действует особый эффект
+  kind.meteor_storm.title: Метеоритный шторм
+  kind.meteor_storm.descr: "+30% к добыче металла"
+  kind.solar_flare.title: Солнечная вспышка
+  kind.solar_flare.descr: "−20% энергии"
+  kind.trade_forum.title: Торговый форум
+  kind.trade_forum.descr: Льготные курсы рынка
+  kind.star_nebula.title: Звёздная туманность
+  kind.star_nebula.descr: "+15% к мощи экспедиций"
+
+forecastUi:
+  forecastIn: "Прогноз через:"
+  hourUnit: ч
+  capWarning: cap
+  capTooltip: Достигнут лимит хранилища
+
+creditsUi:
+  title: Кредиты
+  balanceLabel: "Баланс:"
+  creditsUnit: кр
+  testModeBanner: Тестовый режим — реальные платежи отключены
+  sectionPackages: Пополнить баланс
+  sectionHistory: История покупок
+  historyEmpty: Нет покупок
+  colDate: Дата
+  colPackage: Пакет
+  colCredits: Кредиты
+  colPrice: Цена
+  colStatus: Статус
+  statusPending: ожидает
+  statusPaid: оплачено
+  statusFailed: ошибка
+  statusCancelled: отменено
+  buyBtn: Купить
+  hintSmall: "Небольшой запас"
+  hintMedium: "Оптимальный выбор"
+  hintLarge: "Максимальная выгода"
+  packageHintCustom: "{{count}} кредитов"
+  bonusLabel: "бонус"
+  sectionSpendHints: "💡 На что потратить кредиты?"
+  hint5000: "💼 Все 4 офицера на месяц + запас на артефакты"
+  hint2000: "⭐ Все 4 офицера на 2 недели"
+  hint1000: "👔 Пара офицеров на месяц или смена профессии"
+  hint500: "🎖 Офицер на 2 недели"
+  hint100: "🔧 Мелкие покупки (смена имени, артефакт)"
+  priceHintOfficer.label: "Адмирал / Инженер / Геолог / Меркуре"
+  priceHintOfficer.value: "50 кр/день (1500 кр / месяц)"
+  priceHintProfession.label: "Смена профессии (после 7 дней)"
+  priceHintProfession.value: "1000 кр"
+  priceHintRename.label: "Переименование планеты"
+  priceHintRename.value: бесплатно
+  priceHintArtefact.label: "Покупка артефактов на бирже"
+  priceHintArtefact.value: "зависит от лота"
+
+recordsUi:
+  title: Рекорды
+  filterAll: "📊 Все"
+  filterPlaceholder: Поиск…
+  empty: Нет записей
+  colCategory: Категория
+  colRank: Позиция
+  colHolder: Держатель
+  colRecord: Рекорд
+  colMine: Мой результат
+  catTotal: Общий рейтинг
+  catBuildings: Постройки
+  catResearch: Исследования
+  catFleet: Флот
+  catBattle: Боевой рейтинг
+  catAchievements: Достижения
+
+searchUi:
+  placeholder: Поиск…
+  hint: "минимум 2 символа · Esc — закрыть"
+  searching: Поиск…
+  promptEmpty: Введите запрос для поиска
+  notFound: Ничего не найдено
+  sectionPlayers: Игроки
+  sectionAlliances: Альянсы
+  sectionPlanets: Планеты
+  membersCount: "{{n}} чел."
+
+wikiUi:
+  sidebarTitle: Вики
+  loading: Загрузка…
+  articleLoading: Загрузка статьи…
+  articleError: Не удалось загрузить статью.
+
+techtreeUi:
+  title: Дерево технологий
+  filterAll: Все
+  filterAvailable: "✓ Доступно"
+  filterLocked: "🔒 Закрыто"
+  viewCards: "🗂 Карточки"
+  viewGraph: "🌐 Граф"
+  levelAbbr: Ур.
+  available: доступно
+  locked: закрыто
+  noRequirements: Без предусловий
+  kindBuildings: Постройки
+  kindResearch: Исследования
+  kindShips: Флот
+  kindDefense: Оборона
+
+professionUi:
+  title: Профессия
+  active: активна
+  currentLabel: Текущая профессия
+  available: доступно
+  chooseBtn: Выбрать
+  confirmChoose: "Выбрать профессию «{{name}}»? Смена возможна раз в {{days}} дней."
+  confirmBtn: Подтвердить
+  cancelBtn: Отмена
+  bonusUnknown: Бонус
+  bonusProductionMetal: Добыча металла
+  bonusProductionSilicon: Добыча кристаллов
+  bonusProductionHydrogen: Добыча водорода
+  bonusFleetSpeed: Скорость флота
+  bonusResearchSpeed: Скорость исследований
+  bonusBuildSpeed: Скорость постройки
+  bonusShipAttack: Атака кораблей
+  bonusShipShield: Щит кораблей
+  bonusShipHull: Броня кораблей
+  bonusEspionage: Шпионаж
+
+alienUi:
+  title: Планеты под захватом пришельцев
+  departsLabel: "Уйдут:"
+  fleetLabel: "Флот:"
+  paidLabel: "Уже заплачено:"
+  payBtn: Заплатить (продлить)
+  payHint: "50 кр = 2 часа"
+  expiresLabel: истекает
+  empty: Нет захваченных планет
+  tierLabel: тир
+  payMinutes: "{{n}} мин"
+
+adminUi:
+  title: Панель администратора
+  tabUsers: "👥 Игроки"
+  tabEvents: "⚡ События"
+  tabAudit: "📜 Журнал действий"
+  sectionActions: Действия
+  sectionUsers: Пользователи
+  sectionAutomsgs: Шаблоны сообщений
+  statUsers: Пользователей
+  statPlanets: Планет
+  statFleets: Флотов в пути
+  statEvents: Событий в очереди
+  creditTitle: Начислить кредиты
+  creditAmountPlaceholder: сумма
+  creditConfirm: "Начислить {{amount}} кредитов игроку {{id}}…?"
+  roleTitle: Установить роль
+  roleConfirm: "Назначить роль «{{role}}» игроку {{id}}…? Смена роли меняет его возможности в игре."
+  okBtn: ОК
+  profileBtn: "🔍 Профиль"
+  banBtn: Бан
+  unbanBtn: Разбан
+  banConfirm: "Забанить игрока {{name}}? Он не сможет войти в игру, пока бан не будет снят."
+  unbanConfirm: "Снять бан с игрока {{name}}?"
+  confirmTitle: Подтверждение админского действия
+  confirmBtn: Выполнить
+  cancelBtn: Отмена
+  colPlayer: Игрок
+  colRole: Роль
+  colCredits: Кредиты
+  colScore: Очки
+  colCreated: Создан
+  colActions: Действия
+  automsgColKey: Ключ
+  automsgColTitle: Заголовок
+  automsgColFolder: Папка
+  automsgEditBtn: Правка
+  automsgSaveBtn: Сохранить
+  automsgCancelBtn: Отмена
+  automsgTitleLabel: "Заголовок:"
+  automsgFolderLabel: "Папка:"
+  automsgBodyLabel: "Шаблон тела (поддерживает {{variable}})"
+  automsgSaveErr: ошибка
+  eventsMonitorTitle: Монитор событий
+  eventsTopErrors: "Топ ошибок за 24ч:"
+  eventsLoading: Загрузка…
+  eventsEmpty: нет событий
+  eventsColId: ID
+  eventsColKind: Kind
+  eventsColState: State
+  eventsColAtt: Att
+  eventsColFire: Fire
+  eventsColLastErr: Last error
+  deadTitle: "☠ Dead-letter"
+  deadLoading: Загрузка…
+  deadLoadErr: Ошибка загрузки dead-letter
+  deadEmpty: "Пусто. События попадают сюда после N неудачных попыток."
+  deadRetryConfirm: "Вернуть событие {{id}} в активную очередь?"
+  deadColFailed: failed_at
+  deadColKind: kind
+  deadColAttempt: attempt
+  deadColError: Ошибка
+  deadColTarget: user/planet
+  auditTitle: Журнал
+  auditActionPlaceholder: "action (users.ban, events.retry, …)"
+  auditTargetPlaceholder: target_id
+  auditRefreshBtn: "↻ Обновить"
+  auditLoading: Загрузка…
+  auditLoadErr: Ошибка загрузки журнала
+  auditEmpty: "Журнал пуст. Выполните любое write-действие в админке — запись появится здесь."
+  auditColDate: Дата
+  auditColAdmin: Админ
+  auditColAction: Действие
+  auditColTarget: Цель
+  auditColPayload: Payload
+  auditColIp: IP
+  profileCloseBtn: "✕ Закрыть"
+  profileLoading: Загрузка профиля…
+  profileLoadErr: Ошибка загрузки
+  profileLabelRole: "Роль:"
+  profileLabelCredits: "💳 Кредитов:"
+  profileLabelScore: "🏆 Очков:"
+  profileLabelReg: "Зарегистрирован:"
+  profileLabelOnline: "Был онлайн:"
+  profileBanned: "⛔ Забанен"
+  profileTabSummary: Общее
+  profileTabEconomy: Экономика
+  profileTabCombat: "Бои / отчёты"
+  profileTabAudit: Журнал
+  sectionPlanets: "🪐 Планеты"
+  sectionResources: "⚙️ Изменить ресурсы (delta, может быть отрицательным)"
+  sectionFleets: "🛸 Флоты в полёте"
+  sectionOfficers: "⭐ Офицеры"
+  sectionArtefacts: "💎 Артефакты"
+  sectionMarketLots: "📈 Лоты рынка"
+  sectionArtefactLots: "🏪 Лоты арт-рынка"
+  sectionResLog: "💰 Последние транзакции ресурсов"
+  sectionPurchases: "💳 Покупки кредитов"
+  sectionReports: "📜 Последние отчёты"
+  sectionMessages: "📬 Последние сообщения"
+  sectionAdminAudit: "🗒 Админские действия над этим игроком"
+  resourceApplyBtn: Применить
+  artefactGrantBtn: "+ Выдать"
+  missionAttack: Атака
+  missionEspionage: Разведка
+  missionTransport: Транспорт
+  missionColonize: Колонизация
+  missionHarvest: Сбор обломков
+  missionExpedition: Экспедиция
+  missionInvasion: Вторжение
+  reportBattle: "⚔ Бой"
+  reportEspionage: "🔭 Шпионаж"
+  reportExpedition: "🌌 Экспедиция"
+
+artMarketUi:
+  title: "🏷 Рынок артефактов"
+  balanceLabel: "Баланс:"
+  tabAll: "📋 Все офферы"
+  tabMine: "👤 Мои"
+  empty: Нет офферов.
+  colArtefact: Артефакт
+  colSeller: Продавец
+  colPrice: Цена
+  colDate: Дата
+  buyBtn: Купить
+  buyBtnCantAfford: Мало cr
+  cancelBtn: Отменить
+  tooltipNoCredits: Недостаточно кредитов
+  toastBoughtTitle: Куплено
+  toastBoughtBody: Артефакт добавлен в инвентарь
+  toastBuyErrTitle: Ошибка покупки
+  toastCancelledTitle: Оффер отменён
+
 authUi:
   tagline: космическая стратегия
   loginTab: Войти
@@ -1442,13 +1782,38 @@ global:
   menuMain: Обзор
   menuMarket: Рынок
   menuMessages: Сообщения
+  menuAdmin: Админ
+  menuChat: Чат
+  menuDailyQuests: Задания дня
   menuNotepad: Блокнот
   menuOfficers: Офицеры
   menuPlanetOptions: Планета
   menuPreferences: Настройки
+  menuProfession: Профессия
   menuRanking: Статистика
   menuRecords: Рекорды
   menuReferal: Рефералы
+  menuReferral: Рефералы
+  menuSettings: Настройки
+  menuWiki: Вики
+  navGroupPlanet: Планета
+  navGroupSpace: Космос
+  navGroupSocial: Общение
+  navGroupTrade: Торговля
+  navGroupStats: Статистика
+  navMore: Ещё
+  navNavigation: Навигация
+  navGalaxy: Галакт.
+  navMessages: Сообщ.
+  resMetalAbbr: Мет
+  resSiliconAbbr: Крем
+  resHydrogenAbbr: Водор
+  btnLogout: Выйти
+  btnAdmin: Админ
+  btnSearch: Поиск
+  paymentFail: Оплата не прошла, попробуйте снова
+  paymentSuccess: Оплата прошла успешно, кредиты зачислены
+  reloadBtn: Обновить
   menuRepair: Ремонт
   menuResearch: Исследования
   menuResource: Сырьё
@@ -1546,6 +1911,16 @@ global:
   wiki: Wiki
   writeMessage: Написать сообщение
   yesterday: "<strong>Вчера</strong>"
+  loadingUniverse: "Загрузка вселенной…"
+  incomingAttackWarning: "Атака на [{{coords}}]"
+  incomingAttackWarningMoon: "Атака на [{{coords}}] 🌑"
+  creditsTitle: Кредиты
+  adminTitle: Панель администратора
+  searchTitle: "Поиск (Ctrl+K)"
+  profileTitle: "Профиль / настройки"
+  timeUnitDay: "д"
+  timeUnitHour: "ч"
+  timeUnitMin: "м"
 info:
   abort: Отмена
   alienTech: Инопланетная технология

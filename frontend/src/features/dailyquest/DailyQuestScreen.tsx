@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useToast } from '@/ui/Toast';
+import { useTranslation } from '@/i18n/i18n';
 
 type Quest = {
   def_id: number;
@@ -19,6 +20,7 @@ type Quest = {
 };
 
 export function DailyQuestScreen() {
+  const { t } = useTranslation('dailyquestUi');
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -38,14 +40,14 @@ export function DailyQuestScreen() {
       void qc.invalidateQueries({ queryKey: ['planets'] });
       void qc.invalidateQueries({ queryKey: ['me'] });
       const parts: string[] = [];
-      if (res.reward_credits > 0) parts.push(`+${res.reward_credits} кр`);
-      if (res.reward_metal > 0) parts.push(`+${res.reward_metal} M`);
-      if (res.reward_silicon > 0) parts.push(`+${res.reward_silicon} Si`);
-      if (res.reward_hydrogen > 0) parts.push(`+${res.reward_hydrogen} H`);
-      toast.show('success', 'Награда получена', parts.join(', ') || '—');
+      if (res.reward_credits > 0) parts.push(`+${res.reward_credits} ${t('rewardCredits')}`);
+      if (res.reward_metal > 0) parts.push(`+${res.reward_metal} ${t('rewardMetal')}`);
+      if (res.reward_silicon > 0) parts.push(`+${res.reward_silicon} ${t('rewardSilicon')}`);
+      if (res.reward_hydrogen > 0) parts.push(`+${res.reward_hydrogen} ${t('rewardHydrogen')}`);
+      toast.show('success', t('claimBtn'), parts.join(', ') || '—');
     },
     onError: (err) => {
-      toast.show('danger', 'Ошибка', err instanceof Error ? err.message : 'Не удалось получить награду');
+      toast.show('danger', t('title'), err instanceof Error ? err.message : t('empty'));
     },
   });
 
@@ -53,37 +55,38 @@ export function DailyQuestScreen() {
 
   return (
     <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <h2 style={{ margin: 0 }}>Ежедневные задания</h2>
+      <h2 style={{ margin: 0 }}>{t('title')}</h2>
       <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>
-        Сбрасываются в 00:00 UTC. Завершите — заберите награду.
+        {t('hint')}
       </div>
 
-      {quests.isLoading && <div>Загрузка…</div>}
+      {quests.isLoading && <div>{t('loading')}</div>}
       {!quests.isLoading && list.length === 0 && (
-        <div className="ox-panel" style={{ padding: 16 }}>Заданий пока нет.</div>
+        <div className="ox-panel" style={{ padding: 16 }}>{t('empty')}</div>
       )}
 
       {list.map((q) => {
         const pct = Math.min(100, Math.round((q.progress / q.target_progress) * 100));
         const rewardParts: string[] = [];
-        if (q.reward_credits > 0) rewardParts.push(`${q.reward_credits} кр`);
-        if (q.reward_metal > 0) rewardParts.push(`${q.reward_metal} M`);
-        if (q.reward_silicon > 0) rewardParts.push(`${q.reward_silicon} Si`);
-        if (q.reward_hydrogen > 0) rewardParts.push(`${q.reward_hydrogen} H`);
+        if (q.reward_credits > 0) rewardParts.push(`${q.reward_credits} ${t('rewardCredits')}`);
+        if (q.reward_metal > 0) rewardParts.push(`${q.reward_metal} ${t('rewardMetal')}`);
+        if (q.reward_silicon > 0) rewardParts.push(`${q.reward_silicon} ${t('rewardSilicon')}`);
+        if (q.reward_hydrogen > 0) rewardParts.push(`${q.reward_hydrogen} ${t('rewardHydrogen')}`);
+
 
         return (
           <div key={q.def_id} className="ox-panel" style={{ padding: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <strong>{q.title}</strong>
               {q.claimed ? (
-                <span style={{ color: 'var(--ox-fg-muted)', fontSize: 13 }}>Получено</span>
+                <span style={{ color: 'var(--ox-fg-muted)', fontSize: 13 }}>{t('received')}</span>
               ) : q.completed ? (
                 <button
                   className="ox-btn ox-btn-primary"
                   onClick={() => claim.mutate(q.def_id)}
                   disabled={claim.isPending}
                 >
-                  Забрать награду
+                  {t('claimBtn')}
                 </button>
               ) : (
                 <span style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>
@@ -103,7 +106,7 @@ export function DailyQuestScreen() {
             </div>
             {rewardParts.length > 0 && (
               <div style={{ marginTop: 6, fontSize: 12, color: 'var(--ox-fg-muted)' }}>
-                Награда: {rewardParts.join(', ')}
+                {t('rewardLabel')} {rewardParts.join(', ')}
               </div>
             )}
           </div>

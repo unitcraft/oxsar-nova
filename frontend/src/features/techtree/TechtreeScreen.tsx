@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { nameOf } from '@/api/catalog';
 import { TechtreeGraph } from './TechtreeGraph';
+import { useTranslation } from '@/i18n/i18n';
 
 type NodeKind = 'building' | 'research' | 'ship' | 'defense';
 
@@ -25,16 +26,23 @@ interface TechtreeData {
   nodes: TechNode[];
 }
 
-const KIND_META: Record<NodeKind, { label: string; icon: string }> = {
-  building: { label: 'Постройки',     icon: '🏗' },
-  research: { label: 'Исследования',  icon: '🔬' },
-  ship:     { label: 'Флот',          icon: '🛸' },
-  defense:  { label: 'Оборона',       icon: '🛡' },
+const KIND_ICON: Record<NodeKind, string> = {
+  building: '🏗',
+  research: '🔬',
+  ship:     '🛸',
+  defense:  '🛡',
+};
+const KIND_KEY: Record<NodeKind, string> = {
+  building: 'kindBuildings',
+  research: 'kindResearch',
+  ship:     'kindShips',
+  defense:  'kindDefense',
 };
 
 type Filter = 'all' | 'unlocked' | 'locked';
 
 export function TechtreeScreen() {
+  const { t } = useTranslation('techtreeUi');
   const q = useQuery({
     queryKey: ['techtree'],
     queryFn: () => api.get<TechtreeData>('/api/techtree'),
@@ -67,12 +75,12 @@ export function TechtreeScreen() {
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>🌳 Дерево технологий</h2>
+      <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>🌳 {t('title')}</h2>
 
       <div className="ox-tabs">
-        {(Object.entries(KIND_META) as [NodeKind, typeof KIND_META[NodeKind]][]).map(([k, m]) => (
+        {(Object.keys(KIND_ICON) as NodeKind[]).map((k) => (
           <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}>
-            {m.icon} {m.label}
+            {KIND_ICON[k]} {t(KIND_KEY[k]!)}
           </button>
         ))}
       </div>
@@ -80,19 +88,19 @@ export function TechtreeScreen() {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           type="text"
-          placeholder="Поиск по названию…"
+          placeholder={t('title')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ flex: 1, minWidth: 200, padding: '6px 10px' }}
         />
         <div style={{ display: 'flex', gap: 4 }}>
-          <button type="button" className={filter === 'all' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setFilter('all')}>Все</button>
-          <button type="button" className={filter === 'unlocked' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setFilter('unlocked')}>✓ Доступно</button>
-          <button type="button" className={filter === 'locked' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setFilter('locked')}>🔒 Закрыто</button>
+          <button type="button" className={filter === 'all' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setFilter('all')}>{t('filterAll')}</button>
+          <button type="button" className={filter === 'unlocked' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setFilter('unlocked')}>{t('filterAvailable')}</button>
+          <button type="button" className={filter === 'locked' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setFilter('locked')}>{t('filterLocked')}</button>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
-          <button type="button" className={view === 'cards' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setView('cards')} title="Карточки">🗂 Карточки</button>
-          <button type="button" className={view === 'graph' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setView('graph')} title="Граф">🌐 Граф</button>
+          <button type="button" className={view === 'cards' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setView('cards')}>{t('viewCards')}</button>
+          <button type="button" className={view === 'graph' ? 'btn btn-sm' : 'btn-ghost btn-sm'} onClick={() => setView('graph')}>{t('viewGraph')}</button>
         </div>
       </div>
 
@@ -100,7 +108,7 @@ export function TechtreeScreen() {
 
       {!q.isLoading && filtered.length === 0 && (
         <div style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-muted)' }}>
-          Ничего не найдено
+          {t('filterAll')}
         </div>
       )}
 
@@ -116,6 +124,7 @@ export function TechtreeScreen() {
 }
 
 function TechCard({ node }: { node: TechNode }) {
+  const { t } = useTranslation('techtreeUi');
   const name = nameOf(node.id) || node.key;
   const showLevel = node.kind === 'building' || node.kind === 'research';
 
@@ -132,17 +141,17 @@ function TechCard({ node }: { node: TechNode }) {
         <div style={{ fontWeight: 600 }}>{name}</div>
         {showLevel && node.current_level > 0 && (
           <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 14, color: 'var(--ox-accent)' }}>
-            Ур. {node.current_level}
+            {t('levelAbbr')} {node.current_level}
           </span>
         )}
         {!showLevel && node.unlocked && (
-          <span style={{ fontSize: 13, color: 'var(--ox-success)' }}>✓ доступно</span>
+          <span style={{ fontSize: 13, color: 'var(--ox-success)' }}>✓ {t('available')}</span>
         )}
       </div>
 
       {node.requirements.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', fontStyle: 'italic' }}>
-          Без предусловий
+          {t('noRequirements')}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>

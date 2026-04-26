@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
+import { useTranslation } from '@/i18n/i18n';
 
 interface PlayerResult {
   user_id: string;
@@ -33,6 +34,7 @@ export function GlobalSearch({ open, onClose, onNavigate }: {
   onClose: () => void;
   onNavigate?: (target: { kind: 'player' | 'alliance' | 'planet'; data: PlayerResult | AllianceResult | PlanetResult }) => void;
 }) {
+  const { t } = useTranslation('searchUi');
   const [q, setQ] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -89,7 +91,7 @@ export function GlobalSearch({ open, onClose, onNavigate }: {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Поиск игроков, альянсов, планет…"
+            placeholder={t('placeholder')}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             style={{
@@ -100,29 +102,29 @@ export function GlobalSearch({ open, onClose, onNavigate }: {
             }}
           />
           <div style={{ marginTop: 6, fontSize: 10, color: 'var(--ox-fg-muted)', fontFamily: 'var(--ox-mono)' }}>
-            минимум 2 символа · Esc — закрыть
+            {t('hint')}
           </div>
         </div>
 
         <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
           {q.trim().length < 2 && (
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-muted)' }}>
-              Введите запрос для поиска
+              {t('promptEmpty')}
             </div>
           )}
 
           {q.trim().length >= 2 && results.isLoading && (
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-muted)' }}>Поиск…</div>
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-muted)' }}>{t('searching')}</div>
           )}
 
           {q.trim().length >= 2 && !results.isLoading && !hasResults && (
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--ox-fg-muted)' }}>
-              Ничего не найдено
+              {t('notFound')}
             </div>
           )}
 
           {data && data.players.length > 0 && (
-            <Section title="Игроки" icon="👤">
+            <Section title={t('sectionPlayers')} icon="👤">
               {data.players.map((p) => (
                 <button key={p.user_id} type="button" className="ox-search-item"
                   onClick={() => { onNavigate?.({ kind: 'player', data: p }); onClose(); }}
@@ -141,7 +143,7 @@ export function GlobalSearch({ open, onClose, onNavigate }: {
           )}
 
           {data && data.alliances.length > 0 && (
-            <Section title="Альянсы" icon="🤝">
+            <Section title={t('sectionAlliances')} icon="🤝">
               {data.alliances.map((a) => (
                 <button key={a.tag} type="button" className="ox-search-item"
                   onClick={() => { onNavigate?.({ kind: 'alliance', data: a }); onClose(); }}
@@ -152,7 +154,7 @@ export function GlobalSearch({ open, onClose, onNavigate }: {
                     <span style={{ marginLeft: 8 }}>{a.name}</span>
                   </span>
                   <span style={{ fontFamily: 'var(--ox-mono)', fontSize: 14, color: 'var(--ox-fg-muted)' }}>
-                    {a.members} чел. · {Math.round(a.points).toLocaleString('ru-RU')}
+                    {t('membersCount', { n: String(a.members) })} · {Math.round(a.points).toLocaleString('ru-RU')}
                   </span>
                 </button>
               ))}
@@ -160,7 +162,7 @@ export function GlobalSearch({ open, onClose, onNavigate }: {
           )}
 
           {data && data.planets.length > 0 && (
-            <Section title="Планеты" icon="🪐">
+            <Section title={t('sectionPlanets')} icon="🪐">
               {data.planets.map((p) => (
                 <button key={p.planet_id} type="button" className="ox-search-item"
                   onClick={() => { onNavigate?.({ kind: 'planet', data: p }); onClose(); }}

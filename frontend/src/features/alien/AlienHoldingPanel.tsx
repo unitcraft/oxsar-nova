@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { api } from '@/api/client';
 import { nameOf } from '@/api/catalog';
 import { useToast } from '@/ui/Toast';
+import { useTranslation } from '@/i18n/i18n';
 
 type FleetStack = { unit_id: number; quantity: number };
 
@@ -22,14 +23,14 @@ type Holding = {
   alien_fleet: FleetStack[];
 };
 
-function formatRemaining(endsAt: string): string {
+function formatRemaining(endsAt: string, expires: string, unitDay: string, unitHour: string, unitMin: string): string {
   const ms = new Date(endsAt).getTime() - Date.now();
-  if (ms <= 0) return 'истекает';
+  if (ms <= 0) return expires;
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
-  if (h > 24) return `${Math.floor(h / 24)}д ${h % 24}ч`;
-  if (h > 0) return `${h}ч ${m}м`;
-  return `${m}м`;
+  if (h > 24) return `${Math.floor(h / 24)}${unitDay} ${h % 24}${unitHour}`;
+  if (h > 0) return `${h}${unitHour} ${m}${unitMin}`;
+  return `${m}${unitMin}`;
 }
 
 /**
@@ -38,6 +39,7 @@ function formatRemaining(endsAt: string): string {
  * кнопку оплаты продления.
  */
 export function AlienHoldingPanel() {
+  const { t } = useTranslation('alienUi');
   const qc = useQueryClient();
   const toast = useToast();
   const [amount, setAmount] = useState<Record<string, number>>({});
@@ -58,15 +60,11 @@ export function AlienHoldingPanel() {
       void qc.invalidateQueries({ queryKey: ['alien-holdings'] });
       void qc.invalidateQueries({ queryKey: ['me'] });
       const minutes = Math.round(res.extended_seconds / 60);
-      const msg = res.capped
-        ? `Продлено на ${minutes} мин (достигнут лимит 15 дней)`
-        : `Продлено на ${minutes} мин`;
-      toast.show('success', 'Платёж принят', msg);
+      toast.show('success', t('payBtn'), `+${t('payMinutes', { n: String(minutes) })}`);
       setAmount({ ...amount, [vars.eventID]: 0 });
     },
     onError: (err) => {
-      toast.show('danger', 'Ошибка платежа',
-        err instanceof Error ? err.message : 'Не удалось оплатить');
+      toast.show('danger', t('payBtn'), err instanceof Error ? err.message : '');
     },
   });
 
@@ -77,7 +75,7 @@ export function AlienHoldingPanel() {
     <div className="ox-panel" style={{ padding: 12, margin: '8px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <span style={{ fontSize: 20 }}>👽</span>
-        <strong>Планеты под захватом пришельцев</strong>
+        <strong>{t('title')}</strong>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {list.map((h) => (
@@ -86,23 +84,23 @@ export function AlienHoldingPanel() {
               <div>
                 <strong>{h.planet_name}</strong>
                 <span style={{ marginLeft: 8, color: 'var(--ox-fg-muted)' }}>
-                  [{h.galaxy}:{h.system}:{h.position}] · тир {h.tier}
+                  [{h.galaxy}:{h.system}:{h.position}] · {t('tierLabel')} {h.tier}
                 </span>
               </div>
               <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>
-                Уйдут: <strong>{formatRemaining(h.ends_at)}</strong>
+                {t('departsLabel')} <strong>{formatRemaining(h.ends_at, t('expiresLabel'), t('global', 'timeUnitDay'), t('global', 'timeUnitHour'), t('global', 'timeUnitMin'))}</strong>
               </div>
             </div>
 
             {h.alien_fleet.length > 0 && (
               <div style={{ marginTop: 4, fontSize: 13 }}>
-                Флот: {h.alien_fleet.map((s) => `${s.quantity}× ${nameOf(s.unit_id)}`).join(', ')}
+                {t('fleetLabel')} {h.alien_fleet.map((s) => `${s.quantity}× ${nameOf(s.unit_id)}`).join(', ')}
               </div>
             )}
 
             {h.paid_times > 0 && (
               <div style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>
-                Уже заплачено: {h.paid_credit} кр (×{h.paid_times})
+                {t('paidLabel')} {h.paid_credit} (×{h.paid_times})
               </div>
             )}
 
@@ -121,10 +119,10 @@ export function AlienHoldingPanel() {
                 disabled={(amount[h.event_id] ?? 0) <= 0 || pay.isPending}
                 onClick={() => pay.mutate({ eventID: h.event_id, amt: amount[h.event_id] ?? 0 })}
               >
-                Заплатить (продлить)
+                {t('payBtn')}
               </button>
               <span style={{ fontSize: 12, color: 'var(--ox-fg-muted)' }}>
-                50 кр = 2 часа
+                {t('payHint')}
               </span>
             </div>
           </div>
