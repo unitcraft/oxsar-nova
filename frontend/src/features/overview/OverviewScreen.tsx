@@ -315,6 +315,7 @@ function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
   const toast = useToast();
   const { t } = useTranslation('overviewUi');
   const { t: tg } = useTranslation('global');
+  const { t: ti } = useTranslation('info');
 
   const recall = useMutation({
     mutationFn: (id: string) => api.post<unknown>(`/api/fleet/${id}/recall`),
@@ -378,7 +379,7 @@ function FleetEventRow({ fleet: f }: { fleet: FleetRow }) {
             return (
               <span key={unitId} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
                 {img && <img src={img} alt="" width={16} height={16} style={{ imageRendering: 'pixelated', opacity: 0.85 }} />}
-                {nameOf(id)} ×{count}
+                {nameOf(id, ti)} ×{count}
               </span>
             );
           })}
@@ -404,6 +405,7 @@ function useNow(intervalMs = 1000) {
 
 function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter?: number; used_fields?: number; temp_min?: number; temp_max?: number }; onOptions: () => void }) {
   const { t } = useTranslation('overviewUi');
+  const { t: ti } = useTranslation('info');
   const now = useNow();
   const qc = useQueryClient();
   const invalidateQueues = () => {
@@ -519,7 +521,7 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
             <ActiveQueueItem
               key={item.id}
               icon="🏗"
-              label={`${buildingName(item.unit_id)} → ${t('levelAbbr')} ${item.target_level}`}
+              label={`${buildingName(item.unit_id, ti)} → ${t('levelAbbr')} ${item.target_level}`}
               startAt={item.start_at}
               endAt={item.end_at}
               onDone={invalidateQueues}
@@ -529,7 +531,7 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
             <ActiveQueueItem
               key={item.id}
               icon="🚀"
-              label={`${nameOf(item.unit_id)} × ${item.count}`}
+              label={`${nameOf(item.unit_id, ti)} × ${item.count}`}
               startAt={item.start_at}
               endAt={item.end_at}
               onDone={invalidateQueues}
@@ -539,7 +541,7 @@ function PlanetOverviewCard({ planet, onOptions }: { planet: Planet & { diameter
             <ActiveQueueItem
               key={item.id}
               icon="🔬"
-              label={`${nameOf(item.unit_id)} → ${t('levelAbbr')} ${item.target_level}`}
+              label={`${nameOf(item.unit_id, ti)} → ${t('levelAbbr')} ${item.target_level}`}
               startAt={item.start_at}
               endAt={item.end_at}
               onDone={invalidateQueues}

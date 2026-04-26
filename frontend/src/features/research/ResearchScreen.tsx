@@ -47,6 +47,7 @@ function useLiveProgress(startAt: string, endAt: string): { pct: number; secsLef
 export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo: (id: number, level: number) => void }) {
   const { t } = useTranslation('researchUi');
   const { t: tg } = useTranslation('global');
+  const { t: ti } = useTranslation('info');
   const levelAbbr = t('levelAbbr');
   const uS = tg('timeUnitSec');
   const uM = tg('timeUnitMin');
@@ -146,7 +147,7 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
                   title={t('details')}
                 />
                 <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                  <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => onOpenInfo(r.id, level)}>{r.name}</div>
+                  <div className="ox-unit-card-name" style={{ cursor: 'pointer' }} onClick={() => onOpenInfo(r.id, level)}>{ti(r.tKey)}</div>
                   <div style={{ fontSize: 14, color: level > 0 ? 'var(--ox-fg-dim)' : 'var(--ox-fg-muted)', marginBottom: 2 }}>
                     {level > 0 ? t('level', { n: String(level) }) : t('notStudied')}
                   </div>

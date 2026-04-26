@@ -43,6 +43,7 @@ type Filter = 'all' | 'unlocked' | 'locked';
 
 export function TechtreeScreen() {
   const { t } = useTranslation('techtreeUi');
+  const { t: ti } = useTranslation('info');
   const q = useQuery({
     queryKey: ['techtree'],
     queryFn: () => api.get<TechtreeData>('/api/techtree'),
@@ -65,7 +66,7 @@ export function TechtreeScreen() {
       .filter((n) => {
         if (!search.trim()) return true;
         return n.key.toLowerCase().includes(search.toLowerCase())
-          || nameOf(n.id).toLowerCase().includes(search.toLowerCase());
+          || nameOf(n.id, ti).toLowerCase().includes(search.toLowerCase());
       })
       .sort((a, b) => {
         if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
@@ -125,7 +126,8 @@ export function TechtreeScreen() {
 
 function TechCard({ node }: { node: TechNode }) {
   const { t } = useTranslation('techtreeUi');
-  const name = nameOf(node.id) || node.key;
+  const { t: ti } = useTranslation('info');
+  const name = nameOf(node.id, ti) || node.key;
   const showLevel = node.kind === 'building' || node.kind === 'research';
 
   return (

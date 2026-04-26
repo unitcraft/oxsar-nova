@@ -12,6 +12,7 @@ import { useToast } from '@/ui/Toast';
 export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenInfo?: (kind: 'ship' | 'defense', id: number) => void }) {
   const { t } = useTranslation('shipyardUi');
   const { t: tg } = useTranslation('global');
+  const { t: ti } = useTranslation('info');
   const qc = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState<'ships' | 'defense'>('ships');
@@ -53,7 +54,7 @@ export function ShipyardScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
       void qc.invalidateQueries({ queryKey: ['shipyard-queue', planet.id] });
       void qc.invalidateQueries({ queryKey: ['shipyard-inventory', planet.id] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('success', t('enqueued'), t('enqueuedBody', { name: nameOf(unitId), count: String(count) }));
+      toast.show('success', t('enqueued'), t('enqueuedBody', { name: nameOf(unitId, ti), count: String(count) }));
     },
     onError: (err) => {
       toast.show('danger', tg('error'), err instanceof Error ? err.message : t('enqueuedErr'));
@@ -141,6 +142,7 @@ function UnitCards({
   onOpenInfo?: (kind: 'ship' | 'defense', id: number) => void;
 }) {
   const { t } = useTranslation('shipyardUi');
+  const { t: ti } = useTranslation('info');
   const [drafts, setDrafts] = useState<Record<number, number>>({});
 
   const visibleUnits = showLocked ? units : units.filter((u) => !u.requires?.length);
@@ -179,14 +181,14 @@ function UnitCards({
                 src={imageOf(u.key)} alt={u.name} width={64} height={64}
                 style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 6, background: 'rgba(0,0,0,0.3)', padding: 4, cursor: onOpenInfo ? 'pointer' : undefined }}
                 onClick={onOpenInfo ? () => onOpenInfo(unitKind, u.id) : undefined}
-                title={onOpenInfo ? `${t('details')} ${u.name}` : undefined}
+                title={onOpenInfo ? `${t('details')} ${ti(u.tKey)}` : undefined}
               />
               <div className="ox-unit-card-body" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                 <div
                   className="ox-unit-card-name"
                   style={onOpenInfo ? { cursor: 'pointer' } : undefined}
                   onClick={onOpenInfo ? () => onOpenInfo(unitKind, u.id) : undefined}
-                >{u.name}</div>
+                >{ti(u.tKey)}</div>
                 <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
                   <span>⚔ {u.attack.toLocaleString('ru-RU')}</span>
                   <span>🛡 {u.shield.toLocaleString('ru-RU')}</span>
@@ -257,6 +259,7 @@ function UnitCards({
 
 function ShipQueueRow({ item, isActive, onCancel }: { item: ShipyardQueueItem; isActive: boolean; onCancel: () => void }) {
   const { t } = useTranslation('shipyardUi');
+  const { t: ti } = useTranslation('info');
   const total = new Date(item.end_at).getTime() - new Date(item.start_at).getTime();
   const elapsed = Date.now() - new Date(item.start_at).getTime();
   const pct = total > 0 ? Math.min(100, (elapsed / total) * 100) : 100;
@@ -266,7 +269,7 @@ function ShipQueueRow({ item, isActive, onCancel }: { item: ShipyardQueueItem; i
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15 }}>
         <span style={{ fontSize: 16 }}>{isActive ? '🚀' : '⏳'}</span>
         <span style={{ flex: 1, fontWeight: isActive ? 600 : 400 }}>
-          {nameOf(item.unit_id)} × {item.count}
+          {nameOf(item.unit_id, ti)} × {item.count}
         </span>
         {isActive
           ? <Countdown finishAt={item.end_at} />

@@ -40,6 +40,7 @@ function formatRemaining(endsAt: string, expires: string, unitDay: string, unitH
  */
 export function AlienHoldingPanel() {
   const { t } = useTranslation('alienUi');
+  const { t: ti } = useTranslation('info');
   const qc = useQueryClient();
   const toast = useToast();
   const [amount, setAmount] = useState<Record<string, number>>({});
@@ -94,7 +95,7 @@ export function AlienHoldingPanel() {
 
             {h.alien_fleet.length > 0 && (
               <div style={{ marginTop: 4, fontSize: 13 }}>
-                {t('fleetLabel')} {h.alien_fleet.map((s) => `${s.quantity}× ${nameOf(s.unit_id)}`).join(', ')}
+                {t('fleetLabel')} {h.alien_fleet.map((s) => `${s.quantity}× ${nameOf(s.unit_id, ti)}`).join(', ')}
               </div>
             )}
 

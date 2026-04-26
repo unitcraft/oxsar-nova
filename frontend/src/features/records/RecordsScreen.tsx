@@ -33,6 +33,7 @@ const CATEGORY_KEY: Record<Category, string> = {
 
 export function RecordsScreen() {
   const { t } = useTranslation('recordsUi');
+  const { t: ti } = useTranslation('info');
   const [cat, setCat] = useState<Category | 'all'>('all');
   const [search, setSearch] = useState('');
 
@@ -48,7 +49,7 @@ export function RecordsScreen() {
       .filter((r) => cat === 'all' || r.category === cat)
       .filter((r) => {
         if (!search.trim()) return true;
-        const name = r.unit_id ? nameOf(r.unit_id) : r.key;
+        const name = r.unit_id ? nameOf(r.unit_id, ti) : r.key;
         return name.toLowerCase().includes(search.toLowerCase()) ||
           r.holder_name.toLowerCase().includes(search.toLowerCase());
       })
@@ -98,7 +99,7 @@ export function RecordsScreen() {
               </thead>
               <tbody>
                 {filtered.map((r) => {
-                  const name = r.unit_id ? nameOf(r.unit_id) : r.key;
+                  const name = r.unit_id ? nameOf(r.unit_id, ti) : r.key;
                   const catKey = CATEGORY_KEY[r.category];
                   const ratio = r.value > 0 ? r.my_value / r.value : 0;
                   return (

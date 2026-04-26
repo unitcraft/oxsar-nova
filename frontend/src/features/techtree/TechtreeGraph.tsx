@@ -36,12 +36,13 @@ const GAP_Y = 16;
 
 export function TechtreeGraph({ nodes, kind }: { nodes: TechNode[]; kind: NodeKind }) {
   const { t } = useTranslation('techtreeUi');
+  const { t: ti } = useTranslation('info');
   const [hover, setHover] = useState<string | null>(null);
 
   // Фильтрация по kind.
   const filtered = useMemo(() => nodes.filter((n) => n.kind === kind), [nodes, kind]);
 
-  const positioned = useMemo(() => computeLayout(filtered, kind), [filtered, kind]);
+  const positioned = useMemo(() => computeLayout(filtered, kind, ti), [filtered, kind, ti]);
   const byKey = useMemo(() => {
     const m = new Map<string, Positioned>();
     for (const p of positioned) m.set(p.node.key, p);
@@ -97,7 +98,7 @@ export function TechtreeGraph({ nodes, kind }: { nodes: TechNode[]; kind: NodeKi
               opacity={p.node.unlocked ? 1 : 0.7}
             />
             <text x={10} y={20} fill="var(--ox-fg)" fontSize={12} fontWeight={600}>
-              {truncate(nameOf(p.node.id) || p.node.key, 22)}
+              {truncate(nameOf(p.node.id, ti) || p.node.key, 22)}
             </text>
             <text x={10} y={40} fill="var(--ox-fg-muted)" fontSize={10} fontFamily="var(--ox-mono)">
               {p.node.current_level > 0
@@ -118,7 +119,7 @@ function truncate(s: string, max: number): string {
 
 // Layered-layout: depth считается только по требованиям своего kind
 // (иначе граф из исследований тянет здания — получается пересечение).
-function computeLayout(nodes: TechNode[], kind: NodeKind): Positioned[] {
+function computeLayout(nodes: TechNode[], kind: NodeKind, ti: (key: string) => string): Positioned[] {
   const depthByKey = new Map<string, number>();
   const nodeByKey = new Map<string, TechNode>();
   for (const n of nodes) nodeByKey.set(n.key, n);
@@ -151,7 +152,7 @@ function computeLayout(nodes: TechNode[], kind: NodeKind): Positioned[] {
   }
   // Сортируем внутри глубины по имени для стабильности.
   for (const arr of byDepth.values()) {
-    arr.sort((a, b) => (nameOf(a.id) || a.key).localeCompare(nameOf(b.id) || b.key));
+    arr.sort((a, b) => (nameOf(a.id, ti) || a.key).localeCompare(nameOf(b.id, ti) || b.key));
   }
 
   const out: Positioned[] = [];

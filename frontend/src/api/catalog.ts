@@ -233,10 +233,13 @@ export function planetImageSize(diameter?: number): number {
   return 32 + Math.round((Math.min(diameter, 17000) / 17000) * 32);
 }
 
-export function nameOf(id: number): string {
+// nameOf returns the i18n name for a unit by id.
+// Pass a t function from useTranslation('info') for translated output;
+// omit for a snake_case fallback (e.g. in non-component contexts).
+export function nameOf(id: number, t?: (key: string) => string): string {
   for (const c of [SHIPS, DEFENSE, RESEARCH, ARTEFACTS, BUILDINGS, MOON_BUILDINGS]) {
     const u = c.find((x) => x.id === id);
-    if (u) return u.name;
+    if (u) return t ? t(u.tKey) : u.name;
   }
   return `#${id}`;
 }
@@ -260,8 +263,10 @@ export function categoryOfId(id: number): string | null {
   return null;
 }
 
-export function buildingName(id: number): string {
-  return BUILDINGS.find((b) => b.id === id)?.name ?? `#${id}`;
+export function buildingName(id: number, t?: (key: string) => string): string {
+  const b = BUILDINGS.find((x) => x.id === id);
+  if (!b) return `#${id}`;
+  return t ? t(b.tKey) : b.name;
 }
 
 // API functions for resource management

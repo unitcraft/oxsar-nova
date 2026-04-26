@@ -10,6 +10,7 @@ import { useTranslation } from '@/i18n/i18n';
 
 export function ArtefactsScreen() {
   const { t } = useTranslation('artefactsUi');
+  const { t: ti } = useTranslation('info');
   const qc = useQueryClient();
   const toast = useToast();
   const [sellingID, setSellingID] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export function ArtefactsScreen() {
     onSuccess: (a) => {
       void qc.invalidateQueries({ queryKey: ['artefacts'] });
       void qc.invalidateQueries({ queryKey: ['planets'] });
-      toast.show('success', t('toastArtefact'), t('toastActivated', { name: nameOf(a.unit_id) }));
+      toast.show('success', t('toastArtefact'), t('toastActivated', { name: nameOf(a.unit_id, ti) }));
     },
     onError: (err, _id, ctx) => {
       if (ctx?.prev) qc.setQueryData(['artefacts'], ctx.prev);
@@ -188,7 +189,7 @@ function ArtefactGroup({
               })()}
             </div>
             <div className="ox-unit-card-body">
-              <div className="ox-unit-card-name">{nameOf(a.unit_id)}</div>
+              <div className="ox-unit-card-name">{nameOf(a.unit_id, ti)}</div>
               <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
                 {stateLabel(a.state)}
               </div>

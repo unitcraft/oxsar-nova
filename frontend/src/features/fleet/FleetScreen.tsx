@@ -66,6 +66,7 @@ interface InitialDst { g: number; s: number; pos: number; isMoon: boolean; missi
 export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst?: InitialDst }) {
   const { t } = useTranslation('fleetUi');
   const { t: tg } = useTranslation('global');
+  const { t: ti } = useTranslation('info');
   const uS = tg('timeUnitSec');
   const uM = tg('timeUnitMin');
   const uH = tg('timeUnitHour');
@@ -207,7 +208,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
                             return (
                               <span key={unitId} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
                                 {img && <img src={img} alt="" width={14} height={14} style={{ imageRendering: 'pixelated', opacity: 0.85 }} />}
-                                {nameOf(id)} ×{count}
+                                {nameOf(id, ti)} ×{count}
                               </span>
                             );
                           })}
@@ -319,7 +320,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
               {SHIPS.map((ship) => (
                 <div key={ship.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <img src={imageOf(ship.key)} alt="" width={28} height={28} style={{ imageRendering: 'pixelated', flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 15 }}>{nameOf(ship.id)}</span>
+                  <span style={{ flex: 1, fontSize: 15 }}>{nameOf(ship.id, ti)}</span>
                   <input
                     type="number"
                     min={0}

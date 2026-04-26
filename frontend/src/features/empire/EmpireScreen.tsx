@@ -94,6 +94,7 @@ function SectionHeader({
 
 export function EmpireScreen() {
   const { t } = useTranslation('empireUi');
+  const { t: ti } = useTranslation('info');
   const { data, isLoading } = useQuery({
     queryKey: ['empire'],
     queryFn: () => api.get<{ planets: EmpirePlanet[] }>('/api/empire'),
@@ -161,7 +162,7 @@ export function EmpireScreen() {
       .filter((id) => usedBuildingIds.has(id))
       .map((id) => (
         <tr key={id}>
-          <td style={rowLabelStyle}>{buildingName(id)}</td>
+          <td style={rowLabelStyle}>{buildingName(id, ti)}</td>
           {planets.map((p) => (
             <LevelCell key={p.id} level={p.buildings[String(id)] ?? 0} />
           ))}
@@ -266,7 +267,7 @@ export function EmpireScreen() {
               <SectionHeader label={t('groupFleet')} colSpan={colCount} collapsed={collapsedGroups.has('ships')} onToggle={() => toggleGroup('ships')} />
               {!collapsedGroups.has('ships') && ALL_SHIP_IDS.filter((id) => usedShipIds.has(id)).map((id) => (
                 <tr key={id}>
-                  <td style={rowLabelStyle}>{nameOf(id)}</td>
+                  <td style={rowLabelStyle}>{nameOf(id, ti)}</td>
                   {planets.map((p) => <CountCell key={p.id} count={p.ships[String(id)] ?? 0} />)}
                 </tr>
               ))}
@@ -276,7 +277,7 @@ export function EmpireScreen() {
               <SectionHeader label={t('groupDefense')} colSpan={colCount} collapsed={collapsedGroups.has('defense')} onToggle={() => toggleGroup('defense')} />
               {!collapsedGroups.has('defense') && ALL_DEFENSE_IDS.filter((id) => usedDefenseIds.has(id)).map((id) => (
                 <tr key={id}>
-                  <td style={rowLabelStyle}>{nameOf(id)}</td>
+                  <td style={rowLabelStyle}>{nameOf(id, ti)}</td>
                   {planets.map((p) => <CountCell key={p.id} count={p.defense[String(id)] ?? 0} />)}
                 </tr>
               ))}
