@@ -13,19 +13,19 @@ WORKDIR /app
 # Используем npm install, а не npm ci, потому что npm ci требует идеального
 # совпадения package.json ↔ package-lock.json; добавление Playwright-deps
 # часто обгоняет обновление lock, и CI падает до пересидки lock'а.
-COPY frontend/package.json frontend/package-lock.json* ./frontend/
-RUN cd frontend && npm install --no-audit --no-fund && \
+COPY game/frontend/package.json game/frontend/package-lock.json* ./game/frontend/
+RUN cd game/frontend && npm install --no-audit --no-fund && \
     # В базовом образе браузеры зашиты под версию 1.48.0; если npm поставил
     # более свежий @playwright/test (например, из-за semver), докачиваем
     # chromium под актуальную версию. Для pinned-deps — no-op.
     npx playwright install chromium --with-deps 2>/dev/null || npx playwright install chromium
 
 # Исходники фронта (включая e2e/, playwright.config.ts, scripts/).
-COPY frontend ./frontend
+COPY game/frontend ./game/frontend
 # OpenAPI нужен для api-coverage, если будем его гонять в E2E-пайплайне.
 COPY api ./api
 
-WORKDIR /app/frontend
+WORKDIR /app/game/frontend
 
 # Браузеры скачаны в базовом образе — установка не нужна.
 ENV CI=1

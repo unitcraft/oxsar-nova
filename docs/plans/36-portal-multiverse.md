@@ -265,9 +265,14 @@ packages/
   universe-switcher/    ← React-компонент, shared
     src/UniverseSwitcher.tsx
     src/useCredits.ts
-frontend/
-  portal/               ← oxsar-nova.ru
-  game/                 ← uni-*.oxsar-nova.ru (один фронтенд, разный UNIVERSE_ID)
+portal/
+  frontend/             ← oxsar-nova.ru
+  backend/              ← portal API
+auth/
+  backend/              ← auth-service
+game/
+  frontend/             ← uni-*.oxsar-nova.ru (один фронтенд, разный UNIVERSE_ID)
+  backend/              ← game-server + worker (единый Go-модуль)
 ```
 
 Игровой фронтенд — **один для всех вселенных**, параметризуется через `UNIVERSE_ID`
@@ -554,6 +559,28 @@ services:
 3. Деплой обоих стеков + smoke-test каждого.
 4. Переключение между вселенными — проверить handoff-флоу end-to-end.
 5. DNS: делегировать зону на Selectel, получить wildcard SSL.
+
+### Ф.9 — Реструктуризация репозитория (½ дня) ✅ 2026-04-26
+
+Привести структуру папок к модели «один домен — одна папка»:
+
+```
+portal/
+  frontend/     ← было frontend/portal/
+  backend/      ← будет (backend/cmd/portal + internal/portalsvc + migrations/portal/)
+auth/
+  backend/      ← будет (backend/cmd/auth-service + internal/authsvc + migrations/auth/)
+game/
+  frontend/     ← было frontend/ (src/, e2e/, public/, scripts/, *.config.*)
+  backend/      ← будет (весь backend/ — Go-модуль остаётся единым)
+```
+
+Что обновляется при переносе:
+- `Makefile` — все пути к фронтендам и бэкендам
+- `deploy/docker-compose*.yml` — context/dockerfile пути, bind-mount пути
+- `backend/Dockerfile` — пути к cmd/*
+- `tsconfig.json`, `vite.config.ts`, `package.json` — если есть относительные пути
+- Go-импорты — module path остаётся `github.com/oxsar/nova/backend`, только физические пути меняются
 
 ### Ops: нагрузочный тест (отдельный тикет, ~1–2 дня)
 

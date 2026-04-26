@@ -2,8 +2,9 @@
 SHELL := /bin/bash
 
 ROOT := $(shell pwd)
-BACKEND := $(ROOT)/backend
-FRONTEND := $(ROOT)/frontend
+BACKEND := $(ROOT)/game/backend
+FRONTEND := $(ROOT)/game/frontend
+PORTAL_FRONTEND := $(ROOT)/portal/frontend
 MIGRATIONS := $(ROOT)/migrations
 
 GOOSE_DRIVER := postgres
@@ -22,7 +23,8 @@ help:
 	@echo "  migrate-down    - roll back one migration"
 	@echo "  backend-run     - run HTTP/WS server"
 	@echo "  worker-run      - run event-loop worker"
-	@echo "  frontend-run    - run vite dev server"
+	@echo "  frontend-run         - run game vite dev server"
+	@echo "  portal-frontend-run  - run portal vite dev server"
 	@echo "  test            - run all tests"
 	@echo "  lint            - run all linters"
 	@echo "  gen             - regenerate sqlc + openapi clients"
@@ -58,6 +60,10 @@ worker-run:
 .PHONY: frontend-run
 frontend-run:
 	cd $(FRONTEND) && npm run dev
+
+.PHONY: portal-frontend-run
+portal-frontend-run:
+	cd $(PORTAL_FRONTEND) && npm run dev
 
 # testseed — детерминированные данные для E2E (5 игроков, альянс, сообщения).
 # Использует DB_URL из окружения (или GOOSE_DBSTRING как fallback).
