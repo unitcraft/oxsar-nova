@@ -258,7 +258,7 @@ rapidfire:
 | 18.2 | Исправить SD→LL с ×2 на ×10, SD→Lancer с ×2 на ×3 | Фикс | нет | ✅ done |
 | 18.3 | Портировать 38 недостающих записей rapidfire из legacy | Фикс | нет | ✅ done |
 | 18.3a | Добавить Shadow Ship (325) в `units.yml/fleet:` (catalog_validate раскрыл пропуск) | Фикс | нет | ✅ done |
-| 18.4 | Golden-тесты: обновить `testdata/battle/*.json` под новый rapidfire | Фикс тестов | нет | n/a — golden-файлов ещё нет (см. testdata/battle/README.md) |
+| 18.4 | Golden-тесты: обновить `projects/game-nova/backend/internal/battle/testdata/*.json` под новый rapidfire | Фикс тестов | нет | n/a — golden-файлов ещё нет (см. projects/game-nova/backend/internal/battle/testdata/README.md) |
 | 18.5 | Симуляция: Lancer-spam, DS-vs-fleet, Bomber-vs-defense — сравнить с baseline | Анализ | нет | ✅ done — [simulation-2026-04-24.md](../balance/simulation-2026-04-24.md) |
 | 18.6 | По результатам симуляции — решение по ADR-предложениям 1–3 | Design | **да** | ✅ решено: Фаза 2 плана 18 **не нужна** (DS endgame ок), но план 21 блок A (Lancer cost) **всё-таки нужен** |
 

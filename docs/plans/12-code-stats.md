@@ -29,7 +29,7 @@
   [docs/simplifications.md](../simplifications.md), открытые vs закрытые.
 - TODO/FIXME в коде по доменам.
 - Покрытие тестами (`go test -cover`, vitest coverage) по модулям.
-- Golden-файлы боя в `testdata/battle/` — сколько сценариев зафиксировано.
+- Golden-файлы боя в `projects/game-nova/backend/internal/battle/testdata/` — сколько сценариев зафиксировано.
 
 ### История разработки
 

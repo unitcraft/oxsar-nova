@@ -70,7 +70,7 @@
 - **Приоритет**: —
 
 ### [M4.3] Пропущены golden-тесты против Java-jar
-- **Где**: `testdata/battle/*.json` (пустое).
+- **Где**: `projects/game-nova/backend/internal/battle/testdata/*.json` (пустое).
 - **Что**: нет cross-verification c `oxsar2-java/assault/dist/
   oxsar2-java.jar`.
 - **Почему**: требует JVM в окружении, JavaRandom-адаптер, harness.
