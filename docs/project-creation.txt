@@ -8177,3 +8177,44 @@ benefit/lifetime), добавить поле tKey для i18n-маппинга, 
 
 2. **TestI18nConsistency читает YAML**: использует gopkg.in/yaml.v3 (уже в go.mod),
    строит map[string]interface{}, обходит по group→key, сравнивает симметрично.
+
+---
+
+## Итерация 33-Ф.6+Ф.3-cleanup (2026-04-26)
+
+**Задача**: Завершение дочистки кириллицы в Go-backend (план 33, Ф.6 + Ф.3).
+
+**Файлы изменены**:
+- `backend/internal/fleet/moon_destruction.go` — `tryDestroyMoonACS`: заменены 3 пары
+  hardcoded subject/body на `s.tr("assaultReport", "acsMoonDestroyed*"|"acsDeathstarLost*", ...)`.
+- `backend/internal/fleet/expedition.go` — все hardcoded строки заменены на `s.tr()`
+  или `tr(group, key, vars)`. Введён `trFn` type alias в transport.go. Package-level
+  функции (`expResources`, `expAsteroid`, `expArtefact`, `expExtraPlanet`, `expPirates`,
+  `expBattlefield`, `expDelay`, `expFast`) получили параметр `tr trFn`.
+- `backend/internal/fleet/transport.go` — добавлен `type trFn = func(...)`.
+- `backend/internal/achievement/service.go` — добавлен Bundle + WithBundle + tr();
+  строки subject/body через `s.tr("achievement", ...)`.
+- `backend/internal/goal/notifier.go` — InboxNotifier получил Bundle + WithBundle + tr();
+  строки subject/body через `n.tr("goal", ...)`.
+- `backend/internal/officer/service.go` — добавлен Bundle + WithBundle + tr();
+  строки renewedSubject/Body и expiredSubject/Body через `s.tr("officer", ...)`.
+- `backend/internal/alien/holding.go` — package-level функции `unloadAlienResources`
+  и `extractAlienShips` получили `tr` параметр; username стороны заменён на
+  `"aliens:holding"` (не user-facing); inbox-сообщения через `s.tr("alien", ...)`.
+- `backend/internal/i18n/i18n_no_cyrillic_test.go` — добавлены исключения для
+  `aiadvisor` (AI системный промпт) и `payment/packages` (конфиг шлюза).
+- `configs/i18n/ru.yml` + `configs/i18n/en.yml` — добавлены группы `achievement:`,
+  `goal:`, `officer:` и новые ключи в `alien:` (holding.*).
+- `backend/cmd/server/main.go` + `backend/cmd/worker/main.go` — `.WithBundle(i18nBundle)`
+  добавлен к `achSvc` и `officerSvc`.
+
+**Тесты**: `TestNoCyrillicLiterals` + `TestI18nConsistency` — оба PASS.
+
+### Технические решения
+
+1. **trFn type alias** вместо interface: позволяет передавать `s.tr` напрямую как
+   значение в package-level функции без оборачивания.
+2. **holdingUsername → "aliens:holding"**: `battle.Side.Username` — технический
+   идентификатор в battle report, не inbox-message; i18n на этом уровне не нужен.
+3. **aiadvisor + payment/packages исключены из теста**: AI-промпт и Label пакетов
+   кредитов — не user-facing runtime strings через Bundle.Tr.

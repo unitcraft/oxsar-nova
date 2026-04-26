@@ -83,13 +83,24 @@ func (s *TransportService) WithBundle(b *i18n.Bundle) *TransportService {
 	return s
 }
 
+// trFn — тип функции-переводчика для передачи в package-level helpers expedition.go.
+type trFn = func(group, key string, vars map[string]string) string
+
 // tr — helper: возвращает перевод на русском (язык пользователя пока не
 // читается в event-хендлерах; пользуемся fallback-ru до реализации Ф.3.x).
 func (s *TransportService) tr(group, key string, vars map[string]string) string {
-	if s.bundle == nil {
-		return "[" + group + "." + key + "]"
+	return bundleTr(s.bundle)(group, key, vars)
+}
+
+// bundleTr возвращает функцию-переводчик для package-level хелперов,
+// которые не имеют доступа к TransportService (finalizeAttack, tryCreateMoon).
+func bundleTr(b *i18n.Bundle) func(group, key string, vars map[string]string) string {
+	return func(group, key string, vars map[string]string) string {
+		if b == nil {
+			return "[" + group + "." + key + "]"
+		}
+		return b.Tr(i18n.LangRu, group, key, vars)
 	}
-	return s.bundle.Tr(i18n.LangRu, group, key, vars)
 }
 
 // SetBashingLimits — настройки антибашинга (план 17 A1).

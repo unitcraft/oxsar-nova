@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
@@ -242,7 +243,7 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 				return fmt.Errorf("acs attack: debris: %w", err)
 			}
 			if !isMoon {
-				if err := tryCreateMoon(ctx, tx, lead.g, lead.sys, lead.pos,
+				if err := tryCreateMoon(ctx, tx, s.bundle, lead.g, lead.sys, lead.pos,
 					debrisM+debrisS, report.Seed, defenderUserID, lead.ownerUserID); err != nil {
 					return fmt.Errorf("acs attack: moon: %w", err)
 				}
@@ -370,8 +371,11 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 		}
 
 		// Сообщения всем атакующим + защитнику.
-		subject := fmt.Sprintf("ACS боевой отчёт: %s", report.Winner)
-		body := fmt.Sprintf("Раундов: %d. ACS-группа %s.", report.Rounds, pl.ACSGroupID)
+		btr := bundleTr(s.bundle)
+		subject := btr("assaultReport", "acsSubject", map[string]string{"winner": report.Winner})
+		body := btr("assaultReport", "acsBody", map[string]string{
+			"rounds": strconv.Itoa(report.Rounds), "group": pl.ACSGroupID,
+		})
 		for _, af := range atkFleets {
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body, battle_report_id)

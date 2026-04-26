@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
@@ -96,22 +97,24 @@ func (s *TransportService) tryDestroyMoon(ctx context.Context, tx pgx.Tx,
 	fleetDestroyed := fleetRoll < pFleet
 
 	// 5. Если луна уничтожена — destroyed_at + сообщение.
+	pct := func(f float64) string { return strconv.FormatFloat(f, 'f', 1, 64) }
+	cnt := strconv.FormatInt(int64(ripCount), 10)
+
 	if moonDestroyed {
 		if _, err := tx.Exec(ctx,
 			`UPDATE planets SET destroyed_at = now() WHERE id=$1 AND destroyed_at IS NULL`,
 			moonPlanetID); err != nil {
 			return fmt.Errorf("mark moon destroyed: %w", err)
 		}
+		vars := map[string]string{"count": cnt, "percent": pct(pMoon), "roll": pct(moonRoll)}
 		if err := sendMoonMessage(ctx, tx, defenderUserID,
-			"Ваша луна уничтожена",
-			fmt.Sprintf("Атакующий с %d Deathstar разрушил вашу луну (P=%.1f%%, roll=%.1f%%).",
-				ripCount, pMoon, moonRoll)); err != nil {
+			s.tr("assaultReport", "moonDestroyedSubject", nil),
+			s.tr("assaultReport", "moonDestroyedBody", vars)); err != nil {
 			return err
 		}
 		if err := sendMoonMessage(ctx, tx, attackerUserID,
-			"Луна противника уничтожена",
-			fmt.Sprintf("Ваши %d Deathstar успешно разрушили луну (P=%.1f%%, roll=%.1f%%).",
-				ripCount, pMoon, moonRoll)); err != nil {
+			s.tr("assaultReport", "enemyMoonDestroyedSubject", nil),
+			s.tr("assaultReport", "enemyMoonDestroyedBody", vars)); err != nil {
 			return err
 		}
 	}
@@ -122,10 +125,10 @@ func (s *TransportService) tryDestroyMoon(ctx context.Context, tx pgx.Tx,
 			fleetID, unitDeathstar); err != nil {
 			return fmt.Errorf("wipe DS from fleet: %w", err)
 		}
+		fleetVars := map[string]string{"percent": pct(pFleet), "roll": pct(fleetRoll)}
 		if err := sendMoonMessage(ctx, tx, attackerUserID,
-			"Ваш Deathstar-флот уничтожен",
-			fmt.Sprintf("При попытке разрушить луну все Deathstar взорвались (P=%.1f%%, roll=%.1f%%).",
-				pFleet, fleetRoll)); err != nil {
+			s.tr("assaultReport", "deathstarLostSubject", nil),
+			s.tr("assaultReport", "deathstarLostBody", fleetVars)); err != nil {
 			return err
 		}
 	}
@@ -172,22 +175,25 @@ func (s *TransportService) tryDestroyMoonACS(ctx context.Context, tx pgx.Tx,
 	moonDestroyed := moonRoll < pMoon
 	fleetDestroyed := fleetRoll < pFleet
 
+	pct := func(f float64) string { return strconv.FormatFloat(f, 'f', 1, 64) }
+	cnt := strconv.FormatInt(ripTotal, 10)
+
 	if moonDestroyed {
 		if _, err := tx.Exec(ctx,
 			`UPDATE planets SET destroyed_at = now() WHERE id=$1 AND destroyed_at IS NULL`,
 			moonPlanetID); err != nil {
 			return fmt.Errorf("acs mark moon destroyed: %w", err)
 		}
+		moonVars := map[string]string{"count": cnt, "percent": pct(pMoon), "roll": pct(moonRoll)}
 		_ = sendMoonMessage(ctx, tx, defenderUserID,
-			"Ваша луна уничтожена",
-			fmt.Sprintf("ACS-атака с %d Deathstar разрушила вашу луну (P=%.1f%%, roll=%.1f%%).",
-				ripTotal, pMoon, moonRoll))
+			s.tr("assaultReport", "acsMoonDestroyedSubject", nil),
+			s.tr("assaultReport", "acsMoonDestroyedBody", moonVars))
 		_ = sendMoonMessage(ctx, tx, leadUserID,
-			"Луна противника уничтожена (ACS)",
-			fmt.Sprintf("Объединённый флот с %d Deathstar разрушил луну (P=%.1f%%, roll=%.1f%%).",
-				ripTotal, pMoon, moonRoll))
+			s.tr("assaultReport", "acsEnemyMoonDestroyedSubject", nil),
+			s.tr("assaultReport", "acsEnemyMoonDestroyedBody", moonVars))
 	}
 	if fleetDestroyed {
+		fleetVars := map[string]string{"count": cnt, "percent": pct(pFleet), "roll": pct(fleetRoll)}
 		// Удаляем DS у каждого участника ACS, у кого они выжили.
 		for _, sf := range survivingFleets {
 			hasDS := false
@@ -206,9 +212,8 @@ func (s *TransportService) tryDestroyMoonACS(ctx context.Context, tx pgx.Tx,
 				return fmt.Errorf("acs wipe DS: %w", err)
 			}
 			_ = sendMoonMessage(ctx, tx, sf.info.ownerUserID,
-				"Ваши Deathstar взорвались (ACS)",
-				fmt.Sprintf("При ACS-попытке разрушить луну все Deathstar взорвались (P=%.1f%%, roll=%.1f%%).",
-					pFleet, fleetRoll))
+				s.tr("assaultReport", "acsDeathstarLostSubject", nil),
+				s.tr("assaultReport", "acsDeathstarLostBody", fleetVars))
 		}
 	}
 	return nil

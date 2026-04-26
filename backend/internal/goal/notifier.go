@@ -6,6 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/pkg/ids"
 )
 
@@ -19,18 +20,33 @@ type Notifier interface {
 }
 
 // InboxNotifier пишет message в users inbox при completion.
-type InboxNotifier struct{}
+type InboxNotifier struct {
+	bundle *i18n.Bundle
+}
 
 func NewInboxNotifier() *InboxNotifier { return &InboxNotifier{} }
+
+func (n *InboxNotifier) WithBundle(b *i18n.Bundle) *InboxNotifier {
+	n.bundle = b
+	return n
+}
+
+func (n *InboxNotifier) tr(group, key string, vars map[string]string) string {
+	if n.bundle == nil {
+		return "[" + group + "." + key + "]"
+	}
+	return n.bundle.Tr(i18n.LangRu, group, key, vars)
+}
 
 // OnCompleted — INSERT в messages (folder=2 — system / achievements).
 // Идемпотентность гарантирует Engine: вызов делается ровно один раз
 // при переходе progress → completed.
 func (n *InboxNotifier) OnCompleted(ctx context.Context, tx pgx.Tx, userID string, def GoalDef) error {
-	subject := fmt.Sprintf("Цель: %s", def.Title)
+	vars := map[string]string{"title": def.Title}
+	subject := n.tr("goal", "subject", vars)
 	body := def.Description
 	if body == "" {
-		body = fmt.Sprintf("Вы завершили цель «%s».", def.Title)
+		body = n.tr("goal", "body", vars)
 	}
 	_, err := tx.Exec(ctx, `
 		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)

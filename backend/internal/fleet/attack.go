@@ -34,6 +34,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
@@ -43,6 +44,7 @@ import (
 	"github.com/oxsar/nova/backend/internal/config"
 	"github.com/oxsar/nova/backend/internal/economy"
 	"github.com/oxsar/nova/backend/internal/event"
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/pkg/ids"
 	"github.com/oxsar/nova/backend/pkg/rng"
 )
@@ -203,7 +205,7 @@ func (s *TransportService) AttackHandler() event.Handler {
 		if len(defSide.Units) == 0 && holdingDef == nil {
 			loot := grabLoot(defMetal, defSil, defHydro, attackerShips, s.catalog, cm, csil, ch)
 			rep := battle.Report{Winner: "attackers", Rounds: 0, Seed: deriveSeed(pl.FleetID)}
-			return finalizeAttack(ctx, tx, pl.FleetID, attackerUserID, defenderUserID, planetID,
+			return finalizeAttack(ctx, tx, s.bundle, pl.FleetID, attackerUserID, defenderUserID, planetID,
 				rep, loot, 0, 0, cm, csil, ch, 0, 0)
 		}
 
@@ -267,7 +269,7 @@ func (s *TransportService) AttackHandler() event.Handler {
 			}
 			// Moon-chance: min(20, total_debris/100000)%.
 			if !isMoon {
-				if err := tryCreateMoon(ctx, tx, g, sys, pos, debrisM+debrisS,
+				if err := tryCreateMoon(ctx, tx, s.bundle, g, sys, pos, debrisM+debrisS,
 					report.Seed, defenderUserID, attackerUserID); err != nil {
 					return fmt.Errorf("attack: moon: %w", err)
 				}
@@ -288,7 +290,7 @@ func (s *TransportService) AttackHandler() event.Handler {
 				return fmt.Errorf("attack: moon destroy: %w", err)
 			}
 		}
-		return finalizeAttack(ctx, tx, pl.FleetID, attackerUserID, defenderUserID, planetID,
+		return finalizeAttack(ctx, tx, s.bundle, pl.FleetID, attackerUserID, defenderUserID, planetID,
 			report, loot, debrisM, debrisS, cm, csil, ch, atkPower, defPower)
 	}
 }
@@ -690,7 +692,7 @@ func calcExperience(atkPower, defPower float64, rounds int, winner string, isMoo
 	return int(math.Round(atkExp)), int(math.Round(defExp))
 }
 
-func finalizeAttack(ctx context.Context, tx pgx.Tx,
+func finalizeAttack(ctx context.Context, tx pgx.Tx, b *i18n.Bundle,
 	fleetID, attUID, defUID, planetID string,
 	rep battle.Report, loot lootAmount,
 	debrisM, debrisS int64,
@@ -787,9 +789,14 @@ func finalizeAttack(ctx context.Context, tx pgx.Tx,
 	}
 
 	// Messages для обеих сторон. Folder 2 = inbox/battle в legacy.
-	subject := fmt.Sprintf("Боевой отчёт: %s", rep.Winner)
-	body := fmt.Sprintf("Раундов: %d. Добыча: %d M / %d Si / %d H.",
-		rep.Rounds, loot.Metal, loot.Silicon, loot.Hydrogen)
+	btr := bundleTr(b)
+	subject := btr("assaultReport", "subject", map[string]string{"winner": rep.Winner})
+	body := btr("assaultReport", "body", map[string]string{
+		"rounds":   strconv.Itoa(rep.Rounds),
+		"metal":    strconv.FormatInt(loot.Metal, 10),
+		"silicon":  strconv.FormatInt(loot.Silicon, 10),
+		"hydrogen": strconv.FormatInt(loot.Hydrogen, 10),
+	})
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body, battle_report_id)
 		VALUES ($1, $2, $3, 2, $4, $5, $6)
@@ -816,7 +823,7 @@ func finalizeAttack(ctx context.Context, tx pgx.Tx,
 // tryCreateMoon проверяет шанс создания луны по формуле OGame:
 // chance = min(20, debrisTotal/100000)%. Если луна уже есть — пропуск.
 // seed берётся из battle.Report.Seed для детерминированности.
-func tryCreateMoon(ctx context.Context, tx pgx.Tx, g, sys, pos int,
+func tryCreateMoon(ctx context.Context, tx pgx.Tx, b *i18n.Bundle, g, sys, pos int,
 	debrisTotal int64, battleSeed uint64, defUserID, attUserID string) error {
 	chance := int(debrisTotal / 100000)
 	if chance > 20 {
@@ -854,8 +861,10 @@ func tryCreateMoon(ctx context.Context, tx pgx.Tx, g, sys, pos int,
 		return fmt.Errorf("insert moon: %w", err)
 	}
 	// Сообщения обеим сторонам.
-	subj := fmt.Sprintf("Луна создана в %d:%d:%d", g, sys, pos)
-	body := fmt.Sprintf("В результате боя образовалась луна на %d:%d:%d (диаметр %d).", g, sys, pos, diameter)
+	btr := bundleTr(b)
+	gs, ss, ps, ds := strconv.Itoa(g), strconv.Itoa(sys), strconv.Itoa(pos), strconv.Itoa(diameter)
+	subj := btr("assaultReport", "moonCreatedSubject", map[string]string{"g": gs, "s": ss, "pos": ps})
+	body := btr("assaultReport", "moonCreatedBody", map[string]string{"g": gs, "s": ss, "pos": ps, "diameter": ds})
 	for _, uid := range []string{defUserID, attUserID} {
 		if uid == "" {
 			continue

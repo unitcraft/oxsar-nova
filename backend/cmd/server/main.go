@@ -216,10 +216,10 @@ func run() error {
 	artMarketSvc := artmarket.NewService(db)
 	artMarketH := artmarket.NewHandler(artMarketSvc, rdb)
 
-	achSvc := achievement.NewService(db)
+	achSvc := achievement.NewService(db).WithBundle(i18nBundle)
 	achH := achievement.NewHandler(achSvc)
 
-	officerSvc := officer.NewService(db)
+	officerSvc := officer.NewService(db).WithBundle(i18nBundle)
 	officerH := officer.NewHandler(officerSvc)
 
 	scoreSvc := score.NewServiceWithCoeffs(db, cat, cfg.Game.Points)

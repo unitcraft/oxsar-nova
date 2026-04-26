@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
@@ -315,9 +316,10 @@ func (s *TransportService) PositionArriveHandler() event.Handler {
 		}
 
 		// 4. Сообщение владельцу флота.
-		subj := "Перебазирование завершено"
-		body := fmt.Sprintf("Флот прибыл на [%d:%d:%d]. Корабли перемещены на планету, ресурсы разгружены.",
-			g, sys, pos)
+		subj := s.tr("mission", "relocateDoneSubject", nil)
+		body := s.tr("mission", "relocateDoneBody", map[string]string{
+			"g": strconv.Itoa(g), "s": strconv.Itoa(sys), "pos": strconv.Itoa(pos),
+		})
 		_, _ = tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 			VALUES ($1, $2, NULL, 2, $3, $4)

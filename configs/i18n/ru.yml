@@ -313,6 +313,24 @@ assaultReport:
   unitNothing: Обломки
   unitNothingInfo: Попадания в уничтоженные юниты, промахи и т.п.
   unitSummary: Всего
+  subject: "Боевой отчёт: {{winner}}"
+  body: "Раундов: {{rounds}}. Добыча: {{metal}} М / {{silicon}} Кр / {{hydrogen}} В."
+  acsSubject: "ACS боевой отчёт: {{winner}}"
+  acsBody: "Раундов: {{rounds}}. ACS-группа {{group}}."
+  moonCreatedSubject: "Луна создана в {{g}}:{{s}}:{{pos}}"
+  moonCreatedBody: "В результате боя образовалась луна на {{g}}:{{s}}:{{pos}} (диаметр {{diameter}})."
+  moonDestroyedSubject: Ваша луна уничтожена
+  moonDestroyedBody: "Атакующий с {{count}} Deathstar разрушил вашу луну (P={{percent}}%, roll={{roll}}%)."
+  enemyMoonDestroyedSubject: Луна противника уничтожена
+  enemyMoonDestroyedBody: "Ваши {{count}} Deathstar успешно разрушили луну (P={{percent}}%, roll={{roll}}%)."
+  deathstarLostSubject: Ваш Deathstar-флот уничтожен
+  deathstarLostBody: "При попытке разрушить луну все Deathstar взорвались (P={{percent}}%, roll={{roll}}%)."
+  acsMoonDestroyedSubject: Ваша луна уничтожена
+  acsMoonDestroyedBody: "ACS-атака с {{count}} Deathstar разрушила вашу луну (P={{percent}}%, roll={{roll}}%)."
+  acsEnemyMoonDestroyedSubject: Луна противника уничтожена (ACS)
+  acsEnemyMoonDestroyedBody: "Объединённый флот с {{count}} Deathstar разрушил луну (P={{percent}}%, roll={{roll}}%)."
+  acsDeathstarLostSubject: Ваши Deathstar взорвались (ACS)
+  acsDeathstarLostBody: "При ACS-попытке разрушить луну все Deathstar взорвались (P={{percent}}%, roll={{roll}}%)."
 autoMessages:
   allianceAbandoned: "Ваш альянс [{{arg1}}] распался. Вы можете найти новый альянс, либо продолжать играть в одиночку."
   allianceAbandonedSubject: Альянс распущен
@@ -522,6 +540,16 @@ alien:
   attack.creditGifted: " Инопланетяне оставили {{credits}} кредитов в знак уважения."
   attack.haltNote: " Их флот остался на орбите — ждите отдельного сообщения об удержании."
   raceName: Инопланетяне
+  holdingUsername: "Инопланетяне (удержание)"
+  holding.startSubject: Пришельцы удерживают планету
+  holding.startBody: "Инопланетяне (тир {{tier}}) установили контроль над вашей планетой. Их флот останется на орбите до {{until}}. Пока они здесь, они отражают атаки других игроков — но и сами забирают часть ресурсов."
+  holding.leftSubject: Пришельцы ушли
+  holding.leftBody: Инопланетяне покинули вашу планету — флот ушёл в глубокий космос.
+  holding.leftPaidBody: "Инопланетяне покинули вашу планету. За время удержания вы заплатили им {{credits}} кредитов за {{times}} продлений."
+  holding.giftSubject: Подарок пришельцев
+  holding.giftBody: "Инопланетяне выгрузили на вашу планету ресурсы: металл +{{metal}}, кремний +{{silicon}}, водород +{{hydrogen}}."
+  holding.scatteredSubject: Пришельцы рассеялись
+  holding.scatteredBody: Инопланетяне постепенно покинули вашу планету — их флот рассеялся.
 
 referral:
   bonus.title: Реферальный бонус
@@ -2463,6 +2491,34 @@ mission:
   unkownMission: Задание не известно или не доступно.
   unkownPlanet: Неизвестная планета
   waiting: Готово
+  relocateDoneSubject: Перебазирование завершено
+  relocateDoneBody: "Флот прибыл на [{{g}}:{{s}}:{{pos}}]. Корабли перемещены на планету, ресурсы разгружены."
+  raidWarnSubject: "Предупреждение: вражеский флот!"
+  raidWarnBody: "Вражеский флот приближается к вашей планете [{{g}}:{{s}}:{{pos}}]. Ожидаемое прибытие — менее чем через 10 минут."
+  expeditionSubject: "Экспедиция: {{outcome}}"
+  expeditionBody: "Результат: {{outcome}}"
+  expeditionNothingFound: Ничего не нашли.
+  expeditionNoCargoSpace: нет места в cargo
+  expeditionNoArtefacts: артефакты недоступны
+  expeditionPlanetLimitReached: "Обнаружена пригодная планета, но достигнут лимит ({{current}}/{{max}}). Улучшите computer_tech."
+  expeditionNoPlanetPos: Пригодная планета найдена, но подходящая позиция не обнаружена.
+  expeditionNoShips: нет ship'ов
+  expeditionPirates: "{{count}} × light_fighter"
+  expeditionEnemyDamaged: "{{count}} × light_fighter (повреждённые)"
+  expeditionDelayNoReturnEvent: "delay: нет return_event_id"
+  expeditionFastNoReturnEvent: "fast: нет return_event_id"
+achievement:
+  subject: "Достижение: {{key}}"
+  body: "Открыто новое достижение: {{key}}. Начислено {{credits}} кредитов."
+goal:
+  subject: "Цель: {{title}}"
+  body: "Вы завершили цель «{{title}}»."
+officer:
+  renewedSubject: "Officer {{key}} продлён автоматически"
+  renewedBody: "Подписка продлена. Списано {{credits}} кредитов."
+  expiredSubject: "Officer {{key}} истёк"
+  expiredBody: "Срок подписки закончился. Активируйте снова, если нужно."
+  expiredBodyNoCredits: "Срок подписки закончился. Недостаточно кредитов для авто-продления."
 prefs:
   activated: Активен
   advancedPreferences: Дополнительно

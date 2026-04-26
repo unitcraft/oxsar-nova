@@ -20,20 +20,35 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/oxsar/nova/backend/internal/event"
+	"github.com/oxsar/nova/backend/internal/i18n"
 	"github.com/oxsar/nova/backend/internal/repo"
 	"github.com/oxsar/nova/backend/pkg/ids"
 )
 
 type Service struct {
-	db repo.Exec
+	db     repo.Exec
+	bundle *i18n.Bundle
 }
 
 func NewService(db repo.Exec) *Service { return &Service{db: db} }
+
+func (s *Service) WithBundle(b *i18n.Bundle) *Service {
+	s.bundle = b
+	return s
+}
+
+func (s *Service) tr(group, key string, vars map[string]string) string {
+	if s.bundle == nil {
+		return "[" + group + "." + key + "]"
+	}
+	return s.bundle.Tr(i18n.LangRu, group, key, vars)
+}
 
 var (
 	ErrOfficerNotFound  = errors.New("officer: not found")
@@ -318,8 +333,8 @@ func (s *Service) ExpireHandler() event.Handler {
 					INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 					VALUES ($1, $2, NULL, 13, $3, $4)
 				`, ids.New(), pl.UserID,
-					fmt.Sprintf("Officer %s продлён автоматически", pl.OfficerKey),
-					fmt.Sprintf("Подписка продлена. Списано %d кредитов.", pl.CostCredit),
+					s.tr("officer", "renewedSubject", map[string]string{"key": pl.OfficerKey}),
+					s.tr("officer", "renewedBody", map[string]string{"credits": strconv.FormatInt(pl.CostCredit, 10)}),
 				); err != nil {
 					return fmt.Errorf("auto_renew notify: %w", err)
 				}
@@ -332,10 +347,10 @@ func (s *Service) ExpireHandler() event.Handler {
 			return fmt.Errorf("revert factor: %w", err)
 		}
 		// Уведомление.
-		subject := fmt.Sprintf("Officer %s истёк", pl.OfficerKey)
-		body := "Срок подписки закончился. Активируйте снова, если нужно."
+		subject := s.tr("officer", "expiredSubject", map[string]string{"key": pl.OfficerKey})
+		body := s.tr("officer", "expiredBody", nil)
 		if pl.AutoRenew {
-			body = "Срок подписки закончился. Недостаточно кредитов для авто-продления."
+			body = s.tr("officer", "expiredBodyNoCredits", nil)
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
