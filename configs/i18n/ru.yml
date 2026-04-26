@@ -1014,6 +1014,216 @@ marketUi:
   fleetNoLots: Нет открытых лотов флота
   fleetLotCreated: Лот флота выставлен
 
+scoreUi:
+  title: "🏆 Рейтинг"
+  tabPlayers: "👤 Игроки"
+  tabAlliances: "🤝 Альянсы"
+  tabVacation: "✈ В отпуске"
+  tabTransfers: "📦 Торговля"
+  scoreTypeTotal: Общий
+  scoreTypeBuildings: Постройки
+  scoreTypeResearch: Исследования
+  scoreTypeFleet: Флот
+  scoreTypeAchievements: Достижения
+  scoreTypeBattle: Боевой
+  myRankLabel: "Ваше место в рейтинге «{{typeLabel}}»"
+  filterPlaceholder: "🔍 Фильтр по нику…"
+  emptyPlayers: Рейтинг пока пуст — начните строить!
+  colPlayer: Игрок
+  colAlliance: Альянс
+  colCoords: Координаты
+  colPoints: Очки
+  colCount: Игроков
+  goToGalaxy: Перейти в галактику
+  emptyAlliances: Нет альянсов с игроками
+  emptyVacation: Нет игроков в режиме отпуска
+  colVacationSince: В отпуске с
+  dirReceived: "📥 Получатели"
+  dirSent: "📤 Отправители"
+  periodAll: Всё время
+  periodMonth: Месяц
+  periodWeek: Неделя
+  colReceiver: Получатель
+  colSender: Отправитель
+  colMetal: Металл
+  colSilicon: Кремний
+  colHydrogen: Водород
+  colTotal: "Всего (у.е.)"
+  emptyTransfers: Нет данных
+
+chatUi:
+  tabGlobal: "🌐 Глобальный"
+  tabAlliance: "⚔️ Альянс"
+  reconnecting: Переподключение…
+  editTitle: Редактировать
+  deleteTitle: Удалить
+  editedMark: изм.
+  deleteConfirmTitle: Удалить сообщение?
+  deleteConfirmMsg: Сообщение будет удалено безвозвратно.
+  deleteConfirmBtn: Удалить
+  emojiTitle: Смайлики
+  inputPlaceholder: "Сообщение… (Enter — отправить)"
+  sendBtn: Отправить
+
+settingsUi:
+  title: Настройки аккаунта
+  sectionProfile: Профиль
+  labelEmail: Email
+  saveBtn: Сохранить
+  emailSaved: "✓ Email обновлён"
+  labelLanguage: Язык
+  langRu: Русский
+  langEn: English
+  labelTimezone: Часовой пояс
+  sectionSecurity: Безопасность
+  labelCurrentPw: Текущий пароль
+  labelNewPw: Новый пароль
+  labelConfirmPw: Повторите новый пароль
+  changePwBtn: Сменить пароль
+  pwSaved: "✓ Пароль изменён"
+  pwMismatch: Пароли не совпадают
+  pwTooShort: Минимум 8 символов
+  pwWrongCurrent: Неверный текущий пароль
+  pwSaveError: Ошибка сохранения
+  sectionVacation: Режим отпуска
+  vacationDesc: "В режиме отпуска вы защищены от атак, но не можете строить, исследовать, отправлять флот или торговать. Минимальный интервал между отпусками — 20 дней."
+  vacationActive: "✈ Отпуск активен с {{date}}"
+  leaveVacationBtn: Выйти из отпуска
+  startVacationBtn: Включить режим отпуска
+  vacationWarning: "⚠ Вы уверены? Вся активность будет заморожена."
+  vacationConfirmBtn: Да, уйти в отпуск
+  vacationCancelBtn: Отмена
+  sectionPlanetOrder: Порядок планет
+  planetOrderDesc: Перетащите, чтобы изменить порядок. Этот порядок используется в переключателе планет.
+  planetOrderSaving: "💾 Сохранение…"
+  sectionDanger: "⚠ Опасная зона"
+  deleteAccountBtn: "🗑 Удалить аккаунт…"
+  deleteAccountDesc: "Аккаунт будет удалён навсегда: планеты, флоты, сообщения и участие в альянсе исчезнут. Восстановление невозможно. Для подтверждения требуется одноразовый код, который будет отправлен вам в системные сообщения."
+  requestCodeBtn: Получить код подтверждения
+  requestCodeErr: Ошибка запроса кода
+  codeSentMsg: "Код отправлен в сообщения (папка «Система»). Действителен до {{time}}."
+  confirmDeleteBtn: "🗑 Удалить аккаунт навсегда"
+  confirmDeleteErr: Неверный код
+  cancelBtn: Отмена
+
+referralUi:
+  title: "🎁 Реферальная программа"
+  sectionLink: Ваша ссылка
+  copyBtn: "📋 Копировать"
+  copiedBtn: "✓ Скопировано"
+  shareBtn: "📤 Поделиться"
+  shareGameTitle: "oxsar — космическая стратегия"
+  copyError: Не удалось скопировать
+  refDesc: "Отправьте эту ссылку друзьям. Когда они зарегистрируются и начнут играть — вы получите {{pct}}% от всех их покупок кредитов и очки за каждого активного реферала."
+  statInvited: Приглашено
+  statBonusPoints: Бонусные очки
+  statBonusMax: "макс. {{max}}"
+  statBonus: Бонус от покупок
+  statBonusHint: с каждой покупки кредитов реферала
+  sectionReferred: Приглашённые игроки
+  emptyReferred: Пока никого. Поделитесь ссылкой — бонусы приходят сразу после регистрации.
+  colPlayer: Игрок
+  colPoints: Очки
+  colRegistered: Зарегистрирован
+
+empireUi:
+  title: Империя
+  totalResources: "Всего ресурсов:"
+  colParam: Параметр
+  groupPlanet: Планета
+  rowDiameter: "📐 Диаметр"
+  rowFields: "🔲 Поля"
+  rowTemp: "🌡️ Температура"
+  groupResources: Ресурсы
+  rowMetal: "🟠 Металл"
+  rowSilicon: "💎 Кремний"
+  rowHydrogen: "💧 Водород"
+  groupMining: Добыча
+  groupEnergy: Энергия
+  groupStorages: Хранилища
+  groupProduction: Производство
+  groupSpecial: Особые
+  groupOtherBuildings: Прочие постройки
+  groupFleet: Флот
+  groupDefense: Оборона
+  noPlanets: Нет планет.
+
+notepadUi:
+  title: "📝 Блокнот"
+  hint: Заметки видите только вы. Изменения сохраняются автоматически.
+  placeholder: "Координаты целей, заметки по разведке, планы…\n\nПоддерживаются многострочные записи и простой текст."
+  charCount: "{{count}} / {{max}} символов"
+  updatedAt: "Обновлено:"
+  statusSaving: "💾 Сохраняется…"
+  statusSaved: "✓ Сохранено"
+  statusError: "⚠ Ошибка сохранения"
+
+planetOptionsUi:
+  backBtn: "← Назад"
+  titlePrefix: "Параметры:"
+  sectionRename: Переименовать
+  renamePlaceholder: Новое имя
+  saveBtn: Сохранить
+  sectionHome: Главная планета
+  currentHome: "Текущая главная: {{name}}"
+  setHomeBtn: Установить как главную
+  isHomeMsg: "✓ Это ваша главная планета"
+  moonNoHomeMsg: "ℹ Луны не могут быть главной планетой"
+  setHomeConfirm: "Установить \"{{name}}\" как главную планету?"
+  setHomeConfirmBtn: Да
+  sectionAbandon: Покинуть планету
+  abandonDesc: Это действие необратимо. Введите код подтверждения для удаления.
+  abandonCodeLabel: "Код:"
+  abandonBtn: Покинуть
+  moonAbandonMsg: "ℹ Луны удаляются автоматически при уничтожении планеты"
+  abandonConfirm: "Вы уверены? Планета \"{{name}}\" будет удалена без возможности восстановления."
+  abandonConfirmBtn: Удалить
+  cancelBtn: Отмена
+  toastRenameTitle: Планета переименована
+  toastRenameBody: "Новое имя: {{name}}"
+  toastRenameErr: Ошибка переименования
+  toastHomeTitle: Главная планета
+  toastHomeBody: "{{name}} теперь ваша главная планета"
+  toastHomeErr: Ошибка
+  toastAbandonTitle: Планета покинута
+  toastAbandonBody: "{{name}} была удалена"
+  toastAbandonErr: Ошибка при удалении
+
+unitInfoUi:
+  levelCol: Ур.
+  timeCol: "⏱"
+  currentLevel: "Уровень {{level}}"
+  requires: "🔒 Требуется:"
+  timeWithFactory: Время следующего уровня с учётом фабрики роботов и нано-фабрики.
+  timeWithoutFactory: Время указано без учёта фабрики роботов и нано-фабрики.
+  timeWithoutLab: Время указано без учёта уровня исследовательской лаборатории.
+  sectionCombat: Боевые характеристики
+  colParam: Параметр
+  colInAttack: В атаке
+  colInDefense: В обороне
+  colValue: Значение
+  statAttack: "⚔ Атака"
+  statShield: "🛡 Щит"
+  statShell: "❤ Броня"
+  statFront: "🎯 Приоритет цели"
+  statBallistics: "🎲 Баллистика"
+  statMasking: "👻 Маскировка"
+  sectionOther: Другие характеристики
+  statCargo: "📦 Грузоподъёмность"
+  statSpeed: "🚀 Скорость"
+  statFuel: "⛽ Расход топлива"
+  statFuelUnit: "/ед."
+  statStructure: "🔩 Конструкция"
+  statMetal: "🟠 Металл"
+  statSilicon: "💎 Кремний"
+  statHydrogen: "💧 Водород"
+  statBuildTime: "⏱ Время постройки (базовое)"
+  sectionRapidfire: Быстрый огонь (rapidfire)
+  rfColTarget: Цель
+  rfColShots: Выстрелов за раунд
+  sectionVulnerable: Уязвим к быстрому огню
+  rfColAttacker: Атакующий
+
 authUi:
   tagline: космическая стратегия
   loginTab: Войти

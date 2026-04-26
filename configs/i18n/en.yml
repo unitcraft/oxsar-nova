@@ -1026,6 +1026,217 @@ marketUi:
   fleetLotCreated: ""
 
 # TODO: en
+scoreUi:
+  title: "" # TODO: en
+  tabPlayers: "" # TODO: en
+  tabAlliances: "" # TODO: en
+  tabVacation: "" # TODO: en
+  tabTransfers: "" # TODO: en
+  scoreTypeTotal: "" # TODO: en
+  scoreTypeBuildings: "" # TODO: en
+  scoreTypeResearch: "" # TODO: en
+  scoreTypeFleet: "" # TODO: en
+  scoreTypeAchievements: "" # TODO: en
+  scoreTypeBattle: "" # TODO: en
+  myRankLabel: "" # TODO: en
+  filterPlaceholder: "" # TODO: en
+  emptyPlayers: "" # TODO: en
+  colPlayer: "" # TODO: en
+  colAlliance: "" # TODO: en
+  colCoords: "" # TODO: en
+  colPoints: "" # TODO: en
+  colCount: "" # TODO: en
+  goToGalaxy: "" # TODO: en
+  emptyAlliances: "" # TODO: en
+  emptyVacation: "" # TODO: en
+  colVacationSince: "" # TODO: en
+  dirReceived: "" # TODO: en
+  dirSent: "" # TODO: en
+  periodAll: "" # TODO: en
+  periodMonth: "" # TODO: en
+  periodWeek: "" # TODO: en
+  colReceiver: "" # TODO: en
+  colSender: "" # TODO: en
+  colMetal: "" # TODO: en
+  colSilicon: "" # TODO: en
+  colHydrogen: "" # TODO: en
+  colTotal: "" # TODO: en
+  emptyTransfers: "" # TODO: en
+
+chatUi:
+  tabGlobal: "" # TODO: en
+  tabAlliance: "" # TODO: en
+  reconnecting: "" # TODO: en
+  editTitle: "" # TODO: en
+  deleteTitle: "" # TODO: en
+  editedMark: "" # TODO: en
+  deleteConfirmTitle: "" # TODO: en
+  deleteConfirmMsg: "" # TODO: en
+  deleteConfirmBtn: "" # TODO: en
+  emojiTitle: "" # TODO: en
+  inputPlaceholder: "" # TODO: en
+  sendBtn: "" # TODO: en
+
+settingsUi:
+  title: "" # TODO: en
+  sectionProfile: "" # TODO: en
+  labelEmail: "" # TODO: en
+  saveBtn: "" # TODO: en
+  emailSaved: "" # TODO: en
+  labelLanguage: "" # TODO: en
+  langRu: "" # TODO: en
+  langEn: "" # TODO: en
+  labelTimezone: "" # TODO: en
+  sectionSecurity: "" # TODO: en
+  labelCurrentPw: "" # TODO: en
+  labelNewPw: "" # TODO: en
+  labelConfirmPw: "" # TODO: en
+  changePwBtn: "" # TODO: en
+  pwSaved: "" # TODO: en
+  pwMismatch: "" # TODO: en
+  pwTooShort: "" # TODO: en
+  pwWrongCurrent: "" # TODO: en
+  pwSaveError: "" # TODO: en
+  sectionVacation: "" # TODO: en
+  vacationDesc: "" # TODO: en
+  vacationActive: "" # TODO: en
+  leaveVacationBtn: "" # TODO: en
+  startVacationBtn: "" # TODO: en
+  vacationWarning: "" # TODO: en
+  vacationConfirmBtn: "" # TODO: en
+  vacationCancelBtn: "" # TODO: en
+  sectionPlanetOrder: "" # TODO: en
+  planetOrderDesc: "" # TODO: en
+  planetOrderSaving: "" # TODO: en
+  sectionDanger: "" # TODO: en
+  deleteAccountBtn: "" # TODO: en
+  deleteAccountDesc: "" # TODO: en
+  requestCodeBtn: "" # TODO: en
+  requestCodeErr: "" # TODO: en
+  codeSentMsg: "" # TODO: en
+  confirmDeleteBtn: "" # TODO: en
+  confirmDeleteErr: "" # TODO: en
+  cancelBtn: "" # TODO: en
+
+referralUi:
+  title: "" # TODO: en
+  sectionLink: "" # TODO: en
+  copyBtn: "" # TODO: en
+  copiedBtn: "" # TODO: en
+  shareBtn: "" # TODO: en
+  shareGameTitle: "" # TODO: en
+  copyError: "" # TODO: en
+  refDesc: "" # TODO: en
+  statInvited: "" # TODO: en
+  statBonusPoints: "" # TODO: en
+  statBonusMax: "" # TODO: en
+  statBonus: "" # TODO: en
+  statBonusHint: "" # TODO: en
+  sectionReferred: "" # TODO: en
+  emptyReferred: "" # TODO: en
+  colPlayer: "" # TODO: en
+  colPoints: "" # TODO: en
+  colRegistered: "" # TODO: en
+
+empireUi:
+  title: "" # TODO: en
+  totalResources: "" # TODO: en
+  colParam: "" # TODO: en
+  groupPlanet: "" # TODO: en
+  rowDiameter: "" # TODO: en
+  rowFields: "" # TODO: en
+  rowTemp: "" # TODO: en
+  groupResources: "" # TODO: en
+  rowMetal: "" # TODO: en
+  rowSilicon: "" # TODO: en
+  rowHydrogen: "" # TODO: en
+  groupMining: "" # TODO: en
+  groupEnergy: "" # TODO: en
+  groupStorages: "" # TODO: en
+  groupProduction: "" # TODO: en
+  groupSpecial: "" # TODO: en
+  groupOtherBuildings: "" # TODO: en
+  groupFleet: "" # TODO: en
+  groupDefense: "" # TODO: en
+  noPlanets: "" # TODO: en
+
+notepadUi:
+  title: "" # TODO: en
+  hint: "" # TODO: en
+  placeholder: "" # TODO: en
+  charCount: "" # TODO: en
+  updatedAt: "" # TODO: en
+  statusSaving: "" # TODO: en
+  statusSaved: "" # TODO: en
+  statusError: "" # TODO: en
+
+planetOptionsUi:
+  backBtn: "" # TODO: en
+  titlePrefix: "" # TODO: en
+  sectionRename: "" # TODO: en
+  renamePlaceholder: "" # TODO: en
+  saveBtn: "" # TODO: en
+  sectionHome: "" # TODO: en
+  currentHome: "" # TODO: en
+  setHomeBtn: "" # TODO: en
+  isHomeMsg: "" # TODO: en
+  moonNoHomeMsg: "" # TODO: en
+  setHomeConfirm: "" # TODO: en
+  setHomeConfirmBtn: "" # TODO: en
+  sectionAbandon: "" # TODO: en
+  abandonDesc: "" # TODO: en
+  abandonCodeLabel: "" # TODO: en
+  abandonBtn: "" # TODO: en
+  moonAbandonMsg: "" # TODO: en
+  abandonConfirm: "" # TODO: en
+  abandonConfirmBtn: "" # TODO: en
+  cancelBtn: "" # TODO: en
+  toastRenameTitle: "" # TODO: en
+  toastRenameBody: "" # TODO: en
+  toastRenameErr: "" # TODO: en
+  toastHomeTitle: "" # TODO: en
+  toastHomeBody: "" # TODO: en
+  toastHomeErr: "" # TODO: en
+  toastAbandonTitle: "" # TODO: en
+  toastAbandonBody: "" # TODO: en
+  toastAbandonErr: "" # TODO: en
+
+unitInfoUi:
+  levelCol: "" # TODO: en
+  timeCol: "" # TODO: en
+  currentLevel: "" # TODO: en
+  requires: "" # TODO: en
+  timeWithFactory: "" # TODO: en
+  timeWithoutFactory: "" # TODO: en
+  timeWithoutLab: "" # TODO: en
+  sectionCombat: "" # TODO: en
+  colParam: "" # TODO: en
+  colInAttack: "" # TODO: en
+  colInDefense: "" # TODO: en
+  colValue: "" # TODO: en
+  statAttack: "" # TODO: en
+  statShield: "" # TODO: en
+  statShell: "" # TODO: en
+  statFront: "" # TODO: en
+  statBallistics: "" # TODO: en
+  statMasking: "" # TODO: en
+  sectionOther: "" # TODO: en
+  statCargo: "" # TODO: en
+  statSpeed: "" # TODO: en
+  statFuel: "" # TODO: en
+  statFuelUnit: "" # TODO: en
+  statStructure: "" # TODO: en
+  statMetal: "" # TODO: en
+  statSilicon: "" # TODO: en
+  statHydrogen: "" # TODO: en
+  statBuildTime: "" # TODO: en
+  sectionRapidfire: "" # TODO: en
+  rfColTarget: "" # TODO: en
+  rfColShots: "" # TODO: en
+  sectionVulnerable: "" # TODO: en
+  rfColAttacker: "" # TODO: en
+
+# TODO: en
 authUi:
   tagline: ""
   loginTab: ""

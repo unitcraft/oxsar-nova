@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { BUILDINGS, MOON_BUILDINGS, RESEARCH, SHIPS, DEFENSE, costForLevel, imageOf, formatNum, fmtReqs, nameOf } from '@/api/catalog';
+import { useTranslation } from '@/i18n/i18n';
 
 interface Props {
   kind: 'building' | 'research' | 'ship' | 'defense';
@@ -61,6 +62,7 @@ const cell: React.CSSProperties = { padding: '6px 12px', textAlign: 'right', fon
 const cellLeft: React.CSSProperties = { ...cell, textAlign: 'left' };
 
 export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) {
+  const { t } = useTranslation('unitInfoUi');
   const buildingsQ = useQuery({
     queryKey: ['buildings', planetId],
     queryFn: () => api.get<{ build_seconds: Record<string, number> }>(`/api/planets/${planetId}/buildings`),
@@ -89,7 +91,6 @@ export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Заголовок */}
       <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
         <img
           src={imageOf(entry.key)} alt={entry.name} width={128} height={128}
@@ -101,28 +102,26 @@ export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) 
             <div style={{ fontSize: 15, color: 'var(--ox-fg-muted)', fontStyle: 'italic', marginTop: 4 }}>{entry.fullDesc}</div>
           )}
           {currentLevel > 0 && (
-            <div style={{ fontSize: 15, color: 'var(--ox-accent)', marginTop: 4, fontFamily: 'var(--ox-mono)' }}>Уровень {currentLevel}</div>
+            <div style={{ fontSize: 15, color: 'var(--ox-accent)', marginTop: 4, fontFamily: 'var(--ox-mono)' }}>{t('currentLevel', { level: String(currentLevel) })}</div>
           )}
         </div>
       </div>
 
-      {/* Пререквизиты */}
       {requires && requires.length > 0 && (
         <div className="ox-panel" style={{ padding: '10px 14px', fontSize: 15, color: 'var(--ox-fg-muted)' }}>
-          🔒 Требуется: {fmtReqs(requires)}
+          {t('requires')} {fmtReqs(requires)}
         </div>
       )}
 
-      {/* Таблица уровней */}
       <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 14 }}>
-              <th style={cellLeft}>Ур.</th>
+              <th style={cellLeft}>{t('levelCol')}</th>
               {entry.costBase.metal > 0    && <th style={cell}>🟠</th>}
               {entry.costBase.silicon > 0  && <th style={cell}>💎</th>}
               {entry.costBase.hydrogen > 0 && <th style={cell}>💧</th>}
-              <th style={cell}>⏱</th>
+              <th style={cell}>{t('timeCol')}</th>
               {prodRate && <th style={cell}>{prodRate.label}</th>}
             </tr>
           </thead>
@@ -164,20 +163,19 @@ export function UnitInfoScreen({ kind, unitId, currentLevel, planetId }: Props) 
 
       <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)' }}>
         {isBuilding
-          ? (realBuildSeconds ? 'Время следующего уровня с учётом фабрики роботов и нано-фабрики.' : 'Время указано без учёта фабрики роботов и нано-фабрики.')
-          : 'Время указано без учёта уровня исследовательской лаборатории.'}
+          ? (realBuildSeconds ? t('timeWithFactory') : t('timeWithoutFactory'))
+          : t('timeWithoutLab')}
       </div>
-
     </div>
   );
 }
 
-// Базовое время постройки: (metal+silicon)/5000 * 2 * 3600 сек (при shipyard=1, без нанофабрики)
 function combatBuildTimeSecs(metal: number, silicon: number): number {
   return Math.round(((metal + silicon) / 5000) * 2 * 3600);
 }
 
 function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: number }) {
+  const { t } = useTranslation('unitInfoUi');
   const unitCatalog = kind === 'ship' ? SHIPS : DEFENSE;
   const allUnits = [...SHIPS, ...DEFENSE];
   const entry = unitCatalog.find((x) => x.id === unitId);
@@ -188,7 +186,6 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
   const structure = c ? c.metal + c.silicon : null;
   const buildTime = c ? combatBuildTimeSecs(c.metal, c.silicon) : null;
 
-  // Есть ли различие между атакующим и обороняющимся режимами
   const hasDualMode = isShip && (
     (entry.attacker_front != null && entry.attacker_front !== entry.front) ||
     (entry.attacker_ballistics != null && entry.attacker_ballistics !== entry.ballistics) ||
@@ -197,7 +194,6 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Заголовок */}
       <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
         <img
           src={imageOf(entry.key)} alt={entry.name} width={128} height={128}
@@ -211,96 +207,92 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
         </div>
       </div>
 
-      {/* Требования */}
       {entry.requires && entry.requires.length > 0 && (
         <div className="ox-panel" style={{ padding: '10px 14px', fontSize: 15, color: 'var(--ox-fg-muted)' }}>
-          🔒 Требуется: {fmtReqs(entry.requires)}
+          {t('requires')} {fmtReqs(entry.requires)}
         </div>
       )}
 
-      {/* Боевые характеристики */}
       <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
         <div style={{ padding: '10px 14px 6px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
-          Боевые характеристики
+          {t('sectionCombat')}
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 14 }}>
-              <th style={cellLeft}>Параметр</th>
-              {hasDualMode ? <th style={cell}>В атаке</th> : null}
-              <th style={cell}>{hasDualMode ? 'В обороне' : 'Значение'}</th>
+              <th style={cellLeft}>{t('colParam')}</th>
+              {hasDualMode ? <th style={cell}>{t('colInAttack')}</th> : null}
+              <th style={cell}>{hasDualMode ? t('colInDefense') : t('colValue')}</th>
             </tr>
           </thead>
           <tbody>
             {hasDualMode ? (
               <>
-                <DualRow label="⚔ Атака"       atk={entry.attack.toLocaleString('ru-RU')}       def={entry.attack.toLocaleString('ru-RU')} />
-                <DualRow label="🛡 Щит"         atk={entry.shield.toLocaleString('ru-RU')}       def={entry.shield.toLocaleString('ru-RU')} />
-                <DualRow label="❤ Броня"        atk={entry.shell.toLocaleString('ru-RU')}        def={entry.shell.toLocaleString('ru-RU')} />
-                {entry.front != null && <DualRow label="🎯 Приоритет цели" atk={String(entry.attacker_front ?? entry.front)} def={String(entry.front)} />}
-                {entry.ballistics != null && <DualRow label="🎲 Баллистика" atk={String(entry.attacker_ballistics ?? entry.ballistics)} def={String(entry.ballistics)} />}
-                {entry.masking != null && <DualRow label="👻 Маскировка" atk={String(entry.attacker_masking ?? entry.masking)} def={String(entry.masking)} />}
+                <DualRow label={t('statAttack')}  atk={entry.attack.toLocaleString('ru-RU')}  def={entry.attack.toLocaleString('ru-RU')} />
+                <DualRow label={t('statShield')}   atk={entry.shield.toLocaleString('ru-RU')}  def={entry.shield.toLocaleString('ru-RU')} />
+                <DualRow label={t('statShell')}    atk={entry.shell.toLocaleString('ru-RU')}   def={entry.shell.toLocaleString('ru-RU')} />
+                {entry.front != null && <DualRow label={t('statFront')}       atk={String(entry.attacker_front ?? entry.front)} def={String(entry.front)} />}
+                {entry.ballistics != null && <DualRow label={t('statBallistics')} atk={String(entry.attacker_ballistics ?? entry.ballistics)} def={String(entry.ballistics)} />}
+                {entry.masking != null && <DualRow label={t('statMasking')}     atk={String(entry.attacker_masking ?? entry.masking)} def={String(entry.masking)} />}
               </>
             ) : (
               <>
-                <StatRow label="⚔ Атака"  value={entry.attack.toLocaleString('ru-RU')} />
-                <StatRow label="🛡 Щит"    value={entry.shield.toLocaleString('ru-RU')} />
-                <StatRow label="❤ Броня"   value={entry.shell.toLocaleString('ru-RU')} />
-                {entry.front != null && <StatRow label="🎯 Приоритет цели" value={String(entry.front)} />}
-                {entry.ballistics != null && entry.ballistics > 0 && <StatRow label="🎲 Баллистика" value={String(entry.ballistics)} />}
-                {entry.masking != null && entry.masking > 0 && <StatRow label="👻 Маскировка" value={String(entry.masking)} />}
+                <StatRow label={t('statAttack')}  value={entry.attack.toLocaleString('ru-RU')} />
+                <StatRow label={t('statShield')}   value={entry.shield.toLocaleString('ru-RU')} />
+                <StatRow label={t('statShell')}    value={entry.shell.toLocaleString('ru-RU')} />
+                {entry.front != null && <StatRow label={t('statFront')}       value={String(entry.front)} />}
+                {entry.ballistics != null && entry.ballistics > 0 && <StatRow label={t('statBallistics')} value={String(entry.ballistics)} />}
+                {entry.masking != null && entry.masking > 0 && <StatRow label={t('statMasking')}     value={String(entry.masking)} />}
               </>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Другие характеристики */}
       <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
         <div style={{ padding: '10px 14px 6px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
-          Другие характеристики
+          {t('sectionOther')}
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <tbody>
             {entry.cargo != null && entry.cargo > 0 && (
-              <StatRow label="📦 Грузоподъёмность" value={entry.cargo.toLocaleString('ru-RU')} />
+              <StatRow label={t('statCargo')} value={entry.cargo.toLocaleString('ru-RU')} />
             )}
             {entry.speed != null && entry.speed > 0 && (
-              <StatRow label="🚀 Скорость" value={entry.speed.toLocaleString('ru-RU')} />
+              <StatRow label={t('statSpeed')} value={entry.speed.toLocaleString('ru-RU')} />
             )}
             {entry.fuel != null && entry.fuel > 0 && (
-              <StatRow label="⛽ Расход топлива" value={`${entry.fuel}/ед.`} />
+              <StatRow label={t('statFuel')} value={`${entry.fuel}${t('statFuelUnit')}`} />
             )}
             {structure != null && structure > 0 && (
-              <StatRow label="🔩 Конструкция" value={structure.toLocaleString('ru-RU')} />
+              <StatRow label={t('statStructure')} value={structure.toLocaleString('ru-RU')} />
             )}
             {c && c.metal > 0 && (
-              <StatRow label="🟠 Металл" value={c.metal.toLocaleString('ru-RU')} />
+              <StatRow label={t('statMetal')} value={c.metal.toLocaleString('ru-RU')} />
             )}
             {c && c.silicon > 0 && (
-              <StatRow label="💎 Кремний" value={c.silicon.toLocaleString('ru-RU')} />
+              <StatRow label={t('statSilicon')} value={c.silicon.toLocaleString('ru-RU')} />
             )}
             {c && c.hydrogen > 0 && (
-              <StatRow label="💧 Водород" value={c.hydrogen.toLocaleString('ru-RU')} />
+              <StatRow label={t('statHydrogen')} value={c.hydrogen.toLocaleString('ru-RU')} />
             )}
             {buildTime != null && buildTime > 0 && (
-              <StatRow label="⏱ Время постройки (базовое)" value={fmtSecs(buildTime)} />
+              <StatRow label={t('statBuildTime')} value={fmtSecs(buildTime)} />
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Быстрый огонь */}
       {entry.rapidfire && Object.keys(entry.rapidfire).length > 0 && (
         <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
           <div style={{ padding: '10px 14px 6px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
-            Быстрый огонь (rapidfire)
+            {t('sectionRapidfire')}
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 14 }}>
-                <th style={cellLeft}>Цель</th>
-                <th style={cell}>Выстрелов за раунд</th>
+                <th style={cellLeft}>{t('rfColTarget')}</th>
+                <th style={cell}>{t('rfColShots')}</th>
               </tr>
             </thead>
             <tbody>
@@ -317,20 +309,19 @@ function CombatUnitInfo({ kind, unitId }: { kind: 'ship' | 'defense'; unitId: nu
         </div>
       )}
 
-      {/* Кто стреляет быстро по этому юниту */}
       {(() => {
         const shooters = allUnits.filter((u) => u.rapidfire && u.rapidfire[entry.id]);
         if (shooters.length === 0) return null;
         return (
           <div className="ox-panel" style={{ padding: 0, overflowX: 'auto' }}>
             <div style={{ padding: '10px 14px 6px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)' }}>
-              Уязвим к быстрому огню
+              {t('sectionVulnerable')}
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--ox-border)', color: 'var(--ox-fg-muted)', fontSize: 14 }}>
-                  <th style={cellLeft}>Атакующий</th>
-                  <th style={cell}>Выстрелов за раунд</th>
+                  <th style={cellLeft}>{t('rfColAttacker')}</th>
+                  <th style={cell}>{t('rfColShots')}</th>
                 </tr>
               </thead>
               <tbody>
