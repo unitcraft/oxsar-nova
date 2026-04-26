@@ -9,7 +9,7 @@
 
 if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
-class ExtAchievements extends Page
+class Achievements extends Page
 {
 	protected $pages2show = 3;
 	protected $per_page = 10;
@@ -57,7 +57,7 @@ class ExtAchievements extends Page
 				'per_page'	=> $this->per_page,
 			)
 		);
-		Achievements::loadAchievementsTemplateData($paginator);
+		AchievementsService::loadAchievementsTemplateData($paginator);
 		Core::getTPL()->display('blank');
 		return $this;
 	}
@@ -77,7 +77,7 @@ class ExtAchievements extends Page
 				'user_got'	=> true,
 			)
 		);
-		Achievements::loadAchievementsTemplateData($paginator);
+		AchievementsService::loadAchievementsTemplateData($paginator);
 		Core::getTPL()->assign('done_achi', true);
 		Core::getTPL()->assign('aval_achi', false);
 		Core::getTPL()->assign('page', $page);
@@ -101,7 +101,7 @@ class ExtAchievements extends Page
 				'user_got'	=> false,
 			)
 		);
-		Achievements::loadAchievementsTemplateData($paginator);
+		AchievementsService::loadAchievementsTemplateData($paginator);
 		Core::getTPL()->assign('done_achi', false);
 		Core::getTPL()->assign('aval_achi', true);
 		Core::getTPL()->assign('page', $page);
@@ -127,7 +127,7 @@ class ExtAchievements extends Page
 				'user_got'	=> true,
 			)
 		);
-		Achievements::loadAchievementsTemplateData($params);
+		AchievementsService::loadAchievementsTemplateData($params);
 		Core::getTPL()->assign( 'done_formaction', RELATIVE_URL . 'game.php/AchievementsProfile/'.$id );
 		Core::getTPL()->assign('done_achi', true);
 		Core::getTPL()->assign('aval_achi', false);
@@ -140,7 +140,7 @@ class ExtAchievements extends Page
 	 */
 	protected function achievementInfo( $achievement_id )
 	{
-		Achievements::loadAchievementsTemplateData(array(
+		AchievementsService::loadAchievementsTemplateData(array(
 			"achievement_id" => max(0, (int)$achievement_id),
 		));
 		Core::getTPL()->display('blank');
@@ -154,7 +154,7 @@ class ExtAchievements extends Page
 	{
 		$achievement_id = max(0, (int)$achievement_id);
 		$user_id = NS::getUser()->get('userid');
-		if(!NS::isFirstRun("Achievements::state:{$user_id}-{$achievement_id}"))
+		if(!NS::isFirstRun("AchievementsService::state:{$user_id}-{$achievement_id}"))
 		{
 			// Logger::dieMessage("TOO_MANY_REQUESTS");
 			error_log('TOO_MANY_REQUESTS in achievementHideAjax, achivement_id: ' . $achievement_id );
@@ -162,7 +162,7 @@ class ExtAchievements extends Page
 			return;
 		}
 		$planet_id = NS::getUser()->get("curplanet");
-		Achievements::setAchievementState( $user_id, $planet_id, $achievement_id, ACHIEV_STATE_HIDDEN );
+		AchievementsService::setAchievementState( $user_id, $planet_id, $achievement_id, ACHIEV_STATE_HIDDEN );
 		exit();
 	}
 	
@@ -177,7 +177,7 @@ class ExtAchievements extends Page
 	 */
 	protected function achievementGetBonus( $achievement_id )
 	{
-		Achievements::setAchievementState( null, null, max(0, (int)$achievement_id), ACHIEV_STATE_BONUS_GIVEN );
+		AchievementsService::setAchievementState( null, null, max(0, (int)$achievement_id), ACHIEV_STATE_BONUS_GIVEN );
 		$this->redirectBack();
 	}
 	
@@ -187,7 +187,7 @@ class ExtAchievements extends Page
 	 */
 	protected function achievementProcess( $achievement_id )
 	{
-		Achievements::setAchievementState( null, null, max(0, (int)$achievement_id), ACHIEV_STATE_PROCESSED );
+		AchievementsService::setAchievementState( null, null, max(0, (int)$achievement_id), ACHIEV_STATE_PROCESSED );
 		$this->redirectBack();
 	}
 	
@@ -197,12 +197,12 @@ class ExtAchievements extends Page
 	protected function achievementsRecalc()
 	{
 		$user_id = NS::getUser()->get('userid');
-		if(!NS::isFirstRun("Achievements::recalc:{$user_id}"))
+		if(!NS::isFirstRun("AchievementsService::recalc:{$user_id}"))
 		{
 			Logger::dieMessage("TOO_MANY_REQUESTS");
 		}
 		$planet_id = NS::getUser()->get("curplanet");
-		Achievements::processAchievements( $user_id, $planet_id );
+		AchievementsService::processAchievements( $user_id, $planet_id );
 		$this->redirectBack();
 	}
 }

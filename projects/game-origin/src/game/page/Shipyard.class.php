@@ -82,6 +82,25 @@ class Shipyard extends Construction
 	*/
 	protected function index()
 	{
+		// Из ExtShipyard: countdown-счётчик до окончания текущей постройки в верфи
+		Core::getTPL()->addHTMLHeaderFile("lib/jquery.countdown.js?".CLIENT_VERSION, "js");
+		$result = sqlSelect("shipyard", array("finished"), "", "planetid = '".Core::getUser()->get("curplanet")."'", "finished DESC", "1");
+		$row = sqlFetch($result);
+		$timeleft = $row["finished"] - time();
+
+		$tim_all = "<script type=\"text/javascript\">
+			//<![CDATA[
+			$(function () {
+				$('#bCountDown').countdown({until: ".$timeleft.", compact: true, onExpiry: function() {
+					$('#bCountDown').text('-');
+				}});
+			});
+			//]]>
+			</script>
+			<span id=\"bCountDown\">".getTimeTerm($tim_all)."</span>";
+
+		Core::getTPL()->assign("all_time", $tim_all);
+
 		Core::getLanguage()->load("info,buildings");
 
 		$credit = NS::getUser()->get("credit");

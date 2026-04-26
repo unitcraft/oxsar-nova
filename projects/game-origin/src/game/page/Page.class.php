@@ -141,7 +141,7 @@ abstract class Page
 				&& preg_match("#Main|Constructions|Research|Shipyard|Defense|Mission|Artefacts#is", Core::getRequest()->getGET("go"))
 				)
 		{
-			Achievements::loadAchievementsTemplateData();
+			AchievementsService::loadAchievementsTemplateData();
 		}
 
 		$this->proceedPostActions()->proceedGetActions();

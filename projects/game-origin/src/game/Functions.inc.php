@@ -107,7 +107,7 @@ function updateUserState($user_id, $state_name, $recalc = false)
 	if( $recalc )
 	{
 		$user = User_YII::model()->findByPk($user_id);
-		Achievements::processAchievements($user_id, $user->curplanet);
+		AchievementsService::processAchievements($user_id, $user->curplanet);
 	}
 }
 

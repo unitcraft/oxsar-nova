@@ -9,7 +9,7 @@
 
 if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
-class ExtWidgets extends Page
+class Widgets extends Page
 {
 	/**
 	* Constructor. Handles requests for this page.

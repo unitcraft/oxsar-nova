@@ -219,7 +219,7 @@ class Artefact
 
 	public static function addEvent($mode, $time, $art_id, $user_id, $planet_id, $start_time = null)
 	{
-		// TODO: Does it occur? Probably NS::getEH() has to be refactored. ExtEventHandler has to be used if exists
+		// TODO: Does it occur? Probably NS::getEH() has to be refactored.
 		$EH = NS::getEH();
 		if( !is_object($EH) )
 		{

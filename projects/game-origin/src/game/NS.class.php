@@ -96,10 +96,10 @@ class NS
 			}
             if(ACHIEVEMENTS_ENABLED){
                 if( $achievement_id = Core::getRequest()->getPOST("achievement_get_bonus_id") ){
-                    Achievements::setAchievementState( null, null, max(0, (int)$achievement_id), ACHIEV_STATE_BONUS_GIVEN );
+                    AchievementsService::setAchievementState( null, null, max(0, (int)$achievement_id), ACHIEV_STATE_BONUS_GIVEN );
                 }
                 else if( $achievement_id = Core::getRequest()->getPOST("achievement_process_id") ){
-                    Achievements::setAchievementState( null, null, max(0, (int)$achievement_id), ACHIEV_STATE_PROCESSED );
+                    AchievementsService::setAchievementState( null, null, max(0, (int)$achievement_id), ACHIEV_STATE_PROCESSED );
                 }
             }
 		}
@@ -262,11 +262,10 @@ class NS
 		sqlEnd($result);
 		Core::getTPL()->addLoop("planetHeaderList", $planets);
 
-		// Menu
+		// Menu (Menu сам выбирает mobile vs desktop вариант через isMobileSkin())
 		if( isFacebookSkin() || isMobileSkin() )
 		{
-			$menu_class = isMobileSkin() ? "ExtMenu" : "Menu";
-			$menu = new $menu_class("Menu");
+			$menu = new Menu("Menu");
 			Core::getTPL()->addLoop("menu_headers", $menu->getMenuTitles($planets));
 			Core::getTPL()->addLoop("navigation", $menu);
 		}
@@ -586,8 +585,8 @@ class NS
 			}
 			else if($r["mode"] == UNIT_TYPE_ACHIEVEMENT && ACHIEVEMENTS_ENABLED)
 			{
-				// $rLevel = ( ( Achievements::isGrantedAchievement($userid, $r['needs']) ) ? 1000 : 0 );
-				$rLevel = Achievements::getProcessedAchievementQuantity($userid, $r['needs']);
+				// $rLevel = ( ( AchievementsService::isGrantedAchievement($userid, $r['needs']) ) ? 1000 : 0 );
+				$rLevel = AchievementsService::getProcessedAchievementQuantity($userid, $r['needs']);
 			}
 			else
 			{
@@ -655,8 +654,8 @@ class NS
 			}
 			else if($r["mode"] == UNIT_TYPE_ACHIEVEMENT && ACHIEVEMENTS_ENABLED)
 			{
-				// $rLevel = ( ( Achievements::isGrantedAchievement($userid, $r['needs']) ) ? 1000 : 0 );
-				$rLevel = /* empty($planetid) ? 0 : */ Achievements::getProcessedAchievementQuantity($userid, $r['needs']);
+				// $rLevel = ( ( AchievementsService::isGrantedAchievement($userid, $r['needs']) ) ? 1000 : 0 );
+				$rLevel = /* empty($planetid) ? 0 : */ AchievementsService::getProcessedAchievementQuantity($userid, $r['needs']);
 			}
 			else
 			{
@@ -1395,39 +1394,28 @@ class NS
 	}
 
 	/**
-	* Internal class factory to search for extensions.
+	* Loads page/business class by URL component.
 	*
-	* @param string	Class type path
-	* @param string	Class path
+	* План 37.5b: ext/ слой убран, ExtX-классы смержены в базовые в game/.
+	* Раньше фабрика проверяла ext/<path>/Ext<Class>.class.php перед game/<path>/<Class>.class.php.
 	*
-	* @return string	Class name
+	* @param string	Class type path (e.g. "page")
+	* @param string	Class path / name (e.g. "Main")
+	*
+	* @return string|false	Class name or false if not found
 	*/
 	public static function factory($pathName, $className)
 	{
-		// $pathName = getClassPath($pathName);
 		$className = getClassPath($className);
-		$class = $className;
-		$extFilename = APP_ROOT_DIR."ext/".$pathName."/Ext".$className.".class.php";
 		$stdFilename = APP_ROOT_DIR."game/".$pathName."/".$className.".class.php";
-		// debug_var(array($pathName, $className, $ext, $classes), "[factory] $pathName, $className");
-		$classFilename = false;
-		if(file_exists($extFilename))
+		if(file_exists($stdFilename))
 		{
-			$classFilename = $extFilename;
-			$class = "Ext".$className;
-			// debug_var(array($pathName, $className, $ext, $classes), "[factory] $pathName, $className");
-		}
-		else if(file_exists($stdFilename))
-		{
-			$classFilename = $stdFilename;
-		}
-		if($classFilename !== false)
-		{
+			$class = $className;
 			if(Str::inString("/", $class))
 			{
 				$class = Str::substring(strrchr("/", $class), 1);
 			}
-			require_once($classFilename);
+			require_once($stdFilename);
 			return $class;
 		}
 		return false;
@@ -1473,7 +1461,7 @@ class NS
 	{
 		if(!mt_rand(0, 10000))
 		{
-			// it's used in ExtPayment, check_max_credit
+			// used in Payment, check_max_credit
 			sqlDelete("res_log", "time < ".sqlVal(date("Y-m-d H:i:s", time()-60*60*24*5)));
 		}
 

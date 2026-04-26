@@ -9,7 +9,7 @@
 
 if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
-class ExtNotepad extends Page
+class Notepad extends Page
 {
 	/**
 	* Constructor. Handles requests for this page.

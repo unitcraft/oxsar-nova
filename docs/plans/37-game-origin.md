@@ -457,6 +457,7 @@ projects/game-origin/
 | 37.3 | Удаление Yii, PEAR, OAuth, соцсетей + минимальный bootstrap | средний |
 | 37.4 | Перекомпоновка файлов в новую структуру + ENV-based конфиг + обновление путей include/require + замена DB_MYSQL_PDO на чистый PDO (без Yii) | средний |
 | 37.5 | Docker-compose: mysql + php-fpm, первый запуск; наполнение схемой из `new-for-dm/schema.sql` + `data.sql` | средний |
+| 37.5b | **Слияние ext/ → game/** (отступление от §198 «оставляем нетронутым»): вместо отдельного слоя ext-классы вмерживаются в базовые. Причина — упрощение архитектуры и забывчивость о том, что ext имеет приоритет; стало источником багов. См. подробности ниже. | средний |
 | 37.6 | Аудит багов и дыр (SQL-инъекции, XSS, CSRF, race cond.) | высокий |
 | 37.7 | Исправление критических уязвимостей (безопасность) | высокий |
 | 37.8 | Исправление игровых дыр (не меняя баланс) | высокий |
@@ -465,3 +466,46 @@ projects/game-origin/
 | 37.11 | Параллельный прогон PHP vs Go, валидация | высокий |
 | 37.12 | Интеграция с auth-service (JWT вместо own session) | средний |
 | 37.13 | Финальная чистка неиспользуемых файлов | низкий |
+
+---
+
+## 37.5b — Слияние ext/ в game/ (отступление от §198)
+
+**Контекст**: §198 этого плана говорил «Оставляем нетронутым: весь `ext/`».
+В legacy схеме `NS::factory()` сначала искал `ext/<path>/Ext<Class>.class.php`,
+потом `game/<path>/<Class>.class.php`. Ext-версия имела приоритет — по сути,
+решение работало через override-слой.
+
+**Что пошло не так**: при работе над game-origin постоянно забывалось, что ext
+имеет приоритет — правились методы базового класса в `game/`, а ext-версия
+тихо перекрывала правки. Это ловушка, которой нет смысла оставлять для PHP-клона
+(особенно учитывая, что цель этапа 37.9 — порт всего на Go, где никаких
+override-слоёв не будет).
+
+**Принятое решение** (отклонение от плана, согласовано):
+- Все классы из `ext/` мерджатся в одноимённый базовый класс в `game/`.
+- Удалены: `src/ext/` целиком (53 файла).
+- `ext/templates/standard/*.tpl` → `src/templates/standard/` (один уровень).
+- `NS::factory()` упрощён — теперь только `game/<path>/<Class>.class.php`.
+- `AUTOLOAD_PATH_APP_EXT` удалён, autoload теперь только `game/,game/page/,game/models/`.
+
+**Стратегии слияния** (определены по содержимому каждого Ext-файла):
+
+| Ext-класс | Стратегия | Куда |
+|---|---|---|
+| `ExtMission` (1062 стр.) | Базовые stub'ы (`controlFleet`, `executeJump`, `starGateJump`) заменены реальными реализациями + добавлены новые методы (`starGateDefenseJump`, `holdingSelectCoords`, `holdingSendFleet`, etc.) | `game/page/Mission.class.php` |
+| `ExtShipyard` (33 стр.) | Decorator: добавлен countdown-блок в начало `index()`, дальше идёт оригинал | `game/page/Shipyard.class.php` |
+| `ExtMenu` (137 стр.) | Сохранены **обе** реализации `generateMenu`: базовая (десктоп) + новый `generateMenuMobile` (mobile skin). Диспатч в `generateMenu()` через `isMobileSkin()` | `game/Menu.class.php` |
+| `ExtEventHandler` (927 стр.) | Заменены реализации в base: `queryExpiredEvents`, `removePlanetEvents`, `getFormationAllyFleets`, `startConstructionEventVIP`, `abortConstructionEvent`, `repair`, `disassemble`, `teleportPlanet`, `allianceAttack`, `rocketAttack`. В `fReturn` — Ext-логика добавлена в начало (приоритет — Ext, потом базовая логика). Новые методы (`disassembleOld`, `haltPosition`, `haltReturn`, `alien*`) добавлены в конец класса | `game/EventHandler.class.php` |
+| `ExpedPlanetCreator` (149 стр.) | Самостоятельный класс (не override базового), используется явно в `Expedition.class.php`. **Оставлен как есть** — это extension в смысле "Expedition Planet Creator", не Ext-в-смысле-override | `game/ExpedPlanetCreator.class.php` |
+| `ExtArtefactMarket`, `ExtArtefacts`, `ExtNotepad`, `ExtPayment`, `ExtRepair`, `ExtSimulator`, `ExtSupport`, `ExtTutorial`, `ExtUserAgreement`, `ExtWidgets` | Все наследуются от `Page` напрямую (не от существующего базового класса). **Просто переименованы** `ExtX → X` (файл и класс). Доп. правки: `NS::isFirstRun("ExtX::...")` → `"X::..."`. В `Payment.class.php` починен сломанный `paymentVkontakte()` (после грубого комментирования VK-platежей остался невалидный синтаксис — заменён на pass-through redirect, т.к. соцплатежи отключены планом 37). | `game/page/<X>.class.php` |
+| `ExtAchievements` | **Конфликт имени**: в `game/` есть бизнес-сервис `Achievements`, и ExtAchievements (page) после переименования стал бы вторым `class Achievements`. Решение: переименовать бизнес-класс `Achievements` → `AchievementsService` (он чистый static service), 14 вызовов `Achievements::` обновлены в Page, NS, EventHandler, PlanetCreator, Assault, Functions, achievements.tpl. После этого `ExtAchievements` → `Achievements` (page) без конфликта | `game/AchievementsService.class.php` (бизнес) + `game/page/Achievements.class.php` (page) |
+
+**Проверка после слияния**:
+- `php -l` всех изменённых классов — ✅ без syntax errors.
+- ext/ полностью удалён.
+- Запуск в docker и smoke-тест Main + ключевых страниц.
+
+**Памятка для будущего AI/разработчика**: записи о приоритете ext в memory
+актуальны только для **legacy-кода** (`d:\Sources\oxsar2`), но НЕ для
+game-origin — здесь ext-слой убран.

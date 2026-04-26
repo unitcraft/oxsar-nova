@@ -8,7 +8,7 @@
 
 if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
 
-class ExtRepair extends Construction
+class Repair extends Construction
 {
 	/**
 	* If units can be build.
@@ -414,7 +414,7 @@ class ExtRepair extends Construction
 			throw new GenericException("You can't repair units.");
 		}
 
-		if( !NS::isFirstRun( "ExtRepair::order:" . md5(serialize($post)) ) )
+		if( !NS::isFirstRun( "Repair::order:" . md5(serialize($post)) ) )
 		{
 			throw new GenericException("There are too many queries.");
 		}

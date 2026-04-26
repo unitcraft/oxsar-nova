@@ -9,7 +9,7 @@
 
 if(!defined("APP_ROOT_DIR")) { die("Hacking attempt detected."); }
 
-class ExtArtefactMarket extends Construction
+class ArtefactMarket extends Construction
 {
   /**
   * Displays list of available buildings.

@@ -12,7 +12,7 @@ if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
 require_once(APP_ROOT_DIR . "payments/a1/Functions.inc.php");
 require_once(APP_ROOT_DIR . "ext/payment.inc.php");
 
-class ExtPayment extends Page
+class Payment extends Page
 {
 	public function __construct()
 	{
@@ -294,36 +294,7 @@ class ExtPayment extends Page
 
 	protected function paymentVkontakte($amount)
 	{
-		$amount = max(0, (float)$amount);
-		if($amount > 0 && NS::isFirstRun("paymentVkontakte:$amount:".NS::getUser()->get("userid")))
-		{
-$buy_amount = 0; // social payments disabled
-			// if($amount <= $userBalance)
-$buy_amount = 0; // social payments disabled
-				'uid' => 0,
-				'votes' => round($amount * 100),
-				// 'test_mode' => 1
-			if($buy_amount > 0)
-			{
-
-				if(!isset($database))
-				{
-					require(APP_ROOT_DIR . "config.inc.php");
-				}
-				PS_mysqlConnect();
-				// unset($database);
-
-				$res = PS_finishPayment(array(
-					"user_id" => NS::getUser()->get("userid"),
-					"credit" => getCreditByVkontakteAmount($amount),
-					"pay_id" => "new",
-					"pay_type" => "Vkontakte",
-					"pay_from" => 0,
-					"amount" => $amount
-				));
-				// echo "paymentVkontakte($amount), res: $res";
-			}
-		}
+		// Платежи через VK отключены (план 37 — соцсети не используются).
 		doHeaderRedirection("game.php/Payment", false);
 		return $this;
 	}

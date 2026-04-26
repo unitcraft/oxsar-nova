@@ -9,7 +9,7 @@
 
 if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
-class ExtUserAgreement extends Page
+class UserAgreement extends Page
 {
 	/**
 	* Constructor. Handles requests for this page.

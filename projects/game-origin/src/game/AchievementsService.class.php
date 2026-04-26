@@ -9,7 +9,7 @@
 
 if(!defined("APP_ROOT_DIR")) { die("Hacking attempt detected."); }
 
-class Achievements
+class AchievementsService
 {
 	protected static function checkReqExchRes($user_id, $planet_id = null, $achievemnt_id = null)
 	{
@@ -228,7 +228,7 @@ class Achievements
 			}
 			$user_id = NS::getUser()->get('userid');
 			$planet_id = NS::getUser()->get("curplanet");
-			if( !NS::isFirstRun("Achievements::state:{$user_id}-{$achievement_id}") )
+			if( !NS::isFirstRun("AchievementsService::state:{$user_id}-{$achievement_id}") )
 			{
 				return;
 			}

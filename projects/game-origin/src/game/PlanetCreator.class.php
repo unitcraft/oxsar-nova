@@ -461,7 +461,7 @@ class PlanetCreator
 			Core::getQuery()->update("galaxy", "moonid", $this->planetid, "galaxy = ".sqlVal($this->galaxy)." AND system = ".sqlVal($this->system)." AND position = ".sqlVal($this->position));
 		}
 		
-		Achievements::processAchievements($this->userid, $this->planetid);
+		AchievementsService::processAchievements($this->userid, $this->planetid);
 
 		return $this;
 	}
