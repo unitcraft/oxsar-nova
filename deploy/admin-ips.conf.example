@@ -1,0 +1,19 @@
+# Whitelist IP-адресов для admin.oxsar-nova.ru (план 53 §Security).
+#
+# Используется в nginx geo-блоке (см. deploy/nginx.admin.conf):
+#   geo $admin_allowed { default 0; include /etc/nginx/admin-ips.conf; }
+#
+# Формат: <ip-or-cidr>  1;  # comment
+#
+# В проде монтировать через docker-compose:
+#   volumes:
+#     - ./admin-ips.conf:/etc/nginx/admin-ips.conf:ro
+#
+# Если IP-allowlist НЕ нужен, замените `if ($admin_allowed = 0)` блок в
+# nginx.admin.conf на `# disabled`. Альтернатива — записать сюда `0.0.0.0/0  1;`
+# (разрешить всё), но это снимает один из слоёв защиты.
+
+# Пример:
+# 1.2.3.4         1;     # office VPN gateway
+# 10.0.0.0/24     1;     # corporate range
+# 192.168.1.0/24  1;     # local LAN (dev only)

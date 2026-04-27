@@ -1,0 +1,30 @@
+# Admin-frontend production build (план 53 Ф.11):
+#   stage 1 (builder): node:20-alpine → npm ci → npm run build → dist/
+#   stage 2 (nginx):   nginx:alpine + production-grade конфиг с CSP/HSTS/
+#                      IP-allowlist (см. deploy/nginx.admin.conf).
+#
+# build context = repo root. Запуск:
+#   docker build -f deploy/Dockerfile.admin-frontend -t admin-frontend:latest .
+
+# ── builder ──────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY projects/admin-frontend/package.json projects/admin-frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+COPY projects/admin-frontend ./
+RUN npm run build
+
+# ── runtime ──────────────────────────────────────────────────────────────────
+FROM nginx:1.27-alpine AS runtime
+
+COPY deploy/nginx.admin.conf /etc/nginx/templates/default.conf.template
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# nginx:alpine пайчит template из /etc/nginx/templates/ через envsubst при
+# старте — позволяет передать ENV (BFF_UPSTREAM, ALLOW_IPS_INCLUDE) через
+# docker-compose.
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

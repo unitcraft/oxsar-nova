@@ -1,0 +1,63 @@
+# Admin-консоль (план 53 Ф.11): admin-frontend + admin-bff.
+#
+# Запуск (вместе с базовым stack):
+#   docker compose \
+#     -f deploy/docker-compose.yml \
+#     -f deploy/docker-compose.prod.yml \
+#     -f deploy/docker-compose.admin.yml \
+#     up --build
+#
+# Переменные (передавать через .env или environment):
+#   SESSION_SECRET=...   обязательно ≥32 байта (openssl rand -hex 32).
+#   ADMIN_DOMAIN=admin.oxsar-nova.ru
+#   IDENTITY_URL=http://identity-service:9001
+#   BILLING_URL=http://billing-service:9100
+#   GAME_NOVA_URL=http://backend:8080
+
+services:
+  admin-bff:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.admin-bff
+    environment:
+      BFF_LISTEN_ADDR: ":9200"
+      IDENTITY_URL: ${IDENTITY_URL:-http://identity-service:9001}
+      BILLING_URL: ${BILLING_URL:-http://billing-service:9100}
+      GAME_NOVA_URL: ${GAME_NOVA_URL:-http://backend:8080}
+      REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      BFF_IDLE_TIMEOUT: ${BFF_IDLE_TIMEOUT:-30m}
+      BFF_REFRESH_LEAD_TIME: ${BFF_REFRESH_LEAD_TIME:-60s}
+      BFF_COOKIE_DOMAIN: ${ADMIN_DOMAIN:-}
+      BFF_COOKIE_SECURE: ${BFF_COOKIE_SECURE:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    expose: ["9200"]
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:9200/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  admin-frontend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.admin-frontend
+    environment:
+      BFF_UPSTREAM: http://admin-bff:9200
+    ports:
+      - "${ADMIN_FRONTEND_PORT:-8081}:80"
+    volumes:
+      # IP-allowlist: либо проектный файл, либо пустой (см. *.example).
+      # На продакшене положить admin-ips.conf рядом с docker-compose.
+      - ./admin-ips.conf:/etc/nginx/admin-ips.conf:ro
+    depends_on:
+      - admin-bff
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:80/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
