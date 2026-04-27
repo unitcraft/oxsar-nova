@@ -131,6 +131,8 @@ func run() error {
 		pr.Get("/auth/me", h.Me)
 		pr.Post("/auth/password", h.ChangePassword)
 		pr.Post("/auth/universe-token", h.UniverseToken)
+		// План 44 (152-ФЗ ст. 14): право субъекта на удаление ПДн.
+		pr.Delete("/auth/users/me", h.DeleteMe)
 	})
 
 	// Prometheus metrics

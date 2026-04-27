@@ -1512,6 +1512,9 @@ auth:
   passwordPlaceholder: минимум 8 символов
   loginButton: Войти
   registerButton: Зарегистрироваться
+  consentPrefix: "Я ознакомлен с"
+  consentLinkText: Политикой конфиденциальности
+  consentSuffix: " и даю согласие на обработку моих персональных данных в соответствии с Федеральным законом № 152-ФЗ."
 
 error:
   accountActivation: Аккаунт еще на активирован.

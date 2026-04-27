@@ -1515,6 +1515,9 @@ auth:
   passwordPlaceholder: minimum 8 characters
   loginButton: Sign in
   registerButton: Register
+  consentPrefix: "I have read the"
+  consentLinkText: Privacy Policy
+  consentSuffix: " and consent to the processing of my personal data under Russian Federal Law No. 152-FZ."
 
 error:
   accountActivation: ""

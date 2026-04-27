@@ -5,6 +5,7 @@ import { NewsListPage, NewsDetailPage } from '@/pages/NewsPage';
 import { FeedbackListPage, FeedbackNewPage, FeedbackDetailPage } from '@/pages/FeedbackPage';
 import { LoginPage, RegisterPage } from '@/pages/AuthPage';
 import { ProfilePage } from '@/pages/ProfilePage';
+import { PrivacyPage } from '@/pages/PrivacyPage';
 
 function usePathname() {
   const [path, setPath] = useState(window.location.pathname);
@@ -39,6 +40,8 @@ export function App() {
     page = <RegisterPage />;
   } else if (path === '/profile') {
     page = <ProfilePage />;
+  } else if (path === '/privacy') {
+    page = <PrivacyPage />;
   } else {
     page = <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-muted)' }}>Страница не найдена</div>;
   }

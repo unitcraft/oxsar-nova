@@ -36,11 +36,12 @@ export const portalApi = {
   },
 
   auth: {
-    register: (username: string, email: string, password: string) =>
+    register: (username: string, email: string, password: string, consentAccepted: boolean) =>
       api.post<{ user: AuthUser; tokens: Tokens }>('/auth/register', {
         username,
         email,
         password,
+        consent_accepted: consentAccepted,
       }),
     login: (login: string, password: string) =>
       api.post<{ user: AuthUser; tokens: Tokens }>('/auth/login', { login, password }),
@@ -49,6 +50,8 @@ export const portalApi = {
     logout: (refresh: string) =>
       api.post<void>('/auth/logout', { refresh }),
     me: () => api.get<AuthUser>('/auth/me'),
+    // План 44 (152-ФЗ ст. 14): право на удаление ПДн.
+    deleteMe: () => api.delete<void>('/auth/users/me'),
   },
 
   // План 38 Ф.7: billing-service. Кошельки, история, заказы пакетов кредитов.

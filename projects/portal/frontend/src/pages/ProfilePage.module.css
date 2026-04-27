@@ -34,3 +34,73 @@
   transition: var(--ox-tr);
 }
 .logout:hover { border-color: var(--ox-danger); color: var(--ox-danger); }
+
+.danger {
+  margin-top: 2rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--ox-danger);
+  border-radius: var(--ox-r-lg);
+  background: rgba(239, 68, 68, 0.03);
+  display: flex; flex-direction: column; gap: 0.75rem;
+}
+
+.dangerTitle {
+  margin: 0;
+  font-size: 0.95rem; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ox-danger);
+}
+
+.dangerDesc { margin: 0; font-size: 0.875rem; color: var(--ox-fg-dim); line-height: 1.55; }
+
+.dangerInput {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--ox-border);
+  border-radius: var(--ox-r);
+  background: var(--ox-bg-2);
+  color: var(--ox-fg);
+  font-family: var(--ox-mono); font-size: 0.95rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  max-width: 220px;
+}
+.dangerInput:focus { outline: none; border-color: var(--ox-danger); }
+
+.dangerError { color: var(--ox-danger); font-size: 0.85rem; }
+
+.dangerActions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.dangerBtn {
+  align-self: flex-start;
+  padding: 0.55rem 1.1rem;
+  background: transparent; border: 1px solid var(--ox-danger);
+  color: var(--ox-danger);
+  border-radius: var(--ox-r);
+  cursor: pointer;
+  font-size: 0.875rem; letter-spacing: 0.04em; text-transform: uppercase;
+  transition: var(--ox-tr);
+}
+.dangerBtn:hover { background: rgba(239, 68, 68, 0.08); }
+
+.dangerConfirm {
+  padding: 0.55rem 1.1rem;
+  background: var(--ox-danger); border: 1px solid var(--ox-danger);
+  color: #fff;
+  border-radius: var(--ox-r);
+  cursor: pointer;
+  font-size: 0.875rem; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  transition: var(--ox-tr);
+}
+.dangerConfirm:hover:not(:disabled) { opacity: 0.9; }
+.dangerConfirm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.dangerCancel {
+  padding: 0.55rem 1.1rem;
+  background: transparent; border: 1px solid var(--ox-border);
+  color: var(--ox-fg-muted);
+  border-radius: var(--ox-r);
+  cursor: pointer;
+  font-size: 0.875rem; letter-spacing: 0.04em; text-transform: uppercase;
+  transition: var(--ox-tr);
+}
+.dangerCancel:hover { color: var(--ox-fg); border-color: var(--ox-fg-muted); }
