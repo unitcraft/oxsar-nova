@@ -101,6 +101,33 @@ class Moderation
     }
 
     /**
+     * Маскирует запрещённые корни в строке. Если ничего не найдено —
+     * возвращает $input без изменений.
+     *
+     * Семантика — паритет с MaskForbidden из Go-версии
+     * (projects/game-nova/backend/internal/moderation/blacklist.go):
+     * если найдено хоть одно запрещённое слово, то ВСЕ буквенные
+     * символы в строке заменяются на «*». Цифры, пробелы, пунктуация,
+     * HTML/BBCode-теги остаются как есть. Длина строки сохраняется.
+     *
+     * Это «крупная» стратегия: лучше перерезать невинный текст
+     * (если в нём есть мат), чем пропустить мат через regex-обход.
+     * Для серьёзной модерации — сторонний сервис (см. план 50 §4).
+     */
+    public static function mask($input)
+    {
+        $input = (string)$input;
+        if (!self::isForbidden($input)) { return $input; }
+        $out = '';
+        $len = mb_strlen($input, 'UTF-8');
+        for ($i = 0; $i < $len; $i++) {
+            $ch = mb_substr($input, $i, 1, 'UTF-8');
+            $out .= self::isLetter($ch) ? '*' : $ch;
+        }
+        return $out;
+    }
+
+    /**
      * Количество корней в списке (для логов при старте/в админке).
      */
     public static function size()
