@@ -64,6 +64,16 @@ if (!function_exists('socialUrl')) {
   function socialUrl($url) { return $url; }
 }
 
+// План 37.5d.9: artImageUrl — генерация URL для preview артефакт-картинок.
+// В legacy указывала на index.php/artefact2user_YII (Yii route).
+// У нас Yii нет — возвращаем пустую строку (preview-картинки не критичны).
+if (!function_exists('artImageUrl')) {
+  function artImageUrl($action, $suffix, $real_url = true) {
+    // Возвращает фиксированный 1x1 placeholder, чтобы JavaScript src= не сломался.
+    return ($real_url ? RELATIVE_URL : "") . "images/empty/empty.gif?";
+  }
+}
+
 function doHeaderRedirection($url, $appendSession = true)
 {
   // $test =  strpos("http://", $url);
