@@ -781,8 +781,10 @@ class EventHandler
 						break;
 				}
 			}
-			catch( Exception $e )
+			catch( \Throwable $e )
 			{
+				// 37.8 STUCK-001: было `Exception` — на PHP 8 не ловит \Error (TypeError, OOM и пр.),
+				// событие застревало в PROCESSED_START. \Throwable ловит и Exception, и Error.
 				$processed_result 	= EVENT_PROCESSED_ERROR;
 				$error_message 		= "EH Exception: " . $e->__toString();
 				error_log( "[EVENT {$row['eventid']}] CATCH " . $error_message);
@@ -821,11 +823,16 @@ class EventHandler
 
 		if( !mt_rand(0, 1000) )
 		{
+			// 37.8 STUCK-003: было 14 дней для PROCESSED_START — слишком долго,
+			// игрок ждал две недели до auto-recovery зависшего флота. 3 дня
+			// безопасно покрывает max event duration (экспедиция ~24-48ч).
+			// NB: cleanup только удаляет event, НЕ возвращает ресурсы/корабли —
+			// полноценный recovery остаётся отдельной задачей (см. bugfix-log).
 			sqlDelete(
 				"events",
 				"(processed = ".EVENT_PROCESSED_OK." AND processed_time < ".sqlVal(time() - 60*60*24*7).")"
 				. " OR (processed = ".EVENT_PROCESSED_ERROR." AND processed_time < ".sqlVal(time() - 60*60*24*10).")"
-				. " OR (processed = ".EVENT_PROCESSED_START." AND processed_time < ".sqlVal(time() - 60*60*24*14).")"
+				. " OR (processed = ".EVENT_PROCESSED_START." AND processed_time < ".sqlVal(time() - 60*60*24*3).")"
 			);
 			if($is_external_handler)
 			{
@@ -2250,7 +2257,8 @@ class EventHandler
 	protected function demolish($row, $data)
 	{
 		// Hook::event("EH_DOWNGRADE_BUILDING", array(&$row, &$data));
-		$points = round(($data["metal"] + $data["metal"] + $data["metal"]) * RES_TO_BUILD_POINTS, POINTS_PRECISION);
+		// 37.8 OVF-004: было `metal+metal+metal` (typo legacy oxsar2), теперь как в строке 2201/2853/3021
+		$points = round(($data["metal"] + $data["silicon"] + $data["hydrogen"]) * RES_TO_BUILD_POINTS, POINTS_PRECISION);
 
 		$add_row = sqlSelectRow("building2planet", "added", "", "buildingid = ".sqlVal($data["buildingid"])." AND planetid = ".sqlVal($row["planetid"]));
 

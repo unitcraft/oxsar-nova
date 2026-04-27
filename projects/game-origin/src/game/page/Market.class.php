@@ -216,15 +216,34 @@ class Market extends Page
 
 		if($credit != "---")
 		{
+			// 37.8 REF-005: атомарная проверка credit перед списанием.
+			// Без этого два параллельных запроса оба видели бы достаточный
+			// credit-snapshot и оба списывали бы стоимость → credit в минус.
+			$userid = NS::getUser()->get("userid");
+			$stmt = sqlQuery(
+				"UPDATE ".PREFIX."user SET credit = credit - ".sqlVal($credit)
+				. " WHERE userid = ".sqlVal($userid)
+				. " AND credit >= ".sqlVal($credit)
+			);
+			$reserved = $stmt ? $stmt->rowCount() : 0;
+			if($reserved < 1)
+			{
+				Logger::dieMessage("MARKET_NOT_ENOUGH_CREDITS");
+				doHeaderRedirection($this->main_page, false);
+				return $this;
+			}
+			// Списание прошло атомарно — теперь добавляем ресурсы. Передаём
+			// credit=0, чтобы updateUserRes не списал второй раз; ресурсы
+			// (metal/silicon/hydrogen) добавляются как обычно.
 			NS::updateUserRes(array(
 				"type" => RES_UPDATE_EXCHANGE,
 				"reload_planet" => false,
-				"userid" => NS::getUser()->get("userid"),
+				"userid" => $userid,
 				"planetid" => NS::getPlanet()->getPlanetId(),
 				"metal" => $metal,
 				"silicon" => $silicon,
 				"hydrogen" => $hydrogen,
-				"credit" => - $credit,
+				"credit" => 0,
 				));
 			if( $credit > 0 )
 			{
