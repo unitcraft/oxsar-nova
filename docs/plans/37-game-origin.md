@@ -880,7 +880,24 @@ done
 | 37.5d.2 | Скрипт apply fixture к нашей БД (с сохранением global_user_id) | ✅ done (b0ccce032d) | `tools/apply-test-user-fixture.sh` |
 | 37.5d.3 | Compare-tool: curl всех страниц у нас и в legacy + нормализованный diff | ✅ done | `tools/compare-with-legacy.sh` + `compare-output/report.md` |
 | 37.5d.4 | Триаж diff-отчёта | ✅ done — нашли base-level баги (Yii-классы, sql_mode, paths). UI-сравнение преждевременно. | См. ниже «Триаж» |
-| 37.5d.5 | Заменить остаточные `*_YII` классы и `CDbCriteria` на чистый PDO | pending | `src/game/page/*` фиксы |
+| 37.5d.5 | Заменить остаточные `*_YII` классы и `CDbCriteria` на чистый PDO | ✅ done (6 коммитов: 13f0b595f1, 4c0e1e90d2, d1d049f696, f5a79ae22b, 05a542bec0) | Все 13 Yii-классов и `CDbCriteria` вычищены из активного кода |
+
+### Результаты выполнения 37.5d.5
+
+**Все 13 классов вычищены за 6 коммитов** (все `*_YII::` и `CDbCriteria`
+исчезли из активного кода, остался 1 закомментированный `Assault_YII`
+в `/* ... */` блоке Assault.class.php:367).
+
+| Коммит | Класс / файл | Эффект |
+|---|---|---|
+| 13f0b595f1 | `Requirements_YII` в NS::class.php:800 | Empire 279→57273, Techtree 279→62785 (parity ~99%) |
+| 4c0e1e90d2 | `UserStates_YII` (3) + `User_YII::findByPk` (1) в AchievementsService + Functions | Achievements теперь действительно срабатывают (раньше тихо игнорировались в catch) |
+| d1d049f696 | `Assault_YII`, `Galaxy_YII`, `Planet_YII` (6) в Assault.class.php | checkCreatedMoonInSystem/ForUser работают (вызываются на attack) |
+| f5a79ae22b | `Notes_YII`, `TutorialStatesCategory_YII`, `UserAgreement_YII`, `User_YII::updateByPk` | Notepad 283→12007, Tutorial 284→20972, UserAgreement 289→11686 |
+| 05a542bec0 | `Sessions_YII`, `Artefact2user_YII`, `User_YII` (3 места), `User2ally_YII`, `Config_YII` (мёртвый), `User_YII::showChatOnline` (debug stub) | Logout, Exchange, AccountActivation, LostPassword, Functions::getUser2ally, TestAlienAI |
+
+Smoke test после каждой итерации: Main page стабильно рендерится 16138
+байт, "Hello World" из legacy. Регрессий нет.
 
 ### Решение по 37.5d.5: переписать всё на raw SQL
 
