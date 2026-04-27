@@ -25,36 +25,42 @@ class Tutorial extends Page
 	
 	protected function index()
 	{
-		$crit = new CDbCriteria();
-		$crit->order = 't.id ASC, states.display_order ASC';
-		$tutorials = TutorialStatesCategory_YII::model()->with('states')->findAll($crit);
-		if( empty($tutorials) )
+		// План 37.5d.5#5: replaced TutorialStatesCategory_YII->with('states')->findAll().
+		// FK: tutorial_states.category → tutorial_states_category.id.
+		// Yii relation 'states' = категория HAS_MANY tutorial_states по category.
+		$result = array();
+		$rows = Core::getDB()->query(
+			"SELECT c.id AS cat_id, c.title AS cat_title,"
+			. " s.id AS state_id, s.formaction AS state_formaction, s.name AS state_name"
+			. " FROM ".PREFIX."tutorial_states_category c"
+			. " LEFT JOIN ".PREFIX."tutorial_states s ON s.category = c.id"
+			. " ORDER BY c.id ASC, s.display_order ASC"
+		);
+		$counters = array(); // state index per category
+		while( $row = Core::getDB()->fetch($rows) )
 		{
-			$result = array();
-		}
-		else
-		{
-			foreach( $tutorials as $tutorial )
+			$cat_id = $row["cat_id"];
+			if( !isset($result[$cat_id]) )
 			{
-				$id = $tutorial->id;
-				$result[$id]['number']	= $id;
-				$result[$id]['title']	= Core::getLang()->getItem($tutorial->title);
-				if( $tutorial->states )
-				{
-					$i = 0;
-					foreach( $tutorial->states as $state )
-					{
-						$i++;
-						$result[$id]['states'][$i]['number']	= $id . '.' . $i;
-						$result[$id]['states'][$i]['id']		= $state->id;
-						$result[$id]['states'][$i]['formaction']= $state->formaction;
-						$result[$id]['states'][$i]['title']		= Core::getLang()->getItem($state->name . '_QUESTION');
-					}
-				}
+				$result[$cat_id]['number'] = $cat_id;
+				$result[$cat_id]['title']  = Core::getLang()->getItem($row["cat_title"]);
+				$counters[$cat_id] = 0;
+			}
+			if( !empty($row["state_id"]) )
+			{
+				$counters[$cat_id]++;
+				$i = $counters[$cat_id];
+				$result[$cat_id]['states'][$i] = array(
+					'number'     => $cat_id . '.' . $i,
+					'id'         => $row["state_id"],
+					'formaction' => $row["state_formaction"],
+					'title'      => Core::getLang()->getItem($row["state_name"] . '_QUESTION'),
+				);
 			}
 		}
-		$tutorials = $result;
-		Core::getTPL()->addLoop('avaliable_tutorials', $tutorials);
+		Core::getDB()->free_result($rows);
+
+		Core::getTPL()->addLoop('avaliable_tutorials', $result);
 		Core::getTPL()->display('tutorials');
 		return $this;
 	}
