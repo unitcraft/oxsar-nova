@@ -902,6 +902,74 @@ dev-окружению, ни к фронтенду:
   `service.go::register/login`, `password.go`, `JWT_SECRET` в config) — отдельным
   PR после Ф.12 (мёртвый код, не блокер).
 
+### Ф.12.5 — Lazy-create user-conflict (~½ дня)
+
+**Прецедент 2026-04-27:** юзер `alice` зарегистрировался в auth-service
+(новый `id=A`), но в `game-db.users` уже была запись `username='alice'` с
+**другим** `id=B` (legacy, до Ф.5). `EnsureUserMiddleware` сделал
+`INSERT (id=A, username='alice', email=NULL, ...) ON CONFLICT (id) DO NOTHING`
+— конфликт пошёл по `users_username_key` UNIQUE (не `id`!), INSERT упал
+с SQLSTATE 23505. Все последующие `/api/me` → 500 «no rows in result set»,
+юзер залип на «Загрузка вселенной...».
+
+**Корневая причина:** `EnsureUserMiddleware` обрабатывает только `id`-конфликт,
+не учитывает что `username` тоже UNIQUE и может конфликтовать с legacy-данными.
+
+**Варианты решения:**
+
+1. **(a) Ужесточить UNIQUE-проверки.** В INSERT заменить `ON CONFLICT (id) DO NOTHING`
+   на двойной upsert: сначала по id, потом по username. Если username уже занят
+   с другим id — это **семантический конфликт** (два разных аккаунта хотят
+   одно имя), нужно явно ошибку клиенту. Lazy-create такой случай разрешить
+   не может — это работа админа/UI «занятое имя при регистрации».
+
+2. **(b) Source-of-truth для username — auth-db.** В game-db `username`
+   убрать UNIQUE → дропнуть constraint. Имя берётся из JWT-claims при
+   каждом запросе (через `RSAClaims`). Тогда конфликта нет: два юзера
+   могут иметь одинаковое имя в game-db (хоть и сомнительно с UX).
+
+3. **(c) Mapping-таблица.** Добавить `auth_user_id (UUID) → game_user_id (UUID)`.
+   Все FK в game-db ссылаются на `game_user_id`, EnsureUserMiddleware
+   создаёт mapping при первом lazy-create.
+
+**Выбор: (a)** — минимальные изменения, корректная семантика.
+Реализация:
+
+- `EnsureUserMiddleware`: SQL upgrade
+  ```sql
+  INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, NULL)
+  ON CONFLICT (id) DO NOTHING
+  RETURNING id;
+  ```
+  → если RETURNING пустой (конфликт по id) — юзер уже есть, OK.
+  → если SQLSTATE 23505 на `users_username_key` — это conflict-by-username,
+  legacy-юзер с таким username существует с **другим** id. Логировать,
+  возвращать клиенту 409 Conflict с сообщением «username taken — обратитесь
+  в поддержку для миграции аккаунта».
+
+  В чистой среде (после Ф.5/Ф.12) такого конфликта быть не должно. Возникает
+  только если в game-db остались legacy-юзера до миграций.
+
+- Migrate-скрипт `cmd/tools/migrate-legacy-users` (одноразовый):
+  - SELECT users.* FROM game-db WHERE password_hash IS NOT NULL (т.е. legacy).
+  - Для каждого: SELECT user FROM auth-db WHERE username=X.
+    - Если есть и id совпадает (одна запись в обеих БД с тем же id) — пропускаем
+      (нормальный новый flow).
+    - Если есть и id отличается — UPDATE game-db.users SET id=auth.id WHERE
+      id=legacy.id (CASCADE через FK обновит planets, fleets и т.д.).
+    - Если нет в auth-db — это «забытый» legacy-аккаунт без auth, удалить
+      или экспортировать (по решению).
+  - Вывести summary: migrated/skipped/orphaned.
+
+#### Acceptance
+
+- В чистой dev-среде: `register alice` → `/api/me` на uni01 → 200 (новый юзер).
+- При наличии legacy-юзера: `register alice` → `/api/me` → **409 Conflict**
+  с понятным сообщением (а не 500 «no rows»).
+- `cmd/tools/migrate-legacy-users` корректно мигрирует существующие записи.
+- Тест на race: 50 параллельных запросов от нового юзера → ровно один INSERT
+  в game-db (ON CONFLICT защищает).
+
 ### Ops: нагрузочный тест (отдельный тикет, ~1–2 дня)
 
 После Ф.8, до публичного анонса. Обновить [ops/vps-sizing.md](../ops/vps-sizing.md)
