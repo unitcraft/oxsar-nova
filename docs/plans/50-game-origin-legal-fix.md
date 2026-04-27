@@ -221,12 +221,48 @@ artefactmarket2.tpl и другие.
 
 ## Этапы
 
-### Ф.1. Замена TinyMCE
+### Ф.1. Замена TinyMCE ✅ (2026-04-27)
 
 - Решить: TinyMCE 6+ / Quill / простой textarea.
 - Подключить новый редактор в `src/templates/standard/chat.tpl`.
 - Удалить `public/js/tiny_mce/` целиком (~430 МБ).
 - Smoke-тест чата: отправка сообщения, форматирование (если нужно).
+
+**Решение:** вариант 3 (простой `<textarea>`/`<input>`) — оказался уже
+де-факто реализованным. При изучении `chat.tpl` обнаружено, что
+**весь TinyMCE-код находится в `{if[0 && isAdmin()]}`-блоках**
+(строки 163-271 и 309-332 до правки) — `0 && ...` это Smarty-аналог
+`if(false)`, блок никогда не выполнялся. Реальный chat-input —
+обычный `<input type="text" name="shoutbox_message">` (строка 340
+в исходнике), JS-обработчик `$('#chat_form').live('submit', ...)`
+без TinyMCE-вызовов. Backend (`Chat::sendMessage()` в
+`src/game/page/Chat.class.php`) принимает plain text + bbcode-замены
+через функцию `Teg(...)` (план 50 Ф.4 уже добавил туда
+`Moderation::mask()`).
+
+**Что сделано:**
+- Удалены `if[0 && isAdmin()]`-блоки (init TinyMCE + tinymce_chat_form
+  с `<input id="tinymce_chat_message">`) — заменены HTML-комментариями.
+- `git rm -r projects/game-origin/public/js/tiny_mce/` — **430 файлов**
+  библиотеки TinyMCE удалены. Размер `projects/game-origin/`
+  уменьшился с 3.7G до 3.2G.
+- В `jquery.form.js` (сторонний пакет) осталось одно упоминание в
+  док-комментарии — это сторонняя документация плагина, не наша.
+  Не правим.
+
+**Backend strip_tags не делался:** legacy-сообщения в `na_chat` —
+plain text + bbcode (см. функцию `bbcode($source)` в Chat.class.php
+строки 23-44 — она преобразует `[b]…[/b]` в `<b>…</b>` при выводе).
+Никаких `<script>`/`<img>` у пользователей не было — TinyMCE-форма
+никогда не работала. Ничего не нужно мигрировать.
+
+**Verification:**
+- `curl ?go=Chat` → HTTP 200, **0** совпадений `tiny_mce`/`tinymce`,
+  4 шаблонных совпадения `shoutbox_message` (input в чате).
+- `GET /js/tiny_mce/tiny_mce.js` → **404** (файлы реально удалены).
+- `grep -rn "tiny_mce\|tinyMCE"` в repo вне `/cache/`,
+  `compare-output/`, legacy-dump'ов: только HTML-комментарии в
+  `chat.tpl` + 1 doc-комментарий в `jquery.form.js`.
 
 ### Ф.2. Регистрация и согласия
 

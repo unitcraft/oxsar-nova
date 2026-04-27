@@ -10030,3 +10030,72 @@ copyright, итерация 50.partial). Ф.4 — расширение UGC-black
 с RBAC-правками.
 
 **Коммит**: 1.
+
+## Итерация 50.Ф.1 (2026-04-27) — game-origin: удаление TinyMCE (LGPL, 430MB)
+
+**Контекст**: план 50 §1 закрывает Gap 2.1 из аудита
+(`docs/ops/legal-compliance-audit.md`). TinyMCE 3.x в
+`projects/game-origin/public/js/tiny_mce/` ~430 МБ под LGPL 2.1 —
+несовместим с PolyForm Noncommercial (план 41 B3).
+
+Было запланировано: «заменить на простой <textarea>».
+
+**Что выяснилось при изучении:** весь TinyMCE-код в `chat.tpl`
+находился в `{if[0 && isAdmin()]}`-блоках — выключен с момента
+импорта legacy и **никогда не выполнялся**. Реальный chat-input —
+обычный `<input type="text" name="shoutbox_message">` (строка 340
+в исходнике). JS-обработчик `$('#chat_form').live('submit', ...)`
+не использует TinyMCE. Backend `Chat::sendMessage()` принимает
+plain text + `[b][/b]` BBCode-теги (свой парсер `Teg(...)`,
+`Moderation::mask()` уже добавлен планом 50 Ф.4).
+
+То есть **никакой замены не нужно** — UX уже plain-text. Удаление
+сводится к чистке мёртвого if(0)-кода + `git rm -r tiny_mce/`.
+
+**Что сделано:**
+
+- `chat.tpl`: удалены два `{if[0 && isAdmin()]}`-блока
+  (строки 163-271 — init TinyMCE; строки 309-332 — отдельная
+  tinymce-форма с `<input id="tinymce_chat_message">`). Заменены
+  HTML-комментариями со ссылкой на план 50 Ф.1. Реальная форма
+  `#chat_form` с `shoutbox_message` остаётся.
+
+- `git rm -r projects/game-origin/public/js/tiny_mce/` — 430 файлов
+  библиотеки удалены. **Размер `projects/game-origin/`:
+  3.7G → 3.2G** (минус ~500MB, чуть больше из-за git-внутренностей).
+
+- В `jquery.form.js` (сторонний пакет) осталось одно упоминание
+  `tinyMCE` в док-комментарии — это документация плагина jQuery
+  Form, не наш код. Не правим.
+
+- **Backend strip_tags не делался:** legacy-сообщения в `na_chat`
+  всегда были plain text + bbcode, никогда не было `<script>`/
+  `<img>` (TinyMCE-форма не работала). Миграция данных не нужна.
+
+**Smarty-сюрприз:** `{*…*}`-стиль комментариев Smarty в нашей
+кастомной XCS-обёртке (`game-origin/src/`) **не работает** —
+вложенные `{` (например, `{if[0 && isAdmin()]}` внутри текста
+комментария) ломают балансировку фигурных скобок и приводят к
+`ParseError: Unclosed '{' on line N`. Заменил на HTML-комментарии
+`<!-- ... -->` без фигурных скобок внутри.
+
+**Verifications:**
+- `curl ?go=Chat` → HTTP 200, 27933 байта (нормальная страница чата).
+- `grep -c "tiny_mce\|tinymce"` в HTML-ответе: **0**.
+- `grep -c "shoutbox_message"` в HTML-ответе: **4** (нормальный
+  input + JS-обработчики).
+- `GET /js/tiny_mce/tiny_mce.js` → **404** (файлы реально удалены).
+- `grep -rn "tiny_mce\|tinyMCE"` в репо вне `/cache/`,
+  `compare-output/`, legacy-dump'ов: только HTML-комментарии в
+  `chat.tpl` (4 шт., с пометкой плана 50 Ф.1) + 1 doc-комментарий
+  в `jquery.form.js` (сторонний пакет).
+- `php -l` chat.tpl не применим (не PHP), но Smarty-парсер прогнал
+  без ошибок (см. HTTP 200).
+
+**Параллельные сессии:** перед коммитом `git status --short` —
+проверил, что в working tree только мои файлы (`chat.tpl`, 430
+deletes в `tiny_mce/`, doc-файлы 50/audit/project-creation).
+Соседи (план 56 frontend, план 53 admin-frontend) — в Go/TypeScript,
+не пересекаются.
+
+**Коммит**: 1.

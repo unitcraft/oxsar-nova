@@ -160,115 +160,10 @@ $(function(){
 
 </script>
 
-{if[0 && isAdmin()]}
-<script type="text/javascript" src="{const=RELATIVE_URL}js/tiny_mce/tiny_mce.js"></script>
-<script type="text/javascript">
-
-$(function(){
-	tinyMCE.init({
-		// General options
-		mode : "exact",
-		elements : "tinymce_chat_message",
-		theme : "advanced",
-
-		skin : "o2k7",
-		skin_variant : "black",
-
-		force_p_newlines : false,
-		force_br_newlines : true,
-		forced_root_block : "",
-		paste_create_linebreaks : false,
-		// language: "es",
-		cleanup_on_startup : true,
-		cleanup: true,
-		debug : false,
-		// file_browser_callback : "dame_contenido",
-		auto_focus : "tinymce_chat_message",
-		plugins : "emotions,inlinepopups,noneditable,visualchars,xhtmlxtras",
-
-		// Theme options
-		theme_advanced_buttons1 :",undo,redo,|,bold,italic,underline,strikethrough,{if[ NS::getUser()->get("points") > 5 ]}{if[ NS::getUser()->get("points") > 20 ]}emotions,charmap,{/if}|,forecolor,{if[ NS::getUser()->get("points") > 100 ]}backcolor,{/if}|,link,unlink,{/if}",
-		theme_advanced_buttons2 : "",
-		theme_advanced_buttons3 : "",
-		theme_advanced_buttons4 : "",
-		theme_advanced_toolbar_location : "top",
-		theme_advanced_toolbar_align : "left",
-		theme_advanced_statusbar_location : "none",
-		theme_advanced_buttons1_add_before : "save",
-
-		/*
-		plugins : "pagebreak,style,layer,table,save,advhr,advimage,advlink,emotions,iespell,inlinepopups,insertdatetime,preview,media,searchreplace,print,contextmenu,paste,directionality,fullscreen,noneditable,visualchars,nonbreaking,xhtmlxtras,template",
-
-		// Theme options
-		theme_advanced_buttons1 : "save,newdocument,|,bold,italic,underline,strikethrough,|,justifyleft,justifycenter,justifyright,justifyfull,|,styleselect,formatselect,fontselect,fontsizeselect",
-		theme_advanced_buttons2 : "cut,copy,paste,pastetext,pasteword,|,search,replace,|,bullist,numlist,|,outdent,indent,blockquote,|,undo,redo,|,link,unlink,anchor,image,cleanup,help,code,|,insertdate,inserttime,preview,|,forecolor,backcolor",
-		theme_advanced_buttons3 : "tablecontrols,|,hr,removeformat,visualaid,|,sub,sup,|,charmap,emotions,iespell,media,advhr,|,print,|,ltr,rtl,|,fullscreen",
-		theme_advanced_buttons4 : "insertlayer,moveforward,movebackward,absolute,|,styleprops,|,cite,abbr,acronym,del,ins,attribs,|,visualchars,nonbreaking,template,pagebreak",
-		theme_advanced_toolbar_location : "top",
-		theme_advanced_toolbar_align : "left",
-		theme_advanced_statusbar_location : "bottom",
-		theme_advanced_resizing : true,
-		*/
-
-		// Example content CSS (should be your site CSS)
-		content_css : "{const=RELATIVE_URL}css/style.css?{const=CLIENT_VERSION}",
-
-		// Drop lists for link/image/media/template dialogs
-		/*
-		template_external_list_url : "js/template_list.js",
-		external_link_list_url : "js/link_list.js",
-		external_image_list_url : "js/image_list.js",
-		media_external_list_url : "js/media_list.js",
-		*/
-
-		setup: function(ed)
-			{
-			  ed.onKeyPress.add(function(ed, e)
-			  {
-				  var keyCode = e.keyCode||e.which||e.charCode;
-				  if( keyCode == 13 )
-				  {
-					tinymce_chat_send( ed.getContent() );
-					// ajaxpost('chat_insert.php','texto='+ dame_contenido());
-					ed.setContent(' ');
-					ed.selection.select(ed.getBody());
-					ed.selection.collapse(true);
-					e.preventDefault();
-				  }
-			  });
-			},
-	});
-	// tinyMCE.execCommand("mceAddControl", true, "tinymce_chat_control");
-
-	$('#tinymce_chat_form').live('submit',function(){
-		tinymce_chat_send();
-		return false;
-	});
-
-});
-
-function tinymce_chat_send(msg)
-{
-	if(msg == undefined)
-	{
-		msg = tinyMCE.get('tinymce_chat_message').getContent();
-	}
-
-	msg = encodeURIComponent(msg); // $('#shoutbox_message').val() );
-	var p_data = 'msg=' + msg + '&tinymce=1';
-	$.ajax({
-		data: p_data,
-		type: "POST",
-		url: "<?php echo socialUrl('/chat.php?r=chat/send'); ?>",
-		success: function(data){
-			$('#shoutbox_message').val('');
-			chatRefresh();
-		}
-	});
-}
-
-</script>
-{/if}
+<!-- План 50 Ф.1 (2026-04-27): TinyMCE-блок (LGPL) удалён. Был в
+     if[0 AND isAdmin()] — выключен с момента импорта legacy и
+     никогда не выполнялся. Реальный chat-input — обычный
+     input type=text ниже (см. форму #chat_form). -->
 
 <table class="ntable">
 	<tr>
@@ -306,30 +201,8 @@ function tinymce_chat_send(msg)
 		</div>
 		</td>
 	</tr>
-	{if[0 && isAdmin()]}
-	<tr>
-		<td>
-			<form method="post" action="{@sendAction}" id='tinymce_chat_form'>
-			<table cellspacing="0" cellpadding="0" border="0" class="table_no_background">
-				<tr>
-					<td width="100%">
-						{if[0]}<textarea name="tinymce_chat_message" id="tinymce_chat_message" cols="60" rows="2" style="width:100%">
-						</textarea>{/if}
-						<input type="text" name="tinymce_chat_message" id="tinymce_chat_message" style="width:100%" size="60" maxlength="500" />
-					</td>
-					<td width="1px" valign="top" align="center"><input type="submit" class="button" name="send_message" value="Отправить" />
-						<p />
-						<span>Читают<br /><span class="false" id="chat_online2">~~</span></span>
-					</td>
-				</tr>
-				<tr>
-					<td><div id="tinymce_chat_control"></div></td>
-				</tr>
-			</table>
-			</form>
-		</td>
-	</tr>
-	{/if}
+	<!-- План 50 Ф.1 (2026-04-27): admin-only TinyMCE-форма удалена
+	     (была в if[0 AND isAdmin()], никогда не выполнялась). -->
 	<tr>
 		<td>
 			<table cellspacing="0" cellpadding="0" border="0" class="table_no_background">
