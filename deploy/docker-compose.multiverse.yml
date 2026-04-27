@@ -161,7 +161,6 @@ services:
       JWT_REFRESH_TTL: 720h
       LOG_LEVEL:       info
       ALLOWED_ORIGINS: "https://oxsar-nova.ru,https://uni01.oxsar-nova.ru,https://uni02.oxsar-nova.ru"
-      UNIVERSES_CONFIG: /app/configs/universes.yaml
     volumes:
       - /run/secrets:/run/secrets:ro
     ports: ["9000:9000"]
