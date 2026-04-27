@@ -22,16 +22,18 @@ var (
 	ErrUserExists        = errors.New("authsvc: user already exists")
 	ErrInvalidCredential = errors.New("authsvc: invalid credentials")
 	ErrUserBanned        = errors.New("authsvc: account banned")
-	ErrInsufficientFunds = errors.New("authsvc: insufficient credits")
 )
 
 // User — публичная проекция пользователя.
+//
+// План 38 Ф.5: GlobalCredits удалён — баланс в billing-service
+// (GET /billing/wallet/balance). Чтобы получить вместе с профилем —
+// клиент делает 2 запроса (или backend frontend-агрегатор делает 1).
 type User struct {
-	ID            string   `json:"id"`
-	Username      string   `json:"username"`
-	Email         string   `json:"email"`
-	GlobalCredits int64    `json:"global_credits"`
-	Roles         []string `json:"roles"`
+	ID       string   `json:"id"`
+	Username string   `json:"username"`
+	Email    string   `json:"email"`
+	Roles    []string `json:"roles"`
 }
 
 // RegisterInput — вход регистрации.
@@ -41,22 +43,8 @@ type RegisterInput struct {
 	Password string
 }
 
-// SpendInput — списание кредитов.
-type SpendInput struct {
-	UserID string
-	Amount int64
-	Reason string // "feedback_vote" | "universe_purchase" | ...
-	RefID  string // id предложения, вселенной и т.п.
-}
-
-// CreditTx — одна транзакция кредитов.
-type CreditTx struct {
-	ID        string    `json:"id"`
-	Delta     int64     `json:"delta"`
-	Reason    string    `json:"reason"`
-	RefID     string    `json:"ref_id,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-}
+// План 38 Ф.5: SpendInput, CreditTx, ErrInsufficientFunds удалены —
+// перенесены в billing-service.
 
 // Service — основной сервис Auth Service.
 type Service struct {
@@ -107,7 +95,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (User, jwtrs.T
 		return User{}, jwtrs.Tokens{}, err
 	}
 
-	u := User{ID: userID, Username: username, Email: email, GlobalCredits: 0, Roles: []string{"player"}}
+	u := User{ID: userID, Username: username, Email: email, Roles: []string{"player"}}
 	toks, err := s.issueTokens(ctx, u)
 	if err != nil {
 		return User{}, jwtrs.Tokens{}, err
@@ -123,9 +111,9 @@ func (s *Service) Login(ctx context.Context, login, password string) (User, jwtr
 	var hash string
 	var bannedAt, deletedAt *time.Time
 	err := s.db.Pool().QueryRow(ctx, `
-		SELECT id, username, email, password_hash, global_credits, roles, banned_at, deleted_at
+		SELECT id, username, email, password_hash, roles, banned_at, deleted_at
 		FROM users WHERE email = $1 OR lower(username) = $1
-	`, login).Scan(&u.ID, &u.Username, &u.Email, &hash, &u.GlobalCredits, &u.Roles, &bannedAt, &deletedAt)
+	`, login).Scan(&u.ID, &u.Username, &u.Email, &hash, &u.Roles, &bannedAt, &deletedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return User{}, jwtrs.Tokens{}, ErrInvalidCredential
@@ -164,9 +152,9 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (jwtrs.Token
 
 	var u User
 	err = s.db.Pool().QueryRow(ctx, `
-		SELECT id, username, email, global_credits, roles
+		SELECT id, username, email, roles
 		FROM users WHERE id = $1 AND deleted_at IS NULL AND banned_at IS NULL
-	`, claims.Subject).Scan(&u.ID, &u.Username, &u.Email, &u.GlobalCredits, &u.Roles)
+	`, claims.Subject).Scan(&u.ID, &u.Username, &u.Email, &u.Roles)
 	if err != nil {
 		return jwtrs.Tokens{}, ErrInvalidCredential
 	}
@@ -178,9 +166,9 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (jwtrs.Token
 func (s *Service) GetUser(ctx context.Context, userID string) (User, error) {
 	var u User
 	err := s.db.Pool().QueryRow(ctx, `
-		SELECT id, username, email, global_credits, roles
+		SELECT id, username, email, roles
 		FROM users WHERE id = $1 AND deleted_at IS NULL
-	`, userID).Scan(&u.ID, &u.Username, &u.Email, &u.GlobalCredits, &u.Roles)
+	`, userID).Scan(&u.ID, &u.Username, &u.Email, &u.Roles)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return User{}, fmt.Errorf("authsvc: user not found")
@@ -212,82 +200,8 @@ func (s *Service) GetActiveUniverses(ctx context.Context, userID string) ([]stri
 	return universes, rows.Err()
 }
 
-// SpendCredits атомарно списывает кредиты и записывает транзакцию.
-func (s *Service) SpendCredits(ctx context.Context, in SpendInput) error {
-	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			UPDATE users SET global_credits = global_credits - $1
-			WHERE id = $2 AND global_credits >= $1
-		`, in.Amount, in.UserID)
-		if err != nil {
-			return fmt.Errorf("spend credits: %w", err)
-		}
-		if tag.RowsAffected() == 0 {
-			return ErrInsufficientFunds
-		}
-		_, err = tx.Exec(ctx, `
-			INSERT INTO credit_transactions (id, user_id, delta, reason, ref_id, created_at)
-			VALUES (gen_random_uuid(), $1, $2, $3, $4, now())
-		`, in.UserID, -in.Amount, in.Reason, in.RefID)
-		return err
-	})
-}
-
-// AddCredits зачисляет кредиты (при оплате или другом начислении).
-func (s *Service) AddCredits(ctx context.Context, userID string, amount int64, reason, refID string) error {
-	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			UPDATE users SET global_credits = global_credits + $1 WHERE id = $2
-		`, amount, userID)
-		if err != nil {
-			return fmt.Errorf("add credits: %w", err)
-		}
-		_, err = tx.Exec(ctx, `
-			INSERT INTO credit_transactions (id, user_id, delta, reason, ref_id, created_at)
-			VALUES (gen_random_uuid(), $1, $2, $3, $4, now())
-		`, userID, amount, reason, refID)
-		return err
-	})
-}
-
-// CreditBalance возвращает актуальный баланс.
-func (s *Service) CreditBalance(ctx context.Context, userID string) (int64, error) {
-	var balance int64
-	err := s.db.Pool().QueryRow(ctx,
-		`SELECT global_credits FROM users WHERE id = $1`, userID,
-	).Scan(&balance)
-	if err != nil {
-		return 0, fmt.Errorf("credit balance: %w", err)
-	}
-	return balance, nil
-}
-
-// CreditHistory возвращает историю транзакций кредитов.
-func (s *Service) CreditHistory(ctx context.Context, userID string, limit, offset int) ([]CreditTx, error) {
-	if limit <= 0 || limit > 100 {
-		limit = 50
-	}
-	rows, err := s.db.Pool().Query(ctx, `
-		SELECT id, delta, reason, COALESCE(ref_id,''), created_at
-		FROM credit_transactions
-		WHERE user_id = $1
-		ORDER BY created_at DESC
-		LIMIT $2 OFFSET $3
-	`, userID, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("credit history: %w", err)
-	}
-	defer rows.Close()
-	var result []CreditTx
-	for rows.Next() {
-		var tx CreditTx
-		if err := rows.Scan(&tx.ID, &tx.Delta, &tx.Reason, &tx.RefID, &tx.CreatedAt); err != nil {
-			return nil, err
-		}
-		result = append(result, tx)
-	}
-	return result, rows.Err()
-}
+// План 38 Ф.5: SpendCredits/AddCredits/CreditBalance/CreditHistory удалены.
+// Кошельки в billing-service (см. internal/billing/wallet.go).
 
 // ChangePassword проверяет текущий пароль и устанавливает новый. План 36 Critical-6.
 // Минимальная длина нового пароля — 8 символов (как при регистрации).
@@ -328,7 +242,6 @@ func (s *Service) issueTokens(ctx context.Context, u User) (jwtrs.Tokens, error)
 	return s.iss.Issue(jwtrs.IssueInput{
 		UserID:          u.ID,
 		Username:        u.Username,
-		GlobalCredits:   u.GlobalCredits,
 		ActiveUniverses: universes,
 		Roles:           u.Roles,
 	})

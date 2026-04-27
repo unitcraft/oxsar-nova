@@ -37,7 +37,6 @@ import (
 // Если downstream-сервису нужен email, он дёргает /auth/me с тем же токеном.
 type Claims struct {
 	Username        string   `json:"username"`
-	GlobalCredits   int64    `json:"global_credits"`
 	ActiveUniverses []string `json:"active_universes"`
 	Roles           []string `json:"roles"`
 	jwt.RegisteredClaims
@@ -54,7 +53,6 @@ type Tokens struct {
 type IssueInput struct {
 	UserID          string
 	Username        string
-	GlobalCredits   int64
 	ActiveUniverses []string
 	Roles           []string
 }
@@ -167,7 +165,6 @@ func (iss *Issuer) sign(in IssueInput, now time.Time, ttl time.Duration, kind st
 	jti := kind + ":" + uuid.New().String()
 	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, &Claims{
 		Username:        in.Username,
-		GlobalCredits:   in.GlobalCredits,
 		ActiveUniverses: universes,
 		Roles:           roles,
 		RegisteredClaims: jwt.RegisteredClaims{

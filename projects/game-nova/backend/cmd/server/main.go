@@ -41,7 +41,6 @@ import (
 	"oxsar/game-nova/internal/message"
 	"oxsar/game-nova/internal/notepad"
 	"oxsar/game-nova/internal/officer"
-	"oxsar/game-nova/internal/payment"
 	"oxsar/game-nova/internal/planet"
 	"oxsar/game-nova/internal/profession"
 	"oxsar/game-nova/internal/records"
@@ -276,8 +275,8 @@ func run() error {
 	aiAdvisorSvc := aiadvisor.NewService(db, cfg.AIAdvisor)
 	aiAdvisorH := aiadvisor.NewHandler(aiAdvisorSvc)
 
-	paymentSvc := payment.NewService(db, cfg.Payment).WithReferral(referralSvc).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
-	paymentH := payment.NewHandler(paymentSvc)
+	// План 38 Ф.5: payments переехали в billing-service (отдельный микросервис).
+	// internal/payment/ удалён, см. docs/plans/38-billing-service.md.
 
 	empireH := empire.NewHandler(pool)
 	settingsH := settings.NewHandler(pool).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
@@ -320,11 +319,11 @@ func run() error {
 	r.Post("/api/battle-sim", battleSimHandler)
 	r.Get("/api/stats", scoreH.Stats)
 	r.With(authMiddlewareFn).Get("/api/stats/resource-transfers", scoreH.ResourceTransfers)
-	r.Get("/api/payment/packages", paymentH.Packages)
-	r.Post("/api/payment/webhook", paymentH.Webhook)
-	if cfg.Payment.Provider == "mock" {
-		r.Get("/api/payment/mock/pay", paymentH.MockPay)
-	}
+	// План 38 Ф.5: /api/payment/* удалены. Платежи и пакеты — в billing-service:
+	//   GET  /billing/packages   (публичный)
+	//   POST /billing/orders     (создаёт payment_order и payURL)
+	//   POST /billing/webhooks/{provider}  (HMAC-verified webhook)
+	// Frontend дёргает billing напрямую через vite proxy /billing/*.
 
 	// i18n доступна без авторизации (логин-экран тоже использует).
 	if i18nH != nil {
@@ -429,8 +428,8 @@ func run() error {
 		pr.Post("/ai-advisor/ask", aiAdvisorH.Ask)
 		pr.Get("/ai-advisor/estimate", aiAdvisorH.Estimate)
 
-		pr.Post("/payment/order", paymentH.CreateOrder)
-		pr.Get("/payment/history", paymentH.History)
+		// План 38 Ф.5: /payment/order и /payment/history удалены. См. billing-service:
+		//   POST /billing/orders, GET /billing/wallet/history.
 
 		pr.Post("/alien/holding/{event_id}/pay", alienH.Pay)
 		pr.Get("/alien/holdings/me", alienH.MyHoldings)

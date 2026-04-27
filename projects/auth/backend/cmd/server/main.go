@@ -121,8 +121,8 @@ func run() error {
 	// Обмен handoff-токена → JWT (вызывается игровым сервером)
 	r.Post("/auth/token/exchange", h.TokenExchange)
 
-	// Внутренние endpoints (между сервисами, закрыты firewall-ом)
-	r.Post("/auth/credits/spend", h.SpendCredits)
+	// Внутренние endpoints (между сервисами, закрыты firewall-ом).
+	// План 38 Ф.5: /auth/credits/* удалены — кошельки в billing-service.
 	r.Post("/auth/universes/register", h.RegisterUniverse)
 
 	// Защищённые endpoints (требуют JWT)
@@ -130,8 +130,6 @@ func run() error {
 		pr.Use(authsvc.Middleware(ver))
 		pr.Get("/auth/me", h.Me)
 		pr.Post("/auth/password", h.ChangePassword)
-		pr.Get("/auth/credits/balance", h.CreditBalance)
-		pr.Get("/auth/credits/history", h.CreditHistory)
 		pr.Post("/auth/universe-token", h.UniverseToken)
 	})
 

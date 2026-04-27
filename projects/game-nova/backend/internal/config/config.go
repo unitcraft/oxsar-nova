@@ -13,6 +13,8 @@ import (
 )
 
 // Config агрегирует все настройки, необходимые приложению на старте.
+//
+// План 38 Ф.5: Payment удалён — платежи в billing-service (отдельный домен).
 type Config struct {
 	Server    ServerConfig
 	DB        DBConfig
@@ -20,7 +22,6 @@ type Config struct {
 	Auth      AuthConfig
 	Game      GameConfig
 	AIAdvisor AIAdvisorConfig
-	Payment   PaymentConfig
 }
 
 type ServerConfig struct {
@@ -63,17 +64,6 @@ type GameConfig struct {
 	BashingPeriod          int     // seconds, 0 = disabled
 	BashingMaxAttacks      int     // max attacks per BashingPeriod
 	ProtectionPeriod       int     // seconds new player is protected from attacks
-}
-
-type PaymentConfig struct {
-	Provider       string // PAYMENT_PROVIDER: "robokassa" | "enot" | ""
-	RobokassaLogin string // ROBOKASSA_LOGIN
-	RobokassaPass1 string // ROBOKASSA_PASS1 — подпись при создании платежа
-	RobokassaPass2 string // ROBOKASSA_PASS2 — подпись при верификации webhook
-	EnotApiKey     string // ENOT_API_KEY
-	EnotShopID     string // ENOT_SHOP_ID
-	ReturnURL      string // PAYMENT_RETURN_URL
-	MockBaseURL    string // PAYMENT_MOCK_BASE_URL — префикс для mock pay-url (только provider=mock)
 }
 
 type AIAdvisorConfig struct {
@@ -146,16 +136,8 @@ func Load() (Config, error) {
 		MaxTokens:   envInt("AI_ADVISOR_MAX_TOKENS", 1024),
 	}
 
-	cfg.Payment = PaymentConfig{
-		Provider:       env("PAYMENT_PROVIDER", ""),
-		RobokassaLogin: env("ROBOKASSA_LOGIN", ""),
-		RobokassaPass1: env("ROBOKASSA_PASS1", ""),
-		RobokassaPass2: env("ROBOKASSA_PASS2", ""),
-		EnotApiKey:     env("ENOT_API_KEY", ""),
-		EnotShopID:     env("ENOT_SHOP_ID", ""),
-		ReturnURL:      env("PAYMENT_RETURN_URL", ""),
-		MockBaseURL:    env("PAYMENT_MOCK_BASE_URL", ""),
-	}
+	// План 38 Ф.5: PaymentConfig удалён — платежи в billing-service.
+	// PAYMENT_* env-переменные читаются billing-service-ом, не game-nova.
 
 	if cfg.DB.URL == "" {
 		return Config{}, fmt.Errorf("DB_URL is required")
