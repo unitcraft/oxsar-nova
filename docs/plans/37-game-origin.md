@@ -1221,3 +1221,142 @@ Apply-инструмент `tools/apply-test-user-fixture.sh` идемпотен
 - bash heredoc на Windows глючит — пишем в tmpfile.
 - Контейнеры из удалённого worktree держат stale volume-mount —
   при смене cwd `docker compose down/up`.
+
+---
+
+## 37.5e — Routing PATH_INFO для меню (2026-04-27)
+
+### Проблема
+
+Меню в `src/game/Menu.class.php` (строки 337, 434) генерирует ссылки
+вида `/game.php/Mission` (PATH_INFO-стиль, наследие legacy/Yii). Но
+наш bootstrap `public/game.php` → `NS::loadPage()` берёт страницу
+**только из `Core::getRequest()->getGET("go")`**
+([NS.class.php:140](../../projects/game-origin/src/game/NS.class.php#L140)),
+PATH_INFO нигде не парсится.
+
+В результате клик по любой ссылке меню (`Обзор`, `Сырьё`, `Постройки`,
+`Чат`, `Альянс` и пр.) → URL `/game.php/Mission` → `?go` пустой →
+fallback на Main page. Для пользователя это выглядит как «меню есть,
+но переходы не работают — везде главная страница».
+
+### Подтверждение
+
+```
+$ curl -sb cookie -w "size=%{size_download}\n" -o /dev/null \
+       "http://localhost:8092/game.php/Mission"      # 17068 (Main mask)
+$ curl -sb cookie -w "size=%{size_download}\n" -o /dev/null \
+       "http://localhost:8092/game.php?go=Mission"  # 13068 (real Mission)
+$ curl -sb cookie -w "size=%{size_download}\n" -o /dev/null \
+       "http://localhost:8092/game.php?go=Main"     # 17068
+```
+
+PATH_INFO-вариант байт-в-байт = Main page, что подтверждает «mask».
+Это и есть «PATH_INFO routing не работает», зафиксированное в memory
+`reference_game_origin_routing.md` ещё с прошлых сессий.
+
+### Решение
+
+Два слоя:
+
+**(1) nginx-конфиг** (`projects/game-origin/docker/nginx.conf`).
+Раньше:
+
+```nginx
+location ~ \.php$ {              # ловит только URL, заканчивающиеся .php
+    fastcgi_split_path_info ^(.+\.php)(/.+)$;
+    ...
+}
+location / {                     # /game.php/Mission попадал сюда
+    try_files $uri $uri/ /game.php?$query_string;  # rewrite на /game.php — PATH_INFO теряется
+}
+```
+
+URL `/game.php/Mission` не заканчивается на `.php`, поэтому попадал в
+location `/`, делался try_files и в конце rewrite на `/game.php`
+(без `Mission`). PATH_INFO терялся ещё в nginx, до PHP не доходил.
+
+Стало:
+
+```nginx
+location ~ \.php(/|$) {                            # ловит и .php, и .php/...
+    fastcgi_split_path_info ^(.+?\.php)(/.*)?$;    # без обязательного /, без жадности
+    fastcgi_param PATH_INFO $fastcgi_path_info;
+    ...
+}
+location / {                                       # для всего остального
+    try_files $uri $uri/ /game.php?$query_string;
+}
+```
+
+После — PATH_INFO=`/Mission` корректно доходит до PHP.
+
+**(2) PHP-парсинг PATH_INFO** (`projects/game-origin/src/core/Request.class.php`).
+Сначала пробовал делать fix в `NS::loadPage()` (1 место — где
+`loadPage(getGET("go"))` вызывается). Не сработало для
+`Constructions`/`Research`/`Shipyard`: их обработчики наследуются от
+`Construction.class.php`, который **сам** дёргает
+`Core::getRequest()->getGET("go")` в конструкторе, чтобы определить
+`unit_type`. Если `$_GET["go"]` пуст — кидается `GenericException
+"Unkown construction mode: ''"`.
+
+Поэтому fix перенёс в `Request::__construct()` (singleton,
+выполняется один раз): если `$_GET["go"]` пуст, парсит первый
+сегмент `$_SERVER['PATH_INFO']` (sanitized под `[A-Za-z0-9_]+`) и
+кладёт в `$_GET["go"]`. Это покрывает **всех** потребителей сразу,
+включая Construction/Stock/etc., которые сами читают `$_GET["go"]`.
+
+Дополнительно: в legacy и в нашем routing'е поддерживался формат
+`game.php/Page/sub:value/sub2:value2` (см. `Galaxy/galaxy:7/system:100`
+в Main-странице ссылок). Это не только имя страницы, но и
+sub-параметры. Sub-параметры **не входят** в scope 37.5e — отдельная
+фаза.
+
+### Verification
+
+После fix (curl-чек, 13 страниц):
+
+| Page | PATH_INFO bytes | ?go= bytes | Δ |
+|---|---|---|---|
+| Main | 17212 | 17068 | 144 |
+| Empire | 57958 | 57772 | 186 |
+| Galaxy | 21592 | 21804 | -212 |
+| Constructions | 35404 | 35362 | 42 |
+| Research | 38335 | 38312 | 23 |
+| Shipyard | 37746 | 37855 | -109 |
+| Chat | 27680 | 27680 | 0 |
+| MSG | 12887 | 12883 | 4 |
+| Alliance | 12647 | 12638 | 9 |
+| Notepad | 13014 | 13197 | -183 |
+| Mission | 13298 | 13290 | 8 |
+| Stock | 21997 | 21991 | 6 |
+| Preferences | 17539 | 17511 | 28 |
+
+Δ небольшие (~0–200 байт) — это разные таймстампы/числа от запроса
+к запросу. До fix `/game.php/X` отдавал 17068 байт **на всех страницах**
+= маска Main; после fix размеры разные, страницы реальные.
+
+Регрессий по `?go=` нет — старый формат продолжает работать (5/5
+проверенных страниц).
+
+Sub-параметры (`Galaxy/galaxy:7/system:100`, `go:Galaxy/galaxy:N`)
+**не входят** в scope этого fix'а.
+
+### Что НЕ входит в scope 37.5e
+
+- **Sub-параметры по `:`** — `galaxy:7/system:100` и т.п. Это второй
+  слой парсинга, нужен отдельный fix (или часть будущей миграции на
+  нормальный router).
+- **Refactoring routing'а** — не выносим в отдельный класс/middleware.
+  Один if в loadPage().
+- **Sanitization PATH_INFO** — берём только `[A-Za-z0-9_]+` префикс,
+  чтобы не получить XSS/path-traversal/SQLi через имя страницы.
+
+### Урок
+
+Регрессия лежала с момента закрытия плана 37 (запуск без Yii). Из
+скриншота видно, что меню показывало корректные ссылки
+(`/game.php/Mission`, и т.д.), но клики не работали. Это было
+зафиксировано в memory `reference_game_origin_routing.md` именно как
+«smoke надо делать через `?go=Page`», но пользователь в браузере
+кликает естественно, и обход через `?go=` ломает обычный UX.

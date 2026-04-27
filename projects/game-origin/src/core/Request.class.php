@@ -41,6 +41,28 @@ class Request
     }
 
     /**
+     * План 37.5e: routing PATH_INFO. Меню (Menu.class.php) генерирует
+     * legacy-ссылки вида `/game.php/Mission`, но bootstrap читает
+     * страницу только из `?go=`. Если `?go` пуст — берём первый
+     * сегмент PATH_INFO и кладём в `$_GET["go"]`. Это покрывает не
+     * только NS::loadPage(), но и потомков (Construction.class.php,
+     * Stock.class.php и пр.), которые сами дёргают `getGET("go")`.
+     *
+     * Sanitization: только `[A-Za-z0-9_]+` — без слэшей/двоеточий
+     * (sub-параметры формата `Galaxy/galaxy:7/system:100` отдельная
+     * задача, не входит в 37.5e).
+     */
+    private function __construct()
+    {
+        if (empty($_GET['go'])) {
+            $pi = isset($_SERVER['PATH_INFO']) ? (string)$_SERVER['PATH_INFO'] : '';
+            if ($pi !== '' && preg_match('~^/([A-Za-z0-9_]+)~', $pi, $m)) {
+                $_GET['go'] = $m[1];
+            }
+        }
+    }
+
+    /**
      * Универсальный доступ. Используется в шаблонах через template-тег
      * {request[get/key]} → Core::getRequest()->get('get', 'key').
      */
