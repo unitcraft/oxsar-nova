@@ -34,7 +34,7 @@
 - Новая таблица `wallet_transactions`:
   - `id UUID PRIMARY KEY`,
   - `user_id UUID NOT NULL`,
-  - `amount BIGINT NOT NULL` (signed, отрицательные — расход),
+  - `oxsar BIGINT NOT NULL` (signed, отрицательные — расход),
   - `kind TEXT NOT NULL` (purchase / charge / refund / admin_adjust),
   - `idempotency_key TEXT UNIQUE`,
   - `metadata JSONB`,
@@ -42,11 +42,11 @@
 
 **game-nova**:
 - `users.credit` → `users.oxsarit` (rename + change type to `bigint`).
-- Новая таблица `oxsarite_transactions`:
+- Новая таблица `oxsarit_transactions`:
   - `id UUID PRIMARY KEY`,
   - `user_id UUID NOT NULL`,
   - `universe_id TEXT NOT NULL`,
-  - `amount BIGINT NOT NULL` (signed),
+  - `oxsarit BIGINT NOT NULL` (signed),
   - `kind TEXT NOT NULL` (spend / battle_loss / alien_loss / alien_gift / event_reward / achievement / daily_login / referral / admin_adjust),
   - `source JSONB` (контекст: `event_id`, `battle_id`, `referrer_id` и т.п.),
   - `created_at TIMESTAMPTZ DEFAULT now()`.
@@ -100,7 +100,7 @@ func BuyOfficer(ctx, userID, officerID) error {
     tx := beginTx(ctx)
     if fromOxsarites > 0 {
         tx.users.UpdateOxsarites(userID, -fromOxsarites)
-        tx.oxsarite_transactions.Insert(...)
+        tx.oxsarit_transactions.Insert(...)
     }
 
     // Шаг 3: если не хватило оксаритов, списать остаток из billing
@@ -229,15 +229,15 @@ react-intl / Format.JS).
 | Событие | Где обрабатывается |
 |---|---|
 | YooKassa webhook payment.succeeded | billing-service: `wallet_transactions.kind='purchase'` |
-| Smart-pay charge | billing-service: `wallet_transactions.kind='charge'` + game-nova: `oxsarite_transactions.kind='spend'` |
-| Награда за бой | game-nova battle-engine: `oxsarite_transactions.kind='battle_reward'` |
-| Кража инопланетянами | game-nova alien-engine: `oxsarite_transactions.kind='alien_loss'` |
-| Подарок инопланетян | `oxsarite_transactions.kind='alien_gift'` |
-| Daily login bonus | scheduler-tick: `oxsarite_transactions.kind='daily_login'` |
-| Achievement unlock | achievements-engine: `oxsarite_transactions.kind='achievement'` |
-| Реферал-награда | (см. план для рефералов) `oxsarite_transactions.kind='referral'` |
+| Smart-pay charge | billing-service: `wallet_transactions.kind='charge'` + game-nova: `oxsarit_transactions.kind='spend'` |
+| Награда за бой | game-nova battle-engine: `oxsarit_transactions.kind='battle_reward'` |
+| Кража инопланетянами | game-nova alien-engine: `oxsarit_transactions.kind='alien_loss'` |
+| Подарок инопланетян | `oxsarit_transactions.kind='alien_gift'` |
+| Daily login bonus | scheduler-tick: `oxsarit_transactions.kind='daily_login'` |
+| Achievement unlock | achievements-engine: `oxsarit_transactions.kind='achievement'` |
+| Реферал-награда | (см. план для рефералов) `oxsarit_transactions.kind='referral'` |
 | Рефанд (план 47) | billing-service: `wallet_transactions.kind='refund'` |
-| Бан за нарушение | game-nova admin: `oxsarite_transactions.kind='admin_adjust'` (с metadata о причине) |
+| Бан за нарушение | game-nova admin: `oxsarit_transactions.kind='admin_adjust'` (с metadata о причине) |
 | Удаление аккаунта (план 44) | billing-service deperson: hard в пределах 14 дней — рефанд непотраченного, остальное — деперсонализация (sender_id затирается, запись хранится 5 лет по 402-ФЗ); soft — сгорают |
 
 ---
@@ -287,7 +287,7 @@ react-intl / Format.JS).
     переименовать существующую если уже есть из плана 38) +
     `wallet_transactions`.
   - game-nova: `users.credit → users.oxsarit` (rename + bigint) +
-    `oxsarite_transactions`.
+    `oxsarit_transactions`.
   - game-origin (если применимо): то же.
 - Прогнать в dev-БД.
 
@@ -306,7 +306,7 @@ react-intl / Format.JS).
 
 ### Ф.4. Backend — game-nova oxsarite earnings
 
-- Battle-engine: emit `oxsarite_transactions` при награде.
+- Battle-engine: emit `oxsarit_transactions` при награде.
 - Alien-engine: emit при подарке/краже.
 - Achievements-engine: emit при unlock.
 - Daily login (если используется): emit.
