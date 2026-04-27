@@ -1518,6 +1518,13 @@ auth:
   consentPrefix: "I have read the"
   consentLinkText: Privacy Policy
   consentSuffix: " and consent to the processing of my personal data under Russian Federal Law No. 152-FZ."
+  termsConsentPrefix: "I have read and accept the"
+  termsConsentOffer: Terms of Service
+  termsConsentSeparator1: ", "
+  termsConsentRules: Game Rules
+  termsConsentSeparator2: " and "
+  termsConsentRefund: Refund Policy
+  termsConsentSuffix: "."
 
 error:
   accountActivation: ""

@@ -1,5 +1,6 @@
 import { useAuthStore } from '@/store/auth';
 import { Link } from './Link';
+import { AgeRating } from './AgeRating';
 import styles from './Layout.module.css';
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <main className={styles.main}>{children}</main>
       <footer className={styles.footer}>
         <span>© 2026 Oxsar Nova</span>
+        <AgeRating size="sm" />
+        <Link href="/offer" className={styles.footerLink}>
+          Договор-оферта
+        </Link>
+        <Link href="/game-rules" className={styles.footerLink}>
+          Правила игры
+        </Link>
+        <Link href="/refund" className={styles.footerLink}>
+          Возврат средств
+        </Link>
         <Link href="/privacy" className={styles.footerLink}>
           Политика конфиденциальности
         </Link>

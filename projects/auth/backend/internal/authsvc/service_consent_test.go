@@ -91,9 +91,9 @@ func TestRegister_NoConsent_Rejected(t *testing.T) {
 	}
 }
 
-// TestRegister_WithConsent_PersistsConsent — happy-path: consent_accepted=true,
-// валидный input → user создан, в user_consents запись с правильными
-// атрибутами (type, version, IP, UA, accepted_at).
+// TestRegister_WithConsent_PersistsConsent — happy-path: consent_accepted=true
+// и terms_accepted=true, валидный input → user создан; в user_consents две
+// записи (pdn_processing + offer_acceptance) с правильными атрибутами.
 func TestRegister_WithConsent_PersistsConsent(t *testing.T) {
 	svc, pool := setupTestService(t)
 	username := "consent_ok_" + randHex(t, 8)
@@ -108,6 +108,7 @@ func TestRegister_WithConsent_PersistsConsent(t *testing.T) {
 		Email:            username + "@example.test",
 		Password:         "password123",
 		ConsentAccepted:  true,
+		TermsAccepted:    true,
 		ConsentIP:        wantIP,
 		ConsentUserAgent: wantUA,
 	})
@@ -118,36 +119,64 @@ func TestRegister_WithConsent_PersistsConsent(t *testing.T) {
 		t.Fatalf("empty user/tokens: %+v %+v", u, toks)
 	}
 
-	// Проверяем запись в user_consents.
-	var (
-		gotType    string
-		gotVersion string
-		gotIP      string
-		gotUA      string
-		acceptedAt time.Time
-	)
-	err = pool.QueryRow(context.Background(), `
-		SELECT consent_type, consent_text_version, host(accepted_ip), accepted_user_agent, accepted_at
-		FROM user_consents
-		WHERE user_id = $1
-	`, u.ID).Scan(&gotType, &gotVersion, &gotIP, &gotUA, &acceptedAt)
-	if err != nil {
-		t.Fatalf("select consent: %v", err)
+	// Проверяем обе записи в user_consents (pdn + offer).
+	checkConsent := func(consentType, wantVersion string) {
+		t.Helper()
+		var (
+			gotVersion string
+			gotIP      string
+			gotUA      string
+			acceptedAt time.Time
+		)
+		err := pool.QueryRow(context.Background(), `
+			SELECT consent_text_version, host(accepted_ip), accepted_user_agent, accepted_at
+			FROM user_consents
+			WHERE user_id = $1 AND consent_type = $2
+		`, u.ID, consentType).Scan(&gotVersion, &gotIP, &gotUA, &acceptedAt)
+		if err != nil {
+			t.Fatalf("select consent %s: %v", consentType, err)
+		}
+		if gotVersion != wantVersion {
+			t.Errorf("%s version = %q, want %q", consentType, gotVersion, wantVersion)
+		}
+		if gotIP != wantIP {
+			t.Errorf("%s ip = %q, want %q", consentType, gotIP, wantIP)
+		}
+		if gotUA != wantUA {
+			t.Errorf("%s ua = %q, want %q", consentType, gotUA, wantUA)
+		}
+		if acceptedAt.Before(beforeReg) {
+			t.Errorf("%s accepted_at = %v, want >= %v", consentType, acceptedAt, beforeReg)
+		}
 	}
-	if gotType != ConsentTypePDNProcessing {
-		t.Errorf("type = %q, want %q", gotType, ConsentTypePDNProcessing)
+	checkConsent(ConsentTypePDNProcessing, PrivacyPolicyVersion)
+	checkConsent(ConsentTypeOfferAcceptance, TermsVersion)
+}
+
+// TestRegister_NoTerms_Rejected — план 47: без TermsAccepted Register
+// должен вернуть ErrTermsRequired и не создать ни user, ни consent.
+func TestRegister_NoTerms_Rejected(t *testing.T) {
+	svc, pool := setupTestService(t)
+	username := "terms_no_" + randHex(t, 8)
+	t.Cleanup(func() { cleanupUser(t, pool, username) })
+
+	_, _, err := svc.Register(context.Background(), RegisterInput{
+		Username:        username,
+		Email:           username + "@example.test",
+		Password:        "password123",
+		ConsentAccepted: true,
+		TermsAccepted:   false,
+	})
+	if !errors.Is(err, ErrTermsRequired) {
+		t.Fatalf("err = %v, want ErrTermsRequired", err)
 	}
-	if gotVersion != PrivacyPolicyVersion {
-		t.Errorf("version = %q, want %q", gotVersion, PrivacyPolicyVersion)
+	var n int
+	if err := pool.QueryRow(context.Background(),
+		`SELECT count(*) FROM users WHERE username = $1`, username).Scan(&n); err != nil {
+		t.Fatalf("count users: %v", err)
 	}
-	if gotIP != wantIP {
-		t.Errorf("ip = %q, want %q", gotIP, wantIP)
-	}
-	if gotUA != wantUA {
-		t.Errorf("ua = %q, want %q", gotUA, wantUA)
-	}
-	if acceptedAt.Before(beforeReg) {
-		t.Errorf("accepted_at = %v, want >= %v", acceptedAt, beforeReg)
+	if n != 0 {
+		t.Errorf("users count = %d, want 0", n)
 	}
 }
 
@@ -164,12 +193,14 @@ func TestRegister_DuplicateUser_NoConsentLeaked(t *testing.T) {
 		Email:           username + "@example.test",
 		Password:        "password123",
 		ConsentAccepted: true,
+		TermsAccepted:   true,
 	}
 	if _, _, err := svc.Register(context.Background(), in); err != nil {
 		t.Fatalf("first Register: %v", err)
 	}
 
-	// Считаем, сколько consent-записей сейчас (должна быть ровно 1).
+	// План 47: после успешной регистрации в user_consents должно быть
+	// две записи (pdn_processing + offer_acceptance) на одного юзера.
 	countConsents := func() int {
 		t.Helper()
 		var n int
@@ -181,8 +212,8 @@ func TestRegister_DuplicateUser_NoConsentLeaked(t *testing.T) {
 		}
 		return n
 	}
-	if got := countConsents(); got != 1 {
-		t.Fatalf("after first Register consent count = %d, want 1", got)
+	if got := countConsents(); got != 2 {
+		t.Fatalf("after first Register consent count = %d, want 2", got)
 	}
 
 	// Повторная регистрация с тем же username — должна упасть и НЕ добавить
@@ -191,8 +222,8 @@ func TestRegister_DuplicateUser_NoConsentLeaked(t *testing.T) {
 	if !errors.Is(err, ErrUserExists) {
 		t.Fatalf("err = %v, want ErrUserExists", err)
 	}
-	if got := countConsents(); got != 1 {
-		t.Errorf("after duplicate Register consent count = %d, want still 1", got)
+	if got := countConsents(); got != 2 {
+		t.Errorf("after duplicate Register consent count = %d, want still 2", got)
 	}
 }
 
@@ -209,6 +240,7 @@ func TestDeleteAccount_AnonymizesAndIsIdempotent(t *testing.T) {
 		Email:           username + "@example.test",
 		Password:        "password123",
 		ConsentAccepted: true,
+		TermsAccepted:   true,
 	})
 	if err != nil {
 		t.Fatalf("Register: %v", err)
@@ -278,6 +310,7 @@ func TestDeleteAccount_LoginRefuses(t *testing.T) {
 		Email:           username + "@example.test",
 		Password:        password,
 		ConsentAccepted: true,
+		TermsAccepted:   true,
 	})
 	if err != nil {
 		t.Fatalf("Register: %v", err)

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"oxsar/auth/internal/auth"
+	"oxsar/auth/internal/moderation"
 	"oxsar/auth/internal/repo"
 	"oxsar/auth/pkg/ids"
 	"oxsar/auth/pkg/jwtrs"
@@ -23,6 +24,12 @@ var (
 	ErrInvalidCredential = errors.New("authsvc: invalid credentials")
 	ErrUserBanned        = errors.New("authsvc: account banned")
 	ErrConsentRequired   = errors.New("authsvc: pdn consent required")
+	// ErrTermsRequired — план 47: пользователь не принял Договор-оферту,
+	// Правила игры и Политику возврата.
+	ErrTermsRequired = errors.New("authsvc: terms acceptance required")
+	// ErrUsernameForbidden — план 46 (149-ФЗ): имя содержит запрещённый
+	// корень из UGC-blacklist.
+	ErrUsernameForbidden = errors.New("authsvc: username forbidden")
 )
 
 // PrivacyPolicyVersion — версия Политики конфиденциальности, которую
@@ -31,8 +38,18 @@ var (
 // останутся в БД с прежней версией для аудита.
 const PrivacyPolicyVersion = "1.0"
 
+// TermsVersion — единая версия пакета документов оферты (Договор-оферта,
+// Правила игры, Политика возврата) — план 47. Версионируем пакет
+// единым тегом, потому что они логически меняются вместе. При
+// существенном изменении любого из трёх — поднимаем версию.
+const TermsVersion = "1.0"
+
 // ConsentTypePDNProcessing — обработка персональных данных по 152-ФЗ.
 const ConsentTypePDNProcessing = "pdn_processing"
+
+// ConsentTypeOfferAcceptance — акцепт пакета документов оферты
+// (Договор-оферта, Правила игры, Политика возврата) — план 47.
+const ConsentTypeOfferAcceptance = "offer_acceptance"
 
 // User — публичная проекция пользователя.
 //
@@ -48,14 +65,18 @@ type User struct {
 
 // RegisterInput — вход регистрации.
 //
-// План 44 (152-ФЗ): ConsentAccepted — флаг согласия на обработку ПДн,
-// фиксируется чекбоксом в форме регистрации. ConsentIP / ConsentUserAgent —
-// атрибуты согласия для аудита (заполняет HTTP handler).
+// План 44 (152-ФЗ): ConsentAccepted — флаг согласия на обработку ПДн.
+// План 47: TermsAccepted — флаг акцепта Договора-оферты, Правил игры и
+// Политики возврата. Оба согласия обязательны и фиксируются отдельными
+// записями в user_consents (consent_type = pdn_processing /
+// offer_acceptance) для аудита.
+// ConsentIP / ConsentUserAgent — атрибуты согласия (заполняет HTTP handler).
 type RegisterInput struct {
 	Username         string
 	Email            string
 	Password         string
 	ConsentAccepted  bool
+	TermsAccepted    bool
 	ConsentIP        string
 	ConsentUserAgent string
 }
@@ -65,8 +86,9 @@ type RegisterInput struct {
 
 // Service — основной сервис Auth Service.
 type Service struct {
-	db  *repo.PG
-	iss *jwtrs.Issuer
+	db        *repo.PG
+	iss       *jwtrs.Issuer
+	blacklist *moderation.Blacklist
 }
 
 // New создаёт Service.
@@ -74,11 +96,23 @@ func New(pool *pgxpool.Pool, iss *jwtrs.Issuer) *Service {
 	return &Service{db: repo.New(pool), iss: iss}
 }
 
+// WithBlacklist подключает blacklist для проверки никнеймов (план 46).
+// Если nil — проверка отключена (на dev/test допустимо).
+func (s *Service) WithBlacklist(bl *moderation.Blacklist) *Service {
+	s.blacklist = bl
+	return s
+}
+
 // Register создаёт нового пользователя.
 //
 // План 44 (152-ФЗ): без явного согласия на обработку ПДн регистрация
 // запрещена. Согласие фиксируется в user_consents в одной транзакции
 // с insert users — нельзя оказаться с пользователем без согласия.
+//
+// План 47: дополнительно требуется акцепт Договора-оферты, Правил игры и
+// Политики возврата (TermsAccepted). Оба согласия пишутся в user_consents
+// разными записями (pdn_processing + offer_acceptance) в той же
+// транзакции, что и users — атомарность сохраняется.
 func (s *Service) Register(ctx context.Context, in RegisterInput) (User, jwtrs.Tokens, error) {
 	username := strings.TrimSpace(in.Username)
 	email := strings.ToLower(strings.TrimSpace(in.Email))
@@ -86,8 +120,17 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (User, jwtrs.T
 	if !in.ConsentAccepted {
 		return User{}, jwtrs.Tokens{}, ErrConsentRequired
 	}
+	if !in.TermsAccepted {
+		return User{}, jwtrs.Tokens{}, ErrTermsRequired
+	}
 	if len(username) < 3 || len(username) > 24 {
 		return User{}, jwtrs.Tokens{}, fmt.Errorf("authsvc: username length 3..24")
+	}
+	// План 46 (149-ФЗ): проверка никнейма по UGC-blacklist.
+	if s.blacklist != nil {
+		if forbidden, _ := s.blacklist.IsForbidden(username); forbidden {
+			return User{}, jwtrs.Tokens{}, ErrUsernameForbidden
+		}
 	}
 	if !strings.Contains(email, "@") {
 		return User{}, jwtrs.Tokens{}, fmt.Errorf("authsvc: invalid email")
@@ -129,7 +172,15 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (User, jwtrs.T
 			VALUES ($1, $2, $3, $4, $5)
 		`, userID, ConsentTypePDNProcessing, PrivacyPolicyVersion, consentIP, consentUA)
 		if err != nil {
-			return fmt.Errorf("insert consent: %w", err)
+			return fmt.Errorf("insert pdn consent: %w", err)
+		}
+		_, err = tx.Exec(ctx, `
+			INSERT INTO user_consents
+				(user_id, consent_type, consent_text_version, accepted_ip, accepted_user_agent)
+			VALUES ($1, $2, $3, $4, $5)
+		`, userID, ConsentTypeOfferAcceptance, TermsVersion, consentIP, consentUA)
+		if err != nil {
+			return fmt.Errorf("insert offer consent: %w", err)
 		}
 		return nil
 	})

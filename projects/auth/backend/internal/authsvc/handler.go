@@ -36,12 +36,15 @@ func NewHandler(svc *Service, iss *jwtrs.Issuer, ver *jwtrs.Verifier, rdb *redis
 //
 // План 44 (152-ФЗ): consent_accepted обязателен; без него регистрация
 // возвращает 400. IP и User-Agent сохраняются в user_consents.
+// План 47: terms_accepted обязателен — акцепт Договора-оферты, Правил
+// игры и Политики возврата.
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Username        string `json:"username"`
 		Email           string `json:"email"`
 		Password        string `json:"password"`
 		ConsentAccepted bool   `json:"consent_accepted"`
+		TermsAccepted   bool   `json:"terms_accepted"`
 	}
 	if err := decodeJSON(r, &in); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
@@ -52,6 +55,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		Email:            in.Email,
 		Password:         in.Password,
 		ConsentAccepted:  in.ConsentAccepted,
+		TermsAccepted:    in.TermsAccepted,
 		ConsentIP:        clientIP(r),
 		ConsentUserAgent: r.UserAgent(),
 	})
@@ -61,6 +65,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "user already exists"))
 		case errors.Is(err, ErrConsentRequired):
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "consent to personal data processing is required"))
+		case errors.Is(err, ErrTermsRequired):
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "acceptance of offer, game rules and refund policy is required"))
+		case errors.Is(err, ErrUsernameForbidden):
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "имя содержит запрещённое слово"))
 		default:
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 		}

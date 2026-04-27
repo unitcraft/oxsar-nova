@@ -6,6 +6,9 @@ import { FeedbackListPage, FeedbackNewPage, FeedbackDetailPage } from '@/pages/F
 import { LoginPage, RegisterPage } from '@/pages/AuthPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
+import { OfferPage } from '@/pages/OfferPage';
+import { GameRulesPage } from '@/pages/GameRulesPage';
+import { RefundPolicyPage } from '@/pages/RefundPolicyPage';
 
 function usePathname() {
   const [path, setPath] = useState(window.location.pathname);
@@ -42,6 +45,12 @@ export function App() {
     page = <ProfilePage />;
   } else if (path === '/privacy') {
     page = <PrivacyPage />;
+  } else if (path === '/offer') {
+    page = <OfferPage />;
+  } else if (path === '/game-rules') {
+    page = <GameRulesPage />;
+  } else if (path === '/refund') {
+    page = <RefundPolicyPage />;
   } else {
     page = <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-muted)' }}>Страница не найдена</div>;
   }

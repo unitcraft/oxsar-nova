@@ -36,12 +36,19 @@ export const portalApi = {
   },
 
   auth: {
-    register: (username: string, email: string, password: string, consentAccepted: boolean) =>
+    register: (
+      username: string,
+      email: string,
+      password: string,
+      consentAccepted: boolean,
+      termsAccepted: boolean,
+    ) =>
       api.post<{ user: AuthUser; tokens: Tokens }>('/auth/register', {
         username,
         email,
         password,
         consent_accepted: consentAccepted,
+        terms_accepted: termsAccepted,
       }),
     login: (login: string, password: string) =>
       api.post<{ user: AuthUser; tokens: Tokens }>('/auth/login', { login, password }),

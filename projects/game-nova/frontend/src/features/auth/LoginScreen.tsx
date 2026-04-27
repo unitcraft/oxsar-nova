@@ -3,13 +3,22 @@ import { useAuthStore } from '@/stores/auth';
 import { api } from '@/api/client';
 import type { AuthResponse } from '@/api/types';
 import { useTranslation } from '@/i18n/i18n';
+import { AgeRating } from '@/components/AgeRating';
 
 type Mode = 'login' | 'register';
 
 // План 44: Privacy Policy живёт на портале (oxsar-nova.ru/privacy). В проде
 // game-nova на subdomain — нужен абсолютный URL. В dev (vite) — относительный.
+// План 47: к ней добавились Договор-оферта, Правила игры и Политика возврата
+// на том же портале.
+const PORTAL_BASE =
+  (import.meta.env['VITE_PORTAL_BASE_URL'] as string | undefined) ?? '';
 const PORTAL_PRIVACY_URL =
-  (import.meta.env['VITE_PORTAL_PRIVACY_URL'] as string | undefined) ?? '/privacy';
+  (import.meta.env['VITE_PORTAL_PRIVACY_URL'] as string | undefined) ??
+  (PORTAL_BASE ? `${PORTAL_BASE}/privacy` : '/privacy');
+const PORTAL_OFFER_URL = PORTAL_BASE ? `${PORTAL_BASE}/offer` : '/offer';
+const PORTAL_GAME_RULES_URL = PORTAL_BASE ? `${PORTAL_BASE}/game-rules` : '/game-rules';
+const PORTAL_REFUND_URL = PORTAL_BASE ? `${PORTAL_BASE}/refund` : '/refund';
 
 export function LoginScreen() {
   const setTokens = useAuthStore((s) => s.setTokens);
@@ -18,6 +27,7 @@ export function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [consent, setConsent] = useState(false);
+  const [termsConsent, setTermsConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation('auth');
@@ -32,11 +42,19 @@ export function LoginScreen() {
       // login (email или username), на register — username + email + password.
       // План 44 (152-ФЗ): на register дополнительно отдаём consent_accepted —
       // подтверждение согласия с обработкой ПДн.
+      // План 47: terms_accepted — акцепт Договора-оферты, Правил игры и
+      // Политики возврата.
       const path = mode === 'login' ? '/auth/login' : '/auth/register';
       const body =
         mode === 'login'
           ? { login: email, password }
-          : { username, email, password, consent_accepted: consent };
+          : {
+              username,
+              email,
+              password,
+              consent_accepted: consent,
+              terms_accepted: termsConsent,
+            };
       const res = await api.post<AuthResponse>(path, body);
       setTokens({
         access: res.tokens.access,
@@ -72,8 +90,9 @@ export function LoginScreen() {
           }}>
             OXSAR
           </div>
-          <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', marginTop: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
             {t('tagline')}
+            <AgeRating size="sm" />
           </div>
         </div>
 
@@ -135,6 +154,38 @@ export function LoginScreen() {
               >
                 <input
                   type="checkbox"
+                  checked={termsConsent}
+                  onChange={(e) => setTermsConsent(e.target.checked)}
+                  required
+                  style={{ marginTop: 3, flexShrink: 0 }}
+                />
+                <span>
+                  {t('termsConsentPrefix')}{' '}
+                  <a href={PORTAL_OFFER_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--ox-accent)' }}>
+                    {t('termsConsentOffer')}
+                  </a>
+                  {t('termsConsentSeparator1')}
+                  <a href={PORTAL_GAME_RULES_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--ox-accent)' }}>
+                    {t('termsConsentRules')}
+                  </a>
+                  {t('termsConsentSeparator2')}
+                  <a href={PORTAL_REFUND_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--ox-accent)' }}>
+                    {t('termsConsentRefund')}
+                  </a>
+                  {t('termsConsentSuffix')}
+                </span>
+              </label>
+            )}
+            {mode === 'register' && (
+              <label
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 8,
+                  fontSize: 13, color: 'var(--ox-fg-muted)', lineHeight: 1.5,
+                  marginTop: 4,
+                }}
+              >
+                <input
+                  type="checkbox"
                   checked={consent}
                   onChange={(e) => setConsent(e.target.checked)}
                   required
@@ -153,7 +204,7 @@ export function LoginScreen() {
             <button
               type="submit"
               className="btn"
-              disabled={loading || (mode === 'register' && !consent)}
+              disabled={loading || (mode === 'register' && (!consent || !termsConsent))}
               style={{ width: '100%', marginTop: 8 }}
             >
               {loading ? '…' : mode === 'login' ? t('loginButton') : t('registerButton')}

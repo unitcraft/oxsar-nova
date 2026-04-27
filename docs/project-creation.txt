@@ -9286,3 +9286,104 @@ value violates unique constraint "users_username_key"`. Тест
 
 **Коммит**: test(plan-44.1): integration-тесты consent + DeleteAccount,
 фикс UUIDv7 timestamp-collision в анонимизации.
+
+## Итерация 47 (2026-04-27) — договор оферты, правила игры, refund policy
+
+**Зачем**: до открытия публичной регистрации и приёма платежей нужны
+договор оферты (ст. 437 ГК РФ), правила игры и политика возврата —
+без них приём платежа = неосновательное обогащение, а бан нарушителя
+без публичных правил спорен. План 47.
+
+**Что сделано**:
+
+1. **Документы** в `docs/legal/`:
+   - `offer.md` (Договор-оферта v1.0, 13 разделов: реквизиты Оператора,
+     Кредиты как единица учёта (не электронные деньги по 161-ФЗ),
+     платежи через YooKassa, лицензия PolyForm, ответственность
+     ограничена платежами за 30 дней, юрисдикция РФ);
+   - `game-rules.md` (Правила игры v1.0: один аккаунт на человека,
+     запрет ботов/эксплойтов/торговли аккаунтами, модерация
+     альянс-чата под ответственностью лидера, лестница санкций,
+     обжалование за 30 дней);
+   - `refund-policy.md` (Refund Policy v1.0: возврат 14 дней до
+     использования Кредитов, рассмотрение 14 рабочих дней, через
+     YooKassa на тот же инструмент).
+
+   В реквизитах оферты — только публично-необходимое: «Е. Головин,
+   физлицо, плательщик НПД, РФ», email; ИНН в публичной редакции не
+   указывается, доступен в чеке YooKassa (memory feedback_legal_docs_public).
+
+2. **Страницы портала** (`projects/portal/frontend/src/pages/`):
+   `OfferPage.tsx`, `GameRulesPage.tsx`, `RefundPolicyPage.tsx` —
+   используют общий `PrivacyPage.module.css`. Роуты `/offer`,
+   `/game-rules`, `/refund` в `App.tsx`. Ссылки в футере `Layout.tsx`
+   рядом с уже существующей `/privacy` (план 44) и `AgeRating` (план 46
+   соседней сессии).
+
+3. **Чекбокс акцепта** — вариант B (два раздельных чекбокса):
+   обязательный чекбокс на оферту/правила/возврат + существующий
+   чекбокс на ПДн (план 44). Юридически чище: в споре каждое согласие
+   видно отдельной записью с собственной версией. Submit заблокирован,
+   пока оба не поставлены. Применено в `portal/AuthPage.tsx`
+   (RegisterPage) и `game-nova/features/auth/LoginScreen.tsx` (mode
+   register).
+
+4. **Backend** (`projects/auth/backend/internal/authsvc/`):
+   - `service.go`: новые `TermsVersion="1.0"`,
+     `ConsentTypeOfferAcceptance="offer_acceptance"`,
+     `ErrTermsRequired`, `RegisterInput.TermsAccepted`. Register
+     отказывает с `ErrTermsRequired`, если `TermsAccepted=false`.
+     В одной транзакции с insert users — две INSERT в `user_consents`
+     (pdn_processing + offer_acceptance), атомарность сохраняется.
+   - `handler.go`: новое поле `terms_accepted` в Register-DTO,
+     маппинг `ErrTermsRequired → 400`.
+   - `service_consent_test.go`: обновил happy-path чтобы проверял обе
+     записи в `user_consents` (через `consent_type` фильтр), счётчик
+     дубликата 1→2; добавил `TestRegister_NoTerms_Rejected`.
+
+5. **i18n** (`projects/game-nova/configs/i18n/{ru,en}.yml`): новые
+   ключи `auth.termsConsentPrefix/Offer/Separator1/Rules/Separator2/
+   Refund/Suffix` — текст с тремя ссылками (оферта, правила, возврат).
+   game-nova на subdomain → URL'ы документов собираются через
+   `VITE_PORTAL_BASE_URL` (новое env-имя). Если не задана — путь
+   относительный (как в dev-vite-proxy).
+
+6. **Frontend API** (`portal/frontend/src/api/portal.ts`): сигнатура
+   `register()` дополнена `termsAccepted: boolean` → передаётся в JSON
+   как `terms_accepted`.
+
+**Параллельные сессии**: одновременно работала сессия плана 46
+(возрастная маркировка + UGC-blacklist). Пересечение в файлах:
+`Layout.tsx` (соседский AgeRating + мой блок ссылок),
+`LoginScreen.tsx` game-nova (импорт AgeRating + мой termsConsent),
+`AuthPage.tsx` portal (соседский ageNotice + мой termsConsent),
+`service.go` + `handler.go` auth (соседский blacklist + моё
+TermsAccepted). Изменения в разных частях файлов, конфликта по
+строкам нет; в commit добавлял только свои pathspec-ом, чужие
+unstaged-блоки оставались в working tree (memory
+feedback_parallel_session_check, правило 3).
+
+**Тесты**: integration на dev-стенд (Postgres) — добавил
+`TestRegister_NoTerms_Rejected`; happy-path расширен на проверку обеих
+записей в `user_consents`. `go vet ./internal/authsvc/...` чистый.
+Frontend визуально не запускал — submit и проверка submit-блока на
+визуальном уровне не проверены (риск низкий: `disabled` на кнопке
+зеркалит React-state стандартным образом, отрисовка идентична плану 44).
+
+**Решения и trade-offs** (для simplifications и audit — не
+зафиксировано отдельной записью, всё в текущем плане):
+- Версионирование пакета документов единым тегом `TermsVersion="1.0"`
+  вместо трёх отдельных. Логически они меняются вместе; при
+  существенном изменении любого из трёх — поднимаем общую версию.
+  В споре всегда видно, какая версия пакета акцептована, а в
+  репозитории — содержимое v1.0 трёх файлов.
+- Ответственность Оператора ограничена платежами за 30 дней (раздел 9
+  оферты) — стандартная клауза, не противоречит императивным нормам
+  ЗПП РФ (это ограничение прямо снято в п. 11.2 оферты для
+  потребительских споров).
+- Refund 14 дней «если кредиты не использованы» — стандартная
+  индустриальная практика для виртуальных ценностей; пункт 1.3
+  явно сохраняет права потребителя по императивным нормам.
+
+**Коммит**: feat(plan-47): договор оферты, правила игры, refund
+policy + чекбокс акцепта оферты при регистрации.
