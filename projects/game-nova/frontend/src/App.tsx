@@ -6,6 +6,7 @@ import { api } from './api/client';
 import type { Planet } from './api/types';
 import { LoginScreen } from './features/auth/LoginScreen';
 import { OverviewScreen } from './features/overview/OverviewScreen';
+import { UniverseSwitcher } from './features/universes/UniverseSwitcher';
 import { useTranslation } from '@/i18n/i18n';
 import { ToastProvider, useToast } from './ui/Toast';
 import { ResourceTicker } from './ui/ResourceTicker';
@@ -490,6 +491,7 @@ function Header({
           🔍 <span style={{ fontSize: 10, opacity: 0.6 }}>Ctrl+K</span>
         </button>
         <PlanetSwitcher planet={planet} planets={planets} homePlanetId={homePlanetId} onChange={onPlanetChange} />
+        <UniverseSwitcher />
         {username && (
           <a
             href="#settings"
