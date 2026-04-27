@@ -749,26 +749,36 @@ dev-окружению, ни к фронтенду:
      `/auth/credits/history` через TanStack Query.
 
 5. **Игровой backend → JWKS от auth-service**
-   - В `cmd/server/main.go` заменить инициализацию JWT-верификатора:
-     было — HS256 с `JWT_SECRET`, станет — RSA через JWKS (`auth.LoadVerifier(ctx, AUTH_JWKS_URL)`).
-   - `AUTH_JWKS_URL=http://auth-service:9000` в compose.
-   - `JWT_SECRET` env-переменная удаляется отовсюду.
-   - Старый `/api/auth/login` в game-nova `internal/auth` либо удалить, либо
-     закрыть feature-флагом (решение по ходу).
+   - В compose добавлена `AUTH_JWKS_URL=http://auth-service:9000`. `cmd/server/main.go`
+     уже умел переключаться: при наличии `AUTH_JWKS_URL` использует RSA через
+     `auth.LoadVerifier`, иначе — legacy HS256.
+   - `JWT_SECRET` удалён из backend и worker секций dev-compose.
+   - Что **остаётся** для следующей фазы: старые ручки `/api/auth/login|register|refresh`
+     ещё есть в `internal/auth/handler.go` (никто не вызывает) и lazy-join не реализован.
+     Делается в Ф.12 (Universe Switcher + handoff).
 
 #### Acceptance
 
-- `docker compose up` поднимает auth-service вместе с остальным стеком (healthcheck зелёный).
-- На `http://localhost:5173` (игра) кнопка «Логин» открывает форму, регистрация и логин
-  работают через auth-service.
-- На `http://localhost:5174` (портал) ProfilePage показывает реальные данные из auth-service.
-- Игровой API (`/api/players/me` и т.п.) принимает JWT, выпущенный auth-service.
-- В `deploy/docker-compose.yml` нигде нет `JWT_SECRET`.
+- ✅ `docker compose up` поднимает auth-service вместе со стеком (healthcheck зелёный).
+- ✅ На `http://localhost:5173` (игра) кнопка «Логин» дёргает `/auth/login` (через
+  vite proxy → auth-service:9000). Регистрация и логин работают, JWT (RSA) сохраняется
+  в Zustand-сторе.
+- ✅ На `http://localhost:5174` (портал) ProfilePage дёргает `/auth/me`,
+  `/auth/credits/balance` через portalApi.auth — реальные данные из auth-service.
+- ✅ Игровой backend стартует в режиме `auth mode: RSA-256 via JWKS`. Запрос с
+  RSA-токеном на защищённый эндпоинт (`/api/me`, `/api/galaxy` и т.п.) проходит
+  middleware-валидацию (валидная подпись → 200/4xx по бизнес-логике, не 401).
+- ✅ В `deploy/docker-compose.yml` нет `JWT_SECRET`.
+- ❌ **Не закрыто Ф.11**: запрос на `/api/me` с RSA-токеном падает с 500 «no rows in result set»,
+  потому что юзера ещё нет в `users` table game-nova. Это **lazy-join**, делается в Ф.12.
+  До Ф.12 фронтенд после логина не сможет работать с игровым API без ручного создания
+  записи в `users` (через старый seed или будущий handoff).
 
 #### Что НЕ входит в Ф.11
 
 - OAuth Social Login (ВКонтакте, Mail.ru, Яндекс) — пока не делаем (по решению пользователя).
-- Universe Switcher и handoff-flow между вселенными — отдельная фаза Ф.12.
+- Universe Switcher и handoff-flow между вселенными (lazy-join, удаление старых
+  `/api/auth/*`) — отдельная фаза Ф.12.
 - Перенос платёжных webhook'ов — отдельная фаза Ф.13.
 
 ### Ops: нагрузочный тест (отдельный тикет, ~1–2 дня)
