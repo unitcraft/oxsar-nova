@@ -12,3 +12,7 @@ legacy_dump.sql
 # Каждый разработчик генерит локально через tools/snapshot-legacy-user.sh.
 migrations/fixtures/test-user-snapshot.sql
 migrations/fixtures/*.snapshot.sql
+
+# Output compare-with-legacy.sh — большой (HTML × 41 страниц × 2),
+# регенерится; cookies — sensitive.
+tools/compare-output/

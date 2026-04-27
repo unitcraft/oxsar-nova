@@ -878,9 +878,43 @@ done
 |---|---|---|---|
 | 37.5d.1 | Скрипт snapshot test-юзера из legacy → fixture SQL | ✅ done (73515ae9ad) | `tools/snapshot-legacy-user.sh` + `migrations/fixtures/test-user-snapshot.sql` |
 | 37.5d.2 | Скрипт apply fixture к нашей БД (с сохранением global_user_id) | ✅ done (b0ccce032d) | `tools/apply-test-user-fixture.sh` |
-| 37.5d.3 | Compare-tool: curl всех страниц у нас и в legacy + нормализованный diff | 🚧 in progress | `tools/compare-with-legacy.sh` |
-| 37.5d.4 | Триаж diff-отчёта: список страниц с реальными расхождениями | pending | Запись в dev-log |
-| 37.5d.5+ | Поштучные фиксы по каждой проблемной странице | pending | По коммиту на каждый фикс |
+| 37.5d.3 | Compare-tool: curl всех страниц у нас и в legacy + нормализованный diff | ✅ done | `tools/compare-with-legacy.sh` + `compare-output/report.md` |
+| 37.5d.4 | Триаж diff-отчёта | ✅ done — нашли base-level баги (Yii-классы, sql_mode, paths). UI-сравнение преждевременно. | См. ниже «Триаж» |
+| 37.5d.5 | Заменить остаточные `*_YII` классы и `CDbCriteria` на чистый PDO | pending | `src/game/page/*` фиксы |
+| 37.5d.6 | Fix sql_mode `ONLY_FULL_GROUP_BY` для Galaxy/Records | pending | docker-compose или переписать SELECT |
+| 37.5d.7 | Fix `readdir()/false`, `Undefined constant`, missing-id ошибки | pending | По месту |
+| 37.5d.8 | Повторный compare после фиксов → реальный UI-триаж | pending | report.md v2 |
+| 37.5d.9+ | Поштучные UI-фиксы по результатам v2 | pending | По коммиту на каждый |
+
+### Триаж 37.5d.4 — что показал compare
+
+Compare-tool обработал 41 страницу. Распределение:
+- 🟢 minor (15-19 diff lines): 17 страниц — **рендерятся OK**, расхождения
+  это таймстампы/числа.
+- 🟡 moderate (20-100): 19 страниц.
+- 🔴 major (>100): 4 страницы (Stock, Alliance, BuildingInfo, UnitInfo,
+  Changelog — 222-873 lines diff).
+- ❌ ERROR (HTTP 0/404/500): 0.
+
+**Главная находка**: множество страниц у нас возвращают **279-336 байт**
+вместо ожидаемых 13k-63k у legacy. Это **PHP fatal exception**, а не
+маленькая страница. По первой строке HTML видно категории:
+
+| Класс ошибки | Страницы | Причина |
+|---|---|---|
+| `Class "Xxx_YII" not found` | Constructions, Research, Shipyard, Defense, Empire, Techtree, ArtefactMarket | Остатки Yii-моделей (план 37.5/37.5b их пропустил). Используются 13 разных `*_YII` классов. |
+| `Class "CDbCriteria"` | Notepad, Tutorial, UserAgreement | Yii framework class. |
+| `readdir(): false given` | Repair, Disassemble, Preferences | `opendir` вернул false → readdir fail. Скорее всего legacy путь к asset/template не существует. |
+| `Undefined constant "VERSION_CHECK_PAGE"` | Changelog | Удалили константу при чистке Yii config. |
+| `Unkown building/unit` | BuildingInfo, UnitInfo | Требуют URL-параметр `?id=N`. Не баг, отдельная справочная страница. |
+| `ONLY_FULL_GROUP_BY` | Galaxy, Records | sql_mode strict (мы оставили его, выключили только STRICT_TRANS_TABLES в 37.5c.3). Запросы написаны под не-strict. |
+
+**Вывод**: до собственно UI-фиксов нужен ещё один раунд **системных
+фиксов** (37.5d.5–37.5d.7). Они не «UI», а вообще «страница работает».
+После них — повторный compare и уже UI-триаж.
+
+**Решение (отступление от первоначального плана)**: добавить подэтапы
+37.5d.5–37.5d.8. UI-фиксы переименованы в 37.5d.9+.
 
 ### Результаты выполнения 37.5d.1
 
