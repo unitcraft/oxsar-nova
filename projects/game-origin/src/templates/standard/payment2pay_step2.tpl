@@ -26,7 +26,7 @@ document.write('<script type="text/javascript" src="http://2pay.ru/view/script.p
 </script>
 <!--- Скрипт загрузки, должен быть в конце страницы var id=''; номер вашего проекта в нашей системе var v1=''; v1 v2 v3 ник игрока\номер счета или аккаунт, если известен - вся служебная информация по идентификации пользователя var v2=''; если эта информация известна - нужно подставлять в v1 v2 v3 var v3=''; var page='3021';  служебная информация var country='0';  служебная информация var conf='123';  служебная информация -->
 {if[0]}
- Oxsar http://oxsar.ru
- Copyright (c) 2009-2010 UnitPoint <support@unitpoint.ru>
+ Oxsar https://oxsar-nova.ru
+ Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
   
 {/if}

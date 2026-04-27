@@ -439,6 +439,19 @@ var galaxy_distance_mult = 1;
 
 <form method="post" id="planetSelection" action="{@formaction}" style="display: none;"><input type="hidden" name="planetid" value="0" id="planetid" /></form>
 
+<div class="oxsar-footer">
+	<div class="age-rating" title="Возрастная категория 12+">12+</div>
+	<div class="legal-links">
+		<a href="https://oxsar-nova.ru/offer" target="_blank" rel="noopener">Оферта</a>
+		<span class="sep">|</span>
+		<a href="https://oxsar-nova.ru/game-rules" target="_blank" rel="noopener">Правила</a>
+		<span class="sep">|</span>
+		<a href="https://oxsar-nova.ru/refund" target="_blank" rel="noopener">Возврат</a>
+		<span class="sep">|</span>
+		<a href="https://oxsar-nova.ru/privacy" target="_blank" rel="noopener">Конфиденциальность</a>
+	</div>
+</div>
+
 {if[defined('SN') && !defined('SN_FULLSCREEN')]}
 </div>
 {/if}
@@ -446,7 +459,7 @@ var galaxy_distance_mult = 1;
 </body>
 </html>
 {if[0]}
- Oxsar http://oxsar.ru
- Copyright (c) 2009-2010 UnitPoint <support@unitpoint.ru>
+ Oxsar https://oxsar-nova.ru
+ Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
 
 {/if}
