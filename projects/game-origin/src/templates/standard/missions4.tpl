@@ -43,7 +43,7 @@
 	</tr>{/foreach}
 </table>
 {if[0]}
- Oxsar http://oxsar.ru
- Copyright (c) 2009-2010 UnitPoint <support@unitpoint.ru>
+ Oxsar https://oxsar-nova.ru
+ Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
   
 {/if}

@@ -151,9 +151,12 @@ artefactmarket2.tpl и другие.
 - Если нет — задокументировать, выйти из этой фазы.
 - Если да — добавить чекбоксы + интеграцию с user_consents.
 
-### Ф.3. Возрастная маркировка
+### Ф.3. Возрастная маркировка ✅ (2026-04-27)
 
 - Блок «12+» в `layout.tpl`, CSS-стилизация.
+- Добавлен `<div class="oxsar-footer">` с `.age-rating` (12+) перед
+  закрытием `</body>`; стили `.oxsar-footer .age-rating` в
+  `public/css/layout.css`.
 
 ### Ф.4. UGC-модерация на все точки
 
@@ -167,14 +170,29 @@ artefactmarket2.tpl и другие.
 - HTTP-клиент к `/api/reports` (общий endpoint).
 - Кнопка в местах: никнейм, чат, альянс.
 
-### Ф.6. Ссылки на юр-документы
+### Ф.6. Ссылки на юр-документы ✅ (2026-04-27)
 
 - Блок ссылок в `layout.tpl` footer'а.
+- В `.legal-links` блок с absolute-URL на
+  `https://oxsar-nova.ru/{offer,game-rules,refund,privacy}`,
+  все ссылки `target="_blank" rel="noopener"`.
 
-### Ф.7. Чистка copyright
+### Ф.7. Чистка copyright ✅ (2026-04-27)
 
 - Поисковая замена в 10+ шаблонах.
 - Удалить email `support@unitpoint.ru`.
+- Фактически — 107 файлов в `src/templates/standard/*.tpl`. Шапка
+  `Oxsar http://oxsar.ru` + `Copyright (c) 2009-2010 UnitPoint <support@unitpoint.ru>`
+  заменена на `Oxsar https://oxsar-nova.ru` +
+  `Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.`.
+- В `support.tpl` (регламент техподдержки) email
+  `support@unitpoint.ru` заменён на `gibesapiselfbab@hotmail.com`.
+- **Известная остаточная проблема:** текст самого `support.tpl`
+  (регламент технической поддержки) — это юр-документ ликвидированной
+  ООО «Юнит Поинт», содержит множество упоминаний «Оператор» = ООО.
+  Требует отдельного плана: либо переписать как новый регламент
+  oxsar-nova, либо удалить страницу из game-origin (заменить ссылкой
+  на portal-форму поддержки).
 
 ### Ф.8. Финализация
 

@@ -9793,3 +9793,80 @@ auth-service зафиксирован как часть истории.
 ссылок на внутренние пути сервисов, только публичные тексты.
 
 **Коммит**: 1.
+
+## Итерация 50.partial (2026-04-27) — game-origin: 12+, юр-ссылки, чистка UnitPoint-copyright
+
+**Контекст**: план 50 закрывает 7 юр-gap'ов в legacy-вселенной
+game-origin. Сложные фазы (Ф.1 TinyMCE, Ф.2 регистрация, Ф.4 UGC,
+Ф.5 кнопка «Пожаловаться») отложены в отдельные задания. Эта
+итерация — 3 quick wins (Ф.3, Ф.6, Ф.7).
+
+**Что сделано:**
+
+- **Ф.7** — массовая замена copyright-шапки в 107 файлах
+  `projects/game-origin/src/templates/standard/*.tpl`. Старая шапка
+  `Oxsar http://oxsar.ru` + `Copyright (c) 2009-2010 UnitPoint <support@unitpoint.ru>`
+  заменена на `Oxsar https://oxsar-nova.ru` +
+  `Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.`.
+  Скрипт-замена — Python (regex с `\r?\n` для разных line-endings,
+  поскольку часть файлов имеет hidden-difference в строке-разделителе).
+  Все 107 шапок были в выключенных `{if[0]}…{/if}` блоках Smarty
+  (т.е. не выводились в HTML), но всё равно являются публичной
+  утечкой реквизитов ликвидированной компании в открытом репо.
+- **Ф.7 (доп.)** — в `support.tpl` (регламент техподдержки)
+  email `support@unitpoint.ru` заменён на `gibesapiselfbab@hotmail.com`
+  (новый contact-email из docs/legal/privacy-policy.md). **Текст
+  самого регламента** (упоминания «ООО Юнит Поинт» = «Оператор») не
+  переписан — это полноценный юр-документ ликвидированной компании,
+  требует отдельного плана.
+- **Ф.3** — в `layout.tpl` (legacy-PHP/Smarty layout) добавлен блок
+  `<div class="oxsar-footer">` с `.age-rating` (12+) перед закрытием
+  `</body>`. CSS — `.oxsar-footer .age-rating` в `public/css/layout.css`
+  (28×28 px чёрный квадрат, белая «12+»). Цель — пользователь, играющий
+  в game-origin напрямую, видит маркировку 436-ФЗ.
+- **Ф.6** — там же блок `.legal-links` с absolute-URL на portal:
+  `https://oxsar-nova.ru/{offer,game-rules,refund,privacy}`,
+  все ссылки `target="_blank" rel="noopener"`. URL absolute, потому
+  что portal живёт на отдельном домене; `_blank` — чтобы не выкидывать
+  игрока из игры.
+
+**Verifications:**
+
+- `grep -rln "support@unitpoint\|UnitPoint <" projects/game-origin/`
+  кроме `src/cache/` (Smarty cache, в .gitignore), `tools/compare-output/`
+  (артефакты сравнения с legacy, не tracked) и legacy-dump'ов
+  (`legacy_dump.sql`, `migrations/fixtures/test-user-snapshot.sql`) —
+  **0 совпадений**.
+- 5 случайных шаблонов (login, empire, payment, galaxy, main) —
+  новый copyright на месте.
+- `layout.tpl` содержит блок `oxsar-footer` с двумя дочерними блоками
+  (age-rating + legal-links).
+
+**Smoke-тест в браузере**: не выполнен. Требует `docker-compose up`
+для game-origin, что не было запрошено и не блокирует validation
+(правки — статический HTML+CSS внутри Smarty шаблона, без PHP-логики).
+Smoke рекомендуется выполнить отдельно при следующем запуске
+game-origin dev-окружения.
+
+**Параллельные сессии**: на момент работы шли план 51 (rename
+identity), 52 (RBAC), 53 (admin-frontend) в `projects/identity/`,
+`projects/billing/`, `projects/game-nova/backend/`. Их файлы не
+тронуты — `git add` поимённо `projects/game-origin/...` + явный
+`git commit -- file…` из правила
+`feedback_parallel_session_check.md`.
+
+**Что осталось от плана 50** (отдельные задания):
+
+- Ф.1 — замена TinyMCE LGPL на MIT-альтернативу (~430 МБ удалить).
+- Ф.2 — чекбоксы согласия в `AccountCreator.class.php` (или
+  документировать, что прямая регистрация в game-origin закрыта).
+- Ф.4 — расширение `Moderation::isForbidden()` на чат, альянсы,
+  описания, личные сообщения.
+- Ф.5 — кнопка «Пожаловаться» с интеграцией к
+  `/api/reports` identity-сервиса.
+- **Известная остаточная проблема:** текст `support.tpl` (регламент
+  технической поддержки) — юр-документ ликвидированной ООО «Юнит
+  Поинт», требует отдельного плана (новый регламент oxsar-nova или
+  удаление страницы game-origin со ссылкой на portal).
+
+**Коммит**: 1.
