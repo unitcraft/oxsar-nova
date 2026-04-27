@@ -4,6 +4,7 @@ import { api } from '@/api/client';
 import { Confirm } from '@/ui/Confirm';
 import { useToast } from '@/ui/Toast';
 import { useTranslation } from '@/i18n/i18n';
+import { ReportButton } from '@/components/ReportButton';
 
 interface Alliance {
   id: string;
@@ -342,9 +343,10 @@ function AllianceDetail({
   return (
     <div className="ox-panel" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div>
-        <div style={{ fontSize: 15, fontWeight: 700 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ color: 'var(--ox-accent)', fontFamily: 'var(--ox-mono)' }}>[{alliance.tag}]</span>{' '}
           {alliance.name}
+          <ReportButton targetType="alliance" targetId={alliance.id} compact />
         </div>
         <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
           {alliance.owner_name} · {alliance.member_count} · {alliance.is_open ? `🔓 ${t('labelOpen')}` : `🔒 ${t('labelClosed')}`}

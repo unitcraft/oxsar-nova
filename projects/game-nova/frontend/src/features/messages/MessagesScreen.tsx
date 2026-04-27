@@ -5,6 +5,7 @@ import { nameOf } from '@/api/catalog';
 import { Confirm } from '@/ui/Confirm';
 import { useToast } from '@/ui/Toast';
 import { useTranslation } from '@/i18n/i18n';
+import { ReportButton } from '@/components/ReportButton';
 
 interface Message {
   id: string;
@@ -395,8 +396,11 @@ function MessageDetail({ message, onReply, onFleetMission }: { message: Message;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <h3 style={{ margin: 0, fontSize: 15 }}>{message.subject}</h3>
-      <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>
+      <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         {t('from')} <span style={{ color: 'var(--ox-fg-dim)' }}>{message.from_username || t('senderSystem')}</span>
+        {message.from_user_id && (
+          <ReportButton targetType="user" targetId={message.from_user_id} compact />
+        )}
         {' · '}
         {new Date(message.created_at).toLocaleString('ru-RU')}
       </div>
