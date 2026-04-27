@@ -34,8 +34,8 @@ const AuditPage = lazy(async () => ({
 const BillingStub = lazy(async () => ({
   default: () => <Placeholder title="Billing" phase="план 54" description="платежи, возвраты, лимиты" />,
 }));
-const GameOpsStub = lazy(async () => ({
-  default: () => <Placeholder title="Game-ops" phase="Ф.6" description="dead events, planet/fleet operations" />,
+const GameEventsPage = lazy(async () => ({
+  default: (await import('@/routes/GameEvents')).GameEvents,
 }));
 const SettingsStub = lazy(async () => ({
   default: () => <Placeholder title="Settings" phase="Ф.8" description="2FA, security, sessions" />,
@@ -102,10 +102,14 @@ export function App(): React.ReactElement {
           }
         />
         <Route
-          path="/game-ops/*"
+          path="/game-ops"
+          element={<Navigate to="/game-ops/events" replace />}
+        />
+        <Route
+          path="/game-ops/events"
           element={
             <Suspense fallback={<RouteFallback />}>
-              <GameOpsStub />
+              <GameEventsPage />
             </Suspense>
           }
         />

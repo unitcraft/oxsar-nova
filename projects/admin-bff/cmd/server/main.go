@@ -74,7 +74,12 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	gameUp, err := proxy.NewUpstream("game-nova", "/api/admin/game", cfg.GameNovaURL)
+	// game-nova admin-namespace: events/planets/fleets/galaxy-events.
+	// Префикс `/api/admin/game` зарезервирован под sub-план 53b
+	// (миграция game-nova endpoints в namespaced-prefix). Сейчас
+	// проксируем конкретные пути, чтобы не пересекаться с identity.
+	// План 53 Ф.6 обрабатывает только events.
+	gameEventsUp, err := proxy.NewUpstream("game-nova-events", "/api/admin/events", cfg.GameNovaURL)
 	if err != nil {
 		return err
 	}
@@ -106,7 +111,7 @@ func run() error {
 		// Reverse-proxy на backend-сервисы. Порядок важен — billing/game
 		// должны проверяться до identity (более специфичные prefix).
 		pr.Mount(billingUp.Prefix, billingUp.Handler())
-		pr.Mount(gameUp.Prefix, gameUp.Handler())
+		pr.Mount(gameEventsUp.Prefix, gameEventsUp.Handler())
 		pr.Mount(identityUp.Prefix, identityUp.Handler())
 	})
 

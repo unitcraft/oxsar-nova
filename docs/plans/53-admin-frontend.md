@@ -396,14 +396,35 @@ TanStack Table, фильтрами, пагинацией — после доба
 
 ### Ф.6. Game-ops миграция
 
-- Перенести существующие game-nova/admin страницы в admin-frontend:
-  - `/game-ops/events` — dead events (resurrect, retry, cancel).
-  - `/game-ops/planets` — rename, transfer, delete.
-  - `/game-ops/fleets` — force recall.
-- Удалить `projects/game-nova/frontend/src/features/admin/` (UI
-  переехал; backend endpoints остаются).
-- Заменить ссылки в game-nova UI на «Открыть admin-консоль» (если
-  юзер имеет admin-permissions).
+**Архитектурный gap (обнаружен 2026-04-27):** game-nova admin-routes
+живут в namespace `/api/admin/{events,planets,fleets,users}/*` —
+это пересекается с identity (`/api/admin/{roles,audit,
+users/*/roles}*`). admin-bff проксирует по path-prefix; для
+непересекающихся sub-prefix'ов всё работает (`/api/admin/events/*`
+→ game-nova, `/api/admin/roles*` → identity), но
+`/api/admin/users/{id}/roles` (identity) и
+`/api/admin/users/{id}/credit` (game-nova) делят корень
+`/api/admin/users/`.
+
+Решение этой коллизии — отдельный sub-план **53b-game-namespace**:
+переименовать game-nova admin-routes под `/api/admin/game/`
+(префикс) ИЛИ ввести более специфичную маршрутизацию в admin-bff.
+Пока — только страницы с непересекающимися префиксами.
+
+**Что делаем в Ф.6 сейчас (минимальный полезный набор):**
+
+- `/game-ops/events` — список dead events (`GET
+  /api/admin/events/dead?kind=&limit=&offset`) с пагинацией.
+  Кнопка Resurrect (POST `/api/admin/events/dead/{id}/resurrect`).
+- `/game-ops/events/active` — wait/error events с фильтрами state/
+  kind. Кнопки Retry / Cancel.
+- Permission gates на UI: `game:events:retry` / `game:events:cancel`
+  для соответствующих кнопок.
+
+**Ф.6-extension** (sub-план 53b-game-namespace): полноценная
+миграция planet ops, fleet recall, credit/grant_resources,
+ListUsers и удаление `projects/game-nova/frontend/src/features/admin/`
+после переименования backend-namespace.
 
 ### Ф.7. Moderation (заглушки)
 
