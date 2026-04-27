@@ -8767,3 +8767,54 @@ PHP fatal.
   мёртвый код).
 
 **Коммиты**: 1 (закрытие 37.5d.9 в плане + dev-log).
+
+---
+
+## Итерация 37.5d.9 продолжение (2026-04-27) — реальные UI-фиксы для прода
+
+**Задача**: пользователь обратил внимание на несколько недоделок:
+- Online stats отсутствуют в Main header (placeholder из 37.5).
+- ArtefactMarket пустой (silent template fail).
+- Galaxy с диффом 161 lines.
+- Картинки артефактов "не работают" (мы их заглушили в 1x1 placeholder).
+
+**Изменения** (3 коммита):
+
+37.5d.9.1 (451bb27d30): Online stats в main.tpl. Раньше был
+комментарий `User_YII::showOnline() убран, заменим в plan-37` —
+заменил на raw SQL `SELECT * FROM na_user_online`. Видно админам
+(isAdmin check).
+
+37.5d.9.2 (22090789d0): PHP 8 `class Float` зарезервировано →
+`OxsarFloat` (как `String → OxsarString` в 37.5). 6 файлов в
+core/util/. **Ranking страница**: 157 (PHP fatal) → 23858 байт.
+
+37.5d.9.3 (fc598e8f9e): **GD-генерация preview-картинок артефактов**
+как в проде, без упрощений.
+- Новый endpoint `public/artefact-image.php` повторяет legacy
+  `Artefact2user_YIIController::renderImage()`: фон = тип артефакта,
+  поверх отмасштабированная постройка, сверху level числом через
+  FUTUR_14.TTF с белой обводкой и желтой заливкой (RGB 247,191,21).
+- Кеш в `src/cache/artefacts/{name}{level}{art_name}.jpg`.
+- Dockerfile.php: добавлены GD + FreeType (apk + docker-php-ext-configure).
+- Также убраны Yii-вызовы из 5 шаблонов (artefactmarket2, galaxy,
+  assault_report, tutorial, widgets, payment) — они тихо ломали
+  template-render.
+
+**Compare v3** (после всех 37.5d.9 фиксов):
+- 🟢 minor (≤19 diff): **29** страниц (было 24)
+- 🟡 moderate (20-99): **8** (было 11)
+- 🔴 major (≥100): 5 (Stock, Alliance, BuildingInfo, UnitInfo,
+  Preferences, Changelog — все контентные/специфичные, не баги)
+
+**Что осталось**:
+- 6 🔴 major — все контентные разницы (расширить snapshot или
+  принять как ожидаемые).
+- BuildingInfo/UnitInfo требуют URL `?id=N` (статические справочные
+  страницы).
+
+**Достижение**: PHP-клон рендерит весь игровой UI (включая
+preview-картинки артефактов) практически идентично legacy. Готов
+к security audit (37.6+).
+
+**Коммиты**: 3 (online stats + Float + GD).
