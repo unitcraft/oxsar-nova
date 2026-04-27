@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -23,6 +24,7 @@ import (
 	"oxsar/billing/internal/auth"
 	"oxsar/billing/internal/billing"
 	"oxsar/billing/internal/httpx"
+	"oxsar/billing/internal/limits"
 	"oxsar/billing/internal/payment"
 	"oxsar/billing/internal/repo"
 	"oxsar/billing/internal/storage"
@@ -70,6 +72,19 @@ func run() error {
 	}
 	reconcileInterval := envDur("BILLING_RECONCILE_INTERVAL", time.Hour)
 
+	// План 54: настройки лимита самозанятого (ФЗ-422 НПД).
+	limitsCfg := limits.DefaultConfig()
+	limitsCfg.HardStopKop = envInt64("HARD_STOP_THRESHOLD_KOP", limitsCfg.HardStopKop)
+	limitsCfg.WarnAt80 = envBool("WARN_THRESHOLD_PERCENT_80", true)
+	limitsCfg.WarnAt90 = envBool("WARN_THRESHOLD_PERCENT_90", true)
+	limitsCfg.WarnAt95 = envBool("WARN_THRESHOLD_PERCENT_95", true)
+	if tzName := envStr("LIMIT_CHECK_TIMEZONE", "Europe/Moscow"); tzName != "" {
+		if loc, err := time.LoadLocation(tzName); err == nil {
+			limitsCfg.Timezone = loc
+		}
+	}
+	limitCheckInterval := envDur("LIMIT_CHECK_INTERVAL", 15*time.Minute)
+
 	log := newLogger(envStr("LOG_LEVEL", "info"))
 	slog.SetDefault(log)
 	log.InfoContext(ctx, "starting billing-service", slog.String("addr", addr))
@@ -102,7 +117,13 @@ func run() error {
 	}
 	log.InfoContext(ctx, "payment provider initialized", slog.String("provider", gw.Name()))
 
-	h := billing.NewHandler(svc, gw, returnURL)
+	// План 54: limits-сервис (защита лимита самозанятого).
+	limitsSvc := limits.New(pool, limitsCfg)
+	limitsMetrics := limits.NewPrometheusMetrics()
+	limitsNotifier := limits.NewSlogNotifier(log)
+	limitsHandler := limits.NewHandler(limitsSvc)
+
+	h := billing.NewHandler(svc, gw, returnURL).WithLimits(limitsSvc)
 	wh := billing.NewWebhookHandler(svc, gw)
 	authMW := billing.AuthMiddleware(ver)
 	idemMW := billing.NewIdempotencyMiddleware(pool).Handler(billing.UserIDFromCtx)
@@ -112,6 +133,14 @@ func run() error {
 	reconciler := billing.NewReconciler(svc, reconcileInterval)
 	go reconciler.Run(ctx)
 	log.InfoContext(ctx, "reconciler started", slog.Duration("interval", reconcileInterval))
+
+	// План 54: limits-reconciler — пересчёт revenue_ytd, hard-stop при
+	// превышении HARD_STOP_THRESHOLD_KOP, soft-warning alerts при 80/90/95%.
+	limitsReconciler := limits.NewReconciler(limitsSvc, limitsNotifier, limitsMetrics, limitCheckInterval)
+	go limitsReconciler.Run(ctx)
+	log.InfoContext(ctx, "limits reconciler started",
+		slog.Duration("interval", limitCheckInterval),
+		slog.Int64("hard_stop_kop", limitsCfg.HardStopKop))
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -145,6 +174,13 @@ func run() error {
 	// Публичный каталог пакетов кредитов.
 	r.Get("/billing/packages", h.Packages)
 
+	// План 54 Ф.5: публичный статус лимита (без auth, для UI «Пополнить»).
+	// Cache внутри Service (TTL 30s) защищает от N запросов в БД.
+	// Rate-limit: 60 req/min/IP — общий middleware applied на уровне chi
+	// (если включён); для billing-сервиса rate-limiter сейчас не настроен
+	// глобально, поэтому защита via cache.
+	r.Get("/api/billing/limits/status", limitsHandler.Status)
+
 	// Защищённые wallet-эндпоинты. AuthMiddleware кладёт user_id в context.
 	// IdempotencyMiddleware кэширует ответы по Idempotency-Key (Stripe-style).
 	r.Group(func(pr chi.Router) {
@@ -159,6 +195,19 @@ func run() error {
 		pr.Post("/billing/wallet/spend", h.Spend)
 		pr.Post("/billing/wallet/credit", h.Credit)
 		pr.Post("/billing/orders", h.CreateOrder)
+	})
+
+	// План 54 Ф.6: admin-endpoints для лимита и отчётов.
+	// Permission-checks внутри handler-методов (limits.handler).
+	// Мост permissions из billing-ctx в limits-ctx — оба пакета имеют
+	// собственные ctxKey, чтобы не зависеть друг от друга.
+	r.Group(func(pr chi.Router) {
+		pr.Use(authMW)
+		pr.Use(limitsCtxBridge)
+		pr.Get("/api/admin/billing/limits/status", limitsHandler.AdminStatus)
+		pr.Post("/api/admin/billing/limits/override", limitsHandler.AdminOverride)
+		pr.Get("/api/admin/billing/reports/revenue", limitsHandler.AdminRevenue)
+		pr.Get("/api/admin/billing/reports/csv", limitsHandler.AdminCSVExport)
 	})
 
 	// Webhook от платёжного шлюза. Публичный (защищён HMAC-подписью).
@@ -227,6 +276,51 @@ func envDur(key string, def time.Duration) time.Duration {
 		if d, err := time.ParseDuration(v); err == nil {
 			return d
 		}
+	}
+	return def
+}
+
+func envInt64(key string, def int64) int64 {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			return n
+		}
+	}
+	return def
+}
+
+// limitsCtxBridge — middleware-мост: копирует permissions из billing-ctx
+// (выставлены billing.AuthMiddleware) в limits-ctx (читает limits.handler
+// через limits.PermissionsFromCtx). Также пробрасывает user_id (UUID-string)
+// в limits-ctx для actor_id в audit.
+//
+// Оба пакета держат собственные ctxKey'и — это не циркулярная зависимость
+// и не shared API. Мост применяется только в admin-endpoints где нужны
+// permissions.
+func limitsCtxBridge(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		perms := billing.PermissionsFromCtx(r)
+		if perms != nil {
+			ctx = context.WithValue(ctx, limits.CtxKeyPermissions{}, perms)
+		}
+		if uid, ok := billing.UserIDFromCtx(r); ok {
+			ctx = context.WithValue(ctx, limits.CtxKeyUserID{}, uid)
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func envBool(key string, def bool) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	switch strings.ToLower(v) {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
 	}
 	return def
 }

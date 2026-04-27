@@ -16,7 +16,18 @@ var (
 	ErrOrderNotFound = errors.New("billing: order not found")
 	ErrOrderExpired  = errors.New("billing: order expired")
 	ErrOrderClosed   = errors.New("billing: order already closed")
+	// ErrLimitReached — лимит самозанятого превышен (план 54). HTTP 503.
+	// Сообщение клиенту нейтральное, не раскрывает причину.
+	ErrLimitReached = errors.New("billing: payments temporarily disabled")
 )
+
+// LimitsChecker — интерфейс для проверки лимита самозанятого. Заполняется
+// limits.Service (см. internal/limits). nil-friendly: если nil — проверка
+// не выполняется (для тестов и legacy-кода). В production main.go всегда
+// инжектит non-nil реализацию.
+type LimitsChecker interface {
+	IsActive(ctx context.Context) (bool, error)
+}
 
 // Order — публичная проекция payment_order.
 type Order struct {
@@ -35,10 +46,24 @@ type Order struct {
 // CreateOrder создаёт payment_order и возвращает PayURL для редиректа клиента.
 //
 // Алгоритм:
-//   1. Найти Package по id.
-//   2. INSERT payment_orders (status='pending', expires_at=now+1h).
-//   3. Gateway.BuildPayURL(...) → ссылка для редиректа.
-func (s *Service) CreateOrder(ctx context.Context, userID, packageID, returnURL string, gw payment.Gateway) (Order, string, error) {
+//   1. Hard-stop check (план 54): если limits.IsActive() == false → ErrLimitReached.
+//   2. Найти Package по id.
+//   3. INSERT payment_orders (status='pending', expires_at=now+1h).
+//   4. Gateway.BuildPayURL(...) → ссылка для редиректа.
+//
+// limits может быть nil — тогда проверка пропускается (legacy/тесты).
+// В production всегда передаётся non-nil.
+func (s *Service) CreateOrder(ctx context.Context, userID, packageID, returnURL string, gw payment.Gateway, limits LimitsChecker) (Order, string, error) {
+	if limits != nil {
+		active, err := limits.IsActive(ctx)
+		if err != nil {
+			// Fail-closed: при ошибке проверки лимита считаем запрещено.
+			return Order{}, "", fmt.Errorf("limits check: %w", err)
+		}
+		if !active {
+			return Order{}, "", ErrLimitReached
+		}
+	}
 	pkg, err := payment.FindPackage(packageID)
 	if err != nil {
 		return Order{}, "", err

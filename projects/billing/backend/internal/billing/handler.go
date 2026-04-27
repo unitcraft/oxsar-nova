@@ -16,10 +16,19 @@ type Handler struct {
 	svc       *Service
 	gateway   payment.Gateway
 	returnURL string
+	limits    LimitsChecker // план 54: hard-stop check перед CreateOrder
 }
 
 func NewHandler(svc *Service, gw payment.Gateway, returnURL string) *Handler {
 	return &Handler{svc: svc, gateway: gw, returnURL: returnURL}
+}
+
+// WithLimits подключает limits-проверку (план 54). Без этого вызов
+// CreateOrder будет работать без hard-stop (для тестов / legacy).
+// В production main.go обязательно вызывает WithLimits.
+func (h *Handler) WithLimits(l LimitsChecker) *Handler {
+	h.limits = l
+	return h
 }
 
 // SpendInput — request body для POST /billing/wallet/spend.
@@ -185,11 +194,18 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	if returnURL == "" {
 		returnURL = h.returnURL
 	}
-	order, payURL, err := h.svc.CreateOrder(r.Context(), userID, req.PackageID, returnURL, h.gateway)
+	order, payURL, err := h.svc.CreateOrder(r.Context(), userID, req.PackageID, returnURL, h.gateway, h.limits)
 	if err != nil {
 		switch {
 		case errors.Is(err, payment.ErrPackageNotFound):
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrNotFound, "package not found"))
+		case errors.Is(err, ErrLimitReached):
+			// План 54: hard-stop. HTTP 503 + нейтральное сообщение.
+			httpx.WriteError(w, r, &httpx.Error{
+				Status:  http.StatusServiceUnavailable,
+				Code:    "payments_disabled",
+				Message: "Пополнение временно недоступно. Попробуйте позже.",
+			})
 		default:
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		}
