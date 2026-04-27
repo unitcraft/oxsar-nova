@@ -54,12 +54,13 @@ func run() error {
 	provider := envStr("BILLING_PRIMARY_PROVIDER", envStr("PAYMENT_PROVIDER", "mock"))
 	returnURL := envStr("PAYMENT_RETURN_URL", "http://localhost:5173/")
 	gwCfg := payment.FactoryConfig{
-		ReturnURL:         returnURL,
-		MockBaseURL:       envStr("PAYMENT_MOCK_BASE_URL", "http://localhost:9100"),
-		MockSecret:        envStr("PAYMENT_MOCK_SECRET", ""),
-		YooKassaShopID:    envStr("YOOKASSA_SHOP_ID", ""),
-		YooKassaSecretKey: envStr("YOOKASSA_SECRET_KEY", ""),
-		YooKassaAPIURL:    envStr("YOOKASSA_API_URL", ""),
+		ReturnURL:                  returnURL,
+		MockBaseURL:                envStr("PAYMENT_MOCK_BASE_URL", "http://localhost:9100"),
+		MockSecret:                 envStr("PAYMENT_MOCK_SECRET", ""),
+		YooKassaShopID:             envStr("YOOKASSA_SHOP_ID", ""),
+		YooKassaSecretKey:          envStr("YOOKASSA_SECRET_KEY", ""),
+		YooKassaAPIURL:             envStr("YOOKASSA_API_URL", ""),
+		YooKassaDisableIPAllowlist: envStr("YOOKASSA_DISABLE_IP_ALLOWLIST", "0") == "1",
 	}
 	reconcileInterval := envDur("BILLING_RECONCILE_INTERVAL", time.Hour)
 

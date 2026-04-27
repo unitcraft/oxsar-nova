@@ -1,0 +1,66 @@
+# Override для прогона E2E-флоу с YooKassa-mock сервером.
+#
+# Запуск:
+#   docker compose \
+#     -f deploy/docker-compose.yml \
+#     -f deploy/docker-compose.yookassa-mock.yml \
+#     up -d --build
+#
+# Что меняется относительно базового compose:
+#   - Добавлен сервис yookassa-mock на :9101 (имитирует YooKassa API).
+#   - billing-service переключён на provider=yookassa, API_URL = mock-сервис,
+#     IP-allowlist отключён (webhook прилетит с docker-internal IP, не из
+#     YooKassa-подсетей).
+#
+# План 42: даёт прогнать полный платёжный flow без реального аккаунта
+# YooKassa. Когда появится тестовый магазин — этот override не нужен,
+# вместо него поднимаем основной compose с YOOKASSA_SHOP_ID/SECRET_KEY от
+# YooKassa.
+
+services:
+  yookassa-mock:
+    build:
+      context: ..
+      dockerfile: projects/billing/backend/Dockerfile.yookassa-mock
+    # Не зависим от billing-service: webhook отправляется fire-and-forget,
+    # сам mock самодостаточен. Циклической depends_on не делаем.
+    environment:
+      YOOKASSA_MOCK_ADDR: ":9101"
+      # Public URL — то, что mock прописывает в confirmation_url.
+      # Юзер кликает confirmation_url из браузера на хосте, поэтому здесь
+      # должен быть localhost:9101 (как видно с хоста), не имя сервиса.
+      YOOKASSA_MOCK_PUBLIC_URL: "http://localhost:9101"
+      # Webhook URL — billing-service внутри docker-сети.
+      BILLING_WEBHOOK_URL: "http://billing-service:9100/billing/webhooks/yookassa"
+    ports: ["9101:9101"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9101/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  billing-service:
+    depends_on:
+      # billing использует mock yookassa API → ждём его готовности.
+      yookassa-mock:
+        condition: service_healthy
+      # все остальные depends_on остаются из базового compose.
+      billing-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      billing-migrate:
+        condition: service_completed_successfully
+    environment:
+      BILLING_PRIMARY_PROVIDER: yookassa
+      YOOKASSA_SHOP_ID: mock-shop
+      YOOKASSA_SECRET_KEY: mock-secret-not-real
+      # billing-service внутри docker-сети ходит на yookassa-mock по имени.
+      YOOKASSA_API_URL: "http://yookassa-mock:9101/v3"
+      # КРИТИЧНО: webhook от mock прилетит с docker-internal IP. На проде
+      # этот флаг ОБЯЗАТЕЛЬНО false.
+      YOOKASSA_DISABLE_IP_ALLOWLIST: "1"
+      PAYMENT_RETURN_URL: "http://localhost:5173/?payment=success"

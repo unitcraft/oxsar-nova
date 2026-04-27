@@ -37,9 +37,14 @@ type FactoryConfig struct {
 	MockSecret  string
 
 	// yookassa
-	YooKassaShopID    string
-	YooKassaSecretKey string
-	YooKassaAPIURL    string // пусто → prod https://api.yookassa.ru/v3
+	YooKassaShopID         string
+	YooKassaSecretKey      string
+	YooKassaAPIURL         string // пусто → prod https://api.yookassa.ru/v3
+	// YooKassaDisableIPAllowlist — отключить проверку IP webhook'а.
+	// Только для dev/staging с локальным yookassa-mock — webhook прилетит
+	// с docker-internal IP, не из YooKassa-подсетей. На проде ОБЯЗАТЕЛЬНО
+	// false.
+	YooKassaDisableIPAllowlist bool
 }
 
 // NewGateway возвращает Gateway по имени провайдера.
@@ -52,12 +57,17 @@ func NewGateway(provider string, cfg FactoryConfig) (Gateway, error) {
 		if cfg.YooKassaShopID == "" || cfg.YooKassaSecretKey == "" {
 			return nil, errors.New("yookassa: YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY required")
 		}
-		return NewYooKassaGateway(
+		gw := NewYooKassaGateway(
 			cfg.YooKassaShopID,
 			cfg.YooKassaSecretKey,
 			cfg.YooKassaAPIURL,
 			cfg.ReturnURL,
-		), nil
+		)
+		if cfg.YooKassaDisableIPAllowlist {
+			// dev/staging-режим: webhook прилетит с docker-internal IP.
+			gw.SetTrustedNetworks(nil)
+		}
+		return gw, nil
 	default:
 		return nil, fmt.Errorf("%w: %q (supported: mock, yookassa)", ErrUnknownProvider, provider)
 	}
