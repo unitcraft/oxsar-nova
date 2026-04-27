@@ -10222,3 +10222,70 @@ deletes в `tiny_mce/`, doc-файлы 50/audit/project-creation).
 не пересекаются.
 
 **Коммит**: 1.
+
+## Итерация 50.Ф.0 (2026-04-27) — game-origin: фикс ассет-путей после реструктуризации (план 43)
+
+**Контекст.** Скриншот страницы `?go=Constructions` показал, что у
+**всех** построек отсутствуют иконки — рендерится только placeholder
+`buildings/empty/empty.gif` вместо `metalmine.gif`, `silicon_lab.gif`
+и т.п. Юзер `userid=1` имеет в БД `imagepackage="std"`, файлы на диске
+есть в `public/images/buildings/std/*.gif` — но `getUnitImage()` всё
+равно фоллбэчится на empty.
+
+**Корневая причина.** Регрессия плана 43 (реструктуризация game-origin
+в `src/` + `public/`). Константа `APP_ROOT_DIR` указывает на `src/`
+(где `global.inc.php`), но физически `images/`, `css/` после
+реструктуризации остались только в `public/`. PHP-код искал ассеты
+через `APP_ROOT_DIR."images/..."` — `file_exists()` всегда `false`,
+fallback на empty. nginx обслуживал URL `/images/...` корректно из
+`public/`, поэтому *запрос к существующему файлу* работал, но
+*проверка существования из PHP* — нет.
+
+То же самое происходило с `getUserStyles()` для `us_bg/` и
+`us_table/` CSS — это и был тот самый «-4330 байт diff на каждой
+странице» из `compare-with-legacy.sh`.
+
+**Что починено** (8 точечных правок, замена `APP_ROOT_DIR` на
+`GAME_ORIGIN_DIR."public/"`):
+
+- `src/game/Functions.inc.php:1007` — `getUnitImage()` (главная — иконки построек/юнитов/артефактов)
+- `src/game/Functions.inc.php:1029` — `getImgPacks()` (выбор стиля иконок в Preferences)
+- `src/game/Functions.inc.php:1066` — `getBgImagePlaneStyles()` (фоны планет в Preferences)
+- `src/game/Functions.inc.php:1090` — `getUserStyles()` (user-style CSS, та самая «-4330 байт diff»)
+- `src/game/page/Construction.class.php:123` — валидация `image_package` при сохранении
+- `src/game/page/Preferences.class.php:98` — список image-packs для UI
+- `src/game/page/Preferences.class.php:235` — fallback на std при невалидном
+- `src/game/Artefact.class.php:1442` — флаги стран (`getFlagImage`)
+
+**Verifications.**
+- `php -l` на 4 модифицированных файлах → No syntax errors.
+- `curl ?go=Constructions` после фикса → 18 разных уникальных
+  иконок зданий (`metalmine.gif`, `silicon_lab.gif`, `solar_plant.gif`,
+  `nano_factory.gif`, …) вместо одного `empty.gif`.
+- HTTP-коды: Main, Empire, Constructions, Shipyard, Research, Defense,
+  Galaxy, Stock, Chat, MSG, Alliance, Preferences — все 200, размеры
+  разные (роутинг работает).
+- `Preferences` size 17454 → 34773 байт (+17KB) — теперь
+  `getImgPacks()` видит все 6 пакетов (`std`, `hitech`, `hitech2`,
+  `novax`, `ogame`, `empty`), а не только хардкод-`std` из fallback.
+- `compare-with-legacy.sh` после фикса: 41/41 страниц HTTP 200,
+  0 ошибок 4xx/5xx; major diff остались только на 3 известных
+  страницах (Alliance, BuildingInfo/UnitInfo, Changelog — все
+  задокументированы в `docs/prompts/compare-screens.md` как
+  «не наш код»).
+- Diff Main.diff после фикса: `<link rel="stylesheet" href="/css/us_bg/a-bg-117.css?11" />` и
+  `/css/us_table/table_td2_bg_80.css?11` теперь присутствуют
+  идентично у нас и в legacy.
+
+**Связь с планом 50.** Это **не** скоуп плана 50 (юр-фиксы), а
+регрессия плана 43 (реструктуризация). Но: (а) compare-скрипт
+критически использует CSS-сравнение, без user-style тысячи строк
+шума маскируют реальные регрессии модерации (Ф.4), (б) без иконок
+UI к публичному запуску непригоден (блокировало Ф.8). Поэтому
+зафиксировал как Ф.0 плана 50.
+
+**Параллельные сессии.** `git status --short`: только 4 моих PHP-файла
++ соседский `projects/billing/migrations/0002_limits_and_audit.sql`
+(другая сессия, не моё). Закоммичено только моё, явно по путям.
+
+**Коммит**: 1.

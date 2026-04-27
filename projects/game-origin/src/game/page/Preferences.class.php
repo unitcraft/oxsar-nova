@@ -95,7 +95,7 @@ class Preferences extends Page
 		Core::getTPL()->addLoop("templatePacks", $packs);
 
 		//handling image packs
-		$buildings_dir = APP_ROOT_DIR."images/buildings/";
+		$buildings_dir = GAME_ORIGIN_DIR."public/images/buildings/";
 		if( !defined('SN') && is_dir($buildings_dir) )
 		{
 			$imgpacks = array();
@@ -232,7 +232,7 @@ class Preferences extends Page
 			$templatepackage = "standard";
 		}
 		$imagepackage = empty($imagepackage) || preg_match("#[^\w\d\-_]#is", $imagepackage) ? "std" : $imagepackage;
-		if(!is_dir(APP_ROOT_DIR."images/buildings/".$imagepackage))
+		if(!is_dir(GAME_ORIGIN_DIR."public/images/buildings/".$imagepackage))
 		{
 			$imagepackage = "std";
 		}

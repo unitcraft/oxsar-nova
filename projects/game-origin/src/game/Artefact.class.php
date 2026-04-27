@@ -1439,7 +1439,7 @@ class Artefact
 	public static function getFlagImage($name)
 	{
 		$image = "flag_".strtolower($name).".png";
-		if(!file_exists(APP_ROOT_DIR."images/".$image))
+		if(!file_exists(GAME_ORIGIN_DIR."public/images/".$image))
 		{
 			$image = "buildings/empty/empty.gif";
 		}
