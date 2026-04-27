@@ -16,6 +16,8 @@ Git-стандарт соавторства, GitHub отображает Claude 
 
 ## Как настроить
 
+### Минимум: атрибуция через `attribution.commit`
+
 В файле `.claude/settings.json` (он в `.gitignore`, личный для каждого
 разработчика):
 
@@ -33,6 +35,64 @@ Git-стандарт соавторства, GitHub отображает Claude 
 
 Поле `permissions` — на ваше усмотрение, оно к атрибуции отношения не
 имеет; пример выше — широкие разрешения для удобства, можно сужать.
+
+**Известная проблема (CC 2.1.x, 2026-04):** настройка `attribution.commit`
+иногда не подхватывается автоматически — коммиты идут без AI-trailer'а
+(приемлемо по правилу выше) или с `Co-Authored-By: Claude` (нарушение,
+если AI вписал руками). Поэтому ниже рекомендуется второй слой защиты —
+`SessionStart`-hook + git-hook.
+
+### Полная автоматизация: SessionStart-hook + git-hook
+
+Расширенный `.claude/settings.json` для каждой сессии автоматически
+активирует расшаренный git-hook `scripts/git-hooks/commit-msg`, который
+**гарантированно** срезает `Co-Authored-By: Claude` из коммит-сообщения
+независимо от того, что написано в HEREDOC:
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(*)", "Edit(**)", "Write(**)", "Read(**)"]
+  },
+  "attribution": {
+    "commit": "Generated-with: Claude Code",
+    "pr": ""
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git config core.hooksPath scripts/git-hooks"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+После этого:
+- `attribution.commit` пытается вписать `Generated-with: Claude Code` —
+  идеальный исход;
+- если CLI его не подхватил, и AI вписал `Co-Authored-By: Claude`
+  руками в HEREDOC — git-hook это срежет автоматически на
+  `git commit`;
+- если AI ничего не вписал — коммит идёт чисто, без AI-trailer
+  (тоже приемлемо по правилу плана 41 §6).
+
+### Альтернатива без settings.json
+
+Если разработчик не хочет создавать `.claude/settings.json`, можно
+активировать только git-hook вручную одной командой:
+
+```bash
+git config core.hooksPath scripts/git-hooks
+```
+
+Это инструкция для всех новых сессий и разработчиков, описана в
+[CLAUDE.md](../../CLAUDE.md) §«Onboarding: одноразовые настройки».
 
 ## Проверка
 
