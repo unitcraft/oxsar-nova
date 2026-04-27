@@ -1007,10 +1007,9 @@ End-to-end в dev: register в auth-service → JWT (RSA) → `/api/me` в game-
 
 **Functional (не блокирует security, но нужно для multi-universe):**
 
-- ⏳ **План 38** — billing-service: кошельки, платёжные webhooks
-  (Robokassa/Enot/mock), голосование за feedback с idempotency.
-  Раньше был Ф.7 в auth-service — после ревизии вынесен в отдельный
-  микросервис (different bounded context).
+- ✅ **План 38** — billing-service: кошельки, платёжные webhooks,
+  голосование за feedback с idempotency. Закрыт 2026-04-27, все 8 фаз
+  реализованы. YooKassa как основной провайдер — план 42.
 - ⏳ **Ф.8** — второй вселенский стек (uni02 Speed) для проверки Universe Switcher
   E2E. DNS на Selectel + wildcard SSL.
 - ✅ `bootstrapNewUser` retry-логика — если стартовая планета не назначилась,
