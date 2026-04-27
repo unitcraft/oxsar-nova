@@ -251,11 +251,13 @@ class Preferences extends Page
 		}
 
 		// Check username
+		// План 37.7.1: getRaw() для записи в БД и сравнения. get() возвращает
+		// HTML-escaped username (XSS защита для template вывода).
         if(!isNameCharValid($username))
         {
-            $username = NS::getUser()->get("username");
+            $username = NS::getUser()->getRaw("username");
         }
-		if( !Str::compare($username, NS::getUser()->get("username")) )
+		if( !Str::compare($username, NS::getUser()->getRaw("username")) )
 		{
 			$result = sqlSelect("user", "userid", "", "username = ".sqlVal($username));
 			if(Core::getDB()->num_rows($result) == 0)
@@ -263,7 +265,7 @@ class Preferences extends Page
 				sqlEnd($result);
 				if(!checkCharacters($username))
 				{
-					$username = NS::getUser()->get("username");
+					$username = NS::getUser()->getRaw("username");
 					Logger::addFlashMessage("USERNAME_INVALID");
 				}
 				else
@@ -274,7 +276,7 @@ class Preferences extends Page
 			else
 			{
 				sqlEnd($result);
-				$username = NS::getUser()->get("username");
+				$username = NS::getUser()->getRaw("username");
 				Logger::addFlashMessage("USERNAME_EXISTS");
 			}
 		}
