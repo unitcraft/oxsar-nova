@@ -98,25 +98,27 @@ attribution через проектный `.claude/settings.json`.
 gitignore блокирует — повторно объяснить процедуру через
 `docs/ops/claude-code-attribution.md` или применить альтернативу.
 
-### Gap 4.1 — регистрация в game-origin без согласия
+### Gap 4.1 — регистрация в game-origin без согласия ✅ ЗАКРЫТО (2026-04-28, план 50 Ф.2)
 
-В `projects/game-origin/src/game/AccountCreator.class.php` нет
-упоминаний согласия на ПДн или акцепта оферты. Если пользователь
-может зарегистрироваться напрямую в game-origin (без захода через
-portal с handoff page) — у этой регистрации нет согласия по 152-ФЗ
-и оферте.
+Уточнено пользователем: прямая регистрация в game-origin закрыта,
+вход возможен только через handoff из portal (как и в game-nova).
+Согласия на обработку ПДн и акцепт оферты собираются на portal
+(планы 44, 47) и попадают в `user_consents` identity-сервиса до
+момента handoff'а в game-origin.
 
-**Требует уточнения:** в плане 36 lazy-create user добавлен в
-**game-nova middleware**, но не в game-origin. Нужно проверить, можно
-ли в принципе зарегистрироваться напрямую в game-origin или вход
-работает только через handoff page из portal с уже подписанными
-согласиями.
+Проверено grep'ом по `projects/game-origin/src/` и `public/`:
+внешних вызовов `AccountCreator::registerUser` / `new AccountCreator(...)`
+**нет** (единственное упоминание — комментарий в
+`core/AjaxRequestHelper.abstract_class.php`).
 
-**Что делать:** уточнить у автора. Если регистрация в game-origin
-возможна напрямую — добавить чекбоксы согласия в форму или закрыть
-прямую регистрацию (только через portal). Если регистрация только
-через handoff — задокументировать это в комментариях
-`AccountCreator.class.php` и в плане.
+В шапку `src/game/AccountCreator.class.php` добавлен
+предупреждающий блок-комментарий: класс остаётся как helper для
+lazy-create при handoff'е, добавлять публичные точки входа без
+отдельного плана с чекбоксами + integration user_consents API
+запрещено.
+
+Чекбоксы согласия в game-origin не требуются — их роль выполняют
+формы portal/AuthPage и game-nova/LoginScreen.
 
 ### Gap 5.1 — нет «12+» в game-origin ✅ ЗАКРЫТО (2026-04-27, план 50 Ф.3)
 
