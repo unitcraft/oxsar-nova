@@ -11,6 +11,14 @@ RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS libmemcached-dev zlib-
     && docker-php-ext-enable memcached \
     && apk del .build-deps
 
+# GD + FreeType для генерации preview-картинок артефактов
+# (artImageUrl → public/artefact-image.php, см. план 37.5d.9).
+RUN apk add --no-cache --virtual .build-deps-gd $PHPIZE_DEPS libpng-dev freetype-dev libjpeg-turbo-dev \
+    && apk add --no-cache libpng freetype libjpeg-turbo \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd \
+    && apk del .build-deps-gd
+
 WORKDIR /var/www
 
 COPY --chown=www-data:www-data . .

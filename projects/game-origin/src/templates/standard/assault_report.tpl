@@ -142,7 +142,7 @@ var TSP_CONFIG = {
               <input type="hidden" name="id" id="id" value="{@id}" />
               <input type="hidden" name="key" id="key" value="{@key}" />
               <input type="hidden" name="key2" id="key2" value="{@key2}" />
-              <input type="hidden" name="odnoklassniki" id="odnoklassniki" value="?<?php echo Yii::app()->socialAPI->getSuffix();?>" />
+              <input type="hidden" name="odnoklassniki" id="odnoklassniki" value="?" />
               <input type="hidden" name="track" id="track"/>
             </td>
           </tr>
