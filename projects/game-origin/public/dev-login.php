@@ -28,7 +28,17 @@ $token = b64url('{"typ":"JWT","alg":"none"}')
        . '.' . b64url(json_encode($payload, JSON_UNESCAPED_UNICODE))
        . '.';
 
-setcookie('oxsar-jwt', $token, time() + 86400 * 30, '/');
+// План 37.7.2: CSRF защита через SameSite=Strict cookie + httponly.
+// Браузер не отправит cookie на cross-site POST → CSRF блокируется.
+// secure только если HTTPS (для local dev http не ставим — иначе cookie
+// не работает).
+setcookie('oxsar-jwt', $token, [
+    'expires'  => time() + 86400 * 30,
+    'path'     => '/',
+    'samesite' => 'Strict',
+    'httponly' => true,
+    'secure'   => !empty($_SERVER['HTTPS']),
+]);
 
 header('Location: /game.php?go=Main');
 exit;
