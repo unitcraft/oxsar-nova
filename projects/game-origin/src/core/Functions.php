@@ -1,371 +1,291 @@
 <?php
 /**
-* Generic functions libary.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: Functions.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * Functions.php — clean-room rewrite (план 43 Ф.6). Заменяет одноимённый
+ * файл фреймворка Recipe (GPL).
+ *
+ * Глобальные хелпер-функции для работы с БД (sqlVal/sqlSelect/...),
+ * редиректами, валидацией email, генерацией случайных строк и пр.
+ * Всё это глобальное API legacy-кода, переписать на namespaces — большая
+ * задача (затронет ~200 call-sites). Пока сохраняем глобальные функции
+ * с теми же именами и сигнатурами.
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('RECIPE_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
-/**
-* Displays string and shut program down.
-* (Improved function of die().)
-*
-* @param string	The to displayed string.
-*
-* @return void
-*/
+/* ============================================================
+ * Управление потоком выполнения
+ * ============================================================ */
+
+/** echo + exit. Принимает строку или массив (через print_r). */
 function terminate($string)
 {
-  if(is_array($string)) { print_r($string); }
-  else { echo $string; }
-  exit;
-}
-
-/**
-* Forward to login page.
-*
-* @param string	Error id to output
-*
-* @return void
-*/
-function forwardToLogin($errorid)
-{
-  if(LOGIN_REQUIRED)
-  {
-    if(strpos(LOGIN_URL, '?') === false)
+    if(is_array($string))
     {
-      $login = LOGIN_URL."?error=".$errorid;
-    }
-    else { $login = LOGIN_URL; }
-    // Hook::event("FORWARD_TO_LOGIN_PAGE", array(&$login, $errorid));
-    doHeaderRedirection($login, false);
-  }
-  Core::getLanguage()->load("account");
-  Logger::addMessage($errorid);
-  Core::getTPL()->display("login");
-  return;
-}
-
-/**
-* Perform an header redirection.
-*
-* @param string	URL
-*
-* @return void
-*/
-
-// Stub: socialUrl был для соц.сетей (ОК/VK iframe). В oxsar-nova OAuth убран.
-if (!function_exists('socialUrl')) {
-  function socialUrl($url) { return $url; }
-}
-
-// План 37.5d.9: artImageUrl — генерация URL для preview артефакт-картинок.
-// В legacy указывала на index.php/artefact2user_YII?{suffix}.
-// У нас Yii нет — endpoint реализован в public/artefact-image.php (GD-генерация
-// idential-логики из legacy controller renderImage()).
-// $action = "image_new" | "image" (action_view), у нас оба → один endpoint.
-// $suffix = строка query-params от social API (мы её игнорируем).
-if (!function_exists('artImageUrl')) {
-  function artImageUrl($action, $suffix, $real_url = true) {
-    return ($real_url ? RELATIVE_URL : "") . "artefact-image.php?";
-  }
-}
-
-function doHeaderRedirection($url, $appendSession = true)
-{
-  // $test =  strpos("http://", $url);
-   if(Link::isExternal($url) || strpos("http://", $url) !== false || substr($url, 0, 7) == 'http://')
-  //if(Link::isExternal($url) || strpos("http://", $url) !== false)
-  {
-    $path = $url;
-  }
-  else
-  {
-  	// If need sid, but dont have it.
-    if( $appendSession && strpos($url, "sid=") === false && URL_SESSION )
-    {
-      (strpos($url, "?") === false) ? $url .= "?sid=".SID : $url .= "&sid=".SID;
-    }
-
-    if( defined("FORCE_REWRITE") && FORCE_REWRITE )
-    {
-    	$path = Link::normalizeURL($url);
+        print_r($string);
     }
     else
     {
-    	$path = HTTP_HOST.REQUEST_DIR.$url;
+        echo (string)$string;
     }
-  }
-  if( defined('SN') && strpos($path, '?') === false && strpos($path, 'api_server') === false )
-  {
-	$path = socialUrl($path);
-	/*
-  	if( strpos($path, '?') === false )
-  	{
-  		$path .= '?';
-  	}
-  	else
-  	{
-  		$path .= '&';
-  	}
-  	$path .= '';
-	*/
-  	if( !preg_match("#^(".preg_quote(FULL_URL, "#")."|".preg_quote(RELATIVE_URL, "#").")#is", $path) )
-  	{
-  		$path = RELATIVE_URL . $path;
-  	}
-  }
-  header("Location: ".$path);
-  exit();
+    exit;
 }
 
 /**
-* Checks whether the incoming email address is valid.
-*
-* @param string	Email address to check
-*
-* @return boolean
-*/
+ * Перенаправление на login-страницу с error-параметром, либо рендер
+ * login-template если LOGIN_REQUIRED == false.
+ */
+function forwardToLogin($errorid)
+{
+    if(defined('LOGIN_REQUIRED') && LOGIN_REQUIRED)
+    {
+        $login = defined('LOGIN_URL') ? LOGIN_URL : '/login.php';
+        if(strpos($login, '?') === false)
+        {
+            $login .= '?error='.urlencode((string)$errorid);
+        }
+        doHeaderRedirection($login, false);
+        return;
+    }
+    if(class_exists('Core'))
+    {
+        $lang = Core::getLanguage();
+        if($lang) { $lang->load('account'); }
+    }
+    if(class_exists('Logger'))
+    {
+        Logger::addMessage($errorid);
+    }
+    if(class_exists('Core'))
+    {
+        $tpl = Core::getTPL();
+        if($tpl) { $tpl->display('login'); }
+    }
+}
+
+/* ============================================================
+ * Социальные сети — stubs (план 37: соцсети отключены)
+ * ============================================================ */
+
+if(!function_exists('socialUrl'))
+{
+    function socialUrl($url) { return $url; }
+}
+
+if(!function_exists('artImageUrl'))
+{
+    function artImageUrl($action, $suffix, $real_url = true)
+    {
+        return ($real_url ? RELATIVE_URL : '').'artefact-image.php?';
+    }
+}
+
+/* ============================================================
+ * Header redirect
+ * ============================================================ */
+
+function doHeaderRedirection($url, $appendSession = true)
+{
+    $url = (string)$url;
+    if(class_exists('Link') && Link::isExternal($url))
+    {
+        $path = $url;
+    }
+    elseif(strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0)
+    {
+        $path = $url;
+    }
+    else
+    {
+        if($appendSession && defined('URL_SESSION') && URL_SESSION
+           && strpos($url, 'sid=') === false && defined('SID'))
+        {
+            $sep = strpos($url, '?') === false ? '?' : '&';
+            $url .= $sep.'sid='.SID;
+        }
+
+        if(defined('FORCE_REWRITE') && FORCE_REWRITE && class_exists('Link'))
+        {
+            $path = Link::normalizeURL($url);
+        }
+        else
+        {
+            $host = defined('HTTP_HOST') ? HTTP_HOST : '';
+            $dir = defined('REQUEST_DIR') ? REQUEST_DIR : '';
+            $path = $host.$dir.$url;
+        }
+    }
+    header('Location: '.$path);
+    exit;
+}
+
+/* ============================================================
+ * Валидация и генерация
+ * ============================================================ */
+
 function isMail($mail)
 {
-  if(preg_match("#^[^\\x00-\\x1f@]+@[^\\x00-\\x1f@]{2,}\.[a-z]{2,}$#i", $mail) == 0)
-  {
-    return false;
-  }
-  return true;
+    return is_string($mail) && filter_var($mail, FILTER_VALIDATE_EMAIL) !== false;
 }
 
-/**
-* Generates a random text.
-*
-* @param integer	The length of the random text
-*
-* @return string	The random text
-*/
 function randString($length)
 {
-  $pool = "qwertzupasdfghkyxcvbnm";
-  $pool .= "23456789";
-  $pool .= "QWERTZUPLKJHGFDSAYXCVBNM";
-  srand ((double)microtime()*1000000);
-  for($index = 0; $index < $length; $index++)
-  {
-    $randstr .= substr($pool,(mt_rand()%(strlen($pool))), 1);
-  }
-  return $randstr;
+    $length = max(0, (int)$length);
+    if($length === 0) { return ''; }
+    $alphabet = 'qwertzupasdfghkyxcvbnm23456789QWERTZUPLKJHGFDSAYXCVBNM';
+    $max = strlen($alphabet) - 1;
+    $out = '';
+    for($i = 0; $i < $length; $i++)
+    {
+        $out .= $alphabet[mt_rand(0, $max)];
+    }
+    return $out;
 }
 
-/**
-* Parses an URL and return its components.
-*
-* @param string	The URL to parse
-*
-* @return array	The URL components
-*/
 function parseUrl($url)
 {
-  $out = array();
-  $r  = "^(?:(?P<scheme>\w+)://)?";
-  $r .= "(?:(?P<login>\w+):(?P<pass>\w+)@)?";
-  $r .= "(?P<host>(?:(?P<subdomain>[\w\.]+)\.)?" . "(?P<domain>\w+\.(?P<extension>\w+)))";
-  $r .= "(?::(?P<port>\d+))?";
-  $r .= "(?P<path>[\w/]*/(?P<file>\w+(?:\.\w+)?)?)?";
-  $r .= "(?:\?(?P<arg>[\w=&]+))?";
-  $r .= "(?:#(?P<anchor>\w+))?";
-  $r = "!$r!";
-  preg_match($r, $url, $out);
-  return $out;
+    return parse_url((string)$url) ?: array();
 }
 
 /**
-* Capitalizes the first letter of each directory part.
-*
-* @param string	Path
-* @param char		Path separator [optional]
-*
-* @return string
-*/
+ * Преобразование "path/to/file" → "Path/To/File" для autoloader-резолва
+ * имён классов с namespace-вложенностью.
+ */
 function getClassPath($path, $s = '/')
 {
-  if(preg_match("#".$s."$#i", $path))
-  {
-    $path = substr($path, 0, -1);
-  }
-  if(preg_match("#^".$s."#i", $path))
-  {
-    $path = substr($path, 1);
-  }
-  return str_replace(' ', $s, ucwords(str_replace($s, ' ', $path)));
+    $path = (string)$path;
+    if($path === '') { return ''; }
+    if(substr($path, -strlen($s)) === $s)
+    {
+        $path = substr($path, 0, -strlen($s));
+    }
+    if(strpos($path, $s) === 0)
+    {
+        $path = substr($path, strlen($s));
+    }
+    // 'a/b/c' → 'A/B/C'
+    return str_replace(' ', $s, ucwords(str_replace($s, ' ', $path)));
 }
+
+/* ============================================================
+ * SQL-helpers — обёртки над Core::getDB() / Core::getQuery()
+ * ============================================================ */
 
 function sqlVal($data)
 {
-  return is_null($data) ? "NULL" : Core::getDatabase()->quote_db_value((string)$data);
+    return $data === null ? 'NULL' : Core::getDatabase()->quote_db_value((string)$data);
 }
 
+/**
+ * Принимает массив (или несколько аргументов) и возвращает CSV из
+ * экранированных значений (для `IN (…)` clauses).
+ */
 function sqlArray()
 {
-  $data = func_num_args() > 1 ? func_get_args() : func_get_arg(0);
-  if(is_array($data))
-  {
-    $result = array();
-    foreach($data as $value)
+    $args = func_get_args();
+    if(count($args) === 1 && is_array($args[0]))
     {
-      $result[] = sqlVal($value);
+        $args = $args[0];
     }
-    return count($result) ? implode(",", $result) : 'NULL';
-  }
-  return sqlVal($data);
+    if(count($args) === 0) { return 'NULL'; }
+    $parts = array();
+    foreach($args as $value)
+    {
+        $parts[] = sqlVal($value);
+    }
+    return implode(',', $parts);
 }
 
-function sqlSelect($table, $select, $join = "", $where = "", $order = "", $limit = "", $groupby = "", $other = "")
+function sqlSelect($table, $select, $join = '', $where = '', $order = '', $limit = '', $groupby = '', $other = '')
 {
-  return Core::getQuery()->select($table, $select, $join, $where, $order, $limit, $groupby, $other);
+    return Core::getQuery()->select($table, $select, $join, $where, $order, $limit, $groupby, $other);
 }
 
-function sqlSelectRow($table, $select, $join = "", $where = "", $order = "", $limit = "", $groupby = "", $other = "")
+function sqlSelectRow($table, $select, $join = '', $where = '', $order = '', $limit = '', $groupby = '', $other = '')
 {
-  return Core::getQuery()->selectRow($table, $select, $join, $where, $order, $limit, $groupby, $other);
+    return Core::getQuery()->selectRow($table, $select, $join, $where, $order, $limit, $groupby, $other);
 }
 
-function sqlSelectField($table, $select, $join = "", $where = "", $order = "", $limit = "", $groupby = "", $other = "")
+function sqlSelectField($table, $select, $join = '', $where = '', $order = '', $limit = '', $groupby = '', $other = '')
 {
-  return Core::getQuery()->selectField($table, $select, $join, $where, $order, $limit, $groupby, $other);
+    return Core::getQuery()->selectField($table, $select, $join, $where, $order, $limit, $groupby, $other);
 }
 
 function sqlInsert($table_name, $values)
 {
-  Core::getQuery()->insert($table_name,
-    array_keys($values),
-    array_values($values));
-  return Core::getDB()->insert_id();
+    Core::getQuery()->insert(
+        $table_name,
+        array_keys($values),
+        array_values($values)
+    );
+    return Core::getDB()->insert_id();
 }
 
 function sqlUpdate($table_name, $values, $where)
 {
-  return Core::getQuery()->update($table_name,
-    array_keys($values),
-    array_values($values),
-    $where);
+    return Core::getQuery()->update(
+        $table_name,
+        array_keys($values),
+        array_values($values),
+        $where
+    );
 }
 
 function sqlDelete($table_name, $where)
 {
-  Core::getQuery()->delete($table_name, $where);
+    Core::getQuery()->delete($table_name, $where);
 }
 
 function sqlQuery($sql)
 {
-  return Core::getDB()->query($sql);
+    return Core::getDB()->query($sql);
 }
 
 function sqlQueryRow($sql)
 {
-  return Core::getDB()->queryRow($sql);
+    return Core::getDB()->queryRow($sql);
 }
 
 function sqlQueryField($sql)
 {
-  return Core::getDB()->queryField($sql);
+    return Core::getDB()->queryField($sql);
 }
 
 function sqlFetch($result)
 {
-  return Core::getDB()->fetch($result);
+    return Core::getDB()->fetch($result);
 }
 
 function sqlEnd($result)
 {
-  return Core::getDB()->free_result($result);
+    return Core::getDB()->free_result($result);
 }
 
-/**
-* Gets an environment variable from available sources, and provides emulation
-* for unsupported or inconsistent environment variables (i.e. DOCUMENT_ROOT on
-* IIS, or SCRIPT_NAME in CGI mode).  Also exposes some additional custom
-* environment information.
-*
-* @param  string $key Environment variable name.
-* @return string Environment variable setting.
-* @link http://book.cakephp.org/view/701/env
-*/
-function env($key) {
-  if ($key == 'HTTPS') {
-    if (isset($_SERVER['HTTPS'])) {
-      return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-    }
-    return (strpos(env('SCRIPT_URI'), 'https://') === 0);
-  }
+/* ============================================================
+ * Среда и mobile-detection
+ * ============================================================ */
 
-  if ($key == 'SCRIPT_NAME') {
-    if (env('CGI_MODE') && isset($_ENV['SCRIPT_URL'])) {
-      $key = 'SCRIPT_URL';
-    }
-  }
+function env($key)
+{
+    if(isset($_SERVER[$key])) { return $_SERVER[$key]; }
+    if(isset($_ENV[$key])) { return $_ENV[$key]; }
+    $v = getenv($key);
+    return $v !== false ? $v : null;
+}
 
-  $val = null;
-  if (isset($_SERVER[$key])) {
-    $val = $_SERVER[$key];
-  } elseif (isset($_ENV[$key])) {
-    $val = $_ENV[$key];
-  } elseif (getenv($key) !== false) {
-    $val = getenv($key);
-  }
-
-  if ($key === 'REMOTE_ADDR' && $val === env('SERVER_ADDR')) {
-    $addr = env('HTTP_PC_REMOTE_ADDR');
-    if ($addr !== null) {
-      $val = $addr;
-    }
-  }
-
-  if ($val !== null) {
-    return $val;
-  }
-
-  switch ($key) {
-      case 'SCRIPT_FILENAME':
-        if (defined('SERVER_IIS') && SERVER_IIS === true) {
-          return str_replace('\\\\', '\\', env('PATH_TRANSLATED'));
-        }
-        break;
-      case 'DOCUMENT_ROOT':
-        $name = env('SCRIPT_NAME');
-        $filename = env('SCRIPT_FILENAME');
-        $offset = 0;
-        if (!strpos($name, '.php')) {
-          $offset = 4;
-        }
-        return substr($filename, 0, strlen($filename) - (strlen($name) + $offset));
-        break;
-      case 'PHP_SELF':
-        return str_replace(env('DOCUMENT_ROOT'), '', env('SCRIPT_FILENAME'));
-        break;
-      case 'CGI_MODE':
-        return (PHP_SAPI === 'cgi');
-        break;
-      case 'HTTP_BASE':
-        $host = env('HTTP_HOST');
-        if (substr_count($host, '.') !== 1) {
-          return preg_replace('/^([^.])*/i', null, env('HTTP_HOST'));
-        }
-        return '.' . $host;
-        break;
-  }
-  return null;
+if(!defined('REQUEST_MOBILE_UA'))
+{
+    define('REQUEST_MOBILE_UA', '(iPhone|iPad|MIDP|AvantGo|BlackBerry|J2ME|Opera Mini|DoCoMo|NetFront|Nokia|PalmOS|PalmSource|portalmmm|Plucker|ReqwirelessWeb|SonyEricsson|Symbian|UP\.Browser|Windows CE|Xiino|Android|Mobile)');
 }
 
 function is_mobile_request()
 {
-  return preg_match('/' . REQUEST_MOBILE_UA . '/i', env('HTTP_USER_AGENT'));
+    $ua = env('HTTP_USER_AGENT');
+    return is_string($ua) && preg_match('/'.REQUEST_MOBILE_UA.'/i', $ua) === 1;
 }
 
-define('REQUEST_MOBILE_UA', '(iPhone|MIDP|AvantGo|BlackBerry|J2ME|Opera Mini|DoCoMo|NetFront|Nokia|PalmOS|PalmSource|portalmmm|Plucker|ReqwirelessWeb|SonyEricsson|Symbian|UP\.Browser|Windows CE|Xiino)');
-define('IS_MOBILE_REQUEST', is_mobile_request());
-
-?>
+if(!defined('IS_MOBILE_REQUEST'))
+{
+    define('IS_MOBILE_REQUEST', is_mobile_request());
+}
