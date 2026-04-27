@@ -9940,6 +9940,129 @@ billing, portal); PHP smoke-тест game-origin — 200 на Main/Empire/Stock.
 
 **Коммит**: 1 (`feat(plan-52): RBAC unification`).
 
+## Итерация 53 (2026-04-27) — Admin-консоль на admin.oxsar-nova.ru
+
+**План**: [53-admin-frontend.md](plans/53-admin-frontend.md).
+**Цель**: Отдельная админ-консоль на отдельном домене с production-
+grade безопасностью (IP-allowlist, strict CSP, HSTS) и
+профессиональным utilitarian-дизайном (стиль Stripe / Linear).
+
+### Архитектурные решения
+
+- **BFF (Backend-for-Frontend) вместо OAuth2 PKCE.** После ревью
+  IETF "OAuth 2.0 for Browser-Based Apps" BCP и текущих
+  рекомендаций Auth0/Okta/Microsoft (с 2023): для new-build
+  first-party SPA в монорепо BFF — общепринятая default-практика.
+  PKCE применима к third-party SPA (mobile, CLI), для своего UI
+  на своём домене — overkill. JWT в JS-памяти всё равно открыт
+  XSS, BFF полностью убирает токены из браузера.
+- **shadcn/ui copy-paste primitives.** Не npm-зависимость, полный
+  контроль кастомизации. В `src/components/ui/` — Button (cva
+  variants), Input, Card, Badge, Skeleton, Dialog. Радикс UI
+  под капотом.
+- **Permission-based UI guards.** UI скрывает кнопки на
+  основании JWT-claims permissions (план 52). Это UX, не security
+  — backend в любом случае проверяет (defence in depth).
+- **Strict TypeScript** (noUncheckedIndexedAccess,
+  exactOptionalPropertyTypes, verbatimModuleSyntax). Поймал и
+  поправил несколько пропущенных undefined-cases в conditional
+  spread'ах для опциональных пропсов.
+
+### Что сделано
+
+- **Ф.1**: скаффолдинг `projects/admin-frontend/` (Vite+React+TS+
+  Tailwind+shadcn/ui+TanStack Query/Table+react-hook-form+zod+
+  recharts+react-router+MSW). Smoke через Docker (npm install
+  через named volume — обход Windows bind-mount race conditions):
+  473 packages, build 90 modules, main chunk 27 KB gz.
+- **Ф.2a**: новый Go-сервис `projects/admin-bff/` (~400 строк
+  Go) — chi router, Redis-backed session store с sliding TTL,
+  identity-client с парсингом claims, CSRF middleware
+  (constant-time compare), reverse-proxy с JWT-injection.
+  5 unit-тестов через miniredis.
+- **Ф.2b**: frontend BFF auth-flow — fetch-wrapper
+  (credentials:include + X-CSRF-Token), zod-валидируемая login-
+  форма, Protected route guard (status: unknown → skeleton,
+  anonymous → /login redirect), MSW моки для тестов (5/5
+  passing).
+- **Ф.3**: RootLayout (Topbar 48px + Sidebar 240/56 collapsed +
+  PageHeader). Permission-aware navigation (lucide icons),
+  group-headers, active-highlight. UI-store через
+  zustand+persist.
+- **Ф.4**: Users / Roles UI поверх RBAC API:
+  - `/roles` — таблица с lazy-fetch permissions при раскрытии
+    row.
+  - `/users/lookup` — поиск по UUID (zod).
+  - `/users/{id}` — assignments + Grant/Revoke формы.
+  - GrantRoleDialog (shadcn Dialog + react-hook-form + zod),
+    обязательный reason ≥3 символа.
+- **Ф.5**: Audit log с фильтрами (actor/target/action/since/
+  until), URL-state (deep-linking), пагинация offset-based,
+  CSV-export (RFC 4180 escaping).
+- **Ф.6**: Game-ops events — wait/error events с retry/cancel +
+  dead-letter queue с resurrect. Tabs Active / Dead-letter,
+  permission gates `game:events:retry` / `game:events:cancel`.
+- **Ф.9 + Ф.11**: Production deploy:
+  - `Dockerfile.admin-bff` (multi-stage, alpine non-root,
+    бинарь 10MB).
+  - `Dockerfile.admin-frontend` (nginx + dist).
+  - `nginx.admin.conf` с CSP, HSTS preload (2 года), X-Frame-
+    Options DENY, IP-allowlist через geo-block, SPA fallback.
+  - `docker-compose.admin.yml` — admin-bff+admin-frontend +
+    healthchecks + restart policy.
+  - GitHub Actions workflow `admin-console.yml`: bff (Go vet+
+    test+build) / frontend (typecheck+test+build+bundle-size
+    guard 300KB) / docker-build images через GHA cache.
+- **Ф.12**: документация:
+  - `docs/architecture/admin-frontend.md` — полная архитектура,
+    auth-flow, RBAC integration, security headers, IP-allowlist,
+    bundle breakdown.
+  - `docs/ops/admin-access.md` — runbook: bootstrap superadmin,
+    IP-allowlist, login flow, отзыв доступа, типовые проблемы.
+
+### Архитектурные gap'ы (зафиксированы в плане 53)
+
+- **identity не имеет `GET /api/admin/users`** — sub-план 53d
+  для полноценного списка юзеров с фильтрами и пагинацией. В
+  Ф.4 — поиск по UUID.
+- **game-nova admin namespace `/api/admin/{events,planets,fleets,
+  users}*` пересекается с identity** (`/roles, /audit, /users/*/
+  roles`). admin-bff пока проксирует только `/api/admin/events*`
+  → game-nova. Полная миграция — sub-план 53b
+  (game-nova → `/api/admin/game/` префикс).
+
+### Что отложено (по решению)
+
+- **Ф.7 Moderation** — заглушки, ждёт плана 48 (UGC moderation).
+- **Ф.8 2FA / WebAuthn** — отдельный sub-план 53c (большая
+  backend-работа в identity).
+- **Ф.10 Cmd+K command palette + keyboard shortcuts** — UX
+  polish, не блокирующий.
+
+### Bundle итог
+
+121 → 1732 модуля после всех страниц. Lazy chunks по 1-43 KB.
+
+| Chunk | Raw | Gzipped |
+|---|---|---|
+| react-vendor | 157 KB | 52 KB |
+| index (main) | 110 KB | 31 KB |
+| tanstack | 44 KB | 13 KB |
+| UserDetail (с Dialog) | 43 KB | 15 KB |
+| GameEvents | 12 KB | 4 KB |
+| Audit | 8 KB | 3 KB |
+
+Бюджет 300 KB / main соблюдён, CI guard в workflow.
+
+**Коммитов**: 9 (Ф.1, Ф.2a, Ф.2b, Ф.3, Ф.4, Ф.5, Ф.6, Ф.9+Ф.11,
+план-ревизия + Ф.12).
+
+**Что делать дальше**:
+- Sub-план 53b (game-nova namespace migration).
+- Sub-план 53c (WebAuthn 2FA).
+- Sub-план 53d (users-list endpoint).
+- План 54 (billing limits + reports).
+
 ## Итерация 50.partial-2 (2026-04-27) — game-origin: Ф.4 UGC-модерация
 
 **Контекст**: продолжение плана 50, после Ф.3+Ф.6+Ф.7 (12+, юр-ссылки,
