@@ -8589,3 +8589,59 @@ INSERT statements.
 snapshot на нашу БД с сохранением `global_user_id` для JWT lazy-join.
 
 **Коммиты**: 1 (snapshot tool отдельно от merge plan-36).
+
+---
+
+## Итерация 37.5d.2 (2026-04-27) — apply-test-user-fixture.sh
+
+**Задача**: накатить snapshot test-юзера (37.5d.1) на нашу БД с сохранением
+`global_user_id` для JWT lazy-join. Идемпотентный, безопасный для
+многократного запуска.
+
+**Изменения**:
+- `tools/apply-test-user-fixture.sh` (новый): bash-скрипт, шаги
+  Step 1 backup global_user_id → Step 2 cleanup → Step 2.5 stop
+  event-monitor → Step 3 apply snapshot → Step 4 restore global_user_id
+  → Step 5 verification.
+- В `tools/snapshot-legacy-user.sh`:
+  - Добавлен `--complete-insert` (полные имена колонок) — иначе
+    `INSERT VALUES (...)` legacy не подходит к нашей расширенной схеме
+    (мы добавили `global_user_id` в `na_user`).
+  - Исключены VIEW `na_event_src`/`na_event_dest` — mysqldump их не
+    дампит.
+  - `na_galaxy` обрабатывается отдельно от других planet-таблиц
+    (только у неё есть колонка `moonid`).
+
+**Подводные камни**:
+1. **CRLF в heredoc**: bash на Windows не любит heredoc внутри функций
+   с `set -e`. Решение — записывать SQL во временный файл, подавать
+   через `< file`.
+2. **Orphan-планеты в migration 002**: в `data.sql` уже есть планеты
+   test-юзера с `userid=NULL` (после удаления test). Cleanup `WHERE
+   userid=1` их не находит → PRIMARY KEY конфликт при apply. Решение:
+   cleanup использует `FIND_IN_SET(planetid, '1,2,501,...')` для всех
+   planetids test-юзера в legacy.
+3. **Event-monitor пересоздаёт юзера 1**: между cleanup и apply
+   event-monitor успевает обработать `EVENT_COLONIZE_NEW_USER_PLANET`
+   из старого dev-login и создать `userid=1` заново. Решение —
+   `docker compose stop event-monitor` в Step 2.5.
+4. **Топ-50 юзеров рейтинга уже есть**: `migration 002/data.sql`
+   содержит юзеров для рейтинга, snapshot пытается вставить их
+   повторно → 10 `Duplicate entry`. Используем `--force` чтобы mysql
+   не падал на первой ошибке.
+5. **Контейнеры запущены из удалённого worktree**: при exit worktree
+   docker volume-mount остался указывать в удалённую папку
+   `.claude/worktrees/...` → nginx 404 на всё. Решение —
+   `docker compose down && up` из main repo root.
+
+**Smoke test**:
+- dev-login → /?go=Main → HTTP 200, размер 16138 байт (раньше 12030).
+- В HTML: `<title>Мир Oxsar</title>`, "Hello World" (planet name
+  test-юзера), "test" (username).
+- Verification: user=1, planets=9, buildings=65, researches=19,
+  artefacts=55 ✅
+
+**Следующее (37.5d.3)**: compare-with-legacy.sh — curl всех страниц у нас
+и в legacy + нормализованный diff (убрать таймстампы, ID, числа).
+
+**Коммиты**: 1 (apply-fixture tool + правки snapshot-tool).
