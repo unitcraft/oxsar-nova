@@ -95,16 +95,17 @@ class Preferences extends Page
 		Core::getTPL()->addLoop("templatePacks", $packs);
 
 		//handling image packs
-		if( !defined('SN') )
+		$buildings_dir = APP_ROOT_DIR."images/buildings/";
+		if( !defined('SN') && is_dir($buildings_dir) )
 		{
 			$imgpacks = array();
-			$handle = opendir(APP_ROOT_DIR."images/buildings/");
+			$handle = opendir($buildings_dir);
 			while($dir = readdir($handle))
 			{
-				if($dir != "." && $dir != ".." && is_dir(APP_ROOT_DIR."images/buildings/".$dir))
+				if($dir != "." && $dir != ".." && is_dir($buildings_dir.$dir))
 				{
 					$item = array("dir" => $dir, "name" => $dir, "order" => 999999, "selected" => intval($dir == NS::getUser()->get("imagepackage")));
-					$descr = @file(APP_ROOT_DIR."images/buildings/".$dir."/description.txt");
+					$descr = @file($buildings_dir.$dir."/description.txt");
 					if(is_array($descr))
 					{
 						$item["name"] = isset($descr[0]) ? trim($descr[0]) : $item["name"];

@@ -37,35 +37,12 @@ class Changelog extends Page
 	*/
 	protected function index()
 	{
-		$ip = rawurlencode($_SERVER["SERVER_ADDR"]);
-		$host = rawurlencode(HTTP_HOST);
-		// Fetching changelog data from remote server
-		$request = new HTTP_Request(VERSION_CHECK_PAGE."?ip=".$ip."&host=".$host."&vers=".NS_VERSION);
-		$xml = new XML($request->getResponse());
-		$request->kill();
-		$data = $xml->get();
-		$xml->kill();
-		$release = array();
-		foreach($data as $version)
-		{
-			$changes = "";
-			foreach($version->getChildren("changes")->getChildren() as $change)
-			{
-				$changes .= "# ".$change->getString()."\n";
-			}
-			$release[] = array(
-				"full_name" => $version->getString("full_name"),
-				"version" => $version->getString("version_number"),
-				"version_code" => $version->getString("version_code"),
-				"release_date" => $version->getString("release_date"),
-				"changes" => $changes
-				);
-		}
-		$latestVersion = $data->getChildren("release")->getString("version_number");
-		$latestRevision = $data->getChildren("release")->getInteger("version_code");
-		Core::getTPL()->assign("latestVersion", $latestVersion);
-		Core::getTPL()->assign("latestRevision", $latestRevision);
-		Core::getTPL()->addLoop("release", $release);
+		// План 37.5d.7: VERSION_CHECK_PAGE — undefined в game-origin.
+		// Раньше Changelog тянул XML из netassault.ru (legacy update-server).
+		// Эта фича нам не нужна — показываем пустой changelog.
+		Core::getTPL()->assign("latestVersion", defined('NS_VERSION') ? NS_VERSION : '');
+		Core::getTPL()->assign("latestRevision", 0);
+		Core::getTPL()->addLoop("release", array());
 		Core::getTPL()->display("changelog");
 		return $this;
 	}
