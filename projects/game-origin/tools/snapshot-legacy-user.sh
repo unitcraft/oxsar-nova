@@ -139,6 +139,34 @@ if [ -n "$ALLY_AID" ]; then
   echo "" >> "$OUT"
 fi
 
+# Группа 3.4: Артефакты на бирже (lot_id > 0). Stock рендерит type=3 лоты
+# (ETYPE_ARTEFACT) и для них дополнительно проверяет na_artefact2user
+# через artid из data blob. Без этих записей — silent fail в Stock loop.
+# Также нужны na_events для lifetime/expire/delay этих артефактов.
+echo "  dump na_artefact2user (artefacts on auction, lot_id > 0)" >&2
+echo "-- na_artefact2user (auction artefacts)" >> "$OUT"
+docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+  --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+  --where="lot_id > 0 AND userid != $USERID" na_artefact2user 2>/dev/null >> "$OUT" || true
+
+# events для lifetime/expire/delay этих артефактов
+echo "  dump na_events for auction artefacts (lifetime/expire/delay)" >&2
+AUCTION_EVENT_IDS=$(docker exec "$LEGACY_CONTAINER" mysql -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+  -N -B -e "
+    SELECT GROUP_CONCAT(DISTINCT eid) FROM (
+      SELECT lifetime_eventid AS eid FROM na_artefact2user WHERE lot_id > 0 AND lifetime_eventid > 0
+      UNION SELECT expire_eventid FROM na_artefact2user WHERE lot_id > 0 AND expire_eventid > 0
+      UNION SELECT delay_eventid FROM na_artefact2user WHERE lot_id > 0 AND delay_eventid > 0
+    ) t
+  " 2>/dev/null)
+if [ -n "$AUCTION_EVENT_IDS" ] && [ "$AUCTION_EVENT_IDS" != "NULL" ]; then
+  echo "-- na_events (auction artefact events)" >> "$OUT"
+  docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+    --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+    --where="eventid IN ($AUCTION_EVENT_IDS)" na_events 2>/dev/null >> "$OUT" || true
+fi
+echo "" >> "$OUT"
+
 # Группа 3.5: Stock — все брокеры биржи + активные лоты + связанные планеты/юзеры/galaxy
 
 # Все брокеры биржи (na_exchange)
