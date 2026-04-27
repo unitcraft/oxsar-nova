@@ -375,6 +375,17 @@ class Shipyard extends Construction
 	{
 		// debug_var($post, "[order]");
 
+		// 37.8 RACE-003: lock на 5 сек предотвращает двойной заказ через
+		// двойной клик / параллельные HTTP. Ключ зависит от planetid+unit_type
+		// (FLEET vs DEFENSE) — игрок может одновременно строить корабли и оборону.
+		$_pid_lock = NS::getUser() ? NS::getUser()->get("curplanet") : 0;
+		if( !NS::acquireLock("Shipyard::order:{$_pid_lock}:{$this->unit_type}", 5) )
+		{
+			Logger::dieMessage("TOO_MANY_REQUESTS");
+			doHeaderRedirection($this->main_page, false);
+			return $this;
+		}
+
 		// Vacation enabled?
 		if(NS::getUser()->get("umode"))
 		{
