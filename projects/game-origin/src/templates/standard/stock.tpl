@@ -143,8 +143,8 @@ $(function() {
         <tr>
             <td colspan="6" style="text-align: center" class="false2">Активируйте артефакт Знак торговца, чтобы дешевле покупать
                 или увеличить прибыль от продажи своих товаров. Также вы можете обменять ресурсы
-                в <?php echo CHtml::link('Обменнике', socialUrl(RELATIVE_URL . 'game.php/Market')); ?> и/или приобрести артефакты
-                в <nobr><?php echo CHtml::link('Магазине артефактов', socialUrl(RELATIVE_URL . 'game.php/ArtefactMarket')); ?></nobr></td>
+                в <a href="<?php echo htmlspecialchars(socialUrl(RELATIVE_URL . 'game.php/Market')); ?>">Обменнике</a> и/или приобрести артефакты
+                в <nobr><a href="<?php echo htmlspecialchars(socialUrl(RELATIVE_URL . 'game.php/ArtefactMarket')); ?>">Магазине артефактов</a></nobr></td>
         </tr>
         {/if}
 	{/if}
