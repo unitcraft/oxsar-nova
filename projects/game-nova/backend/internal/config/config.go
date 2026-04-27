@@ -100,10 +100,13 @@ func Load() (Config, error) {
 			URL: env("REDIS_URL", "redis://localhost:6379/0"),
 		},
 		Auth: AuthConfig{
-			OAuthGoogleID:  env("OAUTH_GOOGLE_CLIENT_ID", ""),
-			OAuthGoogleSc:  env("OAUTH_GOOGLE_CLIENT_SECRET", ""),
-			JWKSUrl:        env("AUTH_JWKS_URL", ""),
-			AuthServiceURL: env("AUTH_SERVICE_URL", ""),
+			OAuthGoogleID: env("OAUTH_GOOGLE_CLIENT_ID", ""),
+			OAuthGoogleSc: env("OAUTH_GOOGLE_CLIENT_SECRET", ""),
+			// План 51: переименование auth → identity. Новые имена
+			// IDENTITY_* приоритетны, AUTH_* — fallback на 1-2 недели
+			// до полного перехода (после чего AUTH_* будут удалены).
+			JWKSUrl:        envFallback("IDENTITY_JWKS_URL", "AUTH_JWKS_URL", ""),
+			AuthServiceURL: envFallback("IDENTITY_SERVICE_URL", "AUTH_SERVICE_URL", ""),
 			UniverseID:     env("UNIVERSE_ID", "uni01"),
 		},
 		Game: GameConfig{
@@ -142,16 +145,30 @@ func Load() (Config, error) {
 	if cfg.DB.URL == "" {
 		return Config{}, fmt.Errorf("DB_URL is required")
 	}
-	// План 36 Ф.12: единственный режим — RSA через JWKS (AUTH_JWKS_URL обязателен).
+	// План 36 Ф.12: единственный режим — RSA через JWKS (IDENTITY_JWKS_URL обязателен).
 	// HS256 fallback с JWT_SECRET удалён.
+	// План 51: имя переименовано из AUTH_JWKS_URL; старое читается как fallback.
 	if cfg.Auth.JWKSUrl == "" {
-		return Config{}, fmt.Errorf("AUTH_JWKS_URL is required")
+		return Config{}, fmt.Errorf("IDENTITY_JWKS_URL is required (legacy AUTH_JWKS_URL also accepted)")
 	}
 	return cfg, nil
 }
 
 func env(key, def string) string {
 	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
+	}
+	return def
+}
+
+// envFallback читает primaryKey, при пустом значении — fallbackKey.
+// Используется в плане 51 для backward-compat при rename
+// AUTH_* → IDENTITY_*: пока ENV не обновлены везде, читаем оба имени.
+func envFallback(primaryKey, fallbackKey, def string) string {
+	if v, ok := os.LookupEnv(primaryKey); ok && v != "" {
+		return v
+	}
+	if v, ok := os.LookupEnv(fallbackKey); ok && v != "" {
 		return v
 	}
 	return def

@@ -1,7 +1,7 @@
 package auth
 
 // DUPLICATE: этот файл скопирован между Go-модулями oxsar/game-nova,
-// oxsar/auth, oxsar/portal и oxsar/billing. При любом изменении
+// oxsar/identity, oxsar/portal и oxsar/billing. При любом изменении
 // синхронизируйте КОПИИ:
 //   - projects/game-nova/backend/internal/auth/jwksloader.go
 //   - projects/portal/backend/internal/auth/jwksloader.go

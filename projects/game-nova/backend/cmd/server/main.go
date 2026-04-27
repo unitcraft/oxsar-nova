@@ -146,14 +146,14 @@ func run() error {
 	}
 
 	// План 36 Ф.12: /api/auth/login|register|refresh удалены —
-	// аутентификация только через auth-service.
+	// аутентификация только через identity-service.
 
 	db := repo.New(pool)
 
-	// AUTH_JWKS_URL обязателен. Запуск без него = fail-fast (security:
-	// раньше был fallback на HS256 с дефолтным JWT_SECRET).
+	// IDENTITY_JWKS_URL обязателен (legacy AUTH_JWKS_URL читается как
+	// fallback, см. config.envFallback). Запуск без него = fail-fast.
 	if cfg.Auth.JWKSUrl == "" {
-		return fmt.Errorf("AUTH_JWKS_URL is required (HS256 fallback removed in Ф.12)")
+		return fmt.Errorf("IDENTITY_JWKS_URL is required (legacy AUTH_JWKS_URL also accepted)")
 	}
 	log.InfoContext(ctx, "auth mode: RSA-256 via JWKS",
 		slog.String("jwks_url", cfg.Auth.JWKSUrl),

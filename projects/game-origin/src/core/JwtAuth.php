@@ -119,8 +119,15 @@ class JwtAuth
             return null;
         }
 
-        // Если AUTH_JWKS_URL не задан — пропускаем проверку подписи (dev-режим)
-        $jwksUrl = defined('AUTH_JWKS_URL') ? AUTH_JWKS_URL : (getenv('AUTH_JWKS_URL') ?: '');
+        // Если IDENTITY_JWKS_URL (legacy AUTH_JWKS_URL) не задан — пропускаем
+        // проверку подписи (dev-режим). План 51: rename auth → identity.
+        $jwksUrl = defined('IDENTITY_JWKS_URL') ? IDENTITY_JWKS_URL : '';
+        if (!$jwksUrl) {
+            $jwksUrl = defined('AUTH_JWKS_URL') ? AUTH_JWKS_URL : '';
+        }
+        if (!$jwksUrl) {
+            $jwksUrl = getenv('IDENTITY_JWKS_URL') ?: (getenv('AUTH_JWKS_URL') ?: '');
+        }
         if (!$jwksUrl) {
             return $payload;
         }

@@ -47,7 +47,7 @@ services:
       GAME_UNIVERSE: ${GAME_UNIVERSE:-dm}
       UNIVERSE_NAME_FULL: ${UNIVERSE_NAME_FULL:-Origin}
       PORTAL_URL: ${PORTAL_URL:-}
-      AUTH_JWKS_URL: ${AUTH_JWKS_URL:-}
+      IDENTITY_JWKS_URL: ${IDENTITY_JWKS_URL:-${AUTH_JWKS_URL:-}}
     volumes:
       - ../src:/var/www/src:ro
       - ../public:/var/www/public:ro

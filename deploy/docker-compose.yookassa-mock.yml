@@ -50,7 +50,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      auth-service:
+      identity-service:
         condition: service_healthy
       billing-migrate:
         condition: service_completed_successfully

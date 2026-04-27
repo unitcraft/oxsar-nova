@@ -45,7 +45,13 @@ func run() error {
 	addr := envStr("BILLING_ADDR", ":9100")
 	dbURL := mustEnv("BILLING_DB_URL")
 	redisURL := envStr("REDIS_URL", "redis://localhost:6379/3")
-	jwksURL := mustEnv("AUTH_JWKS_URL")
+	// План 51: rename AUTH_* → IDENTITY_*; читаем оба имени (новое приоритетно)
+	// для безопасной миграции. Старое имя AUTH_JWKS_URL планируется удалить
+	// после прокатки нового конфига во всех окружениях.
+	jwksURL := envStr("IDENTITY_JWKS_URL", os.Getenv("AUTH_JWKS_URL"))
+	if jwksURL == "" {
+		return fmt.Errorf("IDENTITY_JWKS_URL is required (legacy AUTH_JWKS_URL also accepted)")
+	}
 	allowedOrigins := strings.Split(envStr("ALLOWED_ORIGINS",
 		"http://localhost:5173,http://localhost:5174"), ",")
 	// Платёжный провайдер. План 42: yookassa добавлен.

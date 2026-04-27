@@ -65,7 +65,7 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-      auth-service:
+      identity-service:
         condition: service_healthy
     environment:
       SERVER_ADDR: ":8080"
@@ -73,11 +73,11 @@ services:
       LOG_LEVEL: info
       DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
       REDIS_URL: redis://redis:6379/0
-      # План 36 Ф.11: backend верифицирует RSA-JWT через JWKS auth-service.
+      # План 36 Ф.11: backend верифицирует RSA-JWT через JWKS identity-service.
       # JWT_SECRET (HS256) больше не используется в dev — Backend
-      # переключается в режим auth.LoadVerifier(AUTH_JWKS_URL).
-      AUTH_JWKS_URL: http://auth-service:9000
-      AUTH_SERVICE_URL: http://auth-service:9000
+      # переключается в режим auth.LoadVerifier(IDENTITY_JWKS_URL).
+      IDENTITY_JWKS_URL: http://identity-service:9000
+      IDENTITY_SERVICE_URL: http://identity-service:9000
       UNIVERSE_ID: uni01
       CATALOG_DIR: /app/configs
       I18N_DIR: /app/configs/i18n
@@ -163,7 +163,7 @@ services:
         condition: service_healthy
       uni02-migrate:
         condition: service_completed_successfully
-      auth-service:
+      identity-service:
         condition: service_healthy
     environment:
       SERVER_ADDR: ":8080"
@@ -171,8 +171,8 @@ services:
       LOG_LEVEL: info
       DB_URL: postgres://oxsar:oxsar@uni02-db:5432/oxsar?sslmode=disable
       REDIS_URL: redis://redis:6379/5
-      AUTH_JWKS_URL: http://auth-service:9000
-      AUTH_SERVICE_URL: http://auth-service:9000
+      IDENTITY_JWKS_URL: http://identity-service:9000
+      IDENTITY_SERVICE_URL: http://identity-service:9000
       UNIVERSE_ID: uni02
       # Скорость 4× — agressive timing для тестов (см. universes.yaml).
       GAMESPEED: "4.0"
@@ -216,13 +216,13 @@ services:
     depends_on:
       uni02-backend:
         condition: service_healthy
-      auth-service:
+      identity-service:
         condition: service_healthy
       billing-service:
         condition: service_healthy
     environment:
       VITE_PROXY_TARGET: http://uni02-backend:8080
-      VITE_AUTH_TARGET: http://auth-service:9000
+      VITE_IDENTITY_TARGET: http://identity-service:9000
       VITE_BILLING_TARGET: http://billing-service:9100
     ports: ["5175:5173"]
     volumes:
@@ -236,13 +236,13 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-      auth-service:
+      identity-service:
         condition: service_healthy
       billing-service:
         condition: service_healthy
     environment:
       VITE_PROXY_TARGET: http://backend:8080
-      VITE_AUTH_TARGET: http://auth-service:9000
+      VITE_IDENTITY_TARGET: http://identity-service:9000
       VITE_BILLING_TARGET: http://billing-service:9100
     ports: ["5173:5173"]
     volumes:
@@ -250,7 +250,7 @@ services:
       - frontend-node-modules:/app/node_modules
 
   # ── Auth stack ───────────────────────────────────────────────────────────
-  # План 36 Ф.11. RSA-ключ генерируется auth-service-ом сам при первом старте
+  # План 36 Ф.11. RSA-ключ генерируется identity-service-ом сам при первом старте
   # и кладётся в volume auth-rsa-key (pem-файл). На проде он подкладывается
   # как docker secret — см. docker-compose.multiverse.yml.
 
@@ -281,10 +281,10 @@ services:
       MIGRATE_DIR: /migrations/auth
     restart: "no"
 
-  auth-service:
+  identity-service:
     build:
       context: ..
-      dockerfile: projects/auth/backend/Dockerfile
+      dockerfile: projects/identity/backend/Dockerfile
     depends_on:
       auth-db:
         condition: service_healthy
@@ -293,8 +293,8 @@ services:
       auth-migrate:
         condition: service_completed_successfully
     environment:
-      AUTH_ADDR: ":9000"
-      AUTH_DB_URL: postgres://authsvc:authsvc@auth-db:5432/authsvc?sslmode=disable
+      IDENTITY_ADDR: ":9000"
+      IDENTITY_DB_URL: postgres://authsvc:authsvc@auth-db:5432/authsvc?sslmode=disable
       REDIS_URL: redis://redis:6379/2
       # В dev RSA-ключ генерируется при первом старте и сохраняется в volume.
       # AUTH_KEY_AUTOGEN=1 включает auto-generate (только для dev/test).
@@ -358,7 +358,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      auth-service:
+      identity-service:
         condition: service_healthy
       billing-migrate:
         condition: service_completed_successfully
@@ -366,7 +366,7 @@ services:
       BILLING_ADDR: ":9100"
       BILLING_DB_URL: postgres://billing:billing@billing-db:5432/billing?sslmode=disable
       REDIS_URL: redis://redis:6379/3
-      AUTH_JWKS_URL: http://auth-service:9000
+      IDENTITY_JWKS_URL: http://identity-service:9000
       LOG_LEVEL: info
       ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:5174"
       PAYMENT_PROVIDER: mock
@@ -421,14 +421,14 @@ services:
         condition: service_healthy
       portal-migrate:
         condition: service_completed_successfully
-      auth-service:
+      identity-service:
         condition: service_healthy
       billing-service:
         condition: service_healthy
     environment:
       PORTAL_ADDR: ":8090"
       PORTAL_DB_URL: postgres://portal:portal@portal-db:5432/portal?sslmode=disable
-      AUTH_JWKS_URL: http://auth-service:9000
+      IDENTITY_JWKS_URL: http://identity-service:9000
       # План 38 Ф.6: списание кредитов через billing-service.
       BILLING_URL: http://billing-service:9100
       UNIVERSES_CONFIG: /app/configs/universes.yaml
@@ -448,13 +448,13 @@ services:
     depends_on:
       portal-backend:
         condition: service_started
-      auth-service:
+      identity-service:
         condition: service_healthy
       billing-service:
         condition: service_healthy
     environment:
       VITE_PORTAL_API: http://portal-backend:8090
-      VITE_AUTH_TARGET: http://auth-service:9000
+      VITE_IDENTITY_TARGET: http://identity-service:9000
       VITE_BILLING_TARGET: http://billing-service:9100
       VITE_BASE_DOMAIN: localhost
       VITE_UNIVERSE_PORT_uni01: "5173"

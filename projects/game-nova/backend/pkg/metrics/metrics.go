@@ -6,10 +6,10 @@
 package metrics
 
 // DUPLICATE: этот файл скопирован между Go-модулями oxsar/game-nova,
-// oxsar/auth, oxsar/portal и oxsar/billing. При любом изменении
+// oxsar/identity, oxsar/portal и oxsar/billing. При любом изменении
 // синхронизируйте КОПИИ:
 //   - projects/game-nova/backend/pkg/metrics/metrics.go
-//   - projects/auth/backend/pkg/metrics/metrics.go
+//   - projects/identity/backend/pkg/metrics/metrics.go
 //   - projects/portal/backend/pkg/metrics/metrics.go
 //   - projects/billing/backend/pkg/metrics/metrics.go
 // Причина дубля: каждый домен — отдельный go.mod, без shared-модуля.

@@ -6,6 +6,13 @@
 **Затрагивает**: новые сервисы `auth-service`, `portal-backend`, рефактор игрового монолита,
 новый `portal-frontend`, изменения в деплое
 
+> **Терминологическое примечание (план 51, 2026-04-27)**: сервис
+> `auth-service` переименован в `identity-service` (`projects/auth/`
+> → `projects/identity/`, Go module `oxsar/auth` → `oxsar/identity`,
+> ENV `AUTH_*` → `IDENTITY_*` с backward-compat fallback). В этом
+> документе сохранены оригинальные имена для соответствия истории
+> ADR-решений; в новом коде использовать `identity-service`.
+
 ---
 
 ## Контекст и требования

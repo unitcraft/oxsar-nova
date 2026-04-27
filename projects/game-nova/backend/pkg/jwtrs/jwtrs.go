@@ -5,10 +5,10 @@
 package jwtrs
 
 // DUPLICATE: этот файл скопирован между Go-модулями oxsar/game-nova,
-// oxsar/auth, oxsar/portal и oxsar/billing. При любом изменении
+// oxsar/identity, oxsar/portal и oxsar/billing. При любом изменении
 // синхронизируйте КОПИИ:
 //   - projects/game-nova/backend/pkg/jwtrs/jwtrs.go
-//   - projects/auth/backend/pkg/jwtrs/jwtrs.go
+//   - projects/identity/backend/pkg/jwtrs/jwtrs.go
 //   - projects/portal/backend/pkg/jwtrs/jwtrs.go
 //   - projects/billing/backend/pkg/jwtrs/jwtrs.go
 // Причина дубля: каждый домен — отдельный go.mod, без shared-модуля.

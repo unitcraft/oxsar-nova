@@ -41,7 +41,8 @@ func run() error {
 
 	addr := envStr("PORTAL_ADDR", ":8090")
 	dbURL := mustEnv("PORTAL_DB_URL")
-	jwksURL := envStr("AUTH_JWKS_URL", "")
+	// План 51: rename AUTH_* → IDENTITY_*; читаем оба имени.
+	jwksURL := envStr("IDENTITY_JWKS_URL", os.Getenv("AUTH_JWKS_URL"))
 	// План 38 Ф.6: portal списывает кредиты через billing-service.
 	billingURL := envStr("BILLING_URL", "")
 	universesPath := envStr("UNIVERSES_CONFIG", "configs/universes.yaml")
@@ -67,7 +68,7 @@ func run() error {
 			ver = v
 		}
 	} else {
-		log.WarnContext(ctx, "AUTH_JWKS_URL not set — auth middleware disabled (dev mode)")
+		log.WarnContext(ctx, "IDENTITY_JWKS_URL (legacy AUTH_JWKS_URL) not set — auth middleware disabled (dev mode)")
 	}
 
 	reg, err := universe.NewRegistry(universesPath)

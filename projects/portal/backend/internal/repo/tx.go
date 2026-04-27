@@ -5,10 +5,10 @@
 package repo
 
 // DUPLICATE: этот файл скопирован между Go-модулями oxsar/game-nova,
-// oxsar/auth, oxsar/portal и oxsar/billing. При любом изменении
+// oxsar/identity, oxsar/portal и oxsar/billing. При любом изменении
 // синхронизируйте КОПИИ:
 //   - projects/game-nova/backend/internal/repo/tx.go
-//   - projects/auth/backend/internal/repo/tx.go
+//   - projects/identity/backend/internal/repo/tx.go
 //   - projects/portal/backend/internal/repo/tx.go
 //   - projects/billing/backend/internal/repo/tx.go
 // Причина дубля: каждый домен — отдельный go.mod, без shared-модуля.
