@@ -112,6 +112,27 @@ You agree to notify the Owner of any facts or circumstances of
 which you become aware that would make these representations
 inaccurate in any respect.
 
+## 8. Governing Law
+
+- This Agreement is governed by the law of the Russian Federation.
+- Any dispute arising in connection with this Agreement shall be
+  resolved by the competent court at the place of residence of the
+  Owner.
+- The authoritative version of this Agreement is in English. In the
+  event of a dispute before a Russian court, a certified Russian
+  translation will be provided; in case of discrepancy between
+  versions, the English version prevails.
+
+## 9. Moral Rights
+
+Nothing in this Agreement transfers the Contributor's moral rights
+(including the right of authorship, the right to a name, and the
+right of integrity of the work), which remain with the Contributor
+under applicable law (in particular, art. 1265 of the Civil Code of
+the Russian Federation for Russian contributors and equivalents in
+other jurisdictions). The licenses granted in Sections 2 and 3 cover
+exclusive economic (proprietary) rights only.
+
 ---
 
 ## How to sign
@@ -124,6 +145,11 @@ The first time you open a pull request against this repository,
 the CLA-assistant bot will ask you to confirm acceptance in a
 comment. Once you do, the CLA applies to all your future
 Contributions to this Project.
+
+Confirmation via the cla-assistant.io comment constitutes a simple
+electronic signature within the meaning of applicable law (in the
+Russian Federation: art. 5 of Federal Law No. 63-FZ "On Electronic
+Signature").
 
 For **corporate** contributors (when your employer owns your
 work), contact the Owner at <gibesapiselfbab@hotmail.com> to

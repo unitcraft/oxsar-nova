@@ -90,6 +90,10 @@ deploy/        docker-образы, k8s-манифесты
 целях. Любое коммерческое использование требует отдельной лицензии от
 автора — см. [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
 
+Применимое право и юрисдикция для коммерческих лицензий и CLA — Российская
+Федерация (см. [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) §Governing Law,
+[CLA.md](CLA.md) §8).
+
 Весь код в репозитории написан Evgeniy Golovin совместно с Claude Code.
 
 ### Участие в разработке
