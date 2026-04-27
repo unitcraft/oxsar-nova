@@ -461,9 +461,10 @@ projects/game-origin/
 | 37.5c | **Event-monitor воркер + стартовая планета**: PHP-аналог `NewEHMonitorCommand` запускает `EventHandler::goThroughEvents()` в цикле; при первом логине вставляется event `EVENT_COLONIZE_NEW_USER_PLANET` (как в legacy `BaseWebUser`). См. подробности ниже. | средний |
 | 37.5d | **UI-багфиксы первого запуска**: «Пополнить кредиты» наезжает на ресурсы, прочие layout-проблемы. См. подробности ниже. | низкий |
 | 37.6 | Аудит багов и дыр (SQL-инъекции, XSS, CSRF, race cond.) | ✅ done — см. [37-game-origin-security-audit.md](37-game-origin-security-audit.md). SQL OK, direct access OK. **XSS и CSRF — CRITICAL** до открытия игрокам. |
-| 37.7 | Исправление критических уязвимостей (безопасность) | 🚧 TODO — 37.7.1 XSS escape (DAO-level), 37.7.2 CSRF (SameSite=Strict + Origin check). |
-| 37.8 | Исправление игровых дыр (не меняя баланс) | высокий |
-| 37.9 | Порт EventHandler → Go + golden-тесты | очень высокий |
+| 37.7 | Исправление критических уязвимостей (безопасность) | ✅ done — 37.7.1 XSS escape (User), 37.7.2 CSRF (SameSite=Strict + Origin check), 37.7.3 XSS extension (Planet/Alliance/Chat/MSG/Notepad). |
+| 37.8 | Исправление игровых дыр (не меняя баланс) | ⏸️ частично done (8 из ~10 verified P1/P2 закрыты, см. [37-game-origin-bugfix-log.md](37-game-origin-bugfix-log.md)). RACE-004 + STUCK-002 отложены, **зависят от 43**. |
+| **43** | **Замена Recipe (GPL) на Composer-зависимости** ([план 43](43-game-origin-composer.md)) — **блокирует 37.9–37.13**: сначала фреймворк должен стать legal-clean, иначе любой rewrite таскает GPL-конфликт. | средний |
+| 37.9 | Порт EventHandler → Go + golden-тесты (**после 43**) | очень высокий |
 | 37.10 | Порт Assault → Go (адаптер battle-service) | очень высокий |
 | 37.11 | Параллельный прогон PHP vs Go, валидация | высокий |
 | 37.12 | Интеграция с auth-service (JWT вместо own session) | средний |
