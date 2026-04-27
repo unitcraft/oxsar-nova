@@ -1,0 +1,25 @@
+#!/bin/sh
+# Strips `Co-Authored-By: Claude <noreply@anthropic.com>` from commit
+# messages. Per plan 41 §6, this trailer is technical metadata and
+# is replaced with `Generated-with: Claude Code` (or no AI trailer).
+#
+# Why a hook: AI sessions sometimes write `Co-Authored-By: Claude`
+# manually into HEREDOC commit messages, bypassing the
+# attribution.commit setting in .claude/settings.json. This hook is
+# the single source of truth — runs on every commit regardless of
+# session state.
+#
+# Activation (one-time, per developer):
+#   git config core.hooksPath scripts/git-hooks
+#
+# To verify: git log -1 --format=%B should not contain `Co-Authored-By`.
+
+MSG_FILE="$1"
+
+# Remove standalone trailer lines for `Co-Authored-By: Claude ...`.
+# Other Co-Authored-By trailers (real human co-authors) are preserved.
+sed -i.bak \
+    -e '/^Co-Authored-By: Claude <noreply@anthropic\.com>\s*$/d' \
+    -e '/^Co-Authored-By: Claude Opus 4\.7 (1M context) <noreply@anthropic\.com>\s*$/d' \
+    "$MSG_FILE"
+rm -f "${MSG_FILE}.bak"
