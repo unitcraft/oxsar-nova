@@ -16,7 +16,17 @@ export default defineConfig(({ command }) => ({
     // План 36 Ф.11. В проде nginx разводит по доменам, в dev — vite proxy.
     proxy: {
       '/api': process.env.VITE_PORTAL_API ?? 'http://localhost:8090',
-      '/auth': process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+      '/auth': {
+        target: process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+        changeOrigin: true,
+        // /auth/handoff — frontend-route (план 36 Ф.8). См. game-nova vite.config.ts.
+        bypass: (req) => {
+          if (req.url?.startsWith('/auth/handoff')) {
+            return '/index.html';
+          }
+          return null;
+        },
+      },
       '/.well-known/jwks.json':
         process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
       // План 38 Ф.7: billing-service для кошельков и платежей.

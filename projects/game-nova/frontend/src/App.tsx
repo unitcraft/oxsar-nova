@@ -5,8 +5,10 @@ import { useAuthStore } from './stores/auth';
 import { api } from './api/client';
 import type { Planet } from './api/types';
 import { LoginScreen } from './features/auth/LoginScreen';
+import { HandoffPage } from './features/auth/HandoffPage';
 import { OverviewScreen } from './features/overview/OverviewScreen';
 import { UniverseSwitcher } from './features/universes/UniverseSwitcher';
+import { BalanceBadge } from './features/billing/BalanceBadge';
 import { useTranslation } from '@/i18n/i18n';
 import { ToastProvider, useToast } from './ui/Toast';
 import { ResourceTicker } from './ui/ResourceTicker';
@@ -84,6 +86,16 @@ function parseHash(): { tab: Tab; infoUnit: InfoUnit | null } {
 
 export function App() {
   const token = useAuthStore((s) => s.accessToken);
+  // План 36 Ф.8: handoff-route /auth/handoff?code=... — обмен one-time
+  // токена от Universe Switcher на новые JWT через auth-service.
+  // Не требует существующей авторизации (после handoff юзер залогинится).
+  if (window.location.pathname === '/auth/handoff') {
+    return (
+      <ToastProvider>
+        <HandoffPage />
+      </ToastProvider>
+    );
+  }
   return (
     <ToastProvider>
       {token ? <AuthenticatedApp /> : <LoginScreen />}
@@ -492,6 +504,7 @@ function Header({
         </button>
         <PlanetSwitcher planet={planet} planets={planets} homePlanetId={homePlanetId} onChange={onPlanetChange} />
         <UniverseSwitcher />
+        <BalanceBadge />
         {username && (
           <a
             href="#settings"
