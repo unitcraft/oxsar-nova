@@ -83,8 +83,14 @@ func (h *Handler) SwitchUniverse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	redirectURL := fmt.Sprintf("https://%s.oxsar-nova.ru/auth/handoff?code=%s",
-		target.Subdomain, handoffToken)
+	// План 36 Ф.8: если задан dev_url в universes.yaml — используем его
+	// (для local docker-compose с двумя стеками на разных портах).
+	// На проде dev_url пуст → используется production-формат.
+	baseURL := target.DevURL
+	if baseURL == "" {
+		baseURL = fmt.Sprintf("https://%s.oxsar-nova.ru", target.Subdomain)
+	}
+	redirectURL := fmt.Sprintf("%s/auth/handoff?code=%s", baseURL, handoffToken)
 
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]string{
 		"redirect_url":  redirectURL,

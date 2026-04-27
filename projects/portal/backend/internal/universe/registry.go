@@ -22,6 +22,10 @@ type Universe struct {
 	Name              string    `yaml:"name"        json:"name"`
 	Description       string    `yaml:"description" json:"description"`
 	Subdomain         string    `yaml:"subdomain"   json:"subdomain"`
+	// DevURL — full URL фронтенда в dev-окружении (план 36 Ф.8).
+	// Если задано, switcher редиректит сюда вместо production
+	// https://<subdomain>.oxsar-nova.ru. На проде — пустая строка.
+	DevURL            string    `yaml:"dev_url"     json:"dev_url,omitempty"`
 	Status            string    `yaml:"status"      json:"status"` // active|maintenance|upcoming|retired
 	Speed             float64   `yaml:"speed"       json:"speed"`
 	Deathmatch        bool      `yaml:"deathmatch"  json:"deathmatch"`
