@@ -20,6 +20,7 @@ import (
 	"oxsar/portal/internal/auth"
 	"oxsar/portal/internal/httpx"
 	"oxsar/portal/internal/portalsvc"
+	"oxsar/portal/internal/report"
 	"oxsar/portal/internal/storage"
 	"oxsar/portal/internal/universe"
 	"oxsar/portal/pkg/jwtrs"
@@ -80,6 +81,10 @@ func run() error {
 	svc := portalsvc.New(pool)
 	h := portalsvc.NewHandlerWithBilling(svc, reg, billingURL)
 
+	// План 56: пользовательские жалобы (149-ФЗ). Перенесено из game-nova.
+	reportSvc := report.NewService(pool)
+	reportH := report.NewHandler(reportSvc)
+
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -116,11 +121,18 @@ func run() error {
 		pr.Post("/api/feedback/{id}/vote", h.VoteFeedback)
 		pr.Post("/api/feedback/{id}/comments", h.AddComment)
 
+		// План 56: подача жалоб игроком — POST /api/reports.
+		pr.Post("/api/reports", reportH.Create)
+
 		// Admin-only
 		pr.Group(func(ar chi.Router) {
 			ar.Use(portalsvc.AdminMiddleware)
 			ar.Post("/api/news", h.CreateNews)
 			ar.Patch("/api/feedback/{id}/status", h.ModerateFeedback)
+
+			// План 56: модерация жалоб (admin/support+).
+			ar.Get("/api/admin/reports", reportH.AdminList)
+			ar.Post("/api/admin/reports/{id}/resolve", reportH.AdminResolve)
 		})
 	})
 

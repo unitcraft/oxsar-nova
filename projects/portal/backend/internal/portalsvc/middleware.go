@@ -66,3 +66,17 @@ func authorNameFromCtx(r *http.Request) (string, bool) {
 	v, ok := r.Context().Value(ctxAuthorName).(string)
 	return v, ok && v != ""
 }
+
+// UserIDFromContext возвращает UUID-юзера, помещённый Middleware'ом в
+// context. Экспортируется для пакетов вне portalsvc (план 56 — package
+// report использует тот же auth-paypload).
+func UserIDFromContext(ctx context.Context) (string, bool) {
+	v, ok := ctx.Value(ctxUserID).(string)
+	return v, ok && v != ""
+}
+
+// RolesFromContext возвращает роли пользователя из JWT (по умолчанию nil).
+func RolesFromContext(ctx context.Context) []string {
+	v, _ := ctx.Value(ctxRoles).([]string)
+	return v
+}

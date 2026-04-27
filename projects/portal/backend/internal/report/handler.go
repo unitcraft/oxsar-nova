@@ -3,25 +3,31 @@ package report
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
-	"oxsar/game-nova/internal/auth"
-	"oxsar/game-nova/internal/httpx"
+	"oxsar/portal/internal/httpx"
+	"oxsar/portal/internal/portalsvc"
 )
 
+// Handler — HTTP-адаптер для пакета report.
 type Handler struct {
 	svc *Service
 }
 
 func NewHandler(s *Service) *Handler { return &Handler{svc: s} }
 
-// Create POST /api/reports — игрок подаёт жалобу.
+// Create — POST /api/reports — игрок подаёт жалобу.
+//
 // Body: {"target_type":"user","target_id":"...","reason":"spam","comment":"..."}
+//
+// Аутентификация: JWT уже распарсен portalsvc.Middleware'ом, reporter_id
+// берётся из ctx (subject claim).
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := portalsvc.UserIDFromContext(r.Context())
 	if !ok {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
@@ -32,7 +38,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Reason     string `json:"reason"`
 		Comment    string `json:"comment"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeJSON(r, &req); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
 		return
 	}
@@ -58,10 +64,14 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// AdminList GET /api/admin/reports?status=new&limit=50
+// AdminList — GET /api/admin/reports?status=new&limit=50
+//
+// Доступ: admin (через portalsvc.AdminMiddleware) — модератор смотрит
+// очередь жалоб. Авторизация делается на уровне роутинга в main.go,
+// здесь лишь читаем query-параметры.
 func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
-	limit := 50
+	limit := 0
 	if v := r.URL.Query().Get("limit"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			limit = n
@@ -72,13 +82,19 @@ func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
+	if list == nil {
+		list = []Report{}
+	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"reports": list})
 }
 
-// AdminResolve POST /api/admin/reports/{id}/resolve
+// AdminResolve — POST /api/admin/reports/{id}/resolve
+//
 // Body: {"status":"resolved","note":"warning issued"}
+//
+// status: 'resolved' | 'rejected'. После успеха — 204 No Content.
 func (h *Handler) AdminResolve(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := portalsvc.UserIDFromContext(r.Context())
 	if !ok {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
@@ -88,7 +104,7 @@ func (h *Handler) AdminResolve(w http.ResponseWriter, r *http.Request) {
 		Status string `json:"status"`
 		Note   string `json:"note"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeJSON(r, &req); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
 		return
 	}
@@ -105,4 +121,10 @@ func (h *Handler) AdminResolve(w http.ResponseWriter, r *http.Request) {
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	}
+}
+
+func decodeJSON(r *http.Request, into any) error {
+	dec := json.NewDecoder(io.LimitReader(r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	return dec.Decode(into)
 }
