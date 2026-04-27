@@ -46,6 +46,7 @@ import (
 	"oxsar/game-nova/internal/profession"
 	"oxsar/game-nova/internal/records"
 	"oxsar/game-nova/internal/referral"
+	"oxsar/game-nova/internal/report"
 	"oxsar/game-nova/internal/repair"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/internal/requirements"
@@ -276,7 +277,9 @@ func run() error {
 	if blPath == "" {
 		blPath = filepath.Join(catalogDir, "moderation", "blacklist.yaml")
 	}
+	var ugcBlacklist *moderation.Blacklist
 	if bl, blErr := moderation.LoadBlacklist(blPath); blErr == nil {
+		ugcBlacklist = bl
 		allianceSvc = allianceSvc.WithBlacklist(bl)
 		log.InfoContext(ctx, "moderation blacklist loaded",
 			slog.String("path", blPath), slog.Int("roots", bl.Size()))
@@ -286,6 +289,10 @@ func run() error {
 	}
 
 	allianceH := alliance.NewHandler(allianceSvc)
+
+	// План 46 Ф.3 (149-ФЗ): жалобы пользователей на UGC.
+	reportSvc := report.NewService(db)
+	reportH := report.NewHandler(reportSvc)
 
 	professionSvc := profession.NewService(db, cat)
 	professionH := profession.NewHandler(professionSvc)
@@ -313,7 +320,7 @@ func run() error {
 	// fan-out'а. При rdb=nil деградирует до single-instance broadcast.
 	chatHub := chat.NewHubWithRedis(ctx, rdb, log)
 	defer chatHub.Close()
-	chatH := chat.NewHandler(chatHub, db)
+	chatH := chat.NewHandler(chatHub, db).WithBlacklist(ugcBlacklist)
 
 	r := httpx.NewRouter(httpx.RouterDeps{Log: log})
 
@@ -515,6 +522,9 @@ func run() error {
 		pr.Get("/espionage-reports/{id}", messageH.GetEspionageReport)
 		pr.Get("/expedition-reports/{id}", messageH.GetExpeditionReport)
 
+		// План 46 Ф.3: жалобы пользователей.
+		pr.Post("/reports", reportH.Create)
+
 		pr.Route("/admin", func(ar chi.Router) {
 			// Ф.8.1 RBAC: на уровне префикса — минимум support (модератор),
 			// на destructive операции — admin или superadmin.
@@ -537,6 +547,10 @@ func run() error {
 			ar.Get("/events/stats", adminH.EventsStats)
 			ar.Get("/events/dead", adminH.ListDeadEvents)
 			ar.Get("/audit", adminH.ListAudit)
+
+			// План 46 Ф.3: модерация UGC-жалоб (support+).
+			ar.Get("/reports", reportH.AdminList)
+			ar.Post("/reports/{id}/resolve", reportH.AdminResolve)
 
 			// Destructive — admin+.
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/users/{id}/credit", adminH.Credit)

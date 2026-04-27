@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { useTranslation } from '@/i18n/i18n';
+import { ReportButton } from '@/components/ReportButton';
+import { useAuthStore } from '@/stores/auth';
 
 type ScoreType = 'total' | 'b' | 'r' | 'u' | 'a' | 'e';
 type MainTab = 'players' | 'alliances' | 'vacation' | 'transfers';
@@ -83,6 +85,7 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
   const { t } = useTranslation('score');
   const [filter, setFilter] = useState(initialQuery ?? '');
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
+  const myUserId = useAuthStore((s) => s.userId);
 
   useEffect(() => {
     if (initialQuery !== undefined) setFilter(initialQuery);
@@ -185,7 +188,14 @@ function PlayersTab({ scoreType, setScoreType, initialQuery, onPlanetClick }: {
                     style={isMatch ? { background: 'rgba(99,217,255,0.08)' } : undefined}
                   >
                     <td data-label="#" className="num">{MEDAL[e.rank - 1] ?? e.rank}</td>
-                    <td data-label={t('colPlayer')} style={{ fontWeight: e.rank <= 3 ? 700 : 400 }}>{e.username}</td>
+                    <td data-label={t('colPlayer')} style={{ fontWeight: e.rank <= 3 ? 700 : 400 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        {e.username}
+                        {e.user_id !== myUserId && (
+                          <ReportButton targetType="user" targetId={e.user_id} compact />
+                        )}
+                      </span>
+                    </td>
                     <td data-label={t('colAlliance')} style={{ fontSize: 13, color: 'var(--ox-fg-dim)', fontFamily: 'var(--ox-mono)' }}>
                       {e.alliance_tag ? `[${e.alliance_tag}]` : '—'}
                     </td>
