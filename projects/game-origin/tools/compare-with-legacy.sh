@@ -49,7 +49,7 @@ PAGES=(
   Artefacts ArtefactMarket Market Achievements Profession Tutorial
   Ranking Records Battlestats Techtree
   AdvTechCalculator Simulator BuildingInfo UnitInfo ArtefactInfo
-  Preferences UserAgreement Support Widgets Referral Changelog
+  Preferences UserAgreement Support Widgets Changelog
   Exchange
 )
 

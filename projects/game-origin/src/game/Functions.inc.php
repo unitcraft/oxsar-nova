@@ -1777,7 +1777,7 @@ function isHomePlanetRequiredForPage($page_name)
 	{
 		foreach(array('Main', 'HomePlanetRequired', /*'Resource', 'Constructions', 'Research', 'Shipyard', 'Defense', 'Mission',
 			'Artefacts', 'Repair', 'Disassemble', 'Stock', 'ExchangeOpts',*/ 'Chat', /*'ChatAlly',*/ 'MSG',
-			/*'Alliance', 'MemberList',*/ 'Friends', /*'Referral', 'Galaxy', 'Empire',*/ 'Techtree', 'Ranking',
+			/*'Alliance', 'MemberList',*/ 'Friends', /*'Galaxy', 'Empire',*/ 'Techtree', 'Ranking',
 			'Records', 'Battlestats', 'ResTransferStats', 'Simulator', 'AdvTechCalculator', /*'Market',
 			'ArtefactMarket',*/ 'Payment', 'Search', /*'PlanetOptions',*/ 'Prefs', 'UserAgreement', 'Support'
 			) as $name)
@@ -1795,7 +1795,7 @@ function isArgeementCanBeShownForPage($page_name)
 	{
 		foreach(array('Main', /*'HomePlanetRequired',*/ 'Resource', 'Constructions', 'Research', 'Shipyard', 'Defense', 'Mission',
 			'Artefacts', 'Repair', 'Disassemble', 'Stock', 'ExchangeOpts', 'Chat', 'ChatAlly', 'MSG',
-			'Alliance', 'MemberList', 'Friends', 'Referral', 'Galaxy', 'Empire', 'Techtree', 'Ranking',
+			'Alliance', 'MemberList', 'Friends', 'Galaxy', 'Empire', 'Techtree', 'Ranking',
 			'Records', 'Battlestats', 'ResTransferStats', 'Simulator', 'AdvTechCalculator', 'Market',
 			'ArtefactMarket', /*'Payment'*/ 'Search', 'PlanetOptions', 'Prefs', /*'UserAgreement', 'Support'*/
 			) as $name)

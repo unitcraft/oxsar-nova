@@ -141,9 +141,6 @@ class Menu implements IteratorAggregate, Countable
         if( $second->getAttribute("href") === "Achievements" && !ACHIEVEMENTS_ENABLED ){
             continue;
         }
-        if( $second->getAttribute("href") === "Referral" && !REFERRALS_ENABLED ){
-            continue;
-        }
     	if( $second->getAttribute("href") === "Widgets" && $_SESSION["username"] ?? "" != 'admin' )
     	{
     		continue;
@@ -156,11 +153,6 @@ class Menu implements IteratorAggregate, Countable
         {
             continue;
         }
-
-//        if( defined('SN') && $second->getAttribute("href") === "Referral" && $_SERVER['REMOTE_ADDR'] != '95.171.1.55' && !defined('LOCAL') )
-//        {
-//            continue;
-//        }
 
         // NS::getPlanetStack();
         if ($second->getAttribute("href") === "ExchangeOpts" && NS::getPlanet()->getBuilding(UNIT_EXCHANGE) < 1)

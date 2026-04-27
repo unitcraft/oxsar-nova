@@ -39,7 +39,7 @@ bash projects/game-origin/tools/apply-test-user-fixture.sh
 - **na_unit2shipyard**: 15 типов юнитов.
 - **na_alliance + na_user2ally**: alliance "Tagi" (aid=42).
 - **na_chat**: последние 100 сообщений.
-- Прочее: officer, password, referral, user_experience, и т.п.
+- Прочее: officer, password, user_experience, и т.п.
 
 ## Зачем
 

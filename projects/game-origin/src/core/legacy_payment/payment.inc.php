@@ -249,7 +249,6 @@ function PS_finishPayment($params)
         "ownerid" => $pay_id,
         ));
 
-      PS_addReferralCredit($user_id, $credit, $pay_id);
       PS_addCreditBonusItem($user_id, $credit, $pay_id);
 
       $GLOBALS['PS_PAYMENT_RESULT_ID'] = $pay_id;
@@ -262,59 +261,6 @@ function PS_finishPayment($params)
   }
   mysql_close();
   return PS_PAYMENT_ALREADY_DONE;
-}
-
-/**
- *
- * Adding credit to parent of this refferal
- * @param int $ref_id referal id
- * @param int $credit credit bought
- */
-function PS_addReferralCredit( $ref_id, $credit, $pay_id )
-{
-	$res = mysql_query("SELECT u.userid, u.languageid, u2.username as ref_username FROM ".PREFIX."referral r "
-		. " JOIN ".PREFIX."user u ON u.userid = r.userid "
-		. " JOIN ".PREFIX."user u2 ON u2.userid = r.ref_id "
-		. " WHERE r.ref_id = ".PS_sqlVal($ref_id)." LIMIT 1");
-	$data = mysql_fetch_array($res);
-	mysql_free_result($res);
-	if ( empty($data) )
-	{
-		return false;
-	}
-	$credit = $credit * REFERRAL_CREDIT_PERCENT / 100.0;
-	if($credit < 1)
-	{
-		return false;
-	}
-	mysql_query("UPDATE ".PREFIX."user SET credit = credit+".PS_sqlVal($credit)." WHERE userid = ".PS_sqlVal($data['userid'])." LIMIT 1");
-
-	$res = mysql_query("SELECT credit FROM ".PREFIX."user WHERE userid = ".PS_sqlVal($data['userid']));
-	$row = mysql_fetch_array($res);
-	mysql_free_result($res);
-
-	PS_sqlInsert("res_log", array(
-		"type" => RES_UPDATE_ADD_REF_CREDITS,
-		"userid" => $data['userid'],
-		"credit" => $credit,
-		"result_credit" => $row["credit"],
-        "game_credit" => PS_gameCredit(),
-		"ownerid" => $pay_id,
-		));
-
-	mysql_query("UPDATE ".PREFIX."referral SET bonus_credit = bonus_credit+".PS_sqlVal($credit)." WHERE userid = ".PS_sqlVal($data['userid'])." AND ref_id = ".PS_sqlVal($ref_id)." LIMIT 1");
-
-    PS_sqlInsert("message", array(
-      "mode" => MSG_FOLDER_CREDIT,
-      "time" => time(),
-      "sender" => null,
-      "receiver" => $data['userid'],
-	  "message" => strtr(PS_langStr("REFERRAL_CREDIT_MESSAGE", $data['languageid']), array("{@credits}" => PS_fNumber($credit, 2, $data['languageid']), "{@ref_username}" => $data['ref_username'])),
-      "subject" => PS_langStr("REFERRAL_CREDIT_SUBJECT", $data['languageid']),
-      "readed" => 0,
-      "related_user" => $ref_id));
-
-    return true;
 }
 
 function PS_getCreditBonusInfo()

@@ -48,7 +48,7 @@ EOF
 USER_TABLES=(
   na_user na_password na_user2group na_user2ally
   na_planet na_research2user na_artefact2user na_officer
-  na_referral na_user_experience na_credit_bonus_item
+  na_user_experience na_credit_bonus_item
   na_res_log na_res_transfer
 )
 

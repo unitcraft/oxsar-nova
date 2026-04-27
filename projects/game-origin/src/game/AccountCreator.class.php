@@ -253,46 +253,6 @@ class AccountCreator extends AjaxRequestHelper
 				// . ' ORDER BY userid'
 				);
 		}
-		if( $cookie = Core::getRequest()->getCOOKIE("ref") )
-		{
-			$last_time = time() - 86400;
-			$ip_ref = IPADDRESS;
-			$ip_adress = sqlSelectRow("registration", array("ipaddress"), "", "ipaddress = ".sqlVal($ip_ref)." AND time > ".sqlVal($last_time));
-			if( !empty($ip_adress) && false )
-			{
-				sqlInsert(
-					"message",
-					array(
-						"mode"		=> 1,
-						"time"		=> time(),
-						"sender"	=> null,
-						"receiver" 	=> $cookie,
-						"message"	=> "По Вашей ссылке зарегистрировался пользователь - <b>".
-							$this->username.
-							"</b>!<p/>Но он не защитан Вашим рефералом, так как система посчитала это накруткой регистраций.",
-						"subject"	=> "Регистрация по Вашей ссылке",
-						"readed"	=> 0,
-					)
-				);
-			}
-			else
-			{
-				sqlInsert("referral", array("userid" => $cookie, "ref_id" => $userid, "ref_time" => time(), "ref_ip" => IPADDRESS));
-				sqlInsert(
-					"message",
-					array(
-						"mode"		=> 1,
-						"time"		=> time(),
-						"sender"	=> null,
-						"receiver"	=> $cookie,
-						"message"	=> "У Вас появился новый реферал - <b>".$this->username."</b>!"
-										. "<p/>Подробная информация о бонусах за рефералов находится на странице Рефералы.",
-						"subject"	=> "Новый реферал!",
-						"readed"	=> 0,
-					)
-				);
-			}
-		}
 		sqlInsert("registration", array("time" => time(), "ipaddress" => IPADDRESS, "useragent" => $_SERVER['HTTP_USER_AGENT']));
 
         if(SEND_NEW_USER_MESSAGE){
