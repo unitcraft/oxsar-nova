@@ -5,7 +5,8 @@
 	</tr></thead>
 	<tbody><tr>
 		<td><label for="receiver">{lang}RECEIVER{/lang}</label></td>
-        <td><?php echo CHtml::tag('input', array('name' => 'receiver', 'id' => 'receiver', 'value' => {var=receiver}, 'maxlength' => Core::getOptions()->get("MAX_USER_CHARS"))); ?><br />{@userError}</td>
+        <td><?php /* план 37.5d.12: CHtml::tag → raw <input> */ ?>
+            <input type="text" name="receiver" id="receiver" value="{var=receiver}" maxlength="{config}MAX_USER_CHARS{/config}" /><br />{@userError}</td>
 		{if[0]}<td><input type="text" name="receiver" id="receiver" value=<?php echo CJavaScript::encode({var=receiver}); ?> maxlength="{config}MAX_USER_CHARS{/config}" /><br />{@userError}</td>{/if}
 	</tr>
 	<tr>
