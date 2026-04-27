@@ -113,7 +113,7 @@ CREATE TABLE referral_payouts (
     referee_user_id     UUID NOT NULL,
     referral_id         UUID NOT NULL REFERENCES referrals(id),
     payout_kind         TEXT NOT NULL,    -- 'welcome' / 'purchase_percentage' / 'milestone'
-    oxsarit_amount      BIGINT NOT NULL,
+    oxsarit             BIGINT NOT NULL,    -- сумма выплаты в оксаритах
     universe_id         TEXT NOT NULL,    -- куда зачислены
     source_metadata     JSONB,            -- {payment_order_id, amount_rub, ...}
     paid_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
