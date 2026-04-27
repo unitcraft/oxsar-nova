@@ -1868,12 +1868,23 @@ function bbcode_text($text, $extended_syntax = true)
 		// $bb["#{{line}}#si"] = "<hr />";
 		$bb["#\[/(color|size|d|blink|b|i|u|s)\]#si"] = "</span>";
 		$bb["#\[/align\]#si"] = "</div>";
-		$bb["#\[list\]([^\"]*?)\[/list\]#sie"] = 'bbcode_list_items("\\1", \$extended_syntax)';
+		// План 37.5d.13: legacy использовал /e modifier (deprecated в PHP 5.5,
+		// удалён в PHP 7+). Заменено на отдельную обработку через
+		// preg_replace_callback ниже.
+		// Legacy: $bb["#\[list\]([^\"]*?)\[/list\]#sie"] = 'bbcode_list_items("\\1", \$extended_syntax)';
 	}
 	foreach($bb as $pat => $rep)
 	{
 		$text = preg_replace ($pat, $rep, $text);
 	}
+	// Замена /e modifier для [list]...[/list] — отдельный callback.
+	$text = preg_replace_callback(
+		'#\[list\]([^"]*?)\[/list\]#si',
+		function($matches) use ($extended_syntax) {
+			return bbcode_list_items($matches[1], $extended_syntax);
+		},
+		$text
+	);
 	return nl2br($text);
 }
 
