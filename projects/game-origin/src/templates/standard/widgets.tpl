@@ -2,7 +2,7 @@
 <tbody>
 <tr>
 <td>
-<?php if($_SERVER['REMOTE_ADDR'] == '95.171.1.55') { Yii::app()->controller->widget('CurrentEvents', array('limit' => 50)); echo "<p />"; } ?>
+<?php /* план 37.5d.9: Yii widget CurrentEvents удалён */ ?>
 </td>
 </tr>
 </tbody>

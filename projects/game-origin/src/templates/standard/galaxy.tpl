@@ -20,7 +20,7 @@
 
 	function sendFleet(mode, target)
 	{
-		url = "{const=RELATIVE_URL}game.php/go:FleetAjax/target:" + target + "/mode:" + mode+"?<?php echo Yii::app()->socialAPI->getSuffix();?>";
+		url = "{const=RELATIVE_URL}game.php/go:FleetAjax/target:" + target + "/mode:" + mode+"?";
 		$.get(url, function(data) {
 			$("#ajaxresponse").html(data);
 		});
@@ -30,13 +30,13 @@
 	{
 		{if[defined('SN') && !defined('SN_FULLSCREEN')]}
 			$('#falang-scan').dialog('open');
-			var data = '<iframe src ="{const=RELATIVE_URL}game.php/MonitorPlanet/'+id+'?<?php echo Yii::app()->socialAPI->getSuffix();?>" width="100%" height="100%" id="falang_IFrame"></iframe>'
+			var data = '<iframe src ="{const=RELATIVE_URL}game.php/MonitorPlanet/'+id+'?" width="100%" height="100%" id="falang_IFrame"></iframe>'
 			$('#falang-scan').html(data);
 			$('#falang_IFrame').load(function(){
 				$(this).contents().find('a').attr('target', '_top');
 			});
 		{else}
-			win = window.open("{const=RELATIVE_URL}game.php/MonitorPlanet/"+id+"?<?php echo Yii::app()->socialAPI->getSuffix();?>", "", "width=700,height=400,status=yes,scrollbars=yes,resizable=yes");
+			win = window.open("{const=RELATIVE_URL}game.php/MonitorPlanet/"+id+"?", "", "width=700,height=400,status=yes,scrollbars=yes,resizable=yes");
 			win.focus();
 		{/if}
 	}
@@ -156,7 +156,7 @@
 		</td>
 	</tr>{/foreach}
     {if[EXPEDITION_ENABLED]}
-	<tr><td colspan="8" align="center"><a href="{@goMissionLink}g:{@galaxy}/s:{@system}/p:{const=EXPED_PLANET_POSITION}?<?php echo Yii::app()->socialAPI->getSuffix();?>">{lang=SUNSYSTEM_OUTSIDE}</a></td></tr>
+	<tr><td colspan="8" align="center"><a href="{@goMissionLink}g:{@galaxy}/s:{@system}/p:{const=EXPED_PLANET_POSITION}?">{lang=SUNSYSTEM_OUTSIDE}</a></td></tr>
     {/if}
 	</tbody>
 </table>

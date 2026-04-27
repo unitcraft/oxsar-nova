@@ -65,12 +65,14 @@ if (!function_exists('socialUrl')) {
 }
 
 // План 37.5d.9: artImageUrl — генерация URL для preview артефакт-картинок.
-// В legacy указывала на index.php/artefact2user_YII (Yii route).
-// У нас Yii нет — возвращаем пустую строку (preview-картинки не критичны).
+// В legacy указывала на index.php/artefact2user_YII?{suffix}.
+// У нас Yii нет — endpoint реализован в public/artefact-image.php (GD-генерация
+// idential-логики из legacy controller renderImage()).
+// $action = "image_new" | "image" (action_view), у нас оба → один endpoint.
+// $suffix = строка query-params от social API (мы её игнорируем).
 if (!function_exists('artImageUrl')) {
   function artImageUrl($action, $suffix, $real_url = true) {
-    // Возвращает фиксированный 1x1 placeholder, чтобы JavaScript src= не сломался.
-    return ($real_url ? RELATIVE_URL : "") . "images/empty/empty.gif?";
+    return ($real_url ? RELATIVE_URL : "") . "artefact-image.php?";
   }
 }
 
