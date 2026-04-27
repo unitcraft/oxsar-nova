@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"oxsar/game-nova/internal/httpx"
 )
 
 // StarterAssigner назначает стартовую планету новому пользователю.
@@ -43,6 +46,11 @@ type EnsureUserConfig struct {
 // universe_membership в auth-service) делается АСИНХРОННО — fire-and-forget,
 // чтобы не задерживать первый ответ.
 //
+// План 36 Ф.12.5: обработка username-конфликта. INSERT может упасть
+// по UNIQUE на users_username_key, если в game-db уже есть legacy-юзер
+// с этим username, но другим id (до Ф.12 миграции). В этом случае
+// возвращаем 409 Conflict вместо 500 «no rows in result set» в handler'ах.
+//
 // Должен стоять ПОСЛЕ RSAMiddleware.
 func EnsureUserMiddleware(cfg EnsureUserConfig) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -62,7 +70,20 @@ func EnsureUserMiddleware(cfg EnsureUserConfig) func(http.Handler) http.Handler 
 				ON CONFLICT (id) DO NOTHING
 			`, claims.Subject, claims.Username)
 			if err != nil {
-				// Не валим запрос: middleware невидим для эндпоинта.
+				// План 36 Ф.12.5: username-конфликт — legacy-юзер с тем же
+				// именем существует в game-db с другим id. Возвращаем 409
+				// сразу, не пуская в handler (иначе тот выдаст 500).
+				if isUsernameConflict(err) {
+					slog.WarnContext(ctx, "ensure-user username conflict (legacy)",
+						slog.String("user_id", claims.Subject),
+						slog.String("username", claims.Username))
+					httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict,
+						"username already taken by legacy account; contact support to migrate"))
+					return
+				}
+				// Другие ошибки БД — логируем, но не валим запрос
+				// (middleware невидим для эндпоинта; если /api/me потом
+				// упадёт — клиент увидит 500, мы увидим лог).
 				slog.WarnContext(ctx, "ensure-user insert failed",
 					slog.String("user_id", claims.Subject),
 					slog.String("err", err.Error()))
@@ -81,6 +102,24 @@ func EnsureUserMiddleware(cfg EnsureUserConfig) func(http.Handler) http.Handler 
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// isUsernameConflict определяет, что INSERT упал из-за UNIQUE-конфликта
+// на users_username_key (legacy-юзер с этим username, но другим id).
+//
+// pgx 5.x возвращает *pgconn.PgError, но мы зависим от конкретного типа
+// только в одном месте — здесь. Проверяем по тексту ошибки чтобы не
+// тащить *pgconn.PgError в context import-cycle.
+//
+// Postgres SQLSTATE 23505 + constraint имя `users_username_key` —
+// уникально для конкретно username UNIQUE (см. migrations/0001_init.sql).
+func isUsernameConflict(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return strings.Contains(s, "23505") &&
+		strings.Contains(s, "users_username_key")
 }
 
 // retryBootstrapIfNeeded дозапускает bootstrap, если он не завершился ранее.
