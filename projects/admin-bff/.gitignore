@@ -1,0 +1,6 @@
+/server
+/admin-bff
+*.exe
+.env.local
+*.test
+*.out
