@@ -950,25 +950,22 @@ dev-окружению, ни к фронтенду:
   В чистой среде (после Ф.5/Ф.12) такого конфликта быть не должно. Возникает
   только если в game-db остались legacy-юзера до миграций.
 
-- Migrate-скрипт `cmd/tools/migrate-legacy-users` (одноразовый):
-  - SELECT users.* FROM game-db WHERE password_hash IS NOT NULL (т.е. legacy).
-  - Для каждого: SELECT user FROM auth-db WHERE username=X.
-    - Если есть и id совпадает (одна запись в обеих БД с тем же id) — пропускаем
-      (нормальный новый flow).
-    - Если есть и id отличается — UPDATE game-db.users SET id=auth.id WHERE
-      id=legacy.id (CASCADE через FK обновит planets, fleets и т.д.).
-    - Если нет в auth-db — это «забытый» legacy-аккаунт без auth, удалить
-      или экспортировать (по решению).
-  - Вывести summary: migrated/skipped/orphaned.
+- Migrate-скрипт `cmd/tools/migrate-legacy-users` — **не нужен на текущем
+  этапе**. На стенде только тестовые юзеры (TRUNCATE сделан 2026-04-27),
+  реальных legacy-аккаунтов нет. Если в будущем появятся пользователи
+  с расходящимся id между auth-db и game-db — реализовать как отдельную
+  одноразовую утилиту.
 
 #### Acceptance
 
 - В чистой dev-среде: `register alice` → `/api/me` на uni01 → 200 (новый юзер).
 - При наличии legacy-юзера: `register alice` → `/api/me` → **409 Conflict**
   с понятным сообщением (а не 500 «no rows»).
-- `cmd/tools/migrate-legacy-users` корректно мигрирует существующие записи.
 - Тест на race: 50 параллельных запросов от нового юзера → ровно один INSERT
   в game-db (ON CONFLICT защищает).
+
+**Статус**: ✅ закрыта 2026-04-27, коммит f1cdc45f89 + d40962391b.
+Все 4 теста (1 unit + 3 integration) зелёные.
 
 ### Ops: нагрузочный тест (отдельный тикет, ~1–2 дня)
 
