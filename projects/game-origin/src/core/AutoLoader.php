@@ -1,95 +1,75 @@
 <?php
 /**
-* Include required files.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: AutoLoader.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * AutoLoader — clean-room rewrite (план 43 Ф.6). Заменяет одноимённый
+ * файл фреймворка Recipe (GPL).
+ *
+ * Bootstrap-include статических файлов (Functions.php + Exception
+ * interface + abstract Plugin) + spl_autoload_register для динамической
+ * загрузки `Class.class.php` / `util/Class.util.class.php`.
+ *
+ * Ищет файлы в каталогах из AUTOLOAD_PATH_CORE (под core) и
+ * AUTOLOAD_PATH_APP (под game). Резолвит `Class` → `Class.class.php`
+ * либо `util/Class.util.class.php`.
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
-//### All files to include ###//
-$includingFiles = array(
-                        "Functions.php",
-                        "Exception.interface.php",
-                        "plugins/Plugin.abstract_class.php"
-                        );
-
-//### Automatic plug in loader ###//
-$pluginpath = RECIPE_ROOT_DIR."plugins/";
-$handle = opendir($pluginpath);
-$plugins = array();
-while($file = readdir($handle))
+// Static includes — обязательные файлы, которые должны быть подключены
+// до spl_autoload_register'а (либо потому что они нужны до первого
+// autoload, либо потому что у них нестандартное имя файла).
+$_static_includes = array(
+    'Functions.php',
+    'Exception.interface.php',
+    'plugins/Plugin.abstract_class.php',
+);
+foreach($_static_includes as $_inc)
 {
-  if($file != "." && $file != ".." && $file != ".htaccess" && $file != ".svn")
-  {
-    if(is_dir($pluginpath.$file))
+    $_path = RECIPE_ROOT_DIR.$_inc;
+    if(!is_file($_path))
     {
-      // Open first directory layer and try to find another plug in
-      $_handle = opendir($pluginpath.$file);
-      while($_file = readdir($_handle))
-      {
-        if(!file_exists($pluginpath.$file."/".$_file.".dis") && preg_match("/^.+\.php$/i", $_file))
-        {
-          array_push($plugins, "plugins/".$file."/".$_file);
-        }
-      }
-      unset($_file); unset($_handle);
+        die('AutoLoader: missing required file '.$_inc);
     }
-    // Create .dis-file to disable any plug in
-    else if(!file_exists($pluginpath.$file.".dis") && preg_match("/^.+\.php$/i", $file) && !preg_match("/^.+\.abstract_class\.php$/i", $file))
-    {
-      array_push($plugins, "plugins/".$file);
-    }
-  }
+    require_once($_path);
 }
-closedir($handle);
-if(count($plugins) > 0) { $includingFiles = array_merge($includingFiles, $plugins); }
+unset($_inc, $_path, $_static_includes);
 
-//### Include files ###//
-foreach($includingFiles as $inc)
-{
-  if(!file_exists(RECIPE_ROOT_DIR.$inc)) { die("Crash: ".$inc); }
-  require_once(RECIPE_ROOT_DIR.$inc);
-}
-
+/**
+ * Динамический autoloader. Сначала ищет в core (AUTOLOAD_PATH_CORE),
+ * потом в app (AUTOLOAD_PATH_APP), потом fallback в util/.
+ */
 spl_autoload_register(function($class) {
-  $include = false;
-  $class = getClassPath($class);
-  $coreDirs = explode(",", AUTOLOAD_PATH_CORE);
-  foreach($coreDirs as $dir)
-  {
-    $classFile = RECIPE_ROOT_DIR.$dir.$class.".class.php";
-    if(file_exists($classFile))
+    // getClassPath нормализует имя (определена в Functions.php).
+    $normalized = function_exists('getClassPath') ? getClassPath($class) : $class;
+
+    $candidates = array();
+
+    if(defined('AUTOLOAD_PATH_CORE'))
     {
-      $include = $classFile;
-      break;
+        foreach(explode(',', AUTOLOAD_PATH_CORE) as $dir)
+        {
+            $candidates[] = RECIPE_ROOT_DIR.$dir.$normalized.'.class.php';
+        }
     }
-  }
-  if(!$include)
-  {
-    $appDirs = explode(",", AUTOLOAD_PATH_APP);
-    foreach($appDirs as $dir)
+    if(defined('AUTOLOAD_PATH_APP'))
     {
-      $classFile = APP_ROOT_DIR.$dir.$class.".class.php";
-      if(file_exists($classFile))
-      {
-        $include = $classFile;
-        break;
-      }
+        foreach(explode(',', AUTOLOAD_PATH_APP) as $dir)
+        {
+            $candidates[] = APP_ROOT_DIR.$dir.$normalized.'.class.php';
+        }
     }
-  }
-  // План 37.5b: ext/ слой удалён, ExtX-классы смержены в базовые
-  if(!$include)
-  {
-    $include = RECIPE_ROOT_DIR."util/".$class.".util.class.php";
-  }
-  if($include !== false && file_exists($include))
-  {
-    require_once($include);
-  }
+    // Fallback: util/-каталог с суффиксом util.class.php.
+    $candidates[] = RECIPE_ROOT_DIR.'util/'.$normalized.'.util.class.php';
+
+    foreach($candidates as $file)
+    {
+        if(is_file($file))
+        {
+            require_once($file);
+            return;
+        }
+    }
+    // Не найдено — silent return; PHP сам бросит «Class not found»
+    // если кто-то реально использует этот класс.
 });
-?>

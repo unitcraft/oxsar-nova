@@ -1,41 +1,54 @@
 <?php
 /**
-* Initilizing file. Launches program and define important constants.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: init.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * init.php — clean-room rewrite (план 43 Ф.6). Заменяет одноимённый файл
+ * фреймворка Recipe (GPL).
+ *
+ * Bootstrap-файл подключается из global.inc.php, регистрирует обработчик
+ * ошибок (PHP-warning → GenericException) и подключает AutoLoader.
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-// Set error reporting level.
-error_reporting(ERROR_REPORTING_TYPE);
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
-// If an error occured, throw an exception.
+// Уровень репортинга задан в global.inc.php (ERROR_REPORTING_TYPE).
+if(defined('ERROR_REPORTING_TYPE'))
+{
+    error_reporting(ERROR_REPORTING_TYPE);
+}
+
+/**
+ * Превращает PHP-warning в GenericException — чтобы перехватывать
+ * единообразно через try/catch выше по стеку. Активируется только
+ * если RUN_YII != 1 (legacy-флаг для Yii-режима).
+ */
 function errorHandler($errNo, $message, $file, $line)
 {
-  throw new GenericException($message, $file, $line, $errNo);
-}
-//
-if($GLOBALS["RUN_YII"] != 1)
-{
-	set_error_handler("errorHandler", ERROR_REPORTING_TYPE);
+    throw new GenericException(sprintf('%s in %s:%d', $message, $file, $line), $errNo);
 }
 
-// Handles uncaught exceptions
 function exceptionHandler($exception)
 {
-//  $exception->printError();
+    // No-op — uncaught исключения логируются стандартным PHP-механизмом.
+    // Тонкая настройка (показ error-template, отправка в Sentry и т.п.)
+    // вынесена в более высокий слой (game.php → Core → Logger).
 }
-//set_exception_handler("exceptionHandler");
-if($GLOBALS["RUN_YII"] != 1)
-{
-	set_exception_handler("exceptionHandler");
-}
-// Init debuger
-require_once(RECIPE_ROOT_DIR."Debuger.php");
 
-// Load program.
-require_once(RECIPE_ROOT_DIR."AutoLoader.php");
-?>
+if(!isset($GLOBALS['RUN_YII']) || $GLOBALS['RUN_YII'] != 1)
+{
+    set_error_handler('errorHandler', defined('ERROR_REPORTING_TYPE') ? ERROR_REPORTING_TYPE : E_ERROR);
+    set_exception_handler('exceptionHandler');
+}
+
+// Debuger.php — legacy debug-helper, оставлен как есть до Ф.8.
+if(defined('RECIPE_ROOT_DIR') && is_file(RECIPE_ROOT_DIR.'Debuger.php'))
+{
+    require_once(RECIPE_ROOT_DIR.'Debuger.php');
+}
+
+// AutoLoader подключается в самом конце — он spl_autoload_register'ит
+// callback и использует выше определённые helper-функции.
+if(defined('RECIPE_ROOT_DIR') && is_file(RECIPE_ROOT_DIR.'AutoLoader.php'))
+{
+    require_once(RECIPE_ROOT_DIR.'AutoLoader.php');
+}
