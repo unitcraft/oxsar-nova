@@ -21,9 +21,14 @@ export function LoginScreen() {
     setError(null);
     setLoading(true);
     try {
-      const path = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
+      // План 36 Ф.11: фронтенд ходит в auth-service (через vite proxy /auth/* в dev,
+      // через nginx auth.oxsar-nova.ru в prod). На login auth-service ждёт поле
+      // login (email или username), на register — username + email + password.
+      const path = mode === 'login' ? '/auth/login' : '/auth/register';
       const body =
-        mode === 'login' ? { email, password } : { username, email, password };
+        mode === 'login'
+          ? { login: email, password }
+          : { username, email, password };
       const res = await api.post<AuthResponse>(path, body);
       setTokens({
         access: res.tokens.access,
