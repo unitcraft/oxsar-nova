@@ -1,240 +1,68 @@
 <?php
 /**
-* Extended functionality of the SimpleXMLElement.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: XMLObj.util.class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * XMLObj — clean-room rewrite (план 43 Ф.5). Заменяет одноимённый класс
+ * из фреймворка Recipe (GPL).
+ *
+ * Тонкая обёртка над SimpleXMLElement с legacy-API:
+ *   - getAttribute($name): string — вернуть значение атрибута.
+ *   - getName(): string — имя тэга.
+ *   - getString(): string — текст внутри тэга (без подтэгов).
+ *   - getChildren(): XMLObj[] — массив дочерних элементов.
+ *
+ * Используется Menu, Options, PlanetCreator для парсинга XML-config.
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
-class XMLObj extends SimpleXMLElement
+class XMLObj
 {
-  /**
-  * Returns the children of a XML element.
-  *
-  * @param string	The children's name [optional]
-  *
-  * @return XMLObj	The children
-  */
-  #[\ReturnTypeWillChange]
-  public function getChildren($name = null)
-  {
-    if(is_null($name))
+    /** @var \SimpleXMLElement */
+    private $node;
+
+    public function __construct(\SimpleXMLElement $node)
     {
-      return $this->children();
+        $this->node = $node;
     }
-    return $this->$name;
-  }
 
-  /**
-  * Returns the attributes of a XML element.
-  *
-  * @param string	Attribute name [optional]
-  *
-  * @return string	Attribute content
-  */
-  public function getAttribute($name = null)
-  {
-    if(is_null($name))
+    public function getAttribute($name)
     {
-      return $this->attributes();
+        $attrs = $this->node->attributes();
+        return isset($attrs[$name]) ? (string)$attrs[$name] : '';
     }
-    return strval($this->attributes()->$name);
-  }
 
-  /**
-  * Returns the data of a XML element.
-  *
-  * @param string	Element name [optional]
-  * @param string	Data type [optional]
-  *
-  * @return mixed	Data
-  */
-  public function getData($name = null, $type = null)
-  {
-    if(!is_null($type))
+    public function getName()
     {
-      $type = strtolower($type);
-      switch($type)
-      {
-      default: case "string": case "text": case "char": case "str":
-        return $this->getString($name);
-        break;
-      case "int": case "integer":
-        return $this->getInteger($name);
-        break;
-      case "bool": case "boolean":
-        return $this->getBoolean($name);
-        break;
-      case "float": case "double":
-        return $this->getFloat($name);
-        break;
-      case "array": case "arr":
-        return $this->getArray($name);
-        break;
-      case "map":
-        return $this->getMap($name);
-        break;
-      }
+        return $this->node->getName();
     }
-    return $this->getString($name);
-  }
 
-  /**
-  * Returns the data of the XML element as a string.
-  *
-  * @param string	Element name [optional]
-  *
-  * @return string
-  */
-  public function getString($name = null)
-  {
-    if(is_null($name))
+    public function getString()
     {
-      return strval($this);
+        // Текстовое содержимое узла без вложенных тэгов.
+        // SimpleXMLElement->__toString() возвращает текст до первого подэлемента.
+        return trim((string)$this->node);
     }
-    return strval($this->$name);
-  }
 
-  /**
-  * Returns the data of the XML element as a string.
-  *
-  * @param string	Element name [optional]
-  *
-  * @return string
-  */
-  public function getStringObj($name = null)
-  {
-    if(is_null($name))
+    /**
+     * Возвращает массив дочерних XMLObj. Текстовые узлы пропускаются —
+     * только element-узлы.
+     */
+    public function getChildren()
     {
-      return new OxsarString($this);
+        $children = array();
+        foreach($this->node->children() as $child)
+        {
+            $children[] = new XMLObj($child);
+        }
+        return $children;
     }
-    return new OxsarString($this->$name);
-  }
 
-  /**
-  * Returns the data of the XML element as an integer value.
-  *
-  * @param string	Element name [optional]
-  *
-  * @return integer
-  */
-  public function getInteger($name = null)
-  {
-    if(is_null($name))
+    /**
+     * Доступ к underlying SimpleXMLElement (для расширений).
+     */
+    public function getNode()
     {
-      return intval($this);
+        return $this->node;
     }
-    return intval($this->$name);
-  }
-
-  /**
-  * Returns the data of the XML element as an integer value.
-  *
-  * @param string	Element name [optional]
-  *
-  * @return integer
-  */
-  public function getIntegerObj($name = null)
-  {
-    if(is_null($name))
-    {
-      return new Integer($this);
-    }
-    return new Integer($this->$name);
-  }
-
-  /**
-  * Returns the data of the XML element as a boolean value.
-  *
-  * @param string	Element name [optional]
-  *
-  * @return boolean
-  */
-  public function getBoolean($name = null)
-  {
-    if(is_null($name))
-    {
-      return (bool) $this;
-    }
-    return (bool) $this->$name;
-  }
-
-  /**
-  * Returns the data of the XML element as a boolean value.
-  *
-  * @param string	Element name [optional]
-  *
-  * @return boolean
-  */
-  public function getBooleanObj($name = null)
-  {
-    if(is_null($name))
-    {
-      return new Boolean($this);
-    }
-    return new Boolean($this->$name);
-  }
-
-  /**
-  * Returns the data of the XML element as a float value.
-  *
-  * @param string	Element name [optional]
-  *
-  * @return float
-  */
-  public function getFloat($name = null)
-  {
-    if(is_null($name))
-    {
-      return floatval($this);
-    }
-    return floatval($this->$name);
-  }
-
-  /**
-  * Returns the data of the XML element as a float object.
-  *
-  * @param string	Element name [optional]
-  *
-  * @return Float
-  */
-  public function getFloatObj($name = null)
-  {
-    if(is_null($name))
-    {
-      return new OxsarFloat($this);
-    }
-    return new OxsarFloat($this->$name);
-  }
-
-  /**
-  * Returns the data of the XML element as an array.
-  *
-  * @param string	Element name [optional]
-  *
-  * @return array
-  */
-  public function getArray($name = null)
-  {
-    return Arr::trim(explode(",", $this->getString($name)));
-  }
-
-  /**
-  * Returns the data of the XML element as a map.
-  *
-  * @param string	Element name [optional]
-  *
-  * @return Map
-  */
-  public function getMap($name = null)
-  {
-    $map = new Map($this->getArray($name));
-    return $map->trim();
-  }
 }
-?>

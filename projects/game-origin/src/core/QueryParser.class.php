@@ -1,485 +1,155 @@
 <?php
 /**
-* Query parser. Processes queries for SQL access.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: QueryParser.class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * QueryParser — clean-room rewrite (план 43 Ф.6). Заменяет одноимённый
+ * класс из фреймворка Recipe (GPL).
+ *
+ * Минимальный SQL builder поверх Core::getDB(). Сохранены сигнатуры
+ * 9 методов реально вызываемых в проекте: insert/replace/update/delete/
+ * select/selectRow/selectField/showFields/optimize.
+ *
+ * Все SQL-значения экранируются через Core::getDatabase()->quote_db_value()
+ * (PDO::quote под капотом). $select-аргумент может быть массивом
+ * полей или строкой (raw SQL); $where, $order, $limit — строки SQL,
+ * передаются как есть.
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
 class QueryParser
 {
-  /**
-  * Last SQL query.
-  *
-  * @var string
-  */
-  protected $sql = "";
-
-  /**
-  * Disables auto-sending of a query.
-  *
-  * @var boolean
-  */
-  protected $send = true;
-
-  /**
-  * @ignore
-  */
-  public function __construct() {}
-
-  /**
-  * Generates an insert sql query.
-  *
-  * @param string	Table name to insert
-  * @param mixed		Attributes to insert
-  * @param mixed		Values to insert
-  *
-  * @return QueryParser
-  */
-  public function insert($table, $attribute, $value, $op = "INSERT")
-  {
-//    try {
-    	Arr::checkArrays($attribute, $value);
-//    }
-//    catch(Exception $e) { $e->printError(); }
-
-    if(!is_array($attribute) && !is_array($value))
+    /**
+     * INSERT (или REPLACE при $op='REPLACE') в таблицу.
+     * $attribute — массив имён колонок; $value — значения той же длины.
+     */
+    public function insert($table, $attribute, $value, $op = 'INSERT')
     {
-      $attribute = Arr::trimArray(explode(",", $attribute));
-      $value = Arr::trimArray(explode(",", $value));
+        $cols = array();
+        foreach((array)$attribute as $a)
+        {
+            $cols[] = '`'.str_replace('`', '', (string)$a).'`';
+        }
+        $vals = array();
+        foreach((array)$value as $v)
+        {
+            $vals[] = $v === null ? 'NULL' : Core::getDatabase()->quote_db_value((string)$v);
+        }
+        $sql = strtoupper($op).' INTO '.PREFIX.$table
+            .' ('.implode(', ', $cols).') VALUES ('.implode(', ', $vals).')';
+        return Core::getDB()->query($sql);
     }
 
-//    try {
-    	Arr::checkArraySize($attribute, $value);
-//    }
-//    catch(Exception $e) { $e->printError(); }
-
-    $attribute = implode(",", $this->setBackQuotes($attribute));
-    $value = implode(",", $this->setSimpleQuotes($value));
-
-    $this->sql = "$op INTO ".PREFIX.$table." (".$attribute.") VALUES (".$value.")";
-    if($this->send)
+    public function replace($table, $attribute, $value)
     {
-//      try {
-      	Core::getDB()->query($this->sql);
-//      }
-//      catch(Exception $e) { $e->printError(); }
-    }
-    $this->send = true;
-    return $this;
-  }
-
-  public function replace($table, $attribute, $value)
-  {
-    return $this->insert($table, $attribute, $value, "REPLACE");
-  }
-
-  /**
-  * Generates an insert sql query.
-  *
-  * @param string	Table name to insert
-  * @param mixed		Attributes to insert
-  * @param mixed		Values to insert
-  * @param string	Where clauses
-  *
-  * @return QueryParser
-  */
-  public function update($table, $attribute, $value, $where = null)
-  {
-//    try {
-    	Arr::checkArrays($attribute, $value);
-//    }
-//    catch(Exception $e) { $e->printError(); }
-
-    if(!is_array($attribute) && !is_array($value))
-    {
-      $attribute = Arr::trimArray(explode(",", $attribute));
-      $value = Arr::trimArray(explode(",", $value));
+        return $this->insert($table, $attribute, $value, 'REPLACE');
     }
 
-    $value = $this->setSimpleQuotes($value);
-    $attribute = $this->setBackQuotes($attribute);
-
-//    try {
-    	Arr::checkArraySize($attribute, $value);
-//    }
-//    catch(Exception $e) { $e->printError(); }
-
-    $update = $attribute[0]." = ".$value[0];
-    for($i = 1; $i < count($attribute); $i++)
+    /**
+     * UPDATE. $attribute может быть массивом или строкой (одно поле);
+     * $value — массив либо одиночное значение либо ассоциативный массив
+     * key=>value (тогда $value игнорируется).
+     */
+    public function update($table, $attribute, $value, $where = null)
     {
-      $update .= ", ".$attribute[$i]." = ".$value[$i];
+        $sets = array();
+        if(is_array($attribute) && !is_array($value) && $value === null)
+        {
+            // Ассоциативный массив key=>value передан в $attribute.
+            foreach($attribute as $k => $v)
+            {
+                $sets[] = '`'.str_replace('`', '', (string)$k).'` = '
+                    .($v === null ? 'NULL' : Core::getDatabase()->quote_db_value((string)$v));
+            }
+        }
+        elseif(is_array($attribute))
+        {
+            $values = (array)$value;
+            $i = 0;
+            foreach($attribute as $a)
+            {
+                $v = isset($values[$i]) ? $values[$i] : null;
+                $sets[] = '`'.str_replace('`', '', (string)$a).'` = '
+                    .($v === null ? 'NULL' : Core::getDatabase()->quote_db_value((string)$v));
+                $i++;
+            }
+        }
+        else
+        {
+            $sets[] = '`'.str_replace('`', '', (string)$attribute).'` = '
+                .($value === null ? 'NULL' : Core::getDatabase()->quote_db_value((string)$value));
+        }
+        $sql = 'UPDATE '.PREFIX.$table.' SET '.implode(', ', $sets);
+        if($where !== null && $where !== '')
+        {
+            $sql .= ' WHERE '.$where;
+        }
+        return Core::getDB()->query($sql);
     }
 
-    $this->sql = "UPDATE ".PREFIX.$table." SET ".$update;
-    if($where != null)
+    public function delete($table, $where = null)
     {
-      $this->sql .= " WHERE ".$where;
+        $sql = 'DELETE FROM '.PREFIX.$table;
+        if($where !== null && $where !== '')
+        {
+            $sql .= ' WHERE '.$where;
+        }
+        return Core::getDB()->query($sql);
     }
 
-    if($this->send)
+    /**
+     * SELECT. $select — массив колонок (объединяются через ', ') или
+     * строка (используется как есть, например 'COUNT(*)' или '*'). Все
+     * прочие аргументы — raw SQL.
+     */
+    public function select($table, $select, $join = '', $where = '', $order = '', $limit = '', $groupby = '', $other = '')
     {
-//      	echo '...trying to exec sql...';
-//      	echo $this->sql;
-      	$result = Core::getDB()->query($this->sql);
-//      	echo 111;
-//      	$e->getMessage();
-    }
-    $this->send = true;
-    return $this;
-  }
-
-  /**
-  * Generates a select query.
-  *
-  * @param string	Table name to select
-  * @param mixed		Attributes to select
-  * @param string	Tables to join
-  * @param string	Where clauses
-  *
-  * @return resource	The SQL-Statement
-  */
-  public function select($table, $select, $join = "", $where = "", $order = "", $limit = "", $groupby = "", $other = "")
-  {
-    if(!is_array($select))
-    {
-      $select = Arr::trimArray(explode(",", $select));
-    }
-  
-    if(is_array($join))
-    {
-		if( count($join) > 0 )
-		{
-			$join = implode(" ", $join);
-		}
-		else
-		{
-			$join = "";
-		}
-    }
-  
-    if(is_array($where))
-    {
-		if( count($where) > 0 )
-		{
-			$where = "(" . implode(") AND (", $where) . ")";
-		}
-		else
-		{
-			$where = "";			
-		}
-		
+        $cols = is_array($select) ? implode(', ', $select) : (string)$select;
+        $sql = 'SELECT '.$cols.' FROM '.PREFIX.$table;
+        if($join !== '')    $sql .= ' '.$join;
+        if($where !== '')   $sql .= ' WHERE '.$where;
+        if($groupby !== '') $sql .= ' GROUP BY '.$groupby;
+        if($order !== '')   $sql .= ' ORDER BY '.$order;
+        if($limit !== '')   $sql .= ' LIMIT '.$limit;
+        if($other !== '')   $sql .= ' '.$other;
+        return Core::getDB()->query($sql);
     }
 
-    if($join) { $join = " ".$join; }
-    if($where) { $where = " WHERE ".$where; }
-    if($groupby) { $groupby = " GROUP BY ".$groupby; }
-    if($order) { $order = " ORDER BY ".$order; }
-    if($limit) { $limit = " LIMIT ".$limit; }
-    $other = ($other != "") ? " ".$other : "";
-    $select = implode(", ", $select);
-
-    $this->sql = "SELECT ".$select." FROM ".PREFIX.$table.$join.$where.$groupby.$order.$limit.$other;
-    if($this->send)
+    /**
+     * SELECT … LIMIT 1 → первая строка как assoc-array, либо null.
+     */
+    public function selectRow($table, $select, $join = '', $where = '', $order = '', $limit = '1', $groupby = '', $other = '')
     {
-//      try {
-      	return Core::getDB()->query($this->sql);
-//      }
-//      catch(Exception $e) { $e->printError(); }
+        $result = $this->select($table, $select, $join, $where, $order, $limit, $groupby, $other);
+        if(!$result) { return null; }
+        $row = Core::getDB()->fetch($result);
+        Core::getDB()->free_result($result);
+        return $row !== false ? $row : null;
     }
-    $this->send = true;
-    return $this;
-  }
 
-  public function selectRow($table, $select, $join = "", $where = "", $order = "", $limit = "", $groupby = "", $other = "")
-  {
-    $result = $this->select($table, $select, $join, $where, $order, $limit, $groupby, $other);
-    $row = Core::getDB()->fetch($result);
-    Core::getDB()->free_result($result);
-
-    return $row;
-  }
-
-  public function selectField($table, $select, $join = "", $where = "", $order = "", $limit = "", $groupby = "", $other = "")
-  {
-    $result = $this->select($table, $select, $join, $where, $order, $limit, $groupby, $other);
-    // $field = Core::getDB()->fetch_field($result, is_array($select) ? reset($select) : $select);
-    $row = Core::getDB()->fetch($result);
-    Core::getDB()->free_result($result);
-
-    return is_array($row) ? reset($row) : null; // $field;
-  }
-
-  /**
-  * Generates a delete query.
-  *
-  * @param string	Table name to delete
-  * @param mixed		Where clauses
-  *
-  * @return QueryParser
-  */
-  public function delete($table, $where = null)
-  {
-    if($where != null && strlen($where) > 0)
+    /**
+     * SELECT … LIMIT 1 → первое поле первой строки.
+     */
+    public function selectField($table, $select, $join = '', $where = '', $order = '', $limit = '1', $groupby = '', $other = '')
     {
-      $whereclause = " WHERE ".$where;
+        $row = $this->selectRow($table, $select, $join, $where, $order, $limit, $groupby, $other);
+        if(!is_array($row) || count($row) === 0) { return null; }
+        return reset($row);
     }
-    else { $whereclause = ""; }
-    $this->sql = "DELETE FROM ".PREFIX.$table.$whereclause;
 
-    if($this->send)
+    public function optimize($tables)
     {
-//      try {
-      	Core::getDB()->query($this->sql);
-//      }
-//      catch(Exception $e) { $e->printError(); }
+        $tables = is_array($tables) ? $tables : array($tables);
+        $names = array();
+        foreach($tables as $t)
+        {
+            $names[] = PREFIX.$t;
+        }
+        return Core::getDB()->query('OPTIMIZE TABLE '.implode(', ', $names));
     }
-    $this->send = true;
-    return $this;
-  }
 
-  /**
-  * Empties a table completely.
-  *
-  * @param string	Table to empty
-  *
-  * @return QueryParser
-  */
-  public function truncate($table)
-  {
-    $table = $this->setBackQuotes(PREFIX.$table);
-    $this->sql = "TRUNCATE TABLE ".$table;
-
-    if($this->send)
+    public function showFields($table)
     {
-//      try {
-      	Core::getDB()->query($this->sql);
-//      }
-//      catch(Exception $e) { $e->printError(); }
+        return Core::getDB()->query('SHOW FIELDS FROM '.PREFIX.$table);
     }
-    $this->send = true;
-    return $this;
-  }
-
-  /**
-  * Reclaims the unused space of a database file.
-  *
-  * @param mixed		Tables to optimize
-  *
-  * @return QueryParser
-  */
-  public function optimize($tables)
-  {
-    if(is_array($tables))
-    {
-      $tables = $this->setPrefix($tables);
-      $tables = $this->setBackQuotes($tables);
-      $table = implode(", ", $tables);
-    }
-    else
-    {
-      $table = $this->setBackQuotes(PREFIX.$tables);
-    }
-    $this->sql = "OPTIMIZE TABLE ".$table;
-
-    if($this->send)
-    {
-//      try {
-      	Core::getDB()->query($this->sql);
-//      }
-//      catch(Exception $e) { $e->printError(); }
-    }
-    $this->send = true;
-    return $this;
-  }
-
-  /**
-  * Removes one or more tables.
-  *
-  * @param mixed		Tables
-  *
-  * @return QueryParser
-  */
-  public function drop($tables)
-  {
-    if(is_array($tables))
-    {
-      $tables = $this->setPrefix($tables);
-      $tables = $this->setBackQuotes($tables);
-      $table = implode(", ", $tables);
-    }
-    else
-    {
-      $table = $this->setBackQuotes(PREFIX.$tables);
-    }
-    $this->sql = "DROP TABLE IF EXISTS ".$table;
-
-    if($this->send)
-    {
-//      try {
-      	Core::getDB()->query($this->sql);
-//      }
-//      catch(Exception $e) { $e->printError(); }
-    }
-    $this->send = true;
-    return $this;
-  }
-
-  /**
-  * Renames a table.
-  *
-  * @param string	Table to rename
-  * @param string	New table name
-  *
-  * @return QueryParser
-  */
-  public function rename($table, $newname)
-  {
-    $table = $this->setBackQuotes(PREFIX.$table);
-    $newname = $this->setBackQuotes(PREFIX.$newname);
-    $this->sql = "RENAME TABLE ".$table." TO ".$newname;
-
-    if($this->send)
-    {
-//      try {
-      	Core::getDB()->query($this->sql);
-//      }
-//      catch(Exception $e) { $e->printError(); }
-    }
-    $this->send = true;
-    return $this;
-  }
-
-  /**
-  * Returns information about the columns in the given table.
-  *
-  * @param string	Table name
-  *
-  * @return resource	The SQL-Statement
-  */
-  public function showFields($table)
-  {
-    $table = $this->setBackQuotes(PREFIX.$table);
-    $this->sql = "SHOW COLUMNS FROM ".$table;
-
-    if($this->send)
-    {
-//      try {
-      	return Core::getDB()->query($this->sql);
-//      }
-//      catch(Exception $e) { $e->printError(); }
-    }
-    $this->send = true;
-    return $this;
-  }
-
-  /**
-  * Surrounds an array with simple quotes.
-  *
-  * @param array
-  *
-  * @return array
-  */
-  protected function setSimpleQuotes($data)
-  {
-    if(is_array($data))
-    {
-      $size = count($data);
-      for($i = 0; $i < $size; $i++)
-      {
-        $data[$i] = (is_null($data[$i])) ? "NULL" : Core::getDatabase()->quote_db_value($data[$i]);
-      }
-      return $data;
-    }
-    return (is_null($data)) ? "NULL" : Core::getDatabase()->quote_db_value($data);
-  }
-
-  /**
-  * Surrounds an array with back quotes.
-  *
-  * @param array
-  *
-  * @return array
-  */
-  protected function setBackQuotes($data)
-  {
-    if(is_array($data))
-    {
-      $size = count($data);
-      for($i = 0; $i < $size; $i++)
-      {
-        if(Str::substring($data[$i], 0, 1) == "`") { continue; }
-        $data[$i] = "`".$data[$i]."`";
-      }
-      return $data;
-    }
-    if(Str::substring($data, 0, 1) == "`")
-    {
-      return $data;
-    }
-    return "`".$data."`";
-  }
-
-  /**
-  * Returns the last generated SQL query.
-  *
-  * @return string	Last SQL query
-  */
-  public function getLastQuery()
-  {
-    return $this->sql;
-  }
-
-  /**
-  * Sets the prefix to an array of table names.
-  *
-  * @param array
-  *
-  * @return array
-  */
-  protected function setPrefix($tables)
-  {
-    $size = count($tables);
-    for($i = 0; $i < $size; $i++)
-    {
-      $tables[$i] = PREFIX.$tables[$i];
-    }
-    return $tables;
-  }
-
-  /**
-  * Sets whether the next generated query should be executed.
-  *
-  * @param boolean
-  *
-  * @return QueryParser
-  */
-  public function sendNextQuery($send)
-  {
-    $this->send = $send;
-    return $this;
-  }
-
-  /**
-  * Executes the last query.
-  *
-  * @return QueryParser
-  */
-  public function executeLastQuery()
-  {
-//    try {
-      Core::getDB()->query($this->sql);
-//    }
-//    catch(Exception $e)
-//    {
-//      $e->printError();
-//    }
-    return $this;
-  }
 }
-?>
