@@ -9870,3 +9870,72 @@ identity), 52 (RBAC), 53 (admin-frontend) в `projects/identity/`,
   удаление страницы game-origin со ссылкой на portal).
 
 **Коммит**: 1.
+
+## Итерация 52 (2026-04-27) — RBAC unification: identity как single source of truth
+
+**План**: [52-rbac-unification.md](plans/52-rbac-unification.md).
+**Цель**: Привести роли/permissions к единой модели в identity-service,
+выкатить permission-based проверки во все сервисы (game-nova, billing,
+portal, game-origin) с backward-compat для существующего кода.
+
+**Что сделано**:
+
+- **Ф.1 — миграции identity-БД**: 5 таблиц RBAC (`roles`,
+  `permissions`, `role_permissions`, `user_roles`, immutable
+  `audit_role_changes`) + seed 6 системных ролей с ~25 permissions
+  (миграция `0005_rbac_tables.sql`); перенос плоского `users.roles[]`
+  в `user_roles` с audit-записью per-grant (`0006_migrate_user_roles.sql`).
+- **Ф.2 — identity backend**: `RBACService` (List/Grant/Revoke/Audit,
+  всё transactional), `RBACHandler` с 6 admin-endpoints, обогащение
+  JWT через `GetUserRoleNames` + `GetUserPermissions` (DISTINCT-flatten),
+  `claims.Permissions` в context.
+- **Ф.3 — game-nova**: `RequireRole(db, role)` переписан на чтение
+  permissions из JWT (db игнорируется, API сохранён); добавлен
+  `RequirePermission(perm)`. Колонка `users.role` (ENUM) удалена
+  миграцией `0070_drop_users_role.sql`. `SetRole` возвращает 410 Gone
+  с инструкцией использовать identity API.
+- **Ф.4 — billing middleware**: `RequirePermission(perm)` factory,
+  `PermissionsFromCtx`. `HasRole` помечен Deprecated.
+- **Ф.5 — game-origin (PHP)**: `JwtAuth::hasPermission()` /
+  `hasRole()` static API, `$_SESSION['roles']` и `['permissions']`
+  заполняются из JWT-claims; `is_admin` сохранён как backward-compat.
+- **Ф.6 — документация**: `docs/architecture/rbac.md` — принципы,
+  модель данных, JWT-claims, API, использование в Go/PHP/frontend,
+  token revocation, расширение в будущем (ABAC, multi-tenancy,
+  OAuth2 introspection, SAML federation).
+
+**Технические решения**:
+
+- **DUPLICATE convention** для `pkg/jwtrs/jwtrs.go`: 4 копии
+  (identity, game-nova, billing, portal) синхронизированы при
+  добавлении поля `Permissions` в `Claims`. Альтернатива
+  (общий модуль) была отвергнута из-за сложности monorepo go.work.
+- **JWT permissions — flatten + dedup при выпуске**: identity
+  собирает permissions из всех ролей юзера через SQL DISTINCT,
+  кладёт в JWT при логине. Размер ~1-2KB при 6 ролях × 5-10 perms
+  — приемлемо.
+- **Token revocation** через короткий access-TTL (15 мин) — основной
+  механизм. JTI-blacklist в Redis оставлен на план 53 для
+  немедленного отзыва критических токенов.
+- **Системные роли (`is_system=true`)** нельзя удалить из админки,
+  но permission-mapping можно менять — даёт гибкость без миграций.
+- **Audit log immutable** (только INSERT, без UPDATE/DELETE) —
+  каждое назначение/снятие роли пишется с actor_id, target_id, IP,
+  user_agent, reason.
+
+**Билды**: зелёные во всех 4 Go-модулях (identity, game-nova,
+billing, portal); PHP smoke-тест game-origin — 200 на Main/Empire/Stock.
+
+**Что не сделано (намеренно, оставлено на 53)**:
+
+- Admin-frontend (`projects/admin-frontend/`) с использованием
+  RBAC API — план 53.
+- JTI-blacklist через Redis-backed revocation list — план 53 Ф.x.
+- Bootstrap superadmin через `identity-cli grant-role` — план 53 Ф.8.
+
+**Связанные планы**: [51-rename-auth-to-identity.md](plans/51-rename-auth-to-identity.md)
+(базовое переименование), [53-admin-frontend.md](plans/53-admin-frontend.md)
+(потребитель RBAC API), [54-billing-limits-reports.md](plans/54-billing-limits-reports.md)
+(использует `billing:limits`, `billing:reports` permissions).
+
+**Коммит**: 1 (`feat(plan-52): RBAC unification`).
