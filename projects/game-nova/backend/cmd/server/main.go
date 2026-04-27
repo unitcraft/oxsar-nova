@@ -143,8 +143,9 @@ func run() error {
 		log.WarnContext(ctx, "redis unavailable, continuing without cache", slog.String("err", err.Error()))
 	}
 
-	// Rate-limit для /api/auth/login и /api/auth/register: 20 req/min per IP.
-	authRL := auth.NewIPRateLimiter(rdb, 20, time.Minute)
+	// План 36 Ф.12: /api/auth/login|register|refresh удалены, rate-limiter
+	// больше не используется. auth.NewIPRateLimiter оставлен в коде на случай
+	// если понадобится для других ручек.
 
 	db := repo.New(pool)
 
@@ -313,14 +314,10 @@ func run() error {
 	// загрузке решает, какой UI рисовать. План 31 Ф.2.
 	r.Get("/api/features", featureH.List)
 
-	// Auth-эндпоинты регистрации/логина живут здесь только в legacy-режиме (без auth-service).
-	// В режиме JWKS регистрацию/логин обслуживает auth-service, игровой сервер принимает
-	// готовые JWT.
-	if !useJWKS {
-		r.With(authRL.Middleware).Post("/api/auth/register", authH.Register)
-		r.With(authRL.Middleware).Post("/api/auth/login", authH.Login)
-		r.With(authRL.Middleware).Post("/api/auth/refresh", authH.Refresh)
-	}
+	// План 36 Ф.12: /api/auth/login|register|refresh удалены из game-nova.
+	// Регистрация и логин — только в auth-service. game-nova принимает RSA-JWT.
+	// authRL и authH.Register/Login/Refresh пока оставлены в коде как мёртвый
+	// код (плановая чистка после удаления legacy HS256 из service.go).
 	r.With(authMiddlewareFn).Get("/api/me", authH.Me)
 	r.With(authMiddlewareFn).Post("/api/me/vacation", authH.SetVacation)
 	r.With(authMiddlewareFn).Delete("/api/me/vacation", authH.UnsetVacation)
