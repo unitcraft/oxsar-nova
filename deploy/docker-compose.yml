@@ -372,7 +372,9 @@ services:
       PAYMENT_PROVIDER: mock
       PAYMENT_MOCK_BASE_URL: http://billing-service:9100
       PAYMENT_MOCK_SECRET: dev-mock-secret-change-me
-      PAYMENT_RETURN_URL: http://localhost:5173/
+      # План 42 Ф.5: единый return_url с обобщённым ?payment=success.
+      # Имя провайдера в URL не утекает — App.tsx читает только ?payment=...
+      PAYMENT_RETURN_URL: http://localhost:5173/?payment=success
     ports: ["9100:9100"]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9100/healthz"]

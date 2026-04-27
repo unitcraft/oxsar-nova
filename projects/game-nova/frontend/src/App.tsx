@@ -115,8 +115,12 @@ function AuthenticatedApp() {
     const payment = params.get('payment');
     if (payment === 'success') {
       showToast('success', t('global', 'paymentSuccess'));
+      // План 38 Ф.7 / план 42 Ф.5: после оплаты обновить billing-кэши
+      // (badge в шапке, страница магазина), а также /api/me для legacy
+      // полей. Имя провайдера в URL не фигурирует.
       void qc.invalidateQueries({ queryKey: ['me'] });
-      void qc.invalidateQueries({ queryKey: ['payment', 'history'] });
+      void qc.invalidateQueries({ queryKey: ['billing', 'balance'] });
+      void qc.invalidateQueries({ queryKey: ['billing', 'history'] });
     } else if (payment === 'fail') {
       showToast('danger', t('global', 'paymentFail'));
     }

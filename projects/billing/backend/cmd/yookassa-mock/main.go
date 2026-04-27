@@ -278,15 +278,12 @@ func handleCheckoutPay(w http.ResponseWriter, r *http.Request, st *store, id, we
 	}
 	// Шлём webhook в billing-service (fire-and-forget).
 	go sendWebhook(webhookURL, p, "payment.succeeded", log)
-	// Редирект на ReturnURL (с ?yookassa_status=success для удобства).
+	// Редирект на ReturnURL как есть, без добавления query-params про
+	// провайдера — frontend не должен знать, что платёж шёл через YooKassa.
+	// Реальная YooKassa тоже не добавляет свои params в return_url, она
+	// просто редиректит на тот URL, что прислал мерчант.
 	if p.ReturnURL != "" {
-		ret := p.ReturnURL
-		if !contains(ret, "?") {
-			ret += "?yookassa_status=success"
-		} else {
-			ret += "&yookassa_status=success"
-		}
-		http.Redirect(w, r, ret, http.StatusFound)
+		http.Redirect(w, r, p.ReturnURL, http.StatusFound)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -300,7 +297,10 @@ func handleCheckoutCancel(w http.ResponseWriter, r *http.Request, st *store, id 
 		return
 	}
 	if p.ReturnURL != "" {
-		http.Redirect(w, r, p.ReturnURL+"?yookassa_status=canceled", http.StatusFound)
+		// Cancel — отдельный return_url мы не передавали, redirect на тот же.
+		// В будущем, когда YooKassa поддерживает разные URL для success/cancel,
+		// добавим отдельный CancelURL в payment.
+		http.Redirect(w, r, p.ReturnURL, http.StatusFound)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
