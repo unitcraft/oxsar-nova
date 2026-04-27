@@ -1,16 +1,17 @@
 # План 54: Billing limits + admin-отчёты
 
 **Дата**: 2026-04-27
-**Статус**: Активный (приостановлен пользователем 2026-04-27 для согласования
-с планом 58 — ребрендинг валюты)
+**Статус**: Возобновлён 2026-04-27, **только backend-фазы**.
+UI-часть («Пополнить кредиты» → «Пополнить оксары») отложена и
+выполняется в составе плана 58 Ф.5b (i18n-корректировка).
 **Зависимости**: **План 51** (rename), **План 52** (RBAC), **План 53**
-(admin-frontend) должны быть выполнены. **Согласование с планом 58**
-(ADR-0009): термин «кредиты» в UI/документах заменён на «оксары»;
-валюта называется `oxsar` в БД billing. Пакеты пополнения, лимит самозанятого
-2.4 млн ₽ — в оксарах через билинг (1 оксар = 0.1 ₽). Если план 58 ещё не
-выполнен на момент работы над планом 54 — допустимо использовать обе
-терминологии параллельно (`credit`/`oxsar`) с финальной чисткой при
-выполнении плана 58.
+(admin-frontend, backend-часть нужна для admin-bff RBAC) должны быть
+выполнены или готовы к моменту своих операций.
+**Связь с планом 58** (ADR-0009): backend плана 54 работает с суммами
+**в рублях** (лимит ФНС 2.4 млн ₽/год), не зависит от названия валюты.
+В коде допустимо использовать существующее имя `credit` — оно будет
+переименовано на `oxsar` в составе плана 58. Frontend «Пополнить кредиты»
+не трогаем — в плане 58 Ф.5b будет полная i18n-замена.
 **Связанные документы**: [38-billing-service.md](38-billing-service.md),
 [42-yookassa.md](42-yookassa.md), [52-rbac-unification.md](52-rbac-unification.md),
 [53-admin-frontend.md](53-admin-frontend.md).
@@ -341,6 +342,68 @@ billing_refunds_total            Counter
 billing_payments_disabled        Gauge (0 or 1)
 billing_limit_threshold_percent  Gauge (current % of HARD_STOP)
 ```
+
+## Прогресс выполнения
+
+**Backend (2026-04-28)**: ✅ закрыт.
+
+- ✅ Ф.1 Database + base service — миграция `0002_limits_and_audit.sql`
+  (3 таблицы: `billing_system_state`, `billing_alert_state`,
+  `billing_audit_log`) + `internal/limits/service.go` с `IsActive`
+  (in-process cache TTL 30s), `GetRevenueYTD`, `SetActive`,
+  `AutoDisable` (idempotent), `MarkAlerted`/`AlertedAt`.
+- ✅ Ф.2 Hard-stop integration — `billing.CreateOrder` вызывает
+  `limits.IsActive()` до `BuildPayURL`, при `false` возвращает
+  `ErrLimitReached`. Handler отдаёт **HTTP 503** с нейтральным
+  сообщением «Пополнение временно недоступно. Попробуйте позже.».
+- ✅ Ф.3 Reconciliation job — `internal/limits/reconciler.go`,
+  15-минутный loop (env `LIMIT_CHECK_INTERVAL`). Hard-stop при
+  revenue ≥ HARD_STOP, soft-warning при 80/90/95% (один раз/год через
+  `MarkAlerted`).
+- ✅ Ф.4 Soft-warning notifications — `SlogNotifier` пишет structured
+  warn/error (`billing_threshold_reached`, `billing_auto_disabled`).
+  Email и Telegram отложены до плана 57 (mail-service); интерфейс
+  `Notifier` готов к замене.
+- ✅ Ф.5 Public API — `GET /api/billing/limits/status` без auth,
+  отдаёт `{"active": bool, "message": "..."}`. Cache внутри Service
+  защищает от наплыва (~1 SQL/30s).
+- ✅ Ф.6 Admin endpoints — `GET /api/admin/billing/limits/status`
+  (расширенный, для админа), `POST /api/admin/billing/limits/override`,
+  `GET /api/admin/billing/reports/revenue?from=&to=&granularity=`,
+  `GET /api/admin/billing/reports/csv?from=&to=`. RBAC permissions:
+  `billing:reports:read`, `billing:admin:override`,
+  `billing:reports:csv_export`. Все мутации пишутся в
+  `billing_audit_log` транзакционно.
+  В `projects/admin-bff/cmd/server/main.go` уже есть proxy
+  `/api/admin/billing/*` → billing-service (план 53), доп. правок не
+  понадобилось.
+- ✅ Ф.7 ENV config — `HARD_STOP_THRESHOLD_KOP`,
+  `WARN_THRESHOLD_PERCENT_{80,90,95}`, `LIMIT_CHECK_TIMEZONE`,
+  `LIMIT_CHECK_INTERVAL` в `cmd/server/main.go`.
+- ✅ Ф.8 Тесты — unit (`HighestPassed`, `startOfYear`, `alertColumn`)
+  + integration в Postgres (`BILLING_TEST_DB_URL`): 8 cases service-
+  логики + полный flow «1000 платежей → hard-stop → 503 → admin
+  override → 1002-й проходит». Все зелёные.
+
+**Frontend**: отложен в план **58 Ф.5b** (i18n-корректировка после
+ребрендинга «кредиты» → «оксары»). UI «Пополнить кредиты» в
+портале — не трогается.
+
+**Известные ограничения backend-части**:
+
+- Email-уведомления при пересечении порогов — не реализованы (план 57
+  `mail-service` ещё не готов). Сейчас только structured slog-warn
+  (`event=billing_threshold_reached`/`billing_auto_disabled`) +
+  Prometheus gauge `billing_payments_disabled`. Для prod нужна
+  Grafana alert rule на эту метрику.
+- Refunds в схеме billing-сервиса (план 38) пока не выделены отдельной
+  сущностью — `revenue_ytd` считается без вычета возвратов. Это
+  **консервативно**: фактический доход самозанятого ≤ revenue_ytd, что
+  добавляет ещё буфер к HARD_STOP. Когда план 38 выделит refunds в
+  payment_orders, в `GetRevenueYTD` добавится `- SUM(refunds)`.
+- Multi-instance billing-сервис не поддерживается (один reconciler =
+  один процесс). Для horizontal scale потребуется PG advisory-lock
+  (как в `game-nova/scheduler` плана 32).
 
 ## Этапы
 

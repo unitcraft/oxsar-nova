@@ -10356,3 +10356,115 @@ get/post) в новой сигнатуре корректны: `getGET($key, $de
 коммичу только свой `projects/game-origin/src/game/page/Page.class.php`.
 
 **Коммит**: 1.
+
+## Итерация 54-backend (2026-04-28) — Лимит самозанятого + admin-отчёты
+
+**План**: [54-billing-limits-reports.md](plans/54-billing-limits-reports.md).
+**Цель**: автоматическая защита лимита самозанятого (ФЗ-422 НПД,
+2.4 млн ₽/год) с hard-stop при 2.3 млн ₽ + админ-отчёты по платежам.
+**Scope**: только backend. UI «Пополнить кредиты»→«Пополнить оксары»
+отложено в план 58 Ф.5b (после ребрендинга валюты).
+
+### Архитектурные решения
+
+- **Defence in depth (2 слоя)**: 1) reconciler ставит флаг
+  `payments_active=false` в БД при revenue ≥ HARD_STOP; 2)
+  `billing.CreateOrder` перед `BuildPayURL` проверяет
+  `limits.IsActive()` и при false возвращает `ErrLimitReached` →
+  HTTP 503 с нейтральным сообщением. Это работает даже если frontend
+  не дёрнул `/limits/status` (stale cache).
+- **Fail-closed**: при ошибке чтения БД (`SELECT
+  payments_active FROM billing_system_state`) вернуть «не-активен» —
+  безопаснее чем разрешить платежи без проверки.
+- **Cache TTL 30s** на `IsActive` — под нагрузкой N запросов от
+  CreateOrder сводятся к 1 SELECT в БД, при этом задержка между
+  reconciler-обновлением и effect ≤ 30 секунд (приемлемо при cron 15
+  мин).
+- **Per-year alert state** в `billing_alert_state`: каждый порог
+  (80/90/95/hard) шлётся **один раз** в году. Новый календарный год
+  → новая строка → уведомления заново.
+- **Idempotent `AutoDisable`**: повторный вызов reconciler'а после
+  уже выключенного состояния — no-op (audit-запись пишется только
+  при первом auto-disable). Защита от спама в audit при стабильной
+  ситуации hard-stop.
+- **Refund-yo-yo prevention**: refund'ы НЕ сбрасывают auto-disabled
+  флаг. Только manual admin override восстанавливает active=true.
+- **Pending-buffer 100 000 ₽**: HARD_STOP=230_000_000 копеек (2.3 млн
+  ₽), а лимит ФНС — 2.4 млн ₽. Разница страхует от уже инициированных
+  YooKassa-платежей в pending/waiting_for_capture.
+- **Refunds-в-revenue не вычитаются** (текущая схема billing-сервиса
+  плана 38 не выделяет refunds отдельной сущностью). Это
+  консервативно: фактический revenue ≤ posted revenue, добавляет ещё
+  буфер сверх HARD_STOP. Когда план 38 расширит схему — добавим
+  `- SUM(refunds)` в `GetRevenueYTD`.
+
+### Что сделано (Ф.1-Ф.8 backend)
+
+- **Миграция** `0002_limits_and_audit.sql`: 3 таблицы
+  (`billing_system_state` singleton, `billing_alert_state` per-year,
+  `billing_audit_log` INSERT-only).
+- **`internal/limits/`**:
+  - `service.go` — `IsActive` (cached), `GetState`, `GetRevenueYTD`
+    (timezone-aware year boundary, default Europe/Moscow),
+    `SetActive` (transactional + audit), `AutoDisable` (idempotent),
+    `MarkAlerted`/`AlertedAt`, `HighestPassed` (pure).
+  - `reconciler.go` — 15-минутный ticker, hard-stop при revenue ≥
+    HARD_STOP, soft-warning один раз/год.
+  - `notifier.go` — `SlogNotifier` с structured warn/error.
+  - `handler.go` — public `Status` + admin `AdminStatus` /
+    `AdminOverride` / `AdminRevenue` / `AdminCSVExport` с RBAC.
+  - `reports.go` — `QueryRevenueBuckets` (day/month) +
+    `StreamPaymentsCSV` (encoding/csv, RFC 4180 escaping).
+  - `metrics.go` — Prometheus gauges
+    (`billing_revenue_ytd_kop`, `billing_hard_stop_kop`,
+    `billing_payments_disabled`).
+- **`internal/billing/orders.go` + `handler.go`**: добавлен
+  `LimitsChecker` interface + `Handler.WithLimits()`. CreateOrder
+  возвращает 503 «Пополнение временно недоступно» при ErrLimitReached.
+- **`cmd/server/main.go`**: ENV-config (HARD_STOP_THRESHOLD_KOP,
+  WARN_THRESHOLD_PERCENT_*, LIMIT_CHECK_TIMEZONE,
+  LIMIT_CHECK_INTERVAL), wire limits.Service +
+  limits.Reconciler в goroutine, маршруты для public + admin
+  endpoints, мост-middleware `limitsCtxBridge` копирует permissions
+  из billing-ctx в limits-ctx (нет циркулярной зависимости пакетов).
+- **admin-bff** (план 53) уже проксирует `/api/admin/billing/*`,
+  правок в admin-bff не понадобилось.
+
+### Тесты
+
+- **Unit** (без БД): `HighestPassed` (11 граничных кейсов: 0%, 50%,
+  79%, 80% exact, 85%, 90%, 95%, 99%, 100%, over, zero hard_stop),
+  `startOfYear`, `alertColumn`.
+- **Integration** (`BILLING_TEST_DB_URL`, реальный Postgres 16): 8
+  cases service-логики + полный flow «1000 платежей по 100 ₽ →
+  reconciler → auto-disable → public status active=false → admin
+  override → active=true → audit-цепочка». 3.14 sec.
+- Все тесты запускались в Docker через `docker network` с
+  `golang:1.23-alpine` и `postgres:16-alpine`. Миграции — через
+  `goose v3.21.1` (latest требует Go 1.25+).
+- В CI работает `go test ./...` без BILLING_TEST_DB_URL — integration
+  скип'ятся как и существующие `wallet_test.go`/`reconcile_test.go`.
+
+### Что НЕ сделано (по scope)
+
+- **UI «Пополнить»** — план 58 Ф.5b (после ребрендинга «кредиты»→
+  «оксары»). Frontend portal в этой задаче не трогается.
+- **Email/Telegram уведомления** — план 57 (mail-service) ещё не
+  готов. Сейчас только slog-warn (`event=billing_threshold_reached`/
+  `billing_auto_disabled`) + Prometheus gauge.
+- **Admin frontend pages** (`/billing/dashboard`,
+  `/billing/payments`, `/billing/limits`) — план 53 / план 58,
+  не в scope текущей backend-задачи.
+- **Refunds в revenue** — отложено до расширения схемы
+  payment_orders в плане 38.
+- **Multi-instance reconciler** — нужен PG advisory-lock как в
+  `game-nova/scheduler` (план 32). Не блокирует single-instance.
+- **Grafana alert rules** в `deploy/prometheus/alerts.yml` —
+  отдельной задачей.
+
+### Параллельные сессии
+
+`git status --short` в начале и перед каждым commit'ом. Соседняя
+сессия делала план 60 (`projects/game-origin/...`) — не пересекалось.
+Все коммиты — `git commit -m ... -- <explicit-paths>` с явным
+списком (правило `feedback_parallel_session_check.md`).
