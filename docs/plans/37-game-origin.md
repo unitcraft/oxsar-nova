@@ -957,10 +957,46 @@ Yii framework мы выкинули в этапе 37.3, но **папку
 JOIN → данные есть, но связанные поля пустые → страница рендерится
 с пустыми блоками. Митигация — после каждой правки проверять страницу
 и diff с legacy.
-| 37.5d.6 | Fix sql_mode `ONLY_FULL_GROUP_BY` для Galaxy/Records | pending | docker-compose или переписать SELECT |
-| 37.5d.7 | Fix `readdir()/false`, `Undefined constant`, missing-id ошибки | pending | По месту |
-| 37.5d.8 | Повторный compare после фиксов → реальный UI-триаж | pending | report.md v2 |
+| 37.5d.6 | Fix sql_mode `ONLY_FULL_GROUP_BY` для Galaxy/Records | ✅ done (3fdcf6cbb2) | Galaxy 549→10757, Records 556→30892 |
+| 37.5d.7 | Fix `readdir()/false`, `Undefined constant`, missing-id ошибки | ✅ done (29cb1d9132) | Repair/Disassemble/Preferences/Changelog/Constructions/Research/Shipyard/Defense заработали |
+| 37.5d.8 | Повторный compare после фиксов → реальный UI-триаж | ✅ done | См. ниже «Compare v2» |
 | 37.5d.9+ | Поштучные UI-фиксы по результатам v2 | pending | По коммиту на каждый |
+
+### Compare v2 — после системных фиксов 37.5d.5-7
+
+**Существенный прогресс**:
+
+| Категория | До 37.5d.5 | После | Δ |
+|---|---:|---:|---:|
+| 🟢 minor (≤19 lines diff) | 17 | **24** | +7 |
+| 🟡 moderate (20-99) | 19 | 11 | -8 |
+| 🔴 major (≥100) | 5 | 6 | +1 |
+| ❌ pages с PHP fatal (size 279-336) | ~10 | **2** (BuildingInfo/UnitInfo требуют ?id) | -8 |
+
+**Идентичные / parity ≥95%** (24 страницы): Empire, ExchangeOpts,
+Constructions, Research, Shipyard, Records, Techtree, AdvTechCalculator,
+Resource, Chat, MSG, Friends, Search, Artefacts, Market, Achievements,
+Profession, Tutorial, Battlestats, ArtefactInfo, Widgets, Referral,
+UserAgreement, Exchange.
+
+**Остаются 6 🔴 major** (>100 lines diff, все — контент-разницы или
+размер-разницы из-за неполного snapshot):
+- **Stock** 222 — у нас na_stock частично пустая.
+- **Alliance** 873 — у нас mail_alliance/news не импортированы.
+- **ArtefactMarket** 182 — у нас na_artefact_lot пустой.
+- **Preferences** 170 — image-pack list другой (у нас только default).
+- **Changelog** 811 — мы заглушили remote API → пусто.
+- **BuildingInfo / UnitInfo** 735/727 — требуют URL `?id=N`.
+- **Galaxy** 161 — у нас na_galaxy не полный (только 5 строк).
+
+**Вывод 37.5d.8**: системные баги game-origin вычищены. Оставшиеся 🔴
+— это **контент-разницы** (snapshot не покрывает всё, или фичи
+сознательно отключены — Changelog remote API). Эти разницы **не баги
+кода**.
+
+UI-фиксы (37.5d.9+) можно начинать — но базовый игровой цикл
+полностью работает: Main → Constructions/Research/Shipyard/Defense
+рендерятся почти один-в-один с legacy.
 
 ### Триаж 37.5d.4 — что показал compare
 
