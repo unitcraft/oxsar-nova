@@ -49,7 +49,7 @@ PolyForm Noncommercial 1.0.0 несовместим с copyleft-семейств
 |-------------------------------|---------------------:|----:|-----------:|-------------:|-------------:|----:|----------:|
 | `projects/game-nova/backend`  | 26                   | 12  | 4          | 8            | 1            | 1   | 0         |
 | `projects/portal/backend`     | 25                   | 12  | 4          | 8            | 1            | 0   | 0         |
-| `projects/auth/backend`       | 24                   | 11  | 4          | 8            | 1            | 0   | 0         |
+| `projects/identity/backend`   | 24                   | 11  | 4          | 8            | 1            | 0   | 0         |
 | `projects/billing/backend`    | 24                   | 11  | 4          | 8            | 1            | 0   | 0         |
 
 **Итог:** во всех 4 модулях отсутствуют GPL/AGPL/LGPL.
