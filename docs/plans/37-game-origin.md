@@ -881,6 +881,65 @@ done
 | 37.5d.3 | Compare-tool: curl всех страниц у нас и в legacy + нормализованный diff | ✅ done | `tools/compare-with-legacy.sh` + `compare-output/report.md` |
 | 37.5d.4 | Триаж diff-отчёта | ✅ done — нашли base-level баги (Yii-классы, sql_mode, paths). UI-сравнение преждевременно. | См. ниже «Триаж» |
 | 37.5d.5 | Заменить остаточные `*_YII` классы и `CDbCriteria` на чистый PDO | pending | `src/game/page/*` фиксы |
+
+### Решение по 37.5d.5: переписать всё на raw SQL
+
+Yii framework мы выкинули в этапе 37.3, но **папку
+`new_game/protected/models/`** (98 ActiveRecord-классов `*_YII.php`)
+**к нам не скопировали** — она «не нужна была» в момент удаления Yii.
+В коде остались **25 вызовов** через 13 классов (`Notes_YII::model()->findByPk()`,
+`Requirements_YII::model()->findAll(...)` и т.п.) — они работали в legacy
+через Yii autoloader, у нас падают с `Class "*_YII" not found`.
+
+**Решение** (выбран Вариант 1 из 3):
+- **Переписать на raw SQL** через `sqlSelect`/`sqlSelectField`/
+  `Core::getDB()->query`. Чисто, без runtime-зависимостей, объём работы
+  ~3-6 часов на все 25 правок.
+- Альтернатива «shim ORM» (фейк-классы вокруг Core::getDB) отклонена —
+  добавляет «теневой ORM» с собственными багами.
+- Альтернатива «оставить как есть» отклонена — блокирует 7+ ключевых
+  игровых страниц (Constructions, Research, Shipyard, Defense, Empire,
+  Techtree, ArtefactMarket — все через `Requirements_YII`).
+
+**Порядок (по импакту):**
+
+1. **`Requirements_YII`** (1 место в `NS::class.php:800`) — разблокирует
+   7 страниц одной правкой. Самый высокий приоритет.
+2. **`UserStates_YII`** (3 места в `AchievementsService` + `Functions.inc.php`)
+   — тихо игнорируется в catch, но без него achievements не считаются.
+3. **`Assault_YII` + `Galaxy_YII` + `Planet_YII`** (7 мест в
+   `Assault.class.php`) — упадёт при первой атаке. Покрыть пока не
+   запускали бой.
+4. **`Notes_YII`** (2 места в `Notepad.class.php`) — заметки.
+5. **`TutorialStatesCategory_YII`** (1 место в `Tutorial.class.php`) +
+   **`UserAgreement_YII`** + `User_YII::updateByPk` (3 места в
+   `UserAgreement.class.php`).
+6. **`Sessions_YII`** (2 места в `Logout.class.php`) — выход через legacy
+   session, мы используем JWT, но если кто-то логаутнется через старый
+   path, упадёт.
+7. **`Artefact2user_YII`** (1 место в `Exchange.class.php`).
+8. **`User_YII`** (4 места: AccountActivation, LostPassword, Functions,
+   UserAgreement) — auth-flow legacy. AccountActivation/LostPassword
+   мы заменили на portal+JWT, остальные 2 правки в Functions/UserAgreement.
+9. **`User2ally_YII`** (1 место в `Functions.inc.php`).
+10. **`Config_YII`** (1 место в `Options.class.php`) — уже мёртвый код
+    (мы читаем из na_config напрямую, см. simplifications #9).
+    Просто удалить.
+11. **`TestAlienAI`** debug-страница — `User_YII::showChatOnline()`.
+    Удалить или возвращать stub 0.
+12. `user_YII`, `ally_YII` (lowercase) — алиасы. Чинить в местах
+    использования.
+
+**Каждая правка** — отдельный коммит вида `fix(game-origin/yii):
+заменить XxxYII на raw SQL в YyyClass.php`. После каждого блока
+(1-3 коммитов) запуск `tools/compare-with-legacy.sh` чтобы видеть
+прогресс на отчёте.
+
+**Risk**: Yii ActiveRecord скрывал FK-связи через `->with('relation')` —
+автоматически делал JOIN. Без знания legacy схемы можно пропустить
+JOIN → данные есть, но связанные поля пустые → страница рендерится
+с пустыми блоками. Митигация — после каждой правки проверять страницу
+и diff с legacy.
 | 37.5d.6 | Fix sql_mode `ONLY_FULL_GROUP_BY` для Galaxy/Records | pending | docker-compose или переписать SELECT |
 | 37.5d.7 | Fix `readdir()/false`, `Undefined constant`, missing-id ошибки | pending | По месту |
 | 37.5d.8 | Повторный compare после фиксов → реальный UI-триаж | pending | report.md v2 |
