@@ -204,3 +204,12 @@ Service (план 47).
   вселенных. Frontend-админка переезжает в admin-frontend через
   admin-bff (план 53). Backend-перенос закрыт коммитом плана 56;
   frontend (Ф.6) — отдельная задача.
+- **2026-04-28 (план 56 Ф.6-Ф.8)** — frontend завершён:
+  `ReportButton` в game-nova шлёт на portal-backend
+  (`VITE_PORTAL_BASE_URL/api/reports`); `AdminReportsTab`
+  удалён из game-nova; админка модерации жалоб живёт в
+  admin-frontend (`projects/admin-frontend/src/routes/Reports.tsx`,
+  путь `/reports`) и ходит через admin-bff (proxy
+  `/api/admin/reports*` → portal-backend). Перенос продовых
+  данных (Ф.4) выполняется вручную при prod-деплое
+  (`pg_dump --table=user_reports` → `pg_restore` в portal-БД).
