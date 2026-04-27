@@ -163,6 +163,15 @@ abstract class Page
 		{
 			return $this;
 		}
+
+		// План 37.7.2: CSRF защита (Origin/Referer check как defense-in-depth
+		// поверх SameSite=Strict cookie). Любой POST должен исходить с того же
+		// origin что наш сайт.
+		if(!self::isPostOriginValid())
+		{
+			Logger::dieMessage('CSRF_INVALID_ORIGIN');
+		}
+
 		foreach(Core::getRequest()->getPOST() as $action => $value)
 		{
 			if($this->postActions->exists($action))
@@ -173,6 +182,56 @@ abstract class Page
 			}
 		}
 		return $this;
+	}
+
+	/**
+	 * План 37.7.2: проверка что POST пришёл с нашего origin.
+	 *
+	 * Логика: смотрим Origin (приоритет — современные браузеры всегда шлют
+	 * для cross-origin POST), затем Referer (fallback для старых браузеров).
+	 * Сравниваем с собственным host.
+	 *
+	 * Возвращает true если можно continue, false если CSRF подозрение.
+	 */
+	protected static function isPostOriginValid()
+	{
+		// Берём наш host из HTTP_HOST (что nginx прокинул).
+		$ourHost = $_SERVER['HTTP_HOST'] ?? '';
+		if($ourHost === '')
+		{
+			// Без HTTP_HOST не можем сравнить — допускаем (CLI тесты).
+			return true;
+		}
+
+		// Origin: '<scheme>://<host>[:port]', Referer: полный URL.
+		$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+		if($origin !== '')
+		{
+			$parsed = parse_url($origin);
+			$originHost = $parsed['host'] ?? '';
+			if(isset($parsed['port']))
+			{
+				$originHost .= ':' . $parsed['port'];
+			}
+			return $originHost === $ourHost;
+		}
+
+		$referer = $_SERVER['HTTP_REFERER'] ?? '';
+		if($referer !== '')
+		{
+			$parsed = parse_url($referer);
+			$refererHost = $parsed['host'] ?? '';
+			if(isset($parsed['port']))
+			{
+				$refererHost .= ':' . $parsed['port'];
+			}
+			return $refererHost === $ourHost;
+		}
+
+		// Нет ни Origin, ни Referer — для POST это подозрительно.
+		// Современные браузеры всегда отправляют что-то одно.
+		// Возможные false-positives: API-клиенты — но у нас их нет.
+		return false;
 	}
 
 	/**
