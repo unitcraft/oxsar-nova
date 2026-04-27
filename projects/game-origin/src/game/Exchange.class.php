@@ -470,9 +470,21 @@ class Exchange
 		{
 			return false;
 		}
+		// 37.8 REF-004: атомарно «забронировать» лот переводом status=OK→RECALL.
+		// Только победивший процесс делает refund. Закрывает race-окно >2 сек,
+		// которое isFirstRun (TTL=2) не покрывает (бот-скрипт с sleep 2.5s).
+		$stmt = sqlQuery(
+			'UPDATE '.PREFIX.'exchange_lots SET status='.sqlVal(ESTATUS_RECALL).', sold_date='.sqlVal(time())
+			. ' WHERE lid='.sqlVal($id).' AND status='.sqlVal(ESTATUS_OK)
+		);
+		if( !$stmt || $stmt->rowCount() < 1 )
+		{
+			return false;
+		}
+		// Status уже RECALL — SELECT с условием status=OK не подходит, читаем без него.
 		$lot = sqlSelectRow( 'exchange_lots l', 'l.*, p.userid as sellerid',
 				'INNER JOIN '.PREFIX.'planet p ON p.planetid = l.planetid',
-				'l.lid = '.sqlVal($id).' AND l.status='.sqlVal(ESTATUS_OK) );
+				'l.lid = '.sqlVal($id) );
 		if ( $lot )
 		{
 			$data 		= unserialize($lot["data"]);
@@ -545,8 +557,7 @@ class Exchange
 					)
 				);
 			}
-			// Update By Pk
-			sqlUpdate('exchange_lots', array( 'status' => ESTATUS_RECALL, 'sold_date' => time() ), 'lid = '.sqlVal($id));
+			// 37.8 REF-004: status=RECALL уже установлен атомарно в начале метода.
 
 			if( $metal > 0 || $silicon > 0 || $hydrogen > 0 )
 			{
