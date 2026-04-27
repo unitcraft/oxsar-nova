@@ -49,14 +49,20 @@ Stripe Dashboard / Linear / Vercel / Grafana — utilitarian, без
 
 ### Размещение
 
-- **Каталог**: `projects/admin-frontend/` (новый проект в монорепо).
-- **Backend**: НЕТ собственного бэкенда. Frontend дёргает напрямую:
-  - `identity-service` (`/api/admin/*`) — управление ролями.
-  - `billing-service` (`/api/admin/billing/*`) — биллинг (план 54).
-  - `game-nova` (`/api/admin/*`) — game-операции (мигрируется в плане 52).
+- **Каталог**: `projects/admin-frontend/` (SPA, статика).
+- **Каталог**: `projects/admin-bff/` (Go-сервис, BFF, обновлено
+  2026-04-27).
+- **Frontend** — статика, дёргает только admin-bff (`/api/*` →
+  admin-bff проксирует дальше). Никаких прямых запросов к
+  identity/billing/game-nova из браузера.
+- **admin-bff** проксирует на:
+  - `identity-service` (`/api/admin/*` → grant/revoke roles).
+  - `billing-service` (`/api/admin/billing/*` → биллинг, план 54).
+  - `game-nova` (`/api/admin/*` → game-ops, мигрируется в плане 52).
   - `moderation-service` (когда будет, план 48).
-- **Деплой**: отдельный `Dockerfile.admin` + nginx serve статики +
-  CDN опционально.
+- **Деплой**: `Dockerfile.admin-frontend` (nginx + статика) +
+  `Dockerfile.admin-bff` (alpine + Go-binary). За одним nginx
+  endpoint на `admin.oxsar-nova.ru`.
 - **Домен**: `admin.oxsar-nova.ru` (HTTPS only, HSTS preload).
 
 ### Безопасность (production-grade)
@@ -70,16 +76,42 @@ Stripe Dashboard / Linear / Vercel / Grafana — utilitarian, без
    - **Mutual TLS (mTLS)** опционально (отложено на отдельную
      суб-задачу) — клиентский сертификат, выдаваемый каждому админу.
 
-2. **Auth-flow**: OAuth2 Authorization Code + PKCE (S256):
-   - Юзер заходит на `admin.oxsar-nova.ru` → redirect на
-     `identity.oxsar-nova.ru/oauth/authorize?...&code_challenge=...`.
-   - identity показывает login-page (логин + 2FA).
-   - Успешный auth → redirect обратно с `?code=...`.
-   - Frontend обменивает `code` на JWT через POST
-     `/oauth/token` с `code_verifier`.
-   - Access token в memory (Zustand store, не localStorage).
-   - Refresh token в **httpOnly Secure SameSite=Strict cookie**.
-   - Auto-refresh за 1 минуту до истечения access токена.
+2. **Auth-flow**: **BFF (Backend-for-Frontend)** — обновлено
+   2026-04-27 после ревью OAuth 2.0 for Browser-Based Apps (BCP).
+
+   **Почему BFF, а не OAuth2 PKCE:**
+   - admin-frontend — first-party SPA, identity — наш сервис в
+     monorepo. PKCE имеет смысл когда client = third-party (mobile,
+     CLI, чужой SPA), а не свой UI на своём домене.
+   - IETF и Auth0/Okta/Microsoft с 2023 рекомендуют **BFF как
+     default для new-build first-party SPA**.
+   - JWT в JS-памяти всё равно уязвим к XSS (cookie с HttpOnly —
+     нет). BFF полностью убирает токены из браузера.
+
+   **Реализация:**
+   - Новый Go-сервис `projects/admin-bff/` (~400 строк), стоит
+     за nginx на `admin.oxsar-nova.ru`.
+   - Браузер видит **только** opaque session-cookie
+     (`admin_session=<128-bit-random>`, HttpOnly Secure
+     SameSite=Strict, домен admin.oxsar-nova.ru).
+   - admin-bff хранит per-session: JWT access+refresh, claims,
+     last-activity, ip, user-agent в Redis (TTL = idle timeout
+     30 мин, sliding).
+   - admin-bff проксирует `/api/*` запросы на identity/billing/
+     game-nova, добавляя `Authorization: Bearer <JWT>`.
+   - admin-bff делает refresh access-токена за 1 минуту до
+     истечения (фоновый goroutine на каждой проксируемой
+     request, без участия браузера).
+   - Login: POST `/auth/login` от admin-frontend → admin-bff
+     ходит в identity `POST /auth/login`, получает JWT, создаёт
+     session в Redis, возвращает Set-Cookie + claims summary
+     (username/roles/permissions для UI guards).
+   - Logout: POST `/auth/logout` → admin-bff удаляет session
+     из Redis + identity revoke (через JTI blacklist).
+
+   **CSRF:** SameSite=Strict cookie + double-submit token
+   (`X-CSRF-Token` header против `csrf_token` cookie, второй
+   читается JS) для всех state-changing запросов.
 
 3. **2FA / WebAuthn (passkeys)**:
    - **WebAuthn primary** (FaceID, TouchID, Windows Hello, YubiKey).
@@ -273,17 +305,44 @@ Stripe Dashboard / Linear / Vercel / Grafana — utilitarian, без
 - Dockerfile (multi-stage: builder → nginx serve static).
 - `Makefile`: `admin-run`, `admin-build`, `admin-test`.
 
-### Ф.2. Auth flow (OAuth2 PKCE)
+### Ф.2. Auth flow (BFF)
 
-- `src/lib/auth/`:
-  - `pkce.ts` — генерация code_verifier (43-128 символов), code_challenge (SHA-256 base64url).
-  - `flow.ts` — initiate redirect, exchange code, refresh, logout.
-  - `store.ts` — Zustand store для current user + JWT claims.
-- Routes: `/login` (initiate flow), `/callback` (process redirect),
-  `/logout`.
-- Auto-refresh: интерсептор в TanStack Query, 1 минута до expiration.
-- 401 response → redirect на /login с saved location.
-- Тесты: msw для identity-mock + Playwright happy/error flows.
+**Backend (`projects/admin-bff/`)** — новый Go-сервис:
+
+- `cmd/server/main.go` — chi router, healthz, listen.
+- `internal/session/`:
+  - `store.go` — Redis-backed session store (`SET admin:sess:<id>
+    <json> EX 1800` sliding, TTL 30 мин).
+  - `cookie.go` — `admin_session` HttpOnly Secure
+    SameSite=Strict cookie, opaque 128-bit random.
+- `internal/handler/`:
+  - `auth.go` — `POST /auth/login`, `POST /auth/logout`,
+    `GET /auth/me` (возвращает claims summary для UI guards).
+  - `proxy.go` — `/api/*` reverse proxy с JWT-injection и
+    auto-refresh за 60s до exp.
+  - `csrf.go` — middleware double-submit token.
+- `internal/identityclient/` — клиент к identity (login,
+  refresh, logout endpoints).
+- Конфиг: `IDENTITY_URL`, `BILLING_URL`, `GAME_NOVA_URL`,
+  `REDIS_ADDR`, `BFF_LISTEN_ADDR`, `SESSION_SECRET` (для HMAC
+  csrf-токенов).
+
+**Frontend (`projects/admin-frontend/src/lib/auth/`)**:
+
+- `client.ts` — fetch-wrapper, добавляет `X-CSRF-Token` header
+  из cookie, ходит на `/api/*` (через admin-bff).
+- `flow.ts` — `login(username, password) → POST /auth/login`,
+  `logout()`, `me() → GET /auth/me`.
+- `store.ts` — Zustand с claims summary (username, roles,
+  permissions); access-token не хранится клиентом вообще.
+
+Routes: `/login` (форма), `/logout`. 401 → редирект на /login с
+сохранением location. Auto-refresh — на стороне admin-bff,
+прозрачно для frontend.
+
+Тесты: backend — table-tests для session store + httptest для
+handlers; frontend — msw для admin-bff mock + Vitest для login
+flow.
 
 ### Ф.3. Layout + Routing
 
@@ -469,6 +528,14 @@ Stripe Dashboard / Linear / Vercel / Grafana — utilitarian, без
 - **Storybook как admin-UI**: только для разработки, не для прода.
 - **Server-side rendered admin (Next.js)**: для admin не нужен SEO,
   Vite SPA проще.
+- **OAuth2 PKCE (без BFF)**: рассматривался изначально. Отвергнут
+  2026-04-27: PKCE — best-practice для third-party SPA, для
+  first-party SPA в монорепо BFF предпочтительнее (IETF
+  OAuth-Browser-Apps BCP, Auth0/Okta/Microsoft с 2023). JWT в
+  JS-памяти открыт XSS, BFF полностью убирает токены из браузера.
+- **Direct-login без BFF**: тоже рассматривался как «промежуточный
+  вариант». Отвергнут — не даёт security-выигрыша по сравнению с
+  BFF, а scope-разница ~400 строк Go (один день работы).
 
 ## Итог
 
