@@ -1,53 +1,17 @@
 <?php
 /**
-* Abstract class for Plugins. Should be implemented by every plug in.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: Plugin.abstract_class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * Plugin — clean-room stub (план 43 Ф.2). Заменяет одноимённый абстрактный
+ * класс фреймворка Recipe (GPL). Реальная plugin-система не используется
+ * в проекте (никто не extends Plugin), но AutoLoader.php требует наличия
+ * этого файла — оставлен пустой stub, файл будет полностью удалён в Ф.6
+ * вместе с переписыванием AutoLoader на Composer-PSR-4.
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
 abstract class Plugin
 {
-  /**
-  * Plug in name.
-  *
-  * @var string
-  */
-  protected $pluginName;
-
-  /**
-  * Plugin version.
-  *
-  * @var string
-  */
-  protected $pluginVersion;
-
-  /**
-  * Return plug in name.
-  *
-  * @return string
-  */
-  public function getPluginName()
-  {
-    return $this->pluginName;
-  }
-
-  /**
-  * Return plug in version.
-  *
-  * @return string
-  */
-  public function getPluginVersion()
-  {
-    return $this->pluginVersion;
-  }
-
-  public abstract function admin();
-  public abstract function install();
+    // Stub. См. описание в шапке файла.
 }
-?>
