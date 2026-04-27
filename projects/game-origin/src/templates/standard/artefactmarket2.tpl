@@ -13,7 +13,7 @@ $(document).ready(function() {
 		var construction = $(":selected", $('#art_pack_build')).val();
 		var level = $(":selected", $('#art_pack_build_level')).val();
   	  	$( 'img', $('#art_building_img_td') ).attr('src', '<?php echo artImageUrl("image_new", ""); /*{const=FULL_URL}new_game/index.php?r=artefact2user_YII/image_new&*/ ?>cid=' + construction + '&level=' + level + '&typeid=' + type);
-  	  	$( 'a', $('#art_pack_build').parent() ).attr('href', '{const=FULL_URL}game.php/BuyArtefact/{const=ARTEFACT_PACKED_BUILDING}' + '/con_id:' + construction + '/level:' + level + '?<?php echo Yii::app()->socialAPI->getSuffix();?>' );
+  	  	$( 'a', $('#art_pack_build').parent() ).attr('href', '{const=FULL_URL}game.php/BuyArtefact/{const=ARTEFACT_PACKED_BUILDING}' + '/con_id:' + construction + '/level:' + level + '?' );
   	  	$( '.credit_cost', $('#art_pack_build').parent().parent() ).html( fNumber(building_credit*1*level*1) );
 	};
 	var change_research_stuff = function(){
@@ -21,7 +21,7 @@ $(document).ready(function() {
 		var construction = $(":selected", $('#art_pack_research')).val();
 		var level = $(":selected", $('#art_pack_research_level')).val();
   	  	$( 'img', $('#art_research_img_td') ).attr('src', '<?php echo artImageUrl("image_new", ""); /*{const=FULL_URL}new_game/index.php?r=artefact2user_YII/image_new&*/ ?>cid=' + construction + '&level=' + level + '&typeid=' + type);
-  	  	$( 'a', $('#art_pack_research').parent() ).attr('href','{const=FULL_URL}game.php/BuyArtefact/{const=ARTEFACT_PACKED_RESEARCH}' + '/con_id:' + construction + '/level:' + level + '?<?php echo Yii::app()->socialAPI->getSuffix();?>' );
+  	  	$( 'a', $('#art_pack_research').parent() ).attr('href','{const=FULL_URL}game.php/BuyArtefact/{const=ARTEFACT_PACKED_RESEARCH}' + '/con_id:' + construction + '/level:' + level + '?' );
   	  	$( '.credit_cost', $('#art_pack_research').parent().parent() ).html( fNumber(research_credit*1*level*1) );
 	};
 	
