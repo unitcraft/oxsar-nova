@@ -119,3 +119,9 @@ func SessionFromContext(ctx context.Context) (*session.Session, bool) {
 	sess, ok := ctx.Value(ctxKeySession{}).(*session.Session)
 	return sess, ok
 }
+
+// ContextWithSession — кладёт сессию в context. Используется SessionLookup
+// и тестами, которым нужен запрос с готовой сессией без поднятия Redis.
+func ContextWithSession(ctx context.Context, sess *session.Session) context.Context {
+	return context.WithValue(ctx, ctxKeySession{}, sess)
+}
