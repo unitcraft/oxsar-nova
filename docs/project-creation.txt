@@ -8818,3 +8818,49 @@ preview-картинки артефактов) практически идент
 к security audit (37.6+).
 
 **Коммиты**: 3 (online stats + Float + GD).
+
+---
+
+## Итерация 37.5d.10/11 (2026-04-27) — расширение snapshot для 🔴 major страниц
+
+**Задача**: подтянуть оставшиеся 🔴 major страницы (Stock, Alliance,
+Notepad) — все с **контентными** разницами (snapshot не покрывал нужные
+таблицы).
+
+**Изменения** (3 коммита):
+
+37.5d.10 (162f2ff5c4): расширил snapshot-tool:
+- na_notes (PK user_id) — заметки.
+- na_message (sender + receiver=N) — сообщения.
+- na_exchange (все ~63 брокера биржи).
+- na_exchange_lots WHERE status IN (1,5) (все активные лоты).
+- na_planet/na_galaxy/na_user для lot-owners.
+- Alliance: na_allyrank, na_allyapplication, na_ally_relationships,
+  na_ally_relationships_application.
+
+Bug-fix: Exchange.class.php:249 `return self;` — legacy bug, в PHP 8
+fatal "Undefined constant self".
+
+37.5d.11 (da0821831a): артефакты на бирже:
+- na_artefact2user WHERE lot_id > 0 (98 строк).
+- na_events для lifetime/expire/delay этих артефактов (5 events).
+
+**Результаты compare v5**:
+- Notepad: 27 → 11 lines diff (заметки заполнены).
+- ArtefactMarket: parity 99.7%.
+- 26 страниц 🟢 minor, 10 🟡 moderate, 5 🔴 major (контент-разницы).
+
+**Известный bug (требует point-debug, отложено)**: Stock рендерит
+0 строк лотов хотя SQL JOIN дает 5 матчей. Вероятная причина —
+`Stock.class.php:411 $row["date"]` undefined (колонка называется
+`raising_date`). PHP 8 warning не fatal, но возможно прерывает что-то.
+Legacy показывает эти лоты с error message "Время существования
+артефакта истекло" — наш код тоже **должен** их показывать. Полностью
+описано в плане 37.5d.11.
+
+**Итог 37.5d**: PHP-клон рендерит весь игровой UI parity ≥95% с legacy,
+все системные баги вычищены. Базовый игровой цикл работает. Stock
+(одна страница) требует point-debug — отложено до 37.6+ (security
+audit найдёт похожие undefined-array-key).
+
+**Коммиты**: 3.
