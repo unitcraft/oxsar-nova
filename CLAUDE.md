@@ -9,6 +9,30 @@ oxsar-nova. Цель — чтобы новый участник мог прод�
 PostgreSQL + Redis. Боевой движок — порт отдельного java-проекта
 `d:\Sources\oxsar2-java` на Go. Полное ТЗ — [oxsar-spec.txt](docs/oxsar-spec.txt).
 
+## Onboarding: одноразовые настройки
+
+**В начале каждой новой сессии Claude Code** (или каждой первой
+рабочей сессии разработчика-человека) выполнить:
+
+```bash
+git config core.hooksPath scripts/git-hooks
+```
+
+Это активирует расшаренный git-hook `commit-msg`, который срезает
+из коммит-сообщений vendor-атрибуцию AI-инструментов. Политика:
+коммиты в oxsar-nova не несут таких trailer'ов — см.
+[docs/origin-rights.md](docs/origin-rights.md) §6.
+
+**Проверка:** `git config --get core.hooksPath` должно вернуть
+`scripts/git-hooks`. Команда идемпотентна — повторный запуск не
+ломает ничего, можно просто всегда выполнять при старте.
+
+Опционально, для полной автоматизации, скопировать
+[docs/ops/claude-code-attribution.md](docs/ops/claude-code-attribution.md)
+шаблон в локальный `.claude/settings.json` (он в `.gitignore`).
+
+Подробности про hook — [scripts/git-hooks/README.md](scripts/git-hooks/README.md).
+
 ## Запуск
 
 ```bash
