@@ -39,9 +39,16 @@ export default defineConfig(({ command }) => ({
     // В docker'е backend живёт по имени сервиса (backend:8080), а
     // локально — на localhost:8080. Читаем из env, чтобы один и тот
     // же код работал в обоих режимах.
+    //
+    // /auth/* проксируется в auth-service:9000 — отдельный домен в проде
+    // (auth.oxsar-nova.ru), в dev — отдельный сервис в docker-network.
+    // План 36 Ф.11.
     proxy: {
       '/api': process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
       '/healthz': process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
+      '/auth': process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+      '/.well-known/jwks.json':
+        process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
     },
     // warmup — Vite начнёт трансформировать эти модули сразу после
     // старта сервера, не ждать первого запроса. Первые попадания на
