@@ -1,18 +1,16 @@
 <?php
 /**
-* Exception interface. Define expection classes.
-* 
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: Exception.interface.php 23 2010-04-03 19:08:34Z craft $ 
-*/
+ * GlobalException — clean-room rewrite (план 43 Ф.3). Заменяет одноимённый
+ * интерфейс из фреймворка Recipe (GPL).
+ *
+ * Маркерный интерфейс для собственных исключений проекта (отделить
+ * domain-ошибки от системных PHP-исключений).
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
 interface GlobalException
 {
-  public function printError();
 }
-?>

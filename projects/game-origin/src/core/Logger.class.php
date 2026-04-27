@@ -1,100 +1,132 @@
 <?php
 /**
-* Displays message in error box.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: Logger.class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * Logger — clean-room rewrite (план 43 Ф.3). Заменяет одноимённый класс
+ * фреймворка Recipe (GPL). Все методы — статические, обёртывают сообщение
+ * в HTML с CSS-классом и отдают в Template (или session для flash).
+ *
+ * Сообщения: либо ключ из i18n-словаря 'error' (резолвится через
+ * Core::getLanguage()->getItem), либо raw HTML.
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
 class Logger
 {
-	/**
-	* Add a message to log.
-	*
-	* @param string	Message to log
-	* @param string	Log mode
-	*
-	* @return void
-	*/
-	public static function addMessage($message, $mode = "error")
-	{
-		Core::getLanguage()->load("error");
-		$message = Core::getLanguage()->getItem($message);
-		$message = "<div class=\"".$mode."\">".$message."</div>";
-		Core::getTPL()->addLogMessage($message);
-		return;
-	}
-	
-	public static function addFlashMessage($message, $mode = "ui-state-error ui-corner-all")
-	{
-		Core::getLanguage()->load("error");
-		$message = Core::getLanguage()->getItem($message);
-		if( $mode == 'ui-state-error ui-corner-all' )
-		{
-			$message = '<td><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span></td><td>'
-				. $message
-				. '</td>';
-		}
-		if( $mode == 'success' )
-		{
-			$mode	.= ' ui-state-highlight ui-corner-all';
-			$message = '<td><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span></td><td>'
-				. $message
-				. '</td>';
-		}
-		if( $mode == 'error' )
-		{
-			$mode	.= ' ui-state-error ui-corner-all';
-			$message = '<td><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span></td><td>'
-				. $message
-				. '</td>';
-		}
-		$i = 0;
-		while ( $_SESSION["flash_" . $mode . " logger" . $i] ?? false != false )
-		{
-			++$i;
-		}
-		$_SESSION["flash_" . $mode . " logger" . $i] = Core::getLanguage()->getItem($message);
-		return;
-	}
+    /**
+     * Регистрирует сообщение в текущем шаблоне (отображается до завершения
+     * рендера). $mode — CSS-класс div'а (error/info/success/warning).
+     */
+    public static function addMessage($key, $mode = 'error')
+    {
+        $text = self::resolveText($key);
+        $html = '<div class="'.htmlspecialchars((string)$mode, ENT_QUOTES, 'UTF-8').'">'.$text.'</div>';
+        $tpl = Core::getTPL();
+        if($tpl)
+        {
+            $tpl->addLogMessage($html);
+        }
+    }
 
-	/**
-	* Displays a message and shut program down.
-	*
-	* @param string	Message to log
-	*
-	* @return void
-	*/
-	public static function dieMessage($message, $mode = "error")
-	{
-		error_log($message);
-		Core::getLanguage()->load("error");
-		$message = Core::getLanguage()->getItem($message);
-		Core::getTPL()->addLogMessage("<div class=\"".$mode."\">".$message."</div>");
-		Core::getTemplate()->display("error");
-		exit;
-	}
+    /**
+     * Регистрирует «flash»-сообщение в session — будет показано на
+     * следующем рендере и автоматически удалено при отображении.
+     * $mode — символический ключ ('error', 'success', либо raw CSS).
+     * Для известных ключей собирается типовая разметка с jQuery-UI иконкой.
+     */
+    public static function addFlashMessage($key, $mode = 'error')
+    {
+        $text = self::resolveText($key);
+        $cssClass = (string)$mode;
+        $iconClass = null;
 
-	/**
-	* Formats a message.
-	*
-	* @param string	Raw log message
-	* @param string	Log mode
-	*
-	* @return string	Formatted message
-	*/
-	public static function getMessageField($message, $mode = "error")
-	{
-		Core::getLanguage()->load("error");
-		$message = Core::getLanguage()->getItem($message);
-		$message = "<span class=\"field_".$mode."\">".$message."</span>";
-		// Hook::event("MESSAGE_FIELD", array(&$message));
-		return $message;
-	}
+        switch($mode)
+        {
+            case 'success':
+                $cssClass = 'success ui-state-highlight ui-corner-all';
+                $iconClass = 'ui-icon-info';
+                break;
+            case 'error':
+                $cssClass = 'error ui-state-error ui-corner-all';
+                $iconClass = 'ui-icon-alert';
+                break;
+            case 'ui-state-error ui-corner-all':
+                $iconClass = 'ui-icon-alert';
+                break;
+        }
+
+        if($iconClass !== null)
+        {
+            $text = '<td><span class="ui-icon '.$iconClass.'" style="float: left; margin-right: .3em;"></span></td>'
+                .'<td>'.$text.'</td>';
+        }
+
+        if(session_status() !== PHP_SESSION_ACTIVE)
+        {
+            // Если сессия не открыта — flash потеряется, тихо игнорируем
+            // (legacy-семантика — нет error на этом пути).
+            return;
+        }
+
+        $i = 0;
+        $base = 'flash_'.$cssClass.' logger';
+        while(isset($_SESSION[$base.$i]))
+        {
+            $i++;
+        }
+        $_SESSION[$base.$i] = $text;
+    }
+
+    /**
+     * Регистрирует сообщение и завершает страницу через рендер error-шаблона.
+     * Используется в обработчиках ошибок ввода (CSRF, недостаточно ресурсов).
+     */
+    public static function dieMessage($key, $mode = 'error')
+    {
+        // В системный лог пишем сырой ключ (для grep по error_log).
+        @error_log((string)$key);
+
+        $text = self::resolveText($key);
+        $html = '<div class="'.htmlspecialchars((string)$mode, ENT_QUOTES, 'UTF-8').'">'.$text.'</div>';
+        $tpl = Core::getTPL();
+        if($tpl)
+        {
+            $tpl->addLogMessage($html);
+        }
+        $core = Core::getTemplate();
+        if($core)
+        {
+            $core->display('error');
+        }
+        exit;
+    }
+
+    /**
+     * Возвращает HTML-фрагмент для inline-отображения в форме (не пишет
+     * в Template/Session). $mode попадает в имя CSS-класса как field_$mode.
+     */
+    public static function getMessageField($key, $mode = 'error')
+    {
+        $text = self::resolveText($key);
+        return '<span class="field_'.htmlspecialchars((string)$mode, ENT_QUOTES, 'UTF-8').'">'.$text.'</span>';
+    }
+
+    /**
+     * Резолвит ключ через i18n-словарь 'error'. Если Language-сервис
+     * недоступен или ключ не найден — возвращает ключ как есть (legacy
+     * fallback — getItem обычно отдаёт сам ключ при отсутствии перевода).
+     */
+    private static function resolveText($key)
+    {
+        $key = (string)$key;
+        $lang = Core::getLanguage();
+        if(!$lang)
+        {
+            return $key;
+        }
+        $lang->load('error');
+        $resolved = $lang->getItem($key);
+        return $resolved !== null && $resolved !== '' ? $resolved : $key;
+    }
 }
-?>
