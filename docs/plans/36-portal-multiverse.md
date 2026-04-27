@@ -781,6 +781,88 @@ dev-окружению, ни к фронтенду:
   `/api/auth/*`) — отдельная фаза Ф.12.
 - Перенос платёжных webhook'ов — отдельная фаза Ф.13.
 
+### Ф.12 — Lazy-join, Universe Switcher и handoff между вселенными (1–2 дня)
+
+После Ф.11 RSA-токены принимаются backend, но юзера ещё нет в `users` table game-nova,
+поэтому `/api/me` падает 500. Эту фазу закрываем.
+
+**Принцип (паттерн 2: lazy в middleware с ON CONFLICT).** Frontend ничего не знает
+про зеркалирование юзеров — после логина в auth-service сразу шлёт обычные API-запросы
+к game-nova. Middleware при первом запросе с неизвестным `sub` создаёт строку в `users`,
+назначает стартовую планету и шлёт welcome — всё внутри одной транзакции с
+`INSERT ... ON CONFLICT (id) DO NOTHING` (защита от гонки одновременных запросов).
+
+Альтернатива (handoff endpoint, который фронт дёргает явно) была отвергнута:
+- лишний раунд-трип на каждом первом входе
+- frontend начинает знать про распределённую архитектуру
+- если завтра появится третий downstream — фронт надо учить дёргать ещё один handoff
+
+В Auth0 / Supabase / Firebase это решается тем же паттерном 2 (lazy + ON CONFLICT).
+
+**Не путать** с handoff `POST /auth/universe-token` для перехода uni01 → uni02 —
+это **другой** handoff, нужен только для Universe Switcher (один-time-token,
+редирект между вселенными). Он остаётся.
+
+#### Шаги
+
+1. **Email в JWT claims**
+   - В `pkg/jwtrs.Claims` и `IssueInput` добавить поле `Email` (во всех 3 модулях,
+     синхронно — это DUPLICATE-пакет).
+   - Auth-service при `Issue` кладёт email из БД в claims.
+   - Зачем: lazy-create в game-nova нужно email для INSERT (NOT NULL UNIQUE), без
+     дополнительного запроса /auth/me.
+
+2. **Миграция `password_hash` → nullable**
+   - `ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`.
+   - Старые юзеры, созданные через `/api/auth/register`, продолжают работать
+     (у них хеш есть). Новые из lazy-create будут с `NULL`.
+
+3. **RSAMiddleware кладёт полные claims в context**
+   - Сейчас кладётся только `sub`. Нужны `username` и `email` для lazy-create.
+   - Добавить `RSAClaims(ctx) (Claims, bool)` в дополнение к `UserID(ctx)`.
+
+4. **Lazy-create в middleware**
+   - Новый middleware `EnsureUser(pool, starterSvc, automsgSvc)` после `RSAMiddleware`.
+   - При каждом аутентифицированном запросе делает `INSERT INTO users(id, username, email, password_hash) VALUES (sub, username, email, NULL) ON CONFLICT (id) DO NOTHING`.
+   - Если RowsAffected == 1 (юзер был только что создан) — асинхронно (`go func`)
+     назначить стартовую планету через `starter.Assign(ctx, uid)` и отправить
+     welcome через `automsg.Send`. Если упадёт — не критично, можно ретраить.
+   - Регистрация `universe_memberships` в auth-service (`POST /auth/universes/register`) —
+     тоже асинхронно.
+
+5. **Удалить старые ручки `/api/auth/login|register|refresh` из game-nova**
+   - Из `internal/auth/handler.go` методы `Register`, `Login`, `Refresh`.
+   - Из `internal/auth/service.go` — соответствующие методы и `JWTIssuer`.
+   - `internal/auth/password.go` оставить (HashPassword не используется,
+     но удалим его в финальной чистке).
+   - Маршруты в `cmd/server/main.go` удалить. Legacy HS256 режим тоже —
+     `JWT_SECRET` env удалить из `config.go`.
+   - Тесты обновить.
+
+6. **Universe Switcher (минимально)**
+   - Компонент в шапке игры. Получает список из portal-backend.
+   - В vite-config игры добавить `/portal-api/* → portal-backend:8090`,
+     фронт дёргает `/portal-api/universes`.
+   - Выпадашка: список всех вселенных, текущая помечена.
+   - При клике на другую: `POST /auth/universe-token` (auth-service выпускает
+     one-time handoff token), редирект на `uniXX.oxsar-nova.ru/api/auth/handoff?token=...`.
+   - В game-nova endpoint `GET /api/auth/handoff?token=...` — принять
+     one-time токен, обменять в auth-service на полноценный JWT, поставить
+     в localStorage через query-param и редиректить на `/`.
+
+#### Acceptance
+
+- Миграция применяется чисто, существующие тесты зелёные.
+- `register` в auth-service → один обычный запрос `/api/me` в game-nova → 200 с username.
+- При повторных запросах юзер уже создан (нет лишних INSERT).
+- Старые `/api/auth/login|register|refresh` отсутствуют (404).
+- Universe Switcher отображает список из portal-backend, текущая вселенная подсвечена.
+
+#### Что НЕ входит в Ф.12
+
+- Полный двух-вселенский dev-стек (uni01 + uni02 одновременно) — это Ф.8.
+- Платёжные webhook'и — Ф.13.
+
 ### Ops: нагрузочный тест (отдельный тикет, ~1–2 дня)
 
 После Ф.8, до публичного анонса. Обновить [ops/vps-sizing.md](../ops/vps-sizing.md)

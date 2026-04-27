@@ -29,8 +29,13 @@ import (
 )
 
 // Claims — кастомные поля JWT для oxsar-nova.
+//
+// Email включён в claims, чтобы handoff в game-nova/portal мог
+// зеркалить аккаунт в локальной БД без дополнительного запроса
+// /auth/me в auth-service. План 36 Ф.12.
 type Claims struct {
 	Username        string   `json:"username"`
+	Email           string   `json:"email"`
 	GlobalCredits   int64    `json:"global_credits"`
 	ActiveUniverses []string `json:"active_universes"`
 	Roles           []string `json:"roles"`
@@ -48,6 +53,7 @@ type Tokens struct {
 type IssueInput struct {
 	UserID          string
 	Username        string
+	Email           string
 	GlobalCredits   int64
 	ActiveUniverses []string
 	Roles           []string
@@ -145,6 +151,7 @@ func (iss *Issuer) sign(in IssueInput, now time.Time, ttl time.Duration, kind st
 	}
 	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, &Claims{
 		Username:        in.Username,
+		Email:           in.Email,
 		GlobalCredits:   in.GlobalCredits,
 		ActiveUniverses: universes,
 		Roles:           roles,

@@ -202,13 +202,20 @@ func run() error {
 	authH := auth.NewHandler(authSvc, pool)
 
 	// authMiddleware — единая функция выбора middleware по режиму.
+	// В RSA-режиме после верификации стоит EnsureUserMiddleware: lazy-create
+	// юзера в game-db (план 36 Ф.12). В legacy HS256 не нужен — там юзер
+	// создавался старым /api/auth/register.
 	var authMiddlewareFn func(http.Handler) http.Handler
 	if useJWKS {
 		rsaVer, loadErr := auth.LoadVerifier(ctx, cfg.Auth.JWKSUrl)
 		if loadErr != nil {
 			return loadErr
 		}
-		authMiddlewareFn = auth.RSAMiddleware(rsaVer)
+		rsaMW := auth.RSAMiddleware(rsaVer)
+		ensureMW := auth.EnsureUserMiddleware(pool, starter, automsgSvc)
+		authMiddlewareFn = func(next http.Handler) http.Handler {
+			return rsaMW(ensureMW(next))
+		}
 	} else {
 		authMiddlewareFn = auth.Middleware(jwt)
 	}
