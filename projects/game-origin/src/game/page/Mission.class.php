@@ -1364,6 +1364,16 @@ if($_SERVER['REMOTE_ADDR'] == '95.221.91.215')
 		{
 			Logger::dieMessage('TOO_MANY_REQUESTS');
 		}
+		// 37.8 LIM-001/003: дополнительный lock на userid (без зависимости от
+		// $post) — сериализует все fleet/expedition-команды одного юзера на 5 сек.
+		// isFirstRun выше дедупит одинаковые запросы; этот lock дополнительно
+		// закрывает отправку N разных fleet-команд параллельно (превышение
+		// COMPUTER_TECH/UNIT_EXPO_TECH лимитов).
+		$_uid_lock = $_SESSION["userid"] ?? 0;
+		if( !NS::acquireLock("Mission::sendFleet:user:{$_uid_lock}", 5) )
+		{
+			Logger::dieMessage('TOO_MANY_REQUESTS');
+		}
 		$ef_rules = $this->setExpoAndFleetRules();
 		$mode = max(0, (int)$post["mode"]);
 		$metal = max(0, (int)$post["metal"]);

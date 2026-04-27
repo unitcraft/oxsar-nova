@@ -367,6 +367,17 @@ class Constructions extends Construction
 	{
 		$id = max(0, (int)$id);
 
+		// 37.8 RACE-003: lock на 5 сек предотвращает двойную постройку через
+		// двойной клик / параллельные HTTP. Ключ зависит от planetid+building_id —
+		// разные постройки на одной планете не блокируют друг друга.
+		$_pid_lock = NS::getUser() ? NS::getUser()->get("curplanet") : 0;
+		if( !NS::acquireLock("Constructions::upgrade:{$_pid_lock}:{$id}", 5) )
+		{
+			Logger::dieMessage("TOO_MANY_REQUESTS");
+			doHeaderRedirection($this->main_page, false);
+			return $this;
+		}
+
 		Core::getLanguage()->load("info,buildings");
 
 		$events = NS::getEH()->getBuildingEvents();

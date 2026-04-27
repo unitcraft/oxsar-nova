@@ -360,6 +360,17 @@ class Research extends Construction
             throw new GenericException("Expedition is disabled");
         }
 
+		// 37.8 RACE-003: lock на 5 сек предотвращает двойную постройку через
+		// двойной клик / параллельные HTTP. Ключ зависит от userid+research_id —
+		// разные исследования не блокируют друг друга.
+		$_userid_lock = $_SESSION["userid"] ?? 0;
+		if( !NS::acquireLock("Research::upgrade:{$_userid_lock}:{$id}", 5) )
+		{
+			Logger::dieMessage("TOO_MANY_REQUESTS");
+			doHeaderRedirection($this->main_page, false);
+			return $this;
+		}
+
 		Core::getLanguage()->load("info,buildings");
 
 		$events = NS::getEH()->getResearchEvents();

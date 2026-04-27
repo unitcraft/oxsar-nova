@@ -1833,6 +1833,26 @@ class NS
 		return false;
 	}
 
+	/**
+	 * 37.8 RACE-003: межпроцессный lock с настраиваемым TTL для критических секций
+	 * (старт постройки/исследования/корабля). Возвращает true если этот процесс
+	 * первый занял ключ за $ttl секунд; false если ключ уже занят другим.
+	 * Если memcached недоступен — fallback true (защита отключена, поведение
+	 * как до фикса).
+	 */
+	public static function acquireLock($name, $ttl = 5)
+	{
+		if( defined('YII_CONSOLE') )
+		{
+			return true;
+		}
+		if ( !self::$mch->is_valid() )
+		{
+			return true;
+		}
+		return (bool)self::$mch->add("NS:lock:".$name, true, $ttl);
+	}
+
 	public static function getMoonid($planetid)
 	{
 		static $cache = array();
