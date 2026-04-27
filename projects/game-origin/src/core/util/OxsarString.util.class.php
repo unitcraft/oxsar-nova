@@ -25,6 +25,12 @@ class OxsarString extends Type
 {
     private $value;
 
+    /**
+     * Флаг используется в Search-сценарии (prepareForSearch ставит true,
+     * если строка валидна и пригодна для LIKE-запроса).
+     */
+    public $validSearchString = false;
+
     public function __construct($initial = '')
     {
         $this->value = (string)$initial;
@@ -33,6 +39,49 @@ class OxsarString extends Type
     public function get()
     {
         return $this->value;
+    }
+
+    /**
+     * Записать новое значение строки. Используется legacy-кодом для
+     * сброса (например, set("") при невалидном поисковом запросе).
+     */
+    public function set($value)
+    {
+        $this->value = (string)$value;
+        return $this;
+    }
+
+    /**
+     * Trim whitespace; fluent.
+     */
+    public function trim()
+    {
+        $this->value = trim($this->value);
+        return $this;
+    }
+
+    /**
+     * Подготовка строки к LIKE-поиску в БД. Применяет минимальные
+     * правила: trim, длина 2..50, оборачивает % с обоих концов.
+     * Ставит validSearchString=true если строка прошла все проверки.
+     * Используется в Search.class.php (поиск юзеров/планет/альянсов).
+     */
+    public function prepareForSearch()
+    {
+        $this->value = trim($this->value);
+        $len = mb_strlen($this->value, 'UTF-8');
+        if($len < 2 || $len > 50)
+        {
+            $this->validSearchString = false;
+            return $this;
+        }
+        // Эскейпит %_ из ввода (LIKE-spec символы), затем оборачивает в %.
+        $escaped = str_replace(array('\\', '%', '_'),
+                               array('\\\\', '\\%', '\\_'),
+                               $this->value);
+        $this->value = '%'.$escaped.'%';
+        $this->validSearchString = true;
+        return $this;
     }
 
     /**
