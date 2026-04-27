@@ -4,10 +4,10 @@
 package httpx
 
 // DUPLICATE: этот файл скопирован между Go-модулями oxsar/game-nova,
-// oxsar/auth, oxsar/portal и oxsar/billing. При любом изменении
+// oxsar/identity, oxsar/portal и oxsar/billing. При любом изменении
 // синхронизируйте КОПИИ:
 //   - projects/game-nova/backend/internal/httpx/logger.go
-//   - projects/auth/backend/internal/httpx/logger.go
+//   - projects/identity/backend/internal/httpx/logger.go
 //   - projects/portal/backend/internal/httpx/logger.go
 //   - projects/billing/backend/internal/httpx/logger.go
 // Причина дубля: каждый домен — отдельный go.mod, без shared-модуля.

@@ -1,13 +1,13 @@
 # Продакшн-стек oxsar-nova с двумя вселенными.
 #
 # Архитектура:
-#   auth-service  (:9000) — единая аутентификация, global credits, JWKS
+#   identity-service  (:9000) — единая аутентификация, global credits, JWKS
 #   portal        (:8090) — новости, предложения, список вселенных
 #   uni01-backend (:8081) + uni01-worker — вселенная Nova (speed×0.75)
 #   uni02-backend (:8082) + uni02-worker — вселенная Speed (speed×4)
 #
 # Каждый сервис читает секреты из .env-файлов (не коммитятся).
-# RSA-ключ auth-service монтируется из /run/secrets/auth_rsa_key.pem.
+# RSA-ключ identity-service монтируется из /run/secrets/auth_rsa_key.pem.
 #
 # Запуск:
 #   docker compose -f deploy/docker-compose.multiverse.yml up -d
@@ -108,7 +108,7 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.migrate
-    command: ["goose", "-dir", "/migrations/auth", "postgres", "${AUTH_DB_URL}", "up"]
+    command: ["goose", "-dir", "/migrations/auth", "postgres", "${IDENTITY_DB_URL}", "up"]
     depends_on:
       auth-db: { condition: service_healthy }
     restart: "no"
@@ -144,17 +144,17 @@ services:
 
   # ─── Auth Service ─────────────────────────────────────────────────────────
 
-  auth-service:
+  identity-service:
     build:
       context: ..
-      dockerfile: projects/auth/backend/Dockerfile
+      dockerfile: projects/identity/backend/Dockerfile
     depends_on:
       auth-db:      { condition: service_healthy }
       redis:        { condition: service_healthy }
       auth-migrate: { condition: service_completed_successfully }
     environment:
-      AUTH_ADDR:       ":9000"
-      AUTH_DB_URL:     ${AUTH_DB_URL}
+      IDENTITY_ADDR:       ":9000"
+      IDENTITY_DB_URL:     ${IDENTITY_DB_URL}
       REDIS_URL:       redis://redis:6379/0
       RSA_KEY_PATH:    /run/secrets/auth_rsa_key.pem
       # Production TTL (OWASP/industry standard):
@@ -181,13 +181,13 @@ services:
       dockerfile: projects/portal/backend/Dockerfile
     depends_on:
       portal-db:      { condition: service_healthy }
-      auth-service:   { condition: service_healthy }
+      identity-service:   { condition: service_healthy }
       portal-migrate: { condition: service_completed_successfully }
     environment:
       PORTAL_ADDR:      ":8090"
       PORTAL_DB_URL:    ${PORTAL_DB_URL}
-      AUTH_JWKS_URL:    http://auth-service:9000
-      AUTH_SERVICE_URL: http://auth-service:9000
+      IDENTITY_JWKS_URL:    http://identity-service:9000
+      IDENTITY_SERVICE_URL: http://identity-service:9000
       UNIVERSES_CONFIG: /app/configs/universes.yaml
       LOG_LEVEL:        info
       ALLOWED_ORIGINS:  "https://oxsar-nova.ru"
@@ -204,15 +204,15 @@ services:
     depends_on:
       uni01-db:       { condition: service_healthy }
       redis:          { condition: service_healthy }
-      auth-service:   { condition: service_healthy }
+      identity-service:   { condition: service_healthy }
       uni01-migrate:  { condition: service_completed_successfully }
     environment:
       SERVER_ADDR:       ":8080"
       SERVER_ENV:        prod
       DB_URL:            ${UNI01_DB_URL}
       REDIS_URL:         redis://redis:6379/1
-      AUTH_JWKS_URL:     http://auth-service:9000
-      AUTH_SERVICE_URL:  http://auth-service:9000
+      IDENTITY_JWKS_URL:     http://identity-service:9000
+      IDENTITY_SERVICE_URL:  http://identity-service:9000
       UNIVERSE_ID:       uni01
       CATALOG_DIR:       /app/configs
       I18N_DIR:          /app/configs/i18n
@@ -239,15 +239,15 @@ services:
     depends_on:
       uni02-db:       { condition: service_healthy }
       redis:          { condition: service_healthy }
-      auth-service:   { condition: service_healthy }
+      identity-service:   { condition: service_healthy }
       uni02-migrate:  { condition: service_completed_successfully }
     environment:
       SERVER_ADDR:       ":8080"
       SERVER_ENV:        prod
       DB_URL:            ${UNI02_DB_URL}
       REDIS_URL:         redis://redis:6379/2
-      AUTH_JWKS_URL:     http://auth-service:9000
-      AUTH_SERVICE_URL:  http://auth-service:9000
+      IDENTITY_JWKS_URL:     http://identity-service:9000
+      IDENTITY_SERVICE_URL:  http://identity-service:9000
       UNIVERSE_ID:       uni02
       CATALOG_DIR:       /app/configs
       I18N_DIR:          /app/configs/i18n

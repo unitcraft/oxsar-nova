@@ -56,7 +56,7 @@ make lint          # все линтеры
 - `projects/game-nova/frontend/src/features/<domain>` — вертикальные срезы UI
 - `projects/portal/frontend/`          — портал oxsar-nova.ru (Vite/React)
 - `projects/portal/backend/` (plan 36) — portal API (новости, предложения)
-- `projects/auth/backend/` (plan 36)   — auth-service (JWT, OAuth, credits)
+- `projects/identity/backend/` (plan 36, переименован в плане 51) — identity-service (JWT/JWKS, OAuth, users, global credits)
 - `migrations/`               — goose SQL-миграции
 - `configs/`                  — YAML-справочники (источник истины для юнитов/зданий)
 - `projects/game-nova/api/openapi.yaml`          — источник истины для REST-контрактов

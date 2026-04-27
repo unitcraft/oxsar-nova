@@ -10,7 +10,7 @@
  * соответствующий global_user_id в БД).
  */
 
-// JWT с alg=none (валидно когда AUTH_JWKS_URL пустой — dev-режим)
+// JWT с alg=none (валидно когда IDENTITY_JWKS_URL/AUTH_JWKS_URL пустой — dev-режим)
 $payload = [
     'sub'              => 'dev-user-001',  // → na_user.global_user_id
     'username'         => 'dev',

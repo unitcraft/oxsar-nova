@@ -117,7 +117,11 @@ require_once(RECIPE_ROOT_DIR."init.php");
 if (!defined("LOGIN_PAGE")) {
     session_start();
     require_once(RECIPE_ROOT_DIR."JwtAuth.php");
-    define('AUTH_JWKS_URL', getenv('AUTH_JWKS_URL') ?: '');
+    // План 51: rename auth → identity. IDENTITY_JWKS_URL приоритетен,
+    // AUTH_JWKS_URL — fallback на 1-2 недели до полного перехода.
+    $jwksUrl = getenv('IDENTITY_JWKS_URL') ?: (getenv('AUTH_JWKS_URL') ?: '');
+    define('IDENTITY_JWKS_URL', $jwksUrl);
+    define('AUTH_JWKS_URL', $jwksUrl);
     JwtAuth::authenticate();
 }
 
