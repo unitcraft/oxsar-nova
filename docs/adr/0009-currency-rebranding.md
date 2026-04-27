@@ -43,8 +43,8 @@
 
 | Валюта | Тип | Где живёт | Природа |
 |---|---|---|---|
-| **Оксары** (Oxsars) | hard premium | `billing.wallets.oxsars_balance` (глобальный кошелёк) | Реальные деньги. Покупаются за рубли через YooKassa. **Не теряются** в pvp / от инопланетян / событий. Тратятся на премиум-фичи через `billing.charge`. Рефанд возможен по правилам (план 47 §6). |
-| **Оксариты** (Oxsarites) | soft premium | `game-nova.users.oxsarites` (per universe) | Игровой ресурс с премиум-функциональностью. **Только** игровые источники (награды, инопланетяне, события, daily login, ачивки). **Могут теряться** от инопланетян и событий, **но не от других игроков** в pvp. Не покупаются за рубли, не выводятся обратно в оксары. |
+| **Оксары** (Oxsars) | hard premium | `billing.wallets.oxsar` (глобальный кошелёк) | Реальные деньги. Покупаются за рубли через YooKassa. **Не теряются** в pvp / от инопланетян / событий. Тратятся на премиум-фичи через `billing.charge`. Рефанд возможен по правилам (план 47 §6). |
+| **Оксариты** (Oxsarites) | soft premium | `game-nova.users.oxsarit` (per universe) | Игровой ресурс с премиум-функциональностью. **Только** игровые источники (награды, инопланетяне, события, daily login, ачивки). **Могут теряться** от инопланетян и событий, **но не от других игроков** в pvp. Не покупаются за рубли, не выводятся обратно в оксары. |
 
 Игровые ресурсы (металл / кристалл / водород / тёмная материя)
 остаются как сейчас — это базовый soft.
@@ -104,12 +104,19 @@ Smart-pay при покупке премиум-фичи — единственн
 
 | Где | Колонка | Тип | Назначение |
 |---|---|---|---|
-| `billing.wallets` | `oxsars_balance` | `bigint NOT NULL DEFAULT 0` | Hard-оксары пользователя |
-| `game-nova.users` | `oxsarites` | `bigint NOT NULL DEFAULT 0` | Soft-оксариты per universe |
+| `billing.wallets` | `oxsar` | `bigint NOT NULL DEFAULT 0` | Hard-оксары пользователя |
+| `game-nova.users` | `oxsarit` | `bigint NOT NULL DEFAULT 0` | Soft-оксариты per universe |
 | `billing.wallet_transactions` | `id`, `user_id`, `amount` (signed bigint), `kind`, `idempotency_key`, `metadata jsonb`, `created_at` | журнал hard-операций |
 | `game-nova.oxsarite_transactions` | `id`, `user_id`, `universe_id`, `amount` (signed bigint), `kind`, `source jsonb`, `created_at` | журнал soft-операций |
 
-В Go: `wallet.OxsarsBalance`, `user.Oxsarites`. В JSON-API: `oxsars_balance`, `oxsarites` (snake_case). В TypeScript: `oxsarsBalance`, `oxsarites` (camelCase).
+В Go: `wallet.Oxsar`, `user.Oxsarit`. В JSON-API: `oxsar`, `oxsarit` (snake_case). В TypeScript: `oxsar`, `oxsarit` (camelCase, единственное число — соответствует БД).
+
+Множественное число — **только в UI** через CLDR plural rules
+(`1 оксар / 2 оксара / 5 оксаров`; `1 оксарит / 2 оксарита /
+5 оксаритов`). БД, API и backend-код везде используют единственное
+число. Это согласуется со стандартом SQL (Joe Celko, Microsoft,
+Postgres community) и существующей практикой проекта (`metal`,
+`crystal`, `hydrogen`, `level`).
 
 ### 7. Уведомления и UI
 
@@ -137,7 +144,7 @@ Smart-pay при покупке премиум-фичи — единственн
 
 | Событие | Hard оксары | Оксариты |
 |---|---|---|
-| Покупка через YooKassa | пополнение `oxsars_balance` | — |
+| Покупка через YooKassa | пополнение `oxsar` | — |
 | Smart-pay при покупке премиум | списание (если не хватило оксаритов) | списание (приоритетно) |
 | Награда за бой / событие / ачивку | — | + |
 | Кража инопланетянами / события | — | − |

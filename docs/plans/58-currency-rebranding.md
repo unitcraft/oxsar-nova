@@ -29,8 +29,8 @@
 
 **billing**:
 - В существующей таблице кошелька (если есть из плана 38 — `wallets`):
-  колонка `credit_balance` → `oxsars_balance` (`bigint` вместо `numeric`).
-  Если её нет — создать `wallets` с `oxsars_balance`.
+  колонка `credit_balance` → `oxsar` (`bigint` вместо `numeric`).
+  Если её нет — создать `wallets` с `oxsar`.
 - Новая таблица `wallet_transactions`:
   - `id UUID PRIMARY KEY`,
   - `user_id UUID NOT NULL`,
@@ -41,7 +41,7 @@
   - `created_at TIMESTAMPTZ DEFAULT now()`.
 
 **game-nova**:
-- `users.credit` → `users.oxsarites` (rename + change type to `bigint`).
+- `users.credit` → `users.oxsarit` (rename + change type to `bigint`).
 - Новая таблица `oxsarite_transactions`:
   - `id UUID PRIMARY KEY`,
   - `user_id UUID NOT NULL`,
@@ -57,7 +57,7 @@
   Если остались — удалить.
 
 **game-origin** (PHP):
-- Если в game-origin БД есть `users.credit` — переименовать в `users.oxsarites`
+- Если в game-origin БД есть `users.credit` — переименовать в `users.oxsarit`
   (в этой же миграции с game-nova, если БД общая).
 - Если БД отдельная — отдельная миграция.
 
@@ -137,7 +137,7 @@ func BuyOfficer(ctx, userID, officerID) error {
   - разделитель `|`;
   - правая: «🪙 M оксаров (кошелёк)».
 - TanStack Query keys: `['billing', 'wallet']` для оксаров;
-  `['game-nova', 'me']` для оксаритов (поле `oxsarites`).
+  `['game-nova', 'me']` для оксаритов (поле `oxsarit`).
 - Покупка премиум-фичи: модалка с разбивкой
   «Списано 30 оксаритов + 20 оксаров. Опция: ☐ Только из кошелька».
 
@@ -158,11 +158,14 @@ oxsars:
   count_one: "{n} оксар"
   count_few: "{n} оксара"
   count_many: "{n} оксаров"
-oxsarites:
+oxsarit:
   count_one: "{n} оксарит"
   count_few: "{n} оксарита"
   count_many: "{n} оксаритов"
 ```
+
+Имена namespace (`oxsar`, `oxsarit`) — единственное число,
+согласованно с именами колонок в БД и Go-структурами.
 
 Frontend подбирает форму по числу через i18n-библиотеку (i18next /
 react-intl / Format.JS).
@@ -196,26 +199,26 @@ react-intl / Format.JS).
 ### 6. OpenAPI / SDK / типы
 
 - `projects/game-nova/api/openapi.yaml` — поля `credit` →
-  `oxsars` / `oxsarites` соответственно. Schemas обновлены.
+  `oxsar` / `oxsarit` соответственно. Schemas обновлены.
 - Перегенерировать TypeScript-клиенты во всех frontend.
 - Аналогично portal-API, billing-API.
 
 ### 7. Метрики и логирование
 
 - Prometheus-метрики:
-  - `credits_purchased_total` → `oxsars_purchased_total`;
-  - новые: `oxsarites_earned_total{kind="alien_gift|battle|achievement"}`,
-    `oxsarites_lost_total{kind="alien_loss|spend"}`.
-- Slog-поля: `user_credit` → `user_oxsars` (для логов billing) /
-  `user_oxsarites` (для game-nova).
+  - `credits_purchased_total` → `oxsar_purchased_total`;
+  - новые: `oxsarit_earned_total{kind="alien_gift|battle|achievement"}`,
+    `oxsarit_lost_total{kind="alien_loss|spend"}`.
+- Slog-поля: `user_credit` → `user_oxsar` (для логов billing) /
+  `user_oxsarit` (для game-nova).
 - Audit-log записи (план 14) — обновить шаблоны сообщений.
 
 ### 8. Миграция существующих балансов
 
 Если в проде есть пользователи с накопленными `credit`:
 - Все существующие `users.credit` копируются как hard:
-  `wallets.oxsars_balance := users.credit`.
-- `users.oxsarites := 0` (оксариты — новая сущность, начальное 0).
+  `wallets.oxsar := users.credit`.
+- `users.oxsarit := 0` (оксариты — новая сущность, начальное 0).
 
 В dev-окружении — пропустить (тестовые данные сбрасываются).
 
@@ -280,8 +283,10 @@ react-intl / Format.JS).
 
 - Найти все места: `grep -rn "credit" projects/*/migrations/`.
 - Подготовить миграции:
-  - billing: `wallets.credit_balance → oxsars_balance` + `wallet_transactions`.
-  - game-nova: `users.credit → users.oxsarites` (rename + bigint) +
+  - billing: создать `wallets` с колонкой `oxsar` (или
+    переименовать существующую если уже есть из плана 38) +
+    `wallet_transactions`.
+  - game-nova: `users.credit → users.oxsarit` (rename + bigint) +
     `oxsarite_transactions`.
   - game-origin (если применимо): то же.
 - Прогнать в dev-БД.
@@ -333,7 +338,7 @@ react-intl / Format.JS).
 
 ### Ф.9. Миграция продовых данных (если есть)
 
-- Скрипт миграции `users.credit → wallets.oxsars_balance + users.oxsarites=0`.
+- Скрипт миграции `users.credit → wallets.oxsar + users.oxsarit=0`.
 
 ### Ф.10. Финализация
 
@@ -342,8 +347,8 @@ react-intl / Format.JS).
 - `git status --short` → коммитим только своими файлами поимённо.
 - Запись в `docs/project-creation.txt` — итерация 58.
 - Серия коммитов:
-  - `feat(billing): wallet.charge API + oxsars_balance`;
-  - `feat(game-nova): smart-pay + oxsarites + transactions`;
+  - `feat(billing): wallet.charge API + oxsar`;
+  - `feat(game-nova): smart-pay + oxsarit + transactions`;
   - `feat(frontend): UI для двух валют`;
   - `docs(legal): offer v1.0.1 + game-rules § оксариты`;
   - `docs(plans): обновить 25/06/38/42/47, переименовать файлы`.
