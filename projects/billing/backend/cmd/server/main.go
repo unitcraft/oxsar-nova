@@ -52,6 +52,7 @@ func run() error {
 	mockBaseURL := envStr("PAYMENT_MOCK_BASE_URL", "http://localhost:9100")
 	mockSecret := envStr("PAYMENT_MOCK_SECRET", "")
 	returnURL := envStr("PAYMENT_RETURN_URL", "http://localhost:5173/")
+	reconcileInterval := envDur("BILLING_RECONCILE_INTERVAL", time.Hour)
 
 	log := newLogger(envStr("LOG_LEVEL", "info"))
 	slog.SetDefault(log)
@@ -91,6 +92,12 @@ func run() error {
 	wh := billing.NewWebhookHandler(svc, gw)
 	authMW := billing.AuthMiddleware(ver)
 	idemMW := billing.NewIdempotencyMiddleware(pool).Handler(billing.UserIDFromCtx)
+
+	// Reconcile cron — план 38 §Reconciliation. Цикл сверки SUM(transactions.delta)
+	// с wallet.balance. Расхождение → freeze + Prometheus alert.
+	reconciler := billing.NewReconciler(svc, reconcileInterval)
+	go reconciler.Run(ctx)
+	log.InfoContext(ctx, "reconciler started", slog.Duration("interval", reconcileInterval))
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -199,4 +206,13 @@ func mustEnv(key string) string {
 		os.Exit(1)
 	}
 	return v
+}
+
+func envDur(key string, def time.Duration) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
+		}
+	}
+	return def
 }

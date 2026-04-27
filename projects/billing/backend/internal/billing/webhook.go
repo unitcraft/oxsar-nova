@@ -60,10 +60,13 @@ func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		_ = h.markVerifyFailed(r.Context(), logID, verifyErr)
 		switch {
 		case errors.Is(verifyErr, payment.ErrSignatureMismatch):
+			WebhooksTotal.WithLabelValues(h.gateway.Name(), "invalid_signature").Inc()
 			httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		case errors.Is(verifyErr, payment.ErrTimestampOld):
+			WebhooksTotal.WithLabelValues(h.gateway.Name(), "expired").Inc()
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "timestamp out of window"))
 		default:
+			WebhooksTotal.WithLabelValues(h.gateway.Name(), "invalid_payload").Inc()
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, verifyErr.Error()))
 		}
 		return
@@ -94,17 +97,19 @@ func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.svc.PayOrder(r.Context(), orderID); err != nil {
 		_ = h.markProcessFailed(r.Context(), logID, err)
-		// PayOrder идемпотентен: повторный webhook → no-op (status='paid').
-		// Однако ErrOrderExpired — это легитимный отказ, отвечаем 410 Gone.
 		switch {
 		case errors.Is(err, ErrOrderExpired):
+			WebhooksTotal.WithLabelValues(h.gateway.Name(), "order_expired").Inc()
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "order expired"))
 		default:
+			WebhooksTotal.WithLabelValues(h.gateway.Name(), "error").Inc()
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		}
 		return
 	}
 	_ = h.markProcessed(r.Context(), logID)
+	WebhooksTotal.WithLabelValues(h.gateway.Name(), "ok").Inc()
+	TransactionsTotal.WithLabelValues("top_up", "credit").Inc()
 	h.gateway.SuccessResponse(w, orderID)
 }
 
