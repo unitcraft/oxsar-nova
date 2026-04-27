@@ -1515,6 +1515,13 @@ auth:
   consentPrefix: "Я ознакомлен с"
   consentLinkText: Политикой конфиденциальности
   consentSuffix: " и даю согласие на обработку моих персональных данных в соответствии с Федеральным законом № 152-ФЗ."
+  termsConsentPrefix: "Я ознакомлен и принимаю условия"
+  termsConsentOffer: Договора-оферты
+  termsConsentSeparator1: ", "
+  termsConsentRules: Правил игры
+  termsConsentSeparator2: " и "
+  termsConsentRefund: Политики возврата средств
+  termsConsentSuffix: "."
 
 error:
   accountActivation: Аккаунт еще на активирован.

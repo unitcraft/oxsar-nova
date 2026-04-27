@@ -72,6 +72,7 @@ export function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [consent, setConsent] = useState(false);
+  const [termsConsent, setTermsConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -80,7 +81,7 @@ export function RegisterPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await portalApi.auth.register(username, email, password, consent);
+      const res = await portalApi.auth.register(username, email, password, consent, termsConsent);
       setAuth(res.user, res.tokens);
       window.location.href = '/';
     } catch (err) {
@@ -94,6 +95,9 @@ export function RegisterPage() {
     <div className={styles.page}>
       <div className={styles.card}>
         <h1 className={styles.title}>Регистрация</h1>
+        <p className={styles.ageNotice}>
+          Игра предназначена для лиц старше 12 лет (ФЗ № 436).
+        </p>
         <form className={styles.form} onSubmit={(e) => void submit(e)}>
           <label className={styles.label}>
             Имя игрока (3–24 символа)
@@ -133,6 +137,20 @@ export function RegisterPage() {
           <label className={styles.consent}>
             <input
               type="checkbox"
+              checked={termsConsent}
+              onChange={(e) => setTermsConsent(e.target.checked)}
+              required
+            />
+            <span>
+              Я ознакомлен и принимаю условия{' '}
+              <Link href="/offer">Договора-оферты</Link>,{' '}
+              <Link href="/game-rules">Правил игры</Link> и{' '}
+              <Link href="/refund">Политики возврата средств</Link>.
+            </span>
+          </label>
+          <label className={styles.consent}>
+            <input
+              type="checkbox"
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
               required
@@ -148,7 +166,7 @@ export function RegisterPage() {
           <button
             className={styles.submit}
             type="submit"
-            disabled={loading || !consent}
+            disabled={loading || !consent || !termsConsent}
           >
             {loading ? 'Создаём аккаунт…' : 'Создать аккаунт'}
           </button>
