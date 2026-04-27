@@ -53,6 +53,13 @@
 
 .error { color: var(--ox-danger); font-size: 0.85rem; }
 
+.ageNotice {
+  margin: -0.75rem 0 1.25rem;
+  font-size: 0.8rem;
+  color: var(--ox-fg-muted);
+  line-height: 1.5;
+}
+
 .consent {
   display: flex; align-items: flex-start; gap: 0.55rem;
   font-size: 0.8rem; color: var(--ox-fg-dim);

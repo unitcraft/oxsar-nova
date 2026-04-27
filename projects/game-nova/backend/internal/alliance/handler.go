@@ -92,6 +92,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "name already taken"))
 	case errors.Is(err, ErrInvalidTag):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "tag must be 3–5 latin letters/digits"))
+	case errors.Is(err, ErrNameForbidden):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "имя содержит запрещённое слово"))
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}

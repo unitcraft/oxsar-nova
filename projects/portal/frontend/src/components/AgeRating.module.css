@@ -1,0 +1,27 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ox-border);
+  border-radius: var(--ox-r);
+  color: var(--ox-fg-muted);
+  font-family: var(--ox-mono);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  user-select: none;
+  background: transparent;
+}
+
+.sm {
+  font-size: 0.72rem;
+  padding: 0.05rem 0.35rem;
+  min-width: 1.8rem;
+  height: 1.1rem;
+}
+
+.md {
+  font-size: 0.85rem;
+  padding: 0.15rem 0.5rem;
+  min-width: 2.2rem;
+  height: 1.4rem;
+}

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@/components/Link';
+import { AgeRating } from '@/components/AgeRating';
 import { portalApi } from '@/api/portal';
 import styles from './HomePage.module.css';
 
@@ -32,7 +33,9 @@ export function HomePage() {
     <div className={styles.page}>
       <section className={styles.hero}>
         <h1 className={styles.heroTitle}>Oxsar Nova</h1>
-        <p className={styles.heroSub}>Браузерная космическая стратегия</p>
+        <p className={styles.heroSub}>
+          Браузерная космическая стратегия <AgeRating size="md" />
+        </p>
       </section>
 
       <section className={styles.section}>
