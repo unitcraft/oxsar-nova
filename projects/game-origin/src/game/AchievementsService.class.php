@@ -17,11 +17,11 @@ class AchievementsService
 		{
 			return true;
 		}
-		$state = UserStates_YII::model()->findByPk($user_id);
-		if( $state )
+		// План 37.5d.5#2: replaced UserStates_YII::model()->findByPk()
+		$val = sqlSelectField("user_states", "exchanged_ress", "", "user_id=".sqlVal($user_id));
+		if($val !== null)
 		{
-			$val = $state->getAttribute('exchanged_ress');
-			if( $val > 0 )
+			if($val > 0)
 			{
 				return true;
 			}
@@ -43,11 +43,11 @@ class AchievementsService
 		{
 			return true;
 		}
-		$state = UserStates_YII::model()->findByPk($user_id);
-		if( $state )
+		// План 37.5d.5#2: replaced UserStates_YII::model()->findByPk()
+		$val = sqlSelectField("user_states", "simulated_assault", "", "user_id=".sqlVal($user_id));
+		if($val !== null)
 		{
-			$val = $state->getAttribute('simulated_assault');
-			if( $val >= 1 )
+			if($val >= 1)
 			{
 				return true;
 			}

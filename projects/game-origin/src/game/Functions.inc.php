@@ -77,37 +77,34 @@ function updateUserState($user_id, $state_name, $recalc = false)
 		case STATE_RES_UPDATE_EXCHANGE:
 			$state_field = 'exchanged_ress';break;
 	}
-	$state = UserStates_YII::model()->findByPk($user_id);
-	if( $state )
+	// План 37.5d.5#2: replaced UserStates_YII::model()->findByPk() + new UserStates_YII()
+	// PK = user_id. Допустимые $state_field: simulated_assault, exchanged_ress, unknown.
+	$val = sqlSelectField("user_states", $state_field, "", "user_id=".sqlVal($user_id));
+	if( $val !== null )
 	{
-		$val = $state->getAttribute( $state_field );
 		if( $val != 0 )
 		{
-			$state->setAttribute($state_field, ($val + 1) );
+			sqlUpdate("user_states", array($state_field => $val + 1), "user_id=".sqlVal($user_id));
 		}
 		else
 		{
 			$recalc = true;
-			$state->setAttribute($state_field, 1);
+			sqlUpdate("user_states", array($state_field => 1), "user_id=".sqlVal($user_id));
 		}
 	}
 	else
 	{
 		$recalc = true;
-		$state = new UserStates_YII();
-		$state->setAttributes(
-			array(
-				'user_id' 	=> $user_id,
-				$state_field=> 1,
-			),
-			false
-		);
+		sqlInsert("user_states", array(
+			"user_id"     => $user_id,
+			$state_field  => 1,
+		));
 	}
-	$state->save(false);
 	if( $recalc )
 	{
-		$user = User_YII::model()->findByPk($user_id);
-		AchievementsService::processAchievements($user_id, $user->curplanet);
+		// План 37.5d.5#8: replaced User_YII::model()->findByPk()
+		$user_curplanet = sqlSelectField("user", "curplanet", "", "userid=".sqlVal($user_id));
+		AchievementsService::processAchievements($user_id, $user_curplanet);
 	}
 }
 
