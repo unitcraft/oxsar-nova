@@ -52,6 +52,9 @@ DELETE FROM na_planet WHERE FIND_IN_SET(planetid, @pids);
 DELETE FROM na_exchange_lots WHERE status IN (1, 5);
 DELETE FROM na_exchange;
 
+-- Артефакты на бирже (lot_id > 0) — snapshot v4 заливает заново
+DELETE FROM na_artefact2user WHERE lot_id > 0 AND userid != 1;
+
 -- Alliance — расширенные таблицы для нашей alliance (aid=42 у test-юзера)
 DELETE FROM na_allyrank WHERE aid IN (SELECT aid FROM na_user2ally WHERE userid=1);
 DELETE FROM na_allyapplication WHERE aid IN (SELECT aid FROM na_user2ally WHERE userid=1);

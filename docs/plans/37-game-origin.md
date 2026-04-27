@@ -1025,6 +1025,90 @@ parity ≥95% с legacy, все системные баги (Yii, sql_mode, path
 вычищены. Дальнейшая полировка — отдельные задачи (расширить snapshot,
 реализовать online stats), не блокеры.
 
+### 37.5d.10 — расширение snapshot для Stock/Alliance/Notepad/MSG
+
+После 37.5d.5-9 системных фиксов осталось **3 страницы 🔴 major** с
+большим diff. Их природа — **контентные** (snapshot не покрывал нужные
+таблицы), не баги кода:
+
+- **Stock** 222 lines — нет лотов в HTML.
+- **Alliance** 873 lines — у нас Alliance работает, у legacy — PHP error
+  page (так что diff не показатель).
+- **Notepad** 27 lines — пустые заметки.
+
+Расширил snapshot-tool (37.5d.10):
+- `na_notes` (PK user_id) — заметки.
+- `na_message` (sender + receiver=N) — личные сообщения.
+- `na_exchange` — все ~63 брокера биржи.
+- `na_exchange_lots WHERE status IN (1,5)` — все активные лоты.
+- `na_planet`, `na_galaxy`, `na_user` для lot-owners.
+- Alliance: `na_allyrank`, `na_allyapplication`, `na_ally_relationships`,
+  `na_ally_relationships_application`.
+
+Bug-fix: `Exchange.class.php:249 return self;` (legacy bug) — в PHP 5/7
+интерпретировался как строка `"self"`, в PHP 8 fatal `Undefined constant
+self`. Удалил (return value не используется).
+
+Compare v4 после snapshot v3:
+- Notepad: 27 → **11** lines diff (заметки заполнены).
+- Galaxy: 23 → **19** (lot-owner planets есть в snapshot).
+
+### 37.5d.11 (TODO) — артефакты lot-owners для полной парности Stock
+
+**Проблема найдена в 37.5d.10**: Stock рендерит **0 строк** лотов, хотя
+все JOIN'ы (na_exchange + na_planet + na_galaxy + na_user) проходят
+успешно (5 матчей). Причина — type=3 (ETYPE_ARTEFACT) лоты, которых
+12 из 67. Их обработка в `Stock.class.php:357-384` дополнительно делает
+SELECT из `na_artefact2user` по `artid` из `data` blob. Если артефакта
+нет → silent fail (через `lot_valid=false`), но похоже там ещё какое-то
+прерывание цикла.
+
+**Что нужно сделать**:
+1. Расширить snapshot — все `na_artefact2user.artid` которые упоминаются
+   в `na_exchange_lots.data` (нужен парсер `unserialize` или regex по
+   blob `i:N` после `"art_ids"`).
+2. Также нужны `na_events` для `lifetime_eventid`/`expire_eventid`/
+   `delay_eventid` этих артефактов (см. JOIN в `actionFixArtefactEvents`).
+3. После расширения — перезапустить compare, Stock parity должен
+   подняться с 67% до >95%.
+
+**Альтернатива (быстрее, менее идентично)**: вместо полного парсинга
+blob — просто дамп ВСЕХ `na_artefact2user` где `lot_id IS NOT NULL`
+(это артефакты, которые сейчас на бирже). Один SQL, без unserialize.
+
+### Реализовано в 37.5d.11
+
+Добавил в snapshot-tool (`tools/snapshot-legacy-user.sh`):
+- `na_artefact2user WHERE lot_id > 0` (98 артефактов на бирже).
+- `na_events` для `lifetime_eventid`/`expire_eventid`/`delay_eventid`
+  этих артефактов (5 events).
+- Apply-tool обновлён cleanup для них.
+
+После apply: 98 art2user + 5 events в БД. SQL JOIN дает 5 матчей лотов.
+**Но Stock рендерит 0 строк** — глубокий PHP-баг где-то в обработке
+экспайренных артефактов:
+
+- Все наши auction-артефакты `deleted != 0` И `lifetime_eventid IS NULL`
+  (legacy данные 10+ лет давности).
+- В Stock.class.php:373 проверка `!$art_row['eventid']` → `lot_valid=false`
+  с error «STOCK_ARTEFACT_LIFETIME_NOT_FOUND». **Это правильно** — лот
+  должен показываться с error message.
+- Legacy показывает 5 строк лотов с «Время существования артефакта истекло».
+- У нас рендерится 0 строк.
+
+**Дополнительное обнаружение**: в legacy `na_exchange_lots` нет колонки
+`date`, но `Stock.class.php:411` делает `$row["date"] = date(...,
+$row["date"])`. В PHP 8 это generates warning (undefined array key)
+но не fatal. **Возможно** это и причина silent fail — но в логах
+php-fpm не видно.
+
+**Статус 37.5d.11**: snapshot v4 расширен (artefacts на бирже),
+структурно правильный. Stock parity не достигнут — глубокий PHP-баг
+в обработке устаревших лотов, требует point-debug (echo внутри
+Stock-loop). Не блокирует — это **только** Stock страница, остальное
+работает идеально. Задача отложена до 37.6+ (security audit найдёт
+больше undefined-array-key багов одним проходом).
+
 ### Триаж 37.5d.4 — что показал compare
 
 Compare-tool обработал 41 страницу. Распределение:
