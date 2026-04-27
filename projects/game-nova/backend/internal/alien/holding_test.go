@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oxsar/nova/backend/internal/battle"
+	"oxsar/game-nova/internal/battle"
 )
 
 // TestSurvivorsToStacks — компактное представление флота пришельцев

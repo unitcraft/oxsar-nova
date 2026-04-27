@@ -12,10 +12,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/oxsar/nova/backend/internal/auth"
-	"github.com/oxsar/nova/backend/internal/repo"
-	"github.com/oxsar/nova/backend/pkg/ids"
-	"github.com/oxsar/nova/backend/pkg/jwtrs"
+	"oxsar/auth/internal/auth"
+	"oxsar/auth/internal/repo"
+	"oxsar/auth/pkg/ids"
+	"oxsar/auth/pkg/jwtrs"
 )
 
 var (

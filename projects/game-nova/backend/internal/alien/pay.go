@@ -9,8 +9,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/event"
-	"github.com/oxsar/nova/backend/internal/repo"
+	"oxsar/game-nova/internal/event"
+	"oxsar/game-nova/internal/repo"
 )
 
 // Ошибки PayHolding — типизированы, чтобы HTTP-слой мог отличить их от

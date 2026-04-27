@@ -7,9 +7,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/oxsar/nova/backend/internal/economy"
-	"github.com/oxsar/nova/backend/internal/httpx"
-	"github.com/oxsar/nova/backend/pkg/jwtrs"
+	"oxsar/game-nova/internal/economy"
+	"oxsar/game-nova/internal/httpx"
+	"oxsar/game-nova/pkg/jwtrs"
 )
 
 type ctxKey int

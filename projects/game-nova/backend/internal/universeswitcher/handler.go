@@ -11,9 +11,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/oxsar/nova/backend/internal/auth"
-	"github.com/oxsar/nova/backend/internal/httpx"
-	"github.com/oxsar/nova/backend/internal/universe"
+	"oxsar/game-nova/internal/auth"
+	"oxsar/game-nova/internal/httpx"
+	"oxsar/game-nova/internal/universe"
 )
 
 // Handler выдаёт handoff URL для переключения в другую вселенную.

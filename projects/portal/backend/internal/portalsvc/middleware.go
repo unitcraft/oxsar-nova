@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/oxsar/nova/backend/internal/httpx"
-	"github.com/oxsar/nova/backend/pkg/jwtrs"
+	"oxsar/portal/internal/httpx"
+	"oxsar/portal/pkg/jwtrs"
 )
 
 type ctxKey int

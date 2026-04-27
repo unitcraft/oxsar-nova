@@ -8,8 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/pkg/ids"
-	"github.com/oxsar/nova/backend/pkg/rng"
+	"oxsar/game-nova/pkg/ids"
+	"oxsar/game-nova/pkg/rng"
 )
 
 // fleetInfo и survivorFleet — package-level типы, вынесены из

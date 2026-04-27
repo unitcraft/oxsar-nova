@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/oxsar/nova/backend/internal/event"
-	"github.com/oxsar/nova/backend/internal/repo"
+	"oxsar/game-nova/internal/event"
+	"oxsar/game-nova/internal/repo"
 )
 
 // HoldingInfo — карточка активного HOLDING на планете игрока для UI

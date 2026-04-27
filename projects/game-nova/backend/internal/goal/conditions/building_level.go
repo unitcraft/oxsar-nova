@@ -10,7 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/goal"
+	"oxsar/game-nova/internal/goal"
 )
 
 // BuildingLevelParams — параметры snapshot-условия "building_level".

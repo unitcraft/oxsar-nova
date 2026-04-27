@@ -11,9 +11,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/repo"
-	"github.com/oxsar/nova/backend/pkg/metrics"
-	"github.com/oxsar/nova/backend/pkg/trace"
+	"oxsar/game-nova/internal/repo"
+	"oxsar/game-nova/pkg/metrics"
+	"oxsar/game-nova/pkg/trace"
 )
 
 // Handler обрабатывает событие определённого Kind. Вызывается внутри

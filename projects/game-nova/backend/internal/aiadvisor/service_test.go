@@ -3,7 +3,7 @@ package aiadvisor
 import (
 	"testing"
 
-	"github.com/oxsar/nova/backend/internal/config"
+	"oxsar/game-nova/internal/config"
 )
 
 func TestKnownModels(t *testing.T) {

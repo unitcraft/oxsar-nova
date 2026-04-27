@@ -3,9 +3,9 @@ package goal_test
 import (
 	"testing"
 
-	"github.com/oxsar/nova/backend/internal/goal"
+	"oxsar/game-nova/internal/goal"
 	// Подключаем conditions, чтобы зарегистрировались типы для валидации.
-	_ "github.com/oxsar/nova/backend/internal/goal/conditions"
+	_ "oxsar/game-nova/internal/goal/conditions"
 )
 
 // Локальные алиасы для краткости.
