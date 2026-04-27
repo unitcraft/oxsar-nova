@@ -46,7 +46,6 @@ import (
 	"oxsar/game-nova/internal/profession"
 	"oxsar/game-nova/internal/records"
 	"oxsar/game-nova/internal/referral"
-	"oxsar/game-nova/internal/report"
 	"oxsar/game-nova/internal/repair"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/internal/requirements"
@@ -290,9 +289,8 @@ func run() error {
 
 	allianceH := alliance.NewHandler(allianceSvc)
 
-	// План 46 Ф.3 (149-ФЗ): жалобы пользователей на UGC.
-	reportSvc := report.NewService(db)
-	reportH := report.NewHandler(reportSvc)
+	// План 46 Ф.3 (149-ФЗ) → план 56: жалобы перенесены в portal-backend.
+	// game-nova больше не владеет user_reports, см. portal/internal/report.
 
 	professionSvc := profession.NewService(db, cat)
 	professionH := profession.NewHandler(professionSvc)
@@ -522,8 +520,8 @@ func run() error {
 		pr.Get("/espionage-reports/{id}", messageH.GetEspionageReport)
 		pr.Get("/expedition-reports/{id}", messageH.GetExpeditionReport)
 
-		// План 46 Ф.3: жалобы пользователей.
-		pr.Post("/reports", reportH.Create)
+		// План 56: POST /reports перенесён в portal-backend
+		// (POST https://oxsar-nova.ru/api/reports). См. план 56.
 
 		pr.Route("/admin", func(ar chi.Router) {
 			// Ф.8.1 RBAC: на уровне префикса — минимум support (модератор),
@@ -548,9 +546,8 @@ func run() error {
 			ar.Get("/events/dead", adminH.ListDeadEvents)
 			ar.Get("/audit", adminH.ListAudit)
 
-			// План 46 Ф.3: модерация UGC-жалоб (support+).
-			ar.Get("/reports", reportH.AdminList)
-			ar.Post("/reports/{id}/resolve", reportH.AdminResolve)
+			// План 56: модерация UGC-жалоб перенесена в admin-frontend
+			// через admin-bff → portal-backend (/api/admin/reports*).
 
 			// Destructive — admin+.
 			ar.With(admin.RequireRole(db, admin.RoleAdmin)).Post("/users/{id}/credit", adminH.Credit)
