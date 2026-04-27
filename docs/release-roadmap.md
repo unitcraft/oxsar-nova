@@ -158,7 +158,8 @@
 | [57](plans/57-mail-service.md) | Mail-service на TipTap | 📝 эпик (после публичного запуска) |
 | [58](plans/58-currency-rebranding.md) | Кредиты → Оксары + Оксариты | 📝 не запускался |
 | [59](plans/59-referral-program.md) | Реферальная программа | 📝 не запускался (после 58) |
-| [60](plans/60-remove-referral-from-game-origin.md) | Удалить legacy реферальную систему из game-origin | 📝 не запускался |
+| [60](plans/60-remove-referral-from-game-origin.md) | Удалить legacy реферальную систему из game-origin | 🚧 в работе |
+| [61](plans/61-admin-bff-rewrite-migration.md) | admin-bff: Director → Rewrite (deprecated API + security) | 📝 не срочно |
 
 **Ручные шаги пользователя (внерепно):**
 
