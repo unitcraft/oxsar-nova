@@ -21,6 +21,13 @@ the essentials.
   expectations, and domain-specific rules live in
   [CLAUDE.md](CLAUDE.md). The same guidelines apply to human
   and AI contributors.
+- **Dependency licenses.** New dependencies must be compatible
+  with PolyForm Noncommercial 1.0.0. Allowed licenses: MIT,
+  Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0,
+  Unlicense, CC0-1.0, Zlib. GPL/AGPL/LGPL are forbidden — they
+  override PolyForm and force the whole project under copyleft.
+  CI job `license-check` blocks PRs introducing incompatible
+  packages. Details: [docs/ops/license-audit.md](docs/ops/license-audit.md).
 
 ## Workflow
 

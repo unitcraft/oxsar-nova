@@ -100,6 +100,59 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run api:coverage
 
+  license-check:
+    name: License check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            projects/game-nova/frontend/package-lock.json
+            projects/portal/frontend/package-lock.json
+
+      - name: Install go-licenses
+        run: go install github.com/google/go-licenses@latest
+
+      - name: Check Go licenses (game-nova)
+        working-directory: projects/game-nova/backend
+        run: go-licenses check ./... --disallowed_types=forbidden,restricted
+
+      - name: Check Go licenses (portal)
+        working-directory: projects/portal/backend
+        run: go-licenses check ./... --disallowed_types=forbidden,restricted
+
+      - name: Check Go licenses (auth)
+        working-directory: projects/auth/backend
+        run: go-licenses check ./... --disallowed_types=forbidden,restricted
+
+      - name: Check Go licenses (billing)
+        working-directory: projects/billing/backend
+        run: go-licenses check ./... --disallowed_types=forbidden,restricted
+
+      - name: Install frontend deps (game-nova)
+        working-directory: projects/game-nova/frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Check frontend licenses (game-nova)
+        working-directory: projects/game-nova/frontend
+        run: npx --yes license-checker --production --excludePackages "oxsar-nova-frontend@0.1.0" --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;MPL-2.0;Unlicense;CC0-1.0;Zlib"
+
+      - name: Install frontend deps (portal)
+        working-directory: projects/portal/frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Check frontend licenses (portal)
+        working-directory: projects/portal/frontend
+        run: npx --yes license-checker --production --excludePackages "oxsar-portal@0.1.0" --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;MPL-2.0;Unlicense;CC0-1.0;Zlib"
+
   security:
     name: Security scans
     runs-on: ubuntu-latest
