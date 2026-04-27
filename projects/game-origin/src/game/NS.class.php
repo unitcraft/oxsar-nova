@@ -794,37 +794,23 @@ class NS
 //			if(!Core::getCache()->objectExists("requirements"))
 //			{
 			$c_name = 'NS.loadRequirements';
-			$requirements = false;
-			if( $requirements === false )
+			$requirements = array();
+			// План 37.5d.5: replaced Requirements_YII::model()->with('need_const')->findAll(...)
+			// FK: na_requirements.needs → na_construction.buildingid.
+			// Yii->getAttributes() даёт все колонки → используем r.*, b.* кроме
+			// дублирующейся buildingid (буду брать r.buildingid).
+			$result = Core::getDB()->query(
+				"SELECT r.*, b.*, r.buildingid AS buildingid"
+				. " FROM ".PREFIX."requirements r"
+				. " LEFT JOIN ".PREFIX."construction b ON b.buildingid = r.needs"
+				. " ORDER BY b.display_order ASC, r.buildingid ASC"
+			);
+			while($row = Core::getDB()->fetch($result))
 			{
-				$requirements_records = Requirements_YII::model()
-					->with('need_const')
-					->findAll(array('order' => 'need_const.display_order ASC, t.buildingid ASC'));
-				if( $requirements_records )
-				{
-					foreach($requirements_records as $requirement_records)
-					{
-						$data = $requirement_records->getAttributes();
-						if( $requirement_records->need_const )
-						{
-							$data = array_merge($data, $requirement_records->need_const->getAttributes());
-						}
-						$requirements[intval($requirement_records->buildingid)][] = $data;
-					}
-				}
-				// cache disabled
+				$requirements[intval($row["buildingid"])][] = $row;
 			}
+			Core::getDB()->free_result($result);
 			self::$requirements = $requirements;
-//				$result = sqlSelect(
-//					"requirements r",
-//					array("r.buildingid", "r.needs", "b.name", "b.mode", "r.level", "r.level_limit"),
-//					"LEFT JOIN ".PREFIX."construction b ON b.buildingid = r.needs",
-//					"",
-//					"b.display_order ASC, r.buildingid ASC"
-//				);
-//				Core::getCache()->buildObject("requirements", $result, "buildingid");
-//			}
-//			self::$requirements = Core::getCache()->readObject("requirements");
 		}
 	}
 
