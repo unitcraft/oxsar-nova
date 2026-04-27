@@ -358,15 +358,32 @@ flow.
 
 ### Ф.4. Users + Roles management
 
-- `/users`: TanStack Table со списком, фильтры (role, status),
-  search-by-username/email, пагинация. Use TanStack Query
-  with infinite scroll или page-based.
-- `/users/{id}`: детали + табы (Profile, Roles, Sessions, Audit).
-- Grant/Revoke role: shadcn Dialog с form (role select +
-  expires_at + reason textarea).
-- `/roles`: компактная таблица со списком ролей.
-- `/roles/{id}`: детали + checkboxes для permissions toggle (если
-  superadmin).
+**Архитектурный gap (обнаружен 2026-04-27)**: identity-service сейчас
+не имеет endpoint для списка юзеров (`GET /api/admin/users`). Список
+есть только в game-nova и **per-universe** (юзер привязан к вселенной).
+Полноценный «список глобальных юзеров» требует отдельного endpoint в
+identity или агрегирующего endpoint в admin-bff. Делается отдельным
+sub-планом (53-users-list) — не блокирует основную задачу.
+
+**Что делаем в Ф.4 сейчас:**
+
+- `/roles`: список через `GET /api/admin/roles` + permissions для
+  каждой через `GET /api/admin/roles/{id}/permissions` (lazy-fetch
+  при раскрытии row).
+- `/users/lookup`: форма поиска юзера по UUID. Найденный юзер →
+  `/users/{id}`.
+- `/users/{id}`: детали — текущие assignments через
+  `GET /api/admin/users/{id}/roles`. Кнопки Grant Role и Revoke Role
+  открывают shadcn Dialog с формой (role select + expires_at + reason).
+- `POST /api/admin/users/{id}/roles` для grant с body `{role,
+  expires_at?, reason}`.
+- `DELETE /api/admin/users/{id}/roles/{role}?reason=...` для revoke.
+- Permission-guards на UI: кнопки grant/revoke видны только при
+  `roles:grant` / `roles:revoke` permissions у юзера.
+
+**Ф.4-extension** (отдельный sub-план): полноценный `/users` с
+TanStack Table, фильтрами, пагинацией — после добавления
+`GET /api/admin/users` в identity или через aggregator в admin-bff.
 
 ### Ф.5. Audit log
 
