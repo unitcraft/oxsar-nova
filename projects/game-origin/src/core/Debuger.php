@@ -349,20 +349,54 @@ function debug_error_handler($code, $description, $file = null, $line = null, $c
 
 function debug_exception_handler($exception)
 {
-  $file = $exception->getFile();
-  $line = $exception->getLine();
+  // План 37.5d.X: безопасный стилизованный error-page (Yii-style визуально,
+  // но без source-code excerpt и stack-trace, чтобы не утекали наружу
+  // имена файлов/функций и фрагменты исходников). Сообщение и класс —
+  // да, они уже формируются разработчиком и не содержат секретов
+  // (e.g. «Unkown building. ...»). Файл и строка — НЕ показываются
+  // в HTML; идут только в server-side error_log для отладки.
 
-  if (empty($file))
-  {
-    $file = '[internal]';
-  }
-  if (empty($line))
-  {
-    $line = '??';
-  }
-  $file = debug_trim_path($file);
+  $class = get_class($exception);
+  $msg   = $exception->getMessage();
 
-  debug_output_internal(LOG_ERROR, 'Exception', $exception->getCode(), null, $exception->getMessage(), $file, $line, null);
+  // Server-side log с полной информацией.
+  error_log(sprintf(
+    '[%s] %s in %s:%d',
+    $class, $msg,
+    $exception->getFile() ?: '[internal]',
+    $exception->getLine() ?: 0
+  ));
+
+  // Если headers уже отправлены — добавим только короткий блок (не ломаем layout).
+  $partial = headers_sent();
+  $title   = htmlspecialchars($class, ENT_QUOTES, 'UTF-8');
+  $message = nl2br(htmlspecialchars($msg, ENT_QUOTES, 'UTF-8'));
+
+  if ($partial) {
+    echo '<div class="oxsar-exception" style="margin:1em 4em;padding:1em;background:#f3f3f3;border-radius:10px;color:#000;font:11pt Verdana;line-height:160%;">';
+    echo '<h2 style="font:14pt Verdana;color:#800000;margin-bottom:.5em;">' . $title . '</h2>';
+    echo '<p>' . $message . '</p>';
+    echo '</div>';
+  } else {
+    @header('Content-Type: text/html; charset=utf-8');
+    echo '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' . "\n";
+    echo '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>' . "\n";
+    echo '<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>' . "\n";
+    echo '<title>' . $title . '</title>' . "\n";
+    echo '<style type="text/css">/*<![CDATA[*/' . "\n";
+    echo 'body{font:9pt Verdana;color:#000;background:#fff;margin:0;padding:0;}' . "\n";
+    echo 'h1{font:18pt Verdana;color:#f00;margin:0 0 .5em 0;}' . "\n";
+    echo '.container{margin:1em 4em;}' . "\n";
+    echo '.message{color:#000;padding:1em;font:11pt Verdana;background:#f3f3f3;border-radius:10px;line-height:160%;}' . "\n";
+    echo '.version{color:gray;font-size:8pt;border-top:1px solid #aaa;padding-top:1em;margin-top:2em;}' . "\n";
+    echo '/*]]>*/</style></head><body>' . "\n";
+    echo '<div class="container">' . "\n";
+    echo '<h1>' . $title . '</h1>' . "\n";
+    echo '<p class="message">' . $message . '</p>' . "\n";
+    echo '<div class="version">Oxsar ' . (defined('OXSAR_VERSION') ? htmlspecialchars(OXSAR_VERSION, ENT_QUOTES, 'UTF-8') : '') . '</div>' . "\n";
+    echo '</div></body></html>' . "\n";
+  }
+
   die();
 }
 

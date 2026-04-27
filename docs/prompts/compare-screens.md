@@ -93,3 +93,39 @@ memory-reference `reference_game_origin_routing.md` (только `?go=Page`
 CSS (`/css/us_bg/a-bg-117.css`, `/css/us_table/table_td2_bg_80.css`),
 а наш test-юзер их не имеет. Размер блока ~4.3KB одинаков везде потому
 что вставки идут в `<head>` layout-шаблона.
+
+## Известные стабильные «🔴 major» diff'ы — не регрессии
+
+Эти страницы стабильно показывают major diff (>700 lines) в каждом
+прогоне. Это **не баги нашего кода**, не требуют исправления:
+
+- **BuildingInfo / UnitInfo / ArtefactInfo** — страницы по дизайну
+  требуют `?id=N` в URL. Compare-скрипт зовёт их без id, обе
+  вселенные кидают `GenericException("Unkown building/unit/...")`.
+  После плана 37.5f наш error-page стилизован как у legacy
+  (`<title>GenericException</title>` + красный заголовок), но
+  **БЕЗ stack trace и source-excerpt** (security-leak). Diff с
+  legacy ~30-50 lines (legacy показывает stack), это правильно.
+  Чтобы свести diff к минимуму — нужно расширить compare-скрипт
+  поддержкой sub-параметров и звать `?go=BuildingInfo&id=1`.
+  Не сделано. См. план 37.5f.
+
+- **Changelog** — у legacy таблицы `na_changelog` нет, контент
+  тянулся из внешнего `netassault.ru` (legacy update-server). У нас
+  в `Changelog::index()` стоит TODO (план 37.5d.7) — пустой массив
+  `release`. Diff ~811 lines = весь legacy-changelog. Чтобы закрыть
+  — нужна собственная таблица `na_changelog` со списком наших
+  патчей (отдельная задача, см. план 37.5f).
+
+## Косметические разницы (НЕ регрессии)
+
+- `©Dominator` в `<title>` legacy — у нас этого скина нет.
+- `galaxy_distance_mult = 1` (наша) vs `20000` (legacy) — настройка
+  вселенной, не код.
+- Разные ресурсы планет (`7.000.000` металла у нашего test vs
+  `147.650.000` у legacy) — состояние БД, не код.
+- Разные текущие планеты (`Hello World` vs `Фокус`) —
+  `cur-planet` маркер от того, какая планета выбрана.
+- Появление блока `<div class="oxsar-footer">` (12+ + legal-links) —
+  целевое изменение от плана 50 Ф.3+Ф.6, добавляет ~12 lines
+  diff на каждой странице.
