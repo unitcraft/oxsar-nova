@@ -49,3 +49,22 @@ include one-time buy-out, annual subscription, or revenue share.
   `LICENSE` / `NOTICE` files of each dependency for details.
 - **Fair use** rights granted by applicable law are not limited
   by either the PolyForm Noncommercial License or this document.
+
+## Governing Law and Jurisdiction
+
+- **Governing law**: this document and any commercial licensing
+  arrangements concluded on its basis are governed by the law of the
+  Russian Federation.
+- **Jurisdiction**: any dispute arising in connection with this document
+  shall be resolved by the competent court at the place of residence
+  of the author (Owner), unless otherwise agreed by the parties in a
+  separate commercial license agreement.
+- **Language**: the authoritative version of this document is in English.
+  In the event of a dispute before a Russian court, a certified Russian
+  translation will be provided; in case of discrepancy between versions,
+  the English version prevails.
+- **Counterparty details**: this document describes the procedure for
+  requesting a commercial license. The actual commercial license is
+  concluded as a separate agreement, in which the author provides full
+  counterparty details (legal status, identification numbers, payment
+  details) as required by applicable law.
