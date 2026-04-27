@@ -17,6 +17,7 @@ COPY --from=build /go/bin/goose /usr/local/bin/goose
 COPY projects/game-nova/migrations /migrations/game-nova
 COPY projects/auth/migrations      /migrations/auth
 COPY projects/portal/migrations    /migrations/portal
+COPY projects/billing/migrations   /migrations/billing
 
 # ВАЖНО: НЕ выставляем GOOSE_DRIVER — в goose v3.22 комбинация
 # GOOSE_DRIVER из env + driver в позиционных аргументах ломает парсер.

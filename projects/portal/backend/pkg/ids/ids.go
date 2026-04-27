@@ -3,10 +3,12 @@
 package ids
 
 // DUPLICATE: этот файл скопирован между Go-модулями oxsar/game-nova,
-// oxsar/auth и oxsar/portal. При любом изменении синхронизируйте КОПИИ:
+// oxsar/auth, oxsar/portal и oxsar/billing. При любом изменении
+// синхронизируйте КОПИИ:
 //   - projects/game-nova/backend/pkg/ids/ids.go
 //   - projects/auth/backend/pkg/ids/ids.go
 //   - projects/portal/backend/pkg/ids/ids.go
+//   - projects/billing/backend/pkg/ids/ids.go
 // Причина дубля: каждый домен — отдельный go.mod, без shared-модуля.
 
 import "github.com/google/uuid"

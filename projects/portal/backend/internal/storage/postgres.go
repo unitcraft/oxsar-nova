@@ -2,10 +2,12 @@
 package storage
 
 // DUPLICATE: этот файл скопирован между Go-модулями oxsar/game-nova,
-// oxsar/auth и oxsar/portal. При любом изменении синхронизируйте КОПИИ:
+// oxsar/auth, oxsar/portal и oxsar/billing. При любом изменении
+// синхронизируйте КОПИИ:
 //   - projects/game-nova/backend/internal/storage/postgres.go
 //   - projects/auth/backend/internal/storage/postgres.go
 //   - projects/portal/backend/internal/storage/postgres.go
+//   - projects/billing/backend/internal/storage/postgres.go
 // Причина дубля: каждый домен — отдельный go.mod, без shared-модуля.
 
 import (

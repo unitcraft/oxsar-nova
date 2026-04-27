@@ -117,7 +117,9 @@ Wildcard SSL: `*.oxsar-nova.ru` — один сертификат (Let's Encrypt
 
 - OAuth callback — единый URL, не привязан к вселенной.
 - RSA private key не должен быть в каждом игровом инстансе.
-- Global credits и платёжные webhooks — сквозные, не принадлежат ни одной вселенной.
+- Универсальный membership (`universe_memberships`) — список вселенных юзера.
+- Платежи и баланс кошелька — в **отдельном** billing-service (план 38),
+  не в auth-service (different bounded context).
 
 ### JWT: RSA-256
 
@@ -176,9 +178,11 @@ GET  /auth/oauth/{provider}/callback  — приём кода, выдача JWT
 POST /auth/universe-token     — one-time handoff token для переключения вселенной
 POST /auth/token/exchange     — обмен one-time code → JWT (после OAuth redirect)
 
-GET  /auth/credits/balance    — актуальный баланс global credits
-POST /auth/credits/spend      — списать кредиты (внутренний, вызывается Portal Backend)
-POST /auth/payments/{provider}/webhook — webhook от платёжного шлюза
+# Платежи и баланс — НЕ в auth-service, см. план 38 (billing-service):
+#   GET  /billing/wallet/balance
+#   POST /billing/wallet/spend (внутренний)
+#   POST /billing/orders + GET /billing/packages
+#   POST /billing/webhooks/{provider}
 
 GET  /.well-known/jwks.json   — публичный ключ RSA
 ```
@@ -239,7 +243,7 @@ CREATE TABLE credit_transactions (
    `users` таблице по `global_user_id` из JWT.
 5. **Таблица `users` в game DB**: убрать `email`, `password_hash`; добавить
    `global_user_id UUID NOT NULL UNIQUE`.
-6. **Платёжные webhooks** переезжают в Auth Service (Ф.7).
+6. **Платёжные webhooks** переезжают в **billing-service** (план 38).
 
 ---
 
@@ -412,12 +416,16 @@ Pinned-новости выводятся отдельным блоком над 
 
 ---
 
-## Global Credits
+## Global Credits → ВЫНЕСЕНО В ПЛАН 38 (billing-service)
 
-Баланс живёт **только в Auth Service** (`users.global_credits`).  
-Каждое движение — запись в `credit_transactions` (полный аудит).
+Баланс и история транзакций живут в **billing-db** (отдельная Postgres).
+Каждое движение — INSERT в `transactions` (immutable, double-entry).
 
-**Пополнение**: платёжный шлюз → `POST /auth/payments/{provider}/webhook` → зачисление.
+**Пополнение**: платёжный шлюз → `POST /billing/webhooks/{provider}` →
+INSERT transaction + UPDATE wallet.balance.
+
+См. [plans/38-billing-service.md](38-billing-service.md). Ниже секция
+оставлена для исторического контекста (раньше планировалось в auth).
 
 **Списание**:
 - Голос за feedback: Portal Backend → `POST /auth/credits/spend {user_id, amount: 100, reason: "feedback_vote", ref_id}`.
@@ -574,12 +582,22 @@ services:
 3. Upsert `oauth_accounts`.
 4. OAuth-кнопки на Portal Frontend + игровом фронтенде.
 
-### Ф.7 — Global Credits + платёжный шлюз (2–3 дня)
+### Ф.7 — Global Credits + платёжный шлюз → ВЫНЕСЕН В ПЛАН 38
 
-1. Auth Service: `spend`, `balance` endpoints.
-2. Перенести webhooks (CloudPayments, Enot.io) из игрового сервера → Auth Service.
-3. Интеграция голосования за feedback с `credits/spend`.
-4. Баланс кредитов в шапке портала и игры.
+См. [plans/38-billing-service.md](38-billing-service.md).
+
+Решение (2026-04-27): платежи и кошельки выделены в **отдельный микросервис**
+`billing-service` (а не в auth-service, как планировалось изначально).
+Причина: auth-service отвечает за identity, billing — за money. Это разные
+bounded context'ы, объединять нельзя (нарушение SRP, общая blast radius
+при компрометации, общий compliance-scope).
+
+В рамках плана 38:
+- Списание/пополнение, история — в billing-db (отдельный Postgres).
+- Платёжные шлюзы (Robokassa, Enot.io, mock) — в billing.
+- Голосование за feedback дёргает `POST billing/wallet/spend` с idempotency.
+- `users.global_credits` и `credit_transactions` удаляются из auth-db.
+- Баланс берётся из `GET billing/wallet/balance` (не из JWT-claims).
 
 ### Ф.8 — Запуск двух вселенных (2–3 дня)
 
@@ -794,7 +812,7 @@ dev-окружению, ни к фронтенду:
 - OAuth Social Login (ВКонтакте, Mail.ru, Яндекс) — пока не делаем (по решению пользователя).
 - Universe Switcher и handoff-flow между вселенными (lazy-join, удаление старых
   `/api/auth/*`) — отдельная фаза Ф.12.
-- Перенос платёжных webhook'ов — отдельная фаза Ф.13.
+- Перенос платёжных webhook'ов — план 38 (billing-service).
 
 ### Ф.12 — Lazy-join, Universe Switcher и handoff между вселенными (1–2 дня)
 
@@ -879,7 +897,7 @@ dev-окружению, ни к фронтенду:
 #### Что НЕ входит в Ф.12
 
 - Полный двух-вселенский dev-стек (uni01 + uni02 одновременно) — это Ф.8.
-- Платёжные webhook'и — Ф.13.
+- Платёжные webhook'и и кошельки — план 38 (billing-service).
 - Финальная чистка legacy HS256 кода (`internal/auth/handler.go::Register/Login/Refresh`,
   `service.go::register/login`, `password.go`, `JWT_SECRET` в config) — отдельным
   PR после Ф.12 (мёртвый код, не блокер).
@@ -924,8 +942,10 @@ End-to-end в dev: register в auth-service → JWT (RSA) → `/api/me` в game-
 
 **Functional (не блокирует security, но нужно для multi-universe):**
 
-- ⏳ **Ф.7** — Global Credits + платёжные webhook'и (CloudPayments/Enot.io →
-  auth-service). Голосование за feedback должно списывать кредиты.
+- ⏳ **План 38** — billing-service: кошельки, платёжные webhooks
+  (Robokassa/Enot/mock), голосование за feedback с idempotency.
+  Раньше был Ф.7 в auth-service — после ревизии вынесен в отдельный
+  микросервис (different bounded context).
 - ⏳ **Ф.8** — второй вселенский стек (uni02 Speed) для проверки Universe Switcher
   E2E. DNS на Selectel + wildcard SSL.
 - ✅ `bootstrapNewUser` retry-логика — если стартовая планета не назначилась,
