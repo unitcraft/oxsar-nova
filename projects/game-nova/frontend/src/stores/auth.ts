@@ -31,13 +31,28 @@ function loadInitial(): Pick<AuthState, 'accessToken' | 'refreshToken' | 'userId
   }
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   ...loadInitial(),
   setTokens: ({ access, refresh, userId }) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: STORAGE_VERSION, access, refresh, userId }));
     set({ accessToken: access, refreshToken: refresh, userId });
   },
   logout: () => {
+    // План 36 Critical-4: revoke refresh-token через /auth/logout —
+    // auth-service кладёт его jti в Redis-blacklist. После этого
+    // украденный refresh-token не работает до истечения TTL.
+    //
+    // Fire-and-forget: не ждём ответа, чтобы logout был мгновенным.
+    // Если запрос упал (offline / auth-service недоступен) — токен всё
+    // равно стирается локально, на сервере он истечёт по TTL (7d/30d).
+    const refresh = get().refreshToken;
+    if (refresh) {
+      void fetch('/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh }),
+      }).catch(() => undefined);
+    }
     localStorage.removeItem(STORAGE_KEY);
     set({ accessToken: null, refreshToken: null, userId: null });
   },

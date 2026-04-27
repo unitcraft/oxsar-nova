@@ -46,7 +46,19 @@ export default defineConfig(({ command }) => ({
     proxy: {
       '/api': process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
       '/healthz': process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
-      '/auth': process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+      '/auth': {
+        target: process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+        changeOrigin: true,
+        // План 36 Ф.8: /auth/handoff — это frontend-route, не auth-endpoint.
+        // bypass возвращает path → vite отдаёт index.html (SPA fallback),
+        // ReactRouter/наш if (pathname=='/auth/handoff') в App.tsx обрабатывает.
+        bypass: (req) => {
+          if (req.url?.startsWith('/auth/handoff')) {
+            return '/index.html';
+          }
+          return null;
+        },
+      },
       '/.well-known/jwks.json':
         process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
       // План 38 Ф.7: billing-service для кошельков и платежей.

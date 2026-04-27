@@ -60,9 +60,12 @@ export function SettingsScreen() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['settings'] }),
   });
 
+  // План 36 Critical-6: смена пароля переехала в auth-service.
+  // Хеш живёт в auth-db, в game-db password_hash IS NULL.
+  // /auth/* через vite proxy дёргает auth-service.
   const passwordMutation = useMutation({
-    mutationFn: (body: { current_password: string; new_password: string }) =>
-      api.post('/api/settings/password', body),
+    mutationFn: (body: { current: string; new: string }) =>
+      api.post('/auth/password', body),
   });
 
   const [email, setEmail] = useState('');
@@ -124,7 +127,7 @@ export function SettingsScreen() {
     if (newPw !== confirmPw) { setPwError(t('pwMismatch')); return; }
     if (newPw.length < 8) { setPwError(t('pwTooShort')); return; }
     try {
-      await passwordMutation.mutateAsync({ current_password: currentPw, new_password: newPw });
+      await passwordMutation.mutateAsync({ current: currentPw, new: newPw });
       setPwSaved(true);
       setCurrentPw(''); setNewPw(''); setConfirmPw('');
       setTimeout(() => setPwSaved(false), 3000);

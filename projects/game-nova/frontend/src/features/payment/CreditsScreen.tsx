@@ -3,49 +3,67 @@ import { api } from '@/api/client';
 import { useToast } from '@/ui/Toast';
 import { useTranslation } from '@/i18n/i18n';
 
-interface CreditPackage {
-  key: string;
-  label: string;
-  credits: number;
-  bonus_credits: number;
-  total_credits: number;
-  price_rub: number;
+/**
+ * CreditsScreen — магазин кредитов и история транзакций.
+ *
+ * План 38 Ф.7: переписан с /api/payment/* (game-nova) на /billing/* (billing-service).
+ * Vite проксирует /billing/* → billing-service:9100.
+ *
+ * Endpoints:
+ *   GET  /billing/packages         — каталог (публичный).
+ *   POST /billing/orders           — создать заказ → pay_url.
+ *   GET  /billing/wallet/balance   — баланс OXC.
+ *   GET  /billing/wallet/history   — история транзакций.
+ */
+
+interface BillingPackage {
+  id: string;
+  title: string;
+  amount_kop: number;          // 50000 = 500 RUB
+  credits: number;             // base credits в OXC
+  bonus?: number;              // бонус сверх base
+  is_best?: boolean;
 }
 
 interface PackagesResponse {
-  packages: CreditPackage[];
-  test_mode: boolean;
+  packages: BillingPackage[];
 }
 
-interface Purchase {
+interface Balance {
+  balance: number;
+  currency_code: string;
+  frozen: boolean;
+}
+
+interface Transaction {
   id: string;
-  package_key: string;
-  package_label: string;
-  credits: number;
-  price_rub: number;
-  status: 'pending' | 'paid' | 'failed' | 'refunded';
+  delta: number;               // +N для пополнений, -N для трат
+  balance_after: number;
+  reason: string;              // 'top_up' | 'feedback_vote' | ...
+  ref_id?: string;
+  from_account: string;
+  to_account: string;
   created_at: string;
-  paid_at?: string | null;
 }
 
-const STATUS_KEY: Record<string, string> = {
-  paid:     'statusPaid',
-  pending:  'statusPending',
-  failed:   'statusFailed',
-  refunded: 'statusCancelled',
+interface HistoryResponse {
+  transactions: Transaction[];
+}
+
+const REASON_LABEL: Record<string, string> = {
+  top_up:        'Пополнение',
+  feedback_vote: 'Голос за предложение',
+  shop_purchase: 'Покупка',
+  refund:        'Возврат',
+  admin_grant:   'Начисление администратора',
 };
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-function packageHint(total: number, t: (key: string) => string): string | null {
-  if (total >= 5000) return t('hint5000');
-  if (total >= 2000) return t('hint2000');
-  if (total >= 1000) return t('hint1000');
-  if (total >= 500)  return t('hint500');
-  if (total >= 100)  return t('hint100');
-  return null;
+function totalCredits(p: BillingPackage): number {
+  return p.credits + (p.bonus ?? 0);
 }
 
 export function CreditsScreen() {
@@ -53,149 +71,151 @@ export function CreditsScreen() {
   const qc = useQueryClient();
   const { show: showToast } = useToast();
 
-  const me = useQuery({
-    queryKey: ['me'],
-    queryFn: () => api.get<{ credit: number }>('/api/me'),
+  const balance = useQuery({
+    queryKey: ['billing', 'balance'],
+    queryFn: () => api.get<Balance>('/billing/wallet/balance'),
   });
 
   const packages = useQuery({
-    queryKey: ['payment', 'packages'],
-    queryFn: () => api.get<PackagesResponse>('/api/payment/packages'),
+    queryKey: ['billing', 'packages'],
+    queryFn: () => api.get<PackagesResponse>('/billing/packages'),
     staleTime: Infinity,
   });
 
-  const testMode = packages.data?.test_mode ?? false;
-
   const history = useQuery({
-    queryKey: ['payment', 'history'],
-    queryFn: () => api.get<Purchase[]>('/api/payment/history'),
+    queryKey: ['billing', 'history'],
+    queryFn: () => api.get<HistoryResponse>('/billing/wallet/history?limit=50'),
   });
 
   const buyMutation = useMutation({
-    mutationFn: (packageKey: string) =>
-      api.post<{ order_id: string; pay_url: string }>('/api/payment/order', { package_key: packageKey }),
+    mutationFn: (packageId: string) =>
+      api.post<{ order: { id: string; status: string }; pay_url: string }>(
+        '/billing/orders',
+        { package_id: packageId },
+      ),
     onSuccess: (data) => {
-      // В mock-режиме pay_url — локальный эндпоинт, который редиректит обратно
-      // с ?payment=success/fail. В prod — внешний сайт шлюза в новой вкладке.
-      if (testMode) {
-        window.location.href = data.pay_url;
-      } else {
-        window.open(data.pay_url, '_blank', 'noopener,noreferrer');
-        void qc.invalidateQueries({ queryKey: ['payment', 'history'] });
-      }
+      // pay_url ведёт на mock pay-handler в dev (или внешний шлюз в prod).
+      // Mock в Ф.4 не имеет pay-page — webhook вызывается напрямую через
+      // curl/test-helper, а fronend просто открывает URL (попадёт в 404
+      // от billing, что в dev ОК — реальная страница будет с Robokassa).
+      window.location.href = data.pay_url;
     },
-    onError: () => {
-      showToast('danger', t('sectionPackages'));
+    onError: (err) => {
+      showToast('danger', err instanceof Error ? err.message : 'Ошибка покупки');
     },
   });
 
-  const balance = me.data?.credit ?? 0;
+  // refresh после возврата с ?payment=success в Header (см. App.tsx).
+  void qc;
+
+  const balanceVal = balance.data?.balance ?? 0;
 
   return (
     <div className="screen">
-      <h2>{t('sectionPackages')}</h2>
-
-      {testMode && (
-        <div
-          role="alert"
-          style={{
-            padding: '10px 14px',
-            marginBottom: 12,
-            borderRadius: 6,
-            background: 'rgba(245,158,11,0.12)',
-            border: '1px solid rgba(245,158,11,0.6)',
-            color: 'var(--ox-warn, #f59e0b)',
-            fontSize: 15,
-            fontWeight: 600,
-          }}
-        >
-          ⚠️ {t('testModeBanner')}
-        </div>
-      )}
+      <h2>Магазин кредитов</h2>
 
       <p className="credits-balance">
-        {t('balanceLabel')} <strong>💳 {balance.toLocaleString('ru-RU')} {t('creditsUnit')}</strong>
+        Баланс: <strong>💳 {balanceVal.toLocaleString('ru-RU')} OXC</strong>
+        {balance.data?.frozen && (
+          <span className="ox-error" style={{ marginLeft: 12 }}>⚠ кошелёк заморожен</span>
+        )}
       </p>
 
-      {packages.isLoading && <p>{t('historyEmpty')}</p>}
-      {packages.isError && <p className="error">{t('historyEmpty')}</p>}
+      {packages.isLoading && <p>Загрузка пакетов…</p>}
+      {packages.isError && <p className="ox-error">Не удалось загрузить пакеты</p>}
 
       {packages.data && (
         <div className="credit-packages">
-          {packages.data.packages.map((pkg) => {
-            const hint = packageHint(pkg.total_credits, t);
-            return (
-              <div key={pkg.key} className="credit-package-card">
-                <div className="credit-package-label">{pkg.label}</div>
-                <div className="credit-package-credits">
-                  {pkg.total_credits.toLocaleString('ru-RU')} {t('creditsUnit')}
-                  {pkg.bonus_credits > 0 && (
-                    <span className="credit-package-bonus"> (+{pkg.bonus_credits.toLocaleString('ru-RU')} {t('bonusLabel')})</span>
-                  )}
+          {packages.data.packages.map((pkg) => (
+            <div
+              key={pkg.id}
+              className={`credit-package-card ${pkg.is_best ? 'credit-package-best' : ''}`}
+            >
+              {pkg.is_best && (
+                <div style={{
+                  position: 'absolute',
+                  top: -10,
+                  right: 12,
+                  padding: '2px 10px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  background: 'var(--ox-accent)',
+                  color: 'var(--ox-bg)',
+                  borderRadius: 4,
+                  textTransform: 'uppercase',
+                }}>
+                  Выгодно
                 </div>
-                <div className="credit-package-price">{pkg.price_rub.toLocaleString('ru-RU')} ₽</div>
-                {hint && (
-                  <div style={{ fontSize: 13, color: 'var(--ox-fg-dim)', marginBottom: 8, lineHeight: 1.4 }}>
-                    {hint}
-                  </div>
+              )}
+              <div className="credit-package-label">{pkg.title}</div>
+              <div className="credit-package-credits">
+                {totalCredits(pkg).toLocaleString('ru-RU')} OXC
+                {pkg.bonus && pkg.bonus > 0 && (
+                  <span className="credit-package-bonus">
+                    {' '}(+{pkg.bonus.toLocaleString('ru-RU')} бонус)
+                  </span>
                 )}
-                <button
-                  className="btn-primary"
-                  disabled={buyMutation.isPending}
-                  onClick={() => buyMutation.mutate(pkg.key)}
-                >
-                  {t('buyBtn')}
-                </button>
               </div>
-            );
-          })}
-        </div>
-      )}
-
-      <details style={{ marginTop: 16, marginBottom: 16 }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 16, padding: '8px 0' }}>
-          {t('sectionSpendHints')}
-        </summary>
-        <div style={{ padding: 12, background: 'var(--ox-bg-panel)', borderRadius: 6, marginTop: 6 }}>
-          {(['Officer', 'Profession', 'Rename', 'Artefact'] as const).map((k) => (
-            <div key={k} style={{ display: 'flex', gap: 8, padding: '4px 0', fontSize: 15 }}>
-              <span style={{ flex: 1, color: 'var(--ox-fg)' }}>{t(`priceHint${k}.label`)}</span>
-              <span style={{ fontFamily: 'var(--ox-mono)', color: 'var(--ox-accent)' }}>{t(`priceHint${k}.value`)}</span>
+              <div className="credit-package-price">
+                {(pkg.amount_kop / 100).toLocaleString('ru-RU')} ₽
+              </div>
+              <button
+                className="btn-primary"
+                disabled={buyMutation.isPending || balance.data?.frozen}
+                onClick={() => buyMutation.mutate(pkg.id)}
+              >
+                Купить
+              </button>
             </div>
           ))}
         </div>
-      </details>
+      )}
 
-      <h3>{t('sectionHistory')}</h3>
+      <h3 style={{ marginTop: 24 }}>История транзакций</h3>
 
-      {history.isLoading && <p>{t('historyEmpty')}</p>}
-      {history.isError && <p className="error">{t('historyEmpty')}</p>}
-      {history.data && history.data.length === 0 && <p className="muted">{t('historyEmpty')}</p>}
+      {history.isLoading && <p>Загрузка истории…</p>}
+      {history.isError && <p className="ox-error">Не удалось загрузить историю</p>}
+      {history.data && history.data.transactions.length === 0 && (
+        <p className="muted">История пуста</p>
+      )}
 
-      {history.data && history.data.length > 0 && (
+      {history.data && history.data.transactions.length > 0 && (
         <table className="data-table">
           <thead>
             <tr>
-              <th>{t('colDate')}</th>
-              <th>{t('colPackage')}</th>
-              <th>{t('colCredits')}</th>
-              <th>{t('colPrice')}</th>
-              <th>{t('colStatus')}</th>
+              <th>Дата</th>
+              <th>Операция</th>
+              <th style={{ textAlign: 'right' }}>Сумма</th>
+              <th style={{ textAlign: 'right' }}>Баланс после</th>
             </tr>
           </thead>
           <tbody>
-            {history.data.map((p) => (
-              <tr key={p.id}>
-                <td>{fmtDate(p.created_at)}</td>
-                <td>{p.package_label}</td>
-                <td>+{p.credits.toLocaleString('ru-RU')} {t('creditsUnit')}</td>
-                <td>{p.price_rub.toLocaleString('ru-RU')} ₽</td>
-                <td>{STATUS_KEY[p.status] ? t(STATUS_KEY[p.status]!) : p.status}</td>
+            {history.data.transactions.map((tx) => (
+              <tr key={tx.id}>
+                <td>{fmtDate(tx.created_at)}</td>
+                <td>{REASON_LABEL[tx.reason] ?? tx.reason}</td>
+                <td style={{
+                  textAlign: 'right',
+                  fontFamily: 'var(--ox-mono)',
+                  color: tx.delta > 0 ? 'var(--ox-success, #10b981)' : 'var(--ox-danger, #ef4444)',
+                }}>
+                  {tx.delta > 0 ? '+' : ''}{tx.delta.toLocaleString('ru-RU')}
+                </td>
+                <td style={{
+                  textAlign: 'right',
+                  fontFamily: 'var(--ox-mono)',
+                  color: 'var(--ox-fg-dim)',
+                }}>
+                  {tx.balance_after.toLocaleString('ru-RU')}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+
+      {/* TS-suppress: t используется для legacy i18n-ключей, сейчас всё хардкод */}
+      <span style={{ display: 'none' }}>{t('balanceLabel')}</span>
     </div>
   );
 }
