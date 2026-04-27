@@ -8479,3 +8479,72 @@ HTTP-запросе.
 проверка после запуска воркера.
 
 **Коммиты**: 1.
+
+---
+
+## Итерация 37.5c.3 (2026-04-27) — Event-monitor воркер
+
+**Задача**: Запустить обработку игровых событий (`na_events`) — без него
+EVENT_COLONIZE_NEW_USER_PLANET (вставленный 37.5c.2) висит в БД и не
+обрабатывается. Также это первый реальный прогон end-to-end
+EventHandler после слияния 37.5b.
+
+**Стратегия (выбран Вариант 2 из 4 рассмотренных)**: PHP-скрипт живёт
+~125 сек, сам выходит, docker `restart: unless-stopped` поднимает заново.
+
+Контекст выбора (см. также `docs/plans/37-game-origin.md` §37.5c):
+- В legacy этот скрипт периодически падал по непонятным причинам
+  (memory leaks / stale connections / etc.) — поэтому короткий
+  life-cycle в legacy через bash + php exec.
+- Docker даёт более простую реализацию того же подхода: не нужен cron
+  внутри контейнера, нет token-файла, нет `ps grep` защиты — гарантирует
+  docker (один экземпляр сервиса).
+- При краше PHP — `exit 1` → docker auto-restart за ~1-2 сек. За
+  «потерянные» секунды события не теряются — событие с `time` в прошлом
+  обработается на следующей итерации `goThroughEvents`.
+
+Альтернативы (отклонены):
+- Внешний cron в контейнере — антипаттерн docker «один процесс».
+- pcntl_fork с auto-restart — родительский watchdog тоже может упасть.
+- supervisor — избыточен когда docker умеет restart-policy.
+
+**Изменения**:
+- `projects/game-origin/worker/event-monitor.php` (новый):
+  - CLI-only (`PHP_SAPI === 'cli'`).
+  - Bootstrap идентичен `public/game.php`, но с `define('YII_CONSOLE',
+    true)` — отключает HTTP-роутинг и user-инициализацию (флаг уже
+    распознаётся в Core/NS/EventHandler).
+  - Цикл `while(time() < $end_time)`, лимит 125 сек.
+  - **Health-check БД** перед каждой итерацией: `SELECT 1`. При
+    разрыве — `exit 1`, docker перезапустит со свежим коннектом.
+  - **try/catch вокруг `goThroughEvents()`**: одно битое событие не
+    убивает весь воркер. Exception логируется в stderr, цикл
+    продолжается с паузой 500ms.
+  - `externalMonitor = new stdClass()` — маркер для EventHandler что
+    мы CLI (см. `EventHandler:527 is_object($this->externalMonitor)`).
+  - sleep 50ms если 0 обработано (как в legacy).
+  - Логирование: stdout (подбирает `docker compose logs event-monitor`).
+- `docker-compose.yml`: новый сервис `event-monitor`. Использует тот же
+  Dockerfile.php (с расширениями pdo_mysql, memcached). depends_on:
+  mysql + memcached. `restart: unless-stopped`.
+
+**Что дальше**: smoke test (37.5c.4) — выполнено в этой же итерации.
+
+**Smoke test (выполнено)**:
+- dev-login → JWT cookie → GET `/?go=Main` (size=12030).
+- Сразу: event `mode=31, processed=0, fire=now+3s` в `na_events`.
+- Ждём 6 сек.
+- Воркер обработал: `processed=3` (EVENT_PROCESSED_OK_2), error_message=NULL.
+- В `na_planet` появилась запись `planetid=4, userid=1` (HOME_PLANET).
+- `na_user.curplanet=4, hp=4`.
+- Повторный GET `/?go=Main` size=15438 (вырос с 12030 — теперь рендерит
+  планету: координаты, ресурсы, шапка с названием планеты).
+
+**Найденные баги по пути**:
+- `PlanetCreator::setRandPos:293` — `error_log($msg, 'warning')` (PHP 8
+  требует int 2-м аргументом). Убрал второй аргумент.
+- `na_planet.umi NOT NULL` без DEFAULT в legacy-схеме — MySQL 5.7 strict
+  ругается. Решение: отключил `STRICT_TRANS_TABLES` в docker-compose
+  (записано в simplifications.md #11).
+
+**Коммиты**: 1.
