@@ -1,6 +1,9 @@
-// Auth store: JWT держим в memory (план 53 §Auth-flow). Refresh-токен —
-// в httpOnly cookie, недоступен из JS. Permissions/roles берутся из
-// claims access-токена и используются permission-guards в UI.
+// Auth store: claims summary текущей сессии.
+//
+// План 53 (BFF, ревизия 2026-04-27): JWT в браузере НЕ хранится. Сессия
+// живёт на admin-bff (Redis), браузер видит только opaque admin_session
+// HttpOnly cookie. UI получает summary (sub/username/roles/permissions)
+// через GET /auth/me и использует его для permission-guards.
 import { create } from 'zustand';
 
 export interface AuthClaims {
@@ -8,25 +11,30 @@ export interface AuthClaims {
   username: string;
   roles: string[];
   permissions: string[];
-  exp: number;
-  iat: number;
-  jti: string;
 }
 
+export type AuthStatus = 'unknown' | 'authenticated' | 'anonymous';
+
 export interface AuthState {
-  accessToken: string | null;
+  status: AuthStatus;
   claims: AuthClaims | null;
-  setSession: (token: string, claims: AuthClaims) => void;
+  csrfToken: string | null;
+  setSession: (claims: AuthClaims, csrfToken: string) => void;
   clearSession: () => void;
+  setAnonymous: () => void;
   hasPermission: (perm: string) => boolean;
   hasRole: (role: string) => boolean;
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
-  accessToken: null,
+  status: 'unknown',
   claims: null,
-  setSession: (token, claims) => set({ accessToken: token, claims }),
-  clearSession: () => set({ accessToken: null, claims: null }),
+  csrfToken: null,
+  setSession: (claims, csrfToken) =>
+    set({ status: 'authenticated', claims, csrfToken }),
+  clearSession: () =>
+    set({ status: 'anonymous', claims: null, csrfToken: null }),
+  setAnonymous: () => set({ status: 'anonymous', claims: null, csrfToken: null }),
   hasPermission: (perm) => get().claims?.permissions.includes(perm) ?? false,
   hasRole: (role) => get().claims?.roles.includes(role) ?? false,
 }));
