@@ -246,7 +246,10 @@ class Exchange
 			}
 		}
 
-		return self;
+		// План 37.5d.10: legacy "return self;" — bug, в PHP 5/7 интерпретировался
+		// как строка "self", в PHP 8 fatal "Undefined constant self".
+		// Метод модифицирует $data по ссылке, return value не используется
+		// (см. Stock/StockNew/ExchangeOpts callers).
 	}
 
     public static function getMinLotPrice($lot, $amount, $art_id = null)

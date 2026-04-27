@@ -48,6 +48,16 @@ DELETE FROM na_stargate_jump WHERE FIND_IN_SET(planetid, @pids);
 DELETE FROM na_exchange_lots WHERE FIND_IN_SET(planetid, @pids);
 DELETE FROM na_planet WHERE FIND_IN_SET(planetid, @pids);
 
+-- Stock — очистка всех активных лотов и брокеров (snapshot v2 заливает заново)
+DELETE FROM na_exchange_lots WHERE status IN (1, 5);
+DELETE FROM na_exchange;
+
+-- Alliance — расширенные таблицы для нашей alliance (aid=42 у test-юзера)
+DELETE FROM na_allyrank WHERE aid IN (SELECT aid FROM na_user2ally WHERE userid=1);
+DELETE FROM na_allyapplication WHERE aid IN (SELECT aid FROM na_user2ally WHERE userid=1);
+DELETE FROM na_ally_relationships WHERE rel1 IN (SELECT aid FROM na_user2ally WHERE userid=1) OR rel2 IN (SELECT aid FROM na_user2ally WHERE userid=1);
+DELETE FROM na_ally_relationships_application WHERE candidate_ally IN (SELECT aid FROM na_user2ally WHERE userid=1) OR request_ally IN (SELECT aid FROM na_user2ally WHERE userid=1);
+
 -- Очистка по userid=1
 DELETE FROM na_user WHERE userid=1;
 DELETE FROM na_password WHERE userid=1;
@@ -61,6 +71,12 @@ DELETE FROM na_user_experience WHERE userid=1;
 DELETE FROM na_credit_bonus_item WHERE userid=1;
 DELETE FROM na_res_log WHERE userid=1;
 DELETE FROM na_res_transfer WHERE userid=1;
+
+-- Notes (PK user_id)
+DELETE FROM na_notes WHERE user_id=1;
+
+-- Messages (sender/receiver)
+DELETE FROM na_message WHERE receiver=1 OR sender=1;
 
 -- Также удалить event-record нашего юзера колонизации (от 37.5c)
 DELETE FROM na_events WHERE user=1;
