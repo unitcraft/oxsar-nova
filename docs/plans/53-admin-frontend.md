@@ -426,6 +426,15 @@ users/*/roles}*`). admin-bff проксирует по path-prefix; для
 ListUsers и удаление `projects/game-nova/frontend/src/features/admin/`
 после переименования backend-namespace.
 
+> **После плана 58** (ребрендинг валюты, ADR-0009):
+> `/api/admin/users/{id}/credit` → `/api/admin/users/{id}/oxsarit`
+> (game-nova локальный баланс) и аналогичный admin-эндпоинт для
+> `wallets.oxsar` через billing-bff: `/api/admin/users/{id}/oxsar`.
+> `grant_resources` admin-операция тоже учитывает оксариты как
+> отдельный resource-key. Миграция-rename в admin-frontend и
+> admin-bff делается одним коммитом вместе с миграциями БД из
+> плана 58.
+
 ### Ф.7. Moderation (заглушки)
 
 - `/moderation/reports` — заглушка с placeholder-table (план 48
