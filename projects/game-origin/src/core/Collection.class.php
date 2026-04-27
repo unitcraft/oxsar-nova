@@ -50,6 +50,14 @@ abstract class Collection implements Countable, IteratorAggregate
     }
 
     /**
+     * Алиас count() — legacy callers (User->size()).
+     */
+    public function size()
+    {
+        return $this->count();
+    }
+
+    /**
      * Реализация IteratorAggregate — для foreach ($collection as $k=>$v).
      */
     public function getIterator(): Iterator
