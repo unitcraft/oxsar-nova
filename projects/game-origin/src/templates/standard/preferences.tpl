@@ -27,7 +27,7 @@ setActiveStyleSheet('{@current_table_style}', 'table');
             <col width="50%"/>
             <col width="50%"/>
 </colgroup>
-	{if[ (!defined('SN') || defined('SN_EXT')) && Yii::app()->user->activation ]}
+	{if[ false ]}{*план 37.7.1: Yii::app()->user->activation убран — email-activation legacy не используется (auth через portal+JWT)*}
 		<tr>
 			<th colspan="2">&nbsp;</th>
 		</tr>

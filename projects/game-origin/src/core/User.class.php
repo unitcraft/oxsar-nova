@@ -385,6 +385,17 @@ class User extends Collection
 	*
 	* @return mixed	Value
 	*/
+	/**
+	 * План 37.7.1: XSS защита. User-controlled строковые поля
+	 * автоматически HTML-escaped при чтении. Список — username,
+	 * email, temp_email (явно ввод юзера). Остальные поля (числовые
+	 * IDs, settings из dropdown'ов) — без изменений.
+	 *
+	 * Если коду нужен raw username (например, для SQL — но там должно
+	 * быть sqlVal()) — использовать $this->getRaw($var).
+	 */
+	private static $userInputFields = ['username', 'email', 'temp_email'];
+
 	public function get($var)
 	{
 		if(is_null($var))
@@ -393,9 +404,19 @@ class User extends Collection
 		}
 		if($this->exists($var))
 		{
-			return $this->item[$var];
+			$value = $this->item[$var];
+			if(in_array($var, self::$userInputFields, true) && is_string($value))
+			{
+				return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+			}
+			return $value;
 		}
 		return false;
+	}
+
+	public function getRaw($var)
+	{
+		return $this->exists($var) ? $this->item[$var] : false;
 	}
 
 	/**
