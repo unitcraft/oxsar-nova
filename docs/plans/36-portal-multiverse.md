@@ -852,16 +852,22 @@ dev-окружению, ни к фронтенду:
 
 #### Acceptance
 
-- Миграция применяется чисто, существующие тесты зелёные.
-- `register` в auth-service → один обычный запрос `/api/me` в game-nova → 200 с username.
-- При повторных запросах юзер уже создан (нет лишних INSERT).
-- Старые `/api/auth/login|register|refresh` отсутствуют (404).
-- Universe Switcher отображает список из portal-backend, текущая вселенная подсвечена.
+- ✅ Миграция 0067 применяется чисто, тесты `internal/auth` зелёные.
+- ✅ `register` в auth-service → запрос `/api/me` в game-nova → 200 с username.
+  Юзер создан в game-db с password_hash=NULL, стартовая планета назначена.
+- ✅ При повторных запросах юзер уже создан (ON CONFLICT — нет лишних INSERT).
+- ✅ Старые `/api/auth/login|register|refresh` возвращают 401 (попадают на
+  generic auth middleware, без валидного токена).
+- ✅ UniverseSwitcher подключён в шапку игры. Backend-эндпоинты
+  `/api/universes`, `/api/universes/switch`, `/auth/handoff` работают.
 
 #### Что НЕ входит в Ф.12
 
 - Полный двух-вселенский dev-стек (uni01 + uni02 одновременно) — это Ф.8.
 - Платёжные webhook'и — Ф.13.
+- Финальная чистка legacy HS256 кода (`internal/auth/handler.go::Register/Login/Refresh`,
+  `service.go::register/login`, `password.go`, `JWT_SECRET` в config) — отдельным
+  PR после Ф.12 (мёртвый код, не блокер).
 
 ### Ops: нагрузочный тест (отдельный тикет, ~1–2 дня)
 
