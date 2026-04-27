@@ -136,6 +136,36 @@ backend готов отдать `confirmation_url` в ответе на созд
   платёжный шлюз с автоматическим чеком в Мой налог".
 - Коммит: `feat(billing): подключить ЮKassa с автоматическим чеком НПД`.
 
+### Ф.5. Не утекать имя провайдера в публичные URL
+
+**Принцип:** имя платёжного провайдера — это backend-деталь. Frontend
+оперирует только обобщённым `?payment=success` / `?payment=fail`,
+не знает про yookassa/robokassa/mock.
+
+**Что нельзя:**
+- redirect на `?yookassa_status=...` или `?robokassa_status=...` после
+  оплаты;
+- параметры с именем провайдера в `PAYMENT_RETURN_URL`;
+- упоминания `yookassa` в `confirmation_url` (мы не выбираем confirmation_url
+  у YooKassa — она его сама строит, эта часть unavoidable).
+
+**Что нужно:**
+- yookassa-mock-сервер при redirect передаёт `ReturnURL` **as-is**, без
+  добавочных query-params (как делает реальная YooKassa).
+- Если frontend хочет знать «оплата только что прошла» — он узнаёт это:
+  - либо через `?payment=success` (если реальная YooKassa добавит — нужно
+    сконфигурировать `PAYMENT_RETURN_URL=...?payment=success`);
+  - либо через polling баланса после возврата на /shop (TanStack Query
+    refetchInterval).
+- В UI после редиректа: invalidate `['billing','balance']` query, обновить
+  badge в шапке.
+
+**Реализовано (2026-04-27):**
+- yookassa-mock `handleCheckoutPay` / `handleCheckoutCancel` редиректят
+  на `ReturnURL` без `?yookassa_status=...`.
+- Frontend (план 38 Ф.7): App.tsx уже читает `?payment=success` и
+  показывает toast — этого достаточно. yookassa_status больше не приходит.
+
 ---
 
 ## Тестирование
