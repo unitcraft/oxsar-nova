@@ -1004,7 +1004,7 @@ function getUnitImage($name)
 		foreach(array("gif", "png") as $ext)
 		{
 			$image = "buildings/{$imagepackage}/{$name}.{$ext}";
-			if(file_exists(APP_ROOT_DIR."images/{$image}"))
+			if(file_exists(GAME_ORIGIN_DIR."public/images/{$image}"))
 			{
 				return $image;
 			}
@@ -1026,7 +1026,7 @@ function sortByOrder($a, $b)
 
 function getImgPacks()
 {
-	$buildings_dir = APP_ROOT_DIR."images/buildings/";
+	$buildings_dir = GAME_ORIGIN_DIR."public/images/buildings/";
 	if( !defined('SN') && is_dir($buildings_dir) )
 	{
 		$imgpacks = array();
@@ -1063,7 +1063,7 @@ function getImgPacks()
 
 function getBgImagePlaneStyles($name)
 {
-	$path = APP_ROOT_DIR . "images/bg/";
+	$path = GAME_ORIGIN_DIR . "public/images/bg/";
 
 	$styles = array();
 	$handle = opendir($path);
@@ -1087,7 +1087,7 @@ function getBgImagePlaneStyles($name)
 function getUserStyles($type)
 {
 	$css_dir_web = "us_$type/";
-	$css_dir_local = APP_ROOT_DIR . "css/$css_dir_web";
+	$css_dir_local = GAME_ORIGIN_DIR . "public/css/$css_dir_web";
 
 	$styles = array();
 	if (!is_dir($css_dir_local)) {

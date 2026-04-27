@@ -120,7 +120,7 @@ abstract class Construction extends Page
 	protected function updateUserImagePak($image_package)
 	{
 		$image_package = empty($image_package) || preg_match("#[^\w\d\-_]#is", $image_package) ? "std" : $image_package;
-		if(!is_dir(APP_ROOT_DIR."images/buildings/".$image_package))
+		if(!is_dir(GAME_ORIGIN_DIR."public/images/buildings/".$image_package))
 		{
 			$image_package = "std";
 		}

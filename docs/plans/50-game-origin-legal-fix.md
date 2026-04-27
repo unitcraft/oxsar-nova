@@ -221,6 +221,29 @@ artefactmarket2.tpl и другие.
 
 ## Этапы
 
+### Ф.0. Фикс ассет-путей после реструктуризации (план 43) ✅ (2026-04-27)
+
+Регрессия плана 43, обнаруженная при работе над планом 50: после
+выноса `images/` и `css/` из `src/` в `public/` PHP-код продолжал
+искать их через `APP_ROOT_DIR` (= `src/`). `file_exists()` всегда
+возвращал `false` → `getUnitImage()` фоллбэчился на
+`buildings/empty/empty.gif` для **всех** построек/юнитов/артефактов;
+`getUserStyles()` не находил user-style CSS (`us_bg/`, `us_table/`).
+Это и был «-4330 байт diff на каждой странице» из
+`docs/prompts/compare-screens.md`.
+
+**8 точечных замен** `APP_ROOT_DIR` → `GAME_ORIGIN_DIR."public/"`:
+- `Functions.inc.php`: `getUnitImage()`, `getImgPacks()`,
+  `getBgImagePlaneStyles()`, `getUserStyles()`.
+- `Construction.class.php`: валидация `image_package`.
+- `Preferences.class.php` (×2): список image-packs + fallback.
+- `Artefact.class.php`: `getFlagImage()`.
+
+**Verifications**: `php -l` чисто, `?go=Constructions` показывает
+18 уникальных иконок (вместо 1 placeholder), все 41 страниц
+compare-скрипта 200 OK, user-style CSS теперь идентично
+рендерится у нас и в legacy.
+
 ### Ф.1. Замена TinyMCE ✅ (2026-04-27)
 
 - Решить: TinyMCE 6+ / Quill / простой textarea.
