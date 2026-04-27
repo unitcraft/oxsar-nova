@@ -4,6 +4,10 @@ public/assets/
 docker/mysql_data/
 *.log
 
+# План 43 Ф.1: Composer vendor/ — генерируется composer install при сборке образа.
+# composer.lock коммитится (фиксация версий зависимостей для CI/прода).
+vendor/
+
 # Полный дамп legacy БД для dev — тяжёлый, не для коммита
 legacy_dump.sql
 *.dump.sql

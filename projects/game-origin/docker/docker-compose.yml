@@ -53,6 +53,11 @@ services:
       - ../public:/var/www/public:ro
       - ../config:/var/www/config:ro
       - ../src/cache:/var/www/src/cache:rw
+      # План 43 Ф.1: composer.json — read-only из корня game-origin;
+      # vendor/ — named volume (генерится `composer install` в build-time
+      # либо вручную через `docker compose exec php composer install`).
+      - ../composer.json:/var/www/composer.json:ro
+      - origin_vendor:/var/www/vendor
     depends_on:
       mysql:
         condition: service_healthy
@@ -96,6 +101,9 @@ services:
       - ../config:/var/www/config:ro
       - ../worker:/var/www/worker:ro
       - ../src/cache:/var/www/src/cache:rw
+      # План 43 Ф.1: composer.json + vendor (тот же named volume что у php).
+      - ../composer.json:/var/www/composer.json:ro
+      - origin_vendor:/var/www/vendor
     depends_on:
       mysql:
         condition: service_healthy
@@ -104,3 +112,7 @@ services:
 
 volumes:
   mysql_data:
+  # План 43 Ф.1: vendor/ — генерится composer install внутри контейнера.
+  # Не коммитится в git (см. .gitignore), не маунтится с хоста (Windows
+  # filesystem-perms vs Linux uid/gid issues).
+  origin_vendor:
