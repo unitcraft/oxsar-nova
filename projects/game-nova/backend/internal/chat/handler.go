@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"nhooyr.io/websocket"
@@ -15,6 +16,7 @@ import (
 
 	"oxsar/game-nova/internal/auth"
 	"oxsar/game-nova/internal/httpx"
+	"oxsar/game-nova/internal/moderation"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/pkg/ids"
 )
@@ -23,16 +25,65 @@ const (
 	maxBodyLen   = 500
 	historyLimit = 50
 	writeBuf     = 32
+
+	// План 46 Ф.4: rate-limit на отправку сообщений в чат.
+	// 10 msg/min на автора — режет очевидный flood, не мешает обычному
+	// общению. In-memory; на multi-instance каждый процесс считает
+	// своё окно (грубое решение, для запуска достаточно).
+	rateLimitWindow = time.Minute
+	rateLimitCount  = 10
 )
 
 // Handler — HTTP + WebSocket handler для чата.
 type Handler struct {
-	hub *Hub
-	db  repo.Exec
+	hub       *Hub
+	db        repo.Exec
+	blacklist *moderation.Blacklist // план 46 Ф.4: UGC-фильтр
+
+	rlMu     sync.Mutex
+	rlBucket map[string][]time.Time // author_id → таймштампы за window
 }
 
 func NewHandler(hub *Hub, db repo.Exec) *Handler {
-	return &Handler{hub: hub, db: db}
+	return &Handler{hub: hub, db: db, rlBucket: make(map[string][]time.Time)}
+}
+
+// WithBlacklist подключает UGC-blacklist для проверки сообщений (план 46 Ф.4).
+func (h *Handler) WithBlacklist(bl *moderation.Blacklist) *Handler {
+	h.blacklist = bl
+	return h
+}
+
+// allowSend возвращает true, если author может отправить ещё одно
+// сообщение в текущем окне rate-limit'а. Также чистит старые записи.
+func (h *Handler) allowSend(authorID string) bool {
+	now := time.Now()
+	cutoff := now.Add(-rateLimitWindow)
+	h.rlMu.Lock()
+	defer h.rlMu.Unlock()
+	bucket := h.rlBucket[authorID]
+	// Удаляем старше окна (предполагаем отсортированность по возрастанию).
+	i := 0
+	for i < len(bucket) && bucket[i].Before(cutoff) {
+		i++
+	}
+	bucket = bucket[i:]
+	if len(bucket) >= rateLimitCount {
+		h.rlBucket[authorID] = bucket
+		return false
+	}
+	h.rlBucket[authorID] = append(bucket, now)
+	return true
+}
+
+// containsForbidden — true, если сообщение содержит запрещённое слово
+// (или blacklist не подключён → false, пропускаем).
+func (h *Handler) containsForbidden(body string) bool {
+	if h.blacklist == nil {
+		return false
+	}
+	forbidden, _ := h.blacklist.IsForbidden(body)
+	return forbidden
 }
 
 // channelFor разрешает channel по параметру роута:
@@ -186,6 +237,16 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 		if body == "" || len([]rune(body)) > maxBodyLen {
 			continue
 		}
+		// План 46 Ф.4: модерация и rate-limit.
+		if h.containsForbidden(body) {
+			// Сообщение режется молча: уведомлять автора, что он сматерился,
+			// в WS-loop'е дороже чем продолжить (фильтр и так очевиден на
+			// REST-Send).
+			continue
+		}
+		if !h.allowSend(uid) {
+			continue
+		}
 
 		msgID := ids.New()
 		now := time.Now().UTC()
@@ -237,6 +298,15 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "body empty or too long"))
 		return
 	}
+	// План 46 Ф.4 (149-ФЗ): UGC-фильтр и rate-limit.
+	if h.containsForbidden(body) {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "сообщение содержит запрещённое слово"))
+		return
+	}
+	if !h.allowSend(uid) {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrRateLimit, "too many messages, slow down"))
+		return
+	}
 
 	var username string
 	_ = h.db.Pool().QueryRow(r.Context(), `SELECT username FROM users WHERE id=$1`, uid).Scan(&username)
@@ -286,6 +356,11 @@ func (h *Handler) EditMessage(w http.ResponseWriter, r *http.Request) {
 	body := strings.TrimSpace(req.Body)
 	if body == "" || len([]rune(body)) > maxBodyLen {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "body empty or too long"))
+		return
+	}
+	// План 46 Ф.4: edit тоже проверяем — иначе пользователь обойдёт фильтр.
+	if h.containsForbidden(body) {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "сообщение содержит запрещённое слово"))
 		return
 	}
 

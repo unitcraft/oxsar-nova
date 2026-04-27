@@ -3,6 +3,7 @@ import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { Confirm } from '@/ui/Confirm';
 import { useTranslation } from '@/i18n/i18n';
+import { ReportButton } from '@/components/ReportButton';
 
 interface ChatMessage {
   id: string;
@@ -229,8 +230,11 @@ export function ChatScreen() {
               }}
             >
               {!isOwn && (
-                <span style={{ fontSize: 13, color: 'var(--ox-accent)', marginBottom: 2, paddingLeft: 4 }}>
+                <span style={{ fontSize: 13, color: 'var(--ox-accent)', marginBottom: 2, paddingLeft: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   {m.author_name || '???'}
+                  {!m.id.startsWith('tmp-') && (
+                    <ReportButton targetType="chat_msg" targetId={m.id} compact />
+                  )}
                 </span>
               )}
 
