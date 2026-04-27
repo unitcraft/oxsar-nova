@@ -21,7 +21,9 @@ import (
 	"github.com/go-chi/cors"
 
 	"oxsar/billing/internal/auth"
+	"oxsar/billing/internal/billing"
 	"oxsar/billing/internal/httpx"
+	"oxsar/billing/internal/repo"
 	"oxsar/billing/internal/storage"
 	"oxsar/billing/pkg/metrics"
 )
@@ -60,13 +62,18 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("open redis: %w", err)
 	}
-	_ = rdb // redis используется wallet/idempotency сервисами (Ф.2)
+	_ = rdb // зарезервировано для будущего payment-кэша / rate-limiter
 
 	ver, err := auth.LoadVerifier(ctx, jwksURL)
 	if err != nil {
 		return fmt.Errorf("load jwks: %w", err)
 	}
-	_ = ver // используется auth-middleware (Ф.2)
+
+	db := repo.New(pool)
+	svc := billing.New(db)
+	h := billing.NewHandler(svc)
+	authMW := billing.AuthMiddleware(ver)
+	idemMW := billing.NewIdempotencyMiddleware(pool).Handler(billing.UserIDFromCtx)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -97,7 +104,21 @@ func run() error {
 	})
 	r.Handle("/metrics", metrics.Register())
 
-	// TODO Ф.2: /billing/wallet/{spend,credit,balance,history}
+	// Защищённые wallet-эндпоинты. AuthMiddleware кладёт user_id в context.
+	// IdempotencyMiddleware кэширует ответы по Idempotency-Key (Stripe-style).
+	r.Group(func(pr chi.Router) {
+		pr.Use(authMW)
+		pr.Get("/billing/wallet/balance", h.Balance)
+		pr.Get("/billing/wallet/history", h.History)
+	})
+	// Spend/Credit с idempotency. Idempotency-Key читается из header.
+	r.Group(func(pr chi.Router) {
+		pr.Use(authMW)
+		pr.Use(idemMW)
+		pr.Post("/billing/wallet/spend", h.Spend)
+		pr.Post("/billing/wallet/credit", h.Credit)
+	})
+
 	// TODO Ф.3: /billing/{packages,orders}
 	// TODO Ф.4: /billing/webhooks/{provider}
 
