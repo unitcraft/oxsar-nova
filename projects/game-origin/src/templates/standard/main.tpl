@@ -7,7 +7,14 @@
 		{/if}
 		{if[0]}<span style="float:left">{lang}PLANET{/lang} "{@planetNameLink}" ({user}username{/user})</span>{/if}
         {if[isAdmin()]}
-		<span style="float:right"><?php /* online stats: User_YII::showOnline() убран, заменим в plan-37 */ ?></span>
+		<span style="float:right">Сейчас играют: <span class="false"><?php
+			// План 37.5d.9: replaced User_YII::showOnline() (Yii AR + cache).
+			// na_user_online — pre-aggregated VIEW/таблица из cron-job.
+			$online = sqlSelectRow("user_online", "*", "", "");
+			echo fNumber($online ? $online['online_15'] : 0);
+		?></span> | За 24 часа: <span class="false"><?php
+			echo fNumber($online ? $online['core_1'] : 0);
+		?></span></span>
         {/if}
         </th>
 	</tr>
