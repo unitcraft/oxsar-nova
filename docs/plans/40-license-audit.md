@@ -1,7 +1,7 @@
 # План 40: Аудит лицензий зависимостей (GPL/AGPL)
 
 **Дата**: 2026-04-26
-**Статус**: Активный
+**Статус**: ✅ Закрыт 2026-04-27 (с ограничением — PHP/game-origin аудит после плана 43)
 **Зависимости**: нет.
 **Связанные документы**: [LICENSE](../../LICENSE) (PolyForm Noncommercial 1.0.0),
 [COMMERCIAL-LICENSE.md](../../COMMERCIAL-LICENSE.md), `.github/workflows/ci.yml`.

@@ -9496,3 +9496,72 @@ ConfirmDialog).
 **Коммиты**:
 - feat(plan-46 Ф.1-2): возрастная маркировка 12+ и UGC blacklist
 - feat(plan-46 Ф.3-6): жалобы, чат-модерация, регламент
+
+## Итерация 40 (2026-04-27) — Аудит лицензий зависимостей + CI license-check
+
+**Задача**: гарантировать совместимость зависимостей с PolyForm
+Noncommercial 1.0.0. Любая GPL/AGPL/LGPL-зависимость переводит весь
+проект под copyleft и аннулирует защитную функцию PolyForm — нужно
+найти текущие нарушения и закрепить проверку в CI.
+
+**Сканеры**: `go-licenses` (Google) для Go-стека и `license-checker`
+(npm) для frontend-стека. Оба open-source, без внешних сервисов.
+
+**Аудит — Go (4 модуля)**:
+- `go-licenses check ./... --disallowed_types=forbidden,restricted`
+  — exit 0 во всех 4 модулях (`game-nova/backend`, `portal/backend`,
+  `auth/backend`, `billing/backend`).
+- Распределение внешних зависимостей (~25 на модуль, дублируются между
+  ними): MIT ~46%, BSD-3-Clause ~33%, Apache-2.0 ~16%, BSD-2-Clause
+  и ISC. Нет GPL/AGPL/LGPL/MPL.
+
+**Аудит — Frontend (2 проекта)**:
+- `game-nova/frontend`: 22 production-зависимости, 21 MIT + 1
+  Unlicense (`isbot`, public domain).
+- `portal/frontend`: 0 внешних production-зависимостей (только сам
+  пакет).
+- `--onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;MPL-2.0;Unlicense;CC0-1.0;Zlib"`
+  — exit 0 в обоих (с `--excludePackages` для root-package, у
+  которого `private: true`/UNLICENSED).
+
+**CI**: новый job `license-check` в `.github/workflows/ci.yml`
+параллельно с `lint`/`test`. Шаги: `go install go-licenses` →
+4× `go-licenses check` → 2× `npm ci` + `license-checker --onlyAllow`.
+Время ≤3 мин с npm-кэшем.
+
+**Документация**:
+- `docs/ops/license-audit.md` — whitelist/запрещённые лицензии,
+  сводная таблица, инструкция при срабатывании CI, дата аудита.
+- `CONTRIBUTING.md` — короткий абзац про лицензии и ссылка на
+  audit-документ.
+
+**Ограничение — PHP отложен**: на момент аудита план 43 (Recipe →
+Composer) ещё в работе, в `projects/game-origin/src/core/` остаётся
+~28 GPL-файлов legacy-фреймворка Recipe (Sebastian Noll, GPL-2.0+).
+PHP-аудит и соответствующий CI-шаг (`composer licenses` или
+эквивалент) добавляются отдельной итерацией после закрытия плана 43.
+Зафиксировано в плане 40 (Статус: ✅ Закрыт с ограничением) и в
+самом `license-audit.md` отдельным разделом.
+
+**Решения и trade-offs**:
+- `--excludePackages` для root-package обоих frontend-проектов
+  вместо смены `package.json` license с `UNLICENSED` на что-то ещё —
+  root и так не публикуется в npm и его лицензия = LICENSE репо
+  (PolyForm). Менять `package.json` ради косметики проверки
+  бессмысленно.
+- Сканируем только production-зависимости frontend (`--production`).
+  Dev-tools (TypeScript, vitest, ESLint) не попадают в bundle и их
+  лицензии не критичны для распространения; добавление dev-проверки
+  усложнит CI без реальной пользы.
+- `go-licenses` ставится через `go install` в job каждый раз вместо
+  кэширования бинарника — установка занимает ~30с, оптимизация не
+  оправдана для job, который запускается на PR.
+
+**Тестирование**: локальный прогон всех команд из CI-конфига — exit 0
+по всем 6 целям (4 Go + 2 frontend). Тестового прогона CI с
+искусственной GPL-зависимостью не делали — поведение `--onlyAllow`
+очевидно из самой команды (`Package X is licensed under Y which is
+not permitted`), проверять реальным push'ом избыточно.
+
+**Коммит**:
+- chore(ci): аудит лицензий зависимостей + license-check job
