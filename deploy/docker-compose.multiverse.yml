@@ -157,8 +157,12 @@ services:
       AUTH_DB_URL:     ${AUTH_DB_URL}
       REDIS_URL:       redis://redis:6379/0
       RSA_KEY_PATH:    /run/secrets/auth_rsa_key.pem
-      JWT_ACCESS_TTL:  60m
-      JWT_REFRESH_TTL: 720h
+      # Production TTL (OWASP/industry standard):
+      # access короткий (15m) — revocation действует быстро, потеря токена
+      # ограничена окном; refresh 7d — баланс между UX и security.
+      # В dev (docker-compose.yml) — 60m / 30d для удобства разработки.
+      JWT_ACCESS_TTL:  15m
+      JWT_REFRESH_TTL: 168h
       LOG_LEVEL:       info
       ALLOWED_ORIGINS: "https://oxsar-nova.ru,https://uni01.oxsar-nova.ru,https://uni02.oxsar-nova.ru"
     volumes:

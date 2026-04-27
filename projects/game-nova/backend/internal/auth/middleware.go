@@ -21,40 +21,13 @@ const (
 	rsaClaimsKey ctxKey = 2
 )
 
-// Middleware проверяет Authorization: Bearer <access> и кладёт userID
-// в контекст. При отсутствии токена возвращает 401.
-// Для WebSocket-соединений (которые не могут слать custom headers) принимает
-// токен через query-param ?token=<access>.
-func Middleware(j *JWTIssuer) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token := ""
-			if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
-				token = strings.TrimPrefix(h, "Bearer ")
-			} else if q := r.URL.Query().Get("token"); q != "" {
-				token = q
-			}
-			if token == "" {
-				httpx.WriteError(w, r, httpx.ErrUnauthorized)
-				return
-			}
-			uid, err := j.Parse(token, "access")
-			if err != nil {
-				httpx.WriteError(w, r, httpx.ErrUnauthorized)
-				return
-			}
-			ctx := context.WithValue(r.Context(), userIDKey, uid)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
-}
-
-// RSAMiddleware — аналог Middleware, но верифицирует RSA-256 токены
-// выданные Auth Service. Используется когда AUTH_JWKS_URL задан.
+// RSAMiddleware верифицирует RSA-256 JWT, выпущенный Auth Service.
+// Принимает токен либо в Authorization: Bearer, либо в query ?token=
+// (для WebSocket-соединений, которые не могут слать custom headers).
 //
-// В context кладёт ОБА: userID (как Middleware) и полные claims —
-// чтобы EnsureUserMiddleware мог lazy-зеркалить юзера в game-db
-// (нужен username/email из claims). План 36 Ф.12.
+// В context кладёт ОБА: userID и полные claims — чтобы EnsureUserMiddleware
+// мог lazy-зеркалить юзера в game-db (нужен username/email из claims).
+// План 36 Ф.12.
 func RSAMiddleware(ver *jwtrs.Verifier) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

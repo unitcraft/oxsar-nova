@@ -38,11 +38,6 @@ type RedisConfig struct {
 }
 
 type AuthConfig struct {
-	// JWTSecret используется только для legacy HS256 (локальная разработка без auth-service).
-	// При AUTH_JWKS_URL != "" игровой сервер переключается на RSA-256 верификацию.
-	JWTSecret     string
-	AccessTTL     time.Duration
-	RefreshTTL    time.Duration
 	OAuthGoogleID string
 	OAuthGoogleSc string
 	// JWKSUrl — URL Auth Service: http://auth-service:9000/.well-known/jwks.json
@@ -115,9 +110,6 @@ func Load() (Config, error) {
 			URL: env("REDIS_URL", "redis://localhost:6379/0"),
 		},
 		Auth: AuthConfig{
-			JWTSecret:      env("JWT_SECRET", ""),
-			AccessTTL:      envDuration("JWT_ACCESS_TTL", 60*time.Minute),
-			RefreshTTL:     envDuration("JWT_REFRESH_TTL", 30*24*time.Hour),
 			OAuthGoogleID:  env("OAUTH_GOOGLE_CLIENT_ID", ""),
 			OAuthGoogleSc:  env("OAUTH_GOOGLE_CLIENT_SECRET", ""),
 			JWKSUrl:        env("AUTH_JWKS_URL", ""),
@@ -168,9 +160,10 @@ func Load() (Config, error) {
 	if cfg.DB.URL == "" {
 		return Config{}, fmt.Errorf("DB_URL is required")
 	}
-	// JWT_SECRET обязателен только в режиме без auth-service (AUTH_JWKS_URL не задан).
-	if cfg.Auth.JWTSecret == "" && cfg.Auth.JWKSUrl == "" {
-		return Config{}, fmt.Errorf("either JWT_SECRET or AUTH_JWKS_URL is required")
+	// План 36 Ф.12: единственный режим — RSA через JWKS (AUTH_JWKS_URL обязателен).
+	// HS256 fallback с JWT_SECRET удалён.
+	if cfg.Auth.JWKSUrl == "" {
+		return Config{}, fmt.Errorf("AUTH_JWKS_URL is required")
 	}
 	return cfg, nil
 }
