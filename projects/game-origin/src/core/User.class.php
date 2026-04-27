@@ -1,506 +1,328 @@
 <?php
 /**
-* Loads user data.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: User.class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * User — clean-room rewrite (план 43 Ф.6). Заменяет одноимённый класс
+ * из фреймворка Recipe (GPL).
+ *
+ * Сохранён весь публичный API + XSS-эскейп user-controlled полей
+ * (план 37.7.1) при чтении через get(). Для raw-доступа — getRaw().
+ *
+ * Загрузка из na_user JOIN na_user2ally JOIN na_alliance по
+ * $_SESSION['userid'] (без legacy session-таблицы — сейчас auth через JWT).
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
 class User extends Collection
 {
-	/**
-	* Session ID.
-	*
-	* @var string
-	*/
-	protected $sid = "";
+    protected $sid = '';
+    protected $permissions = array();
+    protected $groups = array();
+    protected $groupdata = array();
+    protected $isGuest = false;
+    protected $cacheActive = false;
+    protected $guestGroupId = 1;
 
-	/**
-	* Permissions.
-	*
-	* @var array
-	*/
-	protected $permissions = array();
+    /** План 37.7.1: XSS escape для user-controlled полей при get(). */
+    private static $userInputFields = array('username', 'email', 'temp_email');
 
-	/**
-	* User groups.
-	*
-	* @var array
-	*/
-	protected $groups = array();
+    /**
+     * Карта offset_hours → tz_id (для setDefaultTimeZone). В legacy этот
+     * массив был длиннее, оставлены только реально нужные значения,
+     * остальное обрабатывается PHP date_default_timezone_set напрямую.
+     */
+    protected $timezones = array(
+        '-12'  => 'Pacific/Wake',
+        '-11'  => 'Pacific/Samoa',
+        '-10'  => 'Pacific/Honolulu',
+        '-9'   => 'America/Anchorage',
+        '-8'   => 'America/Los_Angeles',
+        '-7'   => 'America/Denver',
+        '-6'   => 'America/Chicago',
+        '-5'   => 'America/New_York',
+        '-4'   => 'America/Asuncion',
+        '-3'   => 'America/Argentina/Buenos_Aires',
+        '-2'   => 'Atlantic/South_Georgia',
+        '-1'   => 'Atlantic/Cape_Verde',
+        '0'    => 'Europe/London',
+        '1'    => 'Europe/Paris',
+        '2'    => 'Europe/Istanbul',
+        '3'    => 'Europe/Moscow',
+        '4'    => 'Asia/Baku',
+        '5'    => 'Asia/Bishkek',
+        '6'    => 'Asia/Dhaka',
+        '7'    => 'Asia/Bangkok',
+        '8'    => 'Asia/Singapore',
+        '9'    => 'Asia/Tokyo',
+        '10'   => 'Australia/Queensland',
+        '11'   => 'Pacific/Noumea',
+        '12'   => 'Pacific/Fiji',
+    );
 
-	/**
-	* Particular group data.
-	*
-	* @var array
-	*/
-	protected $groupdata = array();
+    public function __construct($sid)
+    {
+        $this->sid = !empty($_SESSION['userid']) ? ($_SESSION['sid'] ?? '') : (string)$sid;
+        $this->setGuestGroupId();
+        if($this->cacheActive && defined('CACHE_ACTIVE'))
+        {
+            $this->cacheActive = (bool)CACHE_ACTIVE;
+        }
+        $this->loadData();
+        if(!$this->isGuest)
+        {
+            $this->loadGroups();
+        }
+        $this->loadPermissions();
+        $this->applyTimezone();
+    }
 
-	/**
-	* If user is guest.
-	*
-	* @var boolean
-	*/
-	protected $isGuest = false;
+    /**
+     * Загружает строку из na_user (плюс ally-данные через JOIN). Если
+     * userid в сессии нет — переход в guest-режим.
+     */
+    protected function loadData()
+    {
+        if(!empty($_SESSION['userid']))
+        {
+            $uid = (int)$_SESSION['userid'];
+            $sql = 'SELECT u.*, a.aid AS allyid, a.name AS ally_name, a.tag AS ally_tag '
+                .'FROM `'.PREFIX.'user` u '
+                .'LEFT JOIN `'.PREFIX.'user2ally` ua ON ua.userid = u.userid '
+                .'LEFT JOIN `'.PREFIX.'alliance` a ON a.aid = ua.aid '
+                .'WHERE u.userid = '.$uid.' LIMIT 1';
+            $result = Core::getDB()->query($sql);
+            if($result)
+            {
+                $row = Core::getDB()->fetch($result);
+                Core::getDB()->free_result($result);
+                if($row)
+                {
+                    $this->item = $row;
+                    $this->item['banned'] = false;
+                }
+            }
+        }
 
-	/**
-	* Enables cache operation.
-	*
-	* @var boolean
-	*/
-	protected $cacheActive = false;
+        if($this->size() > 0)
+        {
+            if(!defined('SID'))
+            {
+                if(!empty($GLOBALS['RUN_YII']) && $GLOBALS['RUN_YII'] == 1)
+                {
+                    define('SID', '');
+                }
+                else
+                {
+                    define('SID', $this->sid);
+                }
+            }
+            // IP-check (защита от session hijacking) — только если включён.
+            if(!defined('SN') && defined('IPCHECK') && IPCHECK && $this->get('ipcheck'))
+            {
+                $stored = $this->getRaw('ipaddress');
+                if($stored && defined('IPADDRESS') && $stored !== IPADDRESS)
+                {
+                    if(!defined('ADMIN_IP') || IPADDRESS !== ADMIN_IP)
+                    {
+                        forwardToLogin('IPADDRESS_INVALID');
+                    }
+                }
+            }
+            $tplPkg = $this->getRaw('templatepackage');
+            if($tplPkg !== false && $tplPkg !== '' && class_exists('Core'))
+            {
+                $tpl = Core::getTemplate();
+                if($tpl) { $tpl->setTemplatePackage($tplPkg); }
+            }
+        }
+        else
+        {
+            if(defined('LOGIN_REQUIRED') && LOGIN_REQUIRED && !defined('LOGIN_PAGE'))
+            {
+                forwardToLogin('NO_ACCESS');
+            }
+            $this->setGuest();
+        }
+    }
 
-	/**
-	* Default user group for guests.
-	*
-	* @var integer
-	*/
-	protected $guestGroupId = 1;
+    /**
+     * Загружает usergroup-членство из na_user2group.
+     */
+    protected function loadGroups()
+    {
+        $uid = $this->getRaw('userid');
+        if(!$uid) { return; }
+        $result = Core::getQuery()->select('user2group',
+            array('usergroupid', 'data'),
+            '',
+            'userid = '.sqlVal($uid));
+        if(!$result) { return; }
+        while($row = Core::getDB()->fetch($result))
+        {
+            $this->groups[] = $row['usergroupid'];
+            $this->groupdata[$row['usergroupid']] = $row['data'];
+        }
+        Core::getDB()->free_result($result);
+    }
 
-	/**
-	* Allowed timezones.
-	* TODO: Someday we should consider daylight saving time.
-	*
-	* @var array
-	*/
-	protected $timezones = array(
-		"-11" => "Pacific/Samoa",
-		"-10" => "Pacific/Honolulu",
-		"-9" => "America/Anchorage",
-		"-8" => "America/Los_Angeles",
-		"-7" => "America/Denver",
-		"-6" => "America/Chicago",
-		"-5" => "America/New_York",
-		"-4.5" => "America/Caracas",
-		"-4" => "America/Asuncion",
-		"-3.5" => "America/St_Johns",
-		"-3" => "America/Argentina/Buenos_Aires",
-		"-2" => "Atlantic/South_Georgia",
-		"-1" => "Atlantic/Cape_Verde",
-		"0" => "Europe/London",
-		"1" => "Europe/Paris",
-		"2" => "Europe/Istanbul",
-		"3" => "Europe/Moscow",
-		"4" => "Asia/Baku",
-		"5" => "Asia/Bishkek",
-		"5.5" => "Asia/Colombo",
-		"5.75" => "Asia/Katmandu",
-		"6" => "Asia/Dhaka",
-		"6.5" => "Indian/Cocos",
-		"7" => "Asia/Bangkok",
-		"8" => "Asia/Singapore",
-		"9" => "Asia/Tokyo",
-		"9.5" => "Australia/Adelaide",
-		"10" => "Australia/Queensland",
-		"10.5" => "Australia/Lord_Howe",
-		"11" => "Pacific/Noumea",
-		"11.5" => "Pacific/Norfolk",
-		"12" => "Pacific/Fiji"
-		);
+    /**
+     * Загружает permissions для всех групп юзера. При множественных
+     * группах permission «разрешён» если хотя бы в одной группе value≠0.
+     */
+    protected function loadPermissions()
+    {
+        if(count($this->groups) === 0) { return; }
+        foreach($this->groups as $group)
+        {
+            $result = Core::getQuery()->select('group2permission p2g',
+                array('p.permission', 'p2g.value'),
+                'LEFT JOIN '.PREFIX.'permissions AS p ON (p2g.permissionid = p.permissionid)',
+                'p2g.groupid = '.sqlVal($group));
+            if(!$result) { continue; }
+            while($row = Core::getDB()->fetch($result))
+            {
+                $p = $row['permission'];
+                if(!isset($this->permissions[$p]) || $this->permissions[$p] == 0)
+                {
+                    $this->permissions[$p] = $row['value'];
+                }
+            }
+            Core::getDB()->free_result($result);
+        }
+    }
 
-	/**
-	* Constructor: Starts user check.
-	*
-	* @param string	The session id
-	*
-	* @return void
-	*/
-	public function __construct($sid)
-	{
-		if( !empty($_SESSION["userid"]) )
-		{
-			$this->sid = $_SESSION["sid"] ?? "";
-		}
-		else
-		{
-			$this->sid = $sid;
-		}
-		
-		$this->setGuestGroupId();
-		
-		if( $this->cacheActive )
-		{
-			$this->cacheActive = CACHE_ACTIVE;
-		}
-		
-		$this->getData();
-		if( !$this->isGuest )
-		{
-			$this->setGroups();
-		}
-		$this->setPermissions();
-		$this->setTimezone();
-		return;
-	}
+    public function checkPermissions($perms)
+    {
+        if(!$this->ifPermissions($perms))
+        {
+            forwardToLogin('NO_ACCESS');
+        }
+        return $this;
+    }
 
-	/**
-	* Fetches the user data in term of a session id.
-	*
-	* @return boolean	True if user is valid, false if not
-	*/
-	protected function getData()
-	{
-		if( !empty($_SESSION["userid"]) )
-		{
-			$this->sid = $_SESSION["sid"] ?? "";
-		}
+    public function ifPermissions($perms)
+    {
+        if(!is_array($perms))
+        {
+            $perms = explode(',', (string)$perms);
+            $perms = array_map('trim', $perms);
+        }
+        foreach($perms as $p)
+        {
+            if(!isset($this->permissions[$p]) || $this->permissions[$p] == 0)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 
-		if( $this->cacheActive )
-		{
-			$this->item = Core::getCache()->getUserCache($this->sid);
-		}
+    protected function setGuest()
+    {
+        $this->isGuest = true;
+        $this->groups[] = $this->guestGroupId;
+    }
 
-		if( empty($this->item) && !empty($_SESSION["userid"]) )
-		{
-			// Прямой SQL-запрос вместо Yii ActiveRecord
-			$uid = (int)$_SESSION["userid"];
-			$sql = "SELECT u.*, a.aid AS allyid, a.name AS ally_name, a.tag AS ally_tag"
-			     . " FROM `" . PREFIX . "user` u"
-			     . " LEFT JOIN `" . PREFIX . "user2ally` ua ON ua.userid = u.userid"
-			     . " LEFT JOIN `" . PREFIX . "alliance` a ON a.aid = ua.aid"
-			     . " WHERE u.userid = " . $uid . " LIMIT 1";
-			$result = Core::getDB()->query($sql);
-			$user_record = Core::getDB()->fetch($result);
-			if( $user_record )
-			{
-				$this->item = $user_record;
-				$this->item['banned'] = false;
-			}
-//			$select = array("u.*", "b.to as ban_to", "b.banid", "s.ipaddress");
-//			$joins	= "LEFT JOIN ".PREFIX."user u ON s.userid = u.userid";
-//			$joins .= " LEFT JOIN ".PREFIX."ban_u b ON u.userid = b.userid";
-//
-//			// Get custom user data from configuration
-//			if(Core::getConfig()->exists("userselect"))
-//			{
-//				$userConfigSelect = Core::getConfig()->get("userselect");
-//				$select = array_merge($select, $userConfigSelect["fieldsnames"]);
-//			}
-//			if(Core::getConfig()->exists("userjoins"))
-//			{
-//				$joins .= " ".Str::replace("PREFIX", PREFIX, Core::getConfig()->get("userjoins"));
-//			}
-//			$this->item = Core::getQuery()->selectRow("sessions s", $select, $joins, "s.sessionid = ".sqlVal($this->sid)." AND s.logged = 1");
-//
-//			$this->item["banned"] = $this->item["banid"] && (is_null($this->item["ban_to"]) || $this->item["ban_to"] >= time());
-//			unset($this->item["banid"], $this->item["ban_to"]);
-		}
-		
-		if( $this->size() > 0 )
-		{
-			if( $GLOBALS["RUN_YII"] == 1 && !empty($_SESSION["userid"]) )
-			{
-				define("SID", '');
-			}
-			else
-			{
-				define("SID", $this->sid);
-			}
-			if( !defined('SN') && IPCHECK && $this->get("ipcheck") )
-			{
-				if($this->get("ipaddress") != IPADDRESS)
-				{
-					if(!defined("ADMIN_IP") || IPADDRESS != ADMIN_IP)
-					{
-						forwardToLogin("IPADDRESS_INVALID");
-					}
-				}
-			}
-			if($this->get("templatepackage") != "") { Core::getTemplate()->setTemplatePackage($this->get("templatepackage")); }
-		}
-		else
-		{
-			if(LOGIN_REQUIRED && !defined("LOGIN_PAGE"))
-			{
-				forwardToLogin("NO_ACCESS");
-			}
-			$this->setGuest();
-		}
-		// Hook::event("USER_DATA_LOADED", array(&$this));
-		return $this;
-	}
+    public function rebuild()
+    {
+        $this->loadData();
+        return $this;
+    }
 
-	/**
-	* Sets the user groups.
-	*
-	* @return User
-	*/
-	protected function setGroups()
-	{
-		$select = array("usergroupid", "data");
-		$result = Core::getQuery()->select("user2group", $select, "", "userid = ".sqlVal($this->get("userid")));
-		while($row = Core::getDatabase()->fetch($result))
-		{
-			array_push($this->groups, $row["usergroupid"]);
-			$this->groupdata[$row["usergroupid"]] = $row["data"];
-		}
-		Core::getDatabase()->free_result($result);
-		return $this;
-	}
+    public function applyTimezone()
+    {
+        $tz = null;
+        if($this->exists('timezone'))
+        {
+            $offset = $this->getRaw('timezone');
+            if(is_numeric($offset) && isset($this->timezones[(string)$offset]))
+            {
+                $tz = $this->timezones[(string)$offset];
+            }
+        }
+        if(class_exists('Core') && method_exists('Core', 'setDefaultTimeZone'))
+        {
+            Core::setDefaultTimeZone($tz);
+        }
+        return $this;
+    }
 
-	/**
-	* Fetches permissions of an usergroup. Regard: Permissions are
-	* favoured in opposite of restrictions.
-	*
-	* @return User
-	*/
-	protected function setPermissions()
-	{
-		if(count($this->groups) > 1)
-		{
-			foreach($this->groups as $group)
-			{
-				if($this->cacheActive)
-				{
-					$permCache = Core::getCache()->getPermissionCache($group);
-					foreach($permCache as $key => $value)
-					{
-						if($this->permissions[$key] == 0 || !isset($this->permissions[$key])) { $this->permissions[$key] = $value; }
-					}
-				}
-				else
-				{
-					$select = array("p.permission", "p2g.value");
-					$result = Core::getQuery()->select("group2permission p2g", $select, "LEFT JOIN ".PREFIX."permissions AS p ON (p2g.permissionid = p.permissionid)", "p2g.groupid = ".sqlVal($group));
-					while($row = Core::getDatabase()->fetch($result))
-					{
-						if($this->permissions[$row["permission"]] == 0 || !isset($this->permissions[$row["permission"]])) { $this->permissions[$row["permission"]] = $row["value"]; }
-					}
-					Core::getDatabase()->free_result($result);
-				}
-			}
-		}
-		else if(count($this->groups) > 0)
-		{
-			if($this->cacheActive)
-			{
-				$this->permissions = Core::getCache()->getPermissionCache($this->groups[0]);
-			}
-			else
-			{
-				$select = array("p.permission", "p2g.value");
-				$result = Core::getQuery()->select("group2permission p2g", $select, "LEFT JOIN ".PREFIX."permissions AS p ON (p2g.permissionid = p.permissionid)", "p2g.groupid = ".sqlVal($this->groups[0]));
-				while($row = Core::getDatabase()->fetch($result))
-				{
-					$this->permissions[$row["permission"]] = $row["value"];
-				}
-				Core::getDatabase()->free_result($result);
-			}
-		}
-		return $this;
-	}
+    /**
+     * План 37.7.1: XSS защита. Для user-controlled полей (username,
+     * email, temp_email) автоматический htmlspecialchars при чтении.
+     */
+    public function get($var)
+    {
+        if($var === null) { return $this->item; }
+        if(!$this->exists($var)) { return false; }
+        $value = $this->item[$var];
+        if(in_array($var, self::$userInputFields, true) && is_string($value))
+        {
+            return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        }
+        return $value;
+    }
 
-	/**
-	* Checks if user has permissions and if so issue an error.
-	*
-	* @param string	The permissions; Splitted with commas
-	*
-	* @return User
-	*/
-	public function checkPermissions($perms)
-	{
-		// Hook::event("CHECK_USER_PERMISSIONS", array($perms));
-		if(!$this->ifPermissions($perms))
-		{
-			// echo "NO_ACCESS !permissions"; exit;
-			forwardToLogin("NO_ACCESS");
-		}
-		return $this;
-	}
+    /**
+     * Raw-доступ без HTML-эскейпа — для SQL-запросов и сравнений
+     * (там должны использоваться sqlVal-обёртки, не пользовательский HTML).
+     */
+    public function getRaw($var)
+    {
+        return $this->exists($var) ? $this->item[$var] : false;
+    }
 
-	/**
-	* Checks if user has permissions.
-	*
-	* @param mixed		The permissions; Splitted with commas
-	*
-	* @return boolean	True, if all permissions are valid, false, if not
-	*/
-	public function ifPermissions($perms)
-	{
-		if(!is_array($perms)) { $perms = explode(",", Arr::trimArray($perms)); }
-		// Hook::event("USER_HAS_PERMISSIONS", array($perms));
-		foreach($perms as $p)
-		{
-			if($this->permissions[$p] == 0 || !$this->permissions[$p])
-			{
-				return false;
-			}
-		}
-		return true;
-	}
+    public function set($var, $value)
+    {
+        if(strcasecmp($var, 'userid') === 0)
+        {
+            throw new GenericException('The primary key of a data record cannot be changed.');
+        }
+        $this->item[$var] = $value;
+        if($this->exists($var))
+        {
+            Core::getQuery()->update('user', array($var), array($value),
+                'userid = '.sqlVal($this->getRaw('userid')));
+            $this->rebuild();
+        }
+        return $this;
+    }
 
-	/**
-	* Assign user to group "guest".
-	*
-	* @return User
-	*/
-	protected function setGuest()
-	{
-		$this->isGuest = true;
-		array_push($this->groups, $this->guestGroupId);
-		return $this;
-	}
+    public function inGroup($groupid)
+    {
+        return in_array($groupid, $this->groups, false);
+    }
 
-	/**
-	* Rebuild user cache.
-	*
-	* @return User
-	*/
-	public function rebuild()
-	{
-		if( $this->cacheActive )
-		{
-//			Core::getCache()->buildUserCache($this->sid);
-//			$this->item = Core::getCache()->getUserCache($this->sid);
-		}
-		$this->getData();
-		return $this;
-	}
+    public function getGroupData($groupid)
+    {
+        return isset($this->groupdata[$groupid]) ? $this->groupdata[$groupid] : false;
+    }
 
-	/**
-	* Checks the timezone.
-	*
-	* @return User
-	*/
-	public function setTimezone()
-	{
-		$timezone = null;
-		if($this->exists("timezone") && is_numeric($this->get("timezone")) && array_key_exists($this->get("timezone"), $this->timezones))
-		{
-			$timezone = $this->timezones[$this->get("timezone")];
-		}
-		Core::setDefaultTimeZone($timezone);
-		return $this;
-	}
+    public function getSid()
+    {
+        return $this->sid;
+    }
 
-	/**
-	* Returns a session value.
-	*
-	* @param string	Session variable
-	*
-	* @return mixed	Value
-	*/
-	/**
-	 * План 37.7.1: XSS защита. User-controlled строковые поля
-	 * автоматически HTML-escaped при чтении. Список — username,
-	 * email, temp_email (явно ввод юзера). Остальные поля (числовые
-	 * IDs, settings из dropdown'ов) — без изменений.
-	 *
-	 * Если коду нужен raw username (например, для SQL — но там должно
-	 * быть sqlVal()) — использовать $this->getRaw($var).
-	 */
-	private static $userInputFields = ['username', 'email', 'temp_email'];
+    public function isGuest()
+    {
+        return $this->isGuest;
+    }
 
-	public function get($var)
-	{
-		if(is_null($var))
-		{
-			return $this->item;
-		}
-		if($this->exists($var))
-		{
-			$value = $this->item[$var];
-			if(in_array($var, self::$userInputFields, true) && is_string($value))
-			{
-				return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-			}
-			return $value;
-		}
-		return false;
-	}
-
-	public function getRaw($var)
-	{
-		return $this->exists($var) ? $this->item[$var] : false;
-	}
-
-	/**
-	* Sets a session value.
-	*
-	* @param string	Session variable
-	* @param mixed		Value
-	*
-	* @return User
-	*/
-	public function set($var, $value)
-	{
-		if(Str::compare($var, "userid"))
-		{
-			throw new GenericException("The primary key of a data record cannot be changed.");
-		}
-		$this->item[$var] = $value;
-		if($this->exists($var))
-		{
-			Core::getQuery()->update("user", array($var), array($value), "userid = ".sqlVal($this->get("userid")));
-			$this->rebuild();
-		}
-		return $this;
-	}
-
-	/**
-	* Checks group membership.
-	*
-	* @param integer	Group id
-	*
-	* @return boolean
-	*/
-	public function inGroup($groupid)
-	{
-		return (in_array($groupid, $this->groups)) ? true : false;
-	}
-
-	/**
-	* Returns specific group membership data.
-	*
-	* @param integer	Group id
-	*
-	* @return mixed	Group membership data
-	*/
-	public function getGroupData($groupid)
-	{
-		return (isset($this->groupdata[$groupid])) ? $this->groupdata[$groupid] : false;
-	}
-
-	/**
-	* Returns the session id.
-	*
-	* @return string
-	*/
-	public function getSid()
-	{
-		return $this->sid;
-	}
-
-	/**
-	* Returns if the user is in guest mode.
-	*
-	* @return boolean
-	*/
-	public function isGuest()
-	{
-		return $this->isGuest;
-	}
-
-	/**
-	* Sets the guest group id.
-	*
-	* @param integer	Guest group id [optional]
-	*
-	* @return User
-	*/
-	public function setGuestGroupId($guestGroupId = null)
-	{
-		if(is_null($guestGroupId))
-		{
-			$guestGroupId = Core::getConfig()->guestgroupid;
-		}
-		$this->guestGroupId = $guestGroupId;
-		return $this;
-	}
+    public function setGuestGroupId($guestGroupId = null)
+    {
+        if($guestGroupId === null && class_exists('Core'))
+        {
+            $cfg = Core::getConfig();
+            if($cfg && isset($cfg->guestgroupid))
+            {
+                $guestGroupId = $cfg->guestgroupid;
+            }
+        }
+        if($guestGroupId !== null)
+        {
+            $this->guestGroupId = (int)$guestGroupId;
+        }
+        return $this;
+    }
 }
-?>

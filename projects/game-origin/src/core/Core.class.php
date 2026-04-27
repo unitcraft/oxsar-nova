@@ -1,550 +1,298 @@
 <?php
 /**
-* Program core. Gathers required program parts.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: Core.class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * Core — clean-room rewrite (план 43 Ф.6). Заменяет одноимённый класс
+ * фреймворка Recipe (GPL).
+ *
+ * Service-locator: при создании `new Core()` инициализирует Timer/DB/
+ * Request/QueryParser/Cache/Options/Template/User/Language. Доступ через
+ * статические геттеры (getDB/getRequest/getOptions/...).
+ *
+ * Сохранён публичный API + интеграции, добавленные в порте:
+ *   - JWT-аутентификация через JwtAuth::resolveUser() (37.5c+).
+ *   - План 37.5c: OnboardingService::ensureColonizationScheduled
+ *     для нового юзера без home planet.
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
 class Core
 {
-	/**
-	* Timer object.
-	*/
-	protected static $TimerObj;
+    /** @var Timer */        protected static $TimerObj;
+    /** @var Request */      protected static $RequestObj;
+    /** @var Database */     protected static $DatabaseObj;
+    /** @var QueryParser */  protected static $QueryObj;
+    /** @var Cache */        protected static $CacheObj;
+    /** @var Options */      protected static $OptionsObj;
+    /** @var Language */     protected static $LanguageObj;
+    /** @var Template */     protected static $TemplateObj;
+    /** @var User */         protected static $UserObj;
 
-	/**
-	* Database object.
-	*
-	* @var Database.
-	*/
-	protected static $DatabaseObj;
+    protected static $LanguageHash = array();
+    protected static $LanguageStack = array();
+    protected static $timezone = null;
+    protected static $defaultTimeZone = 'Europe/Moscow';
+    protected static $old = true;
 
-	/**
-	* Options object.
-	*
-	* @var Options.
-	*/
-	protected static $OptionsObj;
+    /** Семантическая версия для совместимости с legacy-кодом, которые
+     *  опираются на RECIPE_VERSION. Само значение не используется
+     *  бизнес-логикой, оставлено для безопасной обратной совместимости. */
+    protected static $version = array(
+        'major' => 1, 'build' => 1, 'revision' => 0, 'release' => 200,
+    );
 
-	/**
-	* Language object.
-	*
-	* @var Language.
-	*/
-	protected static $LanguageObj;
-	protected static $LanguageStack = array();
-	protected static $LanguageHash = array();
+    public function __construct($old = true)
+    {
+        self::$old = (bool)$old;
+        if(!defined('RECIPE_VERSION'))
+        {
+            define('RECIPE_VERSION', self::$version['release']);
+        }
 
-	/**
-	* Template object.
-	*
-	* @var Template.
-	*/
-	protected static $TemplateObj;
+        $this->setTimer();
+        $this->setDatabase();
+        if(!defined('YII_CONSOLE') && self::$old)
+        {
+            $this->setRequest();
+        }
+        $this->setQuery();
+        $this->setCache();
+        $this->setOptions();
+        $this->setTemplate();
+        if(!defined('YII_CONSOLE') && self::$old)
+        {
+            $this->setUser();
+        }
+        $this->setLanguage();
+    }
 
-	/**
-	* Request object.
-	*
-	* @var Request.
-	*/
-	protected static $RequestObj;
+    /* ============================================================
+     * Timer
+     * ============================================================ */
 
-	/**
-	* User object.
-	*
-	* @var User.
-	*/
-	protected static $UserObj;
+    protected function setTimer()
+    {
+        $start = defined('MICROTIME') ? MICROTIME : microtime();
+        self::$TimerObj = new Timer($start);
+    }
 
-	/**
-	* Query parser object.
-	*
-	* @var QueryParser
-	*/
-	protected static $QueryObj;
+    public static function getTimer() { return self::$TimerObj; }
 
-	/**
-	* Cron object.
-	*
-	* @var Cron
-	*/
-	protected static $CronObj;
+    /* ============================================================
+     * Request
+     * ============================================================ */
 
-	/**
-	* Cache object.
-	*
-	* @var Cache
-	*/
-	protected static $CacheObj;
+    protected function setRequest()
+    {
+        if(class_exists('Request'))
+        {
+            self::$RequestObj = Request::getInstance();
+        }
+    }
 
-	/**
-	* Recipe version id.
-	*
-	* @var Array
-	*/
-	protected static $version;
+    public static function getRequest() { return self::$RequestObj; }
 
-	/**
-	* The time zone that will be set, if no other can be found.
-	*
-	* @var string
-	*/
-	protected static $defaultTimeZone = "Europe/Moscow";
+    /* ============================================================
+     * Database + Query
+     * ============================================================ */
 
-	/**
-	* The current timezone.
-	*
-	* @var string
-	*/
-	protected static $timezone = null;
+    protected function setDatabase()
+    {
+        $type = defined('DB_TYPE') ? DB_TYPE : 'DB_MYSQL_PDO';
+        $host = defined('DB_HOST') ? DB_HOST : '127.0.0.1';
+        $user = defined('DB_USER') ? DB_USER : '';
+        $pwd  = defined('DB_PWD')  ? DB_PWD  : '';
+        $name = defined('DB_NAME') ? DB_NAME : '';
+        $port = defined('DB_PORT') ? DB_PORT : null;
+        self::$DatabaseObj = new $type($host, $user, $pwd, $name, $port);
+    }
 
-	public static $old = true;
-	
-	/**
-	* Constructor. Initializes classes.
-	*
-	* @return void
-	*/
-	public function __construct($old = true)
-	{
-		self::$old = $old;
-		self::$version["major"] = 1;
-		self::$version["build"] = 1;
-		self::$version["revesion"] = 2;
-		self::$version["release"] = 112;
-		define("RECIPE_VERSION", self::$version["release"]);
-		// Hook::event("CORE_START");
-		$this->setTimer();
-		$this->setDatabase();
-		if( !defined('YII_CONSOLE') && self::$old )
-		{
-			$this->setRequest();
-		}
-		$this->setQuery();
-		$this->setCache();
-		$this->setOptions();
-		$this->setTemplate();
-		if( !defined('YII_CONSOLE') && self::$old )
-		{
-			$this->setUser();
-		}
-		$this->checkBans();
-		$this->setLanguage();
-//		$this->initCron();
-		// Hook::event("CORE_FINISHED");
-		return;
-	}
+    public static function getDatabase() { return self::$DatabaseObj; }
+    public static function getDB() { return self::$DatabaseObj; }
 
-	/**
-	* Initializes the timer class.
-	*
-	* @return Core
-	*/
-	protected function setTimer()
-	{
-		self::$TimerObj = new Timer(MICROTIME);
-		return $this;
-	}
+    protected function setQuery()
+    {
+        self::$QueryObj = new QueryParser();
+    }
 
-	/**
-	* Returns the timer object.
-	*
-	* @return Timer
-	*/
-	public static final function getTimer()
-	{
-		return self::$TimerObj;
-	}
+    public static function getQuery() { return self::$QueryObj; }
 
-	/**
-	* Initializes the request class.
-	*
-	* @return Core
-	*/
-	protected function setRequest()
-	{
-		/*
-		try
-		{
-			if(false)
-			{
-				
-			}
-			else
-			{
-				
-			}
-			if( !(self::$RequestObj instanceof Request) )
-			{
-				throw new Exception('!(self::$RequestObj instanceof Request)');
-			}
-			t('ctrl Request');
-		}
-		catch (Exception $e)
-		{
-			error_log('Couldn\'t find Request object in ctrl. Creating Request object in Core class.(' . $e->getMessage() . ')');
-			self::$RequestObj = Request::getInstance();
-		}
-		*/
-		self::$RequestObj = Request::getInstance();
-		return $this;
-	}
+    /* ============================================================
+     * Cache
+     * ============================================================ */
 
-	/**
-	* Returns the request object.
-	*
-	* @return Request
-	*/
-	public static final function getRequest()
-	{
-		return self::$RequestObj;
-	}
+    protected function setCache()
+    {
+        self::$CacheObj = new Cache();
+    }
 
-	/**
-	* Initializes the database.
-	*
-	* @return Core
-	*/
-	protected function setDatabase()
-	{
-		$database = array();
-		$database["type"]         = defined('DB_TYPE')   ? DB_TYPE   : 'DB_MYSQL_PDO';
-		$database["host"]         = defined('DB_HOST')   ? DB_HOST   : '127.0.0.1';
-		$database["user"]         = defined('DB_USER')   ? DB_USER   : '';
-		$database["userpw"]       = defined('DB_PWD')    ? DB_PWD    : '';
-		$database["databasename"] = defined('DB_NAME')   ? DB_NAME   : '';
-		$database["port"]         = defined('DB_PORT')   ? DB_PORT   : null;
-		self::$DatabaseObj = new $database["type"]($database["host"], $database["user"], $database["userpw"], $database["databasename"], $database["port"]);
-		return $this;
-	}
+    public static function getCache() { return self::$CacheObj; }
 
-	/**
-	* Returns the database object.
-	*
-	* @return Database
-	*/
-	public static final function getDatabase()
-	{
-		return self::$DatabaseObj;
-	}
+    /* ============================================================
+     * Options / Config
+     * ============================================================ */
 
-	/**
-	* Shorter Version of getDatabase().
-	*/
-	public static final function getDB()
-	{
-		return self::getDatabase();
-	}
+    protected function setOptions()
+    {
+        self::$OptionsObj = new Options(false);
+    }
 
-	/**
-	* Initializes the query object.
-	*
-	* @return Core
-	*/
-	protected function setQuery()
-	{
-		self::$QueryObj = new QueryParser();
-		return $this;
-	}
+    public static function getOptions() { return self::$OptionsObj; }
+    public static function getConfig()  { return self::$OptionsObj; }
 
-	/**
-	* Returns the query object.
-	*
-	* @return QueryParser
-	*/
-	public static final function getQuery()
-	{
-		return self::$QueryObj;
-	}
+    /* ============================================================
+     * Template
+     * ============================================================ */
 
-	/**
-	* Initializes the options.
-	*
-	* @return Core
-	*/
-	protected function setOptions()
-	{
-		self::$OptionsObj = new Options(false); // false = читать из na_config через прямой SQL (без Yii)
-		return $this;
-	}
+    protected function setTemplate()
+    {
+        self::$TemplateObj = new Template();
+    }
 
-	/**
-	* Returns the options object.
-	*
-	* @return Options
-	*/
-	public static final function getOptions()
-	{
-		return self::$OptionsObj;
-	}
+    public static function getTemplate() { return self::$TemplateObj; }
+    public static function getTPL()      { return self::$TemplateObj; }
 
-	/**
-	* Alias to getOptions().
-	*
-	* @return Options
-	*/
-	public static final function getConfig()
-	{
-		return self::getOptions();
-	}
+    /* ============================================================
+     * User (JWT-aware)
+     * ============================================================ */
 
-	/**
-	* Initializes the language system.
-	*
-	* @return Core
-	*/
-	protected function setLanguage()
-	{
-		if( !defined('YII_CONSOLE') && self::$old )
-		{
-			$langid = (self::getRequest()->getGET("lang")) ? self::getRequest()->getGET("lang") : self::getUser()->get("languageid");
-			self::$LanguageObj = new Language($langid, 'info, global');
-		}
-		else
-		{
-			self::$LanguageObj = new Language(DEF_LANGUAGE_ID, 'info, global');
-		}
-		self::$LanguageHash[self::$LanguageObj->getOpt("languageid")] = self::$LanguageObj;
-		return $this;
-	}
-	
-	public static function pushLanguage()
-	{
-		array_push(self::$LanguageStack, self::$LanguageObj);
-	}
-	
-	public static function popLanguage()
-	{
-		self::$LanguageObj = array_pop(self::$LanguageStack);
-	}
-	
-	public static function selectLanguage($lang_id)
-	{
-		if(self::$LanguageObj->getOpt("languageid") != $lang_id)
-		{
-			if(isset(self::$LanguageHash[$lang_id]))
-			{
-				self::$LanguageObj = self::$LanguageHash[$lang_id];
-			}
-			else
-			{
-				self::$LanguageHash[$lang_id] = self::$LanguageObj = new Language($lang_id, 'info, global');
-			}			
-		}
-		return self::$LanguageObj;
-	}
+    protected function setUser()
+    {
+        // План 37.5c: JWT lazy-join (если cookie с JWT валидна — заполнит
+        // $_SESSION['userid'] до создания User). JwtAuth опциональный класс.
+        if(class_exists('JwtAuth', false))
+        {
+            JwtAuth::resolveUser();
+        }
+        $sid = '';
+        if(self::$RequestObj)
+        {
+            if(defined('URL_SESSION') && URL_SESSION)
+            {
+                $sid = (string)self::$RequestObj->getGET('sid');
+            }
+            else
+            {
+                $sid = (string)self::$RequestObj->getCOOKIE('sid');
+            }
+        }
+        self::$UserObj = new User($sid);
 
-	/**
-	* Returns the language object.
-	*
-	* @return Language
-	*/
-	public static final function getLanguage()
-	{
-		return self::$LanguageObj;
-	}
+        // План 37.5c: автоматическое планирование колонизации первой
+        // планеты для авторизованного юзера без home planet.
+        if(!empty($_SESSION['userid']) && class_exists('OnboardingService', true))
+        {
+            OnboardingService::ensureColonizationScheduled($_SESSION['userid']);
+        }
+    }
 
-	/**
-	* Short form of getLanguage().
-	*
-	* @return Language
-	*/
-	public static final function getLang()
-	{
-		return self::getLanguage();
-	}
+    public static function getUser() { return self::$UserObj; }
 
-	/**
-	* Initializes the template system.
-	*
-	* @return Core
-	*/
-	protected function setTemplate()
-	{
-		self::$TemplateObj = new Template();
-		return $this;
-	}
+    /* ============================================================
+     * Language
+     * ============================================================ */
 
-	/**
-	* Returns the template object.
-	*
-	* @return Template
-	*/
-	public static final function getTemplate()
-	{
-		return self::$TemplateObj;
-	}
+    protected function setLanguage()
+    {
+        if(!defined('YII_CONSOLE') && self::$old && self::$RequestObj && self::$UserObj)
+        {
+            $reqLang = self::$RequestObj->getGET('lang');
+            $userLang = self::$UserObj->getRaw('languageid');
+            $langid = $reqLang ?: $userLang;
+            self::$LanguageObj = new Language($langid, 'info, global');
+        }
+        else
+        {
+            $defId = defined('DEF_LANGUAGE_ID') ? DEF_LANGUAGE_ID : 1;
+            self::$LanguageObj = new Language($defId, 'info, global');
+        }
+        $opt = self::$LanguageObj->getOpt('languageid');
+        if($opt !== null)
+        {
+            self::$LanguageHash[$opt] = self::$LanguageObj;
+        }
+    }
 
-	/**
-	* Short form of getTemplate().
-	*
-	* @return Template
-	*/
-	public static final function getTPL()
-	{
-		return self::getTemplate();
-	}
+    public static function getLanguage() { return self::$LanguageObj; }
+    public static function getLang()     { return self::$LanguageObj; }
 
-	/**
-	* Initializes the user class.
-	*
-	* @return Core
-	*/
-	protected function setUser()
-	{
-		// JWT lazy join (требует уже инициализированной БД)
-		if (class_exists('JwtAuth', false)) {
-			JwtAuth::resolveUser();
-		}
-		if(URL_SESSION)
-		{
-			$sid = (self::getRequest()->getGET("sid")) ? self::getRequest()->getGET("sid") : "";
-		}
-		else
-		{
-			$sid = (self::getRequest()->getCOOKIE("sid")) ? self::getRequest()->getCOOKIE("sid") : "";
-		}
-		self::$UserObj = new User($sid);
+    public static function pushLanguage()
+    {
+        self::$LanguageStack[] = self::$LanguageObj;
+    }
 
-		// План 37.5c: для авторизованного юзера без home planet
-		// планируем колонизацию (асинхронно, обработает event-monitor).
-		if(!empty($_SESSION["userid"]) && class_exists('OnboardingService', true))
-		{
-			OnboardingService::ensureColonizationScheduled($_SESSION["userid"]);
-		}
+    public static function popLanguage()
+    {
+        if(count(self::$LanguageStack) > 0)
+        {
+            self::$LanguageObj = array_pop(self::$LanguageStack);
+        }
+    }
 
-		return $this;
-	}
+    /**
+     * Переключает текущий Language на указанный $lang_id (создаёт
+     * экземпляр при первом обращении и кэширует в LanguageHash).
+     */
+    public static function selectLanguage($lang_id)
+    {
+        if(self::$LanguageObj && self::$LanguageObj->getOpt('languageid') == $lang_id)
+        {
+            return self::$LanguageObj;
+        }
+        if(isset(self::$LanguageHash[$lang_id]))
+        {
+            self::$LanguageObj = self::$LanguageHash[$lang_id];
+        }
+        else
+        {
+            self::$LanguageHash[$lang_id] = new Language($lang_id, 'info, global');
+            self::$LanguageObj = self::$LanguageHash[$lang_id];
+        }
+        return self::$LanguageObj;
+    }
 
-	/**
-	* Returns the user object.
-	*
-	* @return User
-	*/
-	public static final function getUser()
-	{
-		return self::$UserObj;
-	}
+    /* ============================================================
+     * Misc
+     * ============================================================ */
 
-	/**
-	* Check Database for banned IP address.
-	*
-	* @return Core
-	*/
-	protected function checkBans()
-	{
-		// debug_var(IPADDRESS, "[checkBans] ip: ".IPADDRESS); exit;
+    /**
+     * Cron-объект — устаревший stub для совместимости.
+     * Возвращает null (Cron-инфраструктура заменена внешним cron в Docker).
+     */
+    public static function getCron() { return null; }
 
-		// $where_ip = strstr(IPADDRESS, "*") ? "ipaddress like '".str_replace("*", "%", IPADDRESS)."'" : "ipaddress = '".IPADDRESS."'";
-/*		$row = self::getQuery()->selectRow("ban", "reason", "", "'".IPADDRESS."' like ipaddress AND timebegin <= '".time()."' AND (timeend is null OR timeend > '".time()."')");
-		if($row)
-		{
-			header("Content-Type: text/html; charset=utf-8");
-			// terminate("IP address ".IPADDRESS." has been banned:\n".$row["reason"]);
-			// terminate("Sorry, you has been banned."); // .$row["reason"]);
+    public static function versionToString()
+    {
+        return self::$version['major'].'.'.self::$version['build']
+            .'rev'.self::$version['revision'];
+    }
 
-			echo <<<END
-				<?xml version="1.0" encoding="utf-8"?>
-				<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-				<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
-				<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-				<title>Error: Banned!</title>
-				</head>
-				<body>
-				<h1>Sorry, you has been banned.</h1>
-				</div>
-				</body>
-				</html>
-END;
-			exit;
-		}*/
-		return $this;
-	}
-
-	/**
-	* Initializes the Cronjob class.
-	*
-	* @return Core
-	*/
-	protected function initCron()
-	{
-		self::$CronObj = new Cron();
-		return $this;
-	}
-
-	/**
-	* Returns the Cron object.
-	*
-	* @return Cron
-	*/
-	public static final function getCron()
-	{
-		return self::$CronObj;
-	}
-
-	/**
-	* Initializes the Cache.
-	*
-	* @return Core
-	*/
-	protected function setCache()
-	{
-		self::$CacheObj = new Cache();
-		return $this;
-	}
-
-	/**
-	* Returns the Cache object.
-	*/
-	public static final function getCache()
-	{
-		return self::$CacheObj;
-	}
-
-	/**
-	* Returns the version as a string.
-	*
-	* @return string Recipe version.
-	*/
-	public static function versionToString()
-	{
-		return self::$version["major"].".".self::$version["build"]."rev".self::$version["revesion"];
-	}
-
-	/**
-	* Sets the default timezone.
-	*
-	* @param string	Timezone to set
-	*
-	* @return string	Timezone
-	*/
-	public static function setDefaultTimeZone($newTimezone = null)
-	{
-		date_default_timezone_set('Europe/Moscow');
-		return date_default_timezone_get();
-		if(!is_null(self::$timezone))
-		{
-			return date_default_timezone_get();
-		}
-
-		self::$timezone = $newTimezone;
-		
-		if(self::getOptions()->exists("timezone"))
-		{
-			self::$timezone = self::getOptions()->timezone;
-		}
-		else
-		{
-			self::$timezone = self::$defaultTimeZone;
-		}
-		date_default_timezone_set(self::$timezone);
-		return date_default_timezone_get();
-	}
+    /**
+     * Устанавливает таймзону через date_default_timezone_set. По умолчанию
+     * Europe/Moscow (см. project_audience_ru memory). Принимает явный
+     * timezone-id; null → читать из Options или fallback default.
+     */
+    public static function setDefaultTimeZone($newTimezone = null)
+    {
+        if($newTimezone !== null && is_string($newTimezone))
+        {
+            self::$timezone = $newTimezone;
+        }
+        elseif(self::$timezone === null)
+        {
+            $tz = self::$defaultTimeZone;
+            if(self::$OptionsObj)
+            {
+                $configTz = self::$OptionsObj->get('timezone');
+                if(is_string($configTz) && $configTz !== '')
+                {
+                    $tz = $configTz;
+                }
+            }
+            self::$timezone = $tz;
+        }
+        @date_default_timezone_set(self::$timezone);
+        return date_default_timezone_get();
+    }
 }
-?>

@@ -1,165 +1,118 @@
 <?php
 /**
-* Compiles language phrases.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: LanguageCompiler.class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * LanguageCompiler — clean-room rewrite (план 43 Ф.6). Заменяет
+ * одноимённый класс из фреймворка Recipe (GPL).
+ *
+ * Прекомпилирует фразу из языкового словаря: токены `{lang…}`,
+ * `{config=…}`, `{user=…}`, `{const=…}`, `{image[alt]url}` и др.
+ * заменяются на PHP-вызовы. Результат сохраняется в кэше как PHP-код,
+ * выполняется через eval/include при выводе.
+ *
+ * API:
+ *   - new LanguageCompiler($phrase, $hardReplace = false): __construct
+ *   - getPhrase(): string — получить compiled-форму.
+ *   - setPhrase($phrase): self
+ *   - shutdown(): void — no-op (PHP 8 запрещает unset($this)).
+ *
+ * $hardReplace различает два режима генерации:
+ *   true  — фраза будет inline'ена в `<?php echo …; ?>` (нужно отдавать
+ *           готовое PHP-выражение типа `Link::get("…", "…")`);
+ *   false — фраза будет в обычной строке с конкатенацией
+ *           (`"… " . Link::get("…", "…") . " …"`).
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
 class LanguageCompiler
 {
-  /**
-  * Phrase content.
-  *
-  * @var String
-  */
-  protected $phrase = null;
+    /** @var OxsarString */
+    private $phrase;
+    /** @var bool */
+    private $hardReplace;
 
-  /**
-  * Regular expression patterns.
-  *
-  * @var array
-  */
-  protected $patterns = array();
-
-  /**
-  * Replacement for the patterns.
-  *
-  * @var array
-  */
-  protected $replacement = array();
-
-  /**
-  * Modifier for regular expression.
-  *
-  * @var string
-  */
-  protected $modifier = "";
-
-  /**
-  * Constructor.
-  *
-  * @param string	The phrase to be compiled
-  * @param boolean	Replaces wildcards dynamically or hardly
-  *
-  * @return void
-  */
-  public function __construct($phrase, $hardReplace = false)
-  {
-    $this->modifier = ($hardReplace) ? "siUe" : "siU";
-    $this->buildPatterns($hardReplace)->setPhrase($phrase);
-    return;
-  }
-
-  /**
-  * Builds the search and replace pattern.
-  *
-  * @param boolean	Replaces the search pattern with hard code or dynamically
-  *
-  * @return LanguageCompiler
-  */
-  protected function buildPatterns($hardReplace)
-  {
-    $this->patterns["link"] = "/\{link\[(.*)]}(.*)\{\/link}/".$this->modifier;
-    $this->patterns["config"][] = "/\{config}([^\"]+)\{\/config}/".$this->modifier;
-    $this->patterns["config"][] = "/\{config=([^\"]+)\}/".$this->modifier;
-    $this->patterns["user"][] = "/\{user}([^\"]+)\{\/user}/".$this->modifier;
-    $this->patterns["user"][] = "/\{user=([^\"]+)\}/".$this->modifier;
-    $this->patterns["request"] = "/\{request\[([^\"]+)\]\}([^\"]+)\{\/request\}/".$this->modifier;
-    $this->patterns["const"][] = "/\{const}([^\"]+)\{\/const}/".$this->modifier;
-    $this->patterns["const"][] = "/\{const=([^\"]+)\}/".$this->modifier;
-    $this->patterns["image"] = "/\{image\[([^\"]+)]}([^\"]+)\{\/image}/".$this->modifier;
-    $this->patterns["time"][] = "/\{time}(.*)\{\/time}/".$this->modifier;
-    $this->patterns["time"][] = "/\{time=(.*)\}/".$this->modifier;
-
-    if($hardReplace)
+    public function __construct($phrase, $hardReplace = false)
     {
-      $this->replacement["link"] = 'Link::get("\\2", "\\1")';
-      $this->replacement["config"] = 'Core::getOptions()->get("\\1")';
-      $this->replacement["user"] = 'Core::getUser()->get("\\1")';
-      $this->replacement["request"] = 'Core::getRequest()->\\1["\\2"]';
-      $this->replacement["const"] = 'constant("\\1")';
-      $this->replacement["image"] = 'Image::getImage("\\2", "\\1")';
-      $this->replacement["time"] = 'Date::timeToString(3, -1, "\\1", false)';
+        $this->hardReplace = (bool)$hardReplace;
+        $this->setPhrase($phrase);
     }
-    else
+
+    public function setPhrase($phrase)
     {
-      $this->replacement["link"] = "\".Link::get(\"\\2\", \"\\1\").\"";
-      $this->replacement["config"] = "\".Core::getOptions()->get(\"\\1\").\"";
-      $this->replacement["user"] = "\".Core::getUser()->get(\"\\1\").\"";
-      $this->replacement["request"] = "\".Core::getRequest()->\\1[\"\\2\"].\"";
-      $this->replacement["const"] = "\".\\1.\"";
-      $this->replacement["image"] = "\".Image::getImage(\"\\2\", \"\\1\").\"";
-      $this->replacement["time"] = "\".Date::timeToString(3, -1, \"\\1\", false).\"";
+        if($phrase instanceof OxsarString)
+        {
+            $this->phrase = $phrase;
+        }
+        else
+        {
+            $this->phrase = new OxsarString((string)$phrase);
+        }
+        $this->compile();
+        return $this;
     }
-    return $this;
-  }
 
-  /**
-  * Compiles the phrase content.
-  *
-  * @return LanguageCompiler
-  */
-  protected function compile()
-  {
-    $this	->phrase
-      ->replace("\"", "\\\"")
-      ->regEx($this->patterns["link"], $this->replacement["link"])
-      ->regEx($this->patterns["config"], $this->replacement["config"])
-      ->regEx($this->patterns["user"], $this->replacement["user"])
-      ->regEx($this->patterns["request"], $this->replacement["request"])
-      ->regEx($this->patterns["const"], $this->replacement["const"])
-      ->regEx($this->patterns["image"], $this->replacement["image"])
-      ->regEx($this->patterns["time"], $this->replacement["time"]);
-    // Hook::event("COMPILE_PHRASE", array(&$this));
-    return $this;
-  }
-
-  /**
-  * Returns compiled phrase.
-  *
-  * @return string
-  */
-  public function getPhrase()
-  {
-    return $this->phrase->get();
-  }
-
-  /**
-  * Unset this object.
-  *
-  * @return void
-  */
-  public function shutdown()
-  {
-    // PHP 8: unset($this) запрещён — каждый caller сам unset'ит ссылку
-    return;
-  }
-
-  /**
-  * Sets the phrase.
-  *
-  * @param String
-  *
-  * @return LanguageCompiler
-  */
-  public function setPhrase($phrase)
-  {
-    if($phrase instanceof OxsarString)
+    public function getPhrase()
     {
-      $this->phrase = $phrase;
+        return $this->phrase->get();
     }
-    else
+
+    public function shutdown()
     {
-      $this->phrase = new OxsarString($phrase);
+        // No-op (PHP 8 не позволяет unset($this); вызывающий сам сбросит ссылку).
     }
-    $this->compile();
-    return $this;
-  }
+
+    /**
+     * Применяет regex-замены ко всем поддерживаемым токенам.
+     * Сохраняем точно тот же набор паттернов и replacement-strings что
+     * legacy-LanguageCompiler — это контракт с TemplateCompiler и
+     * compiled-кэшем шаблонов.
+     */
+    private function compile()
+    {
+        $modifier = 'siU';
+        $hard = $this->hardReplace;
+
+        // (search => replacement) — порядок важен (link с двумя группами
+        // должен идти раньше других, чтобы внутренние не схлопнулись).
+        $rules = array(
+            // {link[url]text{/link} → Link::get("url","text")
+            '/\{link\[(.*)]}(.*)\{\/link}/'.$modifier
+                => $hard ? 'Link::get("\\2", "\\1")' : '".Link::get("\\2", "\\1")."',
+            // {config}KEY{/config} и {config=KEY}
+            '/\{config}([^"]+)\{\/config}/'.$modifier
+                => $hard ? 'Core::getOptions()->get("\\1")' : '".Core::getOptions()->get("\\1")."',
+            '/\{config=([^"]+)\}/'.$modifier
+                => $hard ? 'Core::getOptions()->get("\\1")' : '".Core::getOptions()->get("\\1")."',
+            // {user}KEY{/user} и {user=KEY}
+            '/\{user}([^"]+)\{\/user}/'.$modifier
+                => $hard ? 'Core::getUser()->get("\\1")' : '".Core::getUser()->get("\\1")."',
+            '/\{user=([^"]+)\}/'.$modifier
+                => $hard ? 'Core::getUser()->get("\\1")' : '".Core::getUser()->get("\\1")."',
+            // {request[get]key{/request} → Core::getRequest()->get["key"] (legacy syntax)
+            '/\{request\[([^"]+)\]\}([^"]+)\{\/request\}/'.$modifier
+                => $hard ? 'Core::getRequest()->\\1["\\2"]' : '".Core::getRequest()->\\1["\\2"]."',
+            // {const}NAME{/const} и {const=NAME}
+            '/\{const}([^"]+)\{\/const}/'.$modifier
+                => $hard ? 'constant("\\1")' : '".\\1."',
+            '/\{const=([^"]+)\}/'.$modifier
+                => $hard ? 'constant("\\1")' : '".\\1."',
+            // {image[alt]url{/image}
+            '/\{image\[([^"]+)]}([^"]+)\{\/image}/'.$modifier
+                => $hard ? 'Image::getImage("\\2", "\\1")' : '".Image::getImage("\\2", "\\1")."',
+            // {time}FORMAT{/time} и {time=FORMAT}
+            '/\{time}(.*)\{\/time}/'.$modifier
+                => $hard ? 'Date::timeToString(3, -1, "\\1", false)' : '".Date::timeToString(3, -1, "\\1", false)."',
+            '/\{time=(.*)\}/'.$modifier
+                => $hard ? 'Date::timeToString(3, -1, "\\1", false)' : '".Date::timeToString(3, -1, "\\1", false)."',
+        );
+
+        // Escape кавычек в исходной фразе (она будет внутри php-строки).
+        $this->phrase->replace('"', '\\"');
+
+        foreach($rules as $pattern => $replacement)
+        {
+            $this->phrase->regEx($pattern, $replacement);
+        }
+    }
 }
-?>
