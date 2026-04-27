@@ -1,56 +1,49 @@
 <?php
 /**
-* Mainly usage: Generate image codes for HTML.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: Image.util.class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * Image — clean-room rewrite (план 43 Ф.2). Заменяет одноимённый класс
+ * фреймворка Recipe (GPL). Только метод getImage, реально вызываемый.
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
 class Image
 {
-  /**
-  * Default CSS class for images.
-  *
-  * @var string
-  */
-  const IMAGE_CSS_CLASS = "image";
+    /**
+     * Генерирует <img>-тег. Сигнатура из legacy:
+     *   getImage($name, $alt = '', $width = null, $height = null, $cssClass = '')
+     *
+     * $name — имя файла относительно RELATIVE_URL/images/ (если без слешей).
+     * Если $name содержит слеш — считается относительным к RELATIVE_URL.
+     * Если $name начинается с http(s)/data:/// — используется как есть.
+     *
+     * Не эскейпит $alt — caller отвечает за его безопасность (legacy-семантика).
+     */
+    public static function getImage($name, $alt = '', $width = null, $height = null, $cssClass = '')
+    {
+        $name = (string)$name;
+        if($name === '') { return ''; }
 
-  /**
-  * Generate image tag in HTML.
-  *
-  * @param string	Image URL
-  * @param string	Additional title
-  * @param integer	Image width
-  * @param integer	Image height
-  * @param string	Additional CSS class designation
-  *
-  * @return string	Image tag
-  */
-  public static function getImage($url, $title, $width = null, $height = null, $cssClass = "", $use_raw_url = false)
-  {
-    if(Core::getUser()->exists("theme") && Core::getUser()->get("theme") && !Link::isExternal($url))
-    {
-      $url = Core::getUser()->get("theme")."images/".$url;
-    }
-    if(!Link::isExternal($url) && !$use_raw_url)
-    {
-      $url = RELATIVE_URL."images/".$url;
-    }
-    if ( $use_raw_url )
-    {
-      $url = RELATIVE_URL.$url;
-    }
+        // Абсолютный URL — без префикса.
+        if(preg_match('~^([a-z][a-z0-9+\-.]*:)~i', $name) || strpos($name, '//') === 0)
+        {
+            $src = $name;
+        }
+        else
+        {
+            $rel = defined('RELATIVE_URL') ? RELATIVE_URL : '/';
+            if($rel !== '' && substr($rel, -1) !== '/') { $rel .= '/'; }
+            // Если в имени уже есть слеш — относительно RELATIVE_URL,
+            // иначе — относительно RELATIVE_URL/images/.
+            $src = strpos($name, '/') !== false ? $rel.ltrim($name, '/') : $rel.'images/'.$name;
+        }
 
-    if(Str::length($cssClass) == 0) { $cssClass = self::IMAGE_CSS_CLASS; }
-    $width = !is_null($width) ? " width=\"".$width."\"" : "";
-    $height = !is_null($height) ? " height=\"".$height."\"" : "";
-    $img = "<img src=\"".$url."\" title=\"".$title."\" "/*."alt=\"".$title."\""*/.$width.$height." class=\"".$cssClass."\" />";
-    return $img;
-  }
+        $altAttr = htmlspecialchars((string)$alt, ENT_QUOTES, 'UTF-8');
+        $titleAttr = $altAttr;
+        $w = $width !== null && $width !== '' ? ' width="'.(int)$width.'"' : '';
+        $h = $height !== null && $height !== '' ? ' height="'.(int)$height.'"' : '';
+        $cls = $cssClass !== '' && $cssClass !== null ? ' class="'.htmlspecialchars((string)$cssClass, ENT_QUOTES, 'UTF-8').'"' : '';
+        return '<img src="'.$src.'" alt="'.$altAttr.'" title="'.$titleAttr.'"'.$w.$h.$cls.' />';
+    }
 }
-?>

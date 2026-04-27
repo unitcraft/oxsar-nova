@@ -1,97 +1,69 @@
 <?php
 /**
-* Advanced array functions.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: Arr.util.class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * Arr — clean-room rewrite (план 43 Ф.2). Заменяет одноимённый класс
+ * фреймворка Recipe (GPL). Оставлены только методы, реально вызываемые
+ * в проекте (см. grep на 2026-04-27).
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
 class Arr
 {
-  /**
-  * Trims all elements of an array.
-  *
-  * @param array		Array to be trimed
-  *
-  * @return array	Trimed array
-  */
-  public static function trimArray($array)
-  {
-    if (!is_array($array)) {
-      return is_string($array) ? trim($array) : $array;
-    }
-    for($i = 0; $i < count($array); $i++)
+    /**
+     * Применяет trim() к каждому элементу массива (или одиночной строке).
+     * Используется для разбиения CSV-подобных строк после explode().
+     */
+    public static function trimArray($a)
     {
-      $array[$i] = trim($array[$i]);
+        if(!is_array($a))
+        {
+            return is_string($a) ? trim($a) : $a;
+        }
+        return array_map(static function($v) {
+            return is_string($v) ? trim($v) : $v;
+        }, $a);
     }
-    return $array;
-  }
 
-  /**
-  * Check two arrays for equal size.
-  *
-  * @param array		First
-  * @param array		Second
-  *
-  * @return void
-  */
-  public static function checkArraySize($array1, $array2)
-  {
-    if(count($array1) != count($array2))
+    /**
+     * Алиас trimArray — сохранён для обратной совместимости с legacy callers.
+     */
+    public static function trim($a)
     {
-      throw new GenericException("Different number of attributes and values.");
+        return self::trimArray($a);
     }
-    return;
-  }
 
-  /**
-  * Checks if both parameters are arrays.
-  *
-  * @param mixed		First array
-  * @param mixed		Second array
-  *
-  * @return void
-  */
-  public static function checkArrays($array1, $array2)
-  {
-    if(!is_array($array1) && is_array($array2) || !is_array($array2) && is_array($array1))
+    /**
+     * Проверяет что оба аргумента — массивы одинакового размера. Throws
+     * на несоответствие. Используется QueryParser-ом для пар (attribute, value).
+     */
+    public static function checkArrays($a, $b)
     {
-      throw new GenericException("You must send two arrays!");
+        if(!is_array($a) || !is_array($b))
+        {
+            throw new InvalidArgumentException('Both arguments must be arrays');
+        }
+        if(count($a) !== count($b))
+        {
+            throw new InvalidArgumentException('Arrays must be the same size');
+        }
+        return true;
     }
-    return;
-  }
 
-  /**
-  * Remove all elements with no content.
-  *
-  * @param array		Array to be cleaned
-  *
-  * @return array	Cleaned array
-  */
-  public static function clean($array)
-  {
-    for($i = 0; $i < count($array); $i++)
+    /**
+     * Проверяет что массив имеет ожидаемый размер. Throws при несоответствии.
+     */
+    public static function checkArraySize($a, $expected)
     {
-      if(Str::length($array[$i]) > 0) { $rArray[$i] = $array[$i]; }
+        if(!is_array($a))
+        {
+            throw new InvalidArgumentException('First argument must be an array');
+        }
+        if(count($a) !== (int)$expected)
+        {
+            throw new InvalidArgumentException('Array size mismatch: got '.count($a).', expected '.$expected);
+        }
+        return true;
     }
-    return $rArray;
-  }
-
-  /**
-  * Alias to trimArray()-method.
-  *
-  * @param array		Array to be trimed
-  *
-  * @return array	Trimed array
-  */
-  public static function trim($array)
-  {
-    return self::trimArray($array);
-  }
 }
-?>

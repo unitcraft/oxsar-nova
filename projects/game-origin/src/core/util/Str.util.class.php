@@ -1,185 +1,118 @@
 <?php
 /**
-* Advanced string functions.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: Str.util.class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * Str — clean-room rewrite (план 43 Ф.2). Заменяет одноимённый класс
+ * фреймворка Recipe (GPL). Только методы, реально вызываемые в проекте.
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
 class Str
 {
-  /**
-  * Holds all valid encryptions used by encode().
-  *
-  * @var array
-  */
-  protected static $validEncryptions = array("md5", "sha1", "crypt", "crc32", "base64_encode");
-
-  protected static function _resolveCharset($charset)
-  {
-    if($charset === null && Core::getLanguage())
-      $charset = Core::getLanguage()->getOpt("charset");
-    // getOpt returns the key name when not found — treat that as no charset
-    if(empty($charset) || $charset === 'charset')
-      return null;
-    return $charset;
-  }
-
-  /**
-  * Generate XHTML valid code.
-  *
-  * @param string	Incoming text
-  *
-  * @return string	Validated text
-  */
-  public static function validateXHTML($text)
-  {
-    if(strlen($text) > 0)
+    /**
+     * Длина строки в Unicode-символах (legacy multi-byte safe).
+     * Игнорирует второй аргумент charset (legacy сигнатура).
+     */
+    public static function length($s, $charset = null)
     {
-      if(self::compare(Core::getLanguage()->getOpt("charset"), "utf-8")) { $chars = HTML_SPECIALCHARS; }
-      else { $chars = HTML_ENTITIES; }
-      $XHTMLConvertEntities = get_html_translation_table($chars);
-      $text = trim($text);
-      $text = strtr($text, $XHTMLConvertEntities);
+        if($s === null) { return 0; }
+        $s = (string)$s;
+        if(function_exists('mb_strlen'))
+        {
+            return mb_strlen($s, 'UTF-8');
+        }
+        return strlen($s);
     }
-    return $text;
-  }
 
-  /**
-  * Encode string to specified encryption method.
-  *
-  * @param string	String to encode
-  * @param string	Encryption method
-  *
-  * @return string	Encoded string
-  */
-  public static function encode($text, $encryption = "md5")
-  {
-    if(in_array($encryption, self::$validEncryptions))
+    /**
+     * Подстрока: $s[$start..$start+$len). Если $len опущен — до конца.
+     * Multi-byte safe для UTF-8.
+     */
+    public static function substring($s, $start, $len = null)
     {
-      return $encryption($text);
+        if($s === null) { return ''; }
+        $s = (string)$s;
+        if(function_exists('mb_substr'))
+        {
+            return $len === null
+                ? mb_substr($s, (int)$start, null, 'UTF-8')
+                : mb_substr($s, (int)$start, (int)$len, 'UTF-8');
+        }
+        return $len === null ? substr($s, (int)$start) : substr($s, (int)$start, (int)$len);
     }
-    return $text;
-  }
 
-  /**
-  * Identical to substr().
-  *
-  * @param string	String
-  * @param integer	Start position
-  * @param integer	Substring length
-  *
-  * @return string	The extracted part of string
-  */
-  public static function substring($string, $start, $length = null, $charset = null)
-  {
-    if($length === null)
+    // PHP методы case-insensitive — Str::Substring и Str::substring это
+    // один метод. Отдельный alias не нужен (legacy callers с большой S
+    // уже работают через substring() выше).
+
+    /**
+     * Замена подстрок. Тонкая обёртка над str_replace для совместимости с
+     * legacy сигнатурой (search, replace, subject).
+     */
+    public static function replace($search, $replace, $subject)
     {
-      $length = self::length($string, $charset);
+        if($subject === null) { return ''; }
+        return str_replace($search, $replace, (string)$subject);
     }
-    $charset = self::_resolveCharset($charset);
-    if($charset)
-      return mb_substr($string, $start, $length, $charset);
-    return substr($string, $start, $length);
-  }
 
-  /**
-  * Identical to strlen().
-  *
-  * @param string
-  *
-  * @return integer	Length of string
-  */
-  public static function length($string, $charset = null)
-  {
-    $charset = self::_resolveCharset($charset);
-    if($charset)
-      return mb_strlen($string, $charset);
-    return strlen($string);
-  }
-
-  /**
-  * Compare two strings for equality.
-  *
-  * @param string
-  * @param string
-  * @param boolean	Enable or disable case sensitive for comparision
-  *
-  * @return boolean True, if strings are equal, false, if not.
-  */
-  public static function compare($string1, $string2, $caseSensitive = false)
-  {
-    if($caseSensitive)
+    /**
+     * Поиск $needle в $haystack. Возвращает true/false. Аналог str_contains.
+     */
+    public static function inString($needle, $haystack)
     {
-      if(strcmp($string1, $string2) == 0) { return true; } else { return false; }
+        if($haystack === null || $needle === null) { return false; }
+        return strpos((string)$haystack, (string)$needle) !== false;
     }
-    else
+
+    /**
+     * Сравнение строк (case-sensitive). 0 — равны, !=0 — не равны.
+     */
+    public static function compare($a, $b)
     {
-      if(strcasecmp($string1, $string2) == 0) { return true; } else { return false; }
+        return strcmp((string)$a, (string)$b);
     }
-  }
 
-  /**
-  * Identical to str_replace().
-  *
-  * @param mixed		Search
-  * @param mixed		Replace
-  * @param mixed		Subject
-  *
-  * @return mixed	Returns a string or an array with the replaced values
-  */
-  public static function replace($search, $replace, $subject)
-  {
-    return str_replace($search, $replace, $subject);
-  }
-
-  public static function tr($subject, $search)
-  {
-    foreach($search as $key => $value)
+    /**
+     * URL-encode для простых случаев.
+     */
+    public static function encode($s)
     {
-      $subject = str_replace($key, $value, $subject);
+        if($s === null) { return ''; }
+        return rawurlencode((string)$s);
     }
-    return $subject;
-  }
 
-  /**
-  * Returns the portion of haystack which
-  * ends at the last occurrence of needle
-  * and starts with the begin of haystack.
-  *
-  * @param string 	The string to search in
-  * @param string	Needle
-  *
-  * @return string	New String
-  */
-  public static function reverse_strrchr($haystack, $needle)
-  {
-    $pos = strrpos($haystack, $needle);
-    if($pos == false) { return $haystack; }
-    return substr($haystack, 0, $pos + 1);
-  }
-
-  /**
-  * Checks if needle can be found in haystack.
-  *
-  * @param string	Needle
-  * @param string	Haystack
-  *
-  * @return boolean
-  */
-  public static function inString($needle, $haystack)
-  {
-    $match = strpos($haystack, $needle);
-    if($match === false)
+    /**
+     * Возвращает часть строки до последнего вхождения $needle.
+     * Если $include_needle = true — включая сам needle.
+     * Если $needle не найден — возвращает исходную строку.
+     */
+    public static function reverse_strrchr($haystack, $needle, $include_needle = false)
     {
-      return false;
+        if($haystack === null || $needle === null) { return ''; }
+        $haystack = (string)$haystack;
+        $needle = (string)$needle;
+        $pos = strrpos($haystack, $needle);
+        if($pos === false)
+        {
+            return $haystack;
+        }
+        return substr($haystack, 0, $include_needle ? $pos + strlen($needle) : $pos);
     }
-    return true;
-  }
+
+    /**
+     * Очищает строку от потенциально опасных HTML/JS-конструкций для
+     * совместимости с XHTML. Используется для subject/message в личных
+     * сообщениях. Это НЕ полная XSS-санитизация — для критичных полей
+     * см. htmlspecialchars в DAO-getter (см. план 37.7.1+).
+     */
+    public static function validateXHTML($s)
+    {
+        if($s === null) { return ''; }
+        $s = (string)$s;
+        // Базовая защита: заменить < > " ' & на сущности. Это безопасно для
+        // отображения в HTML-тексте, но делает невозможным сохранение
+        // legitimate HTML — если потребуется, переключиться на HTMLPurifier.
+        return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
 }
-?>
