@@ -877,7 +877,55 @@ dev-окружению, ни к фронтенду:
 - Auth Service под пиковой нагрузкой (все вселенные логинятся одновременно).
 - Всю связку: портал → auth → две вселенных одновременно.
 
-**Итого**: ~18–25 рабочих дней + ops-тест.
+### Что закрыто на 2026-04-27
+
+- ✅ **Ф.9** Реструктуризация репозитория (один домен — одна папка).
+- ✅ **Ф.10** Разделение Go-модулей (`oxsar/game-nova`, `oxsar/auth`, `oxsar/portal`)
+  с `DUPLICATE`-маркерами в shared-коде.
+- ✅ **Ф.11** auth-service подключён к dev-стеку, vite proxy `/auth/*`,
+  фронты переключены, backend на JWKS.
+- ✅ **Ф.12** Lazy-create в middleware (`EnsureUserMiddleware`), миграция
+  `password_hash → NULLABLE`, Universe Switcher в шапке.
+
+End-to-end в dev: register в auth-service → JWT (RSA) → `/api/me` в game-nova
+возвращает 200, юзер автоматически создан в game-db со стартовой планетой.
+
+### Что должно быть до прода (детали в [simplifications.md](../simplifications.md))
+
+**Critical (security / data integrity):**
+
+1. RSA-ключ — внешний secret, не auto-generate в контейнере. Документация ротации.
+2. Удалить legacy HS256 fallback в game-nova (`cmd/server/main.go`,
+   `internal/auth/Service.Register/Login/Refresh`, `JWTSecret` в config).
+   Сейчас security-bug — запуск без `AUTH_JWKS_URL` = HS256 с дефолтным секретом.
+3. Rate-limiting на `/auth/login` и `/auth/register` в auth-service
+   (был в game-nova, при переезде потерялся).
+4. `POST /auth/logout` с revoke refresh-tokens через Redis-blacklist.
+5. EnsureUserMiddleware должен дёргать `auth-service/auth/universes/register`
+   при создании юзера — иначе `active_universes` в JWT всегда пуст.
+
+**Functional (не блокирует security, но нужно для multi-universe):**
+
+6. Ф.7 — Global Credits + платёжные webhook'и (CloudPayments/Enot.io →
+   auth-service). Голосование за feedback должно списывать кредиты.
+7. Ф.8 — второй вселенский стек (uni02 Speed) для проверки Universe Switcher
+   E2E. DNS на Selectel + wildcard SSL.
+8. `bootstrapNewUser` retry-логика — если стартовая планета не назначилась,
+   повторная попытка на следующем запросе.
+
+**Nice to have:**
+
+9. KeySet (current + previous) для ротации RSA без выкидывания живых JWT.
+10. Email из JWT claims убрать (PII в токене), вместо этого `auth-service/auth/me`.
+11. OAuth Social Login (Ф.6) — отложен по решению пользователя, можно вернуть.
+
+**Косметика:**
+
+12. Удалить мёртвый код `internal/auth/handler.go::Register/Login/Refresh`,
+    `password.go`, тесты на них.
+13. Удалить из git-tracking бинарники `projects/game-nova/backend/{server,worker,*.exe}`.
+
+**Итого**: ~18–25 рабочих дней + ops-тест + critical pre-prod sweep ~3–5 дней.
 
 ---
 
