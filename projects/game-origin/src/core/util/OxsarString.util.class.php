@@ -1,550 +1,87 @@
 <?php
 /**
-* Object-oriented typing: String
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: String.util.class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * OxsarString — clean-room rewrite (план 43 Ф.5). Заменяет одноимённый
+ * класс из фреймворка Recipe (GPL).
+ *
+ * Mutable string-buffer с fluent API. Используется в TemplateCompiler
+ * и LanguageCompiler для построения итогового compiled-текста через
+ * последовательные regex-замены.
+ *
+ * Минимальный API под фактически вызываемые методы:
+ *   - __construct($initial)
+ *   - get(): string — вернуть текущее содержимое.
+ *   - regEx($pattern, $replacement): self — preg_replace, fluent.
+ *   - push($str): self — добавить в конец, fluent.
+ *   - pop($str): self — добавить в начало (legacy-name, не array-pop), fluent.
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
-require_once(RECIPE_ROOT_DIR."util/Type.abstract_class.php");
+require_once(__DIR__.'/Type.abstract_class.php');
 
-// String — зарезервированное имя в PHP 8 → переименован в OxsarString
 class OxsarString extends Type
 {
-  /**
-  * This is the actual string.
-  *
-  * @var string
-  */
-  protected $string = "";
+    private $value;
 
-  /**
-  * If the string can be sent via sql search.
-  *
-  * @var boolean
-  */
-  public $validSearchString = false;
-
-  /**
-  * Min. length for the string to be a valid search string.
-  *
-  * @var integer
-  */
-  protected $minLenghtForSearch = 1;
-
-  /**
-  * Allows the following encryptions with encoding function.
-  *
-  * @var array
-  */
-  protected $validEncryptions = array("md5", "sha1", "crypt", "crc32", "base64_encode");
-
-  /**
-  * Initializes a newly created String object.
-  *
-  * @param string
-  * @return void
-  */
-  public function __construct($string)
-  {
-    $this->string = (string) $string;
-    return;
-  }
-
-  /**
-  * Destructor.
-  *
-  * @return void
-  */
-  public function __destruct()
-  {
-    // PHP 8: unset($this) запрещён
-    return;
-  }
-
-  /**
-  * Returns the String as a character set.
-  *
-  * @return string
-  */
-  public function get()
-  {
-    return $this->string;
-  }
-
-  /**
-  * Compares two strings.
-  *
-  * @param mixed		String to compare with
-  * @param boolean	Case sensitive comparision [optional]
-  *
-  * @return boolean True, if strings are equal, false, if not
-  */
-  public function compareTo($string, $strict = false)
-  {
-//    try {
-    	$compareTo = $this->getFromArgument($string);
-//    }
-//    catch(Exception $e) { $e->printError(); }
-    return Str::compare($this->string, $compareTo->get(), $strict);
-  }
-
-  /**
-  * Returns true if and only if this string contains the
-  * specified sequence of char values.
-  *
-  * @param string	The sequence to search for
-  *
-  * @return boolean	True if this String contains string, false otherwise
-  */
-  public function contains($string)
-  {
-//    try {
-    	$contains = $this->getFromArgument($string);
-//    }
-//    catch(Exception $e) { $e->printError(); }
-    if(strpos($this->string, $contains->get()) !== false)
+    public function __construct($initial = '')
     {
-      return true;
+        $this->value = (string)$initial;
     }
-    return false;
-  }
 
-  /**
-  * Creates a new string resulting from replacing all occurrences
-  * of needle in this string with replacement.
-  *
-  * @param string	Needle
-  * @param string	Replacement
-  *
-  * @return String
-  */
-  public function replace($needle, $replacement)
-  {
-//    try {
-    	$search = $this->getFromArgument($needle);
-//    }
-//    catch(Exception $e) { $e->printError(); }
-//    try {
-    	$replace = $this->getFromArgument($replacement);
-//    }
-//    catch(Exception $e) { $e->printError(); }
-
-    $this->string = Str::replace($search->get(), $replace->get(), $this->string);
-    return $this;
-  }
-
-  /**
-  * Creates a new string that is a substring of this string.
-  *
-  * @param integer	The beginning index, inclusive
-  * @param integer	The ending index, exclusive [optional]
-  *
-  * @return String
-  */
-  public function substring($beginIndex, $endIndex = null)
-  {
-    $this->string = Str::substring($this->string, $beginIndex, $endIndex);
-    return $this;
-  }
-
-  /**
-  * Tells whether or not this string matches the given regular expression.
-  *
-  * @param string	The regular expression to which this string is to be matched
-  *
-  * @return boolean	True if, and only if, this string matches the given regular expression
-  */
-  public function matches($regex)
-  {
-    $regex = strval($regex);
-    if(preg_match($regex, $this->string) === 0)
+    public function get()
     {
-      return false;
+        return $this->value;
     }
-    return true;
-  }
 
-  /**
-  * Perform a regular expression search and replace.
-  *
-  * @param string	Regular expression
-  * @param String	Replacement
-  * @param integer	The maximum possible replacements for each pattern [optional]
-  *
-  * @return String
-  */
-  public function regEx($regex, $replacement)
-  {
-    $replacement = $this->getFromArgument($replacement, "String");
-    $repl = $replacement->get();
-    // /e modifier removed in PHP 7 — emulate with preg_replace_callback
-    $patterns = is_array($regex) ? $regex : array($regex);
-    $needsEval = false;
-    $cleanPatterns = array();
-    foreach($patterns as $p)
+    /**
+     * Применяет str_replace($search, $replace, $value) — НЕ regex.
+     * Используется LanguageCompiler для escape кавычек.
+     */
+    public function replace($search, $replace)
     {
-      if(preg_match('/[a-zA-Z]*e[a-zA-Z]*$/', $p))
-      {
-        $needsEval = true;
-        $cleanPatterns[] = preg_replace('/e([a-zA-Z]*)$/', '$1', $p);
-      }
-      else
-      {
-        $cleanPatterns[] = $p;
-      }
+        $this->value = str_replace($search, $replace, $this->value);
+        return $this;
     }
-    if(!is_array($regex)) { $cleanPatterns = $cleanPatterns[0]; }
-    if($needsEval)
+
+    /**
+     * Применяет preg_replace($pattern, $replacement, $value).
+     * Возвращает $this для chaining.
+     */
+    public function regEx($pattern, $replacement)
     {
-      $this->string = preg_replace_callback($cleanPatterns, function($m) use($repl) {
-        $code = preg_replace_callback('/\\\\\d+|\$\d+/', function($ref) use($m) {
-          $idx = (int)ltrim($ref[0], '\\$');
-          return isset($m[$idx]) ? addslashes($m[$idx]) : '';
-        }, $repl);
-        $result = null;
-        eval('$result = ' . $code . ';');
-        return $result;
-      }, $this->string);
+        $result = preg_replace($pattern, $replacement, $this->value);
+        if($result !== null)
+        {
+            $this->value = $result;
+        }
+        return $this;
     }
-    else
+
+    /**
+     * append: добавить в конец.
+     */
+    public function push($str)
     {
-      $this->string = preg_replace($cleanPatterns, $repl, $this->string);
+        $this->value .= (string)$str;
+        return $this;
     }
-    return $this;
-  }
 
-  /**
-  * Converts all of the characters in this String to lower case.
-  *
-  * @return String
-  */
-  public function toLowerCase()
-  {
-    $this->string = strtolower($this->string);
-    return $this;
-  }
-
-  /**
-  * Converts all of the characters in this String to upper case.
-  *
-  * @return String
-  */
-  public function toUpperCase()
-  {
-    $this->string = strtoupper($this->string);
-    return $this;
-  }
-
-  /**
-  * Overwrites this string.
-  *
-  * @param string	String to put into this object
-  *
-  * @return String
-  */
-  public function set($string)
-  {
-    $string = $this->getFromArgument($string);
-    $this->string = (string) $string->get();
-    return $this;
-  }
-
-  /**
-  * Adds string to the end of this string.
-  *
-  * @param mixed
-  *
-  * @return String
-  */
-  public function push($string)
-  {
-//    try {
-    	$push = $this->getFromArgument($string);
-//    }
-//    catch(Exception $e) { $e->printError(); }
-    $this->string .= $push->get();
-    return $this;
-  }
-
-  /**
-  * Adds string to the beginning of this string.
-  *
-  * @param mixed
-  *
-  * @return String
-  */
-  public function pop($string)
-  {
-//    try {
-    	$pop = $this->getFromArgument($string);
-//    }
-//    catch(Exception $e) { $e->printError(); }
-    $this->string = $pop->get().$this->string;
-    return $this;
-  }
-
-  /**
-  * Returns the number of characters containing this string.
-  *
-  * @return integer	Length
-  */
-  public function length()
-  {
-    return Str::length($this->string);
-  }
-
-  /**
-  * Encodes string to specified encryption method.
-  *
-  * @param string	Encryption method
-  *
-  * @return String
-  */
-  public function encode($encryption = "md5")
-  {
-    if(in_array($encryption, $this->validEncryptions))
+    /**
+     * prepend: добавить в начало (legacy именование Recipe — не array_pop).
+     */
+    public function pop($str)
     {
-      $this->string = $encryption($this->string);
-      return $this;
+        $this->value = (string)$str.$this->value;
+        return $this;
     }
-    throw new IssueException("Unkown encryption method.");
-    return $this;
-  }
 
-  /**
-  * Sets an random string.
-  * Warning: Overwrites current string.
-  *
-  * @param integer	The length of the random string
-  *
-  * @return String
-  */
-  public function random($length)
-  {
-//    try {
-    	$length = $this->getFromArgument($length);
-//  }
-//    catch(Exception $e) { $e->printError(); }
-    $this->string = randString($length->get());
-    return $this;
-  }
-
-  /**
-  * Kills this object.
-  *
-  * @return void
-  */
-  public function kill()
-  {
-    $this->__destruct();
-    return;
-  }
-
-  /**
-  * Empty string.
-  *
-  * @return String
-  */
-  public function flush()
-  {
-    $this->string = "";
-    return $this;
-  }
-
-  /**
-  * Strip whitespace from the beginning and end of a string.
-  *
-  * @return String
-  */
-  public function trim()
-  {
-    $this->string = trim($this->string);
-    return $this;
-  }
-
-  /**
-  * Prints the string.
-  *
-  * @return String
-  */
-  public function out()
-  {
-    echo $this->string;
-    return $this;
-  }
-
-  /**
-  * Shuffles a string.
-  *
-  * @return String
-  */
-  public function shuffle()
-  {
-    $this->string = str_shuffle($this->string);
-    return $this;
-  }
-
-  /**
-  * Returns an Integer object made of this string.
-  *
-  * @return Integer
-  */
-  public function getInteger()
-  {
-    return new Integer($this->toInteger());
-  }
-
-  /**
-  * Converts this string to an int value.
-  *
-  * @return integer
-  */
-  public function toInteger()
-  {
-    return intval($this->string);
-  }
-
-  /**
-  * Returns an Integer object made of this string.
-  *
-  * @return Float
-  */
-  public function getFloat()
-  {
-    return new OxsarFloat($this->toFloat());
-  }
-
-  /**
-  * Converts this string to a float value.
-  *
-  * @return float
-  */
-  public function toFloat()
-  {
-    return floatval($this->string);
-  }
-
-  /**
-  * Prepares the string for SQL search.
-  *
-  * @return String
-  */
-  public function prepareForSearch()
-  {
-    $this->replace("%", "");
-    if(Str::length(Str::replace("*", "", $this->string)) >= $this->minLenghtForSearch)
+    /**
+     * String-cast (если кто-то echo'ит объект напрямую).
+     */
+    public function __toString()
     {
-      $this->validSearchString = true;
+        return $this->value;
     }
-    else { $this->validSearchString = false; }
-    $this->replace("*", "%");
-    $this->string = "%".$this->string."%";
-    return $this;
-  }
-
-  /**
-  * Sets the min length for valid search strings.
-  *
-  * @param integer	Value to set
-  *
-  * @return String
-  */
-  public function setMinSearchLenght($length)
-  {
-    $this->minLenghtForSearch = intval($length);
-    return $this;
-  }
-
-  /**
-  * Splits a string by string into an array.
-  *
-  * @param string	The boundary
-  * @param integer	The returned array will contain a maximum of limit [optional]
-  *
-  * @return array
-  */
-  public function toArray($delmitter, $limit = -1)
-  {
-    $delmitter = $this->getFromArgument($delmitter);
-    $limit = $this->getFromArgument($limit);
-    return explode($delmitter->get(), $this->string, $limit->get());
-  }
-
-  /**
-  * Returns a Map object by splitting the string.
-  *
-  * @param string	The boundary
-  * @param integer	The returned array will contain a maximum of limit [optional]
-  *
-  * @return Map
-  */
-  public function getMap($delmitter, $limit = -1)
-  {
-    return new Map($this->toArray($delmitter, $limit));
-  }
-
-  /**
-  * Uppercases the first character of each word.
-  *
-  * @return String
-  */
-  public function upperWords()
-  {
-    $this->string = ucwords($this->string);
-    return $this;
-  }
-
-  /**
-  * Called when an unkown method has been requested.
-  * Warning: Use only functions with a string as return value!
-  *
-  * @param string	Method name
-  * @param array		Arguments [optional]
-  *
-  * @return String
-  */
-  public function __call($method, array $args = null)
-  {
-    $callback = $this->call($method, $args);
-    if($callback !== false)
-    {
-      $this->string = $callback->get();
-    }
-    return $this;
-  }
-
-  /**
-  * Returns the string when trying to invoke the class by echo:
-  * echo $stringObj;
-  *
-  * @return string
-  */
-  public function __toString()
-  {
-    return $this->get();
-  }
-
-  /**
-  * Produces a string according to the given format.
-  *
-  * @param mixed		Argument 1 [optional]
-  * @param mixed		Argument 2 [optional]
-  * @param mixed		... [optional]
-  *
-  * @return String
-  */
-  public function fromat()
-  {
-    $args = func_get_args();
-    array_unshift($args, $this->string);
-    $this->string = call_user_func_array("sprintf", $args);
-    return $this;
-  }
 }
-?>
