@@ -19,9 +19,9 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/oxsar/nova/backend/internal/auth"
-	"github.com/oxsar/nova/backend/internal/httpx"
-	"github.com/oxsar/nova/backend/internal/repo"
+	"oxsar/game-nova/internal/auth"
+	"oxsar/game-nova/internal/httpx"
+	"oxsar/game-nova/internal/repo"
 )
 
 // Role — строгий enum для проверок прав.

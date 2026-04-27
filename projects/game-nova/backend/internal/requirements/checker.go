@@ -13,7 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/config"
+	"oxsar/game-nova/internal/config"
 )
 
 // ErrNotMet — требования не выполнены. Оборачивает конкретный unmet-

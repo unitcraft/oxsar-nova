@@ -9,8 +9,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/repo"
-	"github.com/oxsar/nova/backend/pkg/ids"
+	"oxsar/game-nova/internal/repo"
+	"oxsar/game-nova/pkg/ids"
 )
 
 // Ошибки доменного слоя. Handler переводит их в HTTP-статусы.

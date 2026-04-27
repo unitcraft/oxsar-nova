@@ -25,7 +25,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/httpx"
+	"oxsar/game-nova/internal/httpx"
 )
 
 // UserProfile — полная карточка игрока.

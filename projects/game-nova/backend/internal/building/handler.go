@@ -7,9 +7,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/oxsar/nova/backend/internal/auth"
-	"github.com/oxsar/nova/backend/internal/httpx"
-	"github.com/oxsar/nova/backend/internal/requirements"
+	"oxsar/game-nova/internal/auth"
+	"oxsar/game-nova/internal/httpx"
+	"oxsar/game-nova/internal/requirements"
 )
 
 type Handler struct{ svc *Service }

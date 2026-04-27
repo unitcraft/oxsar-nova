@@ -7,8 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/pkg/ids"
-	"github.com/oxsar/nova/backend/pkg/trace"
+	"oxsar/game-nova/pkg/ids"
+	"oxsar/game-nova/pkg/trace"
 )
 
 // InsertOpts — параметры для event.Insert. UserID/PlanetID опциональны.

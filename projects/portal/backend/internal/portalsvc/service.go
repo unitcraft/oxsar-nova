@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/oxsar/nova/backend/internal/repo"
-	"github.com/oxsar/nova/backend/pkg/ids"
+	"oxsar/portal/internal/repo"
+	"oxsar/portal/pkg/ids"
 )
 
 var (

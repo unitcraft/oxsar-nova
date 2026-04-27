@@ -9,10 +9,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/battle"
-	"github.com/oxsar/nova/backend/internal/config"
-	"github.com/oxsar/nova/backend/internal/event"
-	"github.com/oxsar/nova/backend/pkg/ids"
+	"oxsar/game-nova/internal/battle"
+	"oxsar/game-nova/internal/config"
+	"oxsar/game-nova/internal/event"
+	"oxsar/game-nova/pkg/ids"
 )
 
 // HoldingDefender — alien-флот, стоящий на планете в HOLDING, готовый

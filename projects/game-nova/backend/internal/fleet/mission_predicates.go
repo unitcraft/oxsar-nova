@@ -1,6 +1,6 @@
 package fleet
 
-import "github.com/oxsar/nova/backend/internal/event"
+import "oxsar/game-nova/internal/event"
 
 // Семантические предикаты над типом миссии.
 //

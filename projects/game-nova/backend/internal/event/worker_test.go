@@ -11,9 +11,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/oxsar/nova/backend/internal/event"
-	"github.com/oxsar/nova/backend/internal/repo"
-	"github.com/oxsar/nova/backend/pkg/ids"
+	"oxsar/game-nova/internal/event"
+	"oxsar/game-nova/internal/repo"
+	"oxsar/game-nova/pkg/ids"
 )
 
 // Интеграционные тесты требуют PostgreSQL. Если TEST_DATABASE_URL не

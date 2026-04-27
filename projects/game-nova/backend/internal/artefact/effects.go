@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/oxsar/nova/backend/internal/config"
+	"oxsar/game-nova/internal/config"
 )
 
 // Направление применения эффекта.

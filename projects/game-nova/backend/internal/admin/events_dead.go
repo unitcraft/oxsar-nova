@@ -17,7 +17,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/httpx"
+	"oxsar/game-nova/internal/httpx"
 )
 
 type DeadEvent struct {

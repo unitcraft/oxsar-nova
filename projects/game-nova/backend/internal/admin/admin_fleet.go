@@ -7,9 +7,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/fleet"
-	"github.com/oxsar/nova/backend/internal/httpx"
-	"github.com/oxsar/nova/backend/internal/repo"
+	"oxsar/game-nova/internal/fleet"
+	"oxsar/game-nova/internal/httpx"
+	"oxsar/game-nova/internal/repo"
 )
 
 // План 14 Ф.2.4 — force-recall fleet.

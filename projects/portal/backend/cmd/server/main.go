@@ -17,13 +17,13 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
-	"github.com/oxsar/nova/backend/internal/auth"
-	"github.com/oxsar/nova/backend/internal/httpx"
-	"github.com/oxsar/nova/backend/internal/portalsvc"
-	"github.com/oxsar/nova/backend/internal/storage"
-	"github.com/oxsar/nova/backend/internal/universe"
-	"github.com/oxsar/nova/backend/pkg/jwtrs"
-	"github.com/oxsar/nova/backend/pkg/metrics"
+	"oxsar/portal/internal/auth"
+	"oxsar/portal/internal/httpx"
+	"oxsar/portal/internal/portalsvc"
+	"oxsar/portal/internal/storage"
+	"oxsar/portal/internal/universe"
+	"oxsar/portal/pkg/jwtrs"
+	"oxsar/portal/pkg/metrics"
 )
 
 const drainDelay = 10 * time.Second

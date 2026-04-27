@@ -6,10 +6,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/battle"
-	"github.com/oxsar/nova/backend/internal/config"
-	"github.com/oxsar/nova/backend/internal/economy"
-	"github.com/oxsar/nova/backend/pkg/rng"
+	"oxsar/game-nova/internal/battle"
+	"oxsar/game-nova/internal/config"
+	"oxsar/game-nova/internal/economy"
+	"oxsar/game-nova/pkg/rng"
 )
 
 type unitStack struct {

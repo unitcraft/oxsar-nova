@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/oxsar/nova/backend/internal/httpx"
+	"oxsar/game-nova/internal/httpx"
 )
 
 // Handler — HTTP-адаптер.

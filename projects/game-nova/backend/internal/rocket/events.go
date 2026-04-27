@@ -7,8 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/event"
-	"github.com/oxsar/nova/backend/pkg/ids"
+	"oxsar/game-nova/internal/event"
+	"oxsar/game-nova/pkg/ids"
 )
 
 // interceptorRocketUnitID — unit_id юнита "interceptor_rocket" (§5.16).

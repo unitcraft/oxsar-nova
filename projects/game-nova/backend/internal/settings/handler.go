@@ -11,9 +11,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/oxsar/nova/backend/internal/auth"
-	"github.com/oxsar/nova/backend/internal/httpx"
-	"github.com/oxsar/nova/backend/internal/i18n"
+	"oxsar/game-nova/internal/auth"
+	"oxsar/game-nova/internal/httpx"
+	"oxsar/game-nova/internal/i18n"
 )
 
 var validTimezones = map[string]bool{

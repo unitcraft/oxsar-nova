@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/oxsar/nova/backend/pkg/sqldump"
+	"oxsar/game-nova/pkg/sqldump"
 )
 
 // na_ship_datasheet: unitid, capicity, speed, consume, attack, shield.

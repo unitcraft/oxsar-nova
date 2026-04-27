@@ -1,7 +1,7 @@
 package conditions
 
 import (
-	"github.com/oxsar/nova/backend/internal/goal"
+	"oxsar/game-nova/internal/goal"
 )
 
 // EventCountParams — параметры counter-условия "event_count".

@@ -3,7 +3,7 @@ package artefact
 import (
 	"testing"
 
-	"github.com/oxsar/nova/backend/internal/config"
+	"oxsar/game-nova/internal/config"
 )
 
 func TestComputeChanges_SetSymmetric(t *testing.T) {
