@@ -33,25 +33,34 @@ func NewHandler(svc *Service, iss *jwtrs.Issuer, ver *jwtrs.Verifier, rdb *redis
 }
 
 // Register — POST /auth/register
+//
+// План 44 (152-ФЗ): consent_accepted обязателен; без него регистрация
+// возвращает 400. IP и User-Agent сохраняются в user_consents.
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Username        string `json:"username"`
+		Email           string `json:"email"`
+		Password        string `json:"password"`
+		ConsentAccepted bool   `json:"consent_accepted"`
 	}
 	if err := decodeJSON(r, &in); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 		return
 	}
 	u, toks, err := h.svc.Register(r.Context(), RegisterInput{
-		Username: in.Username,
-		Email:    in.Email,
-		Password: in.Password,
+		Username:         in.Username,
+		Email:            in.Email,
+		Password:         in.Password,
+		ConsentAccepted:  in.ConsentAccepted,
+		ConsentIP:        clientIP(r),
+		ConsentUserAgent: r.UserAgent(),
 	})
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrUserExists):
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "user already exists"))
+		case errors.Is(err, ErrConsentRequired):
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "consent to personal data processing is required"))
 		default:
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 		}
@@ -155,6 +164,25 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, u)
+}
+
+// DeleteMe — DELETE /auth/users/me (требует JWT).
+//
+// План 44 (152-ФЗ, ст. 14): право субъекта на удаление своих ПДн.
+// Анонимизирует учётную запись в auth-service. Игровые сервисы должны
+// иметь свой flow удаления связанных игровых данных (в game-nova —
+// /api/me/deletion/code → DELETE /api/me).
+func (h *Handler) DeleteMe(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userIDFromCtx(r)
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	if err := h.svc.DeleteAccount(r.Context(), userID); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ChangePassword — POST /auth/password (требует JWT).

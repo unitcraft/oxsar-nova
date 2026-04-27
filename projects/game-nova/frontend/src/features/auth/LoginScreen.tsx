@@ -6,12 +6,18 @@ import { useTranslation } from '@/i18n/i18n';
 
 type Mode = 'login' | 'register';
 
+// План 44: Privacy Policy живёт на портале (oxsar-nova.ru/privacy). В проде
+// game-nova на subdomain — нужен абсолютный URL. В dev (vite) — относительный.
+const PORTAL_PRIVACY_URL =
+  (import.meta.env['VITE_PORTAL_PRIVACY_URL'] as string | undefined) ?? '/privacy';
+
 export function LoginScreen() {
   const setTokens = useAuthStore((s) => s.setTokens);
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation('auth');
@@ -24,11 +30,13 @@ export function LoginScreen() {
       // План 36 Ф.11: фронтенд ходит в auth-service (через vite proxy /auth/* в dev,
       // через nginx auth.oxsar-nova.ru в prod). На login auth-service ждёт поле
       // login (email или username), на register — username + email + password.
+      // План 44 (152-ФЗ): на register дополнительно отдаём consent_accepted —
+      // подтверждение согласия с обработкой ПДн.
       const path = mode === 'login' ? '/auth/login' : '/auth/register';
       const body =
         mode === 'login'
           ? { login: email, password }
-          : { username, email, password };
+          : { username, email, password, consent_accepted: consent };
       const res = await api.post<AuthResponse>(path, body);
       setTokens({
         access: res.tokens.access,
@@ -117,8 +125,37 @@ export function LoginScreen() {
                 placeholder={t('passwordPlaceholder')}
               />
             </label>
+            {mode === 'register' && (
+              <label
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 8,
+                  fontSize: 13, color: 'var(--ox-fg-muted)', lineHeight: 1.5,
+                  marginTop: 4,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  required
+                  style={{ marginTop: 3, flexShrink: 0 }}
+                />
+                <span>
+                  {t('consentPrefix')}{' '}
+                  <a href={PORTAL_PRIVACY_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--ox-accent)' }}>
+                    {t('consentLinkText')}
+                  </a>
+                  {t('consentSuffix')}
+                </span>
+              </label>
+            )}
             {error && <div className="ox-error">{error}</div>}
-            <button type="submit" className="btn" disabled={loading} style={{ width: '100%', marginTop: 8 }}>
+            <button
+              type="submit"
+              className="btn"
+              disabled={loading || (mode === 'register' && !consent)}
+              style={{ width: '100%', marginTop: 8 }}
+            >
               {loading ? '…' : mode === 'login' ? t('loginButton') : t('registerButton')}
             </button>
           </form>

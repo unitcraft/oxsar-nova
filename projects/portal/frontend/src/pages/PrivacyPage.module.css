@@ -1,0 +1,30 @@
+.page { max-width: 760px; margin: 2rem auto 4rem; padding: 0 1.25rem; color: var(--ox-fg); }
+
+.title {
+  font-size: 1.4rem; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ox-fg);
+  border-left: 3px solid var(--ox-accent); padding-left: 0.7rem;
+  margin: 0 0 0.5rem;
+}
+
+.meta {
+  color: var(--ox-fg-muted); font-size: 0.85rem;
+  margin: 0 0 2rem;
+}
+
+.section { margin: 1.75rem 0; }
+
+.section h2 {
+  font-size: 1rem; font-weight: 600; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--ox-fg-dim);
+  margin: 0 0 0.6rem;
+}
+
+.section p, .section li {
+  font-size: 0.95rem; line-height: 1.65; color: var(--ox-fg-dim);
+}
+
+.section ul { margin: 0.4rem 0 0.6rem 1.2rem; padding: 0; }
+.section li { margin-bottom: 0.3rem; }
+
+.section a { color: var(--ox-accent); }

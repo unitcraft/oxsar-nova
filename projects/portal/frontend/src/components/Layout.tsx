@@ -37,6 +37,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <main className={styles.main}>{children}</main>
       <footer className={styles.footer}>
         <span>© 2026 Oxsar Nova</span>
+        <Link href="/privacy" className={styles.footerLink}>
+          Политика конфиденциальности
+        </Link>
       </footer>
     </div>
   );

@@ -71,6 +71,7 @@ export function RegisterPage() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -79,7 +80,7 @@ export function RegisterPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await portalApi.auth.register(username, email, password);
+      const res = await portalApi.auth.register(username, email, password, consent);
       setAuth(res.user, res.tokens);
       window.location.href = '/';
     } catch (err) {
@@ -129,8 +130,26 @@ export function RegisterPage() {
               required
             />
           </label>
+          <label className={styles.consent}>
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              required
+            />
+            <span>
+              Я ознакомлен с{' '}
+              <Link href="/privacy">Политикой конфиденциальности</Link> и даю
+              согласие на обработку моих персональных данных в соответствии с
+              Федеральным законом № 152-ФЗ.
+            </span>
+          </label>
           {error && <div className={styles.error}>{error}</div>}
-          <button className={styles.submit} type="submit" disabled={loading}>
+          <button
+            className={styles.submit}
+            type="submit"
+            disabled={loading || !consent}
+          >
             {loading ? 'Создаём аккаунт…' : 'Создать аккаунт'}
           </button>
         </form>

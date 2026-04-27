@@ -22,7 +22,17 @@ var (
 	ErrUserExists        = errors.New("authsvc: user already exists")
 	ErrInvalidCredential = errors.New("authsvc: invalid credentials")
 	ErrUserBanned        = errors.New("authsvc: account banned")
+	ErrConsentRequired   = errors.New("authsvc: pdn consent required")
 )
+
+// PrivacyPolicyVersion — версия Политики конфиденциальности, которую
+// принимает пользователь чекбоксом при регистрации (план 44, 152-ФЗ).
+// Поднимаем при существенных изменениях документа — старые согласия
+// останутся в БД с прежней версией для аудита.
+const PrivacyPolicyVersion = "1.0"
+
+// ConsentTypePDNProcessing — обработка персональных данных по 152-ФЗ.
+const ConsentTypePDNProcessing = "pdn_processing"
 
 // User — публичная проекция пользователя.
 //
@@ -37,10 +47,17 @@ type User struct {
 }
 
 // RegisterInput — вход регистрации.
+//
+// План 44 (152-ФЗ): ConsentAccepted — флаг согласия на обработку ПДн,
+// фиксируется чекбоксом в форме регистрации. ConsentIP / ConsentUserAgent —
+// атрибуты согласия для аудита (заполняет HTTP handler).
 type RegisterInput struct {
-	Username string
-	Email    string
-	Password string
+	Username         string
+	Email            string
+	Password         string
+	ConsentAccepted  bool
+	ConsentIP        string
+	ConsentUserAgent string
 }
 
 // План 38 Ф.5: SpendInput, CreditTx, ErrInsufficientFunds удалены —
@@ -58,10 +75,17 @@ func New(pool *pgxpool.Pool, iss *jwtrs.Issuer) *Service {
 }
 
 // Register создаёт нового пользователя.
+//
+// План 44 (152-ФЗ): без явного согласия на обработку ПДн регистрация
+// запрещена. Согласие фиксируется в user_consents в одной транзакции
+// с insert users — нельзя оказаться с пользователем без согласия.
 func (s *Service) Register(ctx context.Context, in RegisterInput) (User, jwtrs.Tokens, error) {
 	username := strings.TrimSpace(in.Username)
 	email := strings.ToLower(strings.TrimSpace(in.Email))
 
+	if !in.ConsentAccepted {
+		return User{}, jwtrs.Tokens{}, ErrConsentRequired
+	}
 	if len(username) < 3 || len(username) > 24 {
 		return User{}, jwtrs.Tokens{}, fmt.Errorf("authsvc: username length 3..24")
 	}
@@ -77,6 +101,16 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (User, jwtrs.T
 		return User{}, jwtrs.Tokens{}, err
 	}
 
+	// accepted_ip — INET в Postgres; пустая строка не прокатит, передаём NULL.
+	var consentIP any
+	if in.ConsentIP != "" {
+		consentIP = in.ConsentIP
+	}
+	var consentUA any
+	if in.ConsentUserAgent != "" {
+		consentUA = in.ConsentUserAgent
+	}
+
 	userID := ids.New()
 	err = s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
@@ -88,6 +122,14 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (User, jwtrs.T
 				return ErrUserExists
 			}
 			return fmt.Errorf("insert user: %w", err)
+		}
+		_, err = tx.Exec(ctx, `
+			INSERT INTO user_consents
+				(user_id, consent_type, consent_text_version, accepted_ip, accepted_user_agent)
+			VALUES ($1, $2, $3, $4, $5)
+		`, userID, ConsentTypePDNProcessing, PrivacyPolicyVersion, consentIP, consentUA)
+		if err != nil {
+			return fmt.Errorf("insert consent: %w", err)
 		}
 		return nil
 	})
@@ -202,6 +244,49 @@ func (s *Service) GetActiveUniverses(ctx context.Context, userID string) ([]stri
 
 // План 38 Ф.5: SpendCredits/AddCredits/CreditBalance/CreditHistory удалены.
 // Кошельки в billing-service (см. internal/billing/wallet.go).
+
+// DeleteAccount анонимизирует пользователя в auth-db (план 44, ст. 14 152-ФЗ).
+//
+// По 152-ФЗ достаточно деперсонализации (ст. 3 п. 9), а не физического
+// удаления записи: email и username заменяются на технические значения,
+// password_hash обнуляется (вход больше невозможен), deleted_at = now()
+// — что отсекает пользователя в Login/Refresh/GetUser (см. WHERE-условия).
+//
+// Идемпотентность: если пользователь уже удалён — return без ошибки.
+//
+// Связанные данные (refresh_tokens, oauth_accounts, credit_transactions,
+// universe_memberships, user_consents) удалятся каскадом по ON DELETE
+// CASCADE — но мы ничего не DELETE-аем, чтобы не разрывать FK-инварианты
+// и сохранить аудит-историю. Refresh-токены становятся невалидными, потому
+// что при Refresh пользователь отсекается через deleted_at IS NULL.
+//
+// Полное удаление игровых объектов (планет, флотов, рейтингов) — задача
+// игровых сервисов; в auth-service владелец становится «удалённым», и они
+// сами разруливают (story-параллельно flow в game-nova/settings/delete.go,
+// который анонимизирует игровую таблицу users).
+func (s *Service) DeleteAccount(ctx context.Context, userID string) error {
+	if userID == "" {
+		return fmt.Errorf("authsvc: empty user id")
+	}
+	if len(userID) < 8 {
+		return fmt.Errorf("authsvc: invalid user id")
+	}
+	short := userID[:8]
+	tag, err := s.db.Pool().Exec(ctx, `
+		UPDATE users SET
+			deleted_at    = now(),
+			username      = '[deleted_' || $2 || ']',
+			email         = '[deleted_' || $2 || ']',
+			password_hash = ''
+		WHERE id = $1 AND deleted_at IS NULL
+	`, userID, short)
+	if err != nil {
+		return fmt.Errorf("anonymize user: %w", err)
+	}
+	// 0 строк — пользователь либо не найден, либо уже удалён. Идемпотентно.
+	_ = tag.RowsAffected()
+	return nil
+}
 
 // ChangePassword проверяет текущий пароль и устанавливает новый. План 36 Critical-6.
 // Минимальная длина нового пароля — 8 символов (как при регистрации).
