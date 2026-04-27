@@ -151,52 +151,9 @@ type changePasswordRequest struct {
 	NewPassword     string `json:"new_password"`
 }
 
-// ChangePassword POST /api/settings/password — смена пароля.
-func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
-	if !ok {
-		httpx.WriteError(w, r, httpx.ErrUnauthorized)
-		return
-	}
-
-	var req changePasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
-		return
-	}
-
-	if len(req.NewPassword) < 8 {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "password must be at least 8 chars"))
-		return
-	}
-
-	var currentHash string
-	if err := h.pool.QueryRow(r.Context(),
-		`SELECT password_hash FROM users WHERE id = $1`, uid,
-	).Scan(&currentHash); err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
-		return
-	}
-
-	ok2, err := auth.VerifyPassword(req.CurrentPassword, currentHash)
-	if err != nil || !ok2 {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "current password is incorrect"))
-		return
-	}
-
-	newHash, err := auth.HashPassword(req.NewPassword)
-	if err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
-		return
-	}
-
-	if _, err := h.pool.Exec(r.Context(),
-		`UPDATE users SET password_hash = $1 WHERE id = $2`, newHash, uid); err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
+// План 36 Critical-6: ChangePassword переехал в auth-service (POST /auth/password).
+// Хеш пароля живёт в auth-db, в game-db password_hash IS NULL.
+// Frontend дёргает auth-service напрямую через vite proxy /auth/password.
 
 func (h *Handler) setEmail(ctx context.Context, uid, email string) error {
 	tag, err := h.pool.Exec(ctx,

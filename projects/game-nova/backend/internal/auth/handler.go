@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -12,76 +11,17 @@ import (
 	"oxsar/game-nova/internal/httpx"
 )
 
-// Handler — HTTP-адаптер к auth.Service.
+// Handler — HTTP-адаптер к /api/me и /api/me/vacation.
+//
+// План 36 Ф.12: Register/Login/Refresh переехали в auth-service. Здесь
+// остаются только эндпоинты текущего пользователя (профиль, vacation).
 type Handler struct {
-	svc     *Service
-	db      *pgxpool.Pool
+	db       *pgxpool.Pool
 	vacation *VacationService
 }
 
-func NewHandler(svc *Service, db *pgxpool.Pool) *Handler {
-	return &Handler{svc: svc, db: db, vacation: NewVacationService(db)}
-}
-
-type registerRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type authResponse struct {
-	User   User   `json:"user"`
-	Tokens Tokens `json:"tokens"`
-}
-
-// Register POST /api/auth/register?ref=<userID>
-func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	var req registerRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
-		return
-	}
-	in := RegisterInput{
-		Username:   req.Username,
-		Email:      req.Email,
-		Password:   req.Password,
-		ReferredBy: r.URL.Query().Get("ref"),
-	}
-	u, t, err := h.svc.Register(r.Context(), in)
-	if err != nil {
-		switch {
-		case errors.Is(err, ErrUserExists):
-			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "user exists"))
-		default:
-			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
-		}
-		return
-	}
-	httpx.WriteJSON(w, r, http.StatusCreated, authResponse{User: u, Tokens: t})
-}
-
-type loginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-// Login POST /api/auth/login
-func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
-	var req loginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
-		return
-	}
-	u, t, err := h.svc.Login(r.Context(), req.Email, req.Password)
-	if err != nil {
-		httpx.WriteError(w, r, httpx.ErrUnauthorized)
-		return
-	}
-	httpx.WriteJSON(w, r, http.StatusOK, authResponse{User: u, Tokens: t})
-}
-
-type refreshRequest struct {
-	Refresh string `json:"refresh"`
+func NewHandler(db *pgxpool.Pool) *Handler {
+	return &Handler{db: db, vacation: NewVacationService(db)}
 }
 
 // Me GET /api/me — возвращает user_id, username, role, credit, profession текущего пользователя.
@@ -166,17 +106,3 @@ func (h *Handler) UnsetVacation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Refresh POST /api/auth/refresh
-func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
-	var req refreshRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
-		return
-	}
-	t, err := h.svc.Refresh(req.Refresh)
-	if err != nil {
-		httpx.WriteError(w, r, httpx.ErrUnauthorized)
-		return
-	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]Tokens{"tokens": t})
-}

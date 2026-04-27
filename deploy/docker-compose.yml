@@ -184,8 +184,13 @@ services:
       AUTH_DB_URL: postgres://authsvc:authsvc@auth-db:5432/authsvc?sslmode=disable
       REDIS_URL: redis://redis:6379/2
       # В dev RSA-ключ генерируется при первом старте и сохраняется в volume.
-      # На проде — монтируется secret из /run/secrets.
+      # AUTH_KEY_AUTOGEN=1 включает auto-generate (только для dev/test).
+      # На проде — монтируется secret из /run/secrets, AUTH_KEY_AUTOGEN=0.
       RSA_KEY_PATH: /var/lib/auth/rsa_key.pem
+      AUTH_KEY_AUTOGEN: "1"
+      # Dev TTL: access 60m / refresh 30d — удобно при разработке,
+      # не нужно часто перелогиниваться.
+      # Prod TTL (15m / 7d) — в docker-compose.multiverse.yml.
       JWT_ACCESS_TTL: 60m
       JWT_REFRESH_TTL: 720h
       LOG_LEVEL: info

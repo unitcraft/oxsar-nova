@@ -4,6 +4,13 @@
 *.exe
 coverage.*
 
+# Go-build артефакты (бинарники без расширения, лежат рядом с main.go)
+projects/*/backend/server
+projects/*/backend/worker
+projects/*/backend/auth-service
+projects/*/backend/portal
+projects/*/backend/testseed
+
 # Node
 node_modules/
 .vite/

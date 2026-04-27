@@ -4,7 +4,9 @@ package main
 
 import (
 	"context"
+	"crypto/rsa"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -42,6 +44,10 @@ func run() error {
 	dbURL := mustEnv("AUTH_DB_URL")
 	redisURL := envStr("REDIS_URL", "redis://localhost:6379/0")
 	keyPath := envStr("RSA_KEY_PATH", "/run/secrets/auth_rsa_key.pem")
+	// AUTH_KEY_AUTOGEN=1 — для dev: если файла нет, сгенерировать и записать.
+	// В production оставлять "0" (default) — ключ должен быть подложен извне
+	// (Docker secret, Vault, KMS). Запуск без ключа = fail-fast.
+	keyAutogen := envStr("AUTH_KEY_AUTOGEN", "0") == "1"
 	accessTTL := envDur("JWT_ACCESS_TTL", 60*time.Minute)
 	refreshTTL := envDur("JWT_REFRESH_TTL", 30*24*time.Hour)
 	allowedOrigins := strings.Split(envStr("ALLOWED_ORIGINS",
@@ -62,15 +68,22 @@ func run() error {
 		log.WarnContext(ctx, "redis unavailable", slog.String("err", err.Error()))
 	}
 
-	rsaKey, err := jwtrs.LoadOrGenerateKey(keyPath)
+	var rsaKey *rsa.PrivateKey
+	if keyAutogen {
+		log.WarnContext(ctx, "AUTH_KEY_AUTOGEN=1 — RSA key auto-generated if missing (DEV ONLY)",
+			slog.String("path", keyPath))
+		rsaKey, err = jwtrs.LoadOrGenerateKey(keyPath)
+	} else {
+		rsaKey, err = jwtrs.LoadKey(keyPath)
+	}
 	if err != nil {
-		return err
+		return fmt.Errorf("load rsa key: %w", err)
 	}
 	iss := jwtrs.NewIssuer(rsaKey, accessTTL, refreshTTL)
 	ver := jwtrs.NewVerifierFromKey(iss.PublicKey())
 
 	svc := authsvc.New(pool, iss)
-	h := authsvc.NewHandler(svc, iss, rdb)
+	h := authsvc.NewHandler(svc, iss, ver, rdb)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -93,10 +106,17 @@ func run() error {
 	})
 	r.Get("/.well-known/jwks.json", h.JWKS)
 
-	// Auth endpoints (публичные + rate-limited)
-	r.Post("/auth/register", h.Register)
-	r.Post("/auth/login", h.Login)
-	r.Post("/auth/refresh", h.Refresh)
+	// Auth endpoints (публичные + rate-limited).
+	// Лимиты: login строже (brute-force защита) — 5/мин/IP.
+	// Register чуть мягче — 10/мин/IP. Refresh — 30/мин/IP (может вызываться часто).
+	loginRL := authsvc.NewRateLimiter(rdb, "rl:login", 5, time.Minute).Middleware()
+	registerRL := authsvc.NewRateLimiter(rdb, "rl:register", 10, time.Minute).Middleware()
+	refreshRL := authsvc.NewRateLimiter(rdb, "rl:refresh", 30, time.Minute).Middleware()
+	logoutRL := authsvc.NewRateLimiter(rdb, "rl:logout", 30, time.Minute).Middleware()
+	r.With(registerRL).Post("/auth/register", h.Register)
+	r.With(loginRL).Post("/auth/login", h.Login)
+	r.With(refreshRL).Post("/auth/refresh", h.Refresh)
+	r.With(logoutRL).Post("/auth/logout", h.Logout)
 
 	// Обмен handoff-токена → JWT (вызывается игровым сервером)
 	r.Post("/auth/token/exchange", h.TokenExchange)
@@ -109,6 +129,7 @@ func run() error {
 	r.Group(func(pr chi.Router) {
 		pr.Use(authsvc.Middleware(ver))
 		pr.Get("/auth/me", h.Me)
+		pr.Post("/auth/password", h.ChangePassword)
 		pr.Get("/auth/credits/balance", h.CreditBalance)
 		pr.Get("/auth/credits/history", h.CreditHistory)
 		pr.Post("/auth/universe-token", h.UniverseToken)

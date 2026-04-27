@@ -289,13 +289,45 @@ func (s *Service) CreditHistory(ctx context.Context, userID string, limit, offse
 	return result, rows.Err()
 }
 
+// ChangePassword проверяет текущий пароль и устанавливает новый. План 36 Critical-6.
+// Минимальная длина нового пароля — 8 символов (как при регистрации).
+func (s *Service) ChangePassword(ctx context.Context, userID, current, newPwd string) error {
+	if len(newPwd) < 8 {
+		return fmt.Errorf("authsvc: password >= 8 chars")
+	}
+	var currentHash string
+	err := s.db.Pool().QueryRow(ctx,
+		`SELECT password_hash FROM users WHERE id = $1 AND deleted_at IS NULL`, userID,
+	).Scan(&currentHash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrInvalidCredential
+		}
+		return fmt.Errorf("get current hash: %w", err)
+	}
+	ok, err := auth.VerifyPassword(current, currentHash)
+	if err != nil || !ok {
+		return ErrInvalidCredential
+	}
+	newHash, err := auth.HashPassword(newPwd)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Pool().Exec(ctx,
+		`UPDATE users SET password_hash = $1 WHERE id = $2`, newHash, userID,
+	)
+	if err != nil {
+		return fmt.Errorf("update hash: %w", err)
+	}
+	return nil
+}
+
 // issueTokens выпускает токены для пользователя.
 func (s *Service) issueTokens(ctx context.Context, u User) (jwtrs.Tokens, error) {
 	universes, _ := s.GetActiveUniverses(ctx, u.ID)
 	return s.iss.Issue(jwtrs.IssueInput{
 		UserID:          u.ID,
 		Username:        u.Username,
-		Email:           u.Email,
 		GlobalCredits:   u.GlobalCredits,
 		ActiveUniverses: universes,
 		Roles:           u.Roles,

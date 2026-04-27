@@ -15,14 +15,22 @@ import (
 
 // Handler — HTTP-адаптер Auth Service.
 type Handler struct {
-	svc     *Service
-	iss     *jwtrs.Issuer
-	rdb     *redis.Client
+	svc       *Service
+	iss       *jwtrs.Issuer
+	ver       *jwtrs.Verifier
+	rdb       *redis.Client
+	blacklist *JTIBlacklist
 }
 
 // NewHandler создаёт Handler.
-func NewHandler(svc *Service, iss *jwtrs.Issuer, rdb *redis.Client) *Handler {
-	return &Handler{svc: svc, iss: iss, rdb: rdb}
+func NewHandler(svc *Service, iss *jwtrs.Issuer, ver *jwtrs.Verifier, rdb *redis.Client) *Handler {
+	return &Handler{
+		svc:       svc,
+		iss:       iss,
+		ver:       ver,
+		rdb:       rdb,
+		blacklist: NewJTIBlacklist(rdb),
+	}
 }
 
 // Register — POST /auth/register
@@ -87,12 +95,52 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 		return
 	}
+	// План 36 Critical-4: проверяем blacklist отозванных refresh-токенов.
+	claims, err := h.ver.Parse(in.Refresh, "refresh")
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrUnauthorized, "invalid refresh token"))
+		return
+	}
+	if revoked, _ := h.blacklist.IsRevoked(r.Context(), claims.ID); revoked {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrUnauthorized, "refresh token revoked"))
+		return
+	}
 	toks, err := h.svc.Refresh(r.Context(), in.Refresh)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrUnauthorized, "invalid refresh token"))
 		return
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"tokens": toks})
+}
+
+// Logout — POST /auth/logout. Принимает refresh-token, кладёт его jti
+// в Redis-blacklist на оставшийся TTL.
+//
+// Публичный endpoint (не требует access JWT) — на logout фронт мог уже
+// потерять access. Достаточно знать refresh, чтобы его отозвать.
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Refresh string `json:"refresh"`
+	}
+	if err := decodeJSON(r, &in); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+		return
+	}
+	claims, err := h.ver.Parse(in.Refresh, "refresh")
+	if err != nil {
+		// Идемпотентность: невалидный токен → 204 (logout всё равно «работает»).
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	expiresAt := time.Time{}
+	if claims.ExpiresAt != nil {
+		expiresAt = claims.ExpiresAt.Time
+	}
+	if err := h.blacklist.Revoke(r.Context(), claims.ID, expiresAt); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Me — GET /auth/me
@@ -108,6 +156,36 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, u)
+}
+
+// ChangePassword — POST /auth/password (требует JWT).
+// План 36 Critical-6: смена пароля переехала из game-nova/settings в auth-service,
+// потому что хеш пароля живёт здесь.
+func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userIDFromCtx(r)
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	var in struct {
+		Current string `json:"current"`
+		New     string `json:"new"`
+	}
+	if err := decodeJSON(r, &in); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+		return
+	}
+	err := h.svc.ChangePassword(r.Context(), userID, in.Current, in.New)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrInvalidCredential):
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "current password is incorrect"))
+		default:
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // JWKS — GET /.well-known/jwks.json

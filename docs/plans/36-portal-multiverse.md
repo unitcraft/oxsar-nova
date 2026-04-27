@@ -145,6 +145,20 @@ GET auth.oxsar-nova.ru/.well-known/jwks.json
 `active_universes` — вселенные, где у игрока есть аккаунт. Игровой сервер проверяет
 своё `UNIVERSE_ID` в этом списке при каждом запросе.
 
+### TTL access / refresh
+
+| Среда | access | refresh | Где |
+|---|---|---|---|
+| dev | 60m | 30d (720h) | `deploy/docker-compose.yml` |
+| prod | 15m | 7d (168h) | `deploy/docker-compose.multiverse.yml` |
+
+**Почему различаются**: dev оптимизирован под удобство (не перелогиниваться часто),
+prod — под security (короткий access = revocation действует быстро через TTL даже
+без blacklist'а; refresh 7d — индустриальный стандарт OWASP).
+
+При revoke через `/auth/logout` (план Ф.11/Critical-4) refresh попадает в
+Redis-blacklist на оставшийся TTL.
+
 ### API Auth Service
 
 ```
@@ -152,6 +166,7 @@ POST /auth/register           — регистрация (email + username + pas
 POST /auth/login              — вход по паролю
 POST /auth/refresh            — обновить access token
 POST /auth/logout             — отозвать refresh token
+POST /auth/password           — смена пароля (current + new, требует JWT)
 GET  /auth/me                 — профиль текущего пользователя
 GET  /auth/me/universes       — мои активные вселенные (из universe_memberships)
 
@@ -886,46 +901,50 @@ dev-окружению, ни к фронтенду:
   фронты переключены, backend на JWKS.
 - ✅ **Ф.12** Lazy-create в middleware (`EnsureUserMiddleware`), миграция
   `password_hash → NULLABLE`, Universe Switcher в шапке.
+- ✅ **Pre-prod sweep** (Critical-1..6, Functional-8, Nice-10, Космет.13):
+  RSA fail-fast, удалён HS256, rate-limit, /auth/logout с revoke,
+  universe_memberships записывается, /auth/password в auth-service,
+  bootstrap retry, email убран из JWT, бинарники из git-tracking.
 
 End-to-end в dev: register в auth-service → JWT (RSA) → `/api/me` в game-nova
-возвращает 200, юзер автоматически создан в game-db со стартовой планетой.
+возвращает 200, юзер автоматически создан в game-db со стартовой планетой,
+запись в `universe_memberships` есть. Logout → refresh потом 401. 6-й login
+за минуту → 429.
 
 ### Что должно быть до прода (детали в [simplifications.md](../simplifications.md))
 
-**Critical (security / data integrity):**
+**Critical (security / data integrity) — ✅ ВСЁ ЗАКРЫТО 2026-04-27:**
 
-1. RSA-ключ — внешний secret, не auto-generate в контейнере. Документация ротации.
-2. Удалить legacy HS256 fallback в game-nova (`cmd/server/main.go`,
-   `internal/auth/Service.Register/Login/Refresh`, `JWTSecret` в config).
-   Сейчас security-bug — запуск без `AUTH_JWKS_URL` = HS256 с дефолтным секретом.
-3. Rate-limiting на `/auth/login` и `/auth/register` в auth-service
-   (был в game-nova, при переезде потерялся).
-4. `POST /auth/logout` с revoke refresh-tokens через Redis-blacklist.
-5. EnsureUserMiddleware должен дёргать `auth-service/auth/universes/register`
-   при создании юзера — иначе `active_universes` в JWT всегда пуст.
+1. ✅ RSA-ключ — fail-fast без autogen в проде (`AUTH_KEY_AUTOGEN=0` default).
+2. ✅ Legacy HS256 fallback удалён, AUTH_JWKS_URL обязателен.
+3. ✅ Rate-limiter на /auth/login (5/мин), /auth/register (10/мин).
+4. ✅ POST /auth/logout + Redis-blacklist на refresh-jti.
+5. ✅ EnsureUserMiddleware регистрирует `universe_memberships`.
+6. ✅ Смена пароля — `POST /auth/password` в auth-service.
 
 **Functional (не блокирует security, но нужно для multi-universe):**
 
-6. Ф.7 — Global Credits + платёжные webhook'и (CloudPayments/Enot.io →
-   auth-service). Голосование за feedback должно списывать кредиты.
-7. Ф.8 — второй вселенский стек (uni02 Speed) для проверки Universe Switcher
-   E2E. DNS на Selectel + wildcard SSL.
-8. `bootstrapNewUser` retry-логика — если стартовая планета не назначилась,
-   повторная попытка на следующем запросе.
+- ⏳ **Ф.7** — Global Credits + платёжные webhook'и (CloudPayments/Enot.io →
+  auth-service). Голосование за feedback должно списывать кредиты.
+- ⏳ **Ф.8** — второй вселенский стек (uni02 Speed) для проверки Universe Switcher
+  E2E. DNS на Selectel + wildcard SSL.
+- ✅ `bootstrapNewUser` retry-логика — если стартовая планета не назначилась,
+  повторная попытка на следующем запросе.
 
 **Nice to have:**
 
-9. KeySet (current + previous) для ротации RSA без выкидывания живых JWT.
-10. Email из JWT claims убрать (PII в токене), вместо этого `auth-service/auth/me`.
-11. OAuth Social Login (Ф.6) — отложен по решению пользователя, можно вернуть.
+- ⏳ KeySet (current + previous) для ротации RSA без выкидывания живых JWT.
+- ✅ Email из JWT claims убран (PII), Email NULLABLE в game-db.
+- ⏳ OAuth Social Login (Ф.6) — отложен по решению пользователя.
 
 **Косметика:**
 
-12. Удалить мёртвый код `internal/auth/handler.go::Register/Login/Refresh`,
-    `password.go`, тесты на них.
-13. Удалить из git-tracking бинарники `projects/game-nova/backend/{server,worker,*.exe}`.
+- ✅ Мёртвый код auth handlers (`Register/Login/Refresh`) удалён вместе с
+  `service.go`, `jwt.go`, `ratelimit.go`. `password.go` оставлен (используется
+  `internal/settings/delete.go` для одноразового кода удаления аккаунта).
+- ✅ Бинарники `server`, `worker` убраны из git-tracking, добавлены в `.gitignore`.
 
-**Итого**: ~18–25 рабочих дней + ops-тест + critical pre-prod sweep ~3–5 дней.
+**Итого**: ~18–25 рабочих дней + ops-тест. Pre-prod sweep ✅ (выполнено 2026-04-27).
 
 ---
 

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -143,25 +144,19 @@ func run() error {
 		log.WarnContext(ctx, "redis unavailable, continuing without cache", slog.String("err", err.Error()))
 	}
 
-	// План 36 Ф.12: /api/auth/login|register|refresh удалены, rate-limiter
-	// больше не используется. auth.NewIPRateLimiter оставлен в коде на случай
-	// если понадобится для других ручек.
+	// План 36 Ф.12: /api/auth/login|register|refresh удалены —
+	// аутентификация только через auth-service.
 
 	db := repo.New(pool)
 
-	// Режим аутентификации: RSA-256 через Auth Service (AUTH_JWKS_URL)
-	// или legacy HS256 (JWT_SECRET) для локальной разработки без auth-service.
-	var jwt *auth.JWTIssuer
-	useJWKS := cfg.Auth.JWKSUrl != ""
-	if useJWKS {
-		log.InfoContext(ctx, "auth mode: RSA-256 via JWKS",
-			slog.String("jwks_url", cfg.Auth.JWKSUrl),
-			slog.String("universe_id", cfg.Auth.UniverseID))
-	} else {
-		log.InfoContext(ctx, "auth mode: legacy HS256 (dev)",
-			slog.String("universe_id", cfg.Auth.UniverseID))
-		jwt = auth.NewJWTIssuer(cfg.Auth.JWTSecret, cfg.Auth.AccessTTL, cfg.Auth.RefreshTTL)
+	// AUTH_JWKS_URL обязателен. Запуск без него = fail-fast (security:
+	// раньше был fallback на HS256 с дефолтным JWT_SECRET).
+	if cfg.Auth.JWKSUrl == "" {
+		return fmt.Errorf("AUTH_JWKS_URL is required (HS256 fallback removed in Ф.12)")
 	}
+	log.InfoContext(ctx, "auth mode: RSA-256 via JWKS",
+		slog.String("jwks_url", cfg.Auth.JWKSUrl),
+		slog.String("universe_id", cfg.Auth.UniverseID))
 
 
 	planetRepo := planet.NewRepository(pool)
@@ -197,28 +192,29 @@ func run() error {
 	automsgSvc := automsg.NewService(db).WithBundle(i18nBundle)
 
 	referralSvc := referral.NewService(db).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
-	// В режиме JWKS auth-сервис не нужен игровому серверу: регистрация/логин
-	// живут в auth-service. Здесь оставляем только vacation-эндпоинты и /api/me.
-	authSvc := auth.NewService(db, jwt, starter, automsgSvc).WithReferral(referralSvc)
-	authH := auth.NewHandler(authSvc, pool)
+	_ = referralSvc // referral больше не подключается через auth.Service (она удалена в Ф.12);
+	// referral будет вызываться напрямую из EnsureUserMiddleware/bootstrap (TODO).
 
-	// authMiddleware — единая функция выбора middleware по режиму.
-	// В RSA-режиме после верификации стоит EnsureUserMiddleware: lazy-create
-	// юзера в game-db (план 36 Ф.12). В legacy HS256 не нужен — там юзер
-	// создавался старым /api/auth/register.
-	var authMiddlewareFn func(http.Handler) http.Handler
-	if useJWKS {
-		rsaVer, loadErr := auth.LoadVerifier(ctx, cfg.Auth.JWKSUrl)
-		if loadErr != nil {
-			return loadErr
-		}
-		rsaMW := auth.RSAMiddleware(rsaVer)
-		ensureMW := auth.EnsureUserMiddleware(pool, starter, automsgSvc)
-		authMiddlewareFn = func(next http.Handler) http.Handler {
-			return rsaMW(ensureMW(next))
-		}
-	} else {
-		authMiddlewareFn = auth.Middleware(jwt)
+	// План 36 Ф.12: auth.Service (Register/Login/Refresh) удалён. Здесь только
+	// /api/me и /api/me/vacation — handler берёт данные напрямую из БД.
+	authH := auth.NewHandler(pool)
+
+	// authMiddleware: RSA-валидация JWT от auth-service + lazy-create юзера
+	// в game-db при первом запросе (план 36 Ф.12).
+	rsaVer, loadErr := auth.LoadVerifier(ctx, cfg.Auth.JWKSUrl)
+	if loadErr != nil {
+		return loadErr
+	}
+	rsaMW := auth.RSAMiddleware(rsaVer)
+	ensureMW := auth.EnsureUserMiddleware(auth.EnsureUserConfig{
+		Pool:           pool,
+		Starter:        starter,
+		Automsg:        automsgSvc,
+		UniverseID:     cfg.Auth.UniverseID,
+		AuthServiceURL: cfg.Auth.AuthServiceURL,
+	})
+	authMiddlewareFn := func(next http.Handler) http.Handler {
+		return rsaMW(ensureMW(next))
 	}
 
 	switcherH := universeswitcher.New(cfg.Auth.AuthServiceURL, cfg.Auth.UniverseID, univReg)
@@ -365,7 +361,7 @@ func run() error {
 		pr.Get("/empire", empireH.GetAll)
 		pr.Get("/settings", settingsH.Get)
 		pr.Put("/settings", settingsH.Update)
-		pr.Post("/settings/password", settingsH.ChangePassword)
+		// План 36 Critical-6: смена пароля — POST /auth/password в auth-service.
 		pr.Post("/me/deletion/code", settingsH.RequestDeletionCode)
 		pr.Delete("/me", settingsH.ConfirmDeletion)
 		pr.Get("/referrals", referralH.Mine)

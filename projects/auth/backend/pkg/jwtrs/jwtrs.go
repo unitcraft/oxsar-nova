@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -30,12 +31,10 @@ import (
 
 // Claims — кастомные поля JWT для oxsar-nova.
 //
-// Email включён в claims, чтобы handoff в game-nova/portal мог
-// зеркалить аккаунт в локальной БД без дополнительного запроса
-// /auth/me в auth-service. План 36 Ф.12.
+// Email НЕ включён в claims (PII не должно быть в токене — план 36 Nice-10).
+// Если downstream-сервису нужен email, он дёргает /auth/me с тем же токеном.
 type Claims struct {
 	Username        string   `json:"username"`
-	Email           string   `json:"email"`
 	GlobalCredits   int64    `json:"global_credits"`
 	ActiveUniverses []string `json:"active_universes"`
 	Roles           []string `json:"roles"`
@@ -53,7 +52,6 @@ type Tokens struct {
 type IssueInput struct {
 	UserID          string
 	Username        string
-	Email           string
 	GlobalCredits   int64
 	ActiveUniverses []string
 	Roles           []string
@@ -73,7 +71,20 @@ type Verifier struct {
 	keyID     string
 }
 
-// LoadOrGenerateKey загружает приватный RSA-ключ из файла или генерирует новый.
+// LoadKey читает приватный RSA-ключ из файла. Не генерирует — если файла нет,
+// возвращает ошибку. Использовать в production: ключ должен быть подложен
+// извне (Docker secret, Vault, KMS).
+func LoadKey(keyPath string) (*rsa.PrivateKey, error) {
+	data, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("read rsa key %q: %w", keyPath, err)
+	}
+	return parsePrivateKey(data)
+}
+
+// LoadOrGenerateKey — dev-helper: читает ключ из файла, или генерирует новый
+// (если файла нет) и пишет туда. Использовать ТОЛЬКО в dev/test —
+// в production ключ должен быть внешним секретом (см. LoadKey).
 func LoadOrGenerateKey(keyPath string) (*rsa.PrivateKey, error) {
 	if data, err := os.ReadFile(keyPath); err == nil {
 		return parsePrivateKey(data)
@@ -149,15 +160,17 @@ func (iss *Issuer) sign(in IssueInput, now time.Time, ttl time.Duration, kind st
 	if universes == nil {
 		universes = []string{}
 	}
+	// План 36 Critical-4: jti = kind + ":" + uuid — для уникальности
+	// (revoke через Redis-blacklist хранит конкретный jti).
+	jti := kind + ":" + uuid.New().String()
 	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, &Claims{
 		Username:        in.Username,
-		Email:           in.Email,
 		GlobalCredits:   in.GlobalCredits,
 		ActiveUniverses: universes,
 		Roles:           roles,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   in.UserID,
-			ID:        kind,
+			ID:        jti,
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 			NotBefore: jwt.NewNumericDate(now),
@@ -182,8 +195,9 @@ func (v *Verifier) Parse(raw, kind string) (*Claims, error) {
 	if !ok || !tok.Valid {
 		return nil, errors.New("jwtrs: invalid token")
 	}
-	if claims.ID != kind {
-		return nil, fmt.Errorf("jwtrs: wrong token kind %q, want %q", claims.ID, kind)
+	// jti формат: "<kind>:<uuid>" (см. sign). Проверяем префикс.
+	if !strings.HasPrefix(claims.ID, kind+":") {
+		return nil, fmt.Errorf("jwtrs: wrong token kind in jti %q, want prefix %q:", claims.ID, kind)
 	}
 	return claims, nil
 }

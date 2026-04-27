@@ -1180,7 +1180,32 @@ ResearchLab=12. Поправлено в этом же commit (см. план 29)
 **План возврата**: не требуется.
 
 
-## 2026-04-27 — План 36 Ф.11–Ф.12: auth-service подключён, упрощения до прода
+## 2026-04-27 — План 36 Ф.11–Ф.12: pre-prod sweep ЗАКРЫТО (Critical-1..6, Functional-8, Nice-10, Космет.13)
+
+После исходной фиксации (Ф.11–Ф.12) проведена ревизия "до прода":
+закрыты пп. 1–6 (security/data integrity), 8 (bootstrap retry),
+10 (email из JWT) и 13 (git-tracked binaries).
+
+Что осталось как осознанные упрощения — пп. 2 (ротация RSA-ключей,
+KeySet) и пп. 11 (OAuth Social Login) внутри секции — это самостоятельные
+фичи, не «фикс упрощения», ушли в отдельные итерации. И пп. 7 (голосование
+кредитами) ждёт Ф.7.
+
+Детали по каждому пункту — ниже, оригинальный текст сохранён, статусы
+переведены в ✅ ЗАКРЫТО.
+
+### 1. RSA-ключ генерируется в контейнере при первом старте — ✅ ЗАКРЫТО (2026-04-27)
+**Решение**: добавлены две функции в `pkg/jwtrs`:
+- `LoadKey` — только читает, при отсутствии файла — fail-fast.
+- `LoadOrGenerateKey` — dev-helper (читает или генерирует).
+
+В `cmd/server/main.go` auth-service выбор по env `AUTH_KEY_AUTOGEN`
+(default `"0"` → fail-fast). В `deploy/docker-compose.yml` стоит
+`AUTH_KEY_AUTOGEN: "1"` (dev). В `docker-compose.multiverse.yml` env
+не задан — там читается `/run/secrets/auth_rsa_key.pem` подложенный
+извне, fail-fast при отсутствии.
+
+#### Исходный текст (для истории):
 
 ### 1. RSA-ключ генерируется в контейнере при первом старте
 **Где**: `projects/auth/backend/cmd/server/main.go::run` через `jwtrs.LoadOrGenerateKey`,
@@ -1208,7 +1233,11 @@ Cron-task раз в N дней генерирует новый, сдвигает
 удаляет старый.
 **Приоритет**: M.
 
-### 3. Legacy HS256 fallback всё ещё в `cmd/server/main.go` game-nova
+### 3. Legacy HS256 fallback всё ещё в `cmd/server/main.go` game-nova — ✅ ЗАКРЫТО (2026-04-27)
+**Решение**: удалены `internal/auth/jwt.go`, `service.go` (Register/Login/Refresh),
+`ratelimit.go` (никем не использовался), legacy маршруты и переменные
+`JWT_SECRET`/`AccessTTL`/`RefreshTTL` из `config.go`. `AUTH_JWKS_URL`
+обязателен — иначе fail-fast. Тесты `internal/auth` зелёные.
 **Где**: `projects/game-nova/backend/cmd/server/main.go:151–164`,
 `internal/auth/handler.go::Register/Login/Refresh`,
 `internal/auth/service.go::register/login`.
@@ -1225,7 +1254,12 @@ referral, rate-limiter, тесты), отложена в финальный swee
 `AUTH_JWKS_URL` пустой — fail fast.
 **Приоритет**: H (security risk).
 
-### 4. EnsureUserMiddleware не записывает `universe_memberships` в auth-db
+### 4. EnsureUserMiddleware не записывает `universe_memberships` в auth-db — ✅ ЗАКРЫТО (2026-04-27)
+**Решение**: `bootstrapNewUser` в `internal/auth/ensure_user.go` теперь
+дёргает `POST AUTH_SERVICE_URL/auth/universes/register` после успешного
+INSERT в game-db. Параметры `UniverseID` и `AuthServiceURL` передаются
+через `EnsureUserConfig`. Проверено: после register в auth-service
+запись появляется в `universe_memberships`.
 **Где**: `projects/game-nova/backend/internal/auth/ensure_user.go::bootstrapNewUser`.
 **Что**: при lazy-create в game-db мы вызываем `starter.Assign` и `automsg.Send`,
 но НЕ дёргаем `POST /auth/universes/register` в auth-service. Поэтому таблица
@@ -1240,7 +1274,12 @@ HTTP POST на `auth-service:9000/auth/universes/register` с body
 JWKS_URL — может быть private VPC адресом).
 **Приоритет**: H (блокирует Universe Switcher логику в multi-стек проде).
 
-### 5. Email в JWT claims
+### 5. Email в JWT claims — ✅ ЗАКРЫТО (2026-04-27)
+**Решение**: поле `Email` удалено из `Claims` и `IssueInput` во всех 3
+DUPLICATE-копиях jwtrs. `EnsureUserMiddleware` пишет в game-db `email=NULL`.
+Миграция 0068 сделала `users.email` NULLABLE. Если downstream нужен email
+(admin-views и т.п.) — берёт через `auth-service GET /auth/me` с тем же
+токеном.
 **Где**: `pkg/jwtrs/jwtrs.go::Claims.Email` во всех 3 модулях.
 **Что**: добавлено поле `email` в access + refresh токены, чтобы lazy-create
 в game-db мог сделать INSERT без HTTP-вызова `/auth/me` в auth-service.
@@ -1255,7 +1294,11 @@ GDPR/privacy: токен не должен содержать персональ
 отображения брать оттуда по запросу).
 **Приоритет**: M.
 
-### 6. `bootstrapNewUser` асинхронный и без ретраев
+### 6. `bootstrapNewUser` асинхронный и без ретраев — ✅ ЗАКРЫТО (2026-04-27)
+**Решение**: добавлена `retryBootstrapIfNeeded` в `ensure_user.go`. На
+запросах с RowsAffected==0 (юзер уже существует) делает SELECT
+`cur_planet_id IS NOT NULL` и при `false` повторно дёргает `Starter.Assign`.
+Welcome повторно не отправляем (уже мог быть отправлен).
 **Где**: `projects/game-nova/backend/internal/auth/ensure_user.go`.
 **Что**: `starter.Assign` и `automsg.Send` запускаются в `go func()` после
 `INSERT users`. Если starter падает — юзер в `users` есть, планеты нет.
@@ -1277,7 +1320,13 @@ Lazy-retry на следующем запросе не реализован.
 **План возврата**: Ф.7. До неё голосование бесплатное.
 **Приоритет**: H (блокер для запуска в прод).
 
-### 8. Refresh-токен не отзывается при logout
+### 8. Refresh-токен не отзывается при logout — ✅ ЗАКРЫТО (2026-04-27)
+**Решение**: `POST /auth/logout` принимает refresh-token, валидирует RSA
+и кладёт его `jti` в Redis-blacklist на оставшийся TTL. Реализовано
+в `internal/authsvc/blacklist.go` (`JTIBlacklist`). `Refresh` handler
+проверяет blacklist перед обменом. JWT теперь содержит уникальный
+`jti = kind + ":" + uuid` (раньше был общий "access"/"refresh").
+Проверено: после logout refresh возвращает 401 «refresh token revoked».
 **Где**: `projects/auth/backend/cmd/server/main.go` — нет роута `/auth/logout`,
 `internal/authsvc/handler.go` — нет метода `Logout`.
 **Что**: refresh-токен (TTL 720h = 30 дней) живёт до истечения. Logout на фронте
@@ -1288,7 +1337,12 @@ Lazy-retry на следующем запросе не реализован.
 в blacklist.
 **Приоритет**: H (security, особенно если один аккаунт у нескольких людей).
 
-### 9. Нет rate-limiting на `/auth/login` и `/auth/register`
+### 9. Нет rate-limiting на `/auth/login` и `/auth/register` — ✅ ЗАКРЫТО (2026-04-27)
+**Решение**: `internal/authsvc/ratelimit.go` — IP-based лимитер на Redis
+(INCR + EXPIRE). Лимиты: login 5/min, register 10/min, refresh 30/min,
+logout 30/min. IP берётся из `X-Forwarded-For` / `X-Real-IP` (для
+работы за nginx). Fail-open при ошибке Redis (production может перейти
+на fail-closed). Проверено: 6-й login за минуту получает 429.
 **Где**: `projects/auth/backend/cmd/server/main.go` — middleware-цепочка в `r.Use(...)`
 не содержит rate-limiter.
 **Что**: brute-force атака на login не блокируется. В game-nova был
@@ -1300,7 +1354,10 @@ Lazy-retry на следующем запросе не реализован.
 `POST /auth/login` (строже — 5/min) и `POST /auth/register` (10/min).
 **Приоритет**: H.
 
-### 10. Бинарники game-nova в git
+### 10. Бинарники game-nova в git — ✅ ЗАКРЫТО (2026-04-27)
+**Решение**: `git rm --cached projects/game-nova/backend/{server,worker}`,
+в `.gitignore` добавлены глоб-правила
+`projects/*/backend/{server,worker,auth-service,portal,testseed}`.
 **Где**: `projects/game-nova/backend/{server,worker,*.exe,testseed.exe,...}`
 отслеживаются git-ом (`git ls-files | grep -E "backend/(server|worker)$"`).
 **Что**: `go build`-артефакты закоммичены. Не моё (старая ошибка), но мешают.
