@@ -874,10 +874,57 @@ done
 
 ### Этапы 37.5d
 
-| # | Подзадача | Артефакт |
-|---|---|---|
-| 37.5d.1 | Скрипт snapshot test-юзера из legacy → fixture SQL | `tools/snapshot-legacy-user.sh` + `migrations/fixtures/test-user-snapshot.sql` |
-| 37.5d.2 | Скрипт apply fixture к нашей БД (с сохранением global_user_id) | `tools/apply-test-user-fixture.sh` |
-| 37.5d.3 | Compare-tool: curl всех страниц у нас и в legacy + нормализованный diff | `tools/compare-with-legacy.sh` |
-| 37.5d.4 | Триаж diff-отчёта: список страниц с реальными расхождениями | Запись в dev-log |
-| 37.5d.5+ | Поштучные фиксы по каждой проблемной странице | По коммиту на каждый фикс |
+| # | Подзадача | Статус | Артефакт |
+|---|---|---|---|
+| 37.5d.1 | Скрипт snapshot test-юзера из legacy → fixture SQL | ✅ done (73515ae9ad) | `tools/snapshot-legacy-user.sh` + `migrations/fixtures/test-user-snapshot.sql` |
+| 37.5d.2 | Скрипт apply fixture к нашей БД (с сохранением global_user_id) | ✅ done (b0ccce032d) | `tools/apply-test-user-fixture.sh` |
+| 37.5d.3 | Compare-tool: curl всех страниц у нас и в legacy + нормализованный diff | 🚧 in progress | `tools/compare-with-legacy.sh` |
+| 37.5d.4 | Триаж diff-отчёта: список страниц с реальными расхождениями | pending | Запись в dev-log |
+| 37.5d.5+ | Поштучные фиксы по каждой проблемной странице | pending | По коммиту на каждый фикс |
+
+### Результаты выполнения 37.5d.1
+
+Snapshot-инструмент `tools/snapshot-legacy-user.sh` снимает данные
+test-юзера (userid=1) из боевой legacy через `mysqldump --where`:
+- 14 таблиц по `userid=1`: na_user, na_password, na_user2group,
+  na_user2ally, na_planet, na_research2user, na_artefact2user,
+  na_officer, na_referral, na_user_experience, na_credit_bonus_item,
+  na_res_log, na_res_transfer.
+- 5 таблиц по `planetid IN (...)`: na_building2planet,
+  na_unit2shipyard, na_temp_fleet, na_stargate_jump, na_exchange_lots.
+- na_galaxy отдельно (фильтр `planetid OR moonid IN (...)` —
+  единственная таблица с обеими колонками).
+- Группа alliance: na_alliance + na_user2ally + na_user (members).
+- Группа чат: na_chat (last 100) + na_user (authors).
+- Группа рейтинг: топ-50 na_user по points.
+
+**Артефакт-файл коммитить нельзя — PII** (емейлы, md5-пароли, IP
+реальных игроков). В .gitignore. Каждый dev-разработчик генерит локально.
+
+Размер snapshot: ~184 KB / 1048 строк / ~270 INSERT.
+
+### Результаты выполнения 37.5d.2
+
+Apply-инструмент `tools/apply-test-user-fixture.sh` идемпотентно
+накатывает snapshot:
+1. Backup `na_user.global_user_id` (наша JWT-надстройка).
+2. Cleanup: удалить userid=1 из 13 таблиц + planetid'ы из 7 таблиц
+   через `FIND_IN_SET(planetid, '1,2,501,856,2151,2978,3350,676807,754192')`
+   (так покрываем orphan-планеты из migration 002 с `userid=NULL`).
+3. **Stop event-monitor** (важно: иначе он успевает обработать
+   EVENT_COLONIZE и пересоздать юзера 1 между cleanup и apply).
+4. Apply snapshot через `mysql --force` (топ-50 рейтинга уже есть
+   из migration 002 → 10 `Duplicate entry`, игнорируем).
+5. Restore `global_user_id` (или `dev-user-001` если не было).
+
+После apply: `dev-login.php` → JWT lazy-join находит userid=1 →
+залогинены как **test** из legacy. Main page рендерит "Hello World"
+(planet name test-юзера), HTML 16138 байт (vs 12030 у пустого юзера).
+
+Подводные камни (детали в dev-log iteration 37.5d.2):
+- `--complete-insert` нужен в snapshot (наша схема имеет лишний
+  `global_user_id`).
+- VIEW (`na_event_src/dest`) в mysqldump не включаются.
+- bash heredoc на Windows глючит — пишем в tmpfile.
+- Контейнеры из удалённого worktree держат stale volume-mount —
+  при смене cwd `docker compose down/up`.
