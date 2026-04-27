@@ -10534,3 +10534,100 @@ Tools/fixtures:
 
 **Коммиты**: 2 (fix post-actions + план 60).
 
+
+
+===============================================================
+Итерация 56-final (2026-04-28). План 56: завершение Ф.6-Ф.8.
+===============================================================
+
+**Что было.** Backend плана 56 (Ф.1-3, Ф.5) завершён 2026-04-27:
+система `user_reports` перенесена из `game-nova/internal/report/`
+в `portal/internal/report/`, миграция в game-nova добавила
+`0071_drop_user_reports.sql`. Оставались frontend-фазы:
+- Ф.6 — игровой `ReportButton` всё ещё бил на game-nova (404 после
+  Ф.5), и `AdminReportsTab` жил в game-nova-admin.
+- Ф.7 — обновить документацию.
+- Ф.8 — финализация и коммиты.
+Ф.4 (миграция prod-данных) — пропускается для dev, выполняется
+вручную при prod-деплое.
+
+**Сделано в этой итерации.**
+
+Ф.6.1 — `projects/game-nova/frontend/src/components/ReportButton.tsx`:
+вызов через native fetch на `${VITE_PORTAL_BASE_URL}/api/reports`
+с Authorization из `useAuthStore`. Использован тот же env, что
+в `LoginScreen.tsx` для ссылок на /privacy и /offer — не вводил
+новый паттерн ради одного компонента. Убран импорт `api` из
+@/api/client (там relative URL — не подходит для cross-origin).
+
+Ф.6.2 — admin-bff:
+- `internal/config/config.go`: добавлен `PortalURL` (env
+  `PORTAL_URL`, default `http://localhost:8090`).
+- `cmd/server/main.go`: новый upstream `portal-reports` с
+  префиксом `/api/admin/reports`, смонтирован **перед**
+  `identityUp` (его префикс `/api/admin` ловит всё подряд).
+
+Ф.6.3 — admin-frontend:
+- `src/lib/api/reports.ts` — типы Report, ReportsApi
+  (list / resolve) через `apiRequest`.
+- `src/routes/Reports.tsx` — страница списка + Dialog для
+  резолюции, на shadcn/ui (Dialog/Button/Badge/Skeleton).
+  Permission-gate `moderation:reports:read` с role-based fallback
+  (identity пока не кладёт permissions в JWT — план 52 Ф.X).
+- `src/App.tsx` — lazy-route `/reports`.
+- `src/components/layout/Sidebar.tsx` — пункт «Жалобы» (icon Flag)
+  в группе `operations`.
+
+Ф.6.4 — game-nova:
+- `AdminReportsTab.tsx` удалён.
+- `AdminScreen.tsx` — убран импорт + вкладка `'reports'`, тип
+  `AdminTab` сужен до `'users' | 'events' | 'audit'`.
+
+Ф.7 — документация:
+- `docs/plans/46-age-rating-ugc.md` §«История изменений» — запись
+  2026-04-28 о завершении Ф.6.
+- `docs/ops/ugc-moderation.md` §«Слой 3: жалобы пользователей» —
+  переписан под новый путь (portal-backend + admin-frontend), §
+  «История версий» — bump 1.1.
+- `docs/plans/56-reports-to-portal.md` — статус «Закрыт 2026-04-28»,
+  Ф.6/Ф.7/Ф.8 отмечены ✅, Ф.4 — ⏳ for prod, добавлен раздел
+  «Реализация» под Ф.6 с явным описанием сделанного.
+
+Ф.8 — smoke:
+- admin-bff `go build ./...` — ok.
+- game-nova и admin-frontend type-check на изменённых файлах —
+  чисто (старые ошибки в нетронутых файлах остаются — не моя
+  область).
+- Полноценный e2e (отправка жалобы из game-nova → запись в
+  portal-БД → просмотр и резолюция через admin-frontend) **не
+  выполнялся** в этой итерации: dev-стек требует поднять
+  одновременно portal-backend, admin-bff, admin-frontend,
+  game-nova, identity, postgres, redis, и проверить через
+  браузер с реальным JWT/session. Зафиксирован как известное
+  ограничение, выполнять при следующем integration-прогоне.
+
+**Параллельные сессии.** В этой сессии активны (или недавно
+завершились): план 53 (admin-frontend Ф.1-12 закрыт; правлю
+существующие файлы в src/App.tsx, src/components/layout/Sidebar.tsx
+— конфликт минимален), план 60 (закрыт коммитом 3474d869). Перед
+коммитом — `git status --short`, явные `git add` по путям, без
+-A/-u.
+
+**Что разблокирует.** План 50 Ф.5 (кнопка «Пожаловаться» в
+game-origin) теперь имеет готовый endpoint
+`https://oxsar-nova.ru/api/reports` portal-backend'а — отдельная
+маленькая задача (PHP-кнопка + ajax-POST с JWT).
+
+**Не сделано (сознательно):**
+- Permission-проверку RBAC `moderation:reports:*` на стороне
+  admin-bff (план говорил «через identity JWT»). Текущая
+  archtirecture admin-bff таких per-route checks не делает ни
+  для billing, ни для game-events — ждёт permissions в JWT (план
+  52 Ф.X). Не вводил новый паттерн.
+- Скрипт `scripts/migrate-reports-game-nova-to-portal.sh` (Ф.4) —
+  одноразовая ручная операция при prod-деплое; писать стандартный
+  pg_dump | pg_restore wrapper не нужно.
+
+**Коммиты**: серия из 4-х по логическим этапам (game-nova
+ReportButton; admin-frontend+admin-bff backend+UI; game-nova
+удаление вкладки; docs).

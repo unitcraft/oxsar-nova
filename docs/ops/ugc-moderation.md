@@ -56,12 +56,23 @@
 ### Слой 3: жалобы пользователей
 
 Игрок видит кнопку «🚩 Пожаловаться» рядом с никнеймами в рейтинге, в
-сообщениях чата (на чужие сообщения). API:
+сообщениях чата (на чужие сообщения). С плана 56 API живёт в
+**portal-backend** (единый реестр для game-nova и будущего
+game-origin):
 
-- `POST /api/reports` — игрок подаёт жалобу;
-- `GET /api/admin/reports?status=new` — модератор смотрит очередь;
-- `POST /api/admin/reports/{id}/resolve` — модератор закрывает с
-  пометкой о принятом действии.
+- `POST /api/reports` (portal-backend) — игрок подаёт жалобу.
+  В game-nova frontend `ReportButton` шлёт на абсолютный URL
+  `${VITE_PORTAL_BASE_URL}/api/reports`.
+- `GET /api/admin/reports?status=new` (portal-backend) — список для
+  модератора.
+- `POST /api/admin/reports/{id}/resolve` (portal-backend) — закрытие
+  с пометкой о принятом действии.
+
+Админская модерация делается в **admin-frontend**
+(`admin.oxsar-nova.ru`, маршрут `/reports`) через **admin-bff**:
+admin-bff проксирует `/api/admin/reports*` на portal-backend, JWT
+на пользовательский фронт не утекает. Старая вкладка «Жалобы» в
+game-nova-admin удалена в плане 56 Ф.6.
 
 Действие (warn / mute / rename / ban) — отдельные админ-API из
 плана 14: `/api/admin/users/{id}/ban`, `/api/admin/users/{id}/unban`
@@ -148,3 +159,6 @@
 
 - **1.0** (2026-04-27) — первая редакция, план 46. Зафиксированы 4 слоя
   защиты, SLA 24ч/7д, лестница санкций, процедура takedown.
+- **1.1** (2026-04-28) — план 56: API жалоб переехало в
+  portal-backend; админка модерации — в admin-frontend через
+  admin-bff. Path к админке: `admin.oxsar-nova.ru/reports`.
