@@ -1,12 +1,23 @@
 import { useState } from 'react';
-import { api } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
 
 // План 46 Ф.3 (149-ФЗ): кнопка "Пожаловаться" с модалкой.
+// План 56 Ф.6: endpoint переехал в portal-backend (единый реестр жалоб
+// для всех вселенных). VITE_PORTAL_BASE_URL — тот же env, что использует
+// LoginScreen для ссылок на /privacy и /offer; в dev пустой → vite proxy
+// /api/reports на game-nova не сработает, поэтому в dev требуется явно
+// указать VITE_PORTAL_BASE_URL=http://localhost:8090. В проде origin
+// portal'а должен быть в ALLOWED_ORIGINS portal-backend'а (cross-origin
+// fetch с Authorization-header).
 // targetType — куда жалуемся ('user' | 'alliance' | 'chat_msg' | 'planet').
 // targetId — id объекта жалобы (player.id, alliance.id, chat_message.id, planet.id).
 // label — текст кнопки (по умолчанию иконка-только).
 
 type TargetType = 'user' | 'alliance' | 'chat_msg' | 'planet';
+
+const PORTAL_BASE =
+  (import.meta.env['VITE_PORTAL_BASE_URL'] as string | undefined) ?? '';
+const REPORT_ENDPOINT = `${PORTAL_BASE}/api/reports`;
 
 const REASONS: Array<{ value: string; label: string }> = [
   { value: 'profanity', label: 'Мат / оскорбления' },
@@ -42,12 +53,30 @@ export function ReportButton({
     setSubmitting(true);
     setResult(null);
     try {
-      await api.post('/api/reports', {
-        target_type: targetType,
-        target_id: targetId,
-        reason,
-        comment,
+      const token = useAuthStore.getState().accessToken;
+      const res = await fetch(REPORT_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          target_type: targetType,
+          target_id: targetId,
+          reason,
+          comment,
+        }),
       });
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try {
+          const body = (await res.json()) as { error?: { message?: string } };
+          if (body.error?.message) msg = body.error.message;
+        } catch {
+          // ignore
+        }
+        throw new Error(msg);
+      }
       setResult('ok');
       setComment('');
     } catch (err) {
