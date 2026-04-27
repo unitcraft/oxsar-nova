@@ -1,4 +1,4 @@
-package authsvc
+package identitysvc
 
 import (
 	"encoding/json"

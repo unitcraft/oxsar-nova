@@ -80,11 +80,42 @@ class JwtAuth
         $_SESSION['username']   = $payload['username']           ?? $localUser['username'];
         $_SESSION['email']      = $localUser['email']            ?? '';
         $_SESSION['activation'] = $localUser['activation']       ?? 1;
-        $_SESSION['is_admin']   = in_array('admin', $payload['roles'] ?? []);
-        $_SESSION['skin_type']  = $localUser['templatepackage']  ?? 'standard';
-        $_SESSION['curplanet']  = $localUser['curplanet']        ?? 0;
-        $_SESSION['sid']        = '';
+        // План 52: roles + permissions из JWT-claims в session.
+        // permissions — flatten-список из всех ролей юзера (identity-service
+        // строит его при выпуске JWT через role_permissions).
+        $_SESSION['roles']       = is_array($payload['roles'] ?? null) ? $payload['roles'] : [];
+        $_SESSION['permissions'] = is_array($payload['permissions'] ?? null) ? $payload['permissions'] : [];
+        // Backward-compat флаг is_admin: true если есть роль admin/superadmin.
+        $_SESSION['is_admin']    = !empty(array_intersect($_SESSION['roles'], ['admin', 'superadmin']));
+        $_SESSION['skin_type']   = $localUser['templatepackage']  ?? 'standard';
+        $_SESSION['curplanet']   = $localUser['curplanet']        ?? 0;
+        $_SESSION['sid']         = '';
         return true;
+    }
+
+    /**
+     * Проверка наличия конкретного permission у текущего юзера.
+     * План 52: permissions выпускаются identity-сервисом при логине.
+     *
+     * Использование:
+     *   if (!JwtAuth::hasPermission('billing:refund')) {
+     *       Logger::dieMessage('PERMISSION_DENIED');
+     *   }
+     */
+    public static function hasPermission(string $permission): bool
+    {
+        $perms = $_SESSION['permissions'] ?? [];
+        return is_array($perms) && in_array($permission, $perms, true);
+    }
+
+    /**
+     * Проверка наличия роли (легаси-API). Для новых проверок используйте
+     * hasPermission() — гранулярнее и согласовано с identity-моделью.
+     */
+    public static function hasRole(string $role): bool
+    {
+        $roles = $_SESSION['roles'] ?? [];
+        return is_array($roles) && in_array($role, $roles, true);
     }
 
     private static function extractToken(): ?string

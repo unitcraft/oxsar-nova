@@ -154,6 +154,11 @@ func truncateGameTables(ctx context.Context, pool *pgxpool.Pool) error {
 
 func seed(ctx context.Context, pool *pgxpool.Pool, pwHash string) error {
 	// --- users ---
+	//
+	// План 52: колонка users.role удалена. role-поле в struct оставлено
+	// как информационное (комментарий в логе), но не пишется в БД.
+	// Реальные роли seed-юзерам выдаются через identity-сервис отдельно
+	// (CLI-команда seed-roles или через admin-frontend плана 53).
 	users := []struct {
 		id, username, email, role string
 		credit                    float64
@@ -168,15 +173,15 @@ func seed(ctx context.Context, pool *pgxpool.Pool, pwHash string) error {
 	}
 	for _, u := range users {
 		if _, err := pool.Exec(ctx, `
-			INSERT INTO users (id, username, email, password_hash, role, credit, language)
-			VALUES ($1, $2, $3, $4, $5::user_role, $6, 'ru')
+			INSERT INTO users (id, username, email, password_hash, credit, language)
+			VALUES ($1, $2, $3, $4, $5, 'ru')
 			ON CONFLICT (id) DO UPDATE
 			  SET password_hash = EXCLUDED.password_hash,
-			      role          = EXCLUDED.role,
 			      credit        = EXCLUDED.credit
-		`, u.id, u.username, u.email, pwHash, u.role, u.credit); err != nil {
+		`, u.id, u.username, u.email, pwHash, u.credit); err != nil {
 			return fmt.Errorf("insert user %s: %w", u.username, err)
 		}
+		_ = u.role // seed role is granted via identity-service (план 52).
 	}
 
 	// --- planets ---

@@ -29,12 +29,14 @@ import (
 )
 
 // UserProfile — полная карточка игрока.
+//
+// План 52: поле Role удалено — роли в identity-service. Frontend должен
+// делать отдельный запрос к identity для получения текущих ролей юзера.
 type UserProfile struct {
 	// Базовые поля
 	ID         string     `json:"id"`
 	Username   string     `json:"username"`
 	Email      string     `json:"email"`
-	Role       string     `json:"role"`
 	Credit     int64      `json:"credit"`
 	Score      int64      `json:"score"`
 	BannedAt   *time.Time `json:"banned_at,omitempty"`
@@ -147,12 +149,12 @@ func (h *Handler) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	// 1. Базовый блок + score
 	var p UserProfile
 	err := h.db.Pool().QueryRow(r.Context(), `
-		SELECT u.id, u.username, u.email, COALESCE(u.role::text,''), u.credit,
+		SELECT u.id, u.username, u.email, u.credit,
 		       COALESCE(s.score, 0), u.banned_at, u.created_at, u.last_seen_at
 		FROM users u
 		LEFT JOIN scores s ON s.user_id = u.id
 		WHERE u.id = $1`, uid).
-		Scan(&p.ID, &p.Username, &p.Email, &p.Role, &p.Credit,
+		Scan(&p.ID, &p.Username, &p.Email, &p.Credit,
 			&p.Score, &p.BannedAt, &p.CreatedAt, &p.LastSeenAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrNotFound, "user not found"))
