@@ -33,21 +33,32 @@ func NewUpstream(name, prefix, target string) (*Upstream, error) {
 	if err != nil {
 		return nil, err
 	}
-	rp := httputil.NewSingleHostReverseProxy(u)
-	defaultDirector := rp.Director
-	rp.Director = func(req *http.Request) {
-		defaultDirector(req)
-		// Удаляем admin-bff-specific headers и cookies — backend их не ждёт.
-		req.Header.Del("Cookie")
-		req.Header.Del("X-CSRF-Token")
-		// Добавляем X-Forwarded-* для backend-логирования.
-		req.Header.Set("X-Forwarded-Proto", "https")
-	}
-	rp.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		slog.ErrorContext(r.Context(), "upstream error",
-			slog.String("upstream", name),
-			slog.String("err", err.Error()))
-		http.Error(w, "upstream unavailable", http.StatusBadGateway)
+	rp := &httputil.ReverseProxy{
+		Rewrite: func(r *httputil.ProxyRequest) {
+			r.SetURL(u)
+			// SetXForwarded пересоздаёт X-Forwarded-{For,Host,Proto} на основе
+			// In.RemoteAddr/Host/URL.Scheme — клиентские X-Forwarded-* отбрасываются.
+			r.SetXForwarded()
+			// Backend-сервисы за admin-bff всегда на TLS со стороны клиента,
+			// даже если admin-bff локально слушает HTTP.
+			r.Out.Header.Set("X-Forwarded-Proto", "https")
+			// Чистим admin-bff-specific заголовки — backend их не ждёт.
+			r.Out.Header.Del("Cookie")
+			r.Out.Header.Del("X-CSRF-Token")
+			// Authorization: Rewrite по умолчанию не пробрасывает его из In в Out.
+			// Handler() кладёт server-side токен в r.In.Header — копируем явно.
+			if auth := r.In.Header.Get("Authorization"); auth != "" {
+				r.Out.Header.Set("Authorization", auth)
+			} else {
+				r.Out.Header.Del("Authorization")
+			}
+		},
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			slog.ErrorContext(r.Context(), "upstream error",
+				slog.String("upstream", name),
+				slog.String("err", err.Error()))
+			http.Error(w, "upstream unavailable", http.StatusBadGateway)
+		},
 	}
 	return &Upstream{Name: name, Prefix: prefix, URL: u, proxy: rp}, nil
 }

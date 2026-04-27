@@ -10719,3 +10719,68 @@ git status / git add по явным путям.
 game-origin) и Ф.8 (финализация / повторный аудит).
 
 **Коммит**: один коммит ~100 строк по 9 файлам (точечные).
+
+## Итерация 61 (2026-04-28) — admin-bff: миграция httputil.ReverseProxy.Director → Rewrite
+
+Скоуп — план 61. Точечный рефактор уже работающего proxy-слоя
+admin-bff. Снимает deprecation warning Go 1.20+ и закрывает
+header-smuggling: до правки клиент мог прислать `X-Forwarded-For:
+<любой IP>` поверх admin-bff, и backend-сервис увидел бы подделанный
+адрес в логах/audit.
+
+**Что изменилось.**
+
+`projects/admin-bff/internal/proxy/proxy.go`:
+- `httputil.NewSingleHostReverseProxy` + `Director` → `&httputil.ReverseProxy{Rewrite: ...}`.
+- `r.SetURL(u)` устанавливает Scheme/Host/Path для Out.
+- `r.SetXForwarded()` пересоздаёт `X-Forwarded-{For,Host,Proto}` на
+  основе `In.RemoteAddr/Host/URL.Scheme` — клиентские
+  `X-Forwarded-*` отбрасываются.
+- `r.Out.Header.Set("X-Forwarded-Proto", "https")` — поверх
+  SetXForwarded, потому что admin-bff локально слушает HTTP, а
+  backend ожидает proto клиента (TLS на edge).
+- `r.Out.Header.Del("Cookie" / "X-CSRF-Token")` — backend их не ждёт.
+- Authorization: явная копия из `In` в `Out` (Rewrite по умолчанию
+  не пробрасывает) или `Del` если In пуст. `Handler()` оставлен как
+  было: SessionLookup кладёт сессию в context, Handler пишет
+  `Authorization: Bearer <session.AccessToken>` в `In.Header`,
+  Rewrite копирует в Out.
+- Публичный API `Upstream / NewUpstream / Handler / MatchPrefix`
+  не тронут.
+
+`projects/admin-bff/internal/handler/middleware.go`:
+- Добавлен `ContextWithSession(ctx, sess)` симметрично существующему
+  `SessionFromContext`. Нужен для тестирования proxy без поднятия
+  Redis/SessionLookup. Ключ `ctxKeySession{}` остаётся приватным.
+
+`projects/admin-bff/internal/proxy/proxy_test.go` (новый):
+- 6 кейсов на `httptest.NewServer` как backend-mock:
+  1. `X-Forwarded-For: 8.8.8.8` от клиента — backend видит свой,
+     не клиентский.
+  2. `Authorization: Bearer evil` от клиента — backend получает
+     `Bearer real-server-side-token` из сессии.
+  3. `Cookie: ...` — вырезается.
+  4. `X-CSRF-Token: ...` — вырезается.
+  5. Smoke: backend получает Authorization и `X-Forwarded-Proto: https`.
+  6. Без сессии Handler возвращает 401, backend не вызывается.
+
+**Verifications.**
+
+- `go build ./...` в admin-bff — компилируется.
+- `go vet ./...` — чисто, deprecation warning по Director исчез.
+- `go test ./...` — `internal/proxy` 6/6 PASS, `internal/session`
+  без регрессий.
+- Smoke в Docker — пропущен (dev-stack не запускался в этой сессии).
+
+**Параллельные сессии.** В соседней сессии шёл план 62
+(`docs/research/origin-vs-nova/`, `docs/plans/62-...md`,
+`docs/prompts/plan-62-execute.md`, `docs/legacy/game-origin-access.md`).
+`git status --short` перед каждым add, `git add` только своими
+путями (proxy.go, proxy_test.go, middleware.go, plan 61, dev-log).
+
+**Что разблокирует.** Можно включить `staticcheck` в CI на
+admin-bff/proxy без шума. Шаблон Rewrite-proxy готов к
+переиспользованию (если появится `portal-bff` / `mobile-bff`).
+
+**Коммит**: один коммит, ~150 строк (рефактор + новый тестовый файл
++ 6 строк ContextWithSession + шапка плана + dev-log).
