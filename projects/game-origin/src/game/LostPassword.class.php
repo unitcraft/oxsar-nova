@@ -65,28 +65,26 @@ class LostPassword extends AjaxRequestHelper
 			$this->printIt('EMAIL_INVALID');
 		}
 
-		$crit = new CDbCriteria();
-		$crit->addCondition('email = :e');
-		$crit->params[':e'] = $this->email;
-		$user = User_YII::model()->find($crit);
+		// План 37.5d.5#8: replaced User_YII::find() + CDbCriteria.
+		$user = sqlSelectRow("user", array("userid", "username"), "", "email=".sqlVal($this->email));
 		if( !$user )
 		{
 			$this->printIt('EMAIL_NOT_FOUND');
 			return $this;
 		}
-		$this->id = $user->userid;
-		Core::getLanguage()->assign('req_username', $user->username);
+		$this->id = $user["userid"];
+		Core::getLanguage()->assign('req_username', $user["username"]);
 		Core::getLanguage()->assign('req_ipaddress', IPADDRESS);
 
 		if($mode == self::LOST_USERNAME)
 		{
 			$this->message = Core::getLanguage()->getItem('REQUEST_USERNAME');
 		}
-		else if( Str::compare($this->username, $user->username) )
+		else if( Str::compare($this->username, $user["username"]) )
 		{
 			$this->secKey	= randString(8);
 			$reactivate		= HTTP_HOST . REQUEST_DIR . 'signup.php/Activation:' . $this->secKey;
-			$url			= HTTP_HOST . REQUEST_DIR . 'forgottenpw.php/NewPassword:' . $this->secKey . '/User:' . $user->userid;
+			$url			= HTTP_HOST . REQUEST_DIR . 'forgottenpw.php/NewPassword:' . $this->secKey . '/User:' . $user["userid"];
 			
 			Core::getLanguage()->assign('new_pw_url', $url);
 			Core::getLanguage()->assign('reactivate_url', $reactivate);

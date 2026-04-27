@@ -341,8 +341,9 @@ class Exchange
 		if ( isset($data["ships"][$k[1]]["art_ids"]) )
 		{
 			$art_id = key($data["ships"][$k[1]]["art_ids"]);
-			$art_data = Artefact2user_YII::model()->findByPk($art_id);
-			if( $art_data->planetid == 0 || !empty($art_data->lot_id) )
+			// План 37.5d.5#7: replaced Artefact2user_YII::findByPk()
+			$art_data = sqlSelectRow("artefact2user", array("planetid", "lot_id"), "", "artid=".sqlVal($art_id));
+			if( !$art_data || $art_data["planetid"] == 0 || !empty($art_data["lot_id"]) )
 			{
 				return 'ARTEFACT';
 			}

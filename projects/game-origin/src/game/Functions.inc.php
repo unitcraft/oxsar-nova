@@ -759,10 +759,8 @@ function findAllyYii( $user_id )
 	{
 		return false;
 	}
-	$crit = new CDbCriteria();
-	$crit->addCondition('userid=:userid');
-	$crit->params = array( ':userid' => $user_id );
-	$ally = User2ally_YII::model()->find($crit);
+	// План 37.5d.5#9: replaced User2ally_YII::find() + CDbCriteria.
+	$ally = sqlSelectRow("user2ally", "*", "", "userid=".sqlVal($user_id));
 	if( !$ally )
 	{
 		return false;

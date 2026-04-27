@@ -27,12 +27,10 @@ class Logout
 	{
 		$user_id = $_SESSION["userid"] ?? 0;
 //		Core::getCache()->cleanUserCache($user_id);
-		$session = Sessions_YII::model()->find('userid = ?', $user_id );
-		if($session)
-		{
-			$session->attributes = array('logged' => '0');
-			$session->save();
-		}
+		// План 37.5d.5#6: replaced Sessions_YII (find + save + deleteAll) → raw SQL.
+		// PK na_sessions.sessionid, фильтр по userid.
+		sqlUpdate("sessions", array("logged" => 0), "userid=".sqlVal($user_id));
+
 		if(Core::getConfig()->exists("SESSION_SAVING_DAYS"))
 		{
 			$days = intval(Core::getConfig()->get("SESSION_SAVING_DAYS"));
@@ -42,7 +40,7 @@ class Logout
 			$days = $this->savingDays;
 		}
 		$deleteTime = time() - 60*60*24 * max(1, $days);
-		Sessions_YII::model()->deleteAll('time < ?', array($deleteTime));
+		sqlDelete("sessions", "time < ".sqlVal($deleteTime));
 		
 		header("Location: " . BASE_FULL_URL); exit();
 		/*

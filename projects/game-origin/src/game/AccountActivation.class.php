@@ -58,16 +58,16 @@ class AccountActivation
 		{
 			sqlEnd($result);
 			
-			// Update By Pk
-			$user = User_YII::model()->findByPK($row["userid"]);
+			// План 37.5d.5#8: replaced User_YII::model()->findByPK() + save().
+			$updates = array("activation" => "");
 			if( $this->email )
 			{
-				$user->email_activation		= '';
-				$user->password_activation	= '';
-				$user->email				= $user->temp_email;
+				$temp_email = sqlSelectField("user", "temp_email", "", "userid=".sqlVal($row["userid"]));
+				$updates["email_activation"]    = "";
+				$updates["password_activation"] = "";
+				$updates["email"]               = $temp_email;
 			}
-			$user->activation	= '';
-			$user->save(false);
+			sqlUpdate("user", $updates, "userid=".sqlVal($row["userid"]));
 //			Core::getQuery()->update(
 //				"user",
 //				array( ( ($this->email) ? 'email_' : '' ) . "activation", "email"),
