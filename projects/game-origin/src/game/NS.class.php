@@ -247,6 +247,12 @@ class NS
 		unset($order);
 		while($row = sqlFetch($result))
 		{
+			// План 37.7.3: XSS — planetname/moon контролируются юзером.
+			$row["planetname"] = htmlspecialchars((string)$row["planetname"], ENT_QUOTES, 'UTF-8');
+			if(isset($row["moon"]) && $row["moon"] !== null)
+			{
+				$row["moon"] = htmlspecialchars((string)$row["moon"], ENT_QUOTES, 'UTF-8');
+			}
 			$planets[$i]			= $row;
 			$coords					= $row["galaxy"].":".$row["system"].":".$row["position"];
 			$coords					= "[".$coords."]";

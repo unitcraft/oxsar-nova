@@ -276,8 +276,9 @@ class Alliance extends Page
 		Core::getTPL()->assign("applications", Link::get("game.php/Alliance/ShowCandidates", sprintf(Core::getLanguage()->getItem("CANDIDATES"), fNumber($row["applications"]))));
 		Core::getTPL()->assign("founder", $row["founder"]);
 		Core::getTPL()->assign("manage", $manage);
-		Core::getTPL()->assign("tag", $row["tag"]);
-		Core::getTPL()->assign("name", $row["name"]);
+		// План 37.7.3: XSS — alliance tag/name контролируются юзером (founder).
+		Core::getTPL()->assign("tag", htmlspecialchars((string)$row["tag"], ENT_QUOTES, 'UTF-8'));
+		Core::getTPL()->assign("name", htmlspecialchars((string)$row["name"], ENT_QUOTES, 'UTF-8'));
 		Core::getTPL()->assign("aid", $row["aid"]);
 		Core::getTPL()->assign("logo", ($row["logo"] != "") ? Image::getImage($row["logo"], "") : "");
 

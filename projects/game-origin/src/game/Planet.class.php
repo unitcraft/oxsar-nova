@@ -1053,6 +1053,13 @@ class Planet
 	*
 	* @return mixed	Data
 	*/
+	/**
+	 * План 37.7.1/3: XSS escape для user-controlled полей.
+	 * planetname — единственное явно user-controlled поле в planet.
+	 * Если нужен raw — использовать getDataRaw($param).
+	 */
+	private static $userInputDataFields = ['planetname'];
+
 	public function getData($param = null)
 	{
 		if(is_null($param))
@@ -1061,7 +1068,12 @@ class Planet
 		}
 		if(isset($this->data[$param]))
 		{
-			return $this->data[$param];
+			$value = $this->data[$param];
+			if(in_array($param, self::$userInputDataFields, true) && is_string($value))
+			{
+				return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+			}
+			return $value;
 		}
 		if(!$this->planetid && $param == "planetname")
 		{
@@ -1070,6 +1082,11 @@ class Planet
 			return $this->data[$param];
 		}
 		return false;
+	}
+
+	public function getDataRaw($param)
+	{
+		return isset($this->data[$param]) ? $this->data[$param] : false;
 	}
 
 	/**
