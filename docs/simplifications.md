@@ -1178,3 +1178,20 @@ ResearchLab=12. Поправлено в этом же commit (см. план 29)
 **Почему**: VARBINARY(36) после ALTER в legacy схеме (наследие cp1251 → utf8 миграции),
 наш ALTER даёт корректный VARBINARY автоматически.
 **План возврата**: не требуется.
+
+
+### 11. MySQL strict-mode отключён в game-origin docker-compose
+**Где**: `projects/game-origin/docker/docker-compose.yml` — `mysql.command: --sql-mode=...` без `STRICT_TRANS_TABLES`
+**Что**: MySQL 5.7 по умолчанию в strict-режиме; legacy SQL писалось до этого
+и имеет `NOT NULL` колонки без DEFAULT (`na_planet.umi`, возможно другие),
+которые рассчитывают на implicit zero. Strict-режим даёт fatal
+`Field 'umi' doesn't have a default value` при `INSERT INTO na_planet`
+из `PlanetCreator::setRandPos`.
+**Почему**: Минимальное вмешательство, ближе к legacy. Альтернатива —
+найти все NOT NULL без DEFAULT и либо передавать явно, либо ALTER
+DEFAULT через миграцию (рискованно — может оказаться много колонок).
+**План возврата**: 37.6+ (фикс игровых дыр) — провести аудит всех `NOT NULL`
+без `DEFAULT` в legacy-схеме, добавить `DEFAULT` через миграцию или явные
+значения в коде, включить strict обратно.
+**Приоритет**: средний (для прода важно — strict ловит реальные баги, но
+для PHP-клона как промежуточного этапа допустимо).

@@ -290,7 +290,7 @@ class PlanetCreator
 			}
 			
 		} while($is_exist);
-		error_log($log_str, 'warning');
+		error_log($log_str); // PHP 8: 2-й аргумент должен быть int (0 = system log) — убрано legacy 'warning'
 		return $this;
 	}
 
