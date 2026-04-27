@@ -1106,18 +1106,43 @@ php-fpm не видно.
 структурно правильный. Stock parity не достигнут — глубокий PHP-баг
 в обработке устаревших лотов, требует point-debug.
 
-### 37.5d.12 — point-debug Stock рендеринга
+### 37.5d.12 — point-debug Stock рендеринга ✅ done (aade5ab07c, e7a3fa3f56)
 
-**Подход**:
-1. Включить `error_reporting(E_ALL); ini_set('display_errors', 1);` в начало
-   `Stock.class.php::index` — увидеть skрытые warnings в HTML.
-2. Если undefined-array-key warnings указывают на причину silent fail —
-   починить.
-3. Если нет — `var_dump`/`error_log` внутри `foreach($sqlRows[$j])` чтобы
-   увидеть где обрывается loop.
-4. Сравнить наш `Stock.class.php` с `d:\Sources\oxsar2\www\game\page\Stock.class.php`
-   — может в legacy есть hot-patch.
-5. После фикса — убрать debug, проверить compare v6.
+**Метод нашёл silent template fail**:
+1. `error_reporting(E_ALL) + display_errors=1` в `Stock::index()` →
+   `curl` показал warnings в HTML.
+2. `error_log()` в loop подтвердил: `lots count=5` на момент
+   `addLoop` И на момент `display`. Массив есть.
+3. `tail -c 500 /tmp/stock.html` показал: **`Class "CHtml" not found
+   in stock.cache.php:158`** — template обрывался ПЕРЕД
+   `{foreach[lots]}`.
+4. Заменил `CHtml::link()` (Yii helper) на raw `<a href>` с
+   `htmlspecialchars`.
+5. Профилактически починил остальные 2 `CHtml::*` в `layout.tpl` и
+   `writemessages.tpl`.
+
+**Результат**: Stock 14224 → 21054 байт (parity 98.4% с legacy).
+5 лотов отрендерились с `<span class="false">Время существования
+артефакта истекло</span>` идентично legacy.
+
+### 37.5d.13 — Alliance triage + проактивный fix bbcode /e modifier ✅ done (e455f650c5)
+
+**Симптом**: Alliance 873 lines diff в compare v6.
+
+**Диагностика**: `curl http://localhost:8080/game.php/Alliance` показал
+что **legacy валится с PHP Error**: «preg_replace(): The /e modifier
+is deprecated, use preg_replace_callback instead» в
+`Functions.inc.php:1873` (bbcode `[list]...[/list]` с `/e` modifier).
+
+PHP 5.5+ deprecated `/e`, PHP 7+ удалил совсем. У нас PHP 8.3 → та же
+проблема, но **наш Alliance работает** потому что в данных страницы
+нет `[list]...[/list]`. **Это латентная mina**: любое сообщение/чат/
+описание с `[list]` вызвало бы fatal.
+
+**Фикс**: заменил `#\[list\]([^\"]*?)\[/list\]#sie` (regex с /e) на
+`preg_replace_callback` с замыканием `bbcode_list_items()`.
+
+Smoke test: Main/Alliance/Stock/Chat/MSG — без регрессий.
 
 ### Триаж 37.5d.4 — что показал compare
 
