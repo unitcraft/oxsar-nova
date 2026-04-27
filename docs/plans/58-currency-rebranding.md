@@ -1,286 +1,399 @@
-# План 58: Ребрендинг валюты — кредиты → Оксары + двухвалютная схема
+# План 58: Ребрендинг валюты — Оксары + Оксариты (двухвалютная схема)
 
-**Дата**: 2026-04-27
+**Дата**: 2026-04-27 (обновлён 2026-04-27 после согласования архитектуры)
 **Статус**: Активный
 **Зависимости**: ADR-0009 ([docs/adr/0009-currency-rebranding.md](../adr/0009-currency-rebranding.md))
-— архитектурное решение и обоснование. Текущие планы:
+— архитектурное решение и детальный анализ. Текущие планы:
 [06-credits-ai-advisor.md](06-credits-ai-advisor.md),
 [25-credits-economy.md](25-credits-economy.md),
 [38-billing-service.md](38-billing-service.md),
 [42-yookassa.md](42-yookassa.md),
-[47-offer-tos.md](47-offer-tos.md) §5.
+[47-offer-tos.md](47-offer-tos.md) §5,
+[17-gameplay-improvements.md](17-gameplay-improvements.md) (alien-механики).
 
 ---
 
 ## Цель
 
-Переименовать премиум-валюту проекта «кредиты» → **«оксары»**
-(Oxsars) и зафиксировать двухвалютную схему: оксары (hard, за рубли)
-+ игровые ресурсы (soft, добываются). Обоснование — ADR-0009.
+Перевести проект на двухвалютную схему **Оксары** (hard, в billing) +
+**Оксариты** (soft, в game-nova per universe). Обоснование, юридический
+анализ, UX и edge-cases — в ADR-0009.
 
-В этом плане — **только ребрендинг** (терминология, поля БД,
-интерфейсы, документация). Биржу hard↔soft не вводим, формулы
-баланса AI-advisor/офицеров не меняем — только единица измерения.
+В этом плане — конкретные шаги реализации.
 
 ---
 
 ## Что меняем
 
-### 1. БД — переименовать колонку
+### 1. БД — переименование и новые таблицы
 
-Миграция в game-nova-backend:
+**billing**:
+- В существующей таблице кошелька (если есть из плана 38 — `wallets`):
+  колонка `credit_balance` → `oxsars_balance` (`bigint` вместо `numeric`).
+  Если её нет — создать `wallets` с `oxsars_balance`.
+- Новая таблица `wallet_transactions`:
+  - `id UUID PRIMARY KEY`,
+  - `user_id UUID NOT NULL`,
+  - `amount BIGINT NOT NULL` (signed, отрицательные — расход),
+  - `kind TEXT NOT NULL` (purchase / charge / refund / admin_adjust),
+  - `idempotency_key TEXT UNIQUE`,
+  - `metadata JSONB`,
+  - `created_at TIMESTAMPTZ DEFAULT now()`.
 
-```sql
--- projects/game-nova/migrations/0NNN_rename_credit_to_oxsars.sql
-ALTER TABLE users RENAME COLUMN credit TO oxsars;
-```
+**game-nova**:
+- `users.credit` → `users.oxsarites` (rename + change type to `bigint`).
+- Новая таблица `oxsarite_transactions`:
+  - `id UUID PRIMARY KEY`,
+  - `user_id UUID NOT NULL`,
+  - `universe_id TEXT NOT NULL`,
+  - `amount BIGINT NOT NULL` (signed),
+  - `kind TEXT NOT NULL` (spend / battle_loss / alien_loss / alien_gift / event_reward / achievement / daily_login / referral / admin_adjust),
+  - `source JSONB` (контекст: `event_id`, `battle_id`, `referrer_id` и т.п.),
+  - `created_at TIMESTAMPTZ DEFAULT now()`.
 
-(Точное место колонки — проверить grep'ом, может быть в `users` или
-в отдельной таблице кошельков.)
-
-Если в billing-service есть собственная таблица `wallets` или
-`payment_orders` — там же переименовать поля типа `credit_amount` →
-`oxsar_amount` соответствующими миграциями.
-
-**Атомарность деплоя** — критично:
-- Миграцию запустить **ровно перед** деплоем нового кода всех
-  сервисов;
-- Использовать **maintenance window** или blue-green деплой
-  (план 31 zero-downtime);
-- Старая версия с `users.credit` упадёт после миграции — это
-  нормально, в окне maintenance.
-
-### 2. Backend — переименовать в коде
-
-**game-nova/backend:**
-- `internal/credits/` (если есть) → `internal/oxsars/`;
-- Структуры, функции, поля — везде `credit` → `oxsar` / `oxsars`.
-
-**billing/backend:**
-- Интерфейс `Gateway.BuildPayURL` — параметры остаются по сути
-  (сумма в рублях/копейках), но публичные сообщения и метаданные
-  пакетов — «оксары» вместо «кредитов».
-- Yookassa receipt — описание item'а: «Игровая валюта Оксары,
-  пакет N» вместо «Игровые кредиты».
-- Mock-провайдер, тесты — обновить.
-
-**identity/backend** (бывший auth):
-- Если есть упоминания `credit` в JWT-claims или `/auth/credits/*`
-  endpoint'ах (по плану 36) — переименовать. Большая часть уже
-  должна быть мигрирована в billing-service по плану 38, проверить.
+**identity** (если есть упоминания credit):
+- Если в плане 36 был эндпоинт `/auth/credits/*` (по плану 38 он
+  должен был переехать в billing) — проверить, что упоминаний нет.
+  Если остались — удалить.
 
 **game-origin** (PHP):
-- `users.credit` колонка в game-origin БД (если используется
-  отдельно от game-nova) — переименовать. Если game-origin
-  использует общую БД через identity → ничего не делать.
+- Если в game-origin БД есть `users.credit` — переименовать в `users.oxsarites`
+  (в этой же миграции с game-nova, если БД общая).
+- Если БД отдельная — отдельная миграция.
 
-### 3. Frontend — переименовать в UI
+**Атомарность деплоя**: используем **maintenance window 5–15 минут**
+или blue-green деплой (план 31 zero-downtime). Все backend-серверы
+обновляются ОДНОВРЕМЕННО с миграцией.
 
-**game-nova/frontend:**
-- `BalanceBadge` компонент (по плану 36 / 38) — текст «X кредитов» →
-  «X оксаров», иконка обновляется (предложение: 🪙 или кастомная
-  SVG-иконка с буквой O).
-- TanStack Query keys: `['billing', 'credits', ...]` →
-  `['billing', 'oxsars', ...]`.
-- Все строки UI — `i18n` ключи `credits.*` → `oxsars.*`
-  (или сохранить ключи и обновить только переводы — на усмотрение).
+### 2. Backend — Smart-pay и charge API
 
-**portal/frontend:**
-- Shop UI: «Купить 1000 кредитов за 100 ₽» → «Купить 1000 оксаров
-  за 100 ₽».
-- Pricing-страница — обновить.
+**billing-service** новый эндпоинт (internal-token):
 
-**game-origin** (PHP/Smarty):
-- Шаблоны `*.tpl` с упоминанием «кредитов» — обновить тексты.
-- В оригинале legacy oxsar2 уже была какая-то валюта; проверить
-  не ломаем ли совпадения с локализацией legacy.
+```
+POST /internal/billing/wallet/charge
+{
+  "user_id": "uuid",
+  "amount": 20,
+  "purpose": "officer_purchase",
+  "metadata": {"officer_id": "...", "universe_id": "uni01"},
+  "idempotency_key": "uuid"
+}
+→ 200 {"new_balance": 4980, "transaction_id": "..."}
+→ 402 Payment Required {"reason": "insufficient_balance", "balance": 5}
+→ 409 Conflict (idempotency key уже использован — вернуть старый ответ)
+```
 
-### 4. Документация и юр-документы
+**game-nova** — обновить логику покупки премиум-фичи (офицеры,
+AI-советник, премиум-features из плана 06/25):
 
-**Юр-документы (обновляются):**
-- `docs/legal/offer.md` §5 «Виртуальная валюта»: «Кредиты» →
-  «Оксары», версия документа `1.0` → `1.0.1`. Дата обновления
-  фиксируется. Существующие `user_consents` с
-  `consent_text_version='1.0'` остаются валидными (это
-  непринципиальное переименование, не изменение существенных
-  условий — см. ADR-0009).
-- `docs/legal/refund-policy.md` — те же правки терминологии.
-- `docs/legal/privacy-policy.md` — если упоминает кредиты,
-  обновить.
+```go
+// Псевдокод:
+func BuyOfficer(ctx, userID, officerID) error {
+    price := config.OfficerPrices[officerID]  // например 50
 
-**Активные технические планы:**
-- `docs/plans/25-credits-economy.md` — переименовать **файл** в
-  `25-oxsars-economy.md` и обновить содержимое. Memory
-  `completed_plans.md` обновить ссылку.
-- `docs/plans/06-credits-ai-advisor.md` — переименовать в
-  `06-oxsars-ai-advisor.md`, обновить.
-- `docs/plans/38-billing-service.md` — упоминания «кредитов»
-  заменить на «оксары».
-- `docs/plans/42-yookassa.md` — то же.
-- `docs/plans/47-offer-tos.md` §5 — обновить терминологию.
+    // Шаг 1: сколько списать с оксаритов
+    user := getUser(ctx, userID)
+    fromOxsarites := min(price, user.Oxsarites)
+    fromOxsars := price - fromOxsarites
 
-**Не трогаем (исторические):**
-- `docs/project-creation.txt` — дневник, события записаны в момент
-  совершения. Оставляем «кредиты» как часть истории.
-- `docs/simplifications.md` — то же.
-- `docs/ui/dev-log.md` — то же.
-- `docs/legacy/` — referenс на legacy oxsar2.
-- Старые ADR (0001–0008) — не трогаем.
+    // Шаг 2: транзакция в game-nova-БД
+    tx := beginTx(ctx)
+    if fromOxsarites > 0 {
+        tx.users.UpdateOxsarites(userID, -fromOxsarites)
+        tx.oxsarite_transactions.Insert(...)
+    }
 
-### 5. OpenAPI / SDK / типы
+    // Шаг 3: если не хватило оксаритов, списать остаток из billing
+    if fromOxsars > 0 {
+        idemKey := uuid.New()
+        resp, err := billingClient.WalletCharge(ctx, userID, fromOxsars, idemKey, ...)
+        if err == ErrInsufficientBalance {
+            tx.Rollback()
+            return ErrNotEnoughFunds
+        }
+        // ok
+    }
 
-- `projects/game-nova/api/openapi.yaml` — поля `credit` → `oxsars`.
-- Перегенерировать TypeScript-клиент (`projects/game-nova/frontend/src/api/`).
-- Аналогично для portal-API, billing-API.
+    tx.Commit()
+    applyOfficerEffect(ctx, userID, officerID)
+    return nil
+}
+```
 
-### 6. Метрики и логирование
+Опция «оплатить только из кошелька» — параметр запроса
+`pay_from: "wallet_only"`, тогда `fromOxsarites = 0`,
+`fromOxsars = price`.
 
-- Prometheus-метрики `credits_*` (если есть) → `oxsars_*`. Старые
-  оставить временно с deprecation для исторических данных в
-  Grafana (план 34).
-- Slog-логи: поля `user_credit` → `user_oxsars`.
+**Идемпотентность critical**: при сбое HTTP-вызова billing.charge
+(timeout, 5xx) — в game-nova остаётся `pending_transaction`
+запись, через retry-cron periodically повторяется. Это
+описано в плане 38 / 42 для платежей, переиспользовать паттерн.
+
+### 3. Frontend — UI для двух валют
+
+**game-nova/frontend**:
+- `BalanceBadge` компонент → две части:
+  - левая: «⬢ N оксаритов (uni01)»;
+  - разделитель `|`;
+  - правая: «🪙 M оксаров (кошелёк)».
+- TanStack Query keys: `['billing', 'wallet']` для оксаров;
+  `['game-nova', 'me']` для оксаритов (поле `oxsarites`).
+- Покупка премиум-фичи: модалка с разбивкой
+  «Списано 30 оксаритов + 20 оксаров. Опция: ☐ Только из кошелька».
+
+**portal/frontend**:
+- Шапка: только «🪙 5000 оксаров (кошелёк)».
+- Клик → модалка «Оксариты во вселенных: uni01: 30, uni02: 0, ...».
+- Shop UI: «Купить пакет 1000 оксаров за 100 ₽».
+
+**game-origin** (пока PHP, в будущем переписан на Go+React):
+- Шаблоны `*.tpl` — обновить терминологию.
+- Логика покупки — через тот же billing.charge endpoint.
+
+**Plural rules** (CLDR ru) для UI-строк:
+
+```yaml
+# projects/game-nova/configs/i18n/ru.yml
+oxsars:
+  count_one: "{n} оксар"
+  count_few: "{n} оксара"
+  count_many: "{n} оксаров"
+oxsarites:
+  count_one: "{n} оксарит"
+  count_few: "{n} оксарита"
+  count_many: "{n} оксаритов"
+```
+
+Frontend подбирает форму по числу через i18n-библиотеку (i18next /
+react-intl / Format.JS).
+
+### 4. Юридические документы (обновляются)
+
+- `docs/legal/offer.md` §5 «Виртуальная валюта»: переименовать
+  «Кредиты» на «Оксары и Оксариты». Описать обе валюты, разное
+  правовое положение (оксары — деньги, ст. 437 ГК; оксариты —
+  игровой ресурс, ст. 1062 ГК). Версия документа `1.0` → `1.0.1`.
+  **Существующие `user_consents` с version='1.0' остаются валидными** —
+  это переименование, не изменение существенных условий (ADR-0009 §2).
+- `docs/legal/refund-policy.md` — обновить терминологию: рефанд
+  применим к оксарам (hard), не к оксаритам.
+- `docs/legal/privacy-policy.md` — упомянуть оба типа в категориях
+  обрабатываемых данных (если применимо).
+- `docs/legal/game-rules.md` (план 47) — отдельный пункт «Оксариты —
+  игровой ресурс, может теряться от инопланетян и событий по
+  правилам игры».
+
+### 5. Активные технические планы (обновляются)
+
+- **Файлы переименовать:**
+  - `docs/plans/25-credits-economy.md` → `25-oxsars-economy.md`;
+  - `docs/plans/06-credits-ai-advisor.md` → `06-oxsars-ai-advisor.md`.
+- **Содержимое обновить** (терминология, добавить раздел про оксариты):
+  - 25, 06, 38, 42, 47.
+- **Memory-трекер** `completed_plans.md` — обновить ссылки на
+  переименованные планы.
+
+### 6. OpenAPI / SDK / типы
+
+- `projects/game-nova/api/openapi.yaml` — поля `credit` →
+  `oxsars` / `oxsarites` соответственно. Schemas обновлены.
+- Перегенерировать TypeScript-клиенты во всех frontend.
+- Аналогично portal-API, billing-API.
+
+### 7. Метрики и логирование
+
+- Prometheus-метрики:
+  - `credits_purchased_total` → `oxsars_purchased_total`;
+  - новые: `oxsarites_earned_total{kind="alien_gift|battle|achievement"}`,
+    `oxsarites_lost_total{kind="alien_loss|spend"}`.
+- Slog-поля: `user_credit` → `user_oxsars` (для логов billing) /
+  `user_oxsarites` (для game-nova).
 - Audit-log записи (план 14) — обновить шаблоны сообщений.
 
-### 7. Системные сообщения и шаблоны
+### 8. Миграция существующих балансов
 
-- Письма «Покупка прошла», «Списание оксаров» (план 57 mail-service
-  когда будет реализован) — заголовки и тексты обновить.
-- Email-уведомления (если есть) — обновить.
+Если в проде есть пользователи с накопленными `credit`:
+- Все существующие `users.credit` копируются как hard:
+  `wallets.oxsars_balance := users.credit`.
+- `users.oxsarites := 0` (оксариты — новая сущность, начальное 0).
+
+В dev-окружении — пропустить (тестовые данные сбрасываются).
+
+### 9. Жизненный цикл (см. ADR-0009 §8)
+
+Реализовать обработку для каждого события:
+
+| Событие | Где обрабатывается |
+|---|---|
+| YooKassa webhook payment.succeeded | billing-service: `wallet_transactions.kind='purchase'` |
+| Smart-pay charge | billing-service: `wallet_transactions.kind='charge'` + game-nova: `oxsarite_transactions.kind='spend'` |
+| Награда за бой | game-nova battle-engine: `oxsarite_transactions.kind='battle_reward'` |
+| Кража инопланетянами | game-nova alien-engine: `oxsarite_transactions.kind='alien_loss'` |
+| Подарок инопланетян | `oxsarite_transactions.kind='alien_gift'` |
+| Daily login bonus | scheduler-tick: `oxsarite_transactions.kind='daily_login'` |
+| Achievement unlock | achievements-engine: `oxsarite_transactions.kind='achievement'` |
+| Реферал-награда | (см. план для рефералов) `oxsarite_transactions.kind='referral'` |
+| Рефанд (план 47) | billing-service: `wallet_transactions.kind='refund'` |
+| Бан за нарушение | game-nova admin: `oxsarite_transactions.kind='admin_adjust'` (с metadata о причине) |
+| Удаление аккаунта (план 44) | billing-service deperson: hard в пределах 14 дней — рефанд непотраченного, остальное — деперсонализация (sender_id затирается, запись хранится 5 лет по 402-ФЗ); soft — сгорают |
 
 ---
 
-## Чего НЕ делаем в этом плане
+## Источники оксаритов на старте (план 25 / 06 — обновляется)
 
-- **Не вводим биржу hard↔soft** — оксары обмениваются на soft-ресурсы
-  только через игровые механики (магазин в игре), не через peer-to-peer
-  биржу. Биржа — отдельный план в будущем.
-- **Не вводим вторую hard-валюту** — оксары единственная.
-- **Не меняем формулы баланса** AI-advisor / офицеров. Цены в
-  оксарах = старые цены в кредитах (1 к 1).
-- **Не переписываем историю коммитов**.
-- **Не уведомляем существующих пользователей о переименовании** в
-  рамках этого плана (это маркетинговая задача — банер на portal,
-  пуш-уведомление, новость). Делается отдельно при анонсе.
+По решению: **A на старте, B по мере накопления контента** (см. ADR-0009).
+
+**Старт (Ф.X плана 58 — фиксируется в коде):**
+- Достижения (achievements engine, план 06): за каждое — N оксаритов.
+- Подарок инопланетян (alien-engine, планы 17 / 15): редкие события.
+- Daily login bonus (scheduler, опционально по плану 25): N оксаритов
+  за каждый день.
+
+**Расширение (отдельные геймплейные планы в будущем):**
+- Награды за экспедиции (план 02);
+- Ивенты галактики (план 17 F);
+- Турниры/рейтинги (план 17 E);
+- Daily quests (план 17 D).
+
+Точные числа выдачи — в `configs/economy.yaml` (или эквивалент),
+балансировка — отдельная задача.
+
+---
+
+## Чего НЕ делаем
+
+- **Не вводим биржу hard ↔ soft.**
+- **Не вводим вторую hard-валюту.**
+- **Не меняем формулы баланса** AI-advisor / офицеров.
+- **Не покупаются оксариты за рубли** (это фундаментальное юр-разделение).
+- **Не отнимаются оксариты в pvp между игроками** (только инопланетяне/события).
+- **Не вводим лутбоксы.**
+- **Не уведомляем пользователей автоматически** о ребрендинге —
+  это маркетинговая задача (банер на portal, новость, FAQ).
+- **Не переписываем историю коммитов** или legacy-документы.
 
 ---
 
 ## Этапы
 
-### Ф.1. Подготовка миграции БД
+### Ф.1. Подготовка миграций БД
 
-- Найти все места в схеме БД, где есть `credit`:
-  ```bash
-  grep -rn "credit" projects/*/migrations/
-  grep -rn "credit" projects/*/backend/queries/  # sqlc
-  ```
-- Подготовить миграцию `ALTER TABLE ... RENAME COLUMN`.
-- Прогнать в dev-БД, убедиться что всё работает.
+- Найти все места: `grep -rn "credit" projects/*/migrations/`.
+- Подготовить миграции:
+  - billing: `wallets.credit_balance → oxsars_balance` + `wallet_transactions`.
+  - game-nova: `users.credit → users.oxsarites` (rename + bigint) +
+    `oxsarite_transactions`.
+  - game-origin (если применимо): то же.
+- Прогнать в dev-БД.
 
-### Ф.2. Backend — переименование
+### Ф.2. Backend — billing.charge API
 
-- game-nova: пакет, структуры, поля → `oxsar`/`oxsars`.
-- billing: те же правки + шаблоны для YooKassa receipt.
-- identity (если есть упоминания) — те же правки.
-- Прогнать `go test ./...` во всех модулях.
-- `go-licenses check` (план 40) — убедиться, что не сломали ничего.
+- Реализовать `POST /internal/billing/wallet/charge` с идемпотентностью.
+- Тесты: charge при insufficient balance, idempotency-replay,
+  конкурентные запросы.
 
-### Ф.3. Frontend — переименование
+### Ф.3. Backend — game-nova smart-pay
 
-- game-nova: BalanceBadge, TanStack Query keys, i18n.
-- portal: Shop, Pricing, любые упоминания.
-- game-origin (PHP): шаблоны `.tpl`.
-- OpenAPI-клиенты — перегенерировать.
+- Логика: списание оксаритов → fallback на оксары.
+- Опция `pay_from: "wallet_only"`.
+- Retry-cron для pending_transaction.
+- Unit-тесты.
 
-### Ф.4. Документация
+### Ф.4. Backend — game-nova oxsarite earnings
 
-- Юр-документы: `offer.md` §5, `refund-policy.md`, `privacy-policy.md`.
-- Активные планы: 25, 06, 38, 42, 47.
-- Переименовать **файлы** `25-credits-economy.md` →
-  `25-oxsars-economy.md`, `06-credits-ai-advisor.md` →
-  `06-oxsars-ai-advisor.md`. Обновить ссылки в memory
-  `completed_plans.md`.
+- Battle-engine: emit `oxsarite_transactions` при награде.
+- Alien-engine: emit при подарке/краже.
+- Achievements-engine: emit при unlock.
+- Daily login (если используется): emit.
 
-### Ф.5. Метрики и логи
+### Ф.5. Frontend — UI
 
-- Prometheus-метрики, slog-поля, audit-log шаблоны.
+- BalanceBadge с двумя значениями.
+- Modal для покупки премиум-фичи с разбивкой.
+- Plural rules.
+- Shop UI: пакеты оксаров.
 
-### Ф.6. Smoke-тест end-to-end
+### Ф.6. OpenAPI и регенерация клиентов
 
-- Регистрация → пополнение баланса (через mock-YooKassa) → отображение
-  «X оксаров» в balance-badge.
-- Покупка пакета → запись в `users.oxsars` обновляется.
-- Списание оксаров на AI-advisor / офицера — корректное
-  отображение.
-- В UI нигде не осталось «кредит».
+- Обновить openapi.yaml.
+- Перегенерировать TypeScript-клиенты.
+- Прогнать E2E (план 13).
 
-### Ф.7. Финализация
+### Ф.7. Юридические документы
 
-- `git status --short` → коммит только своими файлами поимённо.
+- Обновить offer.md (→ v1.0.1), refund-policy.md, privacy-policy.md,
+  game-rules.md.
+- Проверить: существующие user_consents v=1.0 остаются валидными.
+
+### Ф.8. Документация и переименование
+
+- Переименовать файлы 25 / 06.
+- Обновить содержимое 25/06/38/42/47.
+- Memory-трекер обновить.
+
+### Ф.9. Миграция продовых данных (если есть)
+
+- Скрипт миграции `users.credit → wallets.oxsars_balance + users.oxsarites=0`.
+
+### Ф.10. Финализация
+
+- Smoke-тест end-to-end: регистрация → покупка пакета → smart-pay
+  при покупке офицера → корректное отображение балансов.
+- `git status --short` → коммитим только своими файлами поимённо.
 - Запись в `docs/project-creation.txt` — итерация 58.
-- Коммиты (по сложности — 2-4 коммита):
-  - `feat(billing,game-nova): rename credit → oxsars в БД и backend`;
-  - `feat(frontend): обновить UI на оксары`;
-  - `docs(legal): оферта v1.0.1 — переименование валюты`;
-  - `docs(plans): обновить план 25/06/38/42/47 под оксары`.
+- Серия коммитов:
+  - `feat(billing): wallet.charge API + oxsars_balance`;
+  - `feat(game-nova): smart-pay + oxsarites + transactions`;
+  - `feat(frontend): UI для двух валют`;
+  - `docs(legal): offer v1.0.1 + game-rules § оксариты`;
+  - `docs(plans): обновить 25/06/38/42/47, переименовать файлы`.
 
 ---
 
 ## Тестирование
 
 - Все Go-тесты во всех модулях зелёные.
-- E2E (план 13) — регистрация → покупка → списание проходит.
-- Smoke-тест каждого UI: balance показывает «оксары», магазин
-  работает.
-- Юр-документы рендерятся на портале (`/offer`, `/refund`,
-  `/privacy`) с новым термином.
+- E2E (план 13): регистрация → пополнение через mock-YooKassa →
+  smart-pay при покупке офицера → корректные балансы.
+- Юр-документы рендерятся на портале (`/offer`, `/refund`, `/privacy`,
+  `/game-rules`) с обновлённой терминологией.
+- `docs/ops/legal-compliance-audit.md` повторный прогон → пробелов нет.
 
 ---
 
 ## Известные риски
 
-1. **Атомарность деплоя.** Если backend обновится до миграции БД —
-   запросы к `users.oxsars` упадут. Если миграция БД пройдёт до
-   деплоя — старый backend упадёт на `users.credit`. Митигация:
-   maintenance window 5–15 минут, или blue-green деплой по плану 31.
-
-2. **Frontend cache.** Браузеры пользователей с открытой страницей
-   могут получать ошибки от обновлённого backend (старый JS
-   ожидает поле `credit`). Митигация: версионирование build'а в
-   URL, после деплоя — soft-reload через service worker (если есть).
-
-3. **Legacy-документация ломает поиск.** Игрок ищет «кредиты» в
-   FAQ — не находит. Митигация: в FAQ оставить упоминание
-   «ранее называлось «кредитами»» в первом параграфе.
-
-4. **Маркетинг-уведомление.** Существующие пользователи могут
-   подумать, что у них «отняли кредиты». Митигация: банер на
-   portal «Кредиты переименованы в Оксары — баланс сохранён»
-   с ссылкой на пост в новостях. Это маркетинговый шаг, не
-   технический — делается отдельно от плана 58.
+1. **Атомарность деплоя.** Митигация: maintenance window или blue-green
+   деплой по плану 31.
+2. **Frontend-кэш у активных игроков.** Митигация: версионирование build,
+   soft-reload.
+3. **Спор «я считал что мои оксариты не должны были украсть».** Митигация:
+   tooltip в UI «оксариты — игровой ресурс, может теряться»;
+   game-rules §X.
+4. **Маркетинг-уведомление.** Маркетинговая задача отдельно.
 
 ---
 
 ## Объём
 
-3–5 коммитов, ~300–600 строк изменений. В основном —
-переименование (rename refactor через IDE), не новая логика.
+5–7 коммитов, ~800–1500 строк изменений. Это **не** просто rename —
+двухвалютная схема + smart-pay + транзакции — полноценная архитектурная
+работа.
 
-Время выполнения: ~3–5 часов агента.
+Время выполнения: **8–14 часов агента**.
 
 ---
 
 ## Когда запускать
 
 После выполнения **базовых платёжных задач** (план 42 ЮKassa,
-план 38 billing закрыты — ✅), но **до публичного запуска** —
-чтобы не пришлось переименовывать на проде с уже накопленной
-базой пользователей.
+план 38 billing — ✅), но **до публичного запуска** — чтобы не
+переименовывать на проде с уже накопленной базой пользователей.
 
 Рекомендуемый порядок относительно текущей очереди:
-1. Закрыть оставшиеся юр-планы (44 Ф.4 РКН — твой ручной шаг,
-   45 товарный знак — твой ручной шаг).
+1. Закрыть юр-планы (44 Ф.4 РКН — ручной шаг, 45 — ручной шаг).
 2. Закрыть план 50 (game-origin gaps — Ф.1, Ф.4, Ф.5).
 3. Закрыть план 56 (reports → portal).
-4. **Выполнить план 58 (это)**.
+4. **Выполнить план 58 (это).**
 5. Маркетинговый анонс ребрендинга.
 6. Публичный запуск.
