@@ -19,11 +19,7 @@ RUN apk add --no-cache ca-certificates tzdata wget
 WORKDIR /app
 
 COPY --from=build /out/server /app/server
-# Auth Service читает universes.yaml из game-nova-конфигов: список вселенных
-# тот же. План 36 §Auth Service.
-COPY projects/game-nova/configs/universes.yaml /app/configs/universes.yaml
 
-ENV UNIVERSES_CONFIG=/app/configs/universes.yaml
 ENV AUTH_ADDR=:9000
 
 EXPOSE 9000

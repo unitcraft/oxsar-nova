@@ -21,7 +21,6 @@ import (
 	"oxsar/auth/internal/authsvc"
 	"oxsar/auth/internal/httpx"
 	"oxsar/auth/internal/storage"
-	"oxsar/auth/internal/universe"
 	"oxsar/auth/pkg/jwtrs"
 	"oxsar/auth/pkg/metrics"
 )
@@ -43,7 +42,6 @@ func run() error {
 	dbURL := mustEnv("AUTH_DB_URL")
 	redisURL := envStr("REDIS_URL", "redis://localhost:6379/0")
 	keyPath := envStr("RSA_KEY_PATH", "/run/secrets/auth_rsa_key.pem")
-	universesPath := envStr("UNIVERSES_CONFIG", "configs/universes.yaml")
 	accessTTL := envDur("JWT_ACCESS_TTL", 60*time.Minute)
 	refreshTTL := envDur("JWT_REFRESH_TTL", 30*24*time.Hour)
 	allowedOrigins := strings.Split(envStr("ALLOWED_ORIGINS",
@@ -71,12 +69,6 @@ func run() error {
 	iss := jwtrs.NewIssuer(rsaKey, accessTTL, refreshTTL)
 	ver := jwtrs.NewVerifierFromKey(iss.PublicKey())
 
-	reg, err := universe.NewRegistry(universesPath)
-	if err != nil {
-		log.WarnContext(ctx, "universes config not loaded", slog.String("err", err.Error()))
-		reg, _ = universe.NewRegistryFromSlice(nil)
-	}
-
 	svc := authsvc.New(pool, iss)
 	h := authsvc.NewHandler(svc, iss, rdb)
 
@@ -100,9 +92,6 @@ func run() error {
 		httpx.WriteJSON(w, r, http.StatusOK, map[string]string{"status": "ok"})
 	})
 	r.Get("/.well-known/jwks.json", h.JWKS)
-	r.Get("/auth/universes", func(w http.ResponseWriter, r *http.Request) {
-		httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"universes": reg.All()})
-	})
 
 	// Auth endpoints (публичные + rate-limited)
 	r.Post("/auth/register", h.Register)

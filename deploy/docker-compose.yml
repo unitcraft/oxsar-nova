@@ -127,6 +127,70 @@ services:
       - ../projects/game-nova/frontend:/app
       - frontend-node-modules:/app/node_modules
 
+  # ── Auth stack ───────────────────────────────────────────────────────────
+  # План 36 Ф.11. RSA-ключ генерируется auth-service-ом сам при первом старте
+  # и кладётся в volume auth-rsa-key (pem-файл). На проде он подкладывается
+  # как docker secret — см. docker-compose.multiverse.yml.
+
+  auth-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: authsvc
+      POSTGRES_PASSWORD: authsvc
+      POSTGRES_DB: authsvc
+    ports: ["5435:5432"]
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authsvc"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  auth-migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.migrate
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    environment:
+      DB_URL: postgres://authsvc:authsvc@auth-db:5432/authsvc?sslmode=disable
+      MIGRATE_DIR: /migrations/auth
+    restart: "no"
+
+  auth-service:
+    build:
+      context: ..
+      dockerfile: projects/auth/backend/Dockerfile
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-migrate:
+        condition: service_completed_successfully
+    environment:
+      AUTH_ADDR: ":9000"
+      AUTH_DB_URL: postgres://authsvc:authsvc@auth-db:5432/authsvc?sslmode=disable
+      REDIS_URL: redis://redis:6379/2
+      # В dev RSA-ключ генерируется при первом старте и сохраняется в volume.
+      # На проде — монтируется secret из /run/secrets.
+      RSA_KEY_PATH: /var/lib/auth/rsa_key.pem
+      JWT_ACCESS_TTL: 60m
+      JWT_REFRESH_TTL: 720h
+      LOG_LEVEL: info
+      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:5174"
+    volumes:
+      - auth-rsa-key:/var/lib/auth
+    ports: ["9000:9000"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9000/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
   # ── Portal stack ─────────────────────────────────────────────────────────
 
   portal-db:
@@ -165,14 +229,13 @@ services:
         condition: service_healthy
       portal-migrate:
         condition: service_completed_successfully
+      auth-service:
+        condition: service_healthy
     environment:
       PORTAL_ADDR: ":8090"
       PORTAL_DB_URL: postgres://portal:portal@portal-db:5432/portal?sslmode=disable
-      # В dev-режиме без auth-service используем заглушку JWKS_URL.
-      # portal стартует с предупреждением если не удаётся загрузить ключ —
-      # это нормально для локального запуска без auth-service.
-      AUTH_JWKS_URL: http://backend:8080/.well-known/jwks.json
-      AUTH_SERVICE_URL: ""
+      AUTH_JWKS_URL: http://auth-service:9000
+      AUTH_SERVICE_URL: http://auth-service:9000
       UNIVERSES_CONFIG: /app/configs/universes.yaml
       LOG_LEVEL: info
     ports: ["8090:8090"]
@@ -204,5 +267,7 @@ volumes:
   pg-data:
   redis-data:
   portal-db-data:
+  auth-db-data:
+  auth-rsa-key:
   frontend-node-modules:
   portal-frontend-node-modules:
