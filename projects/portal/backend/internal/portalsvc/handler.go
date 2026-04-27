@@ -9,8 +9,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/oxsar/nova/backend/internal/httpx"
-	"github.com/oxsar/nova/backend/internal/universe"
+	"oxsar/portal/internal/httpx"
+	"oxsar/portal/internal/universe"
 )
 
 // Handler — HTTP-адаптер портала.

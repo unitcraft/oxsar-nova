@@ -20,7 +20,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/oxsar/nova/backend/pkg/sqldump"
+	"oxsar/game-nova/pkg/sqldump"
 )
 
 func main() {

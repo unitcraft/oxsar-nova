@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/robfig/cron/v3"
 
-	"github.com/oxsar/nova/backend/internal/locks"
-	"github.com/oxsar/nova/backend/pkg/metrics"
+	"oxsar/game-nova/internal/locks"
+	"oxsar/game-nova/pkg/metrics"
 )
 
 // JobFunc — функция, исполняемая по расписанию. Вызов уже произошёл

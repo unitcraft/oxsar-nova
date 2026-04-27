@@ -7,8 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/oxsar/nova/backend/internal/auth"
-	"github.com/oxsar/nova/backend/internal/httpx"
+	"oxsar/game-nova/internal/auth"
+	"oxsar/game-nova/internal/httpx"
 )
 
 type Handler struct {

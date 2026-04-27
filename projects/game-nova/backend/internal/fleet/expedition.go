@@ -19,11 +19,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/battle"
-	"github.com/oxsar/nova/backend/internal/config"
-	"github.com/oxsar/nova/backend/internal/event"
-	"github.com/oxsar/nova/backend/pkg/ids"
-	"github.com/oxsar/nova/backend/pkg/rng"
+	"oxsar/game-nova/internal/battle"
+	"oxsar/game-nova/internal/config"
+	"oxsar/game-nova/internal/event"
+	"oxsar/game-nova/pkg/ids"
+	"oxsar/game-nova/pkg/rng"
 )
 
 // unit IDs для expedition

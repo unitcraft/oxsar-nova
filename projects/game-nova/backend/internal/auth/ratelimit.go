@@ -8,7 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/oxsar/nova/backend/internal/httpx"
+	"oxsar/game-nova/internal/httpx"
 )
 
 // RateLimiter — sliding-window rate limiter на Redis.

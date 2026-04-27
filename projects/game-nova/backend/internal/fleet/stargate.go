@@ -9,7 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/galaxy"
+	"oxsar/game-nova/internal/galaxy"
 )
 
 // План 20 Ф.5: Stargate Jump — мгновенный прыжок флота между лунами.

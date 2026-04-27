@@ -159,8 +159,7 @@ services:
   portal-backend:
     build:
       context: ..
-      dockerfile: projects/game-nova/backend/Dockerfile
-    entrypoint: ["/app/portal"]
+      dockerfile: projects/portal/backend/Dockerfile
     depends_on:
       portal-db:
         condition: service_healthy

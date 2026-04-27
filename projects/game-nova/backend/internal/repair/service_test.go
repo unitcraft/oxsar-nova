@@ -3,7 +3,7 @@ package repair
 import (
 	"testing"
 
-	"github.com/oxsar/nova/backend/internal/config"
+	"oxsar/game-nova/internal/config"
 )
 
 func TestCeil10(t *testing.T) {

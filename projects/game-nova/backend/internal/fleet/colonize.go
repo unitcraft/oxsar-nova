@@ -28,9 +28,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/event"
-	"github.com/oxsar/nova/backend/pkg/ids"
-	"github.com/oxsar/nova/backend/pkg/rng"
+	"oxsar/game-nova/internal/event"
+	"oxsar/game-nova/pkg/ids"
+	"oxsar/game-nova/pkg/rng"
 )
 
 // unitColonyShip — id колониального корабля (legacy UNIT_COLONY_SHIP).

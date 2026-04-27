@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/oxsar/nova/backend/internal/config"
+	"oxsar/game-nova/internal/config"
 )
 
 // TestProductionRatesMetal проверяет, что productionRatesDSL возвращает

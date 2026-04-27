@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/oxsar/nova/backend/internal/auth"
-	"github.com/oxsar/nova/backend/internal/httpx"
+	"oxsar/game-nova/internal/auth"
+	"oxsar/game-nova/internal/httpx"
 )
 
 // План 14 Ф.8.2 — rate-limit write-действий админа.

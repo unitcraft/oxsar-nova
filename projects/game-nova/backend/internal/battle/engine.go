@@ -4,7 +4,7 @@ import (
 	"errors"
 	"math"
 
-	"github.com/oxsar/nova/backend/pkg/rng"
+	"oxsar/game-nova/pkg/rng"
 )
 
 // ErrInvalidInput — структурно некорректный вход (нет сторон, нет unit-ов).

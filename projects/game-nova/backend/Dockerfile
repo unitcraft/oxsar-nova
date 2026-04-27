@@ -1,12 +1,9 @@
-# Multi-stage build для backend: один образ, два бинаря (server, worker).
+# Multi-stage build для game-nova: один образ, два бинаря (server, worker).
 # Выбор entrypoint — через command в docker-compose.
 #
-# Стадия build: выкачиваем зависимости, компилируем статические бинари
-# (CGO=0), пишем их в /out.
-#
-# Стадия runtime: минимальный alpine + CA-сертификаты (для go-redis
-# и будущих внешних HTTPS-вызовов). configs копируются внутрь, потому
-# что LoadCatalog читает их при старте.
+# auth-service и portal живут в отдельных Go-модулях:
+#   projects/auth/backend/Dockerfile
+#   projects/portal/backend/Dockerfile
 
 FROM golang:1.23-alpine AS build
 WORKDIR /src
@@ -19,21 +16,16 @@ RUN cd projects/game-nova/backend && go mod download
 # Копируем исходники и собираем оба бинаря.
 COPY projects/game-nova/backend ./projects/game-nova/backend
 RUN cd projects/game-nova/backend && \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server       ./cmd/server && \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/worker       ./cmd/worker && \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/auth-service ./cmd/auth-service && \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/portal       ./cmd/portal
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/worker ./cmd/worker
 
 FROM alpine:3.20 AS runtime
-# wget — для docker healthcheck (--no-check-certificate не нужен,
-# обращаемся к localhost). ca-certificates — для go-redis и внешних HTTPS.
+# wget — для docker healthcheck. ca-certificates — для go-redis и HTTPS.
 RUN apk add --no-cache ca-certificates tzdata wget
 WORKDIR /app
 
-COPY --from=build /out/server       /app/server
-COPY --from=build /out/worker       /app/worker
-COPY --from=build /out/auth-service /app/auth-service
-COPY --from=build /out/portal       /app/portal
+COPY --from=build /out/server /app/server
+COPY --from=build /out/worker /app/worker
 COPY projects/game-nova/configs /app/configs
 # План 19: вики читается на runtime — копируем сгенерированные .md.
 COPY docs/wiki /app/wiki
@@ -46,5 +38,5 @@ ENV SERVER_ADDR=:8080
 EXPOSE 8080
 
 # По умолчанию стартуем server. worker-сервис в compose переопределит
-# command.
+# entrypoint.
 ENTRYPOINT ["/app/server"]

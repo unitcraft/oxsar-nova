@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/event"
+	"oxsar/game-nova/internal/event"
 )
 
 // ExpireEvent формирует event.Handler, регистрируемый в воркере для

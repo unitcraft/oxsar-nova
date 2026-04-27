@@ -19,7 +19,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/oxsar/nova/backend/internal/config"
+	"oxsar/game-nova/internal/config"
 	"gopkg.in/yaml.v3"
 )
 

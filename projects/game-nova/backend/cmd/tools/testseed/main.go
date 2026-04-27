@@ -26,7 +26,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/oxsar/nova/backend/internal/auth"
+	"oxsar/game-nova/internal/auth"
 )
 
 // Фиксированные UUID — важны для E2E (чтобы Playwright мог подставлять ID в URL).
