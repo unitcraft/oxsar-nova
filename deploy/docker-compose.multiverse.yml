@@ -190,7 +190,9 @@ services:
       IDENTITY_SERVICE_URL: http://identity-service:9000
       UNIVERSES_CONFIG: /app/configs/universes.yaml
       LOG_LEVEL:        info
-      ALLOWED_ORIGINS:  "https://oxsar-nova.ru"
+      # План 50 Ф.5: добавлен origin.oxsar-nova.ru — legacy-вселенная
+      # шлёт жалобы (POST /api/reports) cross-origin из своих шаблонов.
+      ALLOWED_ORIGINS:  "https://oxsar-nova.ru,https://origin.oxsar-nova.ru"
     ports: ["8090:8090"]
     restart: unless-stopped
     healthcheck:

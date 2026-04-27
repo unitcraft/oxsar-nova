@@ -2004,4 +2004,35 @@ function isNameCharValid($username)
         ;
 }
 
+/**
+ * План 50 Ф.5 (149-ФЗ): HTML-кнопка «Пожаловаться» на UGC-объект.
+ * Модалка и JS-обёртка — в шаблоне _report_button.tpl, подключена
+ * один раз в layout. POST идёт на portal-backend (PORTAL_BASE_URL).
+ *
+ * @param string $type 'user' | 'alliance' | 'chat_msg' | 'planet'
+ * @param string|int $id ID объекта (string в URL-safe форме)
+ * @param string|null $title подсказка (по умолчанию «Пожаловаться»)
+ * @return string HTML-кнопка <button> или '' если запрещён self-report.
+ */
+function getReportButton($type, $id, $title = null)
+{
+    // Гостю — кнопку не показываем (некуда слать без JWT).
+    $myUid = '';
+    if (class_exists('NS') && NS::getUser()) {
+        $myUid = (string)NS::getUser()->get('userid');
+    }
+    if ($myUid === '' || $myUid === '0') {
+        return '';
+    }
+    // Не показываем кнопку «пожаловаться на себя».
+    if ($type === 'user' && (string)$id === $myUid) {
+        return '';
+    }
+    $t = htmlspecialchars((string)$type, ENT_QUOTES, 'UTF-8');
+    $i = htmlspecialchars((string)$id,   ENT_QUOTES, 'UTF-8');
+    $tt = htmlspecialchars($title ?? 'Пожаловаться', ENT_QUOTES, 'UTF-8');
+    return '<button type="button" class="ox-report-btn" title="' . $tt
+         . '" onclick="oxReport.open(\'' . $t . '\',\'' . $i . '\')">&#x1F6A9;</button>';
+}
+
 ?>

@@ -5,7 +5,7 @@
 <table class="ntable">
 	<thead><tr>
 		<th width="50%"><center>{@chat_link}</center></th>
-		<th width="50%"><center>{@a_chat_link}</center></th>
+		<th width="50%"><center>{@a_chat_link} <?php /* план 50 Ф.5 */ echo getReportButton('chat_msg', 'ally:' . (int)NS::getUser()->get('aid'), 'Пожаловаться на чат альянса'); ?></center></th>
 	</tr></thead>
 </table>
 <table class="ntable">

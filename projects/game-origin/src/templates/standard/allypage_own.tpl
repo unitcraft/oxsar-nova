@@ -8,7 +8,7 @@
 	</tr>{/if}
 	<tr>
 		<td style="width: 30%;">{lang}TAG{/lang}</td>
-		<td>{@tag}</td>
+		<td>{@tag} <?php /* план 50 Ф.5 */ echo getReportButton('alliance', $this->get('aid'), 'Пожаловаться на альянс'); ?></td>
 	</tr>
 	<tr>
 		<td>{lang}NAME{/lang}</td>
