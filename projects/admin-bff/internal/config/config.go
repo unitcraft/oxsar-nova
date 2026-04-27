@@ -12,6 +12,7 @@ type Config struct {
 	IdentityURL     string
 	BillingURL      string
 	GameNovaURL     string
+	PortalURL       string
 	RedisAddr       string
 	SessionSecret   []byte
 	IdleTimeout     time.Duration
@@ -27,6 +28,7 @@ func Load() (*Config, error) {
 		IdentityURL:     env("IDENTITY_URL", "http://localhost:9001"),
 		BillingURL:      env("BILLING_URL", "http://localhost:9100"),
 		GameNovaURL:     env("GAME_NOVA_URL", "http://localhost:8080"),
+		PortalURL:       env("PORTAL_URL", "http://localhost:8090"),
 		RedisAddr:       env("REDIS_ADDR", "localhost:6379"),
 		IdleTimeout:     envDuration("BFF_IDLE_TIMEOUT", 30*time.Minute),
 		RefreshLeadTime: envDuration("BFF_REFRESH_LEAD_TIME", 60*time.Second),

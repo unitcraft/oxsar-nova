@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   CreditCard,
   Gamepad2,
+  Flag,
   ScrollText,
   Settings,
   ChevronsLeft,
@@ -51,6 +52,12 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/billing', label: 'Billing', icon: CreditCard, requiredPermission: 'billing:read' },
       { to: '/game-ops/events', label: 'Game-ops', icon: Gamepad2, requiredPermission: 'game:events:retry' },
+      // План 56 Ф.6: UGC-жалобы (149-ФЗ). Permission moderation:reports:read
+      // придёт через identity план 52 Ф.X; до тех пор пункт скрыт от
+      // не-admin'ов через Reports.tsx (role-based fallback в самом
+      // route-компоненте), а в sidebar пункт виден всем — это известное
+      // ограничение, исчезнет с подключением permissions в JWT.
+      { to: '/reports', label: 'Жалобы', icon: Flag },
     ],
   },
   {

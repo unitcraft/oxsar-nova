@@ -83,6 +83,13 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	// План 56 Ф.6: модерация UGC-жалоб живёт в portal-backend (единый
+	// реестр для всех вселенных). Префикс должен идти перед identity,
+	// иначе /api/admin/* схватит identityUp.
+	portalReportsUp, err := proxy.NewUpstream("portal-reports", "/api/admin/reports", cfg.PortalURL)
+	if err != nil {
+		return err
+	}
 	identityUp, err := proxy.NewUpstream("identity", "/api/admin", cfg.IdentityURL)
 	if err != nil {
 		return err
@@ -112,6 +119,7 @@ func run() error {
 		// должны проверяться до identity (более специфичные prefix).
 		pr.Mount(billingUp.Prefix, billingUp.Handler())
 		pr.Mount(gameEventsUp.Prefix, gameEventsUp.Handler())
+		pr.Mount(portalReportsUp.Prefix, portalReportsUp.Handler())
 		pr.Mount(identityUp.Prefix, identityUp.Handler())
 	})
 
