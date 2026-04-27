@@ -8645,3 +8645,50 @@ snapshot на нашу БД с сохранением `global_user_id` для JW
 и в legacy + нормализованный diff (убрать таймстампы, ID, числа).
 
 **Коммиты**: 1 (apply-fixture tool + правки snapshot-tool).
+
+---
+
+## Итерация 37.5d.3 + триаж (2026-04-27) — compare-tool, найдены base-level баги
+
+**Задача**: автоматизировать сравнение всех страниц game-origin с legacy.
+
+**Изменения**:
+- `tools/compare-with-legacy.sh` (новый): bash, login → curl 41 страниц
+  у обоих → нормализация (даты/числа/ID) → diff → markdown report.
+- `.gitignore`: `tools/compare-output/` (большой, регенерится).
+
+**Результат compare-tool**:
+- 41 страница, 24 с расхождениями ≥20 lines, 0 HTTP errors.
+- 17 страниц 🟢 minor (15-19 diff lines) — рендерятся OK.
+- 19 страниц 🟡 moderate (20-100).
+- 4 страницы 🔴 major (>100): Stock 222, Alliance 873, BuildingInfo 735,
+  UnitInfo 727, Changelog 779.
+
+**Триаж 37.5d.4 — главная находка**: множество страниц возвращают
+**279-336 байт** вместо 13k-63k у legacy. Это **PHP fatal exception**.
+Категории:
+
+1. `Class "Xxx_YII" not found` — Constructions, Research, Shipyard,
+   Defense, Empire, Techtree, ArtefactMarket. **13 разных Yii-классов**
+   остались в коде (Requirements_YII, Sessions_YII, Notes_YII, и т.д.).
+2. `Class "CDbCriteria"` — Notepad, Tutorial, UserAgreement.
+3. `readdir(): false given` — Repair, Disassemble, Preferences. opendir
+   на несуществующую директорию.
+4. `Undefined constant "VERSION_CHECK_PAGE"` — Changelog.
+5. `Unkown building/unit` — BuildingInfo, UnitInfo требуют URL `?id=N`.
+6. `ONLY_FULL_GROUP_BY` — Galaxy, Records (sql_mode strict, мы только
+   STRICT_TRANS_TABLES выключили).
+
+**Вывод**: до UI-фиксов нужны **системные фиксы**. Изменена фазировка
+плана 37.5d:
+- 37.5d.5: убрать Yii-классы (заменить на чистый SQL/PDO).
+- 37.5d.6: fix sql_mode `ONLY_FULL_GROUP_BY` для Galaxy/Records.
+- 37.5d.7: fix readdir/Undefined constant.
+- 37.5d.8: повторный compare.
+- 37.5d.9+: реальные UI-фиксы.
+
+Compare-tool сделал главное — **ясно показал scope work**, который
+без неё был бы скрыт (страницы Main и Mission работали → казалось
+что всё ОК).
+
+**Коммиты**: 1 (compare-tool + .gitignore + план + dev-log).
