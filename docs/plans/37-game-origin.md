@@ -658,41 +658,226 @@ event-monitor:
 
 ---
 
-## 37.5d — UI-багфиксы первого запуска
+## 37.5d — UI-багфиксы через сравнение со снимком legacy
 
-### 1. «Пополнить кредиты» наезжает на ресурсы
+### Концепция
 
-**Симптом** (скриншот пользователя): заголовок «Пополнить кредиты» в
-header'е перекрывает строку с балансами Металл/Кремний/Водород/Энергия.
+Юзер обнаружил баг — «Пополнить кредиты» наезжает на строку ресурсов.
+Без эталона неясно, это наша регрессия или так в legacy. Решение:
+взять **снимок реального test-юзера** из боевой legacy БД, импортировать
+к себе как fixture, рендерить **те же** страницы с тем же `userid` →
+сравнивать с legacy.
 
-**Подозреваемый источник** (по grep `templates/`): `payment.tpl`
-включается куда-то в header через `{include}` или появляется как
-absolute-позиционированный блок. Найти точно — после починки event-monitor
-(когда страница перестанет быть «заглушкой колонистов» и можно будет
-визуально отлавливать настоящие layout-проблемы).
+Альтернативы (отклонены):
+- **Полный дамп legacy** (~1.5GB) — избыточно для UI-сравнения, тяжело
+  коммитить, протухает.
+- **Поднимать второй legacy-инстанс** с нашим seed — нужно отключать
+  event-loop у legacy (cron + `NS::startEvents` + `oxsar-monitor-manager.txt`),
+  схема тоже синхронизировать. 80% работы — подгонка, 20% — само
+  сравнение.
+- **Side-by-side без синхронизации БД** — ловит только структурные баги
+  (#1 в типологии ниже), не контентные.
 
-**Подход**:
-1. Открыть страницу в браузере с DevTools → найти DOM-элемент «Пополнить
-   кредиты», посмотреть его computed style и родителей.
-2. Найти источник (`grep -r "Пополнить кредиты\|REPLENISH" templates/`).
-3. Если виноват `position: absolute` без правильного container — поправить
-   CSS. Если виновата структура DOM — поправить шаблон.
-4. **Не править глобальный CSS** без необходимости — у legacy огромный
-   `style.css`/`layout.css`, любая правка может сломать другие страницы.
-   Предпочесть точечный fix в шаблоне.
+### Типология UI-багов
 
-### 2. Прочие layout-проблемы
+| Тип | Зависит от данных? | Где видно |
+|---|---|---|
+| Структурные (DOM/CSS): наезд, сломанный grid, отсутствующий контейнер | Нет | Сравнение даже без идентичных данных |
+| Контентные: неправильное число, пустой блок при 0 ресурсов | Да | Только при идентичных данных |
+| Шаблонные: `MENU_X` вместо «Главная», не подставлена переменная | Слабо | Видно даже на пустом юзере |
 
-По мере появления (после 37.5c и реальной игры новым юзером):
-- Меню overflow на узких экранах
-- Таблицы с числами без выравнивания
-- Иконки с broken `src` (legacy ссылается на пути соцсетей, которых нет)
+«Пополнить кредиты» наезжает — структурный (#1). Но раз уж готовим
+fixture — заодно поймаем контентные.
 
-Каждый багфикс — отдельный коммит, минимальная правка, сначала шаблон,
-потом CSS (если без CSS никак).
+### Подход: snapshot test-юзера → fixture → сравнение
+
+#### 1. Снять снимок test-юзера из legacy
+
+Legacy БД доступна в контейнере `oxsar2-mysql-1`. Test-юзер: `userid=1`.
+
+```bash
+# Список таблиц где у юзера есть данные (предварительно — найти все
+# таблицы с колонкой userid или связанной FK):
+docker exec oxsar2-mysql-1 mysql -uroot -proot oxsar_db -N -B -e "
+  SELECT TABLE_NAME FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA='oxsar_db' AND COLUMN_NAME='userid'
+" 2>/dev/null
+
+# Также таблицы по planetid (FK к user через na_planet):
+docker exec oxsar2-mysql-1 mysql -uroot -proot oxsar_db -N -B -e "
+  SELECT TABLE_NAME FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA='oxsar_db' AND COLUMN_NAME='planetid'
+" 2>/dev/null
+```
+
+Снять данные через `mysqldump --where`:
+```bash
+mkdir -p projects/game-origin/migrations/fixtures
+docker exec oxsar2-mysql-1 mysqldump -uroot -proot oxsar_db \
+  --no-create-info --skip-extended-insert --skip-comments --hex-blob \
+  --where="userid=1" \
+  na_user na_planet na_research2user na_unit2shipyard \
+  na_building2planet na_user2group na_buddylist na_message \
+  na_alliance na_user2alliance na_artefact2user \
+  2>/dev/null > projects/game-origin/migrations/fixtures/test-user-snapshot.sql
+
+# Дополнительные таблицы где юзер может быть как destuser/sender:
+docker exec oxsar2-mysql-1 mysqldump -uroot -proot oxsar_db \
+  --no-create-info --skip-extended-insert --skip-comments --hex-blob \
+  --where="planetid IN (SELECT planetid FROM na_planet WHERE userid=1)" \
+  na_galaxy \
+  2>/dev/null >> projects/game-origin/migrations/fixtures/test-user-snapshot.sql
+```
+
+**Важно**:
+- `2>/dev/null` обязателен — иначе stderr-warning про пароль попадает в SQL-файл и ломает применение.
+- Не забыть про `events` (текущие события юзера) — без них некоторые страницы (Mission, Construction) показывают неправильное состояние.
+- Размер ожидается ~100-500KB. Коммитим в репо как dev-fixture.
+
+#### 2. Применить fixture к нашей БД
+
+Скрипт `projects/game-origin/tools/apply-test-user-fixture.sh`:
+```bash
+#!/bin/bash
+# Заменяет dev-юзера на снимок test-юзера из legacy.
+# Сохраняет global_user_id (наша надстройка для JWT).
+
+GUID=$(docker exec docker-mysql-1 mysql -uroot -proot_pass oxsar_db -N -B \
+  -e "SELECT global_user_id FROM na_user WHERE userid=1" 2>/dev/null)
+
+# Очистить нашего dev-юзера и связанные таблицы
+docker exec docker-mysql-1 mysql -uroot -proot_pass oxsar_db <<SQL
+DELETE FROM na_user WHERE userid=1;
+DELETE FROM na_planet WHERE userid=1;
+-- ... (все связанные таблицы)
+SQL
+
+# Применить snapshot
+docker exec -i docker-mysql-1 mysql -uroot -proot_pass oxsar_db \
+  < projects/game-origin/migrations/fixtures/test-user-snapshot.sql
+
+# Восстановить global_user_id для JWT lazy-join
+docker exec docker-mysql-1 mysql -uroot -proot_pass oxsar_db \
+  -e "UPDATE na_user SET global_user_id='${GUID}' WHERE userid=1"
+```
+
+#### 3. Залогиниться как тот же юзер
+
+Наш `dev-login.php` ставит JWT с `sub: dev-user-001` → JwtAuth lazy-join
+находит юзера по `global_user_id`. После применения fixture **userid=1**
+получает наш `global_user_id` → залогинится как `test`.
+
+#### 4. Сравнение всех страниц
+
+Список страниц для сравнения (из `src/game/page/`):
+
+**Основные** (приоритет 1, проверять обязательно):
+Main, Resource, Constructions, Research, Shipyard, Defense, Mission,
+Galaxy, Empire, Stock, ExchangeOpts, Repair, Disassemble.
+
+**Коммуникации** (приоритет 2):
+Chat, MSG, Notepad, Alliance, Friends, Search.
+
+**Геймплей** (приоритет 2):
+Artefacts, ArtefactMarket, Market, Achievements, Profession, Tutorial.
+
+**Статистика и инфо** (приоритет 3):
+Ranking, Records, Battlestats, ResTransferStats, Techtree,
+AdvTechCalculator, Simulator, BuildingInfo, UnitInfo, ArtefactInfo.
+
+**Прочее** (приоритет 3):
+Preferences, UserAgreement, Support, Widgets, Referral, Changelog.
+
+**Намеренно НЕ сравниваем** (выкинуты в game-origin):
+Payment (соцплатежи отключены), Logout (через auth-service), Officer,
+Moderator, RocketAttack, FleetAjax, MonitorPlanet, ChatPro, ChatAlly,
+ArtefactMarketOld, EditConstruction, EditUnit, ExchangeOpts, Stock,
+StockNew, TestAlienAI, ResTransferStats, Page (базовый), Construction
+(базовый абстрактный).
+
+#### 5. Diff-tool
+
+Скрипт `projects/game-origin/tools/compare-with-legacy.sh`:
+```bash
+#!/bin/bash
+# Для каждой страницы из списка:
+# 1. curl нашу версию (port 8092) → /tmp/ours/$page.html
+# 2. curl legacy версию (port 8080) → /tmp/legacy/$page.html
+# 3. Нормализовать (убрать таймстампы, ID, value=, randomized id-event-N)
+# 4. diff → отчёт что отличается
+
+PAGES=(Main Resource Constructions Research Shipyard Defense Mission \
+       Galaxy Empire ...)
+
+# Логин в legacy (cookie-based)
+curl -s -c /tmp/legacy.cookies -X POST \
+  "http://localhost:8080/login.php" \
+  -d "username=test&password=quoYaMe1wHo4xaci&login=OK" -L -o /dev/null
+
+# Логин у нас
+curl -s -c /tmp/ours.cookies "http://localhost:8092/dev-login.php" -o /dev/null
+
+normalize() {
+  sed -e 's/[0-9]\{2\}\.[0-9]\{2\}\.[0-9]\{4\} [0-9:]\+//g' \
+      -e 's/id="[a-z_]*[0-9]\{4,\}"//g' \
+      -e 's/value="[0-9]\+"//g' \
+      -e 's/sid=[a-zA-Z0-9]\+//g' \
+      -e 's/[0-9]\+\.\?[0-9]*//g' \
+      "$1"
+}
+
+for page in "${PAGES[@]}"; do
+  curl -sb /tmp/ours.cookies "http://localhost:8092/?go=$page" \
+       > /tmp/ours/$page.html
+  curl -sb /tmp/legacy.cookies "http://localhost:8080/game.php/$page" \
+       > /tmp/legacy/$page.html
+
+  diff <(normalize /tmp/ours/$page.html) <(normalize /tmp/legacy/$page.html) \
+       > /tmp/diff/$page.diff
+
+  size=$(wc -l < /tmp/diff/$page.diff)
+  echo "$page: $size diff lines"
+done
+```
+
+#### 6. Триаж и фикс
+
+По каждой странице с ненулевым diff:
+1. Открыть оба HTML в браузере (или просто диффы).
+2. Классифицировать различия:
+   - **Тип A** (структурный): чинить в шаблоне или CSS.
+   - **Тип B** (контентный из-за разной БД): не баг, игнорировать.
+   - **Тип C** (шаблонный, не подставлено что-то): чинить.
+3. Каждый фикс — отдельный коммит, conventional commit
+   `fix(game-origin/ui): <страница> — <короткий описание>`.
+
+### Замораживание состояния на время сравнения
+
+Чтобы diff на повторных запусках был стабильным:
+- **У нас**: `docker compose stop event-monitor` перед началом.
+- **В legacy**: создать stop-token: `docker exec oxsar2-php-1 sh -c
+  "echo stop > /var/www/oxsar-monitor-manager.txt"` — бегущий
+  `NewEHMonitor` процесс умрёт при следующем чек-цикле, новый не
+  стартует пока файл существует.
+- **NS::startEvents на HTTP-запросах**: добавить временный
+  `define('SKIP_EVENT_LOOP', true)` в `bd_connect_info.php` обоих
+  окружений (или просто игнорировать — за 30 сек curl-ов состояние
+  обычно не успевает измениться).
 
 ### Что НЕ делаем в 37.5d
 
 - Не редизайним. UI остаётся legacy-style (`.tpl` шаблоны).
 - Не меняем балансные числа на странице (это 37.6+).
 - Не добавляем новые UI-фичи — только фиксы существующих.
+- Не пытаемся добиться pixel-perfect diff — рассинхрон по таймстампам и
+  random-id неизбежен.
+
+### Этапы 37.5d
+
+| # | Подзадача | Артефакт |
+|---|---|---|
+| 37.5d.1 | Скрипт snapshot test-юзера из legacy → fixture SQL | `tools/snapshot-legacy-user.sh` + `migrations/fixtures/test-user-snapshot.sql` |
+| 37.5d.2 | Скрипт apply fixture к нашей БД (с сохранением global_user_id) | `tools/apply-test-user-fixture.sh` |
+| 37.5d.3 | Compare-tool: curl всех страниц у нас и в legacy + нормализованный diff | `tools/compare-with-legacy.sh` |
+| 37.5d.4 | Триаж diff-отчёта: список страниц с реальными расхождениями | Запись в dev-log |
+| 37.5d.5+ | Поштучные фиксы по каждой проблемной странице | По коммиту на каждый фикс |
