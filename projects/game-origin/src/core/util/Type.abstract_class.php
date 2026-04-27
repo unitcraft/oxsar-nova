@@ -93,7 +93,7 @@ abstract class Type
     }
     if(is_float($arg))
     {
-      return new Float($arg);
+      return new OxsarFloat($arg);
     }
     if(is_int($arg) || is_numeric($arg))
     {

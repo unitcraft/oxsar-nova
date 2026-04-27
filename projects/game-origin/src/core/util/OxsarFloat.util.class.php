@@ -13,7 +13,7 @@ if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
 
 require_once(RECIPE_ROOT_DIR."util/Type.abstract_class.php");
 
-class Float extends Type
+class OxsarFloat extends Type
 {
   /**
   * This is the actual float/double value.
@@ -41,7 +41,7 @@ class Float extends Type
   /**
   * Sets a new float value.
   *
-  * @return Float
+  * @return OxsarFloat
   */
   public function set($float)
   {
@@ -62,7 +62,7 @@ class Float extends Type
   /**
   * Sets the absolute value.
   *
-  * @return Float
+  * @return OxsarFloat
   */
   public function absolute()
   {
@@ -73,7 +73,7 @@ class Float extends Type
   /**
   * Sets the float value to PI.
   *
-  * @return Float
+  * @return OxsarFloat
   */
   public function pi()
   {
@@ -86,7 +86,7 @@ class Float extends Type
   *
   * @param mixed Summand
   *
-  * @return Float
+  * @return OxsarFloat
   */
   public function add($summand)
   {
@@ -101,7 +101,7 @@ class Float extends Type
   *
   * @param mixed Subtrahend
   *
-  * @return Float
+  * @return OxsarFloat
   */
   public function subtract($subtrahend)
   {
@@ -116,7 +116,7 @@ class Float extends Type
   *
   * @param mixed Multiplier
   *
-  * @return Float
+  * @return OxsarFloat
   */
   public function multiply($multiplier)
   {
@@ -131,7 +131,7 @@ class Float extends Type
   *
   * @param mxied Divisior
   *
-  * @return Float
+  * @return OxsarFloat
   */
   public function divide($divisor)
   {
@@ -149,7 +149,7 @@ class Float extends Type
   *
   * @param mixed Exponent expression
   *
-  * @return Float
+  * @return OxsarFloat
   */
   public function expo($expression)
   {
@@ -184,7 +184,7 @@ class Float extends Type
   *
   * @param The optional number of decimal digits to round to, defaults to 0.
   *
-  * @return Float
+  * @return OxsarFloat
   */
   public function round($precision = 0)
   {
@@ -196,7 +196,7 @@ class Float extends Type
   /**
   * Round the float value up.
   *
-  * @return Float
+  * @return OxsarFloat
   */
   public function ceil()
   {
@@ -207,7 +207,7 @@ class Float extends Type
   /**
   * Round the float value down.
   *
-  * @return Float
+  * @return OxsarFloat
   */
   public function floor()
   {

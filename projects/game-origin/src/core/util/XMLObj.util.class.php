@@ -207,9 +207,9 @@ class XMLObj extends SimpleXMLElement
   {
     if(is_null($name))
     {
-      return new Float($this);
+      return new OxsarFloat($this);
     }
-    return new Float($this->$name);
+    return new OxsarFloat($this->$name);
   }
 
   /**
