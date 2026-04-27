@@ -1,205 +1,111 @@
 <?php
 /**
-* Abstract database class.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: Database.abstract_class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * Database — clean-room rewrite (план 43 Ф.4). Заменяет одноимённый
+ * абстрактный класс из фреймворка Recipe (GPL).
+ *
+ * Базовый класс для всех DB-адаптеров. Подкласс должен реализовать
+ * connect/query/fetch/free_result/num_rows/insert_id/quote_db_value
+ * — конкретный механизм (mysqli, PDO). Базовый класс реализует общие
+ * хелперы поверх них (queryRow, queryField, query_unique, статистику).
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
 abstract class Database
 {
-	/**
-	*	Host or IP address of database.
-	*
-	* @var mixed
-	*/
-	protected $host;
+    /**
+     * Счётчик выполненных запросов с момента создания подключения.
+     */
+    protected $queryCount = 0;
 
-	/**
-	* Port of database server.
-	*
-	* @var string
-	*/
-	protected $port;
+    /**
+     * Время выполнения каждого запроса в секундах. Ключ — порядковый
+     * номер запроса (1-based).
+     */
+    protected $qTime = array();
 
-	/**
-	* User of database server.
-	*
-	* @var string
-	*/
-	protected $user;
+    // === Должны быть реализованы подклассом ===
 
-	/**
-	* Password of MySQL user.
-	*
-	* @var string
-	*/
-	protected $pw;
+    abstract public function query($sql);
+    abstract public function fetch($result);
+    abstract public function num_rows($result);
+    abstract public function insert_id();
+    abstract public function quote_db_value($string);
+    abstract public function free_result($resource);
 
-	/**
-	* Name of the to used database.
-	*
-	* @var string
-	*/
-	protected $database;
+    // === Хелперы поверх abstract методов ===
 
-	/**
-	* The total number of all queries.
-	*
-	* @var int
-	*/
-	protected $queryCount = 0;
+    /**
+     * Выполняет запрос и возвращает первую строку как assoc-array.
+     * Для запросов которые точно вернут одну строку (SELECT … LIMIT 1).
+     */
+    public function queryRow($sql)
+    {
+        $result = $this->query($sql);
+        if(!$result)
+        {
+            return null;
+        }
+        $row = $this->fetch($result);
+        $this->free_result($result);
+        return $row !== false ? $row : null;
+    }
 
-	/**
-	* Total time to execute database queries.
-	*
-	* @var array
-	*/
-	protected $qTime = array();
+    /**
+     * Выполняет запрос и возвращает первое поле первой строки.
+     * Для SELECT COUNT(*), SELECT MAX(...), SELECT name FROM ... LIMIT 1.
+     */
+    public function queryField($sql)
+    {
+        $row = $this->queryRow($sql);
+        if(!is_array($row) || count($row) === 0)
+        {
+            return null;
+        }
+        // Первое значение независимо от имени колонки.
+        return reset($row);
+    }
 
-	/**
-	* Last executed query.
-	*
-	* @var resource
-	*/
-	protected $query;
+    /**
+     * Алиас queryRow — для legacy callers (Language.class.php).
+     */
+    public function query_unique($sql)
+    {
+        return $this->queryRow($sql);
+    }
 
-	/**
-	* Last result set.
-	*
-	* @var mixed
-	*/
-	protected $result;
+    public function getQueryNumber()
+    {
+        return $this->queryCount;
+    }
 
-	/**
-	* Constructor: Set database access data.
-	*
-	* @param string	The database host
-	* @param string	The database username
-	* @param string	The database password
-	* @param string	The database name
-	* @param integer	The database port
-	*
-	* @return void
-	*/
-	public function __construct($host, $user, $pw, $db, $port)
-	{
-		$this->host = $host;
-		$this->user = $user;
-		$this->pw = $pw;
-		$this->database = $db;
-		$this->port = $port;
-		return;
-	}
+    /**
+     * Возвращает время выполнения конкретного запроса (по 1-based индексу)
+     * либо суммарное время всех запросов, если индекс не указан.
+     */
+    public function getQueryTime($queryid = null)
+    {
+        if($queryid !== null)
+        {
+            return isset($this->qTime[$queryid]) ? $this->qTime[$queryid] : 0;
+        }
+        $sum = 0;
+        foreach($this->qTime as $t)
+        {
+            $sum += (float)$t;
+        }
+        return $sum;
+    }
 
-	abstract function query($sql);
-//	abstract function fetch_object($resource);
-//	abstract function fetch_array($resource);
-	abstract function fetch($resource); // fetch_assoc
-//	abstract function fetch_row($resource);
-//	abstract function fetch_field($resource, $field, $row = null);
-	abstract function num_rows($sql);
-//	abstract function affected_rows();
-	abstract function insert_id();
-	abstract function __destruct();
-//	abstract function getVersion();
-//	abstract function getDatabaseType();
-	abstract function free_result($resource);
-
-	/**
-	* Returns the total number of all queries in a script.
-	*
-	* @return integer	The total number of queries
-	*/
-	public function getQueryNumber()
-	{
-		return $this->queryCount;
-	}
-
-	/**
-	* Returns the total time of all queries in seconds.
-	*
-	* @param integer	Specific query id
-	*
-	* @return float	Time in seconds
-	*/
-	public function getQueryTime($queryid = null)
-	{
-		if($queryid != null) { return round($this->qTime[$queryid], 4)." sec"; }
-		else { return round(array_sum($this->qTime), 4)." sec"; }
-	}
-
-	/**
-	* Returns an unique database row.
-	*
-	* @param string	The SQL query
-	*
-	* @return array	One database row
-	*/
-	public function query_unique($sql)
-	{
-//		try {
-			$result = $this->query($sql);
-//		}
-//		catch(Exception $e) { $e->printError(); }
-		if($row = $this->fetch($result)) { return $row; }
-		return false;
-	}
-
-	/**
-	* Returns all available tablse from the current selected database.
-	*
-	* @return array	Tables
-	*/
-	public function getTables()
-	{
-		$tables = array();
-		$result = $this->query("SHOW TABLES FROM `".$this->database."`");
-		while($row = $this->fetch_array($result))
-		{
-			array_push($tables, $row[0]);
-		}
-		return $tables;
-	}
-
-	/**
-	* Returns an array with all database configuration variables.
-	*
-	* @return array
-	*/
-	public function getVariables()
-	{
-		$vars = array();
-		$result = $this->query("SHOW VARIABLES");
-		while($row = Core::getDB()->fetch($result))
-		{
-			$vars[$row["Variable_name"]] = $row["Value"];
-		}
-		return $vars;
-	}
-
-	public function queryRow($sql)
-	{
-		$result = Core::getDB()->query($sql);
-		$row = Core::getDB()->fetch($result);
-		Core::getDB()->free_result($result);
-
-		return $row;
-	}
-
-	public function queryField($sql)
-	{
-		$result = Core::getDB()->query($sql);
-		$row = Core::getDB()->fetch($result);
-		Core::getDB()->free_result($result);
-
-		return is_array($row) ? reset($row) : null;
-	}
+    /**
+     * Stub для legacy QueryParser. Не реализуем — QueryParser реально
+     * не используется (никто не вызывает Core::getQueryParser()).
+     * Возвращает null вместо имени поля.
+     */
+    public function fetch_field($resource, $field, $row = null)
+    {
+        return null;
+    }
 }
-
-?>

@@ -59,18 +59,25 @@ class Request
         return array_key_exists($key, $arr) ? $arr[$key] : $default;
     }
 
-    public function getGET($key, $default = '')
+    /**
+     * Без $key — возвращает весь массив (legacy: getPOST() в Page.class.php
+     * для получения всего POST-запроса).
+     */
+    public function getGET($key = null, $default = '')
     {
+        if($key === null) { return $_GET; }
         return array_key_exists($key, $_GET) ? $_GET[$key] : $default;
     }
 
-    public function getPOST($key, $default = '')
+    public function getPOST($key = null, $default = '')
     {
+        if($key === null) { return $_POST; }
         return array_key_exists($key, $_POST) ? $_POST[$key] : $default;
     }
 
-    public function getCOOKIE($key, $default = '')
+    public function getCOOKIE($key = null, $default = '')
     {
+        if($key === null) { return $_COOKIE; }
         return array_key_exists($key, $_COOKIE) ? $_COOKIE[$key] : $default;
     }
 
