@@ -1,0 +1,28 @@
+{
+    "name": "oxsar-nova/game-origin",
+    "description": "PHP-порт legacy oxsar2 (вселенная-клон). Часть монорепо oxsar-nova.",
+    "type": "project",
+    "license": "proprietary",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": "^8.3",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "ext-memcached": "*",
+        "ext-gd": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*"
+    },
+    "require-dev": {},
+    "autoload": {
+        "psr-4": {
+            "Oxsar\\Origin\\": "src/oxsar/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true,
+        "allow-plugins": {}
+    }
+}
