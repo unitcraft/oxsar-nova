@@ -10468,3 +10468,69 @@ get/post) в новой сигнатуре корректны: `getGET($key, $de
 сессия делала план 60 (`projects/game-origin/...`) — не пересекалось.
 Все коммиты — `git commit -m ... -- <explicit-paths>` с явным
 списком (правило `feedback_parallel_session_check.md`).
+
+## Итерация 60 (2026-04-28) — game-origin: удаление legacy реферальной системы
+
+Скоуп — план 60. Новая реф-программа (план 59) делается с нуля
+на portal-backend; legacy-реализация в game-origin не
+переиспользуется. Цель — выкинуть мёртвый код, чтобы не плодить
+поверхность ошибок и не тащить дальше после переименования
+«кредиты» → «оксары» (план 58).
+
+**Удалено.**
+
+PHP:
+- `src/game/page/Referral.class.php` — основной класс страницы.
+- `src/game/Menu.class.php` — спецкейс `REFERRALS_ENABLED` + закомментированный «whitelist по IP».
+- `src/game/xml/Menu.xml` — пункт меню `<referral>`.
+- `src/game/AccountCreator.class.php` — обработка cookie `ref` при регистрации (sqlInsert в `na_referral`, авто-сообщение «новый реферал»).
+- `src/core/legacy_payment/payment.inc.php` — `PS_addReferralCredit()` и её вызов в обработчике покупки кредитов.
+- `src/game/cronjob/RemoveInactiveUser.php` — `sqlDelete("referral", ...)` при удалении неактивного юзера.
+- `src/game/Functions.inc.php` — упоминания `'Referral'` в whitelist'ах `isHomePlanetRequiredForPage`, `isArgeementCanBeShownForPage`.
+- `src/game/NS.class.php` — `RES_UPDATE_ADD_REF_CREDITS => "+"` в map для UI res_log.
+- `config/consts.php` — константы `REFERRALS_ENABLED`, `REFERRAL_BONUS_POINTS`, `REFERRAL_MAX_BONUS_POINTS`, `REFERRAL_METAL_BONUS`, `REFERRAL_SILICON_BONUS`, `REFERRAL_HYDROGEN_BONUS`, `REFERRAL_CREDIT_PERCENT`, `RES_UPDATE_ADD_REF_CREDITS`.
+
+Шаблоны:
+- `src/templates/standard/referral.tpl` — собственно страница рефералов.
+- `src/templates/standard/before_content.tpl` — 4 рандомных подсказки в шапке про «приведи друга».
+- `src/templates/standard/main.tpl` — блок `{if[REFERRALS_ENABLED]}` (реф. ссылка + userbar/BBCODE с реф-ссылкой).
+- `src/cache/templates/standard/referral.cache.php` — Smarty-кэш (gitignored, удалён из FS).
+
+БД (`migrations/005_drop_referral.sql`):
+- `DROP VIEW na_referral_ext` (вью с join'ами для админки рефералов).
+- `DROP TABLE na_referral` (`userid`, `ref_id`, `ref_time`, `ref_ip`, `bonus*`, `bonus_credit`).
+- `DELETE FROM na_phrases WHERE title IN ('REFERRAL_CREDIT_MESSAGE','REFERRAL_CREDIT_SUBJECT','MENU_REFERAL')` — все 6 локалей (ru/en/de/ua/zh/by).
+
+Tools/fixtures:
+- `tools/compare-with-legacy.sh` — `Referral` убран из списка страниц для diff-сравнения.
+- `tools/snapshot-legacy-user.sh` — `na_referral` убран из списка таблиц для дампа.
+- `tools/apply-test-user-fixture.sh` — `DELETE FROM na_referral WHERE userid=1` убран.
+- `migrations/fixtures/README.md` — упоминание `referral` в перечне таблиц убрано.
+
+Документация:
+- `docs/legacy/game-reference.md` §«Реферальная система» — пометка «Удалено в плане 60».
+
+**Чего НЕ трогали** (сознательно):
+- HTTP `Referer` (CSRF-проверка в `Page.class.php:219-228`, аналитика в `game_counters.tpl`) — это про HTTP-заголовок, не про реф-систему.
+- `EVENT_ALLIANCE_ATTACK_ADDITIONAL` (комментарий «serves as referer to alliance attack») — внутренний механизм альянс-атак, не реф-связь.
+- `MSG_FOLDER_CREDIT` — категория сообщений, могла использоваться не только для реф-бонусов.
+- Исторические записи в `na_res_log` с `type=23` (бывший `RES_UPDATE_ADD_REF_CREDITS`) остаются как есть — это лог транзакций. После удаления константы тип просто потеряет подпись в UI лога, новых записей с ним не появится.
+- Историческое упоминание реферальной системы в `docs/legacy/game-reference.md` оставлено (с пометкой), это исторический справочник legacy oxsar2.
+
+**Verifications.**
+- `php -l` на 7 модифицированных PHP-файлах → `No syntax errors`.
+- Миграция применена в dev-MySQL → `SHOW TABLES LIKE 'na_referral%'` пусто, `SELECT COUNT(*) FROM na_phrases WHERE title IN (...)` = 0.
+- Smoke через `dev-login.php`: 11 страниц (Main, Constructions, Research, Shipyard, Defense, Empire, Galaxy, Stock, Payment, Prefs, Friends) — все 200 OK, размеры 12k–58k. `?go=Referral` тоже 200 (legacy-роутинг падает обратно на Main page при unknown class — рендерит Main, без ошибок и без упоминаний рефералов).
+- `grep -ric "реферал\|referral" /tmp/ref.html` = 0 — на странице нет ни упоминаний, ни остаточных ссылок.
+- В меню (Main): `grep -i "referral\|реферал\|menu_referal"` пусто.
+- В php-fpm логах за время smoke: только не-наша ошибка `payments/a1/Functions.inc.php` (старая, не связана с реф-системой).
+
+**Связь со «вторым» коммитом этой сессии.** Параллельно с планом 60 в той же сессии я починил регрессию post-actions из плана 43 Ф.3 — это было нужно, потому что без неё select стиля картинок и чекбоксы в Constructions не работали (юзер заметил при ревью plan-60-related изменений). Зафиксировал отдельным коммитом перед планом 60: `fix(game-origin): починить post/get-actions ...`.
+
+**Параллельные сессии.** В working tree держались чужие правки от
+сессии план 54 (`projects/billing/...`, `docs/plans/54-...md`) —
+не трогаю. `git add` всегда явно по путям, `git status --short`
+перед каждым commit'ом.
+
+**Коммиты**: 2 (fix post-actions + план 60).
+

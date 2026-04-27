@@ -67,7 +67,6 @@ function removeInactiveUsers()
     }
     sqlEnd($_result);
     sqlDelete("user", "userid = ".sqlVal($userid));
-    sqlDelete("referral", "userid = ".sqlVal($userid)." OR ref_id = ".sqlVal($userid));
     sqlDelete("officer", "userid = ".sqlVal($userid));
   }
   sqlEnd($result);

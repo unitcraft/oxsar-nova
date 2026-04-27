@@ -164,24 +164,6 @@ $(function(){
 		</tr>
 		{/if}
 		{if[!defined('SN')]}
-            {if[REFERRALS_ENABLED]}
-		<tr>
-			<td valign="top">Реф. ссылка</td>
-			<td colspan="2"><b>{const=BASE_FULL_URL}profile{user=userid}</b>
-				<p />Приглашайте по этой ссылке друзей и знакомых. После регистрации друга в игре по данной ссылке, он станет Вашим рефералом.
-				Кредитный бонус составляет <font color = "#00FF00"><b>20%</b></font> от каждого пополнения рефералом кредитов!
-				Подробности читайте на странице {link[MENU_REFERAL]}"game.php/Referral"{/link}.
-			</td>
-		</tr>
-		<tr>
-			<td colspan="3" align="center">
-			  <p /><img src="{const=FULL_URL}userbar/{user=userid}.jpg" alt="Oxsar - новая космическая онлайн стратегия" {if[isMobileSkin()]}width="95%"{/if} />
-			  <p /><b>BBCODE</b>:
-			  <br /><textarea id="userbar_bbcode_text" cols="50" rows="3">[url={const=BASE_FULL_URL}profile{user=userid}][img]{const=FULL_URL}userbar/{user=userid}.jpg[/img][/url]</textarea>
-			  <br />Разместите его в своем блоке или в подписи на форумах. BBCODE уже содержит реф. ссылку.
-			</td>
-		</tr>
-            {/if}
 		{else}
 		<tr>
 		<td colspan="3" class='center'>

@@ -21,7 +21,6 @@
 		<notepad href="Notepad">MENU_NOTEPAD</notepad>
 		<alliance href="Alliance">MENU_ALLIANCE</alliance>
 		<friends href="Friends">MENU_FRIENDS</friends>
-		<referral href="Referral">MENU_REFERAL</referral>
 		<search href="Search">MENU_SEARCH</search>
 	</info2>
 

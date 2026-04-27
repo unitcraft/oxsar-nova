@@ -205,7 +205,6 @@ defined('SHOW_DM_POINTS') or define('SHOW_DM_POINTS', false);
 
 defined('ACHIEVEMENTS_ENABLED') or define('ACHIEVEMENTS_ENABLED', !DEATHMATCH);
 defined('TUTORIAL_ENABLED') or define('TUTORIAL_ENABLED', !DEATHMATCH);
-defined('REFERRALS_ENABLED') or define('REFERRALS_ENABLED', !DEATHMATCH);
 defined('MISSION_HALTING_OTHER_ENABLED') or define('MISSION_HALTING_OTHER_ENABLED', !DEATHMATCH);
 
 defined('YII_CONSOLE_IS_RUNNING') or define('YII_CONSOLE_IS_RUNNING', true);
@@ -565,7 +564,6 @@ define("RES_UPDATE_BUY_ARTEFACT",       19);
 define("RES_UPDATE_VIP_START",          20);
 define("RES_UPDATE_ACHIEVEMENT",		21);
 define("RES_UPDATE_EXCH_FUEL_REST",		22);
-define("RES_UPDATE_ADD_REF_CREDITS",    23);
 define("RES_UPDATE_ATTACKER",    		24);
 define("RES_UPDATE_LOAD_FLEET",         25);
 define("RES_UPDATE_UNLOAD_FLEET",       26);
@@ -727,13 +725,6 @@ define("MAX_ADD_TECH_LEVELS", 20);
 define("MAX_MAILS", 50);
 define("MAIL_SENDER_NAME", 'oxsar.ru');
 define("MAIL_SENDER", 'no-reply@oxsar.ru');
-
-define("REFERRAL_BONUS_POINTS", 3000);
-define("REFERRAL_MAX_BONUS_POINTS", 500000);
-define("REFERRAL_METAL_BONUS", 10);
-define("REFERRAL_SILICON_BONUS", 5);
-define("REFERRAL_HYDROGEN_BONUS", 2);
-define("REFERRAL_CREDIT_PERCENT", 20);
 
 define("FLEET_FUEL_CONSUMPTION", 0.5); // 0.8);
 define("MAX_HEIGHT", '480');

@@ -69,7 +69,6 @@ DELETE FROM na_user2ally WHERE userid=1;
 DELETE FROM na_research2user WHERE userid=1;
 DELETE FROM na_artefact2user WHERE userid=1;
 DELETE FROM na_officer WHERE userid=1;
-DELETE FROM na_referral WHERE userid=1;
 DELETE FROM na_user_experience WHERE userid=1;
 DELETE FROM na_credit_bonus_item WHERE userid=1;
 DELETE FROM na_res_log WHERE userid=1;
