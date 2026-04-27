@@ -28,8 +28,8 @@ const UserDetailPage = lazy(async () => ({
 const RolesPage = lazy(async () => ({
   default: (await import('@/routes/Roles')).Roles,
 }));
-const AuditStub = lazy(async () => ({
-  default: () => <Placeholder title="Audit log" phase="Ф.5" description="фильтры по actor/target/action" />,
+const AuditPage = lazy(async () => ({
+  default: (await import('@/routes/Audit')).Audit,
 }));
 const BillingStub = lazy(async () => ({
   default: () => <Placeholder title="Billing" phase="план 54" description="платежи, возвраты, лимиты" />,
@@ -89,7 +89,7 @@ export function App(): React.ReactElement {
           path="/audit"
           element={
             <Suspense fallback={<RouteFallback />}>
-              <AuditStub />
+              <AuditPage />
             </Suspense>
           }
         />
