@@ -120,8 +120,11 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      auth-service:
+        condition: service_healthy
     environment:
       VITE_PROXY_TARGET: http://backend:8080
+      VITE_AUTH_TARGET: http://auth-service:9000
     ports: ["5173:5173"]
     volumes:
       - ../projects/game-nova/frontend:/app
@@ -253,8 +256,11 @@ services:
     depends_on:
       portal-backend:
         condition: service_started
+      auth-service:
+        condition: service_healthy
     environment:
       VITE_PORTAL_API: http://portal-backend:8090
+      VITE_AUTH_TARGET: http://auth-service:9000
       VITE_BASE_DOMAIN: localhost
       VITE_UNIVERSE_PORT_uni01: "5173"
       VITE_UNIVERSE_PORT_uni02: "5175"

@@ -11,8 +11,14 @@ export default defineConfig(({ command }) => ({
     port: 5174,
     host: true,
     allowedHosts: true,
+    // /api/* — portal-backend (новости, feedback, /api/universes).
+    // /auth/* — auth-service (логин, регистрация, профиль, кредиты).
+    // План 36 Ф.11. В проде nginx разводит по доменам, в dev — vite proxy.
     proxy: {
       '/api': process.env.VITE_PORTAL_API ?? 'http://localhost:8090',
+      '/auth': process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+      '/.well-known/jwks.json':
+        process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
     },
   },
   build: {
