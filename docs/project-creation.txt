@@ -9072,3 +9072,76 @@ OVF-001..003 (float precision loss в production, eval без cap).
   кодовые базы; формулы могут расходиться, не сверять и не считать дырой.
 
 **Коммиты**: 1 (плановый файл + dev-log).
+
+
+## Итерация 36.Ф.12.5 (2026-04-27) — Lazy-create user-conflict (409 вместо 500)
+
+**Триггер**: production-bug — юзер `alice@test.com` зависал на «Загрузка
+вселенной...». В логах backend: `duplicate key value violates unique
+constraint "users_username_key" (SQLSTATE 23505)`. Все `/api/me` → 500.
+
+**Корень проблемы**: `EnsureUserMiddleware` (план 36 Ф.12) делает
+`INSERT ... ON CONFLICT (id) DO NOTHING` — но конфликт пришёл по
+**username**, а не по id. Альтернативный сценарий, не учтённый в плане:
+- Юзер регистрируется в auth-service → новый `id=A`.
+- В `game-db.users` уже есть legacy-запись `username='alice'` с `id=B`
+  (создана до миграции на split auth/game-db).
+- INSERT падает по `users_username_key`, middleware не классифицирует —
+  пускает в handler, тот выдаёт 500 «no rows in result set».
+
+**Решения, рассмотренные**:
+- (a) Ужесточить UNIQUE-проверки в middleware → возвращать 409. **Выбран**.
+- (b) Source-of-truth username в auth-db, в game-db только id.
+  Отвергнут — слишком много рефакторинга, разлад с UI-локалью.
+- (c) Mapping-таблица `auth_user_id → game_user_id`. Отвергнут — лишний
+  слой косвенности на каждый запрос, нечего лечить кроме одного legacy-edge.
+
+**Реализация**:
+- `isUsernameConflict(err)` — классификатор pg-ошибки: SQLSTATE 23505 +
+  имя constraint `users_username_key` (НЕ pkey, НЕ email_key).
+- При конфликте middleware возвращает 409 с понятным сообщением,
+  handler не вызывается (через `httpx.WriteError` + `httpx.ErrConflict`).
+- Прочие ошибки БД — `slog.WarnContext` + продолжение в handler
+  (поведение до фикса).
+
+**Тесты** (3 файла, ~250 строк):
+- `TestIsUsernameConflict` — unit, 7 case'ов: nil, рандом, только
+  sqlstate без constraint, только constraint без sqlstate, реальный
+  pg-конфликт, конфликт по pkey (не username), конфликт по email_key.
+- `TestEnsureUser_UsernameConflict_Integration` — INSERT legacy id=A,
+  RSA-claims id=B + тот же username → 409, handler не дёрнут.
+- `TestEnsureUser_CleanFlow_Integration` — happy-path 200, юзер создан.
+- `TestEnsureUser_RaceCondition_Integration` — 50 параллельных запросов
+  одного юзера, в БД ровно 1 запись (ON CONFLICT id защищает гонку).
+
+**Прогон в Docker**: integration-тесты на Windows-хосте не запускаются
+(порт 5433 занят host-postgres, перебивает Docker). Обход:
+
+```
+MSYS_NO_PATHCONV=1 docker run --rm --network deploy_default \
+  -v //d/Sources/oxsar-nova:/work \
+  -w /work/projects/game-nova/backend \
+  -e GAME_TEST_DB_URL="postgres://oxsar:oxsar@deploy-postgres-1:5432/oxsar?sslmode=disable" \
+  golang:1.23-alpine go test ./internal/auth/ -v
+```
+
+Все 4 теста зелёные за 0.215s.
+
+**Параллельная сессия — 3-й прецедент**: пока я готовил коммит, соседская
+сессия запустила `git add -A` и зацепила мои файлы из staging вместе со
+своими `projects/game-origin/src/core/*.php`. Пришлось делать
+`git reset HEAD -- projects/game-origin/`, потом атомарный
+`git add ... && git commit -m "..." -- file1 file2 ...` одной командой.
+Memory-правило 3 переписано как **ЖЁСТКОЕ** — всегда `--` со списком
+путей, всегда add+commit одним `&&`-pipeline.
+
+**Сопутствующее**: TRUNCATE TABLE users CASCADE на postgres + uni02-db
+для очистки 20 тестовых юзеров (legacy-data, не прод). После TRUNCATE
+alice логинится → создаётся с правильным id из auth-db.
+
+**Migrate-legacy-users**: разовый скрипт синхронизации `game-db.users.id`
+с `auth-db.users.id` для всех существующих legacy-юзеров. Нужен, когда
+будут реальные пользователи, которых нельзя TRUNCATE'ить. Отложен в
+TODO как отдельная задача.
+
+**Коммит**: f1cdc45f89 fix(plan-36 Ф.12.5).
