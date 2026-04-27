@@ -19,11 +19,14 @@ const RouteFallback = (): React.ReactElement => (
   </div>
 );
 
-const UsersStub = lazy(async () => ({
-  default: () => <Placeholder title="Users" phase="Ф.4" description="grant/revoke roles, ban/unban" />,
+const UsersLookupPage = lazy(async () => ({
+  default: (await import('@/routes/UsersLookup')).UsersLookup,
 }));
-const RolesStub = lazy(async () => ({
-  default: () => <Placeholder title="Roles" phase="Ф.4" description="справочник ролей и permissions" />,
+const UserDetailPage = lazy(async () => ({
+  default: (await import('@/routes/UserDetail')).UserDetail,
+}));
+const RolesPage = lazy(async () => ({
+  default: (await import('@/routes/Roles')).Roles,
 }));
 const AuditStub = lazy(async () => ({
   default: () => <Placeholder title="Audit log" phase="Ф.5" description="фильтры по actor/target/action" />,
@@ -56,9 +59,21 @@ export function App(): React.ReactElement {
         <Route path="/" element={<Dashboard />} />
         <Route
           path="/users"
+          element={<Navigate to="/users/lookup" replace />}
+        />
+        <Route
+          path="/users/lookup"
           element={
             <Suspense fallback={<RouteFallback />}>
-              <UsersStub />
+              <UsersLookupPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/users/:id"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <UserDetailPage />
             </Suspense>
           }
         />
@@ -66,7 +81,7 @@ export function App(): React.ReactElement {
           path="/roles"
           element={
             <Suspense fallback={<RouteFallback />}>
-              <RolesStub />
+              <RolesPage />
             </Suspense>
           }
         />
