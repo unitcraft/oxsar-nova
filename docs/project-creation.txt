@@ -9231,3 +9231,58 @@ GDPR-механизмы (DSAR, право на портативность). Дл
 
 **Коммит**: feat(plan-44): 152-ФЗ — privacy policy, чекбокс
 согласия, право на удаление.
+
+## Итерация 44.1 (2026-04-27) — integration-тесты + баг анонимизации UUIDv7
+
+**Зачем**: пользователь попросил написать integration-тесты для consent
+flow и DeleteAccount (план 44 в repo был, но в самом пакете
+`internal/authsvc/` тестов не существовало).
+
+**Что сделано**: 5 тестов в `service_consent_test.go`:
+
+1. `TestRegister_NoConsent_Rejected` — без `consent_accepted` Register
+   падает с `ErrConsentRequired`, юзер в БД не появляется.
+2. `TestRegister_WithConsent_PersistsConsent` — happy-path: создан юзер
+   и в `user_consents` запись с правильным `consent_type`,
+   `consent_text_version='1.0'`, `accepted_ip` (через `host(...)`),
+   `accepted_user_agent`, `accepted_at >= beforeReg`.
+3. `TestRegister_DuplicateUser_NoConsentLeaked` — повторная регистрация
+   с тем же username возвращает `ErrUserExists` и НЕ оставляет
+   осиротевшего consent (rollback в одной транзакции).
+4. `TestDeleteAccount_AnonymizesAndIsIdempotent` — username/email
+   анонимизированы, `password_hash=''`, `deleted_at != NULL`; повторный
+   вызов идемпотентен (UPDATE фильтрует по `deleted_at IS NULL`).
+5. `TestDeleteAccount_LoginRefuses` — после DeleteAccount Login со
+   старыми credentials возвращает `ErrInvalidCredential`.
+
+**Конвенция**: `AUTH_TEST_DB_URL` env var, `t.Skip` если не задана —
+аналогично `game-nova/internal/auth/ensure_user_test.go` (план 36 Ф.12.5).
+
+**Прогон**: миграция 0004 не была прокатана на dev-стенд → погнал
+`docker compose up --build auth-migrate` → миграция применилась →
+тесты погнал в golang:1.23-alpine на `network=deploy_default` против
+`deploy-auth-db-1`.
+
+**Найденный реальный баг** в `service.DeleteAccount`: использовался
+`userID[:8]` как суффикс анонимизированного имени (`[deleted_<8>]`).
+UUIDv7 — это `tttttttt-tttt-7xxx-yxxx-xxxxxxxxxxxx`, где первые 32
+бита (= 8 hex символов) — это **millisecond timestamp**. Два юзера,
+созданные близко по времени, дают одинаковый `id[:8]` → коллизия по
+UNIQUE(username) при анонимизации второго: `ERROR: duplicate key
+value violates unique constraint "users_username_key"`. Тест
+`TestDeleteAccount_LoginRefuses` поймал это при последовательном
+прогоне; в изоляции — проходил.
+
+**Фикс**: брать **последний** блок UUIDv7 (12 hex = 48 случайных
+бит) через `strings.LastIndex(userID, "-")`. Эти биты —
+гарантированно случайные, коллизия практически невозможна. После
+правки все 5 тестов зелёные.
+
+**Параллельные сессии**: соседняя сессия в это время правила
+`projects/game-origin/src/core/util/Image.util.class.php` и
+`Link.util.class.php` (план 43). Не пересеклись: в `git add` —
+только `service.go`, `service_consent_test.go` и
+`docs/project-creation.txt`.
+
+**Коммит**: test(plan-44.1): integration-тесты consent + DeleteAccount,
+фикс UUIDv7 timestamp-collision в анонимизации.

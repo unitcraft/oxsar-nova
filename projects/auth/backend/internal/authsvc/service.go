@@ -264,14 +264,22 @@ func (s *Service) GetActiveUniverses(ctx context.Context, userID string) ([]stri
 // игровых сервисов; в auth-service владелец становится «удалённым», и они
 // сами разруливают (story-параллельно flow в game-nova/settings/delete.go,
 // который анонимизирует игровую таблицу users).
+//
+// Уникальность анонимизированного username/email: используем последний
+// блок UUIDv7 (12 hex символов = 48 случайных бит). Префикс UUIDv7
+// — это millisecond timestamp, два юзера, созданные в ту же миллисекунду,
+// дают одинаковый prefix и ловят 23505 на UNIQUE(username) при коротком
+// `id[:8]`. Последний блок — гарантированно случаен.
 func (s *Service) DeleteAccount(ctx context.Context, userID string) error {
 	if userID == "" {
 		return fmt.Errorf("authsvc: empty user id")
 	}
-	if len(userID) < 8 {
+	// UUIDv7: tttttttt-tttt-7xxx-yxxx-xxxxxxxxxxxx — берём последний блок.
+	idx := strings.LastIndex(userID, "-")
+	if idx < 0 || idx >= len(userID)-1 {
 		return fmt.Errorf("authsvc: invalid user id")
 	}
-	short := userID[:8]
+	suffix := userID[idx+1:]
 	tag, err := s.db.Pool().Exec(ctx, `
 		UPDATE users SET
 			deleted_at    = now(),
@@ -279,7 +287,7 @@ func (s *Service) DeleteAccount(ctx context.Context, userID string) error {
 			email         = '[deleted_' || $2 || ']',
 			password_hash = ''
 		WHERE id = $1 AND deleted_at IS NULL
-	`, userID, short)
+	`, userID, suffix)
 	if err != nil {
 		return fmt.Errorf("anonymize user: %w", err)
 	}
