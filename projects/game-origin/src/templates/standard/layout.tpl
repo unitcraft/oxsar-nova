@@ -339,11 +339,8 @@ var galaxy_distance_mult = 1;
 			<?php if(0): ?>
 			<tr>
 				<td width="100%" align="center" style="padding-bottom:10px">
-					<?php
-						echo CHtml::link("Эта рекламу можно убрать пополнив запасы кредитов", socialUrl(RELATIVE_URL . 'game.php/Payment'), array(
-							'class' => 'false2',
-						));
-					?>
+					<?php /* план 37.5d.12: CHtml::link → raw HTML (Yii убран) */ ?>
+					<a href="<?php echo htmlspecialchars(socialUrl(RELATIVE_URL . 'game.php/Payment')); ?>" class="false2">Эта рекламу можно убрать пополнив запасы кредитов</a>
 				</td>
 			</tr>
 			<?php endif; ?>

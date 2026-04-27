@@ -1104,10 +1104,20 @@ php-fpm не видно.
 
 **Статус 37.5d.11**: snapshot v4 расширен (artefacts на бирже),
 структурно правильный. Stock parity не достигнут — глубокий PHP-баг
-в обработке устаревших лотов, требует point-debug (echo внутри
-Stock-loop). Не блокирует — это **только** Stock страница, остальное
-работает идеально. Задача отложена до 37.6+ (security audit найдёт
-больше undefined-array-key багов одним проходом).
+в обработке устаревших лотов, требует point-debug.
+
+### 37.5d.12 — point-debug Stock рендеринга
+
+**Подход**:
+1. Включить `error_reporting(E_ALL); ini_set('display_errors', 1);` в начало
+   `Stock.class.php::index` — увидеть skрытые warnings в HTML.
+2. Если undefined-array-key warnings указывают на причину silent fail —
+   починить.
+3. Если нет — `var_dump`/`error_log` внутри `foreach($sqlRows[$j])` чтобы
+   увидеть где обрывается loop.
+4. Сравнить наш `Stock.class.php` с `d:\Sources\oxsar2\www\game\page\Stock.class.php`
+   — может в legacy есть hot-patch.
+5. После фикса — убрать debug, проверить compare v6.
 
 ### Триаж 37.5d.4 — что показал compare
 
