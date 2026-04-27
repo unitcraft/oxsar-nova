@@ -63,38 +63,10 @@ class Options extends Collection
 	
 	protected function loadFromMemcache()
 	{
+		// План 37.5d.5#10: stub — метод никогда не дочитывался до Yii-кода
+		// (был ранний `return;`). Memcache отключён в game-origin (см.
+		// simplifications.md #9: Options читает из na_config напрямую).
 		return;
-		$c_name = 'Options.items';
-		$c_dur	= 3600*24*3;
-		$result = false;
-		if( $result === false )
-		{
-			$configs = Config_YII::model()->findAll();
-			foreach($configs as $config)
-			{
-				$result[ $config->var ] = $this->parseItemByTypeNew($config->value, $config->type);
-			}
-			$from_xml = array();
-			$file = RECIPE_ROOT_DIR.$this->configFile;
-			if( file_exists($file) )
-			{
-				$xml = new XML($file);
-				$config = $xml->get()->getChildren();
-				$xml->kill();
-				$from_xml = $this->getFromXML($config);
-			}
-			$result = CMap::mergeArray($from_xml, $result);
-			if( file_exists($file) )
-			{
-				// cache disabled
-			}
-			else
-			{
-				// cache disabled
-			}
-		}
-		$this->item = $result;
-		return $this;
 	}
 	
 	protected function generateYiiCode()
