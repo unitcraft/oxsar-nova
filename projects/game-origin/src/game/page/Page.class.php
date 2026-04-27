@@ -283,11 +283,11 @@ abstract class Page
 		$args = array();
 		foreach($getArgStack as $arg)
 		{
-			$args[] = Core::getRequest()->getArgument("get", $arg);
+			$args[] = Core::getRequest()->getGET($arg);
 		}
 		foreach($postArgStack as $arg)
 		{
-			$args[] = Core::getRequest()->getArgument("post", $arg);
+			$args[] = Core::getRequest()->getPOST($arg);
 		}
 		$coreArgs = $this->getMethodArgsFromType("inner", $method);
 		if(count($coreArgs) > 0)
