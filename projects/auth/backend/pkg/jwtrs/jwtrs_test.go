@@ -36,7 +36,6 @@ func TestIssueAndParse(t *testing.T) {
 	in := jwtrs.IssueInput{
 		UserID:          "user-123",
 		Username:        "StarLord",
-		GlobalCredits:   500,
 		ActiveUniverses: []string{"uni01"},
 		Roles:           []string{"player"},
 	}
@@ -54,9 +53,6 @@ func TestIssueAndParse(t *testing.T) {
 	}
 	if claims.Username != "StarLord" {
 		t.Errorf("username = %q, want StarLord", claims.Username)
-	}
-	if claims.GlobalCredits != 500 {
-		t.Errorf("credits = %d, want 500", claims.GlobalCredits)
 	}
 	if len(claims.ActiveUniverses) != 1 || claims.ActiveUniverses[0] != "uni01" {
 		t.Errorf("universes = %v, want [uni01]", claims.ActiveUniverses)

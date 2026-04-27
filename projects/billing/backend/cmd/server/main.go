@@ -48,10 +48,19 @@ func run() error {
 	jwksURL := mustEnv("AUTH_JWKS_URL")
 	allowedOrigins := strings.Split(envStr("ALLOWED_ORIGINS",
 		"http://localhost:5173,http://localhost:5174"), ",")
-	provider := envStr("PAYMENT_PROVIDER", "mock")
-	mockBaseURL := envStr("PAYMENT_MOCK_BASE_URL", "http://localhost:9100")
-	mockSecret := envStr("PAYMENT_MOCK_SECRET", "")
+	// Платёжный провайдер. План 42: yookassa добавлен.
+	// PAYMENT_PROVIDER либо BILLING_PRIMARY_PROVIDER (план 42 §3) — синонимы;
+	// второе предпочтительнее, первое осталось для обратной совместимости.
+	provider := envStr("BILLING_PRIMARY_PROVIDER", envStr("PAYMENT_PROVIDER", "mock"))
 	returnURL := envStr("PAYMENT_RETURN_URL", "http://localhost:5173/")
+	gwCfg := payment.FactoryConfig{
+		ReturnURL:         returnURL,
+		MockBaseURL:       envStr("PAYMENT_MOCK_BASE_URL", "http://localhost:9100"),
+		MockSecret:        envStr("PAYMENT_MOCK_SECRET", ""),
+		YooKassaShopID:    envStr("YOOKASSA_SHOP_ID", ""),
+		YooKassaSecretKey: envStr("YOOKASSA_SECRET_KEY", ""),
+		YooKassaAPIURL:    envStr("YOOKASSA_API_URL", ""),
+	}
 	reconcileInterval := envDur("BILLING_RECONCILE_INTERVAL", time.Hour)
 
 	log := newLogger(envStr("LOG_LEVEL", "info"))
@@ -78,13 +87,11 @@ func run() error {
 	db := repo.New(pool)
 	svc := billing.New(db)
 
-	// Платёжный шлюз: только mock в Ф.3 (Robokassa/Enot — Ф.3.5+).
-	var gw payment.Gateway
-	switch provider {
-	case "mock":
-		gw = payment.NewMockGateway(mockBaseURL, mockSecret)
-	default:
-		return fmt.Errorf("unknown PAYMENT_PROVIDER=%q (supported: mock)", provider)
+	// Платёжный шлюз. План 42: factory выбирает по BILLING_PRIMARY_PROVIDER
+	// (mock | yookassa). Robokassa/Enot — отложены до тестового аккаунта.
+	gw, err := payment.NewGateway(provider, gwCfg)
+	if err != nil {
+		return fmt.Errorf("init payment gateway: %w", err)
 	}
 	log.InfoContext(ctx, "payment provider initialized", slog.String("provider", gw.Name()))
 
