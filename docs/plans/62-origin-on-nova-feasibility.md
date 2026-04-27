@@ -148,6 +148,36 @@ backend game-nova как движок для legacy-вселенной oxsar2-cl
     из 57 переиспользуется как редактор чата (минимальный режим) и
     почты альянса (полный режим) в обеих вселенных.
 
+### Куда сохраняется результат
+
+Все артефакты — в **`docs/research/origin-vs-nova/`** (новая
+директория, агент создаёт её при Ф.1).
+
+Структура:
+
+```
+docs/research/origin-vs-nova/
+├── origin-inventory.md         (Ф.1 — инвентарь origin)
+├── nova-inventory.md           (Ф.2 — инвентарь nova)
+├── comparison.md               (Ф.3 — 8 сравнительных таблиц)
+├── divergence-log.md           (Ф.3.5 — журнал D-NNN, ≥30)
+├── nova-ui-backlog.md          (Ф.3 — U-NNN ≥10 + X-NNN ≥20)
+├── origin-ui-replication.md    (Ф.3 — S-NNN, все 55 контроллеров)
+├── alien-ai-comparison.md      (Ф.3 — углублённое сравнение AI)
+├── formula-dsl.md              (Ф.1+Ф.3 — DSL формул из БД)
+├── roadmap-report.md           (Ф.4+Ф.5 — итоговая декомпозиция)
+└── screenshots/                (опционально — эталоны для
+                                 screenshot-diff CI; снимаются с
+                                 запущенного game-origin)
+```
+
+Никакие другие пути не используются (кроме обновлений
+`docs/project-creation.txt`, `docs/release-roadmap.md`, шапки самого
+`docs/plans/62-...md` в Ф.6).
+
+В коде game-nova / game-origin **ничего не меняется** — это
+исследовательский план без правок исходников.
+
 ### Стратегическое решение принято: ремастер на nova-backend
 
 **Не feasibility-вопрос «делать ли», а аудит «что нужно сделать».**
