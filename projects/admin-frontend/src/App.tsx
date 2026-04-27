@@ -37,6 +37,9 @@ const BillingStub = lazy(async () => ({
 const GameEventsPage = lazy(async () => ({
   default: (await import('@/routes/GameEvents')).GameEvents,
 }));
+const ReportsPage = lazy(async () => ({
+  default: (await import('@/routes/Reports')).Reports,
+}));
 const SettingsStub = lazy(async () => ({
   default: () => <Placeholder title="Settings" phase="Ф.8" description="2FA, security, sessions" />,
 }));
@@ -110,6 +113,14 @@ export function App(): React.ReactElement {
           element={
             <Suspense fallback={<RouteFallback />}>
               <GameEventsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <ReportsPage />
             </Suspense>
           }
         />
