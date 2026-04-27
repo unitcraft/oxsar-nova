@@ -441,16 +441,20 @@ var galaxy_distance_mult = 1;
 
 {include}"_report_button"{/include}
 
+<?php /* план 50 Ф.5 (2026-04-28): юр-ссылки через PORTAL_WEB_URL —
+       в dev portal-frontend на :5174, в prod oxsar-nova.ru. */
+$_p = defined('PORTAL_WEB_URL') ? rtrim(PORTAL_WEB_URL, '/') : 'https://oxsar-nova.ru';
+?>
 <div class="oxsar-footer">
 	<div class="age-rating" title="Возрастная категория 12+">12+</div>
 	<div class="legal-links">
-		<a href="https://oxsar-nova.ru/offer" target="_blank" rel="noopener">Оферта</a>
+		<a href="<?php echo $_p; ?>/offer" target="_blank" rel="noopener">Оферта</a>
 		<span class="sep">|</span>
-		<a href="https://oxsar-nova.ru/game-rules" target="_blank" rel="noopener">Правила</a>
+		<a href="<?php echo $_p; ?>/game-rules" target="_blank" rel="noopener">Правила</a>
 		<span class="sep">|</span>
-		<a href="https://oxsar-nova.ru/refund" target="_blank" rel="noopener">Возврат</a>
+		<a href="<?php echo $_p; ?>/refund" target="_blank" rel="noopener">Возврат</a>
 		<span class="sep">|</span>
-		<a href="https://oxsar-nova.ru/privacy" target="_blank" rel="noopener">Конфиденциальность</a>
+		<a href="<?php echo $_p; ?>/privacy" target="_blank" rel="noopener">Конфиденциальность</a>
 	</div>
 </div>
 

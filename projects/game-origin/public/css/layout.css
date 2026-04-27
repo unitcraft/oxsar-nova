@@ -54,14 +54,19 @@
 
 .oxsar-footer
 {
-  width: 100%;
+  /* План 50 Ф.5 (2026-04-28): #leftMenu и #planets — position:fixed,
+     обычный clear:both их не учитывает, поэтому footer заезжал под
+     меню. Зажимаем боковыми отступами под ширину fixed-колонок
+     (#leftMenu ~165px слева, #planets ~170px справа). */
+  margin: 16px 180px 12px 180px;
   padding: 12px 8px 16px;
-  margin-top: 16px;
   text-align: center;
   color: #888;
   font-size: 11px;
   font-family: Tahoma, Verdana, sans-serif;
   clear: both;
+  position: relative;
+  z-index: 1;
 }
 
 .oxsar-footer .age-rating
