@@ -36,6 +36,9 @@ var (
 	ErrConflict     = &Error{Status: http.StatusConflict, Code: "conflict", Message: "conflict"}
 	ErrInternal     = &Error{Status: http.StatusInternalServerError, Code: "internal", Message: "internal error"}
 	ErrRateLimit    = &Error{Status: http.StatusTooManyRequests, Code: "rate_limit", Message: "rate limit exceeded"}
+	ErrPaymentRequired = &Error{Status: http.StatusPaymentRequired, Code: "payment_required", Message: "payment required"}
+	ErrUnprocessable = &Error{Status: http.StatusUnprocessableEntity, Code: "unprocessable", Message: "unprocessable entity"}
+	ErrLocked = &Error{Status: http.StatusLocked, Code: "locked", Message: "resource locked"}
 )
 
 // WriteJSON сериализует value как JSON. Ошибки маршалинга не возвращаются
