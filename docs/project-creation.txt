@@ -8903,3 +8903,26 @@ parity ≥95% с legacy. Все блокирующие баги вычищены
 test-юзера + apply-tool + compare-tool теперь часть инструментария.
 
 **Коммиты**: 4 (Stock CHtml fix + CHtml mass-replace + bbcode /e).
+
+---
+
+## Итерация 37.6 (2026-04-27) — Security audit
+
+**Задача**: Аудит на SQL-injection, XSS, CSRF, прямой доступ к файлам.
+Каждая категория через grep-патtern + анализ кода.
+
+**Результат**: см. `docs/plans/37-game-origin-security-audit.md`.
+
+| Категория | Статус |
+|---|---|
+| SQL-injection | ✅ OK (legacy дисциплинированно использует sqlVal/sqlArray) |
+| Direct file access | ✅ OK (nginx deny + структура папок) |
+| **XSS** | 🔴 CRITICAL (Template::get() не escapes ~50+ user-controlled полей) |
+| **CSRF** | 🔴 CRITICAL (91 POST-форма, 0 токенов, 0 проверок Origin/Referer) |
+
+**Готовность к открытию игрокам**: 🔴 НЕТ — нужны 37.7.1 (XSS) + 37.7.2 (CSRF).
+
+**Что дальше (37.7)**:
+- 37.7.1: escape user-controlled полей на DAO-level (Core::getUser()->get(),
+  и др.) или глобально в Template::get().
+- 37.7.2: SameSite=Strict cookie на JWT + Origin/Referer check в Page-middleware.
