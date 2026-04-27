@@ -7,21 +7,155 @@
 
 ## Архитектура
 
-Все шлюзы реализуют интерфейс `Gateway` (`backend/internal/payment/gateway.go`).
-Активный шлюз выбирается через переменную окружения `PAYMENT_PROVIDER`.
+План 38 + 42: платежи и кошельки живут в **billing-service** (отдельный
+микросервис, `projects/billing/backend/`). Все шлюзы реализуют интерфейс
+`Gateway` (`internal/payment/gateway.go`). Выбор активного шлюза — через
+переменную `BILLING_PRIMARY_PROVIDER` (или legacy `PAYMENT_PROVIDER`).
 
-Точки входа:
-- `POST /api/payment/order` — игрок создаёт заказ, получает `pay_url`
-- `POST /api/payment/webhook` — callback от шлюза после оплаты (без JWT)
-- `GET /api/payment/packages` — список пакетов (публичный)
-- `GET /api/payment/history` — история покупок игрока
+Точки входа billing-сервиса:
+- `GET /billing/packages` — список пакетов кредитов (публичный).
+- `POST /billing/orders` — игрок создаёт заказ, получает `pay_url`.
+  Требует JWT и поддерживает `Idempotency-Key` (Stripe-style).
+- `POST /billing/webhooks/{provider}` — callback от шлюза. Защита по подписи
+  (mock) или IP-allowlist + re-fetch (yookassa).
+- `GET /billing/wallet/balance` — текущий баланс OXC игрока.
+- `GET /billing/wallet/history` — история транзакций.
 
-После успешной оплаты игрок возвращается на `PAYMENT_RETURN_URL?payment=success`,
-кредиты уже зачислены (webhook срабатывает раньше).
+После успешной оплаты игрок возвращается на `PAYMENT_RETURN_URL`. Webhook
+прилетает раньше → кредиты уже зачислены к моменту, когда юзер вернулся.
+
+Поддерживаемые провайдеры:
+- **`yookassa`** — основной (план 42). См. §1.
+- **`mock`** — dev/test (план 38 Ф.4). См. §2.
+- **`robokassa`** — резервный, **код пока не реализован** (был в game-nova,
+  будет портирован при наличии тестового аккаунта). См. §3.
 
 ---
 
-## Шлюз 1: Робокасса (основной)
+## Шлюз 1: ЮKassa (основной)
+
+**Статус:** реализован (`projects/billing/backend/internal/payment/yookassa.go`).
+**Подходит:** самозанятые (НПД), физлица.
+**Комиссия:** от 2.8% (карты) до 3.5% (СБП с эквайрингом).
+**Выплаты:** в день регистрации платежа.
+**Чек ФНС:** автоматический для НПД (через API `receipt`).
+
+### Шаг 1 — Регистрация
+
+1. Зайти на [yookassa.ru](https://yookassa.ru/) → «Подключить».
+2. Заполнить анкету. Для самозанятого (НПД) выбрать тип «Физическое лицо
+   как самозанятый».
+3. Привязать статус НПД через приложение «Мой налог»: в нём разрешить
+   ЮKassa регистрировать чеки от вашего имени.
+4. Подписать договор (электронно через ЕСИА/Госуслуги).
+
+### Шаг 2 — Получить креды
+
+В личном кабинете ЮKassa: «Настройки → API → Отображать секретные
+ключи» → получаем:
+- `shopId` (числовой идентификатор магазина)
+- `secretKey` (рекомендуется создать **отдельный** для prod, не reuse тестовый)
+
+### Шаг 3 — Настроить webhook URL
+
+В ЛК → «Уведомления → Webhooks»:
+- URL: `https://billing.oxsar-nova.ru/billing/webhooks/yookassa`
+  (или другой публичный домен биллинга).
+- События: отметить **`payment.succeeded`** (минимум). Дополнительно
+  можно `payment.canceled` и `refund.succeeded`.
+
+ЮKassa не использует HMAC-подпись webhook — только IP-allowlist + re-fetch
+(оба механизма реализованы в `yookassa.go`).
+
+### Шаг 4 — ENV переменные
+
+В `deploy/docker-compose.multiverse.yml` (prod):
+```yaml
+billing-service:
+  environment:
+    BILLING_PRIMARY_PROVIDER: yookassa
+    YOOKASSA_SHOP_ID: <shopId>          # из Docker secret
+    YOOKASSA_SECRET_KEY: <secretKey>    # из Docker secret
+    YOOKASSA_API_URL: https://api.yookassa.ru/v3
+    PAYMENT_RETURN_URL: https://oxsar-nova.ru/?payment=success
+```
+
+ЮKassa-секреты подкладываются через Docker secrets (`/run/secrets/`),
+не env vars (security: env видны через `docker inspect`).
+
+### Шаг 5 — Тестовый магазин
+
+Прежде чем включать prod-магазин, проверить flow в **тестовом** магазине
+ЮKassa (отдельный shopId/secretKey):
+- `YOOKASSA_API_URL=https://api.yookassa.ru/v3` (ЮKassa определяет тест/prod
+  по самому магазину, не по URL).
+- Прогнать сценарий: createOrder → редирект на confirmation_url → выбрать
+  «Тестовая карта» → webhook → проверить `wallet.balance` += amount.
+- Проверить, что в реальном магазине через сутки чек появляется в
+  приложении «Мой налог».
+
+### Технические особенности реализации
+
+`internal/payment/yookassa.go`:
+- `BuildPayURL` делает `POST /v3/payments` с `Idempotence-Key=order_id`,
+  `metadata={order_id}`. Получает `confirmation_url` для редиректа.
+- `VerifyWebhook` проверяет (1) IP клиента в YooKassa-allowlist
+  (`YooKassaTrustedNetworks`), (2) re-fetch платежа через
+  `GET /v3/payments/{id}` для подтверждения статуса. Принимает только
+  `event=payment.succeeded`.
+- `kopToRubString`/`rubStringToKop` — точная конвертация копейки↔"500.00"
+  (без float).
+
+### Чек НПД через API (`receipt`)
+
+В текущей реализации поле `receipt` в `BuildPayURL` **пока NIL** — для
+полноценного НПД-чека нужен email/phone клиента, которого нет в текущей
+сигнатуре `Gateway.BuildPayURL`. Расширение интерфейса (передача
+customer-данных) — в план 42 §2 (TODO до публичного запуска).
+
+После расширения:
+```go
+receipt: {
+  customer: { email: "user@x.com" },
+  items: [{
+    description: "Игровые кредиты, пакет 500 OXC",
+    quantity: "1",
+    amount: { value: "500.00", currency: "RUB" },
+    vat_code: 1,                  // НДС 0% для самозанятого
+    payment_subject: "service",
+    payment_mode: "full_payment"
+  }]
+}
+```
+
+ЮKassa автоматически отправит чек в ФНС через интеграцию с «Мой налог».
+
+---
+
+## Шлюз 2: Mock (dev/test)
+
+**Статус:** реализован (`projects/billing/backend/internal/payment/mock.go`).
+**Назначение:** локальная разработка, E2E-тесты, demo.
+
+В отличие от тривиальной заглушки, Mock использует **настоящую HMAC-SHA256
+подпись** и проверку timestamp ±5 мин (replay protection). Это значит:
+- Тестовый код, который имитирует webhook, обязан правильно подписать
+  payload (тем же secret-ом).
+- E2E-тест прогоняет тот же verify-flow, что и prod-шлюз → меньше
+  «работает на тесте, ломается на проде».
+
+ENV:
+- `BILLING_PRIMARY_PROVIDER=mock`
+- `PAYMENT_MOCK_SECRET=<random-string>` (в `deploy/docker-compose.yml`
+  для dev).
+- `PAYMENT_MOCK_BASE_URL=http://billing-service:9100` (для построения
+  pay-URL в docker-network).
+
+В prod-окружении НЕ использовать.
+
+---
+
+## Шлюз 3: Робокасса (резервный, не реализован)
 
 **Статус:** реализован (`backend/internal/payment/robokassa.go`).  
 **Подходит:** самозанятые (НПД), физлица.  

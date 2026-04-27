@@ -1,9 +1,11 @@
 // Package payment — платёжные шлюзы для billing-service.
 //
 // План 38 Ф.3-4. Поддерживаются провайдеры:
-//   - mock (dev/test, без подписей и внешних HTTP)
-//   - robokassa (готов к проду, требует MerchantID + SecretKey)
-//   - enot.io (резервный)
+//   - mock — dev/test, HMAC-SHA256 подпись webhook
+//   - yookassa — основной (план 42), API + IP allowlist + re-fetch
+//
+// Robokassa и Enot.io остаются опциональными (через тот же Gateway-интерфейс),
+// но не реализованы — добавятся при появлении тестового аккаунта.
 //
 // Выбор шлюза по env PAYMENT_PROVIDER (см. cmd/server/main.go).
 package payment
@@ -11,6 +13,7 @@ package payment
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -19,7 +22,46 @@ var (
 	ErrWebhookInvalid     = errors.New("payment: invalid webhook payload")
 	ErrSignatureMismatch  = errors.New("payment: signature mismatch")
 	ErrTimestampOld       = errors.New("payment: timestamp too old (replay protection)")
+	ErrUnknownProvider    = errors.New("payment: unknown provider")
 )
+
+// FactoryConfig — параметры для NewGateway-factory.
+// Не все поля нужны каждому провайдеру (mock использует BaseURL+Secret,
+// YooKassa — ShopID+SecretKey+APIURL и т.д.).
+type FactoryConfig struct {
+	// общие
+	ReturnURL string
+
+	// mock
+	MockBaseURL string
+	MockSecret  string
+
+	// yookassa
+	YooKassaShopID    string
+	YooKassaSecretKey string
+	YooKassaAPIURL    string // пусто → prod https://api.yookassa.ru/v3
+}
+
+// NewGateway возвращает Gateway по имени провайдера.
+// План 42: yookassa добавлен. Robokassa/Enot — отложены до тестового аккаунта.
+func NewGateway(provider string, cfg FactoryConfig) (Gateway, error) {
+	switch provider {
+	case "mock":
+		return NewMockGateway(cfg.MockBaseURL, cfg.MockSecret), nil
+	case "yookassa":
+		if cfg.YooKassaShopID == "" || cfg.YooKassaSecretKey == "" {
+			return nil, errors.New("yookassa: YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY required")
+		}
+		return NewYooKassaGateway(
+			cfg.YooKassaShopID,
+			cfg.YooKassaSecretKey,
+			cfg.YooKassaAPIURL,
+			cfg.ReturnURL,
+		), nil
+	default:
+		return nil, fmt.Errorf("%w: %q (supported: mock, yookassa)", ErrUnknownProvider, provider)
+	}
+}
 
 // Gateway — общий интерфейс платёжного шлюза.
 //
