@@ -83,7 +83,7 @@ func run() error {
 	iss := jwtrs.NewIssuer(rsaKey, accessTTL, refreshTTL)
 	ver := jwtrs.NewVerifierFromKey(iss.PublicKey())
 
-	svc := authsvc.New(pool, iss)
+	svc := identitysvc.New(pool, iss)
 
 	// План 46 (149-ФЗ): blacklist для проверки никнеймов при регистрации.
 	// Путь — env MODERATION_BLACKLIST (default — общий blacklist в game-nova
@@ -100,7 +100,16 @@ func run() error {
 			slog.String("path", blPath), slog.String("err", blErr.Error()))
 	}
 
-	h := authsvc.NewHandler(svc, iss, ver, rdb)
+	// План 52 Ф.2: RBAC service + handler для управления ролями/permissions.
+	rbacSvc := identitysvc.NewRBACService(pool)
+	rbacH := identitysvc.NewRBACHandler(rbacSvc)
+
+	// Подключаем RBAC к Service: при выпуске JWT теперь Roles/Permissions
+	// читаются из user_roles + role_permissions (динамическая модель),
+	// fallback на u.Roles если RBAC ничего не вернёт.
+	svc = svc.WithRBAC(rbacSvc)
+
+	h := identitysvc.NewHandler(svc, iss, ver, rdb)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -126,10 +135,10 @@ func run() error {
 	// Auth endpoints (публичные + rate-limited).
 	// Лимиты: login строже (brute-force защита) — 5/мин/IP.
 	// Register чуть мягче — 10/мин/IP. Refresh — 30/мин/IP (может вызываться часто).
-	loginRL := authsvc.NewRateLimiter(rdb, "rl:login", 5, time.Minute).Middleware()
-	registerRL := authsvc.NewRateLimiter(rdb, "rl:register", 10, time.Minute).Middleware()
-	refreshRL := authsvc.NewRateLimiter(rdb, "rl:refresh", 30, time.Minute).Middleware()
-	logoutRL := authsvc.NewRateLimiter(rdb, "rl:logout", 30, time.Minute).Middleware()
+	loginRL := identitysvc.NewRateLimiter(rdb, "rl:login", 5, time.Minute).Middleware()
+	registerRL := identitysvc.NewRateLimiter(rdb, "rl:register", 10, time.Minute).Middleware()
+	refreshRL := identitysvc.NewRateLimiter(rdb, "rl:refresh", 30, time.Minute).Middleware()
+	logoutRL := identitysvc.NewRateLimiter(rdb, "rl:logout", 30, time.Minute).Middleware()
 	r.With(registerRL).Post("/auth/register", h.Register)
 	r.With(loginRL).Post("/auth/login", h.Login)
 	r.With(refreshRL).Post("/auth/refresh", h.Refresh)
@@ -144,12 +153,23 @@ func run() error {
 
 	// Защищённые endpoints (требуют JWT)
 	r.Group(func(pr chi.Router) {
-		pr.Use(authsvc.Middleware(ver))
+		pr.Use(identitysvc.Middleware(ver))
 		pr.Get("/auth/me", h.Me)
 		pr.Post("/auth/password", h.ChangePassword)
 		pr.Post("/auth/universe-token", h.UniverseToken)
 		// План 44 (152-ФЗ ст. 14): право субъекта на удаление ПДн.
 		pr.Delete("/auth/users/me", h.DeleteMe)
+
+		// План 52 Ф.2: RBAC admin endpoints.
+		// Permission-check внутри handler-методов (не на уровне роутера),
+		// чтобы возвращать корректные 403 с конкретным required-permission
+		// в сообщении.
+		pr.Get("/api/admin/roles", rbacH.ListRoles)
+		pr.Get("/api/admin/roles/{id}/permissions", rbacH.GetRolePermissions)
+		pr.Get("/api/admin/users/{id}/roles", rbacH.ListUserRoles)
+		pr.Post("/api/admin/users/{id}/roles", rbacH.GrantUserRole)
+		pr.Delete("/api/admin/users/{id}/roles/{role}", rbacH.RevokeUserRole)
+		pr.Get("/api/admin/audit/role-changes", rbacH.QueryAudit)
 	})
 
 	// Prometheus metrics

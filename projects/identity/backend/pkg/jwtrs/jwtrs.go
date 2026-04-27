@@ -39,6 +39,11 @@ type Claims struct {
 	Username        string   `json:"username"`
 	ActiveUniverses []string `json:"active_universes"`
 	Roles           []string `json:"roles"`
+	// Permissions — flatten-список из всех ролей юзера, дедуплицирован.
+	// План 52 Ф.2: позволяет клиентам валидировать разрешения локально
+	// без обращения к identity-service. Размер ~1-2KB при 6 ролях ×
+	// 5-10 permissions, что приемлемо.
+	Permissions []string `json:"permissions,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -55,6 +60,7 @@ type IssueInput struct {
 	Username        string
 	ActiveUniverses []string
 	Roles           []string
+	Permissions     []string
 }
 
 // Issuer выпускает JWT приватным ключом RSA-256.
@@ -167,6 +173,7 @@ func (iss *Issuer) sign(in IssueInput, now time.Time, ttl time.Duration, kind st
 		Username:        in.Username,
 		ActiveUniverses: universes,
 		Roles:           roles,
+		Permissions:     in.Permissions,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   in.UserID,
 			ID:        jti,

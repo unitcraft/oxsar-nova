@@ -1,6 +1,6 @@
-// Package authsvc реализует логику Auth Service: регистрация, логин,
+// Package identitysvc реализует логику Auth Service: регистрация, логин,
 // refresh, управление global credits.
-package authsvc
+package identitysvc
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -89,6 +90,7 @@ type Service struct {
 	db        *repo.PG
 	iss       *jwtrs.Issuer
 	blacklist *moderation.Blacklist
+	rbac      *RBACService
 }
 
 // New создаёт Service.
@@ -100,6 +102,13 @@ func New(pool *pgxpool.Pool, iss *jwtrs.Issuer) *Service {
 // Если nil — проверка отключена (на dev/test допустимо).
 func (s *Service) WithBlacklist(bl *moderation.Blacklist) *Service {
 	s.blacklist = bl
+	return s
+}
+
+// WithRBAC подключает RBAC service для обогащения JWT-claims
+// permissions при выпуске токенов (план 52 Ф.2).
+func (s *Service) WithRBAC(rbac *RBACService) *Service {
+	s.rbac = rbac
 	return s
 }
 
@@ -381,12 +390,32 @@ func (s *Service) ChangePassword(ctx context.Context, userID, current, newPwd st
 }
 
 // issueTokens выпускает токены для пользователя.
+//
+// План 52 Ф.2: если RBAC service подключён — заполняем claims roles/
+// permissions из user_roles + role_permissions (динамическая модель).
+// Иначе fallback на u.Roles (устаревшее поле users.roles[]).
 func (s *Service) issueTokens(ctx context.Context, u User) (jwtrs.Tokens, error) {
 	universes, _ := s.GetActiveUniverses(ctx, u.ID)
+
+	roles := u.Roles
+	var perms []string
+	if s.rbac != nil {
+		uid, err := uuid.Parse(u.ID)
+		if err == nil {
+			if rbacRoles, err := s.rbac.GetUserRoleNames(ctx, uid); err == nil && len(rbacRoles) > 0 {
+				roles = rbacRoles
+			}
+			if rbacPerms, err := s.rbac.GetUserPermissions(ctx, uid); err == nil {
+				perms = rbacPerms
+			}
+		}
+	}
+
 	return s.iss.Issue(jwtrs.IssueInput{
 		UserID:          u.ID,
 		Username:        u.Username,
 		ActiveUniverses: universes,
-		Roles:           u.Roles,
+		Roles:           roles,
+		Permissions:     perms,
 	})
 }

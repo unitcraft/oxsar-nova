@@ -36,7 +36,11 @@ type Handler struct {
 func NewHandler(db repo.Exec) *Handler { return &Handler{db: db} }
 
 // AdminOnly — middleware, пропускающий только admin/superadmin.
+//
+// План 52: проверка идёт по JWT-claims (Roles), не по локальной таблице.
+// Параметр db оставлен в сигнатуре для backward-compat — не используется.
 func AdminOnly(db repo.Exec) func(http.Handler) http.Handler {
+	_ = db
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			uid, _ := auth.UserID(r.Context())
@@ -44,10 +48,19 @@ func AdminOnly(db repo.Exec) func(http.Handler) http.Handler {
 				httpx.WriteError(w, r, httpx.ErrUnauthorized)
 				return
 			}
-			var role string
-			err := db.Pool().QueryRow(r.Context(),
-				`SELECT role FROM users WHERE id = $1`, uid).Scan(&role)
-			if err != nil || (role != "admin" && role != "superadmin") {
+			claims, ok := auth.RSAClaims(r.Context())
+			if !ok {
+				httpx.WriteError(w, r, httpx.ErrForbidden)
+				return
+			}
+			isAdmin := false
+			for _, role := range claims.Roles {
+				if role == "admin" || role == "superadmin" {
+					isAdmin = true
+					break
+				}
+			}
+			if !isAdmin {
 				httpx.WriteError(w, r, httpx.ErrForbidden)
 				return
 			}
@@ -57,11 +70,15 @@ func AdminOnly(db repo.Exec) func(http.Handler) http.Handler {
 }
 
 // UserRow — строка таблицы игроков для админ-просмотра.
+// UserRow — строка таблицы юзеров для admin-просмотра.
+//
+// План 52: поле Role удалено — роли теперь в identity-service.
+// Frontend (admin-frontend, план 53) делает отдельный запрос
+// GET identity:/api/admin/users/{id}/roles для получения текущих ролей.
 type UserRow struct {
 	ID         string     `json:"id"`
 	Username   string     `json:"username"`
 	Email      string     `json:"email"`
-	Role       string     `json:"role"`
 	Credit     int64      `json:"credit"`
 	Score      int64      `json:"score"`
 	BannedAt   *time.Time `json:"banned_at,omitempty"`
@@ -78,7 +95,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 
 	rows, err := h.db.Pool().Query(r.Context(), `
-		SELECT u.id, u.username, u.email, COALESCE(u.role::text,''), u.credit,
+		SELECT u.id, u.username, u.email, u.credit,
 		       COALESCE(s.score, 0), u.banned_at, u.created_at, u.last_seen_at
 		FROM users u
 		LEFT JOIN scores s ON s.user_id = u.id
@@ -93,7 +110,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	var out []UserRow
 	for rows.Next() {
 		var u UserRow
-		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.Credit,
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.Credit,
 			&u.Score, &u.BannedAt, &u.CreatedAt, &u.LastSeenAt); err != nil {
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 			return
@@ -165,8 +182,23 @@ func (h *Handler) Credit(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"credit": newCredit})
 }
 
-// SetRole POST /api/admin/users/{id}/role  body: {"role": "admin"|"player"|...}
+// SetRole POST /api/admin/users/{id}/role — DEPRECATED (план 52).
+//
+// Управление ролями теперь в identity-service (single source of truth):
+//   POST   /api/admin/users/{id}/roles
+//   DELETE /api/admin/users/{id}/roles/{role}
+//
+// Этот endpoint оставлен как stub возвращающий 410 Gone, чтобы клиенты
+// получали явную ошибку, а не успешный ответ при попытке установить
+// несуществующую колонку. Будет удалён полностью в плане 37.13.
 func (h *Handler) SetRole(w http.ResponseWriter, r *http.Request) {
+	httpx.WriteError(w, r, &httpx.Error{
+		Status:  http.StatusGone,
+		Code:    "moved",
+		Message: "role management moved to identity-service (POST/DELETE /api/admin/users/{id}/roles)",
+	})
+	return
+	// dead code preserved to keep imports healthy until full removal
 	uid := chi.URLParam(r, "id")
 	var body struct {
 		Role string `json:"role"`

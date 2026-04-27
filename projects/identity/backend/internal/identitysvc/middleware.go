@@ -1,4 +1,4 @@
-package authsvc
+package identitysvc
 
 import (
 	"context"
@@ -33,6 +33,13 @@ func Middleware(ver *jwtrs.Verifier) func(http.Handler) http.Handler {
 				return
 			}
 			ctx := context.WithValue(r.Context(), ctxUserID, claims.Subject)
+			// План 52 Ф.2: permissions из JWT в context — для permission-checks
+			// в admin-handler-ах (RBAC). Используем typed key из rbac_handler.go.
+			if len(claims.Permissions) > 0 {
+				ctx = context.WithValue(ctx, ctxKeyPermissions{}, claims.Permissions)
+			}
+			// actor uuid — для audit-log в RBAC handler-ах.
+			ctx = context.WithValue(ctx, ctxKeyUserID{}, claims.Subject)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
