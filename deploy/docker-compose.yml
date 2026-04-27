@@ -205,6 +205,68 @@ services:
       retries: 5
       start_period: 10s
 
+  # ── Billing stack ────────────────────────────────────────────────────────
+  # План 38. Кошельки, платёжные шлюзы (Robokassa/Enot/Mock), idempotent
+  # spend/credit. Webhook'и от платёжных шлюзов.
+
+  billing-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: billing
+      POSTGRES_PASSWORD: billing
+      POSTGRES_DB: billing
+    ports: ["5436:5432"]
+    volumes:
+      - billing-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U billing"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  billing-migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.migrate
+    depends_on:
+      billing-db:
+        condition: service_healthy
+    environment:
+      DB_URL: postgres://billing:billing@billing-db:5432/billing?sslmode=disable
+      MIGRATE_DIR: /migrations/billing
+    restart: "no"
+
+  billing-service:
+    build:
+      context: ..
+      dockerfile: projects/billing/backend/Dockerfile
+    depends_on:
+      billing-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      billing-migrate:
+        condition: service_completed_successfully
+    environment:
+      BILLING_ADDR: ":9100"
+      BILLING_DB_URL: postgres://billing:billing@billing-db:5432/billing?sslmode=disable
+      REDIS_URL: redis://redis:6379/3
+      AUTH_JWKS_URL: http://auth-service:9000
+      LOG_LEVEL: info
+      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:5174"
+      PAYMENT_PROVIDER: mock
+      PAYMENT_MOCK_BASE_URL: http://billing-service:9100
+      PAYMENT_RETURN_URL: http://localhost:5173/
+    ports: ["9100:9100"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9100/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
   # ── Portal stack ─────────────────────────────────────────────────────────
 
   portal-db:
@@ -286,5 +348,6 @@ volumes:
   portal-db-data:
   auth-db-data:
   auth-rsa-key:
+  billing-db-data:
   frontend-node-modules:
   portal-frontend-node-modules:
