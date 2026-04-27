@@ -119,6 +119,14 @@ class AccountCreator extends AjaxRequestHelper
 		{
 			$error[] = "USERNAME_INVALID";
 		}
+		// План 46/48 (149-ФЗ): проверка никнейма по UGC-blacklist.
+		// Источник YAML — projects/game-nova/configs/moderation/blacklist.yaml,
+		// тот же что у Go-сервисов. Отсутствие файла → проверка
+		// отключена (Moderation::size()==0), регистрация работает.
+		else if( Moderation::isForbidden($this->username) )
+		{
+			$error[] = "USERNAME_FORBIDDEN";
+		}
 		if(!checkEmail($this->email))
 		{
 			$error[] = "EMAIL_INVALID";
