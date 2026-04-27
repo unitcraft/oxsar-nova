@@ -8692,3 +8692,43 @@ Compare-tool сделал главное — **ясно показал scope wor
 что всё ОК).
 
 **Коммиты**: 1 (compare-tool + .gitignore + план + dev-log).
+
+---
+
+## Итерация 37.5d.5/6/7/8 (2026-04-27) — все системные баги вычищены
+
+**Задача**: убрать остаточные Yii-классы (13 шт), strict sql_mode для
+GROUP BY, missing-paths/Undefined constants. Без этого compare-tool
+показал ~10 страниц с PHP fatal (size 279-336 байт).
+
+**Изменения** (8 коммитов, по подэтапам):
+
+37.5d.5 — Yii-классы (6 коммитов):
+- 13f0b595f1: Requirements_YII (1 место) — разблокировал 7 страниц
+- 4c0e1e90d2: UserStates_YII + User_YII::findByPk (4 места)
+- d1d049f696: Assault/Galaxy/Planet_YII в Assault.class.php (6 мест)
+- f5a79ae22b: Notes/TutorialStatesCategory/UserAgreement_YII (Notepad,
+  Tutorial, UserAgreement page)
+- 05a542bec0: Sessions/Artefact2user/User2ally/Config_YII + auth-flow
+  (User_YII в LostPassword/AccountActivation, debug stub TestAlienAI)
+
+37.5d.6 (3fdcf6cbb2): отключён ONLY_FULL_GROUP_BY в docker-compose
+mysql.command.
+
+37.5d.7 (29cb1d9132): is_dir() guard перед opendir() в getImgPacks
++ Preferences. Stub для VERSION_CHECK_PAGE в Changelog (legacy
+fetch-XML с netassault.ru).
+
+37.5d.8 (compare v2): 24 страницы parity ≥95%, 0 fatal, 6 🔴 major
+— все контентные разницы из-за неполного snapshot.
+
+**Главное достижение**: базовый игровой цикл полностью работает —
+Constructions, Research, Shipyard, Defense рендерятся parity 94-96%
+с legacy. До этих фиксов все 4 ключевых страницы возвращали 279 байт
+PHP fatal.
+
+**Что дальше (37.5d.9+)**: точечные UI-фиксы по результатам compare v2
+(если нужны). Также возможно расширить snapshot для контентных
+разниц (Stock, Alliance, ArtefactMarket, Galaxy).
+
+**Коммиты**: 9 (6 Yii-fix + sql_mode + paths + plan-update).
