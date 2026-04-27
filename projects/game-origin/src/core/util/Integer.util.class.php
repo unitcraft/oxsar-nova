@@ -208,7 +208,7 @@ class Integer extends Type
   */
   public function getFloat()
   {
-    return new Float($this->toFloat());
+    return new OxsarFloat($this->toFloat());
   }
 
   /**
