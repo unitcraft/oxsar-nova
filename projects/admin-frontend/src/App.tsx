@@ -1,9 +1,42 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { fetchMe } from '@/lib/auth/flow';
 import { Login } from '@/routes/Login';
 import { Dashboard } from '@/routes/Dashboard';
 import { Protected } from '@/routes/Protected';
+import { RootLayout } from '@/components/layout/RootLayout';
+import { Placeholder } from '@/routes/Placeholder';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Lazy-load страниц с большими таблицами/графиками: разнесёт bundle
+// по chunks (план 53 §Производительность). Сейчас — placeholder, в
+// Ф.4-7 каждая будет вытащена в отдельный module.
+const RouteFallback = (): React.ReactElement => (
+  <div className="space-y-3">
+    <Skeleton className="h-6 w-48" />
+    <Skeleton className="h-4 w-64" />
+    <Skeleton className="h-32 w-full max-w-xl" />
+  </div>
+);
+
+const UsersStub = lazy(async () => ({
+  default: () => <Placeholder title="Users" phase="Ф.4" description="grant/revoke roles, ban/unban" />,
+}));
+const RolesStub = lazy(async () => ({
+  default: () => <Placeholder title="Roles" phase="Ф.4" description="справочник ролей и permissions" />,
+}));
+const AuditStub = lazy(async () => ({
+  default: () => <Placeholder title="Audit log" phase="Ф.5" description="фильтры по actor/target/action" />,
+}));
+const BillingStub = lazy(async () => ({
+  default: () => <Placeholder title="Billing" phase="план 54" description="платежи, возвраты, лимиты" />,
+}));
+const GameOpsStub = lazy(async () => ({
+  default: () => <Placeholder title="Game-ops" phase="Ф.6" description="dead events, planet/fleet operations" />,
+}));
+const SettingsStub = lazy(async () => ({
+  default: () => <Placeholder title="Settings" phase="Ф.8" description="2FA, security, sessions" />,
+}));
 
 export function App(): React.ReactElement {
   useEffect(() => {
@@ -14,13 +47,62 @@ export function App(): React.ReactElement {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route
-        path="/"
         element={
           <Protected>
-            <Dashboard />
+            <RootLayout />
           </Protected>
         }
-      />
+      >
+        <Route path="/" element={<Dashboard />} />
+        <Route
+          path="/users"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <UsersStub />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/roles"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <RolesStub />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/audit"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <AuditStub />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/billing/*"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <BillingStub />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/game-ops/*"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <GameOpsStub />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/settings/*"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <SettingsStub />
+            </Suspense>
+          }
+        />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
