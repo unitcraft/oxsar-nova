@@ -2,9 +2,18 @@
 /**
 * Create accounts.
 *
-* Oxsar http://oxsar.ru
+* Oxsar https://oxsar-nova.ru
 *
-*
+* ВНИМАНИЕ (план 50 Ф.2, 152-ФЗ):
+* Прямая регистрация в game-origin закрыта. Все аккаунты создаются
+* через identity-service (handoff из portal oxsar-nova.ru). Согласия
+* на обработку ПДн и акцепт оферты собираются на стороне portal
+* (планы 44, 47), запись в user_consents — на identity-service.
+* Этот класс остаётся как helper для lazy-create user'а в game-origin
+* при первом входе через handoff (без UI-формы регистрации).
+* НЕ добавлять публичные точки входа (контроллер/маршрут/форму) без
+* отдельного плана: это потребует чекбоксов согласия + интеграции
+* с identity user_consents API.
 */
 
 if(!defined("APP_ROOT_DIR")) { die("Hacking attempt detected."); }

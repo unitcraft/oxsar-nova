@@ -287,11 +287,24 @@ plain text + bbcode (см. функцию `bbcode($source)` в Chat.class.php
   `compare-output/`, legacy-dump'ов: только HTML-комментарии в
   `chat.tpl` + 1 doc-комментарий в `jquery.form.js`.
 
-### Ф.2. Регистрация и согласия
+### Ф.2. Регистрация и согласия ✅ (2026-04-28)
 
-- Уточнить, возможна ли прямая регистрация в game-origin.
-- Если нет — задокументировать, выйти из этой фазы.
-- Если да — добавить чекбоксы + интеграцию с user_consents.
+Уточнено пользователем: **прямая регистрация в game-origin закрыта**,
+вход только через handoff из portal (как и в game-nova). Согласия
+на обработку ПДн и акцепт оферты собираются на portal (планы 44,
+47), запись в `user_consents` — на identity-service.
+
+Действия:
+- Проверено grep'ом: внешних вызовов `AccountCreator::registerUser`
+  / `new AccountCreator(...)` в `projects/game-origin/src/` и
+  `public/` **нет** (единственное упоминание — комментарий в
+  `core/AjaxRequestHelper.abstract_class.php`).
+- В шапку `src/game/AccountCreator.class.php` добавлен
+  предупреждающий блок: класс остаётся как helper для lazy-create
+  при handoff'е, публичные точки входа добавлять нельзя без
+  отдельного плана с чекбоксами + integration user_consents API.
+- Чекбоксы согласия в game-origin **не нужны** — собираются на
+  portal/AuthPage и game-nova/LoginScreen (планы 44 + 47).
 
 ### Ф.3. Возрастная маркировка ✅ (2026-04-27)
 
