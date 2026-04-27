@@ -79,7 +79,7 @@
 
 ### 3. Миграция `user_consents`
 
-Новая таблица в auth-сервисе (или там, где живёт регистрация):
+Новая таблица в identity-сервисе (или там, где живёт регистрация):
 
 ```sql
 CREATE TABLE user_consents (
@@ -170,7 +170,7 @@ CREATE INDEX ON user_consents(user_id, consent_type);
 - API endpoint `DELETE /auth/users/me`.
 - UI-кнопка в "Настройки аккаунта" → "Удалить аккаунт" с модальным
   подтверждением (ввести "DELETE" в текстовое поле).
-- Логика анонимизации в auth-service.
+- Логика анонимизации в identity-service.
 
 ### Ф.4. Уведомление в РКН (внерепно)
 

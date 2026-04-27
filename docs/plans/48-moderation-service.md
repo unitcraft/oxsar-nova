@@ -16,7 +16,7 @@
 
 - `projects/game-nova/backend/internal/moderation/` — Go, читает
   `configs/moderation/blacklist.yaml`.
-- `projects/auth/backend/internal/moderation/` — Go, копия того же кода
+- `projects/identity/backend/internal/moderation/` — Go, копия того же кода
   (разные модули → не получилось общего пакета).
 - В `projects/game-origin/` (PHP) сейчас **нет фильтра вообще** — план 48
   Шаг 0 закроет это локальной PHP-обёрткой над тем же YAML, без сети.
