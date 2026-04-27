@@ -65,9 +65,20 @@ func (h *Handler) Spend(w http.ResponseWriter, r *http.Request) {
 		IdempotencyKey: r.Header.Get("Idempotency-Key"),
 	})
 	if err != nil {
+		switch {
+		case errors.Is(err, ErrInsufficient):
+			SpendErrorsTotal.WithLabelValues("insufficient").Inc()
+		case errors.Is(err, ErrFrozen):
+			SpendErrorsTotal.WithLabelValues("frozen").Inc()
+		case errors.Is(err, ErrInvalidAmount):
+			SpendErrorsTotal.WithLabelValues("invalid_amount").Inc()
+		default:
+			SpendErrorsTotal.WithLabelValues("internal").Inc()
+		}
 		writeBillingError(w, r, err)
 		return
 	}
+	TransactionsTotal.WithLabelValues(req.Reason, "spend").Inc()
 	httpx.WriteJSON(w, r, http.StatusOK, tx)
 }
 
@@ -124,6 +135,7 @@ func (h *Handler) Credit(w http.ResponseWriter, r *http.Request) {
 		writeBillingError(w, r, err)
 		return
 	}
+	TransactionsTotal.WithLabelValues(req.Reason, "credit").Inc()
 	httpx.WriteJSON(w, r, http.StatusOK, tx)
 }
 
