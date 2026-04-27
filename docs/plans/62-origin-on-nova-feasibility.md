@@ -147,6 +147,15 @@ backend game-nova как движок для legacy-вселенной oxsar2-cl
 10. **Mail-service (план 57) — до старта origin-фронта.** TipTap
     из 57 переиспользуется как редактор чата (минимальный режим) и
     почты альянса (полный режим) в обеих вселенных.
+11. **game-origin запущен в Docker и доступен по http://localhost:8092/**
+    — clean-room PHP-порт legacy. Dev-логин — `/dev-login.php`
+    (мгновенный, как `test`/userid=1, 9 планет, ~36M очков).
+    БД на `localhost:3307`, контейнер `docker-mysql-1`, БД `oxsar_db`,
+    пользователь `oxsar_user`/`oxsar_pass`. Параметры доступа и
+    проверенные экраны — в [docs/legacy/game-origin-access.md](../legacy/game-origin-access.md).
+    Это **основной** источник для сверки UI и поведения; legacy
+    oxsar2 на :8080 (`docs/legacy/game-reference.md`) — вторичный
+    (для сверки оригинального PHP).
 
 ### Куда сохраняется результат
 
@@ -1505,7 +1514,11 @@ UX-микрологика, которых нет в nova-frontend.
 - [docs/balance/analysis.md](../balance/analysis.md) — анализ
   балансных формул game-nova.
 - [docs/status.md](../status.md) — матрица готовности модулей nova.
+- [docs/legacy/game-origin-access.md](../legacy/game-origin-access.md) —
+  **запущенный game-origin** (http://localhost:8092/, dev-login),
+  основной источник для сверки UI и поведения по плану 62.
 - [docs/legacy/game-reference.md](../legacy/game-reference.md) —
-  доступ к oxsar2 для сверки.
+  доступ к legacy oxsar2 (http://localhost:8080/) для сверки
+  оригинального PHP, когда clean-room мог расходиться.
 - ADR `0009-currency-rebranding` — расхождение валют (важно для
   category 3).

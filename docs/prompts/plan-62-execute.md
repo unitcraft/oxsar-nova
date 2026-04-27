@@ -37,9 +37,20 @@
    - docs/plans/15-alien-holding-thursday.md (категория 4 — alien-AI)
    - docs/plans/20-legacy-port.md (что портировано из legacy)
    - docs/plans/57-mail-service.md (TipTap как редактор)
-   - docs/legacy/game-reference.md (доступ к запущенному oxsar2 для
-     сверки: localhost:8080/game.php/Main, test/quoYaMe1wHo4xaci —
-     **проверь что работает** перед попыткой использовать)
+   - docs/legacy/game-origin-access.md — **запущенный game-origin**
+     на http://localhost:8092/. Dev-логин:
+       curl -s -c /tmp/origin-jar.txt -L \
+         "http://localhost:8092/dev-login.php" -o /dev/null -w "%{http_code}\n"
+     После — любой экран:
+       curl -s -b /tmp/origin-jar.txt \
+         "http://localhost:8092/game.php?go=Main" -o /tmp/x.html \
+         -w "%{http_code} %{size_download}\n"
+     БД-запросы:
+       docker exec docker-mysql-1 mysql -uoxsar_user -poxsar_pass oxsar_db \
+         -e "SELECT ... FROM na_... ;"
+     Это **основной** источник для сверки UI/поведения origin.
+   - docs/legacy/game-reference.md — legacy oxsar2 на localhost:8080
+     (вторичный источник, если нужна сверка оригинального PHP).
 
 ЧТО НУЖНО СДЕЛАТЬ:
 
