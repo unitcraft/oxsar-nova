@@ -4,7 +4,6 @@ import { api } from '@/api/client';
 import { useTranslation } from '@/i18n/i18n';
 import { Confirm } from '@/ui/Confirm';
 import { AdminUserProfilePanel } from './AdminUserProfilePanel';
-import { AdminReportsTab } from './AdminReportsTab';
 
 interface AdminStats {
   users: number;
@@ -31,7 +30,9 @@ interface AutomsgDef {
   folder: number;
 }
 
-type AdminTab = 'users' | 'events' | 'audit' | 'reports';
+// План 56 Ф.6: вкладка 'reports' переехала в admin-frontend
+// (admin.oxsar-nova.ru → /reports), endpoint живёт в portal-backend.
+type AdminTab = 'users' | 'events' | 'audit';
 
 export function AdminScreen() {
   const { t } = useTranslation('admin');
@@ -106,14 +107,10 @@ export function AdminScreen() {
         <button type="button" aria-pressed={tab === 'audit'} onClick={() => setTab('audit')}>
           {t('tabAudit')}
         </button>
-        <button type="button" aria-pressed={tab === 'reports'} onClick={() => setTab('reports')}>
-          🚩 Жалобы
-        </button>
       </div>
 
       {tab === 'audit' && <AdminAuditTab />}
       {tab === 'events' && <AdminEventsTab />}
-      {tab === 'reports' && <AdminReportsTab />}
       {tab !== 'users' ? null : (<>
 
       {stats.data && (
