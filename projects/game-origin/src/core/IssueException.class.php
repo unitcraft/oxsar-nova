@@ -1,79 +1,41 @@
 <?php
 /**
-* Sends error message to logger.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-*/
+ * IssueException — clean-room rewrite (план 43 Ф.3). Заменяет одноимённый
+ * класс из фреймворка Recipe (GPL).
+ *
+ * Используется когда сообщение — ключ из i18n-словаря (типа
+ * "NO_VALID_EMAIL_ADDRESS"). Содержит хелперы которые делегируют в Logger
+ * для отображения локализованного текста.
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
-class IssueException extends Exception implements GlobalException
+class IssueException extends \Exception implements GlobalException
 {
-  /**
-  * Constructor.
-  *
-  * @param string	Message
-  * @param string	File
-  * @param integer	Line
-  * @param integer	Additional code
-  *
-  * @return void
-  */
-  public function __construct($message, $file = "", $line = 0, $code = 0)
-  {
-    $this->file = $file;
-    $this->line = $line;
-    parent::__construct($message, $code);
-    return;
-  }
-
-  /**
-  * Add the message to logger.
-  *
-  * @return void
-  */
-  public function printError()
-  {
-    Logger::addMessage($this->message);
-    return;
-  }
-
-  /**
-  * Displays the message and shut program down.
-  *
-  * @return void
-  */
-  public function diePrintError()
-  {
-    Logger::dieMessage($this->message);
-    return;
-  }
-
-  /**
-  * Sums the exception up.
-  *
-  * @return string	Formatted message
-  */
-  public function __toString()
-  {
-    if($this->file != "" && $this->line != 0)
+    /**
+     * Регистрирует i18n-сообщение в текущем шаблоне через Logger.
+     */
+    public function addMessage()
     {
-      return "Error in class ".$this->file." (".$this->line.") occurred: ".$this->message;
+        Logger::addMessage($this->message);
     }
-    return "Error: $this->message";
-  }
 
-  /**
-  * Returns field error.
-  *
-  * @return string	Error message
-  */
-  public function getFieldError()
-  {
-    return Logger::getMessageField($this->message);
-  }
+    /**
+     * Завершает страницу через рендер error-template (Logger::dieMessage).
+     */
+    public function dieMessage()
+    {
+        Logger::dieMessage($this->message);
+    }
+
+    /**
+     * Возвращает HTML-фрагмент с локализованным текстом для inline-показа
+     * в форме.
+     */
+    public function getMessageField()
+    {
+        return Logger::getMessageField($this->message);
+    }
 }
-?>

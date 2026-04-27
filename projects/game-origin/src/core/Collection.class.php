@@ -1,88 +1,59 @@
 <?php
 /**
-* Base collection class.
-*
-* @package Recipe 1.1
-* @author Sebastian Noll
-* @copyright Copyright (c) 2008, Sebastian Noll
-* @license <http://www.gnu.org/licenses/gpl.txt> GNU/GPL
-* @version $Id: Collection.class.php 23 2010-04-03 19:08:34Z craft $
-*/
+ * Collection — clean-room rewrite (план 43 Ф.3). Заменяет одноимённый
+ * абстрактный класс из фреймворка Recipe (GPL).
+ *
+ * Базовый класс для именованных коллекций «ключ -> значение». Subclass'ы:
+ * User, Language, Options. Реализует обход (foreach) и подсчёт (count).
+ * Конкретный get/set остаётся за подклассом — Collection не диктует
+ * стратегию (lazy load из БД, кэш, и т.п.).
+ *
+ * Copyright (c) 2026 oxsar-nova authors. PolyForm Noncommercial 1.0.0.
+ */
 
-if(!defined("RECIPE_ROOT_DIR")) { die("Hacking attempt detected."); }
+if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
 abstract class Collection implements Countable, IteratorAggregate
 {
-  // PHP 8: count() требует Countable; делегируем в size()
-  public function count(): int
-  {
-    return $this->size();
-  }
+    /**
+     * Собственно данные коллекции. Subclass'ы наполняют его при загрузке.
+     */
+    protected $item = array();
 
-  // PHP 8: foreach по объекту требует Iterator; даём ArrayIterator над $item
-  public function getIterator(): Iterator
-  {
-    return new ArrayIterator(is_array($this->item) ? $this->item : [$this->item]);
-  }
-  // public abstract function __construct();
-  public abstract function get($var);
-  public abstract function set($var, $value);
+    /**
+     * Возвращает значение по ключу. Семантика «не найдено» — на усмотрение
+     * подкласса (false / null / throw).
+     */
+    public abstract function get($var);
 
-  /**
-  * Holds collection data.
-  *
-  * @var unknown_type
-  */
-  protected $item = array();
+    /**
+     * Записывает значение по ключу. Подкласс может реджектить запись
+     * (read-only поля).
+     */
+    public abstract function set($var, $value);
 
-  /**
-  * Supports access to collection variable as class property.
-  * ($collection->variable)
-  *
-  * @param string	Variable name
-  *
-  * @return string	Value
-  */
-  public function __get($var)
-  {
-    return $this->get($var);
-  }
+    /**
+     * Существует ли ключ в коллекции. Не проверяет null-значения
+     * специально — array_key_exists совместим с null.
+     */
+    public function exists($var)
+    {
+        return is_array($this->item) && array_key_exists($var, $this->item);
+    }
 
-  /**
-  * Supports access to collection variable as class property.
-  * ($collection->variable = "Value")
-  *
-  * @param string	Variable name
-  * @param mixed		Value
-  *
-  * @return Collection
-  */
-  public function __set($var, $value)
-  {
-    $this->set($var, $value);
-    return $this;
-  }
+    /**
+     * Реализация Countable — для count($collection).
+     */
+    public function count(): int
+    {
+        return is_array($this->item) ? count($this->item) : 0;
+    }
 
-  /**
-  * Checks if the given key or index exists in the collection.
-  *
-  * @param string	Variable to check
-  *
-  * @return boolean	True if the given key is set in the session
-  */
-  public function exists($var)
-  {
-    if(array_key_exists($var, $this->item)) { return true; } else { return false; }
-  }
-
-  /**
-  * Returns the size of all collection items.
-  *
-  * @return integer
-  */
-  public function size()
-  {
-    return count($this->item);
-  }
+    /**
+     * Реализация IteratorAggregate — для foreach ($collection as $k=>$v).
+     */
+    public function getIterator(): Iterator
+    {
+        return new ArrayIterator(is_array($this->item) ? $this->item : array());
+    }
 }
-?>
