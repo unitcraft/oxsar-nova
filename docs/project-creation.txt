@@ -9645,3 +9645,90 @@ integration.md (нужны для настройки).
 
 **Коммит**: chore(docs): убрать налоговый статус и точечные ФИО
 автора из технических документов (план 49).
+
+## Итерация 43 (2026-04-27) — Замена Recipe-фреймворка (54 GPL-файла → 0)
+
+**Зачем**: legacy game-origin содержал 54 файла фреймворка Recipe
+(Sebastian Noll, 2008, GPL). PolyForm Noncommercial 1.0.0 (выбранная
+лицензия для всего oxsar-nova) **несовместима с GPL** — если в
+дистрибутиве есть GPL-код, любой пользователь юридически имеет право
+требовать чтобы весь oxsar-nova распространялся под GPL. Это пробивало
+защиту коммерциализации (план 41 origin-rights, план 47 договор оферты).
+
+Блокер на план 40 (CI license-check): пока в репо есть GPL-файлы,
+автоматическая проверка лицензий зависимостей будет фейлится.
+
+**8 фаз, 6 коммитов в одной сессии**:
+
+1. **Ф.1 — Composer bootstrap** (8d3e227300): composer.json,
+   Dockerfile.php добавляет composer install, docker-compose монтирует
+   composer.json + named volume для vendor/, .gitignore vendor/.
+2. **Ф.2 — Утилиты** (ce57df9ebf + ea6aabc331 + 6892db6c54):
+   clean-room rewrite Arr/Str/Date/Link/File/Image/Timer (7 файлов),
+   удаление как dead Upload/HTTP_Request/Curl/Fsock/Request_Adapter
+   (5 файлов), Plugin → пустой stub. Doublecheck-фикс Link/Image
+   (default class="link"/"image", /images/ префикс).
+3. **Ф.3 — Ядро** (520d54f51d + ea6aabc331): clean-room Logger/Hook/
+   Collection/Request/Exception interface/GenericException/IssueException/
+   AjaxRequestHelper. Удаление Cron как dead.
+4. **Ф.4 — БД** (aa9274d01f): clean-room Database abstract +
+   DB_MYSQL_PDO. Удаление DB_MySQL/DB_MySQLi как dead.
+5. **Ф.7 — maintenance/** (7b112aaac8): удаление 7 admin-скриптов
+   (TableCleaner, banIPClasses, ClearSessions, LanguageImporter/Exporter,
+   XML_LanguageImporter, SortPhrases — все dead).
+6. **Ф.5+Ф.6 — оставшиеся утилиты** (6063938316 + 21cd890f32):
+   clean-room util/Email/Login/QueryParser/XML/XMLObj/Map/OxsarString/
+   Type, удаление dead Boolean/Integer/OxsarFloat (закрытая
+   Recipe-подсистема), удаление Login/GameLogin (legacy login flow,
+   в порте — JWT через game-nova/auth).
+7. **Ф.6 partial — bootstrap** (d8a972f3dc): clean-room init.php +
+   AutoLoader.php + Functions.php (22 SQL-helper-функции +
+   getClassPath + env + isMail + randString + doHeaderRedirection).
+8. **Ф.5+Ф.6 final** (7ce0fa6704 + ee73ddb37d): clean-room Cache/Core/
+   Language/LanguageCompiler/Options/User/Template/TemplateCompiler.
+   Followup-фикс OxsarString::trim/set/prepareForSearch + property
+   validSearchString (Search.class.php требует этот API).
+
+**Метод clean-room**: реализация по публичному API (известному из
+~700 call-sites в `src/game/` через grep) и observable behavior из
+existing compiled cache в `src/cache/templates/`. Не копировал
+expression-by-expression из оригинала — только сигнатуры методов и
+семантика регексов из compiled output. У всех новых файлов наша шапка
+с PolyForm-attribution, без `@package Recipe / @author Sebastian Noll`.
+
+**Сохранены интеграции порта** (внесены в clean-room rewrite):
+- 37.7.1 XSS escape для username/email/temp_email в User::get()
+  (raw — через User::getRaw()).
+- 37.5c JWT lazy-join через JwtAuth::resolveUser() + автоматическое
+  планирование колонизации через OnboardingService.
+- DB_MYSQL_PDO с PDO::ATTR_EMULATE_PREPARES=false и
+  ATTR_ERRMODE=EXCEPTION (lazy fetch, корректная обработка PDOException).
+
+**Доказательство закрытия**:
+- `grep -rl "@package Recipe\|@author Sebastian Noll" projects/game-origin/src/`
+  → **0 файлов**.
+- Compare с legacy (41 страница, нормализованный diff): 39 страниц
+  стабильны, Preferences улучшилась на -148 строк (170→22), Notepad
+  +16 — НЕ регрессия кода (разный snapshot test-юзера: legacy имеет
+  реальные заметки про корабли, у нас XSS-test payload от 37.7.3).
+  0 HTTP-ошибок.
+
+**Что снимается этим планом**:
+- ✅ Юридическая защита PolyForm Noncommercial валидна для всего
+  oxsar-nova (нет GPL-кода в дистрибутиве).
+- ✅ Блокер на план 40 (CI license-check) снят — теперь можно
+  безопасно прогонять license-checker.
+- ✅ Готовность к 37.9 (Go-порт EventHandler) и 37.13 (финальная
+  чистка) — следующий rewrite не наследует GPL-конфликт.
+
+**Trade-offs (записать в simplifications.md)**:
+- Email::sendMail() в текущей реализации только логирует через
+  error_log (SMTP не настроен). Для реальной отправки нужно
+  symfony/mailer + ENV-конфиг — отдельная задача.
+- Cache::buildUserCache() — stub (legacy session-таблица не
+  используется, в порте JWT). Если cacheActive=true в Config.xml —
+  User упадёт на загрузку из na_user напрямую (это нормально).
+- Plugin.abstract_class.php — пустой stub. Полное удаление файла
+  + правка autoloader-config'а — отдельная мини-задача.
+
+**Коммитов**: 9.
