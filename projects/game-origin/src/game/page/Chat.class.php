@@ -48,6 +48,7 @@ class Chat extends Page
 		while($row = sqlFetch($result))
 		{
 			$row["time"] = date("[H:i:s]", $row["time"]);
+			$row["username"] = htmlspecialchars((string)$row["username"], ENT_QUOTES, 'UTF-8');
 			$row["message"] = bbcode(stripslashes($row["message"]));
 			$messages[] = $row;
 		}

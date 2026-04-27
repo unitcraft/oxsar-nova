@@ -36,7 +36,8 @@ class Notepad extends Page
 		// План 37.5d.5#4: replaced Notes_YII::model()->findByPk() + CDbCriteria.
 		$user_id = $_SESSION["userid"] ?? 0;
 		$notes = sqlSelectField("notes", "notes", "", "user_id=".sqlVal($user_id));
-		Core::getTPL()->assign('notes', $notes ?? '');
+		// 37.7.3: notes идёт в <textarea> через {@notes} (не эскейпается шаблоном) — экранируем чтобы </textarea> не сломал разметку
+		Core::getTPL()->assign('notes', htmlspecialchars((string)($notes ?? ''), ENT_QUOTES, 'UTF-8'));
 		Core::getTPL()->assign('formaction', socialUrl(RELATIVE_URL . 'game.php/SaveNotes'));
 		Core::getTPL()->display('notes');
 		return $this;
