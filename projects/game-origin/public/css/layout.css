@@ -54,38 +54,46 @@
 
 .oxsar-footer
 {
-  /* План 50 Ф.5 (2026-04-28): #leftMenu и #planets — position:fixed,
-     обычный clear:both их не учитывает, поэтому footer заезжал под
-     меню. Зажимаем боковыми отступами под ширину fixed-колонок
-     (#leftMenu ~165px слева, #planets ~170px справа). */
-  margin: 16px 180px 12px 180px;
-  padding: 12px 8px 16px;
+  /* План 50 Ф.5 (2026-04-28): footer фиксируется внизу окна между
+     #leftMenu (fixed, ~165px) и #planets (absolute, ~170px) — на
+     длинных страницах при скролле он бы уезжал под левое меню. */
+  position: fixed;
+  bottom: 0;
+  left: 170px;
+  right: 180px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.65);
+  border-top: 1px solid #333;
   text-align: center;
   color: #888;
   font-size: 11px;
   font-family: Tahoma, Verdana, sans-serif;
-  clear: both;
-  position: relative;
-  z-index: 1;
+  z-index: 100;
+}
+
+/* Запас снизу контента, чтобы footer не закрывал последние строки. */
+#contentHtml
+{
+  padding-bottom: 48px;
 }
 
 .oxsar-footer .age-rating
 {
   display: inline-block;
-  width: 28px;
-  height: 28px;
-  line-height: 28px;
+  padding: 0 6px;
   background: #000;
   color: #fff;
   font-weight: bold;
-  font-size: 13px;
+  font-size: 11px;
   border: 1px solid #444;
-  margin-bottom: 6px;
+  margin-right: 8px;
+  vertical-align: middle;
 }
 
 .oxsar-footer .legal-links
 {
-  margin-top: 4px;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .oxsar-footer .legal-links a
