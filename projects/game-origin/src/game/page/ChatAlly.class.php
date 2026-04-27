@@ -126,6 +126,9 @@ class ChatAlly extends Page
 		$message = Teg("[","u","]",$message);
 		$message = Teg("[","s","]",$message);
 
+		// План 50 Ф.4 (149-ФЗ): UGC-маскирование сообщений чата альянса.
+		$message = Moderation::mask($message);
+
 		$u_id = NS::getUser()->get("aid");
 		if($message != "" && $u_id != 0 && !$this->checkRO() )
 		{

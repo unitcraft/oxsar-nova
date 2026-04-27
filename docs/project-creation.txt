@@ -9939,3 +9939,94 @@ billing, portal); PHP smoke-тест game-origin — 200 на Main/Empire/Stock.
 (использует `billing:limits`, `billing:reports` permissions).
 
 **Коммит**: 1 (`feat(plan-52): RBAC unification`).
+
+## Итерация 50.partial-2 (2026-04-27) — game-origin: Ф.4 UGC-модерация
+
+**Контекст**: продолжение плана 50, после Ф.3+Ф.6+Ф.7 (12+, юр-ссылки,
+copyright, итерация 50.partial). Ф.4 — расширение UGC-blacklist'а
+с никнейма (единственное применение от плана 48 Шаг 0) на чат, альянсы,
+ЛС, заявки, рассылки.
+
+**Что сделано:**
+
+- **`Moderation::mask()`** в
+  `projects/game-origin/src/core/util/Moderation.util.class.php` —
+  новый публичный метод. Семантика — паритет с `MaskForbidden` из
+  Go-версии (`projects/game-nova/backend/internal/moderation/blacklist.go`):
+  если найден хоть один запрещённый корень — все буквенные символы
+  (a-z, А-я, ё) в исходной строке заменяются на `*`; цифры, пробелы,
+  пунктуация, BBCode/HTML-теги остаются. Длина строки сохраняется.
+  Это «крупная» стратегия: лучше перерезать невинный текст с матом,
+  чем пропустить мат через regex-обход. Описание в плане-50 (§4
+  «каждый символ найденного вхождения») — упрощённое перефразирование;
+  следовал Go-эталону, как явно требует план («семантика должна
+  совпадать с Go-реализацией»).
+
+- **7 UGC-точек, 12 вызовов:**
+
+  | Файл | Точка | Стратегия |
+  |---|---|---|
+  | `src/game/page/Chat.class.php` | `sendMessage` (строка 119) | mask |
+  | `src/game/page/ChatAlly.class.php` | `sendMessage` (строка 130) | mask |
+  | `src/game/page/MSG.class.php` | `PM` тема + тело (строки 174-175) | mask × 2 |
+  | `src/game/page/Alliance.class.php` | `foundAlliance` tag, name (199-200) | isForbidden × 2 |
+  | `src/game/page/Alliance.class.php` | `updateAllyPrefs` extern, intern, applicationtext (1001-1003) | mask × 3 |
+  | `src/game/page/Alliance.class.php` | `apply` text заявки (1158) | mask |
+  | `src/game/page/Alliance.class.php` | `globalMail` тема + тело (1378-1379) | mask × 2 |
+
+  Стратегия: для **идентификаторов** (тег, название альянса) —
+  блокировка через `isForbidden()`, при срабатывании поднимаются
+  `tagError`/`nameError` через тот же `Logger::getMessageField`,
+  что используется при некорректной длине / regex-нарушении (т.е.
+  пользователь видит «ALLIANCE_TAG_INVALID» — общее сообщение, не
+  специфичное для модерации; это упрощение, отдельная локализация
+  не вводилась). Для **свободного текста** (всё остальное) —
+  маскирование через `mask()` перед `INSERT INTO` или `UPDATE`.
+
+- **Поверхности, которых нет в legacy:**
+  - Описание планеты — нет редактируемого поля.
+  - AllianceCreator — нет, создание прямо в `Alliance::foundAlliance`.
+  - Notepad (`Notepad.class.php`) — приватный, не UGC, пропущен.
+  - `ChatPro.class.php` — пустой класс-заглушка, реальная логика
+    в `public/chatPro.php` через внешний класс `OxsarAJAXChat`
+    (отдельная точка вне scope этой фазы).
+
+**Verifications:**
+
+- `php -l` на всех 5 модифицированных файлах (Moderation +
+  Chat + ChatAlly + MSG + Alliance) — `No syntax errors`.
+- Unit-тест `Moderation::mask()` через PHP CLI — 11/11 PASS:
+  - 57 корней загружены из общего blacklist
+    (`projects/game-nova/configs/moderation/blacklist.yaml`).
+  - Чистый текст не меняется.
+  - Пустая строка ОК.
+  - Запрещённый текст: все буквы → `*`, длина сохраняется,
+    цифры/пробелы/пунктуация/BBCode-скобки уцелели.
+  - `isForbidden()` работает как до Ф.4 (регрессия).
+- `grep "Moderation::"` — 14 use-сайтов: 1 существующий в
+  AccountCreator + 13 новых (12 вызовов + 1 комментарий).
+
+**Smoke-тест в браузере не выполнен** — требует docker-compose up
+для game-origin; правки точечные `Moderation::mask()`/`isForbidden()`
+на критических путях (insert в БД), unit-тест mask() показывает
+корректную семантику. Smoke рекомендуется при следующем dev-запуске.
+
+**Известные ограничения** (не входят в Ф.4, см. план 50 §4
+«Что отложено»):
+
+- **Audit-таблица модерации** (запись факта срабатывания) — отдельная
+  задача, в Ф.4 нет.
+- **Структурное хранилище логов чата на 6 месяцев** (требование
+  149-ФЗ к данным по запросу регулятора). Таблицы `chat`/`chat2ally`
+  существуют и не TTL-чистятся, но запрос «выдай по userid за
+  период» — отдельная админ-функция.
+- **Три формы блокировки альянса** (ALLIANCE_TAG_INVALID одно сообщение
+  для всех причин — длина/regex/blacklist). Идеально — отдельная
+  фраза «ALLIANCE_TAG_FORBIDDEN». Не сделано, чтобы не лезть в
+  i18n-механизм.
+
+**Параллельные сессии**: на момент работы шёл план 52 (RBAC) — он
+завершился отдельным коммитом до моего. Мои файлы не пересекаются
+с RBAC-правками.
+
+**Коммит**: 1.

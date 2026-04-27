@@ -194,8 +194,12 @@ class Alliance extends Page
 		$maxCharsTag = Core::getOptions()->get("MAX_CHARS_ALLY_TAG");
 		$minCharsName = Core::getOptions()->get("MIN_CHARS_ALLY_NAME");
 		$maxCharsName = Core::getOptions()->get("MAX_CHARS_ALLY_NAME");
+		// План 50 Ф.4 (149-ФЗ): тег и название альянса — идентификаторы,
+		// маскировать нельзя; блокируем создание при срабатывании blacklist'а.
+		$tagForbidden = Moderation::isForbidden($tag);
+		$nameForbidden = Moderation::isForbidden($name);
 		// Hook::event("FOUND_ALLIANCE", array(&$tag, &$name));
-		if(Str::length($tag) >= $minCharsTag && Str::length($tag) <= $maxCharsTag && Str::length($name) >= $minCharsName && Str::length($name) <= $maxCharsName && preg_match($this->namePattern, $tag) && preg_match($this->namePattern, $name))
+		if(!$tagForbidden && !$nameForbidden && Str::length($tag) >= $minCharsTag && Str::length($tag) <= $maxCharsTag && Str::length($name) >= $minCharsName && Str::length($name) <= $maxCharsName && preg_match($this->namePattern, $tag) && preg_match($this->namePattern, $name))
 		{
 			$result_count = sqlSelectField("alliance", "count(*)", "", "tag = ".sqlVal($name)." OR name = ".sqlVal($name));
 			if($result_count == 0)
@@ -214,12 +218,12 @@ class Alliance extends Page
 		}
 		else
 		{
-			if(Str::length($tag) < $minCharsTag || Str::length($tag) > $maxCharsTag || !preg_match($this->namePattern, $tag))
+			if($tagForbidden || Str::length($tag) < $minCharsTag || Str::length($tag) > $maxCharsTag || !preg_match($this->namePattern, $tag))
 			{
 				Core::getTPL()->assign("tagError", Logger::getMessageField("ALLIANCE_TAG_INVALID"));
 			}
 
-			if(Str::length($name) < $minCharsName || Str::length($name) > $maxCharsName || !preg_match($this->namePattern, $name))
+			if($nameForbidden || Str::length($name) < $minCharsName || Str::length($name) > $maxCharsName || !preg_match($this->namePattern, $name))
 			{
 				Core::getTPL()->assign("nameError", Logger::getMessageField("ALLIANCE_NAME_INVALID"));
 			}
@@ -992,6 +996,12 @@ class Alliance extends Page
 			$textextern = str_replace('{{', '[[', $textextern);
 			$textextern = str_replace('}}', ']]', $textextern);
 
+			// План 50 Ф.4 (149-ФЗ): UGC-маскирование описаний альянса
+			// (внешнего, внутреннего и шаблона заявки на вступление).
+			$textextern = Moderation::mask($textextern);
+			$textintern = Moderation::mask($textintern);
+			$applicationtext = Moderation::mask($applicationtext);
+
 			$vals = array($logo, Str::validateXHTML($textextern), Str::validateXHTML($textintern), Str::validateXHTML($applicationtext), $homepage, $showmember, $showhomepage, $memberlistsort, $open, Str::validateXHTML($foundername));
 			Core::getQuery()->update("alliance", $atts, $vals, "aid = ".sqlVal($this->aid)
 				. ' ORDER BY aid ');
@@ -1144,6 +1154,8 @@ class Alliance extends Page
 			if($result3_count > 0)
 			{
 				$applicationtext = sqlSelectField('alliance', 'applicationtext', '', "aid = ".sqlVal($this->aid)." AND open = '1'");
+				// План 50 Ф.4 (149-ФЗ): UGC-маскирование текста заявки игрока.
+				$text = Moderation::mask($text);
 				Core::getQuery()->insert(
 					"allyapplication",
 					array("userid", "aid", "date", "application"),
@@ -1362,6 +1374,9 @@ class Alliance extends Page
 				{
 					$message = Str::validateXHTML($message);
 					$subject = Str::validateXHTML($subject);
+					// План 50 Ф.4 (149-ФЗ): UGC-маскирование рассылки альянса.
+					$message = Moderation::mask($message);
+					$subject = Moderation::mask($subject);
 					if(Str::length($message) > 2 && Str::length($message) <= Core::getOptions()->get("MAX_PM_LENGTH") && Str::length($subject) > 0 && Str::length($subject) < 101)
 					{
                         NS::checkSpan($message, 'Ally.globalMail.message');

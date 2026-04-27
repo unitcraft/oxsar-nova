@@ -115,6 +115,9 @@ class Chat extends Page
 		$message = Teg("[","u","]",$message);
 		$message = Teg("[","s","]",$message);
 
+		// План 50 Ф.4 (149-ФЗ): UGC-маскирование сообщений чата.
+		$message = Moderation::mask($message);
+
 		if( $message != "" && !$this->checkRO() )
 		{
 			$userid = NS::getUser()->get("userid");

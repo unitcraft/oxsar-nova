@@ -170,6 +170,9 @@ class MSG extends Page
 				if($row["userid"] != NS::getUser()->get("userid"))
 				{
 					$subject = preg_replace("#((RE|FW):\s)+#is", "\\1", $subject); // Remove excessive reply or forward notes
+					// План 50 Ф.4 (149-ФЗ): UGC-маскирование темы и тела ЛС.
+					$subject = Moderation::mask($subject);
+					$message = Moderation::mask($message);
 					// Hook::event("SEND_PRIVATE_MESSAGE", array(&$row, $receiver, &$subject, &$message));
 					Core::getQuery()->insert("message", array("mode", "time", "sender", "receiver", "subject", "message", "readed", "related_user"), array(1, time(), NS::getUser()->get("userid"), $row["userid"], Str::validateXHTML($subject), Str::validateXHTML($message), 0, $row["userid"]));
 					Core::getQuery()->insert("message", array("mode", "time", "sender", "receiver", "subject", "message", "readed", "related_user"), array(2, time(), $row["userid"], NS::getUser()->get("userid"), Str::validateXHTML($subject), Str::validateXHTML($message), 1, NS::getUser()->get("userid")));
