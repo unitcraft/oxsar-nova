@@ -1360,3 +1360,88 @@ Sub-параметры (`Galaxy/galaxy:7/system:100`, `go:Galaxy/galaxy:N`)
 зафиксировано в memory `reference_game_origin_routing.md` именно как
 «smoke надо делать через `?go=Page`», но пользователь в браузере
 кликает естественно, и обход через `?go=` ломает обычный UX.
+
+---
+
+## 37.5f — Косметика error-page для compare-with-legacy (2026-04-27)
+
+### Проблема
+
+`compare-with-legacy.sh` вызывает 3 страницы, которые **по дизайну
+требуют `?id=N` параметр**: `BuildingInfo`, `UnitInfo`, `ArtefactInfo`.
+Без id обе вселенные кидают exception (это корректное поведение, не
+баг ни legacy, ни наш). НО:
+
+- **Legacy** рендерит exception в **Yii-style debug-page** ~32 KB:
+  `<title>GenericException</title>`, стилизованный `.container .message`,
+  плюс **исходный код** функции (source-excerpt с подсветкой) и
+  **полный stack trace** с раскрываемыми frames. Это security-leak,
+  но визуально красиво.
+- **Наш** debug-handler (`src/core/Debuger.php::debug_exception_handler`)
+  выводил три коротких `<pre class="cake-debug">` строки — суммарно
+  ~336 байт без `<html>`/`<body>`/CSS. Безопасно (нет утечек), но
+  визуально голо.
+
+В compare-отчёте это давало **🔴 major (700+ lines diff)** на трёх
+страницах, маскируя реальные регрессии. И «major» постоянно сидел
+в baseline'е, заставляя при каждом compare пропускать эти 3 строки
+глазами вручную.
+
+### Решение
+
+Переписан `debug_exception_handler` в
+`projects/game-origin/src/core/Debuger.php`:
+
+- Полноценный HTML-документ: `<!DOCTYPE>`, `<html>`, `<head><title>`,
+  `<style>` (~50 строк CSS), `<body><div class="container">`.
+- Структура **визуально как у legacy**: `<h1>` с именем класса
+  exception, `<p class="message">` с текстом, `<div class="version">`
+  с `OXSAR_VERSION`.
+- **БЕЗ** `<div class="source">` (исходный код) и `<div class="traces">`
+  (stack trace) — это намеренно, чтобы не утекали наружу пути файлов
+  и фрагменты PHP-кода.
+- Полная информация (file, line, message, class) — в `error_log()`
+  для server-side отладки.
+- Если `headers_sent()` — рендерит только короткий блок (не ломает
+  частично отрендеренный layout).
+
+Размер выросс ~336 → ~934 байт (полноценный HTML с inline-CSS).
+Diff в compare с legacy уменьшается с ~700 lines до ~30-50 lines
+(остаётся разница: у legacy stack trace, у нас — нет; это
+**правильно** для прода).
+
+### Альтернативы (отвергнуты)
+
+- **(B1)** Полная Yii-style debug-page с stack trace + source-excerpt
+  → security-leak. План 37.6 (security-аудит) явно требует не
+  отдавать stack trace в проде.
+- **Fallback** — BuildingInfo/UnitInfo без id показывают список —
+  изменение поведения, которого нет в legacy. Не делаем.
+
+### Verification
+
+После fix:
+- `?go=BuildingInfo` без id: 934 байт, валидный HTML с
+  `<title>GenericException</title>` + красным `<h1>` + сообщением.
+- Все нормальные страницы (Main, Mission, Galaxy, Constructions, ...)
+  работают как раньше — handler меняет только UNCAUGHT exception.
+- `php -l` чисто.
+- Server-side error_log получает полную информацию (file, line,
+  class, message).
+
+### Snapshot na_changelog (попытка, отвергнуто)
+
+Параллельно проверял возможность дополнить snapshot test-юзера
+таблицей `na_changelog` (для уменьшения diff Changelog 811 → ~10 lines).
+**Оказалось:** в legacy oxsar_db **таблицы `na_changelog` не существует**.
+Legacy Changelog тянул XML changelog'а из внешнего netassault.ru
+(legacy update-server). У нас в `Changelog::index()` уже стоит TODO
+от плана 37.5d.7: `Core::getTPL()->addLoop("release", array())` —
+пустой changelog. Это **не контентная разница из БД**, а
+фундаментальная разница архитектуры (внешний update-server vs наша
+заглушка). Diff +811 lines на странице Changelog — **не закрываемо**
+этим путём; нужен либо MR на доступ к XML-источнику (которого больше
+нет), либо собственный `na_changelog` со списком наших патчей
+(отдельная задача).
+
+Snapshot-script (`tools/snapshot-legacy-user.sh`) изменён НЕ был.
