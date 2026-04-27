@@ -88,6 +88,8 @@ class UserList extends AllianceList
     $row["message"] = Link::get("game.php/MSG/Write/Receiver:".rawurlencode($row["username"]), $this->pmPic);
     $row["buddyrequest"] = Link::get("game.php/go:Friends/id:Add/User:".$row["userid"], $this->buddyPic);
     $row["moderator"] = Link::get("game.php/Moderator/".$row["userid"], $this->modPic);
+    // План 50 Ф.5 (149-ФЗ): кнопка «Пожаловаться» на игрока.
+    $row["report"] = getReportButton('user', $row["userid"]);
 
 	if($this->newbieProtection) // $this->type == "points") // && isAdmin())
 	{

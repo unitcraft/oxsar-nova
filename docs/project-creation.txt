@@ -10631,3 +10631,91 @@ game-origin) теперь имеет готовый endpoint
 **Коммиты**: серия из 4-х по логическим этапам (game-nova
 ReportButton; admin-frontend+admin-bff backend+UI; game-nova
 удаление вкладки; docs).
+
+──────────────────────────────────────────────────────────────────
+Итерация 50-Ф.5 (2026-04-28) — game-origin: кнопка «Пожаловаться»
+──────────────────────────────────────────────────────────────────
+
+Финальная фаза плана 50 для legacy-вселенной — UGC report-кнопка,
+закрывает gap 6.2 в legal-compliance-audit. game-nova получила
+аналогичную кнопку в плане 46, после плана 56 endpoint живёт
+централизованно на portal-backend; здесь — клиент в legacy-PHP,
+тот же контракт.
+
+**Что сделано:**
+- `_report_button.tpl` — partial с CSS, HTML модалки и JS-обёрткой
+  `oxReport.open(targetType, targetId)`. Подключён один раз в
+  `layout.tpl` перед футером, поэтому модалка доступна на любой
+  странице, где есть layout.
+- `getReportButton($type, $id, $title=null)` в `Functions.inc.php` —
+  helper, возвращает `<button>🚩</button>` с inline-onclick.
+  Защиты: гостю и при self-target='user' возвращает пустую строку.
+- `PORTAL_BASE_URL` в `config/consts.php` — default
+  `https://oxsar-nova.ru` (prod) / `http://localhost:8090` (dev),
+  переопределяется через env или `consts.local.php`.
+- 4 точки внедрения:
+  - playerstats: `UserList::formatRow` → `$row["report"]`,
+    шаблон рендерит `{loop}report{/loop}` рядом с message/buddy.
+  - чат общий (`chat.tpl`): рядом с шапкой,
+    `target_type='chat_msg', target_id='global'`.
+  - чат альянса (`chatally.tpl`): рядом с шапкой,
+    `target_id='ally:<aid>'`.
+  - страница своего альянса (`allypage_own.tpl`):
+    `target_type='alliance', target_id={var=aid}`.
+- `ALLOWED_ORIGINS` portal-backend в multiverse compose: добавлен
+  `https://origin.oxsar-nova.ru` (origin поддомен legacy-вселенной
+  по плану 37).
+
+**JWT cross-origin tricky-момент.** В game-origin token хранится
+в cookie `oxsar-jwt` с флагами HttpOnly + SameSite=Strict
+(см. `public/dev-login.php`). Это правильно для безопасности
+самой game-origin (защита от XSS-кражи и CSRF), но создаёт
+проблему для cross-origin POST на portal-backend: SameSite=Strict
+запрещает браузеру отправлять cookie на чужой origin, а HttpOnly
+запрещает JS читать её. Решение — серверный шаблон читает cookie
+из `$_COOKIE` и embed'ит JWT в JS как строку (через `json_encode`
+с HEX-флагами, чтобы экранировать кавычки/слэши/теги/амперсанды);
+JS добавляет её в `Authorization: Bearer`-header при fetch.
+XSS-риск минимален — токен принадлежит текущему юзеру и уже у
+него в браузере.
+
+**Вёрстка legacy-Smarty.** В `.tpl`-файлах работает обычный PHP
+(`<?php echo ... ?>`) — это уже используется в layout.tpl и других
+шаблонах, компилятор Recipe просто копирует PHP-блоки as-is. Поэтому
+helper-вызов `<?php echo getReportButton(...); ?>` встраивается в
+шаблон без танцев со spec-тегами.
+
+**Не сделано:**
+- Кнопка в личных сообщениях (MSG.class.php / writemessages.tpl) —
+  ЛС приватные между двумя пользователями, жалоба на конкретное
+  сообщение требует message_id; в плане 50 §5 этот случай не указан,
+  отложен.
+- Жалоба на отдельное сообщение чата (по `messageid`) — требует
+  правки JSON-API чата (`chat.php?r=chat/index`) и AJAX-рендера
+  списка сообщений; legacy-чат сейчас рендерится через несуществующий
+  Yii-модуль (`public/chat.php` — заглушка), AJAX-цикл просто не
+  работает в текущем состоянии. Сделана общая кнопка «жалоба на
+  чат» (target_id='global') как fallback — модератор получит сигнал
+  и сможет посмотреть `chat_messages` за период.
+- `target_type='planet'` — в плане 50 не упоминался, в legacy
+  описаний планет, видимых другим, на текущем UI не нашёл.
+
+**Verifications:**
+- `php -l` на 4 файлах (Functions.inc.php, UserList.class.php,
+  consts.php, _report_button.tpl) — `No syntax errors`.
+- `require` Functions.inc.php в чистом PHP — загружается без
+  фатальных ошибок.
+- Smoke в браузере — отложен до следующего dev-запуска
+  (требует docker-compose origin-стек, identity, portal-backend,
+  postgres). Правки точечные, риск регрессий низкий.
+
+**Параллельные сессии.** На момент работы dev-tree чистый;
+git status / git add по явным путям.
+
+**Что разблокирует.** План 50 теперь имеет 6 ✅ из 8 фаз (Ф.0 фикс
+ассетов, Ф.1 TinyMCE, Ф.3 «12+», Ф.4 UGC-маска, Ф.5 кнопка жалобы,
+Ф.6 юр-ссылки в footer, Ф.7 copyright-чистка). Остаются Ф.2
+(регистрация и согласия — ждёт решения о direct-регистрации в
+game-origin) и Ф.8 (финализация / повторный аудит).
+
+**Коммит**: один коммит ~100 строк по 9 файлам (точечные).

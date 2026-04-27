@@ -147,6 +147,14 @@ defined('DB_HOST') || require_once(dirname(__FILE__)."/../src/bd_connect_info.ph
 @include_once(dirname(__FILE__)."/consts.local.php");
 
 defined('DEV_MODE') || define('DEV_MODE', true);
+
+// План 50 Ф.5: portal-backend для централизованных жалоб (POST /api/reports).
+// В prod — https://oxsar-nova.ru, в dev — http://localhost:8090.
+// Можно переопределить в consts.local.php или через env PORTAL_BASE_URL.
+defined('PORTAL_BASE_URL') || define(
+    'PORTAL_BASE_URL',
+    getenv('PORTAL_BASE_URL') ?: (DEV_MODE ? 'http://localhost:8090' : 'https://oxsar-nova.ru')
+);
 defined('PASSWORD_SALT') || define('PASSWORD_SALT', 'Ac5YemeiToy7htho');
 
 defined('CLIENT_JS_VERSION') || define('CLIENT_JS_VERSION', OXSAR_VERSION.CLIENT_VERSION.rand());

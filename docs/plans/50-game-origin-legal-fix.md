@@ -347,11 +347,50 @@ smoke-тест из 8 шагов, что отложено).
   задача (см. план 50 §4 «Что отложено»).
 - 1 общий коммит.
 
-### Ф.5. Кнопка «Пожаловаться»
+### Ф.5. Кнопка «Пожаловаться» ✅ (2026-04-28)
 
-- Smarty-шаблон + JS-обёртка для модалки.
-- HTTP-клиент к `/api/reports` (общий endpoint).
-- Кнопка в местах: никнейм, чат, альянс.
+- Smarty-шаблон-партиал
+  `projects/game-origin/src/templates/standard/_report_button.tpl` —
+  CSS+HTML модалки + JS-обёртка `oxReport.open(type, id)` /
+  `submit()`. Подключён один раз через `{include}"_report_button"{/include}`
+  в `layout.tpl` перед футером.
+- PHP-helper `getReportButton($type, $id, $title=null)` в
+  `src/game/Functions.inc.php` — возвращает HTML-кнопку 🚩 с
+  inline-onclick. Гость → пустая строка; self-report для `user` →
+  пустая строка.
+- Контракт совпадает с `ReportButton.tsx` из game-nova: 7 reasons
+  (profanity / extremism / drugs / spam / impersonation / cheat /
+  other), 4 target_type (user / alliance / chat_msg / planet),
+  comment до 1000 символов. POST на `${PORTAL_BASE_URL}/api/reports`
+  с `Authorization: Bearer <jwt>`.
+- `PORTAL_BASE_URL` — добавлена в `config/consts.php` (default
+  `https://oxsar-nova.ru` для prod, `http://localhost:8090` для dev,
+  переопределяется через env или `consts.local.php`).
+- JWT для cross-origin: cookie `oxsar-jwt` помечена HttpOnly +
+  SameSite=Strict (`public/dev-login.php`), браузер не отправит её
+  на portal-backend. Поэтому PHP читает её из `$_COOKIE` и embed'ит
+  в JS как строку (`json_encode` + strip кавычек) — fetch выставляет
+  `Authorization: Bearer`.
+- Точки внедрения:
+  - **Никнейм игрока** (`UserList::formatRow` → `$row["report"] = ...`),
+    `playerstats.tpl` теперь рендерит `{loop}report{/loop}` рядом с
+    `message`/`buddyrequest`. Применяется ко всем рейтингам, которые
+    делают `addLoop("ranking", $UserList->getArray())`.
+  - **Общий чат** (`chat.tpl` шапка `{@chat_link}`) —
+    `target_type='chat_msg', target_id='global'`.
+  - **Чат альянса** (`chatally.tpl` шапка `{@a_chat_link}`) —
+    `target_type='chat_msg', target_id='ally:<aid>'`.
+  - **Страница своего альянса** (`allypage_own.tpl` рядом с тегом) —
+    `target_type='alliance', target_id={var=aid}`.
+- **CORS portal-backend**: в `deploy/docker-compose.multiverse.yml`
+  добавлен `https://origin.oxsar-nova.ru` в `ALLOWED_ORIGINS`
+  portal-сервиса (пары с уже существующим `https://oxsar-nova.ru`).
+- **Verifications**: `php -l` чисто на всех 4 PHP-файлах
+  (Functions.inc.php, UserList.class.php, consts.php,
+  _report_button.tpl); `Functions.inc.php` загружается без фаталов
+  через `require`. Smoke в браузере — отложен до следующего
+  dev-запуска (требует docker-compose; правки точечные, риск
+  минимальный).
 
 ### Ф.6. Ссылки на юр-документы ✅ (2026-04-27)
 

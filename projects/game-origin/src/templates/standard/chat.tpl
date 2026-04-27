@@ -187,7 +187,7 @@ $(function(){
 
 <table class="ntable">
 	<thead><tr>
-		<th width="50%"><center id='chat_link_for_tutorial'>{@chat_link}</center></th>
+		<th width="50%"><center id='chat_link_for_tutorial'>{@chat_link} <?php /* план 50 Ф.5 */ echo getReportButton('chat_msg', 'global', 'Пожаловаться на чат'); ?></center></th>
 		<th width="50%"><center>{@a_chat_link}</center></th>
 	</tr></thead>
 </table>

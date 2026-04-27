@@ -26,7 +26,7 @@
 	<tbody>{foreach[ranking]}<tr>
 		<td>{loop}rank{/loop}</td>
 		<td>{if[ $row["premium_seller"] ]}{loop=premium_seller}&nbsp;{/if}{loop}username_link{/loop}{if[$row["user_status_long"] != ""]} ({loop}user_status_long{/loop}){/if}</td>
-		<td class="center" nowrap="nowrap">{if[$row["userid"] != Core::getUser()->get("userid")]}{perm[CAN_MODERATE_USER]}{loop}moderator{/loop} {/perm}{loop}message{/loop} {loop}buddyrequest{/loop}{/if}</td>
+		<td class="center" nowrap="nowrap">{if[$row["userid"] != Core::getUser()->get("userid")]}{perm[CAN_MODERATE_USER]}{loop}moderator{/loop} {/perm}{loop}message{/loop} {loop}buddyrequest{/loop} {loop}report{/loop}{/if}</td>
 		<td>{loop}alliance{/loop}</td>
 		<td>{loop}points{/loop}</td>
 		<td>{loop}position{/loop}</td>

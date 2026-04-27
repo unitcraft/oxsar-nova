@@ -439,6 +439,8 @@ var galaxy_distance_mult = 1;
 
 <form method="post" id="planetSelection" action="{@formaction}" style="display: none;"><input type="hidden" name="planetid" value="0" id="planetid" /></form>
 
+{include}"_report_button"{/include}
+
 <div class="oxsar-footer">
 	<div class="age-rating" title="Возрастная категория 12+">12+</div>
 	<div class="legal-links">
