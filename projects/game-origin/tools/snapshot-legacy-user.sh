@@ -52,6 +52,11 @@ USER_TABLES=(
   na_res_log na_res_transfer
 )
 
+# Group 1b: таблицы по user_id (с подчёркиванием)
+USER_ID_TABLES=(
+  na_notes
+)
+
 for tbl in "${USER_TABLES[@]}"; do
   echo "  dump $tbl WHERE userid=$USERID" >&2
   echo "-- $tbl" >> "$OUT"
@@ -62,6 +67,23 @@ for tbl in "${USER_TABLES[@]}"; do
     }
   echo "" >> "$OUT"
 done
+
+for tbl in "${USER_ID_TABLES[@]}"; do
+  echo "  dump $tbl WHERE user_id=$USERID" >&2
+  echo "-- $tbl" >> "$OUT"
+  docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+    --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+    --where="user_id=$USERID" "$tbl" 2>/dev/null >> "$OUT" || true
+  echo "" >> "$OUT"
+done
+
+# na_message — фильтр по receiver (нашему юзеру) + sender
+echo "  dump na_message WHERE receiver=$USERID OR sender=$USERID" >&2
+echo "-- na_message" >> "$OUT"
+docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+  --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+  --where="receiver=$USERID OR sender=$USERID" na_message 2>/dev/null >> "$OUT" || true
+echo "" >> "$OUT"
 
 # Группа 2: таблицы где фильтр по planetid IN (...). Только planetid —
 # moonid есть только у na_galaxy (см. отдельную обработку ниже).
@@ -114,6 +136,76 @@ if [ -n "$ALLY_AID" ]; then
       --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
       --where="aid=$ALLY_AID AND userid != $USERID" na_user2ally 2>/dev/null >> "$OUT" || true
   fi
+  echo "" >> "$OUT"
+fi
+
+# Группа 3.5: Stock — все брокеры биржи + активные лоты + связанные планеты/юзеры/galaxy
+
+# Все брокеры биржи (na_exchange)
+echo "  dump na_exchange (all brokers, ~63 rows)" >&2
+echo "-- na_exchange (all brokers)" >> "$OUT"
+docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+  --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+  na_exchange 2>/dev/null >> "$OUT" || true
+
+echo "  dump na_exchange_lots WHERE status IN (1,5)" >&2
+echo "-- na_exchange_lots (all active for Stock page)" >> "$OUT"
+docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+  --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+  --where="status IN (1,5)" na_exchange_lots 2>/dev/null >> "$OUT" || true
+echo "" >> "$OUT"
+
+# Юзеры/планеты/galaxy владельцев активных лотов
+LOT_PLANETIDS=$(docker exec "$LEGACY_CONTAINER" mysql -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+  -N -B -e "SELECT GROUP_CONCAT(DISTINCT planetid) FROM na_exchange_lots WHERE status IN (1,5)" 2>/dev/null)
+if [ -n "$LOT_PLANETIDS" ]; then
+  echo "  dump na_planet+na_galaxy for lot-owners" >&2
+  echo "-- na_planet (Stock lot owners)" >> "$OUT"
+  docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+    --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+    --where="planetid IN ($LOT_PLANETIDS) AND userid != $USERID" na_planet 2>/dev/null >> "$OUT" || true
+
+  echo "-- na_galaxy (Stock lot owner planets)" >> "$OUT"
+  docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+    --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+    --where="planetid IN ($LOT_PLANETIDS)" na_galaxy 2>/dev/null >> "$OUT" || true
+
+  # И их юзеров (если ещё не вытащены)
+  LOT_USERIDS=$(docker exec "$LEGACY_CONTAINER" mysql -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+    -N -B -e "SELECT GROUP_CONCAT(DISTINCT userid) FROM na_planet WHERE planetid IN ($LOT_PLANETIDS) AND userid IS NOT NULL" 2>/dev/null)
+  if [ -n "$LOT_USERIDS" ]; then
+    echo "-- na_user (Stock lot owners)" >> "$OUT"
+    docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+      --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+      --where="userid IN ($LOT_USERIDS) AND userid != $USERID" na_user 2>/dev/null >> "$OUT" || true
+  fi
+fi
+echo "" >> "$OUT"
+
+# Группа 3.6: Alliance — расширенные таблицы. У каждой свой WHERE.
+if [ -n "$ALLY_AID" ]; then
+  echo "  dump alliance extended tables (allyrank, applications, relationships)" >&2
+
+  echo "-- na_allyrank WHERE aid=$ALLY_AID" >> "$OUT"
+  docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+    --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+    --where="aid=$ALLY_AID" na_allyrank 2>/dev/null >> "$OUT" || true
+
+  echo "-- na_allyapplication WHERE aid=$ALLY_AID" >> "$OUT"
+  docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+    --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+    --where="aid=$ALLY_AID" na_allyapplication 2>/dev/null >> "$OUT" || true
+
+  echo "-- na_ally_relationships WHERE rel1/rel2=$ALLY_AID" >> "$OUT"
+  docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+    --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+    --where="rel1=$ALLY_AID OR rel2=$ALLY_AID" na_ally_relationships 2>/dev/null >> "$OUT" || true
+
+  echo "-- na_ally_relationships_application WHERE candidate_ally/request_ally=$ALLY_AID" >> "$OUT"
+  docker exec "$LEGACY_CONTAINER" mysqldump -u"$LEGACY_USER" -p"$LEGACY_PASS" "$LEGACY_DB" \
+    --no-create-info --skip-extended-insert --skip-comments --hex-blob --complete-insert \
+    --where="candidate_ally=$ALLY_AID OR request_ally=$ALLY_AID" na_ally_relationships_application 2>/dev/null >> "$OUT" || true
+
   echo "" >> "$OUT"
 fi
 
