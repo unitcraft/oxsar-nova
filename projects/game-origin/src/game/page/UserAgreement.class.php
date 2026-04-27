@@ -39,24 +39,40 @@ class UserAgreement extends Page
 	
 	protected function actionAgree()
 	{
-		User_YII::model()->updateByPk( $_SESSION["userid"] ?? 0, array( 'user_agreement_read' => time() ) );
+		// План 37.5d.5#5: replaced User_YII::model()->updateByPk()
+		sqlUpdate("user", array("user_agreement_read" => time()),
+			"userid=".sqlVal($_SESSION["userid"] ?? 0));
 		doHeaderRedirection("game.php/Main", false);
 	}
-	
+
 	protected function getChildAgreements( $id = NULL, $parent_depth_str = "", $logic_depth = 0 )
 	{
-		$criteria	= new CDbCriteria(array(
-			'condition'	=> 'parent_id ' . ( $id == NULL ? 'IS' : '=' ) . ' :pid',
-			'order'		=> 'display_order ASC, id ASC',
-		));
-		$criteria->addCondition('lang = :lid');
-		$criteria->params = array(':lid' => ($_SESSION['languageid'] ?? DEF_LANGUAGE_ID), ':pid' => $id);
-		$agreements	= UserAgreement_YII::model()->findAll($criteria);
-		if(!$agreements && ($_SESSION['languageid'] ?? DEF_LANGUAGE_ID) != DEF_LANGUAGE_ID)
+		// План 37.5d.5#5: replaced UserAgreement_YII + CDbCriteria.
+		// Логика: ищем строки na_user_agreement с указанным parent_id (или
+		// IS NULL для корня) и lang = текущий. Если для текущего языка ничего
+		// нет — fallback на DEF_LANGUAGE_ID.
+		$lang = $_SESSION['languageid'] ?? DEF_LANGUAGE_ID;
+		$parent_clause = ($id === NULL) ? 'parent_id IS NULL' : 'parent_id=' . sqlVal($id);
+
+		$loadAgreements = function($lang_id) use ($parent_clause) {
+			$rows = array();
+			$result = sqlSelect("user_agreement", "*", "",
+				$parent_clause . " AND lang=" . sqlVal($lang_id),
+				"display_order ASC, id ASC");
+			while($row = sqlFetch($result))
+			{
+				$rows[] = $row;
+			}
+			sqlEnd($result);
+			return $rows;
+		};
+
+		$agreements = $loadAgreements($lang);
+		if(!$agreements && $lang != DEF_LANGUAGE_ID)
 		{
-			$criteria->params[':lid'] = DEF_LANGUAGE_ID;
-			$agreements	= UserAgreement_YII::model()->findAll($criteria);
+			$agreements = $loadAgreements(DEF_LANGUAGE_ID);
 		}
+
 		$i = 1;
 		$result = array();
 		foreach( $agreements as $key => $agreement )

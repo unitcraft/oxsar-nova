@@ -33,26 +33,30 @@ class Notepad extends Page
 	 */
 	protected function index()
 	{
-		$crit = new CDbCriteria();
-		$note = Notes_YII::model()->findByPk($_SESSION["userid"] ?? 0);
-		Core::getTPL()->assign('notes', $note->notes);
+		// План 37.5d.5#4: replaced Notes_YII::model()->findByPk() + CDbCriteria.
+		$user_id = $_SESSION["userid"] ?? 0;
+		$notes = sqlSelectField("notes", "notes", "", "user_id=".sqlVal($user_id));
+		Core::getTPL()->assign('notes', $notes ?? '');
 		Core::getTPL()->assign('formaction', socialUrl(RELATIVE_URL . 'game.php/SaveNotes'));
 		Core::getTPL()->display('notes');
 		return $this;
 	}
-	
+
 	protected function saveNotes($notes = '')
 	{
 		if( trim($notes) )
 		{
-			$note = Notes_YII::model()->findByPk($_SESSION["userid"] ?? 0);
-			if( !$note )
+			// План 37.5d.5#4: replaced Notes_YII active record (findByPk + new + save).
+			$user_id = $_SESSION["userid"] ?? 0;
+			$existing = sqlSelectField("notes", "user_id", "", "user_id=".sqlVal($user_id));
+			if( $existing !== null )
 			{
-				$note = new Notes_YII();
-				$note->user_id = $_SESSION["userid"] ?? 0;
+				sqlUpdate("notes", array("notes" => $notes), "user_id=".sqlVal($user_id));
 			}
-			$note->notes= $notes;
-			$note->save(false);
+			else
+			{
+				sqlInsert("notes", array("user_id" => $user_id, "notes" => $notes));
+			}
 		}
 		// return $this->index();
 		doHeaderRedirection("game.php/Notepad", false);
