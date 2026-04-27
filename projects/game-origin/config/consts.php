@@ -148,13 +148,25 @@ defined('DB_HOST') || require_once(dirname(__FILE__)."/../src/bd_connect_info.ph
 
 defined('DEV_MODE') || define('DEV_MODE', true);
 
-// План 50 Ф.5: portal-backend для централизованных жалоб (POST /api/reports).
-// В prod — https://oxsar-nova.ru, в dev — http://localhost:8090.
-// Можно переопределить в consts.local.php или через env PORTAL_BASE_URL.
-defined('PORTAL_BASE_URL') || define(
-    'PORTAL_BASE_URL',
-    getenv('PORTAL_BASE_URL') ?: (DEV_MODE ? 'http://localhost:8090' : 'https://oxsar-nova.ru')
+// План 50 Ф.5: URL'ы portal'а для legacy-вселенной.
+//
+// PORTAL_API_URL — backend API (POST /api/reports для жалоб). В dev
+// слушает 8090, в prod проксируется через oxsar-nova.ru/api/*.
+//
+// PORTAL_WEB_URL — frontend страницы (/offer, /privacy и др.). В dev
+// portal-frontend крутится на 5174, в prod — тот же oxsar-nova.ru.
+//
+// PORTAL_BASE_URL — backward-compat alias на API URL (был добавлен
+// первым; не удаляем, чтобы не ломать другие использования).
+defined('PORTAL_API_URL') || define(
+    'PORTAL_API_URL',
+    getenv('PORTAL_API_URL') ?: (DEV_MODE ? 'http://localhost:8090' : 'https://oxsar-nova.ru')
 );
+defined('PORTAL_WEB_URL') || define(
+    'PORTAL_WEB_URL',
+    getenv('PORTAL_WEB_URL') ?: (DEV_MODE ? 'http://localhost:5174' : 'https://oxsar-nova.ru')
+);
+defined('PORTAL_BASE_URL') || define('PORTAL_BASE_URL', PORTAL_API_URL);
 defined('PASSWORD_SALT') || define('PASSWORD_SALT', 'Ac5YemeiToy7htho');
 
 defined('CLIENT_JS_VERSION') || define('CLIENT_JS_VERSION', OXSAR_VERSION.CLIENT_VERSION.rand());
