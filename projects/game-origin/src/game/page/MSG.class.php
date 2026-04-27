@@ -292,11 +292,12 @@ class MSG extends Page
 			if(count($reports) > 0)
 			{
 				Logger::addMessage("MESSAGES_REPORTED", "success");
+				// 37.7.3: NS::getUser()->get('username') уже эскейпится в User::get (план 37.7.1)
 				Core::getLang()->assign("reportSender", NS::getUser()->get("username"));
 				foreach($reports as $report)
 				{
-					Core::getLang()->assign("reportMessage", $report["message"]);
-					Core::getLang()->assign("reportUser", $report["username"]);
+					Core::getLang()->assign("reportMessage", htmlspecialchars((string)$report["message"], ENT_QUOTES, 'UTF-8'));
+					Core::getLang()->assign("reportUser", htmlspecialchars((string)$report["username"], ENT_QUOTES, 'UTF-8'));
 					Core::getLang()->assign("reportSendTime", Date::timeToString(1, $report["time"], "", false));
 					$message = Core::getLang()->get("MODERATOR_REPORT_MESSAGE");
 					$subject = Core::getLang()->get("MODERATOR_REPORT_SUBJECT");
@@ -373,6 +374,8 @@ class MSG extends Page
         $read_ids = array();
         while($row = sqlFetch($result))
         {
+            // 37.7.3: XSS — username из user-controlled, эскейпать перед использованием в HTML
+            $row["username"] = htmlspecialchars((string)$row["username"], ENT_QUOTES, 'UTF-8');
             $read_ids[] = $row["msgid"];
             $mid = $row["msgid"];
             $m[$mid]["odd"] = $odd ? ' class="odd"' : "";
