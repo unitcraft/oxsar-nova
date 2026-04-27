@@ -1180,6 +1180,136 @@ ResearchLab=12. Поправлено в этом же commit (см. план 29)
 **План возврата**: не требуется.
 
 
+## 2026-04-27 — План 36 Ф.11–Ф.12: auth-service подключён, упрощения до прода
+
+### 1. RSA-ключ генерируется в контейнере при первом старте
+**Где**: `projects/auth/backend/cmd/server/main.go::run` через `jwtrs.LoadOrGenerateKey`,
+volume `auth-rsa-key` в `deploy/docker-compose.yml`.
+**Что**: если файл `/var/lib/auth/rsa_key.pem` отсутствует — auth-service сам
+генерирует RSA-2048 и пишет в volume.
+**Почему**: для dev удобно (не надо мудохаться с external secret каждый раз).
+В `deploy/docker-compose.multiverse.yml` ключ уже подкладывается из
+`/run/secrets/auth_rsa_key.pem`, но процесс выдачи ключа не задокументирован.
+**Риск**: утечка `auth-rsa-key` volume = компрометация всех JWT.
+**План возврата** (до прода): docs/ops/auth-key-management.md — генерация ключа
+наружу (openssl), подкладка через Docker secret (compose) или Vault/KMS, ротация
+через два-ключевой `KeySet`. Удалить fallback на генерацию из `LoadOrGenerateKey`,
+оставить только Load (если файла нет — fail fast).
+**Приоритет**: H.
+
+### 2. Нет ротации RSA-ключей
+**Где**: `projects/auth/backend/pkg/jwtrs/jwtrs.go::Issuer/Verifier`.
+**Что**: в JWKS-выдаче и подписи участвует один ключ. При компрометации сменить
+нельзя без выкидывания всех живых JWT.
+**Почему**: одного ключа достаточно для MVP, ротация — не первоочередное.
+**План возврата**: `KeySet` с `current` (подписывает новые токены) и `previous`
+(участвует в верификации в течение grace-period 24h). JWKS отдаёт оба `kid`.
+Cron-task раз в N дней генерирует новый, сдвигает current→previous, через 24h
+удаляет старый.
+**Приоритет**: M.
+
+### 3. Legacy HS256 fallback всё ещё в `cmd/server/main.go` game-nova
+**Где**: `projects/game-nova/backend/cmd/server/main.go:151–164`,
+`internal/auth/handler.go::Register/Login/Refresh`,
+`internal/auth/service.go::register/login`.
+**Что**: если `AUTH_JWKS_URL` не задан, server откатывается на HS256 с
+`JWT_SECRET`. В Ф.11 я убрал JWT_SECRET из compose, но сам **код** legacy-режима
+живёт. Если кто-то запустит без AUTH_JWKS_URL и с дефолтным секретом — security-bug.
+Тесты на старые `Register/Login/Refresh` тоже остались (зелёные, проверяют
+мёртвый код).
+**Почему**: чистка legacy кода — большая правка (зависимости через `Service`,
+referral, rate-limiter, тесты), отложена в финальный sweep после Ф.12.
+**План возврата**: удалить целиком: маршруты `/api/auth/login|register|refresh`,
+методы `Service.Register/Login/Refresh`, `JWTIssuer`, `password.go::HashPassword`
+(unused), `cfg.Auth.JWTSecret`. В `main.go` `useJWKS` всегда true; если
+`AUTH_JWKS_URL` пустой — fail fast.
+**Приоритет**: H (security risk).
+
+### 4. EnsureUserMiddleware не записывает `universe_memberships` в auth-db
+**Где**: `projects/game-nova/backend/internal/auth/ensure_user.go::bootstrapNewUser`.
+**Что**: при lazy-create в game-db мы вызываем `starter.Assign` и `automsg.Send`,
+но НЕ дёргаем `POST /auth/universes/register` в auth-service. Поэтому таблица
+`universe_memberships` в auth-db остаётся пустой, а JWT при выдаче имеет
+`active_universes: []`.
+**Почему**: я забыл это сделать. План 36 Ф.12 явно указывал.
+**Эффект**: Universe Switcher на фронте не знает, в каких вселенных юзер уже играл —
+все показываются как «новые».
+**План возврата**: в `bootstrapNewUser` после успешного `starter.Assign` сделать
+HTTP POST на `auth-service:9000/auth/universes/register` с body
+`{user_id, universe_id}`. Новая env `AUTH_INTERNAL_URL` (отличается от
+JWKS_URL — может быть private VPC адресом).
+**Приоритет**: H (блокирует Universe Switcher логику в multi-стек проде).
+
+### 5. Email в JWT claims
+**Где**: `pkg/jwtrs/jwtrs.go::Claims.Email` во всех 3 модулях.
+**Что**: добавлено поле `email` в access + refresh токены, чтобы lazy-create
+в game-db мог сделать INSERT без HTTP-вызова `/auth/me` в auth-service.
+**Почему**: одна строка в БД быстрее, чем round-trip к соседнему сервису.
+**Риск**: PII (email) попадает в логи если кто-то запишет токен дословно.
+GDPR/privacy: токен не должен содержать персональные данные больше
+необходимого минимума.
+**План возврата**: убрать `Email` из claims. EnsureUserMiddleware при
+`RowsAffected==1` делает HTTP `GET /auth/me` к auth-service (token forwarded),
+получает email, делает второй INSERT-апдейт (UPDATE users SET email=...).
+Альтернатива — не хранить email в game-db вообще (он живёт в auth-db, для
+отображения брать оттуда по запросу).
+**Приоритет**: M.
+
+### 6. `bootstrapNewUser` асинхронный и без ретраев
+**Где**: `projects/game-nova/backend/internal/auth/ensure_user.go`.
+**Что**: `starter.Assign` и `automsg.Send` запускаются в `go func()` после
+`INSERT users`. Если starter падает — юзер в `users` есть, планеты нет.
+Lazy-retry на следующем запросе не реализован.
+**Почему**: middleware не место для тяжёлой логики, async — единственная адекватная
+опция.
+**План возврата**: в `EnsureUserMiddleware` дополнительная проверка: если
+юзер существует, но `cur_planet_id IS NULL` — выполнить `starter.Assign`
+повторно (тоже async). Альтернатива — periodic background-job, который
+сканирует подвешенных юзеров.
+**Приоритет**: M.
+
+### 7. Голосование за feedback в portal не списывает кредиты
+**Где**: `projects/portal/backend/internal/portalsvc/handler.go::VoteFeedback`.
+**Что**: `POST /api/feedback/{id}/vote` инкрементирует `vote_count`, но
+не дёргает `auth-service POST /auth/credits/spend`. ADR в плане 36 говорил
+«100 кредитов за голос».
+**Почему**: Ф.7 (Global Credits + платёжные webhook'и) ещё не сделана.
+**План возврата**: Ф.7. До неё голосование бесплатное.
+**Приоритет**: H (блокер для запуска в прод).
+
+### 8. Refresh-токен не отзывается при logout
+**Где**: `projects/auth/backend/cmd/server/main.go` — нет роута `/auth/logout`,
+`internal/authsvc/handler.go` — нет метода `Logout`.
+**Что**: refresh-токен (TTL 720h = 30 дней) живёт до истечения. Logout на фронте
+просто чистит localStorage; украденный refresh-токен можно использовать.
+**Почему**: revocation требует Redis-хранилища revoked-jti, не сделано.
+**План возврата**: реализовать `POST /auth/logout` — кладёт `jti` refresh-токена
+в Redis с TTL=refreshTTL. Verifier при `kind="refresh"` проверяет наличие jti
+в blacklist.
+**Приоритет**: H (security, особенно если один аккаунт у нескольких людей).
+
+### 9. Нет rate-limiting на `/auth/login` и `/auth/register`
+**Где**: `projects/auth/backend/cmd/server/main.go` — middleware-цепочка в `r.Use(...)`
+не содержит rate-limiter.
+**Что**: brute-force атака на login не блокируется. В game-nova был
+`auth.NewIPRateLimiter` (20 req/min/IP), я его убрал в Ф.12 как мёртвый код,
+в auth-service ничего не появилось.
+**Почему**: фокус был на функциональности, не security.
+**План возврата**: portировать `IPRateLimiter` в `oxsar/auth/internal/auth`
+(либо использовать готовое — `httprate`, `ulule/limiter`). Применить к
+`POST /auth/login` (строже — 5/min) и `POST /auth/register` (10/min).
+**Приоритет**: H.
+
+### 10. Бинарники game-nova в git
+**Где**: `projects/game-nova/backend/{server,worker,*.exe,testseed.exe,...}`
+отслеживаются git-ом (`git ls-files | grep -E "backend/(server|worker)$"`).
+**Что**: `go build`-артефакты закоммичены. Не моё (старая ошибка), но мешают.
+**Почему**: исторически.
+**План возврата**: `git rm --cached projects/game-nova/backend/{server,worker,*.exe}`
++ добавить в `.gitignore` правило `projects/*/backend/{server,worker}`,
+`*.exe` уже есть в .gitignore.
+**Приоритет**: L.
+
 ### 11. MySQL strict-mode отключён в game-origin docker-compose
 **Где**: `projects/game-origin/docker/docker-compose.yml` — `mysql.command: --sql-mode=...` без `STRICT_TRANS_TABLES`
 **Что**: MySQL 5.7 по умолчанию в strict-режиме; legacy SQL писалось до этого
