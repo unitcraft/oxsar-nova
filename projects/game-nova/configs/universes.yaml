@@ -7,6 +7,7 @@ universes:
     name: "Nova"
     description: "Основная вселенная. Скорость ×1, без дефматча."
     subdomain: "uni01"            # uni01.oxsar-nova.ru
+    dev_url: "http://localhost:5173"  # dev frontend port (план 36 Ф.8)
     status: "active"              # active | maintenance | upcoming | retired
     speed: 0.75
     deathmatch: false
@@ -22,7 +23,8 @@ universes:
     name: "Speed"
     description: "Быстрая вселенная. Скорость ×4, ускоренные исследования."
     subdomain: "uni02"            # uni02.oxsar-nova.ru
-    status: "upcoming"
+    dev_url: "http://localhost:5175"  # dev frontend port (план 36 Ф.8)
+    status: "active"
     speed: 4.0
     deathmatch: false
     max_planets: 0

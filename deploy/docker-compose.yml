@@ -119,6 +119,116 @@ services:
       retries: 3
       start_period: 10s
 
+  # ── Universe 02: Speed (план 36 Ф.8) ──────────────────────────────────
+  # Параллельный стек uni02 с GAMESPEED=4. Используется отдельная БД
+  # (uni02-db) и Redis logical-DB (5) — полная изоляция от uni01 (RAM
+  # дороже, но соответствует прод-архитектуре multiverse.yml и позволяет
+  # тестировать handoff E2E с реальным переездом юзера между БД).
+
+  uni02-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: oxsar
+      POSTGRES_PASSWORD: oxsar
+      POSTGRES_DB: oxsar
+    ports: ["5437:5432"]
+    volumes:
+      - uni02-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oxsar"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  uni02-migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.migrate
+    depends_on:
+      uni02-db:
+        condition: service_healthy
+    environment:
+      DB_URL: postgres://oxsar:oxsar@uni02-db:5432/oxsar?sslmode=disable
+      MIGRATE_DIR: /migrations/game-nova
+    restart: "no"
+
+  uni02-backend:
+    build:
+      context: ..
+      dockerfile: projects/game-nova/backend/Dockerfile
+    depends_on:
+      uni02-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      uni02-migrate:
+        condition: service_completed_successfully
+      auth-service:
+        condition: service_healthy
+    environment:
+      SERVER_ADDR: ":8080"
+      SERVER_ENV: dev
+      LOG_LEVEL: info
+      DB_URL: postgres://oxsar:oxsar@uni02-db:5432/oxsar?sslmode=disable
+      REDIS_URL: redis://redis:6379/5
+      AUTH_JWKS_URL: http://auth-service:9000
+      AUTH_SERVICE_URL: http://auth-service:9000
+      UNIVERSE_ID: uni02
+      # Скорость 4× — agressive timing для тестов (см. universes.yaml).
+      GAMESPEED: "4.0"
+      NUM_GALAXIES: "4"
+      NUM_SYSTEMS: "300"
+      PROTECTION_PERIOD: "43200"
+      CATALOG_DIR: /app/configs
+      I18N_DIR: /app/configs/i18n
+    ports: ["8082:8080"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  uni02-worker:
+    build:
+      context: ..
+      dockerfile: projects/game-nova/backend/Dockerfile
+    entrypoint: ["/app/worker"]
+    depends_on:
+      uni02-backend:
+        condition: service_started
+    environment:
+      DB_URL: postgres://oxsar:oxsar@uni02-db:5432/oxsar?sslmode=disable
+      REDIS_URL: redis://redis:6379/5
+      CATALOG_DIR: /app/configs
+      WORKER_METRICS_ADDR: ":9091"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9091/api/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  uni02-frontend:
+    build:
+      context: ..
+      dockerfile: projects/game-nova/frontend/Dockerfile
+    depends_on:
+      uni02-backend:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      billing-service:
+        condition: service_healthy
+    environment:
+      VITE_PROXY_TARGET: http://uni02-backend:8080
+      VITE_AUTH_TARGET: http://auth-service:9000
+      VITE_BILLING_TARGET: http://billing-service:9100
+    ports: ["5175:5173"]
+    volumes:
+      - ../projects/game-nova/frontend:/app
+      - uni02-frontend-node-modules:/app/node_modules
+
   frontend:
     build:
       context: ..
@@ -359,5 +469,7 @@ volumes:
   auth-db-data:
   auth-rsa-key:
   billing-db-data:
+  uni02-db-data:
   frontend-node-modules:
+  uni02-frontend-node-modules:
   portal-frontend-node-modules:
