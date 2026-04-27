@@ -7,3 +7,8 @@ docker/mysql_data/
 # Полный дамп legacy БД для dev — тяжёлый, не для коммита
 legacy_dump.sql
 *.dump.sql
+
+# Снимки legacy для UI-сравнения (содержат реальные emails/passwords/IP — PII).
+# Каждый разработчик генерит локально через tools/snapshot-legacy-user.sh.
+migrations/fixtures/test-user-snapshot.sql
+migrations/fixtures/*.snapshot.sql
