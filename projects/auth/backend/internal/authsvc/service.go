@@ -295,6 +295,7 @@ func (s *Service) issueTokens(ctx context.Context, u User) (jwtrs.Tokens, error)
 	return s.iss.Issue(jwtrs.IssueInput{
 		UserID:          u.ID,
 		Username:        u.Username,
+		Email:           u.Email,
 		GlobalCredits:   u.GlobalCredits,
 		ActiveUniverses: universes,
 		Roles:           u.Roles,

@@ -14,7 +14,12 @@ import (
 
 type ctxKey int
 
-const userIDKey ctxKey = 1
+const (
+	userIDKey ctxKey = 1
+	// План 36 Ф.12: lazy-create middleware читает username/email
+	// из RSA-claims, чтобы зеркалить юзера в game-db без HTTP-вызова в auth-service.
+	rsaClaimsKey ctxKey = 2
+)
 
 // Middleware проверяет Authorization: Bearer <access> и кладёт userID
 // в контекст. При отсутствии токена возвращает 401.
@@ -46,6 +51,10 @@ func Middleware(j *JWTIssuer) func(http.Handler) http.Handler {
 
 // RSAMiddleware — аналог Middleware, но верифицирует RSA-256 токены
 // выданные Auth Service. Используется когда AUTH_JWKS_URL задан.
+//
+// В context кладёт ОБА: userID (как Middleware) и полные claims —
+// чтобы EnsureUserMiddleware мог lazy-зеркалить юзера в game-db
+// (нужен username/email из claims). План 36 Ф.12.
 func RSAMiddleware(ver *jwtrs.Verifier) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -65,9 +74,17 @@ func RSAMiddleware(ver *jwtrs.Verifier) func(http.Handler) http.Handler {
 				return
 			}
 			ctx := context.WithValue(r.Context(), userIDKey, claims.Subject)
+			ctx = context.WithValue(ctx, rsaClaimsKey, claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// RSAClaims достаёт RSA-claims, положенные RSAMiddleware. Возвращает nil
+// и false если middleware не стоял (или был legacy HS256-вариант).
+func RSAClaims(ctx context.Context) (*jwtrs.Claims, bool) {
+	v, ok := ctx.Value(rsaClaimsKey).(*jwtrs.Claims)
+	return v, ok && v != nil
 }
 
 // UserID достаёт идентификатор пользователя, положенный Middleware.
