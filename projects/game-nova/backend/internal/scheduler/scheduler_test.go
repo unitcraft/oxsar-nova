@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/oxsar/nova/backend/pkg/metrics"
+	"oxsar/game-nova/pkg/metrics"
 )
 
 func newTestConfig(t *testing.T) *Config {

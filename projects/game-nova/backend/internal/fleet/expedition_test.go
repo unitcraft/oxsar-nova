@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/oxsar/nova/backend/pkg/rng"
+	"oxsar/game-nova/pkg/rng"
 )
 
 func TestCalcExpPower(t *testing.T) {

@@ -21,11 +21,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/config"
-	"github.com/oxsar/nova/backend/internal/galaxy"
-	"github.com/oxsar/nova/backend/internal/i18n"
-	"github.com/oxsar/nova/backend/internal/repo"
-	"github.com/oxsar/nova/backend/pkg/ids"
+	"oxsar/game-nova/internal/config"
+	"oxsar/game-nova/internal/galaxy"
+	"oxsar/game-nova/internal/i18n"
+	"oxsar/game-nova/internal/repo"
+	"oxsar/game-nova/pkg/ids"
 )
 
 // unitInterplanetary — id ракеты в ships (legacy UNIT_INTERPLANETARY_ROCKET).

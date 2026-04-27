@@ -38,15 +38,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/alien"
-	"github.com/oxsar/nova/backend/internal/artefact"
-	"github.com/oxsar/nova/backend/internal/battle"
-	"github.com/oxsar/nova/backend/internal/config"
-	"github.com/oxsar/nova/backend/internal/economy"
-	"github.com/oxsar/nova/backend/internal/event"
-	"github.com/oxsar/nova/backend/internal/i18n"
-	"github.com/oxsar/nova/backend/pkg/ids"
-	"github.com/oxsar/nova/backend/pkg/rng"
+	"oxsar/game-nova/internal/alien"
+	"oxsar/game-nova/internal/artefact"
+	"oxsar/game-nova/internal/battle"
+	"oxsar/game-nova/internal/config"
+	"oxsar/game-nova/internal/economy"
+	"oxsar/game-nova/internal/event"
+	"oxsar/game-nova/internal/i18n"
+	"oxsar/game-nova/pkg/ids"
+	"oxsar/game-nova/pkg/rng"
 )
 
 // unitStack — «плоская» запись в ships/defense/fleet_ships.

@@ -18,11 +18,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/oxsar/nova/backend/internal/economy"
-	"github.com/oxsar/nova/backend/internal/event"
-	"github.com/oxsar/nova/backend/internal/i18n"
-	"github.com/oxsar/nova/backend/internal/repo"
-	"github.com/oxsar/nova/backend/pkg/ids"
+	"oxsar/game-nova/internal/economy"
+	"oxsar/game-nova/internal/event"
+	"oxsar/game-nova/internal/i18n"
+	"oxsar/game-nova/internal/repo"
+	"oxsar/game-nova/pkg/ids"
 )
 
 type Service struct {

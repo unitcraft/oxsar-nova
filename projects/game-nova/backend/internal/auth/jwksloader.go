@@ -1,5 +1,12 @@
 package auth
 
+// DUPLICATE: этот файл скопирован между Go-модулями oxsar/game-nova,
+// oxsar/auth и oxsar/portal. При любом изменении синхронизируйте КОПИИ:
+//   - projects/game-nova/backend/internal/auth/jwksloader.go
+//   - projects/auth/backend/internal/auth/jwksloader.go
+//   - projects/portal/backend/internal/auth/jwksloader.go
+// Причина дубля: каждый домен — отдельный go.mod, без shared-модуля.
+
 import (
 	"context"
 	"fmt"
@@ -8,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oxsar/nova/backend/pkg/jwtrs"
+	"oxsar/game-nova/pkg/jwtrs"
 )
 
 // LoadVerifier загружает публичный ключ RSA с JWKS URL и возвращает Verifier.

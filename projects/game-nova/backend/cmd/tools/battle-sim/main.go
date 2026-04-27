@@ -24,8 +24,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/oxsar/nova/backend/internal/battle"
-	"github.com/oxsar/nova/backend/internal/config"
+	"oxsar/game-nova/internal/battle"
+	"oxsar/game-nova/internal/config"
 )
 
 func main() {

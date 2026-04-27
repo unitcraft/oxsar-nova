@@ -20,8 +20,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/i18n"
-	"github.com/oxsar/nova/backend/internal/repo"
+	"oxsar/game-nova/internal/i18n"
+	"oxsar/game-nova/internal/repo"
 )
 
 // AutoMsgSender — узкий интерфейс к automsg.SendDirect.

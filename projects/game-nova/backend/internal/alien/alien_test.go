@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oxsar/nova/backend/internal/battle"
-	"github.com/oxsar/nova/backend/internal/config"
-	"github.com/oxsar/nova/backend/pkg/rng"
+	"oxsar/game-nova/internal/battle"
+	"oxsar/game-nova/internal/config"
+	"oxsar/game-nova/pkg/rng"
 )
 
 // alienTestCatalog — минимальный каталог с alien-кораблями (id 200–204),

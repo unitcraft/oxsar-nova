@@ -13,7 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/repo"
+	"oxsar/game-nova/internal/repo"
 )
 
 type Service struct {

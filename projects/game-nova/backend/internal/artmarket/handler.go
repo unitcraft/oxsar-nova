@@ -8,9 +8,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/oxsar/nova/backend/internal/auth"
-	"github.com/oxsar/nova/backend/internal/httpx"
-	"github.com/oxsar/nova/backend/pkg/idempotency"
+	"oxsar/game-nova/internal/auth"
+	"oxsar/game-nova/internal/httpx"
+	"oxsar/game-nova/pkg/idempotency"
 )
 
 type Handler struct {

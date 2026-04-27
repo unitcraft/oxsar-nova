@@ -16,10 +16,10 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/oxsar/nova/backend/internal/artefact"
-	"github.com/oxsar/nova/backend/internal/config"
-	"github.com/oxsar/nova/backend/internal/repo"
-	"github.com/oxsar/nova/backend/internal/storage"
+	"oxsar/game-nova/internal/artefact"
+	"oxsar/game-nova/internal/config"
+	"oxsar/game-nova/internal/repo"
+	"oxsar/game-nova/internal/storage"
 )
 
 func main() {

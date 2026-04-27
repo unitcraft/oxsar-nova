@@ -9,7 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/oxsar/nova/backend/internal/httpx"
+	"oxsar/game-nova/internal/httpx"
 )
 
 // Handler — HTTP-адаптер к auth.Service.

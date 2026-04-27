@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/oxsar/nova/backend/internal/event"
+	"oxsar/game-nova/internal/event"
 )
 
 // RecalcAllScheduled — точка входа для scheduler'а (план 32 Ф.4).

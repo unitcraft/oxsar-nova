@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/oxsar/nova/backend/internal/httpx"
-	"github.com/oxsar/nova/backend/pkg/jwtrs"
+	"oxsar/auth/internal/httpx"
+	"oxsar/auth/pkg/jwtrs"
 	"github.com/redis/go-redis/v9"
 )
 

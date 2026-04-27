@@ -582,6 +582,116 @@ game/
 - `tsconfig.json`, `vite.config.ts`, `package.json` — если есть относительные пути
 - Go-импорты — module path остаётся `github.com/oxsar/nova/backend`, только физические пути меняются
 
+### Ф.10 — Разделение Go-модулей auth / portal / game-nova (½–1 день)
+
+После Ф.9 код auth-service и portal-backend физически живёт внутри
+`projects/game-nova/backend/` (общий `go.mod`, бинарники собираются вместе).
+Это нарушает доменную независимость: изменения в game-nova триггерят пересборку
+auth/portal, и наоборот.
+
+**Цель:** разнести по самостоятельным Go-модулям.
+
+#### Module paths
+
+Module path не обязан быть реальным URL — это идентификатор в монорепо.
+Принято: префикс `oxsar/`, после него — имя домена. Никакой `github.com`,
+никакой `nova` в путях.
+
+```
+projects/game-nova/backend/   module oxsar/game-nova   (был github.com/oxsar/nova/backend)
+projects/auth/backend/        module oxsar/auth
+projects/portal/backend/      module oxsar/portal
+```
+
+Переименование game-nova — это `sed`-замена `github.com/oxsar/nova/backend → oxsar/game-nova`
+во всех `.go`-файлах + `go.mod`. Делается одной командой, не 600 правок.
+
+#### Целевая структура
+
+```
+projects/game-nova/backend/
+  cmd/server/                ← бинарь /app/server
+  cmd/worker/                ← бинарь /app/worker
+  cmd/tools/...              ← CLI-утилиты
+  internal/...               (БЕЗ authsvc, portalsvc)
+  pkg/...
+  go.mod                     module oxsar/game-nova
+
+projects/auth/backend/
+  cmd/server/main.go         ← бинарь /app/server (был cmd/auth-service)
+  internal/authsvc/          (копия из game-nova)
+  internal/auth/             (только password.go — argon2 хеш)
+  internal/httpx/            (копия)
+  internal/repo/             (только tx.go — InTx обёртка)
+  internal/storage/          (копия)
+  internal/universe/         (копия)
+  pkg/ids/                   (копия)
+  pkg/jwtrs/                 (копия)
+  pkg/metrics/               (копия)
+  go.mod                     module oxsar/auth
+  Dockerfile
+
+projects/portal/backend/
+  cmd/server/main.go         ← бинарь /app/server (был cmd/portal)
+  internal/portalsvc/        (копия из game-nova)
+  internal/httpx/            (копия)
+  internal/repo/             (копия tx.go)
+  internal/storage/          (копия)
+  internal/universe/         (копия)
+  pkg/ids/                   (копия)
+  pkg/jwtrs/                 (копия)
+  pkg/metrics/               (копия)
+  go.mod                     module oxsar/portal
+  Dockerfile
+```
+
+Все три бинарника называются одинаково — `/app/server`. В compose
+различаются именем сервиса и Dockerfile-ом.
+
+#### Решение по shared-коду — вариант (b): дублировать минимум
+
+Без go workspace, без отдельного shared-модуля. Дубль ~600–800 строк
+shared-кода в каждом из двух новых доменов. Каждый файл-копия начинается
+с маркера:
+
+```go
+// DUPLICATE: этот файл скопирован между Go-модулями.
+// При изменении синхронизировать ВСЕ копии:
+//   - projects/game-nova/backend/<путь>
+//   - projects/auth/backend/<путь>
+//   - projects/portal/backend/<путь>
+// Причина дубля: каждый домен — отдельный go.mod, без shared-модуля.
+```
+
+Тесты (`*_test.go`) копируются вместе с пакетом — `go test ./...` в
+каждом модуле сразу проверяет, что копия не сломалась.
+
+**Почему не workspace/shared-модуль:** проект разрабатывается одним
+человеком, версионирование общего кода не нужно. Workspace в Docker-сборках
+ломает кеширование слоёв, требует `replace`-директив с относительными
+путями, ломается на CI. Дубль из ~10 файлов проще ментально.
+
+#### Что обновляется
+
+- 3 новых `go.mod` (auth, portal, game-nova переименовывается)
+- `deploy/docker-compose.yml` — `dockerfile: projects/auth/backend/Dockerfile`,
+  `projects/portal/backend/Dockerfile`
+- 2 новых Dockerfile (auth/backend, portal/backend) — копия
+  `game-nova/backend/Dockerfile` с поправленными путями и одним бинарником
+- Удалить из game-nova/backend: `cmd/auth-service/`, `cmd/portal/`,
+  `internal/authsvc/`, `internal/portalsvc/`
+- `Makefile` — entry-points game-nova (оставить как есть, auth/portal
+  собираются через `cd projects/auth/backend && go build ./cmd/server`)
+
+#### Acceptance
+
+- `go build ./...` зелёный во всех трёх модулях
+- `go test ./...` зелёный во всех трёх модулях
+- `docker compose -f deploy/docker-compose.yml up --build` поднимает все
+  сервисы, healthchecks проходят
+- `grep -rn "DUPLICATE" projects/auth projects/portal` показывает маркеры
+  во всех скопированных пакетах
+
 ### Ops: нагрузочный тест (отдельный тикет, ~1–2 дня)
 
 После Ф.8, до публичного анонса. Обновить [ops/vps-sizing.md](../ops/vps-sizing.md)
