@@ -16,7 +16,7 @@
 
 if(!defined('APP_ROOT_DIR')) { die('Hacking attempt detected.'); }
 
-class XMLObj
+class XMLObj implements \IteratorAggregate
 {
     /** @var \SimpleXMLElement */
     private $node;
@@ -24,6 +24,19 @@ class XMLObj
     public function __construct(\SimpleXMLElement $node)
     {
         $this->node = $node;
+    }
+
+    /**
+     * Итерация по дочерним element-узлам как XMLObj. Legacy-Recipe
+     * XMLObj был Iterable; rewrite (план 43 Ф.5) этот контракт потерял,
+     * из-за чего `foreach($menuXml as $first)` в Menu::generateMenu()
+     * становился no-op'ом и левое меню рендерилось пустым (Menu count=0).
+     * Восстановлено по аналогии с тем, как использует foreach Menu и
+     * другие потребители (PlanetCreator, Options).
+     */
+    public function getIterator(): \Iterator
+    {
+        return new \ArrayIterator($this->getChildren());
     }
 
     public function getAttribute($name)

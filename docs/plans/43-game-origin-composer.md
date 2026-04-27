@@ -226,3 +226,57 @@ Apache-2.0); файлы Recipe удалены из репозитория."
 точечным smoke-тестом. После выполнения GPL-конфликт фреймворка снят,
 PolyForm Noncommercial валидна для всего oxsar-nova, план 40 (CI license
 check) можно выполнять без блокировки.
+
+---
+
+## Постфактум: регрессия Ф.5 — XMLObj не Iterable (2026-04-27)
+
+**Симптом:** левое меню в game-origin рендерится пустым у авторизованного
+игрока — `<div id="leftMenu"><ul><li><nobr>Oxsar 2.14.2</nobr></li></ul>`,
+без 46 элементов навигации. Найдено визуально на скриншоте главной страницы
+во время работ по плану 50 Ф.4.
+
+**Причина:** clean-room rewrite `XMLObj`
+(`projects/game-origin/src/core/util/XMLObj.util.class.php`) — обёртка
+над `SimpleXMLElement` — был сделан как «тонкая обёртка» с методами
+`getAttribute/getName/getString/getChildren/getNode`, но **не реализовывал
+`IteratorAggregate`**. Legacy-Recipe `XMLObj` был Iterable.
+
+В `Menu::generateMenu()` (`src/game/Menu.class.php:84`) код:
+
+```php
+foreach($this->xml as $first) { ... }
+```
+
+где `$this->xml` — объект `XMLObj`. Без `IteratorAggregate` PHP перебирал
+публичные свойства объекта (которых у XMLObj нет, есть только `private $node`),
+foreach становился no-op'ом, `$this->menu` оставался пустым массивом. То же
+самое касалось всех потребителей XMLObj через foreach
+(`PlanetCreator`, `Options`).
+
+**Smoke-тест плана 43 не поймал**, потому что Ф.8 говорит про «main экран
+без ошибок в логах». PHP действительно не падал (foreach по пустому ничего
+не выводит), но навигация молча пропадала — это видно только глазами в
+браузере.
+
+**Fix (1 коммит, 1 файл):**
+
+```php
+class XMLObj implements \IteratorAggregate
+{
+    // ...
+    public function getIterator(): \Iterator
+    {
+        return new \ArrayIterator($this->getChildren());
+    }
+}
+```
+
+**Verification:** `Menu count` через CLI — было 0, стало 46. После очистки
+Smarty-кэша (`src/cache/templates/standard/*.cache.php`) HTTP-ответ
+`/?go=Main` содержит 54 `<li>` в `<div id="leftMenu">` (вместо 1).
+
+**Урок:** для clean-room rewrite'а Recipe `XMLObj`/`Menu`/`Options` нужно
+было сравнить публичный API не только по списку методов, но и по
+implements-интерфейсам (Iterable, Countable, ArrayAccess и т.п.). В план 43
+Ф.5 это явно не вписано — дефицит спецификации, не реализации.
