@@ -22,6 +22,7 @@ import (
 
 	"oxsar/auth/internal/authsvc"
 	"oxsar/auth/internal/httpx"
+	"oxsar/auth/internal/moderation"
 	"oxsar/auth/internal/storage"
 	"oxsar/auth/pkg/jwtrs"
 	"oxsar/auth/pkg/metrics"
@@ -83,6 +84,22 @@ func run() error {
 	ver := jwtrs.NewVerifierFromKey(iss.PublicKey())
 
 	svc := authsvc.New(pool, iss)
+
+	// План 46 (149-ФЗ): blacklist для проверки никнеймов при регистрации.
+	// Путь — env MODERATION_BLACKLIST (default — общий blacklist в game-nova
+	// configs относительно cmd/server при `go run`). Отсутствие файла — warning,
+	// не fatal: в dev/test без файла регистрация работает, проверка никнеймов
+	// отключена.
+	blPath := envStr("MODERATION_BLACKLIST", "../../../game-nova/configs/moderation/blacklist.yaml")
+	if bl, blErr := moderation.LoadBlacklist(blPath); blErr == nil {
+		svc = svc.WithBlacklist(bl)
+		log.InfoContext(ctx, "moderation blacklist loaded",
+			slog.String("path", blPath), slog.Int("roots", bl.Size()))
+	} else {
+		log.WarnContext(ctx, "moderation blacklist not loaded; nickname check disabled",
+			slog.String("path", blPath), slog.String("err", blErr.Error()))
+	}
+
 	h := authsvc.NewHandler(svc, iss, ver, rdb)
 
 	r := chi.NewRouter()

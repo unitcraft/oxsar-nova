@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"oxsar/game-nova/internal/i18n"
+	"oxsar/game-nova/internal/moderation"
 	"oxsar/game-nova/internal/repo"
 )
 
@@ -30,12 +31,20 @@ type AutoMsgSender interface {
 }
 
 type Service struct {
-	db      repo.Exec
-	automsg AutoMsgSender
-	bundle  *i18n.Bundle
+	db        repo.Exec
+	automsg   AutoMsgSender
+	bundle    *i18n.Bundle
+	blacklist *moderation.Blacklist
 }
 
 func NewService(db repo.Exec) *Service { return &Service{db: db} }
+
+// WithBlacklist — UGC-модерация для tag/name альянса (план 46).
+// Если nil — проверка отключена.
+func (s *Service) WithBlacklist(bl *moderation.Blacklist) *Service {
+	s.blacklist = bl
+	return s
+}
 
 // WithAutoMsg подключает сервис системных сообщений (опционально).
 func (s *Service) WithAutoMsg(a AutoMsgSender) *Service {
@@ -72,6 +81,8 @@ var (
 	ErrTagTaken          = errors.New("alliance: tag already taken")
 	ErrNameTaken         = errors.New("alliance: name already taken")
 	ErrInvalidTag        = errors.New("alliance: tag must be 3–5 latin letters/digits")
+	// План 46: tag или name содержит запрещённое слово.
+	ErrNameForbidden     = errors.New("alliance: name contains forbidden word")
 	ErrCannotLeaveOwn    = errors.New("alliance: owner must transfer or disband before leaving")
 	ErrApplicationExists = errors.New("alliance: application already pending")
 	ErrApplicationNotFound = errors.New("alliance: application not found")
@@ -199,6 +210,15 @@ func (s *Service) Create(ctx context.Context, ownerID, tag, name, description st
 	}
 	if n := utf8.RuneCountInString(name); n < 3 || n > 64 {
 		return Alliance{}, fmt.Errorf("alliance: name must be 3–64 characters")
+	}
+	// План 46 (149-ФЗ): проверка tag/name по UGC-blacklist.
+	if s.blacklist != nil {
+		if forbidden, _ := s.blacklist.IsForbidden(tag); forbidden {
+			return Alliance{}, ErrNameForbidden
+		}
+		if forbidden, _ := s.blacklist.IsForbidden(name); forbidden {
+			return Alliance{}, ErrNameForbidden
+		}
 	}
 	if utf8.RuneCountInString(description) > 2000 {
 		description = string([]rune(description)[:2000])

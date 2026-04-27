@@ -39,6 +39,7 @@ import (
 	"oxsar/game-nova/internal/i18n"
 	"oxsar/game-nova/internal/market"
 	"oxsar/game-nova/internal/message"
+	"oxsar/game-nova/internal/moderation"
 	"oxsar/game-nova/internal/notepad"
 	"oxsar/game-nova/internal/officer"
 	"oxsar/game-nova/internal/planet"
@@ -267,6 +268,23 @@ func run() error {
 	scoreH := score.NewHandlerWithDB(scoreSvc, db)
 
 	allianceSvc := alliance.NewService(db).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
+
+	// План 46 (149-ФЗ): UGC-blacklist для tag/name альянса и для чата.
+	// Путь — env MODERATION_BLACKLIST (default: общий конфиг в корне репо).
+	// Отсутствие файла — warning, не fatal (на dev/test допустимо).
+	blPath := os.Getenv("MODERATION_BLACKLIST")
+	if blPath == "" {
+		blPath = filepath.Join(catalogDir, "moderation", "blacklist.yaml")
+	}
+	if bl, blErr := moderation.LoadBlacklist(blPath); blErr == nil {
+		allianceSvc = allianceSvc.WithBlacklist(bl)
+		log.InfoContext(ctx, "moderation blacklist loaded",
+			slog.String("path", blPath), slog.Int("roots", bl.Size()))
+	} else {
+		log.WarnContext(ctx, "moderation blacklist not loaded; UGC checks disabled",
+			slog.String("path", blPath), slog.String("err", blErr.Error()))
+	}
+
 	allianceH := alliance.NewHandler(allianceSvc)
 
 	professionSvc := profession.NewService(db, cat)

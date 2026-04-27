@@ -16,6 +16,7 @@ import { Countdown } from './ui/Countdown';
 import { ScreenSkeleton } from './ui/Skeleton';
 import { useKeyboardShortcuts } from './lib/useKeyboardShortcuts';
 import { GlobalSearch } from './features/search/GlobalSearch';
+import { AgeRating } from './components/AgeRating';
 
 const BuildingsScreen    = lazy(() => import('./features/buildings/BuildingsScreen').then(m => ({ default: m.BuildingsScreen })));
 const ResearchScreen     = lazy(() => import('./features/research/ResearchScreen').then(m => ({ default: m.ResearchScreen })));
@@ -363,8 +364,9 @@ function AuthenticatedApp() {
       {/* Мобильная нижняя навигация */}
       <BottomNav tab={tab} setTab={navigateTo} unreadCount={unreadCount} />
 
-      <footer className="ox-footer">
+      <footer className="ox-footer" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12 }}>
         <small>oxsar-nova v0.1.0 — dev preview</small>
+        <AgeRating size="sm" />
       </footer>
 
       <GlobalSearch
