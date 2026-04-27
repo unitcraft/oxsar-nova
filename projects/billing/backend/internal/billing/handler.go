@@ -8,15 +8,18 @@ import (
 	"strconv"
 
 	"oxsar/billing/internal/httpx"
+	"oxsar/billing/internal/payment"
 )
 
 // Handler — HTTP-адаптер billing.
 type Handler struct {
-	svc *Service
+	svc       *Service
+	gateway   payment.Gateway
+	returnURL string
 }
 
-func NewHandler(svc *Service) *Handler {
-	return &Handler{svc: svc}
+func NewHandler(svc *Service, gw payment.Gateway, returnURL string) *Handler {
+	return &Handler{svc: svc, gateway: gw, returnURL: returnURL}
 }
 
 // SpendInput — request body для POST /billing/wallet/spend.
@@ -138,6 +141,52 @@ func (h *Handler) Balance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, wal)
+}
+
+// Packages — GET /billing/packages (публично, без auth).
+func (h *Handler) Packages(w http.ResponseWriter, r *http.Request) {
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"packages": payment.Packages})
+}
+
+// CreateOrder — POST /billing/orders { "package_id": "pack_500" } (требует JWT).
+type createOrderRequest struct {
+	PackageID string `json:"package_id"`
+	ReturnURL string `json:"return_url,omitempty"`
+}
+
+func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
+	userID, ok := UserIDFromCtx(r)
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	var req createOrderRequest
+	if err := decodeJSON(r, &req); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+		return
+	}
+	if req.PackageID == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "package_id required"))
+		return
+	}
+	returnURL := req.ReturnURL
+	if returnURL == "" {
+		returnURL = h.returnURL
+	}
+	order, payURL, err := h.svc.CreateOrder(r.Context(), userID, req.PackageID, returnURL, h.gateway)
+	if err != nil {
+		switch {
+		case errors.Is(err, payment.ErrPackageNotFound):
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrNotFound, "package not found"))
+		default:
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		}
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusCreated, map[string]any{
+		"order":   order,
+		"pay_url": payURL,
+	})
 }
 
 // History — GET /billing/wallet/history?limit=50&offset=0&currency=OXC

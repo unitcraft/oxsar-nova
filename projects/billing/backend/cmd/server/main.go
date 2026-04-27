@@ -23,6 +23,7 @@ import (
 	"oxsar/billing/internal/auth"
 	"oxsar/billing/internal/billing"
 	"oxsar/billing/internal/httpx"
+	"oxsar/billing/internal/payment"
 	"oxsar/billing/internal/repo"
 	"oxsar/billing/internal/storage"
 	"oxsar/billing/pkg/metrics"
@@ -47,6 +48,10 @@ func run() error {
 	jwksURL := mustEnv("AUTH_JWKS_URL")
 	allowedOrigins := strings.Split(envStr("ALLOWED_ORIGINS",
 		"http://localhost:5173,http://localhost:5174"), ",")
+	provider := envStr("PAYMENT_PROVIDER", "mock")
+	mockBaseURL := envStr("PAYMENT_MOCK_BASE_URL", "http://localhost:9100")
+	mockSecret := envStr("PAYMENT_MOCK_SECRET", "")
+	returnURL := envStr("PAYMENT_RETURN_URL", "http://localhost:5173/")
 
 	log := newLogger(envStr("LOG_LEVEL", "info"))
 	slog.SetDefault(log)
@@ -71,7 +76,19 @@ func run() error {
 
 	db := repo.New(pool)
 	svc := billing.New(db)
-	h := billing.NewHandler(svc)
+
+	// Платёжный шлюз: только mock в Ф.3 (Robokassa/Enot — Ф.3.5+).
+	var gw payment.Gateway
+	switch provider {
+	case "mock":
+		gw = payment.NewMockGateway(mockBaseURL, mockSecret)
+	default:
+		return fmt.Errorf("unknown PAYMENT_PROVIDER=%q (supported: mock)", provider)
+	}
+	log.InfoContext(ctx, "payment provider initialized", slog.String("provider", gw.Name()))
+
+	h := billing.NewHandler(svc, gw, returnURL)
+	wh := billing.NewWebhookHandler(svc, gw)
 	authMW := billing.AuthMiddleware(ver)
 	idemMW := billing.NewIdempotencyMiddleware(pool).Handler(billing.UserIDFromCtx)
 
@@ -104,6 +121,9 @@ func run() error {
 	})
 	r.Handle("/metrics", metrics.Register())
 
+	// Публичный каталог пакетов кредитов.
+	r.Get("/billing/packages", h.Packages)
+
 	// Защищённые wallet-эндпоинты. AuthMiddleware кладёт user_id в context.
 	// IdempotencyMiddleware кэширует ответы по Idempotency-Key (Stripe-style).
 	r.Group(func(pr chi.Router) {
@@ -111,16 +131,18 @@ func run() error {
 		pr.Get("/billing/wallet/balance", h.Balance)
 		pr.Get("/billing/wallet/history", h.History)
 	})
-	// Spend/Credit с idempotency. Idempotency-Key читается из header.
+	// Spend/Credit/CreateOrder с idempotency. Idempotency-Key читается из header.
 	r.Group(func(pr chi.Router) {
 		pr.Use(authMW)
 		pr.Use(idemMW)
 		pr.Post("/billing/wallet/spend", h.Spend)
 		pr.Post("/billing/wallet/credit", h.Credit)
+		pr.Post("/billing/orders", h.CreateOrder)
 	})
 
-	// TODO Ф.3: /billing/{packages,orders}
-	// TODO Ф.4: /billing/webhooks/{provider}
+	// Webhook от платёжного шлюза. Публичный (защищён HMAC-подписью).
+	// Путь зависит от провайдера: /billing/webhooks/mock, /billing/webhooks/robokassa и т.д.
+	r.Post("/billing/webhooks/"+gw.Name(), wh.Handle)
 
 	srv := &http.Server{
 		Addr:              addr,
