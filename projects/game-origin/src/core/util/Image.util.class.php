@@ -34,16 +34,18 @@ class Image
         {
             $rel = defined('RELATIVE_URL') ? RELATIVE_URL : '/';
             if($rel !== '' && substr($rel, -1) !== '/') { $rel .= '/'; }
-            // Если в имени уже есть слеш — относительно RELATIVE_URL,
-            // иначе — относительно RELATIVE_URL/images/.
-            $src = strpos($name, '/') !== false ? $rel.ltrim($name, '/') : $rel.'images/'.$name;
+            // Legacy-семантика: ВСЕ относительные имена префиксятся
+            // /images/ (включая пути с / типа planets/small/x.jpg).
+            $src = $rel.'images/'.ltrim($name, '/');
         }
 
-        $altAttr = htmlspecialchars((string)$alt, ENT_QUOTES, 'UTF-8');
-        $titleAttr = $altAttr;
+        // Legacy-семантика: alt-атрибут НЕ выводится (только title), default
+        // class="image" если cssClass не передан явно.
+        if($cssClass === '' || $cssClass === null) { $cssClass = 'image'; }
+        $titleAttr = htmlspecialchars((string)$alt, ENT_QUOTES, 'UTF-8');
         $w = $width !== null && $width !== '' ? ' width="'.(int)$width.'"' : '';
         $h = $height !== null && $height !== '' ? ' height="'.(int)$height.'"' : '';
-        $cls = $cssClass !== '' && $cssClass !== null ? ' class="'.htmlspecialchars((string)$cssClass, ENT_QUOTES, 'UTF-8').'"' : '';
-        return '<img src="'.$src.'" alt="'.$altAttr.'" title="'.$titleAttr.'"'.$w.$h.$cls.' />';
+        $cls = ' class="'.htmlspecialchars((string)$cssClass, ENT_QUOTES, 'UTF-8').'"';
+        return '<img src="'.$src.'" title="'.$titleAttr.'"'.$w.$h.$cls.' />';
     }
 }

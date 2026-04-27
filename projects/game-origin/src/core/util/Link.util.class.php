@@ -27,18 +27,21 @@ class Link
         {
             return (string)$text;
         }
-        if(self::isExternal($url))
+        $isExt = self::isExternal($url);
+        $href = $isExt ? $url : self::normalizeURL($url);
+        // Legacy-семантика: пустая строка = взять default. Внешние ссылки
+        // получают class="external" вместо "link".
+        if($cssClass === '' || $cssClass === null)
         {
-            $href = $url;
+            $cssClass = $isExt ? 'external' : 'link';
         }
-        else
-        {
-            $href = self::normalizeURL($url);
-        }
-        $cls = $cssClass !== '' ? ' class="'.htmlspecialchars((string)$cssClass, ENT_QUOTES, 'UTF-8').'"' : '';
+        $cls = ' class="'.htmlspecialchars((string)$cssClass, ENT_QUOTES, 'UTF-8').'"';
         $tit = ' title="'.htmlspecialchars((string)$title, ENT_QUOTES, 'UTF-8').'"';
+        // Внешние ссылки получают target='_blank' автоматически — но только
+        // если caller не передал target в $attachment (избегаем дублирования).
         $att = $attachment !== '' ? ' '.$attachment : '';
-        return '<a href="'.$href.'"'.$tit.$cls.$att.'>'.$text.'</a>';
+        $target = ($isExt && strpos((string)$attachment, 'target=') === false) ? " target='_blank'" : '';
+        return '<a href="'.$href.'"'.$tit.$cls.$att.$target.'>'.$text.'</a>';
     }
 
     /**
