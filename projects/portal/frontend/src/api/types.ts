@@ -49,7 +49,6 @@ export interface AuthUser {
   id: string;
   username: string;
   email: string;
-  global_credits: number;
   roles: string[];
 }
 

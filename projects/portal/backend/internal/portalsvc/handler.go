@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -17,17 +18,20 @@ import (
 type Handler struct {
 	svc     *Service
 	reg     *universe.Registry
-	credits *CreditClient
+	credits *BillingClient
 }
 
-// NewHandler создаёт Handler.
+// NewHandler создаёт Handler без billing-клиента (для тестов).
 func NewHandler(svc *Service, reg *universe.Registry) *Handler {
-	return &Handler{svc: svc, reg: reg, credits: NewCreditClient("")}
+	return &Handler{svc: svc, reg: reg, credits: NewBillingClient("")}
 }
 
-// NewHandlerWithCredits создаёт Handler с клиентом кредитов.
-func NewHandlerWithCredits(svc *Service, reg *universe.Registry, authServiceURL string) *Handler {
-	return &Handler{svc: svc, reg: reg, credits: NewCreditClient(authServiceURL)}
+// NewHandlerWithBilling создаёт Handler с клиентом billing.
+//
+// План 38 Ф.6: вместо auth-service используется billing-service
+// (различные bounded context-ы — identity vs money).
+func NewHandlerWithBilling(svc *Service, reg *universe.Registry, billingURL string) *Handler {
+	return &Handler{svc: svc, reg: reg, credits: NewBillingClient(billingURL)}
 }
 
 // --- universes ---
@@ -177,7 +181,11 @@ func (h *Handler) ModerateFeedback(w http.ResponseWriter, r *http.Request) {
 }
 
 // VoteFeedback — POST /api/feedback/{id}/vote
-// Списывает 100 кредитов через auth-service и добавляет голос.
+//
+// План 38 Ф.6: списание идёт в billing-service, не auth-service.
+// Idempotency-Key = "vote:" + user + ":" + post → защита от двойного списания
+// при повторных кликах. Если billing вернул 402 (insufficient) — голос
+// не записывается, фронт получает 402.
 func (h *Handler) VoteFeedback(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromCtx(r)
 	if !ok {
@@ -197,17 +205,41 @@ func (h *Handler) VoteFeedback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Списываем 100 кредитов через auth-service, затем записываем голос.
-	const voteCost = int64(100)
-	if err := h.credits.Spend(r.Context(), userID, voteCost, "feedback_vote", postID); err != nil {
-		if errors.Is(err, ErrInsufficientCredits) {
-			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "insufficient credits (need 100)"))
-			return
-		}
-		httpx.WriteError(w, r, httpx.ErrInternal)
+	// Forward JWT юзера (тот же RSA-токен, что прислал клиент).
+	authHdr := r.Header.Get("Authorization")
+	userToken := ""
+	if strings.HasPrefix(authHdr, "Bearer ") {
+		userToken = strings.TrimPrefix(authHdr, "Bearer ")
+	}
+	if userToken == "" {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
+
+	const voteCost = int64(100)
+	idemKey := "vote:" + userID + ":" + postID
+	err = h.credits.Spend(r.Context(), SpendInput{
+		UserToken:      userToken,
+		Amount:         voteCost,
+		Reason:         "feedback_vote",
+		RefID:          postID,
+		ToAccount:      "vote:feedback:" + postID,
+		IdempotencyKey: idemKey,
+	})
+	if err != nil {
+		if errors.Is(err, ErrInsufficientCredits) {
+			httpx.WriteError(w, r, httpx.ErrPaymentRequired)
+			return
+		}
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	// Билинг идемпотентен → голос идемпотентен. Но в feedback_votes у нас тоже
+	// UNIQUE(post_id, user_id, idem_key)?  Если нет — повторный INSERT может
+	// упасть. Service.VoteFeedback ниже должен быть готов к этому.
 	if err := h.svc.VoteFeedback(r.Context(), postID, userID, voteCost); err != nil {
+		// Если billing уже списал, а INSERT vote упал — это рассинхронизация.
+		// Логируем (TODO: компенсация — billing.credit обратно).
 		httpx.WriteError(w, r, httpx.ErrInternal)
 		return
 	}

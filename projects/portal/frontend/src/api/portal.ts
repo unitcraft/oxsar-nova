@@ -46,7 +46,28 @@ export const portalApi = {
       api.post<{ user: AuthUser; tokens: Tokens }>('/auth/login', { login, password }),
     refresh: (refresh: string) =>
       api.post<{ tokens: Tokens }>('/auth/refresh', { refresh }),
+    logout: (refresh: string) =>
+      api.post<void>('/auth/logout', { refresh }),
     me: () => api.get<AuthUser>('/auth/me'),
-    creditBalance: () => api.get<{ balance: number }>('/auth/credits/balance'),
+  },
+
+  // План 38 Ф.7: billing-service. Кошельки, история, заказы пакетов кредитов.
+  billing: {
+    balance: () =>
+      api.get<{ balance: number; currency_code: string; frozen: boolean }>(
+        '/billing/wallet/balance',
+      ),
+    history: (limit = 50) =>
+      api.get<{ transactions: Array<Record<string, unknown>> }>(
+        `/billing/wallet/history?limit=${limit}`,
+      ),
+    packages: () =>
+      api.get<{ packages: Array<{ id: string; title: string; amount_kop: number; credits: number; bonus?: number }> }>(
+        '/billing/packages',
+      ),
+    createOrder: (packageId: string) =>
+      api.post<{ order: Record<string, unknown>; pay_url: string }>('/billing/orders', {
+        package_id: packageId,
+      }),
   },
 };

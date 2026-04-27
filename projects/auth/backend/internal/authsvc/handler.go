@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
 	"oxsar/auth/internal/httpx"
@@ -194,73 +193,11 @@ func (h *Handler) JWKS(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, r, http.StatusOK, jwks)
 }
 
-// CreditBalance — GET /auth/credits/balance
-func (h *Handler) CreditBalance(w http.ResponseWriter, r *http.Request) {
-	userID, ok := userIDFromCtx(r)
-	if !ok {
-		httpx.WriteError(w, r, httpx.ErrUnauthorized)
-		return
-	}
-	balance, err := h.svc.CreditBalance(r.Context(), userID)
-	if err != nil {
-		httpx.WriteError(w, r, httpx.ErrInternal)
-		return
-	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]int64{"balance": balance})
-}
-
-// CreditHistory — GET /auth/credits/history?limit=50&offset=0
-func (h *Handler) CreditHistory(w http.ResponseWriter, r *http.Request) {
-	userID, ok := userIDFromCtx(r)
-	if !ok {
-		httpx.WriteError(w, r, httpx.ErrUnauthorized)
-		return
-	}
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-	txs, err := h.svc.CreditHistory(r.Context(), userID, limit, offset)
-	if err != nil {
-		httpx.WriteError(w, r, httpx.ErrInternal)
-		return
-	}
-	if txs == nil {
-		txs = []CreditTx{}
-	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"transactions": txs})
-}
-
-// SpendCredits — POST /auth/credits/spend (внутренний, только между сервисами)
-func (h *Handler) SpendCredits(w http.ResponseWriter, r *http.Request) {
-	var in struct {
-		UserID string `json:"user_id"`
-		Amount int64  `json:"amount"`
-		Reason string `json:"reason"`
-		RefID  string `json:"ref_id"`
-	}
-	if err := decodeJSON(r, &in); err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
-		return
-	}
-	if in.Amount <= 0 {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "amount must be positive"))
-		return
-	}
-	err := h.svc.SpendCredits(r.Context(), SpendInput{
-		UserID: in.UserID,
-		Amount: in.Amount,
-		Reason: in.Reason,
-		RefID:  in.RefID,
-	})
-	if err != nil {
-		if errors.Is(err, ErrInsufficientFunds) {
-			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "insufficient credits"))
-			return
-		}
-		httpx.WriteError(w, r, httpx.ErrInternal)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
+// План 38 Ф.5: CreditBalance/CreditHistory/SpendCredits handlers удалены.
+// Кошельки и платежи живут в billing-service:
+//   GET  /billing/wallet/balance
+//   GET  /billing/wallet/history
+//   POST /billing/wallet/spend (с Idempotency-Key)
 
 // UniverseToken — POST /auth/universe-token
 // Создаёт одноразовый handoff-токен для переключения вселенной.

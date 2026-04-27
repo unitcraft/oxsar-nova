@@ -19,6 +19,8 @@ export default defineConfig(({ command }) => ({
       '/auth': process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
       '/.well-known/jwks.json':
         process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+      // План 38 Ф.7: billing-service для кошельков и платежей.
+      '/billing': process.env.VITE_BILLING_TARGET ?? 'http://localhost:9100',
     },
   },
   build: {

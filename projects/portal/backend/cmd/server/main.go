@@ -42,7 +42,8 @@ func run() error {
 	addr := envStr("PORTAL_ADDR", ":8090")
 	dbURL := mustEnv("PORTAL_DB_URL")
 	jwksURL := envStr("AUTH_JWKS_URL", "")
-	authServiceURL := envStr("AUTH_SERVICE_URL", "")
+	// План 38 Ф.6: portal списывает кредиты через billing-service.
+	billingURL := envStr("BILLING_URL", "")
 	universesPath := envStr("UNIVERSES_CONFIG", "configs/universes.yaml")
 	allowedOrigins := strings.Split(envStr("ALLOWED_ORIGINS",
 		"http://localhost:5174,http://localhost:3000"), ",")
@@ -76,7 +77,7 @@ func run() error {
 	}
 
 	svc := portalsvc.New(pool)
-	h := portalsvc.NewHandlerWithCredits(svc, reg, authServiceURL)
+	h := portalsvc.NewHandlerWithBilling(svc, reg, billingURL)
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)

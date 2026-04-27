@@ -6,9 +6,10 @@ import styles from './ProfilePage.module.css';
 
 export function ProfilePage() {
   const { user, clearAuth } = useAuthStore();
+  // План 38 Ф.7: баланс берётся из billing-service, не auth-service.
   const { data: balanceData } = useQuery({
-    queryKey: ['credits-balance'],
-    queryFn: () => portalApi.auth.creditBalance(),
+    queryKey: ['billing-balance'],
+    queryFn: () => portalApi.billing.balance(),
     enabled: !!user,
   });
 
@@ -36,7 +37,7 @@ export function ProfilePage() {
         </div>
         <div className={styles.row}>
           <span className={styles.label}>Глобальные кредиты</span>
-          <span className={styles.value}>{balanceData?.balance ?? user.global_credits}</span>
+          <span className={styles.value}>{balanceData?.balance ?? 0}</span>
         </div>
         <div className={styles.row}>
           <span className={styles.label}>Роли</span>
