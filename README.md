@@ -94,7 +94,10 @@ deploy/        docker-образы, k8s-манифесты
 Федерация (см. [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) §Governing Law,
 [CLA.md](CLA.md) §8).
 
-Весь код в репозитории написан Evgeniy Golovin совместно с Claude Code.
+Автор кода — Evgeniy Golovin. При разработке использовался AI-ассистент
+Claude Code как технический инструмент; творческий отбор, проверка,
+интеграция и компоновка кода выполнены автором. Подробности правового
+статуса — [docs/origin-rights.md](docs/origin-rights.md).
 
 ### Участие в разработке
 
