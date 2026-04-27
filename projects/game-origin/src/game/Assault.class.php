@@ -380,51 +380,39 @@ class Assault
 	 */
 	protected function checkCreatedMoonInSystem( $planet_id, $time = MOON_CREATION_SYSTEM_INTERVAL )
 	{
-		$crit = new CDbCriteria();
-		$crit->addCondition('planetid = :p OR moonid = :p');
-		$crit->params[':p'] = $planet_id;
-		$planet_galaxy = Galaxy_YII::model()->find($crit);
-		if( $planet_galaxy ) { ; }
-		else
+		// План 37.5d.5#3: replaced Galaxy_YII + Assault_YII (CDbCriteria → raw SQL).
+		$planet_id_q = sqlVal($planet_id);
+		$planet_galaxy = sqlSelectRow("galaxy", array("system", "galaxy"), "",
+			"planetid = ".$planet_id_q." OR moonid = ".$planet_id_q);
+		if( !$planet_galaxy )
 		{
 			return false;
 		}
-
-		$system = $planet_galaxy->system;
-		$galaxy = $planet_galaxy->galaxy;
 
 		$planets_search = array();
-		$crit = new CDbCriteria();
-		$crit->addCondition('system = :s AND galaxy = :g AND destroyed = 0');
-		$crit->params[':s'] = $system;
-		$crit->params[':g'] = $galaxy;
-		$planets = Galaxy_YII::model()->findAll($crit);
-		if( $planets )
+		$result = sqlSelect("galaxy", array("planetid", "moonid"), "",
+			"system = ".sqlVal($planet_galaxy["system"])
+			." AND galaxy = ".sqlVal($planet_galaxy["galaxy"])
+			." AND destroyed = 0");
+		while($row = sqlFetch($result))
 		{
-			foreach( $planets as $row )
+			if( !empty($row["planetid"]) )
 			{
-				if( !empty($row->planetid) )
-				{
-					$planets_search[] = $row->planetid;
-				}
-				elseif( !empty($row->moonid) )
-				{
-					$planets_search[] = $row->planetid;
-				}
+				$planets_search[] = $row["planetid"];
+			}
+			elseif( !empty($row["moonid"]) )
+			{
+				$planets_search[] = $row["planetid"];
 			}
 		}
-		else
-		{
-			return false;
-		}
+		sqlEnd($result);
+
 		if( !empty($planets_search) )
 		{
-			$crit = new CDbCriteria();
-			$crit->addInCondition('planetid', $planets_search);
-			$crit->addCondition('moon = 1');
-			$crit->addCondition('time >= :t');
-			$crit->params[':t'] = time() - $time;
-			$assault = Assault_YII::model()->find($crit);
+			$assault = sqlSelectField("assault", "assaultid", "",
+				"planetid IN (".sqlArray($planets_search).")"
+				." AND moon = 1"
+				." AND time >= ".sqlVal(time() - $time));
 			if( $assault )
 			{
 				return true;
@@ -445,39 +433,24 @@ class Assault
 	 */
 	protected function checkCreatedMoonForUser( $user_id, $time = MOON_CREATION_USER_INTERVAL )
 	{
-		/*
-		$crit = new CDbCriteria();
-		$crit->addCondition('planetid = :p');
-		$crit->params[':p'] = $planet_id;
-		$planet = Planet_YII::model()->find($crit);
-		if(!$planet)
+		// План 37.5d.5#3: replaced Planet_YII + Assault_YII (CDbCriteria → raw SQL).
+		$planets_search = array();
+		$result = sqlSelect("planet", "planetid", "", "userid = ".sqlVal($user_id));
+		while($row = sqlFetch($result))
 		{
-			return false;
+			$planets_search[] = $row["planetid"];
 		}
-		*/
-		$crit = new CDbCriteria();
-		$crit->addCondition('userid = :u');
-		$crit->params[':u'] = $user_id; // $planet->userid;
-		$planets = Planet_YII::model()->findAll($crit);
-		if( $planets )
+		sqlEnd($result);
+
+		if( !empty($planets_search) )
 		{
-			$planets_search = array();
-			foreach( $planets as $row )
+			$assault = sqlSelectField("assault", "assaultid", "",
+				"planetid IN (".sqlArray($planets_search).")"
+				." AND moon = 1"
+				." AND time >= ".sqlVal(time() - $time));
+			if( $assault )
 			{
-				$planets_search[] = $row->planetid;
-			}
-			if( !empty($planets_search) )
-			{
-				$crit = new CDbCriteria();
-				$crit->addInCondition('planetid', $planets_search);
-				$crit->addCondition('moon = 1');
-				$crit->addCondition('time >= :t');
-				$crit->params[':t'] = time() - $time;
-				$assault = Assault_YII::model()->find($crit);
-				if( $assault )
-				{
-					return true;
-				}
+				return true;
 			}
 		}
 		return false;
