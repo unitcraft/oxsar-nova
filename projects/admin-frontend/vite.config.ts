@@ -12,6 +12,10 @@ export default defineConfig({
   server: {
     port: 5174,
     strictPort: true,
+    proxy: {
+      '/auth': { target: 'http://localhost:9200', changeOrigin: false },
+      '/api': { target: 'http://localhost:9200', changeOrigin: false },
+    },
   },
   build: {
     target: 'es2022',
