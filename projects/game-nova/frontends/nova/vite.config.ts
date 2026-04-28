@@ -40,7 +40,7 @@ export default defineConfig(({ command }) => ({
     // локально — на localhost:8080. Читаем из env, чтобы один и тот
     // же код работал в обоих режимах.
     //
-    // /auth/* проксируется в auth-service:9000 — отдельный домен в проде
+    // /auth/* проксируется в identity-service:9000 — отдельный домен в проде
     // (auth.oxsar-nova.ru), в dev — отдельный сервис в docker-network.
     // План 36 Ф.11.
     proxy: {

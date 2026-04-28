@@ -33,7 +33,7 @@ type EnsureUserConfig struct {
 	Starter    StarterAssigner
 	Automsg    AutomsgSender
 	UniverseID string // план 36 Critical-5: регистрируется в universe_memberships
-	// AuthServiceURL — base URL auth-service для внутренних вызовов.
+	// AuthServiceURL — base URL identity-service для внутренних вызовов.
 	// Пустая строка — пропускаем регистрацию membership (для тестов).
 	AuthServiceURL string
 }
@@ -43,7 +43,7 @@ type EnsureUserConfig struct {
 // (защита от гонки одновременных запросов).
 //
 // Тяжёлая инициализация (стартовая планета, welcome-сообщение, регистрация
-// universe_membership в auth-service) делается АСИНХРОННО — fire-and-forget,
+// universe_membership в identity-service) делается АСИНХРОННО — fire-and-forget,
 // чтобы не задерживать первый ответ.
 //
 // План 36 Ф.12.5: обработка username-конфликта. INSERT может упасть
@@ -63,7 +63,7 @@ func EnsureUserMiddleware(cfg EnsureUserConfig) func(http.Handler) http.Handler 
 			ctx := r.Context()
 			// План 36 Nice-10: email больше не в JWT-claims (PII).
 			// В game-db email NULLABLE — для отображения email берётся через
-			// /auth/me в auth-service по требованию (admin-views и т.п.).
+			// /auth/me в identity-service по требованию (admin-views и т.п.).
 			tag, err := cfg.Pool.Exec(ctx, `
 				INSERT INTO users (id, username, email, password_hash)
 				VALUES ($1, $2, NULL, NULL)
@@ -171,7 +171,7 @@ func bootstrapNewUser(userID, username string, cfg EnsureUserConfig) {
 	}
 }
 
-// registerUniverseMembership шлёт POST /auth/universes/register в auth-service —
+// registerUniverseMembership шлёт POST /auth/universes/register в identity-service —
 // чтобы при следующей выдаче JWT этот universe попал в active_universes claim.
 // План 36 Critical-5.
 func registerUniverseMembership(ctx context.Context, authServiceURL, userID, universeID string) {

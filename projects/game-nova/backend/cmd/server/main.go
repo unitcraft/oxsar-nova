@@ -33,6 +33,7 @@ import (
 	billingclient "oxsar/game-nova/internal/billing/client"
 	"oxsar/game-nova/internal/battlestats"
 	"oxsar/game-nova/internal/building"
+	"oxsar/game-nova/internal/catalog"
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/empire"
 	"oxsar/game-nova/internal/fleet"
@@ -206,7 +207,7 @@ func run() error {
 	// /api/me и /api/me/vacation — handler берёт данные напрямую из БД.
 	authH := auth.NewHandler(pool)
 
-	// authMiddleware: RSA-валидация JWT от auth-service + lazy-create юзера
+	// authMiddleware: RSA-валидация JWT от identity-service + lazy-create юзера
 	// в game-db при первом запросе (план 36 Ф.12).
 	rsaVer, loadErr := auth.LoadVerifier(ctx, cfg.Auth.JWKSUrl)
 	if loadErr != nil {
@@ -322,6 +323,7 @@ func run() error {
 	battlestatsH := battlestats.NewHandler(pool)
 	friendsH := friends.NewHandler(pool)
 	recordsH := records.NewHandler(pool, cat)
+	catalogH := catalog.NewHandler(cat)
 
 	adminH := admin.NewHandler(db)
 	alienH := alien.NewHandler(db)
@@ -374,7 +376,7 @@ func run() error {
 	r.Get("/api/features", featureH.List)
 
 	// План 36 Ф.12: /api/auth/login|register|refresh удалены из game-nova.
-	// Регистрация и логин — только в auth-service. game-nova принимает RSA-JWT.
+	// Регистрация и логин — только в identity-service. game-nova принимает RSA-JWT.
 	// authRL и authH.Register/Login/Refresh пока оставлены в коде как мёртвый
 	// код (плановая чистка после удаления legacy HS256 из service.go).
 	r.With(authMiddlewareFn).Get("/api/me", authH.Me)
@@ -424,7 +426,7 @@ func run() error {
 		pr.Get("/empire", empireH.GetAll)
 		pr.Get("/settings", settingsH.Get)
 		pr.Put("/settings", settingsH.Update)
-		// План 36 Critical-6: смена пароля — POST /auth/password в auth-service.
+		// План 36 Critical-6: смена пароля — POST /auth/password в identity-service.
 		pr.Post("/me/deletion/code", settingsH.RequestDeletionCode)
 		pr.Delete("/me", settingsH.ConfirmDeletion)
 		pr.Get("/referrals", referralH.Mine)
@@ -434,6 +436,10 @@ func run() error {
 		pr.Get("/techtree", techtreeH.Get)
 		pr.Get("/battlestats", battlestatsH.List)
 		pr.Get("/records", recordsH.List)
+		// План 72 Ф.4 Spring 3 — catalog endpoints для origin info-страниц.
+		pr.Get("/buildings/catalog/{type}", catalogH.BuildingByType)
+		pr.Get("/units/catalog/{type}", catalogH.UnitByType)
+		pr.Get("/artefacts/catalog/{type}", catalogH.ArtefactByType)
 		pr.Get("/friends", friendsH.List)
 		pr.Post("/friends/{userId}", friendsH.Add)
 		pr.Delete("/friends/{userId}", friendsH.Remove)

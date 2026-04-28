@@ -11,7 +11,7 @@ export function ProfilePage() {
   const [confirmText, setConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  // План 38 Ф.7: баланс берётся из billing-service, не auth-service.
+  // План 38 Ф.7: баланс берётся из billing-service, не identity-service.
   const { data: balanceData } = useQuery({
     queryKey: ['billing-balance'],
     queryFn: () => portalApi.billing.balance(),

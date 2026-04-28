@@ -151,9 +151,9 @@ type changePasswordRequest struct {
 	NewPassword     string `json:"new_password"`
 }
 
-// План 36 Critical-6: ChangePassword переехал в auth-service (POST /auth/password).
-// Хеш пароля живёт в auth-db, в game-db password_hash IS NULL.
-// Frontend дёргает auth-service напрямую через vite proxy /auth/password.
+// План 36 Critical-6: ChangePassword переехал в identity-service (POST /auth/password).
+// Хеш пароля живёт в identity-db, в game-db password_hash IS NULL.
+// Frontend дёргает identity-service напрямую через vite proxy /auth/password.
 
 func (h *Handler) setEmail(ctx context.Context, uid, email string) error {
 	tag, err := h.pool.Exec(ctx,

@@ -13256,10 +13256,18 @@ identity-БД стартовала с пустыми миграциями.
 
 **Smoke**: go build ./... зелёный для identity, game-nova,
 portal, billing. `go test ./internal/identitysvc/...` ✅.
-Docker compose smoke (`down -v` + up) — пользователь запустит
-вручную после согласования (destructive для dev-юзеров в
-identity-db; альтернатива ALTER USER/RENAME DATABASE с goose
-сложнее).
+Docker compose smoke (`down -v` + `up -d --build`) выполнен:
+- ✅ identity-db (новое имя), identity-migrate (новое имя)
+  поднимаются healthy.
+- ✅ Миграции 0001-0004 применяются успешно (CRITICAL Ф.2 fix
+  подтверждён — до плана 80 они не применялись вообще:
+  Dockerfile.migrate указывал на несуществующую papkу
+  `projects/auth/migrations`).
+- ❌ Миграция 0005_rbac_tables.sql валится на финальном
+  CROSS JOIN без ON CONFLICT — upstream-баг плана RBAC,
+  маскировался тем, что identity-БД до плана 80 не получала
+  миграций. Записан как P80.A в simplifications.md, фикс —
+  отдельный план/hotfix.
 
 **grep-проверка** (по плану): `auth-db|authsvc|projects/auth/
 migrations|Dockerfile.{auth,portal}` в active-коде (исключая

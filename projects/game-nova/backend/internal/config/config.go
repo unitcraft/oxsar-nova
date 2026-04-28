@@ -43,10 +43,10 @@ type RedisConfig struct {
 type AuthConfig struct {
 	OAuthGoogleID string
 	OAuthGoogleSc string
-	// JWKSUrl — URL Auth Service: http://auth-service:9000/.well-known/jwks.json
+	// JWKSUrl — URL Identity Service: http://identity-service:9000/.well-known/jwks.json
 	JWKSUrl        string
-	// AuthServiceURL — базовый URL Auth Service для межсервисных вызовов.
-	// Пример: http://auth-service:9000
+	// AuthServiceURL — базовый URL Identity Service для межсервисных вызовов.
+	// Пример: http://identity-service:9000
 	AuthServiceURL string
 	// UniverseID — идентификатор этой вселенной (uni01, uni02, …).
 	UniverseID string

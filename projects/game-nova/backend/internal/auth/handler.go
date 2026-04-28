@@ -13,7 +13,7 @@ import (
 
 // Handler — HTTP-адаптер к /api/me и /api/me/vacation.
 //
-// План 36 Ф.12: Register/Login/Refresh переехали в auth-service. Здесь
+// План 36 Ф.12: Register/Login/Refresh переехали в identity-service. Здесь
 // остаются только эндпоинты текущего пользователя (профиль, vacation).
 type Handler struct {
 	db       *pgxpool.Pool

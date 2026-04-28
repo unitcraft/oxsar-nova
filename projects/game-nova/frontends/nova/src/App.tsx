@@ -96,7 +96,7 @@ function parseHash(): { tab: Tab; infoUnit: InfoUnit | null } {
 export function App() {
   const token = useAuthStore((s) => s.accessToken);
   // План 36 Ф.8: handoff-route /auth/handoff?code=... — обмен one-time
-  // токена от Universe Switcher на новые JWT через auth-service.
+  // токена от Universe Switcher на новые JWT через identity-service.
   // Не требует существующей авторизации (после handoff юзер залогинится).
   if (window.location.pathname === '/auth/handoff') {
     return (

@@ -37,8 +37,8 @@ export function LoginScreen() {
     setError(null);
     setLoading(true);
     try {
-      // План 36 Ф.11: фронтенд ходит в auth-service (через vite proxy /auth/* в dev,
-      // через nginx auth.oxsar-nova.ru в prod). На login auth-service ждёт поле
+      // План 36 Ф.11: фронтенд ходит в identity-service (через vite proxy /auth/* в dev,
+      // через nginx auth.oxsar-nova.ru в prod). На login identity-service ждёт поле
       // login (email или username), на register — username + email + password.
       // План 44 (152-ФЗ): на register дополнительно отдаём consent_accepted —
       // подтверждение согласия с обработкой ПДн.

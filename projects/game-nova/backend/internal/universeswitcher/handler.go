@@ -1,6 +1,6 @@
 // Package universeswitcher реализует переключение вселенных для игрового сервера.
 // Клиент вызывает GET /api/universes/switch?target=uni02, сервер проксирует запрос
-// в auth-service для получения handoff-токена и возвращает redirect URL.
+// в identity-service для получения handoff-токена и возвращает redirect URL.
 package universeswitcher
 
 import (
@@ -18,7 +18,7 @@ import (
 
 // Handler выдаёт handoff URL для переключения в другую вселенную.
 type Handler struct {
-	authServiceURL string // http://auth-service:9000
+	authServiceURL string // http://identity-service:9000
 	universeID     string // текущая вселенная, например uni01
 	reg            *universe.Registry
 	httpClient     *http.Client
@@ -44,7 +44,7 @@ func (h *Handler) ListUniverses(w http.ResponseWriter, r *http.Request) {
 }
 
 // SwitchUniverse — GET /api/universes/switch?target=<universeID>
-// Требует аутентификации. Запрашивает handoff-токен у auth-service
+// Требует аутентификации. Запрашивает handoff-токен у identity-service
 // и возвращает URL для перехода в целевую вселенную.
 func (h *Handler) SwitchUniverse(w http.ResponseWriter, r *http.Request) {
 	if h.authServiceURL == "" {
@@ -74,7 +74,7 @@ func (h *Handler) SwitchUniverse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получаем Bearer токен из запроса, чтобы передать в auth-service
+	// Получаем Bearer токен из запроса, чтобы передать в identity-service
 	authHeader := r.Header.Get("Authorization")
 
 	handoffToken, err := h.requestHandoffToken(r.Context(), authHeader, targetID)
@@ -119,7 +119,7 @@ func (h *Handler) requestHandoffToken(ctx context.Context, authHeader, universeI
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("auth-service returned %d", resp.StatusCode)
+		return "", fmt.Errorf("identity-service returned %d", resp.StatusCode)
 	}
 
 	var out struct {

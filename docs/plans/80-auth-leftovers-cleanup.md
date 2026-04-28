@@ -1,7 +1,7 @@
 # План 80: Cleanup auth-хвостов после переименования identity
 
 **Дата**: 2026-04-28
-**Статус**: Открыт.
+**Статус**: ✅ Закрыт 2026-04-28.
 **Зависимости**: должен идти **после** планов 78 (frontends + legacy-PHP)
 и 79 (deploy refactor), чтобы не пересекаться по compose-файлам и
 docker-структуре.
@@ -225,3 +225,54 @@ ErrUserBanned        = errors.New("authsvc: account banned")
   по активному коду = 0 результатов (исключения: legacy-PHP, auth_rsa_key.pem).
 - Шапка плана 80 ✅.
 - Запись в docs/project-creation.txt.
+
+---
+
+## Smoke 2026-04-28 (post-execution)
+
+Полный destructive smoke выполнен после Ф.1-Ф.6:
+
+```bash
+docker compose -f deploy/docker-compose.yml down -v
+# Удалены volumes: pg-data, redis-data, portal-db-data, billing-db-data,
+# uni02-db-data, frontend-node-modules, uni02-frontend-node-modules,
+# portal-frontend-node-modules + старые auth-db-data и auth-rsa-key
+# (зомби-volumes от прошлой раскладки, удалены вручную).
+docker compose -f deploy/docker-compose.yml up -d --build
+```
+
+**Результат**:
+- ✅ `identity-db` (новое имя) встаёт healthy с `POSTGRES_USER=identitysvc`,
+  `POSTGRES_DB=identitysvc`.
+- ✅ `identity-migrate` (новое имя) запускается, читает миграции из
+  `/migrations/identity` (после плана 80 Ф.2), применяет 0001-0004
+  УСПЕШНО:
+  ```
+  OK   0001_init.sql (358ms)
+  OK   0002_universe_memberships.sql (67ms)
+  OK   0003_drop_credits.sql (16ms)
+  OK   0004_user_consents.sql (57ms)
+  ```
+  → **CRITICAL Ф.2 fix подтверждён**: до плана 80 эти миграции
+  НЕ ПРИМЕНЯЛИСЬ (Dockerfile.migrate копировал из несуществующей
+  `projects/auth/migrations`), identity-БД стартовала пустой.
+- ❌ Миграция `0005_rbac_tables.sql` падает:
+  ```
+  ERROR: duplicate key value violates unique constraint
+  "role_permissions_pkey" (SQLSTATE 23505)
+  ```
+  Финальный `INSERT INTO role_permissions ... FROM roles r, permissions p`
+  делает CROSS JOIN для ВСЕХ ролей включая `support`/`moderator`/
+  `admin`/`billing_admin`, которым уже выданы permissions
+  предыдущими INSERT'ами в той же миграции — ON CONFLICT отсутствует.
+  Это **upstream-баг плана RBAC** (план 5x), не дефект плана 80.
+  Нужен отдельный hotfix: добавить `ON CONFLICT (role_id, permission_id)
+  DO NOTHING` в финальный INSERT, либо WHERE-условие на `r.name = 'superadmin'`.
+
+**Выводы**:
+- Ф.1-Ф.6 acceptance плана 80 — выполнены: rename корректный,
+  компилится, миграции 0001-0004 применяются. Что и требовалось:
+  CRITICAL prod-баг (Dockerfile.migrate указывал на пустоту) починен.
+- Smoke плана 80 ВЫЯВИЛ ранее скрытый баг 0005_rbac_tables — это
+  **бонус-польза плана**, до этого баг маскировался тем, что
+  identity-БД вообще не получала миграций. Фикс — отдельный план.

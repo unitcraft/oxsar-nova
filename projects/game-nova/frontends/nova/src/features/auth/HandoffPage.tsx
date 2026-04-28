@@ -8,13 +8,13 @@ import { useAuthStore } from '@/stores/auth';
  *
  * Flow (план 36 Ф.5/Ф.8):
  *   1. Universe Switcher в uni01 кликнул «uni02».
- *   2. uni01-backend дёрнул auth-service /auth/universe-token → handoff_token.
+ *   2. uni01-backend дёрнул identity-service /auth/universe-token → handoff_token.
  *   3. uni01-backend вернул redirect_url: <uni02>/auth/handoff?code=<token>.
  *   4. Браузер открыл этот URL — мы здесь.
  *   5. Дёргаем /auth/token/exchange с handoff_token → новые JWT (access+refresh).
  *   6. Сохраняем в localStorage, редиректим на /.
  *
- * /auth/* проксируется vite в auth-service (см. vite.config.ts).
+ * /auth/* проксируется vite в identity-service (см. vite.config.ts).
  */
 export function HandoffPage() {
   const setTokens = useAuthStore((s) => s.setTokens);

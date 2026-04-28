@@ -41,7 +41,7 @@ func NewWebhookHandler(svc *Service, gw payment.Gateway) *WebhookHandler {
 // Handle — POST /billing/webhooks/{provider}.
 //
 // Public endpoint (rate-limit отдельно — TODO Ф.4.1, можно через Redis-RL
-// как в auth-service). IP allowlist — через nginx на проде.
+// как в identity-service). IP allowlist — через nginx на проде.
 func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, 64*1024))
 	if err != nil {
