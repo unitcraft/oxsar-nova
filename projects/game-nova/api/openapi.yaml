@@ -1390,7 +1390,44 @@ paths:
     get:
       tags: [alliances]
       security: [{ bearerAuth: [] }]
-      summary: Список альянсов (топ-50 по числу участников).
+      summary: Список альянсов с фильтрами и полнотекстовым поиском (план 67 Ф.4, U-012).
+      description: |
+        Без параметров — топ по числу участников. Поиск:
+        - `q` — полнотекст по name+tag. Для одного слова применяется
+          prefix-match (`q=str` найдёт `Strikers`); для фраз с
+          пробелами — `websearch_to_tsquery` (поддерживает кавычки,
+          OR, исключения через `-`).
+        - `is_open=true|false` — фильтр по открытости.
+        - `min_members` / `max_members` — диапазон по числу участников.
+        - `limit` (1..100, default 50) / `offset` — пагинация.
+
+        GIN-индекс `ix_alliances_search` (миграция 0080) на
+        `to_tsvector('simple', name || ' ' || tag)`.
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema: { type: string }
+        - in: query
+          name: is_open
+          required: false
+          schema: { type: boolean }
+        - in: query
+          name: min_members
+          required: false
+          schema: { type: integer, minimum: 0 }
+        - in: query
+          name: max_members
+          required: false
+          schema: { type: integer, minimum: 0 }
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, default: 50, minimum: 1, maximum: 100 }
+        - in: query
+          name: offset
+          required: false
+          schema: { type: integer, default: 0, minimum: 0 }
       responses:
         "200":
           description: ok
@@ -1402,6 +1439,8 @@ paths:
                   alliances:
                     type: array
                     items: { $ref: "#/components/schemas/Alliance" }
+                  limit:  { type: integer }
+                  offset: { type: integer }
     post:
       tags: [alliances]
       security: [{ bearerAuth: [] }]

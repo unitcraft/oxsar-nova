@@ -132,28 +132,99 @@ type Member struct {
 
 var ErrMemberNotFound = errors.New("alliance: member not found")
 
-// List возвращает первые N альянсов, сортировка по числу участников.
-func (s *Service) List(ctx context.Context, limit int) ([]Alliance, error) {
-	if limit <= 0 || limit > 100 {
-		limit = 50
+// ListFilters — параметры фильтрации/поиска для GET /api/alliances
+// (план 67 Ф.4, U-012).
+type ListFilters struct {
+	// Q — полнотекстовая строка поиска (по name+tag, prefix-match).
+	// Пустая строка → без фильтра.
+	Q string
+	// IsOpen — если не nil, фильтрует по alliances.is_open.
+	IsOpen *bool
+	// MinMembers / MaxMembers — диапазон по числу участников.
+	// 0 / 0 = без фильтра. MaxMembers == 0 → без верхней границы.
+	MinMembers int
+	MaxMembers int
+	Limit      int
+	Offset     int
+}
+
+// List возвращает альянсы с опциональными фильтрами/поиском.
+//
+// Полнотекст: GIN-индекс на to_tsvector('simple', name||' '||tag),
+// миграция 0080. Запрос — to_tsquery('simple', $1 || ':*') для
+// prefix-match (пользователь видит результаты по мере набора).
+func (s *Service) List(ctx context.Context, f ListFilters) ([]Alliance, error) {
+	if f.Limit <= 0 || f.Limit > 100 {
+		f.Limit = 50
 	}
-	rows, err := s.db.Pool().Query(ctx, `
+	if f.Offset < 0 {
+		f.Offset = 0
+	}
+
+	q := `
 		SELECT a.id, a.tag, a.name, a.description, a.is_open, a.owner_id,
 		       COALESCE(u.username,'') AS owner_name,
 		       COUNT(m.user_id)        AS member_count,
 		       a.created_at
 		FROM alliances a
 		LEFT JOIN users u ON u.id = a.owner_id
-		LEFT JOIN alliance_members m ON m.alliance_id = a.id
-		GROUP BY a.id, u.username
-		ORDER BY member_count DESC, a.created_at ASC
-		LIMIT $1
-	`, limit)
+		LEFT JOIN alliance_members m ON m.alliance_id = a.id`
+	args := []any{}
+	wheres := []string{}
+
+	add := func(cond string, v any) {
+		args = append(args, v)
+		wheres = append(wheres, strings.Replace(cond, "?", "$"+strconv.Itoa(len(args)), 1))
+	}
+
+	if q := strings.TrimSpace(f.Q); q != "" {
+		// to_tsquery требует токенов через &; пользовательский ввод
+		// проще передать через plainto_tsquery — но он не делает
+		// prefix-match. Используем websearch_to_tsquery (доступен с
+		// PG 11) — он экранирует спецсимволы и поддерживает фразы.
+		// Для prefix-match — отдельная ветка через to_tsquery с :*
+		// если пользователь не ввёл пробел.
+		if !strings.ContainsAny(q, " \t") {
+			add(`to_tsvector('simple', a.name || ' ' || a.tag) @@ to_tsquery('simple', ? || ':*')`, sanitizeTSQuery(q))
+		} else {
+			add(`to_tsvector('simple', a.name || ' ' || a.tag) @@ websearch_to_tsquery('simple', ?)`, q)
+		}
+	}
+	if f.IsOpen != nil {
+		add("a.is_open = ?", *f.IsOpen)
+	}
+
+	if len(wheres) > 0 {
+		q += " WHERE " + strings.Join(wheres, " AND ")
+	}
+	q += " GROUP BY a.id, u.username"
+
+	// HAVING для фильтров по member_count.
+	having := []string{}
+	if f.MinMembers > 0 {
+		args = append(args, f.MinMembers)
+		having = append(having, "COUNT(m.user_id) >= $"+strconv.Itoa(len(args)))
+	}
+	if f.MaxMembers > 0 {
+		args = append(args, f.MaxMembers)
+		having = append(having, "COUNT(m.user_id) <= $"+strconv.Itoa(len(args)))
+	}
+	if len(having) > 0 {
+		q += " HAVING " + strings.Join(having, " AND ")
+	}
+
+	q += " ORDER BY member_count DESC, a.created_at ASC"
+	args = append(args, f.Limit)
+	q += " LIMIT $" + strconv.Itoa(len(args))
+	args = append(args, f.Offset)
+	q += " OFFSET $" + strconv.Itoa(len(args))
+
+	rows, err := s.db.Pool().Query(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("alliances list: %w", err)
 	}
 	defer rows.Close()
-	var out []Alliance
+	out := []Alliance{}
 	for rows.Next() {
 		var al Alliance
 		if err := rows.Scan(&al.ID, &al.Tag, &al.Name, &al.Description, &al.IsOpen,
@@ -163,6 +234,24 @@ func (s *Service) List(ctx context.Context, limit int) ([]Alliance, error) {
 		out = append(out, al)
 	}
 	return out, rows.Err()
+}
+
+// sanitizeTSQuery убирает символы, которые to_tsquery интерпретирует
+// как операторы (& | ! ( ) :), оставляя только буквы/цифры. Для
+// websearch_to_tsquery санитайзинг не нужен — он сам справляется.
+func sanitizeTSQuery(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z',
+			r >= 'A' && r <= 'Z',
+			r >= '0' && r <= '9',
+			r >= 'А' && r <= 'я',
+			r == 'ё', r == 'Ё':
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // Get возвращает альянс по ID вместе со списком участников.
