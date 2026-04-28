@@ -12,6 +12,24 @@ export interface ApiError extends Error {
   code: string;
 }
 
+// MutationOpts — расширенные опции для PATCH/POST/PUT/DELETE.
+// idempotencyKey: значение HTTP-заголовка `Idempotency-Key` (R9 ТЗ —
+// см. §16.10). Бэкенд хранит ответ под этим ключом 24ч; повторный
+// запрос с тем же ключом не выполнится дважды.
+// headers: произвольные дополнительные заголовки (если потребуется
+// в будущем).
+export interface MutationOpts {
+  idempotencyKey?: string;
+  headers?: Record<string, string>;
+}
+
+function withMutationHeaders(opts?: MutationOpts): Record<string, string> | undefined {
+  if (!opts) return undefined;
+  const h: Record<string, string> = { ...(opts.headers ?? {}) };
+  if (opts.idempotencyKey !== undefined) h['Idempotency-Key'] = opts.idempotencyKey;
+  return Object.keys(h).length > 0 ? h : undefined;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = useAuthStore.getState().accessToken;
   const res = await fetch(path, {
@@ -46,14 +64,32 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+function buildInit(method: string, body?: unknown, opts?: MutationOpts): RequestInit {
+  const init: RequestInit = { method, body: body ? JSON.stringify(body) : null };
+  const headers = withMutationHeaders(opts);
+  if (headers) init.headers = headers;
+  return init;
+}
+
 export const api = {
   get: <T,>(path: string) => request<T>(path),
-  post: <T,>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : null }),
-  put: <T,>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'PUT', body: body ? JSON.stringify(body) : null }),
-  patch: <T,>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : null }),
-  delete: <T,>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'DELETE', body: body ? JSON.stringify(body) : null }),
+  post: <T,>(path: string, body?: unknown, opts?: MutationOpts) =>
+    request<T>(path, buildInit('POST', body, opts)),
+  put: <T,>(path: string, body?: unknown, opts?: MutationOpts) =>
+    request<T>(path, buildInit('PUT', body, opts)),
+  patch: <T,>(path: string, body?: unknown, opts?: MutationOpts) =>
+    request<T>(path, buildInit('PATCH', body, opts)),
+  delete: <T,>(path: string, body?: unknown, opts?: MutationOpts) =>
+    request<T>(path, buildInit('DELETE', body, opts)),
 };
+
+// genIdempotencyKey — короткий уникальный ключ для одной мутации.
+// Использует crypto.randomUUID если доступен (HTTPS / localhost / dev).
+// Fallback — Math.random+timestamp (достаточно для дедупа в окне 24ч,
+// бэкенд хеширует ключ перед хранением).
+export function genIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}

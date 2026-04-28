@@ -214,6 +214,65 @@ alliance:
   colActions: Actions
   transferLeadership.codeTitle: Alliance leadership transfer code
   transferLeadership.codeBody: "Confirmation code for alliance leadership transfer: {{code}}\nValid until {{expiresAt}}.\n\nIf you didn't request this — just ignore the message; leadership will not be transferred."
+  # Plan 67 Ph.5: alliance UI extensions.
+  descriptions.title: Alliance descriptions
+  descriptions.tabExternal: External
+  descriptions.tabInternal: For members
+  descriptions.tabApply: For applicants
+  descriptions.empty: Empty
+  descriptions.editBtn: Edit
+  descriptions.saveBtn: Save
+  descriptions.saved: Descriptions updated
+  descriptions.placeholderExternal: Visible to everyone — public alliance page.
+  descriptions.placeholderInternal: Visible only to members — internal rules, schedule, contacts.
+  descriptions.placeholderApply: Visible to applicants — requirements for candidates.
+  ranks.title: Ranks and permissions
+  ranks.createBtn: Create rank
+  ranks.editBtn: Edit
+  ranks.deleteBtn: Delete
+  ranks.saveBtn: Save
+  ranks.colPosition: "#"
+  ranks.colName: Name
+  ranks.colPerms: Permissions
+  ranks.formCreate: New rank
+  ranks.formEdit: Edit rank
+  ranks.namePlaceholder: "e.g.: Officer"
+  ranks.permsLegend: Permissions
+  ranks.permsNone: No permissions
+  ranks.permsAll: All permissions
+  ranks.empty: No custom ranks yet.
+  ranks.created: Rank created
+  ranks.updated: Rank updated
+  ranks.deleted: Rank deleted
+  ranks.deleteConfirm: "Delete rank «{{name}}»? Members assigned to it will revert to the default role."
+  relFriend: FRIEND
+  relNeutral: NEUTRAL
+  relHostileNeutral: HOSTILE
+  diplomacy.filterAll: All
+  diplomacy.colTarget: Alliance
+  diplomacy.colStatus: Status
+  diplomacy.statusOutgoing: Awaiting reply
+  diplomacy.statusIncoming: Pending consent
+  diplomacy.statusActive: Active
+  diplomacy.targetPlaceholder: "Alliance ID (UUID)"
+  diplomacy.proposeBtn: Propose
+  diplomacy.breakBtn: Break
+  diplomacy.empty: No diplomatic ties.
+  diplomacy.proposed: Proposal sent
+  perm.can_invite: Invite players
+  perm.can_kick: Kick players
+  perm.can_send_global_mail: Alliance broadcast
+  perm.can_manage_diplomacy: Manage diplomacy
+  perm.can_change_description: Edit descriptions
+  perm.can_propose_relations: Propose relations
+  perm.can_manage_ranks: Manage ranks
+  perm.can_invite.short: invite
+  perm.can_kick.short: kick
+  perm.can_send_global_mail.short: mail
+  perm.can_manage_diplomacy.short: dipl
+  perm.can_change_description.short: desc
+  perm.can_propose_relations.short: rels
+  perm.can_manage_ranks.short: ranks
 artefactInfo:
   action: ""
   activate: ""
@@ -2753,3 +2812,20 @@ userAgreement:
   userAgreementNewPreText: ""
   userAgreementPostText: ""
   userAgreementPreText: ""
+feedback:
+  fleetSlots: "Fleet slots:"
+  fleetSlotsFull: "no free slots"
+  expoSlots: "Expedition slots:"
+  expoSlotsFull: "no free slots"
+  expoSlotsHint: "(grows with expo_tech)"
+  artefactActive: "active"
+  artefactCharging: "charging"
+  artefactListed: "listed"
+  artefactExpired: "expired"
+  artefactConsumed: "consumed"
+  artefactExpiringSoon: "expiring soon"
+  newAchievementsAria: "{{n}} new achievements"
+  energyDeficit: "energy deficit"
+  insufficientRepairFields: "no free repair fields"
+  energyTipTitle: "⚡ Energy"
+  energyTipBody: "Production is green, consumption is red. When total balance ≤ 0, mines and labs work at reduced efficiency."

@@ -5,6 +5,9 @@ import { Confirm } from '@/ui/Confirm';
 import { useToast } from '@/ui/Toast';
 import { useTranslation } from '@/i18n/i18n';
 import { ReportButton } from '@/components/ReportButton';
+import { DescriptionsPanel } from './DescriptionsPanel';
+import { RanksPanel } from './RanksPanel';
+import { DiplomacyPanel } from './DiplomacyPanel';
 
 interface Alliance {
   id: string;
@@ -34,19 +37,6 @@ interface Application {
   message: string;
   created_at: string;
 }
-
-interface Relationship {
-  target_alliance_id: string;
-  target_tag: string;
-  target_name: string;
-  relation: string;
-  status: string;
-  initiator: boolean;
-  set_at: string;
-}
-
-const REL_LABEL_KEY: Record<string, string> = { nap: 'relNap', war: 'relWar', ally: 'relAlly' };
-const REL_COLOR: Record<string, string> = { nap: 'var(--ox-fg-dim)', war: 'var(--ox-danger)', ally: 'var(--ox-success)' };
 
 export function AllianceScreen() {
   const { t } = useTranslation('alliance');
@@ -257,11 +247,6 @@ function MyAlliancePanel({
             </div>
           </div>
         </div>
-        {alliance.description && (
-          <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', borderTop: '1px solid var(--ox-border)', paddingTop: 8, marginTop: 4 }}>
-            {alliance.description}
-          </div>
-        )}
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           {isOwner && (
             <button
@@ -286,11 +271,17 @@ function MyAlliancePanel({
         </div>
       </div>
 
+      {/* Descriptions: 3 текста (external/internal/apply) — план 67 D-041, U-015 */}
+      <DescriptionsPanel allianceID={alliance.id} canEdit={isOwner} />
+
       {/* Members */}
       <MembersTable alliance={alliance} members={members} isOwner={isOwner} />
 
-      {/* Alliance relations */}
-      {isOwner && <RelationsPanel allianceID={alliance.id} />}
+      {/* Custom ranks с гранулярными permissions — план 67 D-014, U-005 */}
+      <RanksPanel allianceID={alliance.id} canManage={isOwner} />
+
+      {/* Diplomacy: 5 enum-статусов, accept/reject/break — план 67 D-014 B1 */}
+      <DiplomacyPanel allianceID={alliance.id} canManage={isOwner} />
 
       {/* Applications */}
       {isOwner && !alliance.is_open && (
@@ -441,106 +432,6 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
           {create.isPending ? '…' : `🤝 ${t('createBtn')}`}
         </button>
         <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>{t('cancelBtn')}</button>
-      </div>
-    </div>
-  );
-}
-
-function RelationsPanel({ allianceID }: { allianceID: string }) {
-  const { t } = useTranslation('alliance');
-  const qc = useQueryClient();
-  const toast = useToast();
-  const [targetID, setTargetID] = useState('');
-  const [relation, setRelation] = useState<'nap' | 'war' | 'ally'>('nap');
-
-  const rels = useQuery({
-    queryKey: ['alliances', allianceID, 'relations'],
-    queryFn: () => api.get<{ relations: Relationship[] | null }>(`/api/alliances/${allianceID}/relations`),
-    refetchInterval: 30000,
-  });
-
-  const propose = useMutation({
-    mutationFn: ({ tid, rel }: { tid: string; rel: string }) =>
-      api.put<void>(`/api/alliances/${allianceID}/relations/${tid}`, { relation: rel }),
-    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['alliances', allianceID, 'relations'] }); setTargetID(''); },
-    onError: (e) => toast.show('danger', t('createErr'), e instanceof Error ? e.message : ''),
-  });
-
-  const remove = useMutation({
-    mutationFn: (tid: string) => api.put<void>(`/api/alliances/${allianceID}/relations/${tid}`, { relation: 'none' }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['alliances', allianceID, 'relations'] }),
-  });
-
-  const accept = useMutation({
-    mutationFn: (initiatorID: string) => api.post<void>(`/api/alliances/${allianceID}/relations/${initiatorID}/accept`),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['alliances', allianceID, 'relations'] }),
-  });
-
-  const rejectRel = useMutation({
-    mutationFn: (initiatorID: string) => api.delete<void>(`/api/alliances/${allianceID}/relations/${initiatorID}`),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['alliances', allianceID, 'relations'] }),
-  });
-
-  const list = rels.data?.relations ?? [];
-
-  return (
-    <div className="ox-panel" style={{ padding: '12px 16px' }}>
-      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ox-fg-muted)', marginBottom: 8 }}>
-        {t('sectionRelations')}
-      </div>
-
-      {list.length === 0 && !rels.isLoading && (
-        <div style={{ fontSize: 15, color: 'var(--ox-fg-dim)', marginBottom: 10 }}>{t('noApplications')}</div>
-      )}
-
-      {list.length > 0 && (
-        <table className="ox-table" style={{ margin: '0 0 12px', fontSize: 14 }}>
-          <thead>
-            <tr><th>{t('title')}</th><th>{t('colRelation')}</th><th>{t('labelTag')}</th><th /></tr>
-          </thead>
-          <tbody>
-            {list.map((r) => (
-              <tr key={`${r.initiator ? 'out' : 'in'}-${r.target_alliance_id}`}>
-                <td style={{ fontFamily: 'var(--ox-mono)' }}>[{r.target_tag}] {r.target_name}</td>
-                <td style={{ color: REL_COLOR[r.relation] ?? 'var(--ox-fg-dim)', fontWeight: 700 }}>
-                  {r.relation in REL_LABEL_KEY ? t(REL_LABEL_KEY[r.relation]!) : r.relation}
-                </td>
-                <td style={{ color: r.status === 'pending' ? 'var(--ox-warning)' : 'var(--ox-fg-dim)' }}>
-                  {r.initiator ? t('applyBtn') : t('acceptBtn')}{r.status === 'pending' ? ` (${t('noApplications')})` : ''}
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {!r.initiator && r.status === 'pending' ? (
-                      <>
-                        <button type="button" className="btn btn-sm" disabled={accept.isPending} onClick={() => accept.mutate(r.target_alliance_id)}>✓</button>
-                        <button type="button" className="btn-ghost btn-sm" disabled={rejectRel.isPending} onClick={() => rejectRel.mutate(r.target_alliance_id)}>✕</button>
-                      </>
-                    ) : (
-                      <button type="button" className="btn-ghost btn-sm" disabled={remove.isPending} onClick={() => remove.mutate(r.target_alliance_id)}>✕</button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-        <input
-          placeholder={t('labelTag')}
-          value={targetID}
-          onChange={(e) => setTargetID(e.target.value)}
-          style={{ flex: 1, minWidth: 200, fontFamily: 'var(--ox-mono)', fontSize: '0.85em' }}
-        />
-        <select value={relation} onChange={(e) => setRelation(e.target.value as typeof relation)}>
-          <option value="nap">{t('relNap')}</option>
-          <option value="ally">{t('relAlly')}</option>
-          <option value="war">{t('relWar')}</option>
-        </select>
-        <button type="button" className="btn btn-sm" disabled={!targetID || propose.isPending} onClick={() => propose.mutate({ tid: targetID, rel: relation })}>
-          {t('applyBtn')}
-        </button>
       </div>
     </div>
   );
