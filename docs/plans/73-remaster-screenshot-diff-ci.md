@@ -1,4 +1,4 @@
-# План 73: Screenshot-diff CI (Playwright + visual regression)
+# План 73 (ремастер): Screenshot-diff CI (Playwright + visual regression)
 
 **Дата**: 2026-04-28
 **Статус**: Скелет (детали допишет агент-реализатор при старте)

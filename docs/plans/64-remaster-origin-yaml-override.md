@@ -1,4 +1,4 @@
-# План 64: origin.yaml override + per-universe balance loading
+# План 64 (ремастер): origin.yaml override + per-universe balance loading
 
 **Дата**: 2026-04-28
 **Статус**: Активный
