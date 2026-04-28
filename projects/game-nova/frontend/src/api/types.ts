@@ -8,15 +8,15 @@ export interface User {
   email: string;
 }
 
-export interface Tokens {
-  access: string;
-  refresh: string;
-  expires: string;
-}
-
+// План 63: формат ответа login/refresh по RFC 6749 §5.1.
+// access_token + token_type:"Bearer" + expires_in (TTL в секундах) + refresh_token.
+// Поле user — non-RFC, но widespread practice для SPA login endpoint'ов.
 export interface AuthResponse {
-  user: User;
-  tokens: Tokens;
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_token: string;
+  user?: User;
 }
 
 export interface Planet {

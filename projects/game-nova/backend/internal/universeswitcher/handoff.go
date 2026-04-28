@@ -35,8 +35,8 @@ window.location.replace('/');
 }
 
 type tokenPair struct {
-	Access  string `json:"access"`
-	Refresh string `json:"refresh"`
+	Access  string
+	Refresh string
 }
 
 func (h *Handler) exchangeHandoffCode(ctx context.Context, code string) (tokenPair, error) {
@@ -61,11 +61,13 @@ func (h *Handler) exchangeHandoffCode(ctx context.Context, code string) (tokenPa
 		return tokenPair{}, fmt.Errorf("exchange returned %d", resp.StatusCode)
 	}
 
+	// План 63: identity отвечает по RFC 6749 §5.1 (плоский формат).
 	var out struct {
-		Tokens tokenPair `json:"tokens"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return tokenPair{}, err
 	}
-	return out.Tokens, nil
+	return tokenPair{Access: out.AccessToken, Refresh: out.RefreshToken}, nil
 }

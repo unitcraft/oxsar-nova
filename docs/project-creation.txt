@@ -10935,3 +10935,84 @@ add/commit, `git add` только своими путями
 ёмкие сборы (controllers/events/DSL/AlienAI и
 domain-comparisons/UI-replication/UX-microlog) уложило работу в
 одну сессию с полнотой ≥порогов.
+
+## Итерация 63 (2026-04-28) — identity tokens по RFC 6749
+
+**Что сделали.** Перевели формат ответа identity-service на login/
+refresh/register/token-exchange со self-made wrapper
+`{user, tokens:{access, refresh}}` на стандарт **OAuth 2.0 / RFC 6749 §5.1**:
+плоская структура `{access_token, token_type:"Bearer", expires_in,
+refresh_token, user}`. Поле `user` оставили рядом плоско — это
+non-RFC, но widespread practice (Auth0, Firebase) для login
+endpoint'ов SPA, экономит лишний round-trip.
+
+**Зачем.** Предыдущий формат не соответствовал ни одному стандарту —
+ровно по этой причине агент плана 62 не смог залогиниться в
+admin-frontend через admin-bff: identityclient в admin-bff ждал
+плоские `access_token`/`refresh_token`, а identity отдавал
+вложенный wrapper. Любой будущий клиент (mobile SDK, OAuth-аналитика,
+тестовый инструмент) ломался бы аналогично.
+
+**Что менять не стали.** JWT-claims (sub/iss/aud/exp/iat/jti),
+JWKS endpoint `/.well-known/jwks.json`, RBAC-логику. Не вводили
+полный OpenID Connect (ID Token, отдельный `/userinfo`) — пока
+избыточно.
+
+**Затронутые файлы.**
+- identity:
+  - `pkg/jwtrs/jwtrs.go` — добавлен метод `Issuer.AccessTTL()` для
+    `expires_in` в ответе.
+  - `internal/identitysvc/handler.go` — `tokenResponse` DTO + helper
+    `buildTokens(toks, *user)`, обновлены 4 endpoint'а: Register,
+    Login, Refresh, TokenExchange. Refresh не возвращает user
+    (опционально по плану).
+- portal-frontend:
+  - `src/api/types.ts` — `Tokens` → `TokenResponse` (RFC поля).
+  - `src/api/portal.ts` — login/register/refresh типизированы как
+    `TokenResponse`, плоские поля.
+  - `src/store/auth.ts` — `setAuth` принимает `TokenResponse`,
+    тянет `user` либо из ответа, либо fallback-параметром.
+  - `src/pages/AuthPage.tsx` — `setAuth(res)` вместо
+    `setAuth(res.user, res.tokens)`.
+- game-nova frontend:
+  - `src/api/types.ts` — `AuthResponse` стал плоским RFC 6749.
+  - `src/features/auth/LoginScreen.tsx` — читает
+    `res.access_token`/`res.refresh_token`/`res.user`.
+  - `src/features/auth/HandoffPage.tsx` — то же для exchange-ответа.
+  - `e2e/fixtures/auth.ts` — фикстура парсит `resp.access_token`
+    напрямую.
+- game-nova backend:
+  - `internal/universeswitcher/handoff.go` — exchange-парсер
+    `out.AccessToken`/`out.RefreshToken` плоско.
+- openapi:
+  - `projects/game-nova/api/openapi.yaml` — схема `AuthResponse`
+    переопределена под RFC 6749, схема `Tokens` удалена,
+    `/api/auth/refresh` возвращает `AuthResponse`.
+- admin-bff: уже использовал плоский формат (`access_token`/
+  `refresh_token`) — без правок.
+- game-origin PHP: парсит только JWT-payload (header.payload base64),
+  wrapper'ы login не трогает — без правок.
+
+**Грепы.** Полный обход
+`'\.tokens\.access\|\.tokens\.refresh\|"tokens"'` по
+`projects/ --include="*.ts","*.tsx","*.go","*.php"` — все 9
+исходных мест найдены и обновлены, после правок остались только
+комментарий в плане 63 и строка в playwright-отчёте (артефакт).
+
+**Что не проверено.** Вручную через браузер не запускали
+docker-compose стек — пользователь должен прогнать smoke в:
+portal AuthPage, game-nova LoginScreen, admin-frontend через
+admin-bff, refresh-flow (после истечения access), handoff из
+portal в game-origin. Сборка `go build ./...` и `go test ./...`
+для identity, admin-bff, game-nova-backend — зелёные.
+
+**Коммиты**: 1 коммит `refactor(identity): tokens по RFC 6749 +
+потребители (план 63)`. Решено не дробить на identity + consumers
+по варианту B плана: правки небольшие (~150 строк, 11 файлов),
+изоляция от параллельной сессии плана 62 обеспечивается поимённым
+`git add` (`projects/identity/`, `projects/portal/frontend/`,
+`projects/game-nova/`, `projects/admin-bff/` не правился,
+`docs/plans/63-...`, `docs/project-creation.txt`).
+
+**Объём** — ~2 часа в активном темпе. На нижней границе оценки
+плана 2-4 часа.

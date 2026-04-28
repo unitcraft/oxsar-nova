@@ -19,9 +19,13 @@ export type TestUserName = keyof typeof TEST_USERS;
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8080';
 
+// План 63: identity отвечает по RFC 6749 §5.1 (плоский access_token / refresh_token).
 interface AuthResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
   user: { id: string; username: string };
-  tokens: { access: string; refresh: string };
 }
 
 // Кешируем токены на весь прогон — backend имеет ratelimit на /api/auth/login
@@ -55,7 +59,7 @@ export async function loginAs(page: Page, user: TestUserName): Promise<void> {
         JSON.stringify({ v: 2, access, refresh, userId }),
       );
     },
-    [resp.tokens.access, resp.tokens.refresh, resp.user.id] as const,
+    [resp.access_token, resp.refresh_token, resp.user.id] as const,
   );
 
   await page.goto('/');

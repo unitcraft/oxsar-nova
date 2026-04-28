@@ -17,7 +17,7 @@ export function LoginPage() {
     setLoading(true);
     try {
       const res = await portalApi.auth.login(login, password);
-      setAuth(res.user, res.tokens);
+      setAuth(res);
       window.location.href = '/';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка входа');
@@ -82,7 +82,7 @@ export function RegisterPage() {
     setLoading(true);
     try {
       const res = await portalApi.auth.register(username, email, password, consent, termsConsent);
-      setAuth(res.user, res.tokens);
+      setAuth(res);
       window.location.href = '/';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка регистрации');

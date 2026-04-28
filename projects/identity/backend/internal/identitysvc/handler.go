@@ -12,6 +12,31 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// tokenResponse — формат ответа login/refresh/register по RFC 6749 §5.1.
+// План 63: плоская структура вместо self-made wrapper {user, tokens:{access,refresh}}.
+//
+// Поле user не входит в RFC 6749 (стандарт предполагает отдельный
+// /userinfo endpoint OpenID Connect), но это широко принятая практика
+// для login endpoint'ов SPA — экономит лишний round-trip. Опционально:
+// для refresh user не возвращается.
+type tokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`        // всегда "Bearer"
+	ExpiresIn    int    `json:"expires_in"`        // TTL access в секундах
+	RefreshToken string `json:"refresh_token"`
+	User         *User  `json:"user,omitempty"`
+}
+
+func (h *Handler) buildTokens(toks jwtrs.Tokens, u *User) tokenResponse {
+	return tokenResponse{
+		AccessToken:  toks.Access,
+		TokenType:    "Bearer",
+		ExpiresIn:    int(h.iss.AccessTTL().Seconds()),
+		RefreshToken: toks.Refresh,
+		User:         u,
+	}
+}
+
 // Handler — HTTP-адаптер Auth Service.
 type Handler struct {
 	svc       *Service
@@ -74,7 +99,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusCreated, map[string]any{"user": u, "tokens": toks})
+	httpx.WriteJSON(w, r, http.StatusCreated, h.buildTokens(toks, &u))
 }
 
 // Login — POST /auth/login
@@ -99,7 +124,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"user": u, "tokens": toks})
+	httpx.WriteJSON(w, r, http.StatusOK, h.buildTokens(toks, &u))
 }
 
 // Refresh — POST /auth/refresh
@@ -126,7 +151,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrUnauthorized, "invalid refresh token"))
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"tokens": toks})
+	httpx.WriteJSON(w, r, http.StatusOK, h.buildTokens(toks, nil))
 }
 
 // Logout — POST /auth/logout. Принимает refresh-token, кладёт его jti
@@ -296,7 +321,7 @@ func (h *Handler) TokenExchange(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrInternal)
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"user": u, "tokens": toks})
+	httpx.WriteJSON(w, r, http.StatusOK, h.buildTokens(toks, &u))
 }
 
 // RegisterUniverse — POST /auth/universes/register (внутренний, вызывается игровым сервером)

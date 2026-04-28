@@ -50,12 +50,15 @@ export function HandoffPage() {
         throw new Error(body.error?.message ?? `HTTP ${res.status}`);
       }
       const data = (await res.json()) as {
-        tokens: { access: string; refresh: string };
+        access_token: string;
+        refresh_token: string;
+        token_type: string;
+        expires_in: number;
         user: { id: string };
       };
       setTokens({
-        access: data.tokens.access,
-        refresh: data.tokens.refresh,
+        access: data.access_token,
+        refresh: data.refresh_token,
         userId: data.user.id,
       });
       return true;

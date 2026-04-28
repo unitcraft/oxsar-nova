@@ -56,9 +56,12 @@ export function LoginScreen() {
               terms_accepted: termsConsent,
             };
       const res = await api.post<AuthResponse>(path, body);
+      if (!res.user) {
+        throw new Error('login response missing user');
+      }
       setTokens({
-        access: res.tokens.access,
-        refresh: res.tokens.refresh,
+        access: res.access_token,
+        refresh: res.refresh_token,
         userId: res.user.id,
       });
     } catch (err) {
