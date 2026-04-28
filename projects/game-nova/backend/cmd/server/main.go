@@ -515,6 +515,8 @@ func run() error {
 		pr.Patch("/alliances/{id}/members/{userID}/rank-id", allianceH.AssignMemberRank)
 		pr.Delete("/alliances/{id}/members/{userID}", allianceH.Kick)
 		pr.Get("/alliances/{id}/audit", allianceH.ListAudit)
+		pr.Post("/alliances/{id}/transfer-leadership/code", allianceH.RequestTransferLeadership)
+		pr.Post("/alliances/{id}/transfer-leadership", allianceH.ConfirmTransferLeadership)
 
 		pr.Get("/chat/{kind}/history", chatH.History)
 		pr.Post("/chat/{kind}/send", chatH.Send)

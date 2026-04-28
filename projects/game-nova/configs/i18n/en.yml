@@ -212,6 +212,8 @@ alliance:
   colPoints: Points
   colRelation: Relation
   colActions: Actions
+  transferLeadership.codeTitle: Alliance leadership transfer code
+  transferLeadership.codeBody: "Confirmation code for alliance leadership transfer: {{code}}\nValid until {{expiresAt}}.\n\nIf you didn't request this — just ignore the message; leadership will not be transferred."
 artefactInfo:
   action: ""
   activate: ""
@@ -376,6 +378,10 @@ assaultReport:
   acsEnemyMoonDestroyedBody: ""
   acsDeathstarLostSubject: ""
   acsDeathstarLostBody: ""
+  buildingDestroyedSubject: ""
+  buildingDestroyedBody: ""
+  enemyBuildingDestroyedSubject: ""
+  enemyBuildingDestroyedBody: ""
 autoMessages:
   allianceAbandoned: ""
   allianceAbandonedSubject: ""

@@ -212,6 +212,8 @@ alliance:
   colPoints: Очки
   colRelation: Отношение
   colActions: Действия
+  transferLeadership.codeTitle: Код для передачи лидерства альянса
+  transferLeadership.codeBody: "Код подтверждения передачи лидерства альянса: {{code}}\nДействителен до {{expiresAt}}.\n\nЕсли это запросили не Вы — просто проигнорируйте, лидерство не будет передано."
 artefactInfo:
   action: Действие
   activate: Активировать
@@ -376,6 +378,10 @@ assaultReport:
   acsEnemyMoonDestroyedBody: "Объединённый флот с {{count}} Deathstar разрушил луну (P={{percent}}%, roll={{roll}}%)."
   acsDeathstarLostSubject: Ваши Deathstar взорвались (ACS)
   acsDeathstarLostBody: "При ACS-попытке разрушить луну все Deathstar взорвались (P={{percent}}%, roll={{roll}}%)."
+  buildingDestroyedSubject: На вашей планете разрушено здание
+  buildingDestroyedBody: "Атакующий понизил уровень здания #{{unit_id}} с {{level_from}} до {{level_to}}."
+  enemyBuildingDestroyedSubject: Здание противника разрушено
+  enemyBuildingDestroyedBody: "Ваш флот понизил уровень здания #{{unit_id}} с {{level_from}} до {{level_to}}."
 autoMessages:
   allianceAbandoned: "Ваш альянс [{{arg1}}] распался. Вы можете найти новый альянс, либо продолжать играть в одиночку."
   allianceAbandonedSubject: Альянс распущен
