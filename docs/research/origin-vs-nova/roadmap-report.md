@@ -85,6 +85,34 @@ alien-ai A1-A14 — даёт **серию будущих планов 63+** дл
   артефактов, расширенная дипломатия, телепорт планеты,
   achievements engine), но **поведение этих механик в modern-
   вселенных** определяется отдельно, не копируется из origin.
+
+**Явные исключения R0** (upgrades modern по решению пользователя
+2026-04-28):
+
+- **AlienAI полный паритет во всех вселенных** (план 66). План 15
+  этап 3 был пропущен в nova; теперь полная AI (грабёж, удержание,
+  четверг ×5, change-mission, fly-unknown) применяется к
+  uni01/uni02/origin одинаково. Это сознательный upgrade игрового
+  опыта modern, не R0-нарушение.
+- **Алиен-юниты во всех вселенных** (план 66 + 64). UNIT_A_1..A_5
+  (alien_unit_1..5) и legacy-спец-юниты (Lancer, Shadow,
+  Transplantator, Collector, Small/Large Planet Shield, Armored
+  Terran) добавляются в `configs/units.yml` (modern) **и**
+  `configs/balance/origin.yaml` (override). Это нужно для
+  AlienAI — нельзя дать AI боеспособный флот без юнитов. Грабёж
+  оксаритов и подарки от инопланетян — тоже работают для
+  uni01/uni02.
+
+**Что это означает практически:**
+
+- План 64 импортирует алиен-юниты не только в origin.yaml override,
+  но и **в дефолтный** `configs/units.yml`/`ships.yml` (R0 исключение).
+- Игроки uni01/uni02 видят алиен-флот в боевых отчётах, как и
+  игроки origin.
+- **Числа** (атака, щит, hull) алиен-юнитов **одинаковые во всех
+  вселенных** (берутся из na_ship_datasheet), формулы боя — тоже.
+- Если в будущем потребуется подкрутить балас алиен-флота для
+  modern (не для origin) — это новый отдельный план с ADR.
 - ✅ Параметризовывать существующие коды-пути для поддержки
   origin-чисел через `LoadFor(universeCode)` + override-YAML.
 - ✅ Рефакторить код nova под per-universe configurability,
@@ -890,6 +918,69 @@ backend которых уже готов.
 | **Ачивки в origin-фронте** (S-Achievements) | **не реализуем в первой итерации**; в nova ачивки уже есть, для origin реализуем позже отдельным планом | Сократить scope плана 72; план 70 (расширение goal engine под классические ачивки oxsar2) **отложен** до пост-запуска origin |
 | **Туториал в origin-фронте** (S-Tutorial) | **не реализуем в первой итерации**; реализуем позже отдельным планом | Сократить scope плана 72; nova имеет свой onboarding, для origin вернёмся к туториалу после старта |
 | **Баннеры и рекламные тексты в origin-фронте** | **не переносим** из legacy-PHP | В legacy-PHP origin есть рекламные блоки / баннеры / промо-тексты в шапке/футере/между секциями. В новый фронт **не копируются** — ни визуально, ни функционально. Решение по монетизации origin принимается отдельно после запуска (если будет). На старте origin-фронт чист от рекламы. |
+| **Расы игроков** (D-021, `users.race`) | **отказ** — ни в origin, ни в nova | Поле `na_user.race` в legacy-PHP-схеме есть с дефолтом 1, но **не используется** в коде (мёртвая архитектурная заглушка). Полноценные расы — это новая фича, не порт legacy. План 69 не вводит `users.race`. |
+| **Read-only архивный чат** (`na_chat_ro` / `na_chat_ro_u`) | **отказ** | Ненужная legacy-фича. История чата покрывается soft-delete + retention 6 месяцев (план 46 / 56). |
+| **Async-симулятор боя** (EVENT_RUN_SIM_ASSAULT) | **отказ** | nova-симулятор быстрый и синхронный (`backend/cmd/tools/battle-sim/`). Async был нужен в 2009-м из-за PHP-производительности. Если когда-то понадобится «запланировать бой на четверг» — отдельный план как новая фича. |
+| **Случайная колонизация** (EVENT_COLONIZE_RANDOM_PLANET) | **отказ** | Узкая admin-механика. Если admin'у понадобится «создать планету в случайном слоте» — кнопка в admin-frontend (план 53), не Kind в event-loop'е. |
+| **Кастомная alien-атака** (EVENT_ALIEN_ATTACK_CUSTOM) | **отказ** | Admin-tool для тестирования AlienAI. Если нужен — форма в admin-frontend (план 53), не отдельный Kind. |
+| **Реферальный экран в origin-фронте** | **отказ** — кнопка ведёт на portal | Реферальная программа cross-universe (план 59) живёт на portal-frontend. В origin-фронте только кнопка «Реферальная программа» в меню/хедере, открывает `oxsar-nova.ru/profile/referrals` в новой вкладке. Q1. |
+| **`users.ui_theme` enum** (D-007) | **отказ** для первой итерации | YAGNI: на старте у nova одна тема, у origin одна тема (pixel-perfect клон `standard`). Свободный выбор тем — после запуска, отдельным планом если понадобится. План 69 не вводит `users.ui_theme`. P1. |
+
+---
+
+## Часть V.5. Раскладка событий event-loop'а origin → nova
+
+В origin 75 EVENT_*, в nova ~41 Kind. Решения по каждому
+несовпадающему событию (зафиксировано 2026-04-28):
+
+### Уже паритет (одинаковая семантика)
+
+37 событий: BUILD_CONSTRUCTION, DEMOLISH_CONSTRUCTION, RESEARCH,
+BUILD_FLEET, BUILD_DEFENSE, POSITION, TRANSPORT, COLONIZE,
+RECYCLING, ATTACK_SINGLE, SPY, ATTACK_ALLIANCE, HALT,
+MOON_DESTRUCTION, EXPEDITION, ROCKET_ATTACK, HOLDING, RETURN,
+DELIVERY_UNITS, DELIVERY_RESOURSES, ATTACK_DESTROY_MOON,
+ATTACK_ALLIANCE_DESTROY_MOON, STARGATE_TRANSPORT, STARGATE_JUMP,
+REPAIR, DISASSEMBLE, ARTEFACT_EXPIRE, ARTEFACT_DISAPPEAR,
+ARTEFACT_DELAY, плюс все 8 ALIEN_* (план 66 расширит).
+
+### → Добавить в nova как общий знаменатель (план 65)
+
+| origin EVENT | nova Kind | Закрывает |
+|---|---|---|
+| EVENT_EXCH_EXPIRE | KindExchangeExpire | план 68 биржа |
+| EVENT_EXCH_BAN | KindExchangeBan | план 68 биржа |
+| EVENT_DELIVERY_ARTEFACTS | KindDeliveryArtefacts | расширение DELIVERY-семьи |
+| EVENT_ATTACK_DESTROY_BUILDING | KindAttackDestroyBuilding | боевая механика |
+| EVENT_ATTACK_ALLIANCE_DESTROY_BUILDING | KindAttackAllianceDestroyBuilding | ACS-вариант |
+| EVENT_ALLIANCE_ATTACK_ADDITIONAL | KindAllianceAttackAdditional | служебный referer ACS |
+| EVENT_TELEPORT_PLANET | KindTeleportPlanet | премиум-фича через оксары |
+
+### → Используют существующие nova-механизмы
+
+| origin EVENT | Что в nova |
+|---|---|
+| EVENT_TEMP_PLANET_DISAPEAR | `KindExpirePlanet` (Kind=65) — soft-удаление по `expires_at` |
+| EVENT_COLONIZE_NEW_USER_PLANET | user-creation flow + lazy-create middleware (план 36) |
+| EVENT_ALIEN_GRAB_CREDIT | `KindAlienGrabCredit` (Kind=37) — но крадёт **оксариты**, не «кредиты» (R1, ADR-0009) |
+
+### → nova-only Kind'ы — origin тоже получает
+
+- `KindOfficerExpire` (62) — subscription-офицеры через оксары (общий billing C1, R0).
+- `KindRaidWarning` (64) — UX-улучшение для всех вселенных.
+
+### → Не отдельный Kind, инфраструктура
+
+- **Score recalc** — через cron scheduler (план 32 + plans 09 Ф.5),
+  не event. `KindScoreRecalcAll` (Kind=70) оставлен только для legacy
+  wait-events / on-demand admin.
+
+### ❌ Отказ — не реализуем (см. Часть V)
+
+- TOURNAMENT_SCHEDULE / TOURNAMENT_RESCHEDULE / TOURNAMENT_PARTICIPANT
+- RUN_SIM_ASSAULT
+- COLONIZE_RANDOM_PLANET
+- ALIEN_ATTACK_CUSTOM
 
 ---
 
@@ -904,7 +995,8 @@ backend которых уже готов.
 3. **Шрифты в origin** — какие именно, лицензии. План 72 решит
    аудитом.
 4. **Какие именно из 100+ ачивок origin переносить** — нужен
-   отбор приоритетных vs «исторических». План 70 решит.
+   отбор приоритетных vs «исторических». План 70 (отложен) решит
+   при реактивации после плана 74.
 5. **Лицензии иконок origin** — критичный блокер. Аудит до плана 72.
 6. **Чат фан-аут с TipTap-payload** — план 32 готов, но
    протестировать на ~100 одновременных пользователей до плана 72.
