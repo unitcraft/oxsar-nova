@@ -300,7 +300,7 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	}
 	// План 46 Ф.4 (149-ФЗ): UGC-фильтр и rate-limit.
 	if h.containsForbidden(body) {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "сообщение содержит запрещённое слово"))
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "message contains forbidden word"))
 		return
 	}
 	if !h.allowSend(uid) {
@@ -360,7 +360,7 @@ func (h *Handler) EditMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	// План 46 Ф.4: edit тоже проверяем — иначе пользователь обойдёт фильтр.
 	if h.containsForbidden(body) {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "сообщение содержит запрещённое слово"))
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "message contains forbidden word"))
 		return
 	}
 
