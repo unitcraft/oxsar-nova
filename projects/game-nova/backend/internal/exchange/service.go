@@ -69,25 +69,42 @@ func DefaultConfig() Config {
 	}
 }
 
+// EventInserter — DI для event.Insert. Позволяет тестам подменять real
+// pgx-вызов фейковой функцией без поднятия БД.
+type EventInserter func(ctx context.Context, tx pgx.Tx, opts event.InsertOpts) (string, error)
+
+// defaultEventInserter — обёртка над event.Insert. Используется в проде.
+func defaultEventInserter(ctx context.Context, tx pgx.Tx, opts event.InsertOpts) (string, error) {
+	return event.Insert(ctx, tx, opts)
+}
+
 type Service struct {
-	db     repo.Exec
-	repo   Repo
-	cfg    Config
-	permit PermitChecker
+	db          repo.Exec
+	repo        Repo
+	cfg         Config
+	permit      PermitChecker
+	insertEvent EventInserter
 }
 
 func NewService(db repo.Exec, r Repo, cfg Config) *Service {
 	return &Service{
-		db:     db,
-		repo:   r,
-		cfg:    cfg,
-		permit: AlwaysAllowPermit{},
+		db:          db,
+		repo:        r,
+		cfg:         cfg,
+		permit:      AlwaysAllowPermit{},
+		insertEvent: defaultEventInserter,
 	}
 }
 
 // WithPermitChecker — DI для тестов и будущей реальной реализации.
 func (s *Service) WithPermitChecker(p PermitChecker) *Service {
 	s.permit = p
+	return s
+}
+
+// WithEventInserter — DI для тестов (mock event.Insert).
+func (s *Service) WithEventInserter(ei EventInserter) *Service {
+	s.insertEvent = ei
 	return s
 }
 
@@ -196,7 +213,7 @@ func (s *Service) CreateLot(ctx context.Context, in CreateLotInput) (Lot, error)
 
 		// 7. INSERT event KindExchangeExpire с fire_at=expires_at.
 		sellerCopy := in.SellerUserID
-		eventID, err := event.Insert(ctx, tx, event.InsertOpts{
+		eventID, err := s.insertEvent(ctx, tx, event.InsertOpts{
 			UserID: &sellerCopy,
 			Kind:   event.KindExchangeExpire,
 			FireAt: expiresAt,

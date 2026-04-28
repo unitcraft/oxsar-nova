@@ -864,8 +864,28 @@ vs 11 при basic=10000). Все cost_factor в origin.yaml override
 
 ### D-039. Биржа артефактов (Exchange / Stock / StockNew)
 
+✅ **BACKEND ЗАКРЫТ** (план 68 Ф.1-Ф.4+Ф.6+Ф.7, 2026-04-28).
+Модуль `internal/exchange/` (~1900 строк Go), 6 endpoint'ов
+(`GET/POST /api/exchange/lots`, `GET/DELETE /api/exchange/lots/{id}`,
+`POST /api/exchange/lots/{id}/buy`, `GET /api/exchange/stats`).
+Эскроу row-per-item через `exchange_lot_items` (миграция 0081),
+артефакты переходят в state='listed'. Антифрод: rolling-30d AVG ×
+10.0 cap, max 10 active lots/user, max 100 артефактов/лот.
+KindExchangeExpire/KindExchangeBan handler'ы (план 65 event-loop).
+Idempotency-Key обязателен на mutating-endpoint'ах. R8 метрики
+`oxsar_exchange_*`. UI — план 76 (nova) и спринт 5 плана 72 (origin).
+
+Адаптации против исходного описания плана 68:
+- Currency: `users.credit bigint` (legacy-имя для оксаритов по
+  ADR-0009; переименование колонки — отдельный план).
+- Schema: `artifact_unit_id INT` (не TEXT) + row-per-item
+  artefacts_user, не quantity-based как в legacy oxsar2.
+- universe_id не добавляется (nova однобазная, см. 0075).
+- Permit «Знак торговца» — DI с MVP-stub `AlwaysAllowPermit`
+  (gating отключён, см. simplifications.md).
+
 - **Категория**: api / механика
-- **Цвет**: 🟠 (главное расхождение)
+- **Цвет**: 🟢 (backend ✅, UI остаётся)
 - **Origin**: 3 контроллера
   (`Exchange.class.php` 1220 стр, `Stock.class.php` 757 стр,
   `StockNew.class.php` 850 стр) + 5+ шаблонов + таблицы

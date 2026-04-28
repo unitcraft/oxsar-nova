@@ -11,20 +11,22 @@ import (
 //
 // SellerUsername заполняется через JOIN users только в read-операциях
 // (ListLots, GetLot); в write-сценариях остаётся пустым.
+//
+// JSON-теги — snake_case по контракту OpenAPI (R1, R12).
 type Lot struct {
-	ID               string
-	SellerUserID     string
-	SellerUsername   string
-	ArtifactUnitID   int
-	Quantity         int
-	PriceOxsarit     int64
-	UnitPriceOxsarit int64
-	Status           string
-	CreatedAt        time.Time
-	ExpiresAt        time.Time
-	BuyerUserID      *string
-	SoldAt           *time.Time
-	ExpireEventID    *string
+	ID               string     `json:"id"`
+	SellerUserID     string     `json:"seller_user_id"`
+	SellerUsername   string     `json:"seller_username,omitempty"`
+	ArtifactUnitID   int        `json:"artifact_unit_id"`
+	Quantity         int        `json:"quantity"`
+	PriceOxsarit     int64      `json:"price_oxsarit"`
+	UnitPriceOxsarit int64      `json:"unit_price_oxsarit"`
+	Status           string     `json:"status"`
+	CreatedAt        time.Time  `json:"created_at"`
+	ExpiresAt        time.Time  `json:"expires_at"`
+	BuyerUserID      *string    `json:"buyer_user_id,omitempty"`
+	SoldAt           *time.Time `json:"sold_at,omitempty"`
+	ExpireEventID    *string    `json:"expire_event_id,omitempty"`
 }
 
 // ListFilters — фильтры для ListLots.

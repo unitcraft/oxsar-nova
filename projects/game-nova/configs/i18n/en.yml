@@ -2921,3 +2921,28 @@ teleport:
   billingUnavailable: "Payment service is temporarily unavailable. Please retry in a minute."
   success: "Teleport scheduled. The planet will appear at the new coordinates once the event fires."
   cost: "Cost: {{cost}} oxsars"
+
+# Plan 68: artefact exchange (P2P trade for oxsarits).
+exchange:
+  lotCreated: "Lot created. {{quantity}} artefacts have been escrowed."
+  lotBought: "Purchase successful. Artefacts transferred to you; oxsarits sent to the seller."
+  lotCancelled: "Lot cancelled. Artefacts returned to your inventory."
+  lotExpired: "Lot expired. Artefacts returned to your inventory."
+  errors:
+    insufficientArtefacts: "Not enough artefacts of the required type in your inventory."
+    insufficientOxsarits: "Not enough oxsarits to complete the purchase."
+    priceCapExceeded: "Price exceeds the anti-fraud cap. Lower the price."
+    permitRequired: "Trading on the exchange requires the Merchant's Mark."
+    lotNotActive: "Lot has already been sold, cancelled, or expired."
+    notASeller: "Only the seller can cancel their lot."
+    cannotBuyOwnLot: "You cannot buy your own lot."
+    maxActiveLots: "Maximum number of active lots per player exceeded."
+    maxQuantity: "Maximum number of artefacts per lot exceeded (100)."
+    invalidExpiry: "Lot expiry must be between 1 hour and 7 days."
+
+event:
+  exchange:
+    expire:
+      subject: "Exchange lot expired"
+    ban:
+      subject: "Your exchange lots have been cancelled"

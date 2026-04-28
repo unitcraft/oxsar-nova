@@ -1,7 +1,9 @@
 # План 68 (ремастер): Биржа артефактов (Exchange)
 
 **Дата**: 2026-04-28
-**Статус**: Скелет (детали допишет агент-реализатор при старте)
+**Статус**: ✅ Backend готов (Ф.1-Ф.4 + Ф.6 + Ф.7, 2026-04-28).
+UI Ф.5 отложена в план 76 (для nova-фронта) и спринт 5 плана 72
+(для origin-фронта).
 **Зависимости**: нет критичных (можно параллелить).
 **Связанные документы**:
 - [62-origin-on-nova-feasibility.md](62-origin-on-nova-feasibility.md)
@@ -69,15 +71,41 @@
 - Не вводим cross-universe торговлю в первой итерации (лоты
   per-universe, как и игроки).
 
-## Этапы (детали — при старте)
+## Этапы (статус)
 
-- Ф.1. Миграции БД (exchange_lots, exchange_history).
-- Ф.2. OpenAPI-схемы (R2).
-- Ф.3. Backend (service + handler).
-- Ф.4. Event-handler'ы для expire/ban.
-- Ф.5. Frontend (3 экрана).
-- Ф.6. Антифрод (price cap, премиум-permit).
-- Ф.7. Финализация.
+- ✅ Ф.1. Миграции БД (exchange_lots, exchange_lot_items, exchange_history) — 0081_exchange.sql.
+- ✅ Ф.2. OpenAPI-схемы (R2) — секция `/api/exchange/*` + ExchangeLot.
+- ✅ Ф.3. Backend (service + handler + repo + errors + payload + metrics).
+- ✅ Ф.4. Event-handler'ы expire/ban + wiring в worker.
+- ⏸ Ф.5. Frontend (3 экрана) → план 76 (nova) + спринт 5 плана 72 (origin).
+- ✅ Ф.6. Антифрод (price cap по rolling-30d AVG, max active lots, max quantity).
+- ✅ Ф.7. Финализация: тесты, property-based (escrow + oxsarit invariants), i18n.
+
+## Архитектурные адаптации (при реализации)
+
+Принятые при реализации Ф.1-Ф.7 решения, отличающиеся от исходного
+текста плана и зафиксированные в simplifications.md:
+
+- **Currency**: используется существующая колонка `users.credit bigint`
+  как backing-storage для оксаритов (по ADR-0009 семантически
+  идентично; переименование колонки credit→oxsarit — отдельный план).
+- **Schema**: `artifact_unit_id INT` (а не TEXT) + row-per-item модель
+  через `exchange_lot_items` (link-таблица), а не quantity-based как
+  в legacy oxsar2 — это соответствует существующей схеме `artefacts_user`
+  (миграция 0007).
+- **Эскроу**: `artefact_state='listed'` (введено миграцией 0013 для
+  artmarket) переиспользуется — биржа и artmarket сосуществуют, имея
+  одинаковую семантику «escrow в продаже».
+- **universe_id не добавляется**: nova однобазная (universe = отдельный
+  инстанс БД, см. комментарий в миграции 0075). R10 неприменим в этом
+  плане.
+- **Permit «Знак торговца»**: DI-интерфейс `PermitChecker` с MVP-stub
+  `AlwaysAllowPermit` (gating отключён, активация — отдельный план под
+  премиум-вселенные).
+- **Балансовый конфиг**: `configs/balance/{default,origin}.yaml` создан
+  с секцией `exchange`, но loader пока не реализован — service.go
+  использует `DefaultConfig()` с теми же значениями. Подключение
+  loader'а — отдельный пост-фикс.
 
 ## Конвенции (R1-R5)
 
