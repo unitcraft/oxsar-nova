@@ -101,15 +101,15 @@ DSL поддерживает: переменные, операторы `+ - * /`
 - **B3 — динамика в Go.** Те формулы, которые зависят от
   **рантайм-контекста** (температура планеты, уровни
   research-технологий), реализуются **функциями на Go** в
-  `internal/legacy/economy/`, читающими коэффициенты из
+  `internal/origin/economy/`, читающими коэффициенты из
   `origin.yaml` и применяющими их.
 
 Этот гибрид:
 - Не создаёт долгоживущей DSL-зависимости в Go-коде.
 - Не теряет точность (числа берутся из реального legacy через
   скрипт-импортёр, а не от руки).
-- Делает legacy-режим конфигурируемым через те же механизмы YAML,
-  что nova.
+- Делает origin-вселенную конфигурируемой через те же механизмы
+  YAML, что nova.
 
 ---
 
@@ -134,7 +134,7 @@ DSL поддерживает: переменные, операторы `+ - * /`
 
 Новый файл. Структура — по аналогии с существующими
 `configs/buildings.yml`, `configs/units.yml`, `configs/rapidfire.yml`,
-но с **legacy-числами** из origin.
+но с **числами origin**.
 
 Минимальная структура (детали — в Ф.2):
 
@@ -171,7 +171,7 @@ buildings:
       metal:  [60, 90, 135, 202, 303, 455, 683, 1024, ...]
       silicon: [15, 22, 33, 50, 75, ...]
       # ...
-    # Динамика — реализуется в Go (см. internal/legacy/economy/buildings.go)
+    # Динамика — реализуется в Go (см. internal/origin/economy/buildings.go)
     has_dynamic_production: true  # производство зависит от temp/tech
 
   hydrogen_lab:
@@ -319,10 +319,10 @@ cost := bundle.Buildings["metal_mine"].ChargeAt(level)
 
 ### 6. Динамические формулы (B3 — Go-функции)
 
-Для legacy-режима — модуль `internal/legacy/economy/`:
+Для origin-вселенной — модуль `internal/origin/economy/`:
 
 ```go
-// internal/legacy/economy/buildings.go
+// internal/origin/economy/buildings.go
 
 // HydrogenProduction — закрывает D-029.
 // formula: prod = base_prod * level * pow(1.1, level) * (-0.002*temp + 1.28) * (1 + 0.1*tech)
@@ -348,12 +348,12 @@ func SolarPlantProduction(bundle *balance.Bundle, level int) float64 { ... }
 - Detection динамических формул → `has_dynamic_production: true`
 - Skip формул без leading `_` (служебные поля)
 
-#### 7.2. Golden-тесты `internal/legacy/economy/`
+#### 7.2. Golden-тесты `internal/origin/economy/`
 - Для каждой динамической функции — golden-таблица «(level, temp, tech) → expected_value»
 - Эталоны генерируются из live-origin: SQL-запрос к `na_planet` +
   `na_user`, расчёт через `Planet::updateProduction()`, фиксация
   результата в JSON.
-- Golden-файлы в `internal/legacy/economy/testdata/*.json`
+- Golden-файлы в `internal/origin/economy/testdata/*.json`
 
 #### 7.3. Integration-тест per-universe loader
 - Создать две universe-записи с разными profile
@@ -447,7 +447,7 @@ func SolarPlantProduction(bundle *balance.Bundle, level int) float64 { ... }
   `LoadFor("origin")` — bundle с origin-числами
   (`bundle.Buildings["metal_mine"].Basic.Metal == 60`).
 
-### Ф.4. Динамические формулы — `internal/legacy/economy/`
+### Ф.4. Динамические формулы — `internal/origin/economy/`
 
 - Создать модуль с минимальным набором динамических функций
   (приоритет — production, потому что они вызываются на каждый
@@ -472,7 +472,7 @@ func SolarPlantProduction(bundle *balance.Bundle, level int) float64 { ... }
   // Output: JSON с полями prod_metal/silicon/hydrogen/energy для всех зданий 1..30
   ```
 - Сохранить эти JSON-файлы в
-  `internal/legacy/economy/testdata/golden_planet_*.json`.
+  `internal/origin/economy/testdata/golden_planet_*.json`.
 - Go-golden-тест читает эти JSON и сверяет с результатами своих
   функций. Допуск: **точное совпадение** для целых чисел,
   абсолютная погрешность <= 1 единица для дробных (PHP eval может
@@ -518,7 +518,7 @@ func SolarPlantProduction(bundle *balance.Bundle, level int) float64 { ... }
 ## Тестирование
 
 - Unit-тесты импорт-скрипта (DSL parser).
-- Unit + golden-тесты в `internal/legacy/economy/`.
+- Unit + golden-тесты в `internal/origin/economy/`.
 - Integration-тест per-universe loader.
 - Property-based (rapid) для invariants production.
 - E2E smoke по Ф.6.
@@ -554,8 +554,8 @@ func SolarPlantProduction(bundle *balance.Bundle, level int) float64 { ... }
 2. **`feat(balance): импорт origin → configs/balance/origin.yaml (план 64 Ф.2)`**
    — CLI-импортёр + сгенерированный YAML.
 
-3. **`feat(legacy/economy): динамические формулы + golden-тесты (план 64 Ф.4-Ф.6)`**
-   — `internal/legacy/economy/`, golden-эталоны, переключение
+3. **`feat(origin/economy): динамические формулы + golden-тесты (план 64 Ф.4-Ф.6)`**
+   — `internal/origin/economy/`, golden-эталоны, переключение
    потребителей на bundle, smoke на двух вселенных.
 
 Каждый коммит — conventional, с trailer `Generated-with: Claude Code`,
@@ -619,7 +619,7 @@ func SolarPlantProduction(bundle *balance.Bundle, level int) float64 { ... }
 - План 03 (`docs/plans/03-economy-config.md`) — текущая модель
   экономики nova, источник стиля YAML-конфигов.
 - План 18 (`docs/plans/18-unit-rebalance.md`) — пример того, как
-  ребалансы nova остаются в modern и **не переносятся** в legacy.
+  ребалансы nova остаются в modern и **не переносятся** в origin.
 - `formula-dsl.md` — спецификация origin DSL для импорт-скрипта.
 - `divergence-log.md` D-022, D-026..D-030 — конкретные расхождения,
   которые этот план закрывает.

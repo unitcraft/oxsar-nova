@@ -13,8 +13,8 @@
 
 ## Цель
 
-Расширить goal engine game-nova под legacy-ачивки origin
-(~100 ачивок из `na_achievement_datasheet`). Применимо для всех
+Расширить goal engine game-nova под ачивки origin
+(~100 классических из `na_achievement_datasheet`). Применимо для всех
 вселенных — это **общий знаменатель** (R1).
 
 ---

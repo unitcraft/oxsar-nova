@@ -2,8 +2,8 @@
 
 **Дата**: 2026-04-28
 **Статус**: Скелет (детали допишет агент-реализатор при старте)
-**Зависимости**: блокируется планом 64 (legacy.yaml для дефолтных
-значений legacy-вселенной).
+**Зависимости**: блокируется планом 64 (`configs/balance/origin.yaml` для дефолтных
+значений вселенной origin).
 **Связанные документы**:
 - [62-origin-on-nova-feasibility.md](62-origin-on-nova-feasibility.md)
 - [docs/research/origin-vs-nova/divergence-log.md](../research/origin-vs-nova/divergence-log.md) —
@@ -16,7 +16,7 @@
 ## Цель
 
 Добавить недостающие поля в `users` (и сопутствующие таблицы) для
-поддержки legacy-механик origin. Применимо для всех вселенных
+поддержки механик origin (классические из oxsar2). Применимо для всех вселенных
 (uni01/uni02/origin), но часть полей **активна только для legacy**
 (через NULL / default).
 

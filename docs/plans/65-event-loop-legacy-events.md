@@ -2,7 +2,7 @@
 
 **Дата**: 2026-04-28
 **Статус**: Скелет (детали допишет агент-реализатор при старте)
-**Зависимости**: блокируется планом 64 (legacy.yaml — для balance numbers).
+**Зависимости**: блокируется планом 64 (`configs/balance/origin.yaml` — для balance numbers).
 **Связанные документы**:
 - [62-origin-on-nova-feasibility.md](62-origin-on-nova-feasibility.md)
 - [docs/research/origin-vs-nova/divergence-log.md](../research/origin-vs-nova/divergence-log.md) —
@@ -15,8 +15,8 @@
 ## Цель
 
 Реализовать недостающие event-Kind'ы в game-nova event-loop'е,
-которые есть в origin (75 типов) и нужны для legacy-вселенной.
-Расширить существующие хендлеры под legacy-сценарии.
+которые есть в game-origin-php (75 типов) и нужны для вселенной
+origin. Расширить существующие хендлеры под origin-сценарии.
 
 ---
 
@@ -52,13 +52,13 @@ audit_log, тесты.
 - Ф.1. Каждый Kind: payload-схема + handler + golden-тест.
 - Ф.2. Идемпотентность (advisory locks, как в существующих handler'ах).
 - Ф.3. Audit-log записи через `internal/audit/`.
-- Ф.4. Smoke с тестовой вселенной legacy-режима (после плана 64).
+- Ф.4. Smoke с тестовой вселенной origin (после плана 64).
 - Ф.5. Финализация.
 
 ## Конвенции (R1-R5)
 
 - Имена Kind'ов в Go — `KindXxx Kind = NN` (см. существующий `kinds.go`).
-  Для legacy-only — добавить комментарий «// legacy-only».
+  Для origin-only — добавить комментарий «// origin-only».
 - payload-поля в JSON — snake_case.
 - Тесты — golden + property-based (R4).
 
