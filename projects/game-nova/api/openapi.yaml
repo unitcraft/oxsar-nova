@@ -2642,6 +2642,249 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorEnvelope" }
 
+  # ───────────────────────────────────────────────────────────────────
+  # Биржа артефактов (план 68). P2P-обмен пакетов артефактов одного
+  # типа на оксариты (soft-currency, ст. 1062 ГК; см. ADR-0009).
+  # Эскроу: при создании лота N конкретных artefacts_user.id переводятся
+  # в state='listed'. При покупке — owner+state переводятся атомарно с
+  # oxsarit-переводом. При отзыве/истечении — артефакты возвращаются.
+  # ───────────────────────────────────────────────────────────────────
+  /api/exchange/lots:
+    get:
+      tags: [exchange]
+      summary: Список активных лотов с фильтрами
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: artifact_unit_id
+          schema: { type: integer }
+          description: фильтр по типу артефакта (ARTEFACT_* код)
+        - in: query
+          name: min_price
+          schema: { type: integer, format: int64 }
+        - in: query
+          name: max_price
+          schema: { type: integer, format: int64 }
+        - in: query
+          name: seller_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: status
+          schema: { type: string, enum: [active, sold, cancelled, expired] }
+          description: по умолчанию active
+        - in: query
+          name: cursor
+          schema: { type: string }
+          description: cursor-based пагинация (opaque, из предыдущего ответа)
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [lots]
+                properties:
+                  lots:
+                    type: array
+                    items: { $ref: "#/components/schemas/ExchangeLot" }
+                  next_cursor:
+                    type: string
+                    nullable: true
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [exchange]
+      summary: Создать лот (escrow артефактов)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [artifact_unit_id, quantity, price_oxsarit, expires_in_hours]
+              properties:
+                artifact_unit_id:
+                  type: integer
+                  description: ARTEFACT_* код артефакта
+                quantity:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                price_oxsarit:
+                  type: integer
+                  format: int64
+                  minimum: 1
+                  description: цена за весь лот в оксаритах
+                expires_in_hours:
+                  type: integer
+                  minimum: 1
+                  maximum: 168
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [lot]
+                properties:
+                  lot: { $ref: "#/components/schemas/ExchangeLot" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: |
+            idempotency_conflict — Idempotency-Key уже использовался с другим body.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "422":
+          description: |
+            insufficient_artefacts — у seller'а меньше N held-артефактов нужного типа.
+            price_cap_exceeded — цена превышает rolling-30d AVG × multiplier.
+            permit_required — нет permit «Знак торговца» (gating отключён в MVP, см. simplifications.md).
+            max_active_lots — превышен лимит активных лотов на игрока.
+            max_quantity — quantity > 100.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  /api/exchange/lots/{id}:
+    get:
+      tags: [exchange]
+      summary: Детали лота (с item-list)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [lot, items]
+                properties:
+                  lot: { $ref: "#/components/schemas/ExchangeLot" }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [artefact_id]
+                      properties:
+                        artefact_id: { type: string, format: uuid }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [exchange]
+      summary: Отозвать собственный лот
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: ok }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: not the seller
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: lot_not_active — лот уже sold/cancelled/expired
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  /api/exchange/lots/{id}/buy:
+    post:
+      tags: [exchange]
+      summary: Купить лот (атомарный oxsarit→artefact обмен)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: bought
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [lot]
+                properties:
+                  lot: { $ref: "#/components/schemas/ExchangeLot" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402":
+          description: insufficient_oxsarits — недостаточно средств у buyer'а
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "403":
+          description: cannot buy own lot
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: |
+            lot_not_active — лот уже sold/cancelled/expired.
+            idempotency_conflict — Idempotency-Key с другим body.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  /api/exchange/stats:
+    get:
+      tags: [exchange]
+      summary: Агрегаты по биржам (count/avg по unit_id)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [artifact_unit_id, active_lots, avg_unit_price, last_30d_volume]
+                      properties:
+                        artifact_unit_id: { type: integer }
+                        active_lots:      { type: integer }
+                        avg_unit_price:
+                          type: integer
+                          format: int64
+                          nullable: true
+                          description: rolling-30d AVG(price/quantity) по 'bought'
+                        last_30d_volume:  { type: integer, format: int64 }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -3345,3 +3588,43 @@ components:
         status:        { type: string, enum: [pending, paid, failed, refunded] }
         created_at:    { type: string, format: date-time }
         paid_at:       { type: string, format: date-time, nullable: true }
+
+    # Биржа артефактов (план 68).
+    ExchangeLot:
+      type: object
+      required:
+        - id
+        - seller_user_id
+        - artifact_unit_id
+        - quantity
+        - price_oxsarit
+        - status
+        - created_at
+        - expires_at
+      properties:
+        id:               { type: string, format: uuid }
+        seller_user_id:   { type: string, format: uuid }
+        seller_username:  { type: string, nullable: true }
+        artifact_unit_id: { type: integer }
+        quantity:         { type: integer }
+        price_oxsarit:
+          type: integer
+          format: int64
+          description: цена за весь лот (целые оксариты)
+        unit_price_oxsarit:
+          type: integer
+          format: int64
+          description: price_oxsarit / quantity (для UI; backend отдаёт)
+        status:
+          type: string
+          enum: [active, sold, cancelled, expired]
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        buyer_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        sold_at:
+          type: string
+          format: date-time
+          nullable: true
