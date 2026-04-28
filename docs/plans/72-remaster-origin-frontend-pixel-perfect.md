@@ -183,21 +183,65 @@ endpoint'ов. По R15 (без MVP-сокращений / mock'ов «как д
 - **Ф.4 (Spring 3)** — добавляются catalog-endpoints (отсутствовали
   в openapi.yaml на момент Spring 3):
   - `GET /api/artefacts/catalog/{type}` — описание артефакта.
-  - `GET /api/buildings/catalog/{type}` — формула стоимости здания.
-  - `GET /api/units/catalog/{type}` — статы юнита, rapidfire-таблица.
+  - `GET /api/buildings/catalog/{type}` — параметры здания + pre-
+    computed таблица.
+  - `GET /api/units/catalog/{type}` — параметры юнита + pre-
+    computed статы для нескольких уровней техники.
   - `GET /api/research/tree` — граф технологий с зависимостями.
-  - Альтернативно: один общий `GET /api/catalog` который отдаёт
-    всё сразу (агент решает по простоте).
-  - Источники данных — статические YAML в
-    `projects/game-nova/configs/{buildings,units,research}.yml`,
-    которые `internal/balance/loader.go` (план 64) уже читает.
+  - Альтернативно: один общий `GET /api/catalog` для (1)+(2)+(3)
+    (агент решает по простоте; tree и records — отдельные).
+
+  **Важно про источник данных и форму ответа catalog-endpoints:**
+
+  Параметры (`cost_base`, `cost_factor`, `base_rate_per_hour`,
+  `max_level`, ...) живут в YAML `projects/game-nova/configs/
+  {buildings,units,research}.yml` (читаются через
+  `internal/balance/loader.go`, план 64). **Формулы** живут в **Go-
+  коде** в `internal/origin/economy/*.go` и подобных пакетах —
+  они **не сериализуются** в YAML и не отдаются как «формула»
+  через endpoint.
+
+  Что catalog-endpoint отдаёт:
+  - **params** из YAML — как есть (для отображения «base_cost: 60»,
+    «factor: 1.5», «max_level: 40»).
+  - **pre-computed** таблица результатов для нескольких ключевых
+    уровней (например, 1, 5, 10, 20, max_level) — рассчитанных
+    через Go-функции из economy/ (cost_at_level, production_at_level,
+    time_at_level и пр.). Frontend рендерит таблицу «уровень →
+    стоимость → производство → время → энергия».
+  - **formula description** как строка для UI (например,
+    «base_cost × factor^(level-1)») — справочно, не как код.
+
+  Это правильное разделение: формула живёт в Go (как вычисляется),
+  endpoint сериализует **результат** для UI.
+
+- **Records (S-031) — отдельный план 82**, не Ф.4 Spring 3.
+  Per-unit record holders (top-1 по типу здания/исследования/корабля)
+  — отсутствующий backend-домен в nova (агрегации не считаются
+  нигде). Это **не упрощение существующей фичи**, а отсутствующий
+  домен с собственным объёмом ~400-600 строк (миграция +
+  materialized view + cron + golden + handler).
+
+  В Ф.4 Spring 3 реализуется **endpoint-skeleton** для S-031:
+  - `GET /api/records?type=...` возвращает корректный DTO
+    `{records: [], type, category}` с пустым массивом.
+  - R8 Prometheus подключён.
+  - Frontend `RecordsScreen` рендерит empty-state «Рекорды
+    появятся в планируемом обновлении».
+  - Когда план 82 реализован — handler начинает возвращать данные,
+    frontend **не меняется**.
+
+  Это **TRADE-OFF по R15** (✅ «Не реализованная фича из плана,
+  явно отложенная до Ф.X»), а не пропуск. Записывается в
+  `simplifications.md` как P72.S3.X.
+
 - **Ф.5 (Spring 4)** — TBD при реализации.
 - **Ф.6 (Spring 5)** — TBD при реализации.
 
 Если по ходу обнаруживается что нужен значительно более сложный
 endpoint (>200 строк, требует миграции, нового домена) — агент
 останавливается и обсуждает с пользователем (отдельный sub-план
-или вынос в новый план).
+или вынос в новый план — как сделано с records → план 82).
 
 ## Конвенции (R1-R5)
 
