@@ -202,7 +202,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 // DeleteMe — DELETE /auth/users/me (требует JWT).
 //
 // План 44 (152-ФЗ, ст. 14): право субъекта на удаление своих ПДн.
-// Анонимизирует учётную запись в auth-service. Игровые сервисы должны
+// Анонимизирует учётную запись в identity-service. Игровые сервисы должны
 // иметь свой flow удаления связанных игровых данных (в game-nova —
 // /api/me/deletion/code → DELETE /api/me).
 func (h *Handler) DeleteMe(w http.ResponseWriter, r *http.Request) {
@@ -219,7 +219,7 @@ func (h *Handler) DeleteMe(w http.ResponseWriter, r *http.Request) {
 }
 
 // ChangePassword — POST /auth/password (требует JWT).
-// План 36 Critical-6: смена пароля переехала из game-nova/settings в auth-service,
+// План 36 Critical-6: смена пароля переехала из game-nova/settings в identity-service,
 // потому что хеш пароля живёт здесь.
 func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromCtx(r)

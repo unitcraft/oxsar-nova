@@ -1,5 +1,5 @@
 -- План 38 Ф.5: кошельки и платежи переехали в billing-service.
--- В auth-db не нужны users.global_credits и credit_transactions.
+-- В identity-db не нужны users.global_credits и credit_transactions.
 
 -- +goose Up
 DROP TABLE IF EXISTS credit_transactions;
