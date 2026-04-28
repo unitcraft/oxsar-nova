@@ -11,6 +11,39 @@ git config core.hooksPath scripts/git-hooks
 
 ## Хуки
 
+### `pre-commit`
+
+Защита от случайного захвата чужих файлов в commit при параллельных
+Claude Code сессиях.
+
+**Зачем:** 4 раза за 2 дня (2026-04-27/28) у Claude Code агентов
+случайно попадали в commit чужие staged-файлы — потому что между
+`git add path` и `git commit` другая параллельная сессия успевала
+что-то staged'ить, а commit без двойного-тире подбирает всё из
+индекса. См. memory `feedback_parallel_session_check.md`.
+
+**Логика:** если переменная среды `CC_AGENT_PATHS` установлена
+(агент сам выставляет её при старте сессии), hook проверяет что
+в commit идут только эти пути. Если попадается чужой файл — commit
+блокируется с понятным сообщением.
+
+**Использование агентом:**
+
+```bash
+export CC_AGENT_PATHS="internal/billing/client/ pkg/idempotency/ docs/plans/77-..."
+git add internal/billing/client/...
+git commit -m "..." -- internal/billing/client/ pkg/idempotency/ docs/plans/77-...
+```
+
+**Backwards-compat:** если `CC_AGENT_PATHS` не задана — hook просто
+проходит, не блокирует. Это для ручных коммитов людей и legacy-сессий.
+
+**Связанные документы:**
+- memory `feedback_parallel_session_check.md` — правило 3:
+  ВСЕГДА `git commit -m "..." -- path1 path2`.
+- `docs/active-sessions.md` — лайв-документ для координации между
+  параллельными агентами.
+
 ### `commit-msg`
 
 Удаляет из коммит-сообщений строки вида

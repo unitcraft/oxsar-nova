@@ -1,0 +1,96 @@
+#!/bin/sh
+# Защита от случайного захвата чужих файлов в commit при параллельных
+# Claude Code сессиях.
+#
+# Почему: 4 раза за 2 дня (2026-04-27/28) у Claude Code агентов
+# случайно попадали в commit чужие staged-файлы из параллельных
+# сессий — потому что между `git add path` и `git commit` другая
+# сессия успевала что-то staged'ить, а commit без двойного-тире
+# подбирает всё из индекса.
+#
+# См. memory feedback_parallel_session_check.md
+# (правило 3: ВСЕГДА `git commit -m "..." -- path1 path2`).
+#
+# Этот hook — второй слой защиты. Если переменная среды
+# CC_AGENT_PATHS установлена (агент сам выставляет её), hook
+# проверяет что в commit идут ТОЛЬКО эти пути.
+#
+# Использование агентом:
+#   export CC_AGENT_PATHS="path1 path2 path3"
+#   git add path1 path2 path3
+#   git commit -m "..." -- $CC_AGENT_PATHS
+#
+# Если CC_AGENT_PATHS не задана — hook просто проходит (warn-only),
+# не блокирует коммит. Это backwards-compat для ручных коммитов
+# людей.
+#
+# Активация (одноразово, per-developer):
+#   git config core.hooksPath scripts/git-hooks
+#   chmod +x scripts/git-hooks/pre-commit
+
+set -e
+
+# Если CC_AGENT_PATHS не задана — выходим (warn-only режим).
+if [ -z "$CC_AGENT_PATHS" ]; then
+    exit 0
+fi
+
+# Получаем список файлов в индексе (то что будет закоммичено).
+STAGED=$(git diff --cached --name-only)
+
+if [ -z "$STAGED" ]; then
+    # Пустой коммит — нечего проверять.
+    exit 0
+fi
+
+# Проверяем каждый staged-файл против CC_AGENT_PATHS.
+# CC_AGENT_PATHS — строки разделённые пробелом, могут быть префиксы
+# директорий (например "internal/billing/" — матчит всё что в этой
+# директории) или точные пути.
+UNEXPECTED=""
+for staged_file in $STAGED; do
+    matched=0
+    for allowed in $CC_AGENT_PATHS; do
+        # Точное совпадение
+        if [ "$staged_file" = "$allowed" ]; then
+            matched=1
+            break
+        fi
+        # Префиксное совпадение (если allowed заканчивается на /)
+        case "$allowed" in
+            */)
+                case "$staged_file" in
+                    "$allowed"*) matched=1; break ;;
+                esac
+                ;;
+        esac
+    done
+    if [ $matched -eq 0 ]; then
+        UNEXPECTED="$UNEXPECTED $staged_file"
+    fi
+done
+
+if [ -n "$UNEXPECTED" ]; then
+    echo "ERROR: pre-commit hook caught unexpected files in commit:" >&2
+    for f in $UNEXPECTED; do
+        echo "  - $f" >&2
+    done
+    echo "" >&2
+    echo "Allowed paths (from CC_AGENT_PATHS):" >&2
+    for p in $CC_AGENT_PATHS; do
+        echo "  - $p" >&2
+    done
+    echo "" >&2
+    echo "Cause: another parallel Claude Code session likely staged" >&2
+    echo "files between your 'git add' and 'git commit'." >&2
+    echo "" >&2
+    echo "Fix:" >&2
+    echo "  git reset HEAD -- $UNEXPECTED" >&2
+    echo "  git commit -m \"...\" -- \$CC_AGENT_PATHS" >&2
+    echo "" >&2
+    echo "If you intentionally want to commit these files," >&2
+    echo "extend CC_AGENT_PATHS or unset it for this commit." >&2
+    exit 1
+fi
+
+exit 0
