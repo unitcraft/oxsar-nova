@@ -2249,7 +2249,7 @@ unit-тесты на форматтеры/валидаторы/router-маршр
 
 ## 2026-04-28 — План 80: smoke выявил баг миграции 0005
 
-### [P80.A] Миграция 0005_rbac_tables.sql валится на CROSS JOIN без ON CONFLICT
+### [P80.A] Миграция 0005_rbac_tables.sql валится на CROSS JOIN без ON CONFLICT — ✅ ЗАКРЫТО планом 84 (2026-04-28)
 - **Где**: `projects/identity/migrations/0005_rbac_tables.sql` —
   финальный INSERT для роли `superadmin`:
   ```sql
@@ -2267,11 +2267,13 @@ unit-тесты на форматтеры/валидаторы/router-маршр
   `admin`/`billing_admin`, которым выше в той же миграции уже
   выданы permissions подмножествами. Конфликт PK
   `(role_id, permission_id)`.
-- **Как чинить**: отдельный план/коммит — добавить
-  `ON CONFLICT (role_id, permission_id) DO NOTHING` к финальному
-  INSERT, либо явное `WHERE r.name = 'superadmin'`. Идемпотентно
-  и совместимо с уже накатанными prod-БД (если такие есть).
+- **Как починили (план 84)**: финальный INSERT переписан как
+  `FROM roles r CROSS JOIN permissions p WHERE r.name = 'superadmin'
+  ON CONFLICT (role_id, permission_id) DO NOTHING`. WHERE — основной
+  фикс (ограничивает scope до superadmin), ON CONFLICT —
+  defense-in-depth (идемпотентность повторного запуска и совместимость
+  с prod-БД, где 0005 могла быть применена частично).
 - **Приоритет**: H (identity-стек не поднимается с нуля).
 
-**Связанный план**: [docs/plans/80-auth-leftovers-cleanup.md](plans/80-auth-leftovers-cleanup.md) (smoke раздел)
+**Связанный план**: [docs/plans/80-auth-leftovers-cleanup.md](plans/80-auth-leftovers-cleanup.md) (smoke раздел), [docs/plans/84-rbac-migration-0005-hotfix.md](plans/84-rbac-migration-0005-hotfix.md) (фикс).
 

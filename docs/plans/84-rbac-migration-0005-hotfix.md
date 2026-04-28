@@ -1,8 +1,10 @@
 # План 84: Hotfix миграции 0005_rbac_tables (CROSS JOIN без ON CONFLICT)
 
 **Дата**: 2026-04-28
-**Статус**: Открыт. **HIGH PRIORITY** — identity-стек не поднимается
-с нуля.
+**Статус**: ✅ ЗАКРЫТО (2026-04-28). Миграция 0005 переписана с
+WHERE+ON CONFLICT, P80.A закрыт. Smoke с docker compose не выполнялся
+в этой сессии (требует destructive `down -v`); ручной smoke на
+стороне пользователя.
 **Зависимости**: ✅ план 52 (RBAC unification, миграция 0005), ✅
 план 80 (Dockerfile.migrate fix, выявил баг 0005).
 **Связанные документы**:
