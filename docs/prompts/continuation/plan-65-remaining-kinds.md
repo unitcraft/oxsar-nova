@@ -1,29 +1,48 @@
-# Continuation: план 65 — остальные 6 Kind'ов по эталону
+# Continuation: план 65 — Ф.3+Ф.4+Ф.5 attack-destroy-building (одна сессия)
 
 **Применение**: вставить блок ниже в новую сессию Claude Code.
-**Объём**: ~2-3 нед, ~600-1200 строк Go + тесты по 6 Kind'ам.
+**Объём**: ~5-6 часов, ~400-700 строк Go + тесты для 3 Kind'ов.
+
+**После Ф.2 (KindDeliveryArtefacts, commit d6f1785dda)** в плане 65
+осталось **4 Kind'а**, не 6:
+- Ф.3 KindAttackDestroyBuilding
+- Ф.4 KindAttackAllianceDestroyBuilding (ACS-вариант)
+- Ф.5 KindAllianceAttackAdditional (служебный no-op referrer)
+- Ф.6 KindTeleportPlanet — **отдельная сессия** (билинг + REST +
+  OpenAPI + cooldown, нет billing-client в nova сейчас).
+
+EXCHANGE_* вынесены в план 68 (биржа реализует их в рамках
+internal/exchange/).
 
 ---
 
 ```
-Задача: завершить план 65 (ремастер) — реализовать оставшиеся 6
-Kind'ов event-loop'а по эталону KindDemolishConstruction.
+Задача: реализовать Ф.3+Ф.4+Ф.5 плана 65 в одной сессии — три
+Kind'а событий разрушения построек по эталону KindDemolishConstruction
+(commit 9a3992a384).
 
 КОНТЕКСТ:
 
-Ф.1 плана 65 закрыта коммитом 9a3992a384 — KindDemolishConstruction
-как эталонный handler. Шапка плана 65 помечена «Ф.1 ✅; остальные
-6 Kind'ов — TODO по эталону».
+Ф.1 (commit 9a3992a384) — KindDemolishConstruction эталон.
+Ф.2 (commit d6f1785dda) — KindDeliveryArtefacts.
+EXCHANGE_* вынесены в план 68.
 
-Задача этой сессии: реализовать остальные 6 Kind'ов:
-- KindExchangeExpire (для плана 68 биржа)
-- KindExchangeBan (служебный)
-- KindDeliveryArtefacts
-- KindAttackDestroyBuilding
-- KindAttackAllianceDestroyBuilding (ACS)
-- KindAllianceAttackAdditional (referer для ACS)
-- KindTeleportPlanet (премиум-фича через оксары; зависит от
-  users.last_planet_teleport_at — есть в миграции 0072 от плана 69)
+Эта сессия: 3 Kind'а в одном коммите.
+- Ф.3 KindAttackDestroyBuilding (D-037 одиночная атака на здание).
+- Ф.4 KindAttackAllianceDestroyBuilding (D-037 ACS-вариант).
+- Ф.5 KindAllianceAttackAdditional (служебный no-op referrer как
+  в legacy EventHandler.class.php:707-708; в nova ACS уже
+  консолидирован в KindAttackAlliance с acs_group_id, поэтому
+  KindAllianceAttackAdditional становится no-op-маркером для
+  совместимости с origin-payload'ами; обоснуй в коде комментарием
+  + в simplifications.md если решишь, что не нужен вообще).
+
+Ф.6 KindTeleportPlanet — ОТДЕЛЬНАЯ СЕССИЯ. Не делать в этом прогоне.
+Препятствия: в nova нет billing-client (только локальные
+users.credits, нет интеграции с oxsar-credits), нет
+idempotency-middleware в API-роутере (есть только в billing/),
+нужен REST + OpenAPI + cooldown handler с нуля. ~600-800 строк +
+миграция + 3 новые подсистемы — это самостоятельный план.
 
 ПЕРЕД НАЧАЛОМ:
 
