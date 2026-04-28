@@ -164,7 +164,9 @@ WHERE r.name = 'billing_admin' AND p.name IN (
 
 -- superadmin: всё (включая управление ролями + system config)
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p;
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'superadmin'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- +goose StatementEnd
 
