@@ -284,3 +284,154 @@ export interface BattleStatsTotals {
   losses: number;
   draws: number;
 }
+
+// ===== Artefacts (план 72 Ф.4 Spring 3 — S-013) =====
+
+export type ArtefactState =
+  | 'held'
+  | 'delayed'
+  | 'active'
+  | 'expired'
+  | 'consumed';
+
+export interface Artefact {
+  id: string;
+  user_id: string;
+  planet_id: string | null;
+  unit_id: number;
+  state: ArtefactState;
+  acquired_at: string;
+  activated_at: string | null;
+  expire_at: string | null;
+}
+
+// ===== Highscore / public stats (план 72 Ф.4 — S-023, S-024, S-032) =====
+
+export interface HighscoreEntry {
+  user_id: string;
+  username: string;
+  score: number;
+  rank: number;
+}
+
+export interface PublicStats {
+  online_now: number;
+  online_24h: number;
+}
+
+// ===== Catalog (план 72 Ф.4 Spring 3) =====
+
+export interface ResCost {
+  metal: number;
+  silicon: number;
+  hydrogen: number;
+}
+
+export interface BuildingPreviewRow {
+  level: number;
+  cost: ResCost;
+  build_seconds: number;
+  production_per_hour?: number;
+  energy_demand?: number;
+  energy_output?: number;
+}
+
+export interface BuildingCatalogEntry {
+  id: number;
+  key: string;
+  name: string;
+  cost_base: ResCost;
+  cost_factor: number;
+  time_base_seconds: number;
+  base_rate_per_hour?: number | null;
+  energy_per_level?: number | null;
+  energy_output_per_level?: number | null;
+  capacity_base?: number | null;
+  moon_only?: boolean;
+  max_level: number;
+  preview: BuildingPreviewRow[];
+}
+
+export interface RapidfireEntry {
+  target_id: number;
+  multiplier: number;
+}
+
+export interface ResearchPreviewRow {
+  level: number;
+  cost: ResCost;
+}
+
+export interface UnitCatalogEntry {
+  id: number;
+  key: string;
+  name: string;
+  kind: 'ship' | 'defense' | 'research';
+  cost: ResCost;
+  cost_factor?: number | null;
+  attack?: number | null;
+  shield?: number | null;
+  shell?: number | null;
+  cargo?: number | null;
+  speed?: number | null;
+  fuel?: number | null;
+  front?: number | null;
+  rapidfire?: RapidfireEntry[];
+  preview?: ResearchPreviewRow[];
+}
+
+export interface ArtefactEffect {
+  type: string;
+  field?: string;
+  op?: string;
+  value?: number;
+  active_value?: number;
+  inactive_value?: number;
+  battle_attack?: number;
+  battle_shield?: number;
+  battle_shell?: number;
+}
+
+export interface ArtefactCatalogEntry {
+  id: number;
+  key: string;
+  name: string;
+  effect: ArtefactEffect;
+  stackable: boolean;
+  max_stacks?: number;
+  lifetime_seconds: number;
+  delay_seconds?: number;
+}
+
+// Techtree (S-021)
+export interface TechtreeRequirement {
+  kind: 'building' | 'research';
+  key: string;
+  level: number;
+  have: number;
+  met: boolean;
+}
+
+export interface TechtreeNode {
+  key: string;
+  kind: 'building' | 'research' | 'ship' | 'defense';
+  id: number;
+  current_level: number;
+  unlocked: boolean;
+  requirements: TechtreeRequirement[];
+}
+
+export interface Techtree {
+  nodes: TechtreeNode[];
+}
+
+// Records (S-024)
+export interface RecordEntry {
+  category: 'building' | 'research' | 'ship' | 'defense' | 'score';
+  key: string;
+  unit_id?: number;
+  holder_id: string;
+  holder_name: string;
+  value: number;
+  my_value: number;
+}
