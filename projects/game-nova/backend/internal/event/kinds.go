@@ -39,6 +39,7 @@ const (
 	KindAttackAllianceDestroyMoon  Kind = 27 // план 20 Ф.6: ACS-вариант
 	KindAttackAllianceDestroyBuilding Kind = 29 // план 65 Ф.4 (D-037): ACS-вариант разрушения здания
 	KindAllianceAttackAdditional   Kind = 30 // план 65 Ф.5: служебный referrer для ACS (no-op в nova, см. handler-doc)
+	KindTeleportPlanet             Kind = 31 // план 65 Ф.6 (D-032+U-009): телепорт планеты на новые координаты, премиум через оксары
 	KindStargateTransport          Kind = 28
 	KindStargateJump               Kind = 32 // план 20 Ф.5: мгновенный прыжок флота между лунами с jump_gate
 	KindAlienFlyUnknown            Kind = 33 // миссия пришельцев без явной цели (план 15, этап 3)

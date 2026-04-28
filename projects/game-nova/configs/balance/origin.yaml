@@ -362,3 +362,18 @@ ships:
     fuel:   100
     front:  10
 
+# План 65 Ф.6: премиум-телепорт планеты на новые координаты, оплата
+# оксарами через billing-service. Параметры приведены здесь только для
+# справки/документации — фактически конфиг балансовых параметров
+# teleport_* читается из ENV через config.GameConfig (см.
+# internal/config/config.go), а не из этого override-файла. Ввод override
+# через override.go потребует расширения схемы globalsOverride; пока
+# Ф.6 ограничивается ENV-конфигом (modern-default == origin-default,
+# legacy origin использовал артефакт ARTEFACT_PLANET_TELEPORTER без
+# отдельного cost'а оксарами).
+#
+# Дефолтные значения, синхронизированные с config.GameConfig:
+#   teleport_cost_oxsars:      50000   # премиум-стоимость телепорта
+#   teleport_cooldown_hours:   24      # legacy PLANET_TELEPORT_MIN_INTERVAL_TIME = 24h
+#   teleport_duration_minutes: 0       # мгновенно (legacy: ext-вариант синхронный
+#                                      # apply на стороне миссии — упрощено в nova)

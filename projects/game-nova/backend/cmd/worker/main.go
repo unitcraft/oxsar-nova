@@ -24,6 +24,7 @@ import (
 	"oxsar/game-nova/internal/artefact"
 	"oxsar/game-nova/internal/automsg"
 	"oxsar/game-nova/internal/balance"
+	billingclient "oxsar/game-nova/internal/billing/client"
 	"oxsar/game-nova/internal/dailyquest"
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/event"
@@ -242,6 +243,24 @@ func run() error {
 	w.Register(event.KindAttackAllianceDestroyBuilding, withAchievement(transportSvc.ACSAttackHandler()))
 	// План 65 Ф.5: служебный referrer для ACS — no-op в nova (см. handler-doc).
 	w.Register(event.KindAllianceAttackAdditional, event.HandleAllianceAttackAdditional)
+
+	// План 65 Ф.6: KindTeleportPlanet. Refunder вызывает billing.Refund при
+	// отказе телепорта (planet удалена, target slot занят на момент
+	// срабатывания event'а). При BILLING_URL="" billingC возвращает
+	// ErrNotConfigured — refund тихо проваливается, что приемлемо для dev.
+	teleportBilling := billingclient.New(cfg.Billing.URL)
+	teleportRefunder := func(ctx context.Context, userID, planetID string, pl event.TeleportPlanetPayload) error {
+		return teleportBilling.Refund(ctx, billingclient.SpendInput{
+			Amount:         pl.CostOxsars,
+			Reason:         "planet_teleport_cancelled",
+			RefID:          planetID,
+			ToAccount:      "system:teleport",
+			IdempotencyKey: pl.IdempotencyKey + ":refund",
+		})
+	}
+	// withScore не нужен (телепорт не меняет очки). withAchievement тоже не нужен
+	// (нет достижения «телепортировал планету»). withDailyQuest — нет квеста.
+	w.Register(event.KindTeleportPlanet, event.HandleTeleportPlanet(teleportRefunder))
 	w.Register(event.KindRaidWarning, transportSvc.RaidWarningHandler())
 	w.Register(event.KindRecycling, withAchievement(transportSvc.RecyclingHandler()))
 	w.Register(event.KindSpy, withAchievement(transportSvc.SpyHandler()))
