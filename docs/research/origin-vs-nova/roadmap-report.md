@@ -94,14 +94,20 @@ alien-ai A1-A14 — даёт **серию будущих планов 63+** дл
   четверг ×5, change-mission, fly-unknown) применяется к
   uni01/uni02/origin одинаково. Это сознательный upgrade игрового
   опыта modern, не R0-нарушение.
-- **Алиен-юниты во всех вселенных** (план 66 + 64). UNIT_A_1..A_5
-  (alien_unit_1..5) и legacy-спец-юниты (Lancer, Shadow,
-  Transplantator, Collector, Small/Large Planet Shield, Armored
-  Terran) добавляются в `configs/units.yml` (modern) **и**
-  `configs/balance/origin.yaml` (override). Это нужно для
-  AlienAI — нельзя дать AI боеспособный флот без юнитов. Грабёж
-  оксаритов и подарки от инопланетян — тоже работают для
-  uni01/uni02.
+- **Алиен-юниты + спец-юниты во всех вселенных** (план 66 + 64).
+  - **AI-флот** (UNIT_A_1..A_5 = `alien_unit_1..5`) — AlienAI
+    использует. Игроки **не строят** напрямую (`is_alien: true`).
+  - **Спец-юниты для игроков** (Lancer, Shadow, Transplantator,
+    Collector, Small/Large Planet Shield, Armored Terran) — могут
+    быть **построены игроками** при условии: после посещения
+    AlienAI-флотом планеты игрока (как в legacy-PHP origin).
+    Применимо ко всем вселенным (uni01/uni02/origin).
+  - Все юниты добавляются в дефолтные `configs/units.yml` /
+    `configs/ships.yml` / `configs/rapidfire.yml`. В
+    `origin.yaml` override — только если требуются другие числа
+    (на старте — числа одинаковые из na_ship_datasheet).
+  - Грабёж оксаритов и подарки от инопланетян — работают для всех
+    вселенных.
 
 **Что это означает практически:**
 

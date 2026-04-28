@@ -197,10 +197,17 @@ units:
 
   # Алиен-юниты и спец-юниты (D-027, D-028) — **переехали** в
   # дефолтные configs/units.yml / ships.yml / rapidfire.yml,
-  # потому что AlienAI работает во всех вселенных (R0-исключение
-  # 2026-04-28, план 66). В origin.yaml — только если требуется
-  # override чисел для origin (на старте — не требуется,
-  # числа одинаковые из na_ship_datasheet).
+  # потому что:
+  # 1. AlienAI работает во всех вселенных (R0-исключение
+  #    2026-04-28, план 66) — `alien_unit_1..5` нужны как AI-флот.
+  # 2. Спец-юниты (Lancer, Shadow, Transplantator, Collector,
+  #    Small/Large Planet Shield, Armored Terran) — игроки
+  #    могут строить при условии (после посещения AlienAI-флотом
+  #    планеты), как в legacy-PHP origin. Применимо во всех
+  #    вселенных.
+  # В origin.yaml — только если требуется override чисел для
+  # origin (на старте — не требуется, числа одинаковые из
+  # na_ship_datasheet).
   shadow_ship: { ... }
   ship_transplantator: { ... }
   ship_collector: { ... }
