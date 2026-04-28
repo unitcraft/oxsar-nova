@@ -122,6 +122,42 @@ alien-ai A1-A14 — даёт **серию будущих планов 63+** дл
 прецедента. Если прецедента нет — выбери понятнее и оставь
 комментарий в миграции почему.
 
+**Особый случай: игровая валюта.**
+
+Все новые поля под валюту — **строго по ADR-0009 / плану 58**, а
+НЕ по legacy `na_user.credit`. Двухвалютная модель уже зафиксирована
+архитектурно, и серия 64-74 не должна её ломать.
+
+| Сущность | Где живёт | Колонка | Тип |
+|---|---|---|---|
+| Hard premium (за рубли) | `billing.wallets` | `oxsar` | `bigint NOT NULL DEFAULT 0` |
+| Soft premium (per universe) | `game-nova.users` | `oxsarit` | `bigint NOT NULL DEFAULT 0` |
+| Журнал hard-операций | `billing.wallet_transactions` | `oxsar` (signed) + `kind`, `idempotency_key`, `metadata jsonb`, `created_at` | — |
+| Журнал soft-операций | `game-nova.oxsarit_transactions` | `oxsarit` (signed) + `kind`, `source jsonb`, `created_at` | — |
+| Реферальные выплаты | — | `referral_payouts.oxsarit` (только soft, по плану 59) | — |
+
+**Конкретные правила для валюты:**
+
+- Имена колонок — `oxsar` / `oxsarit` без постфиксов
+  (НЕ `oxsar_amount`, НЕ `oxsar_balance`, НЕ `credit`).
+- Тип — `bigint` (целые), не `numeric`/`float`.
+- Цены премиум-фич в конфигах — с префиксом валюты:
+  `officers.yaml: oxsar_price`, не просто `price`.
+- Hard и soft журналируются **отдельно** (юр-разделение): hard в
+  billing-сервисе под ст. 437 ГК, soft в game-nova под ст. 1062 ГК.
+  НЕ смешивать в одной таблице.
+- Перевод origin `users.credit` (если миграция данных понадобится)
+  → `users.oxsarit` (по плану 58 Ф.var-B). НЕ создавать колонку
+  `credit` в новых таблицах под legacy-привычку.
+
+**Источники истины** (читать перед работой над валютой):
+- [docs/adr/0009-currency-rebranding.md](../../adr/0009-currency-rebranding.md)
+  — архитектурное решение + полная таблица колонок.
+- [docs/plans/58-currency-rebranding.md](../../plans/58-currency-rebranding.md)
+  — миграционный план + smart-pay механика.
+- [docs/plans/59-referral-program.md](../../plans/59-referral-program.md)
+  — реферальная программа в оксаритах.
+
 ### Правило R2. OpenAPI как источник истины
 
 Любой новый endpoint = сначала схема в `projects/game-nova/api/openapi.yaml`,
