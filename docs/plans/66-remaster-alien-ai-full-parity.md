@@ -1,7 +1,7 @@
 # План 66 (ремастер): AlienAI до полного паритета с oxsar2-classic
 
 **Дата**: 2026-04-28
-**Статус**: Скелет (детали допишет агент-реализатор при старте)
+**Статус**: В работе. Ф.1+Ф.2+Ф.3+Ф.4 ✅ (2026-04-28). Ф.5+Ф.6+Ф.7 — следующие сессии.
 **Зависимости**: блокируется планом 64 (alien-юниты в `configs/balance/origin.yaml`).
 **Связанные документы**:
 - [15-alien-holding-thursday.md](15-alien-holding-thursday.md) —
@@ -66,11 +66,16 @@
 - **Ф.1. Расширение state machine + переходы.** — ✅ закрыто 2026-04-28
 - **Ф.2. generateFleet + findTarget + shuffleKeyValues (helper-логика).** — ✅ закрыто 2026-04-28
 - **Ф.3. Реализация Kind'ов FlyUnknown, GrabCredit, ChangeMissionAI.** — ✅ закрыто 2026-04-28
-- Ф.4. Расширение HoldingAI до 8 действий (2 активных + 6 заглушек).
-  Spawner-проводка `internal/alien/Spawn` → `origin/alien.GenerateMission` (использует pgx-Loader).
+- **Ф.4. Расширение HoldingAI до 8 действий (2 активных + 6 заглушек).** — ✅ закрыто 2026-04-28
 - Ф.5. Платный выкуп удержания через billing (оксары — R1, ADR-0009).
 - Ф.6. Golden-тесты на 50+ итераций (property-based).
 - Ф.7. Финализация.
+
+> **Замечание по Ф.4**: spawner-проводка
+> `internal/alien.Service.Spawn` → `origin/alien.GenerateMission`
+> отложена в `simplifications.md` (см. запись плана 66 Ф.3) — не
+> относится к HoldingAI 8-фаз и будет переделана отдельно при
+> переходе к новому payload-формату HALT/HOLDING.
 
 ### Ф.1+Ф.2 — итог (2026-04-28)
 
@@ -188,6 +193,98 @@
 
 Объём Ф.3: ~700 строк Go (production: handlers+payload+service+loader_pgx)
 + ~600 строк тестов.
+
+### Ф.4 — итог (2026-04-28)
+
+Эталон применённого паттерна — `KindDemolishConstruction` (план 65 Ф.1)
++ существующий `KindAlienHoldingAI` в `internal/alien/holding.go`
+(50/50 random extract/unload — упрощение плана 15, см.
+simplifications.md «HOLDING_AI — 6 из 8 действий пустые»).
+
+R0-исключение: HoldingAI работает во ВСЕХ вселенных (uni01/uni02 +
+origin), как и весь пакет origin/alien.
+
+Реализовано:
+
+- `payload_holding_ai.go` — `HoldingAIPayload` (R13 typed) +
+  `HoldingFleetUnit` + `HoldingParentSnapshot`. JSON-shape совместим
+  с `internal/alien.holdingPayload` (старый пакет nova): HALT/HOLDING
+  создаёт KindAlienHoldingAI с тем же json-marshal'ом, после
+  переключения регистрации worker'а handler читает тот же payload без
+  ломки сериализации. Поля `control_times`/`paid_sum_credit`/
+  `metal`/`silicon`/`hydrogen` добавлены `omitempty` — отсутствуют в
+  старом payload и интерпретируются как 0 при первом тике.
+
+- `holding_ai_handler.go`:
+  - `HoldingSubphase` — типизированное имя 1 из 8 подфаз (R13).
+  - `holdingSubphasesOrder` + `pickHoldingSubphase` — равновесный
+    выбор 1 из 8, как в origin AlienAI:949-966 (8 веток × вес 10).
+  - `HoldingAIHandler` — порт `onHoldingAIEvent` (PHP:924-1014):
+    проверка parent → consume `paid_credit` → выбор subphase →
+    `control_times++` → продление `parent.fire_at` (если
+    `paid_credit>0` или alien_fleet изменился) → планирование
+    следующего тика по `HoldingAISubphaseDuration` (origin:974,
+    `clamp(min(12h, 30s*times) ... max(24h, 60s*times))`),
+    capped на parent.fire_at-2s.
+  - `subphaseExtractAlienShips` — порт PHP:1025-1079: ceil(q × 0.01
+    × times²) убавление случайного alien-стека, capped q-1; если
+    все стеки == 1 — флот уходит и HOLDING закрывается.
+  - `subphaseUnloadAlienResources` — порт PHP:1081-1084 (=
+    Extract + unload-флаг PHP:1053-1061): сначала рассчитывается
+    подарок ресурсов из parent-snapshot
+    `gift = ceil(min(snap×0.7, snap×0.1×times))`; при good_bonus
+    (любой res > 1M) extract уменьшается ×0.3.
+  - `subphaseStub` × 6 — заглушки RepairUserUnits / AddUserUnits /
+    AddCredits / AddArtefact / GenerateAsteroid /
+    FindPlanetAfterBattle (как в origin PHP:1086-1124 — пустые
+    тела). Audit-log на каждом вызове для распределения метрик.
+  - `closeHoldingScattered` — закрытие parent KindAlienHolding
+    (`state='ok'`, processed_at=now), сообщение
+    "пришельцы рассеялись".
+
+- `cmd/worker/main.go` — KindAlienHoldingAI переключён со старого
+  `internal/alien.HoldingAIHandler` на `originAlienSvc.HoldingAIHandler()`.
+  Старый handler остался в коде (используются `LoadHoldingDefender`/
+  `CloseHoldingIfWiped` из того же пакета), но не регистрируется.
+
+Тесты:
+
+- `holding_ai_handler_test.go` (rapid, R4):
+  - `TestPickHoldingSubphase_Distribution` — все 8 веток
+    встречаются за 800 бросков, ни одна не >50%;
+  - `TestPickHoldingSubphase_Determinism` — детерминизм по seed;
+  - `TestUnloadGift_Bounds` — cap snapshot × 0.7, монотонность по
+    times, zero-at-zero;
+  - `TestHoldingAISubphaseDuration_GrowsWithControlTimes` —
+    верхняя граница hi растёт с control_times.
+  - `TestPowerScaleAfterControlTimes_Monotone` — `1 + ct*1.5` >= 1.0.
+
+- `holding_ai_integration_test.go` (с TEST_DATABASE_URL):
+  - `TestHoldingAI_TickIncrementsControlTimes` —
+    `control_times` 0→1 в payload follow-up event;
+  - `TestHoldingAI_PaidCreditExtendsParent` — paid=50 →
+    parent.fire_at +2h (формула `2h × paid / 50`),
+    `paid_sum_credit` и `paid_times` пишутся в parent.payload;
+  - `TestHoldingAI_SkipParentGone` — отсутствующий parent →
+    handler возвращает nil без follow-up;
+  - `TestHoldingAI_SkipParentDone` — parent state='ok' → silent skip;
+  - `TestHoldingAI_StubSubphasesAreNoop` — 50 тиков без
+    `paid_credit` не сдвигают parent.fire_at;
+  - `TestHoldingAI_NegativePayloadRejected` — пустой
+    `holding_event_id` → ошибка валидации.
+
+Что **не делалось** в Ф.4 (по ТЗ):
+- Spawner-проводка `internal/alien.Service.Spawn` →
+  `origin/alien.GenerateMission` — записана в simplifications.md
+  как Ф.3-отложение, остаётся открытой; не блокирует Ф.4.
+- 1% recheck `checkAlientNeeds` (PHP:1006-1008) — origin
+  с малой вероятностью на тике HOLDING_AI запускает спавн новой
+  миссии. В nova спавн идёт через scheduler `alien_spawn` и
+  redundant 1%-trigger излишен. Записано в `simplifications.md`
+  как сознательное расхождение.
+
+Объём Ф.4: ~530 строк Go (production: payload + handler +
+8 sub-phases) + ~280 строк тестов (5 property + 6 integration).
 
 ## Конвенции (R1-R5)
 

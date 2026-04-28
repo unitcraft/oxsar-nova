@@ -486,21 +486,23 @@
   формуле 2ч/50 кредитов. Остатки: FLY_UNKNOWN=33, GRAB_CREDIT=37,
   CHANGE_MISSION_AI=81 — Этап 3 плана 15.
 
-### [Alien AI] HOLDING_AI — 6 из 8 действий пустые (как в legacy)
-- **Где**: `internal/alien/holding.go::HoldingAIHandler`.
-- **Что**: реализованы 2 из 8 действий тика HOLDING_AI:
-  `onUnloadAlienResoursesAI` (выгрузка ресурсов) и
-  `onExtractAlientShipsAI` (убывание alien-флота). Остальные 6
-  (`onRepairUserUnitsAI`, `onAddUserUnitsAI`, `onAddCreditsAI`,
-  `onAddArtefactAI`, `onGenerateAsteroidAI`,
-  `onFindPlanetAfterBattleAI`) — no-op.
-- **Почему**: в legacy (`AlienAI.class.php:1086–1126`) эти 6 —
-  тоже **пустые тела**. Портировать нечего; в игре они никогда
-  ничего не делали.
-- **Как чинить**: дизайн-вопрос. Если решим давать игрокам подарки
-  (артефакты, кредиты, астероиды) в HOLDING — это отдельная фича,
-  не «порт».
-- **Приоритет**: — (решение геймдизайна).
+### [Alien AI] HOLDING_AI — 6 из 8 действий пустые (как в legacy) — ЗАКРЫТО
+- **Закрыто**: 2026-04-28, план 66 Ф.4. `HoldingAIHandler` переписан
+  в `internal/origin/alien/holding_ai_handler.go` с равновесным
+  выбором 1 из 8 веток (origin AlienAI:940-947). 2 активные
+  (`SubphaseExtractAlienShips`, `SubphaseUnloadAlienResources`),
+  6 заглушек (`SubphaseRepairUserUnits` / `AddUserUnits` /
+  `AddCredits` / `AddArtefact` / `GenerateAsteroid` /
+  `FindPlanetAfterBattle`) с audit-log на каждом вызове.
+  Регистрация в worker'е переключена с `internal/alien` на новый
+  пакет.
+- **Почему остаются заглушки**: в legacy
+  (`AlienAI.class.php:1086–1126`) эти 6 — тоже **пустые тела**.
+  Портировать нечего; их семантика «делают ничего, но засчитываются
+  тиком (control_times++)» сохранена в нашем handler'е.
+- **Когда расширять**: дизайн-вопрос. Если решим давать игрокам
+  подарки (артефакты, оксариты, астероиды) в HOLDING — это отдельная
+  фича, не «порт».
 
 ### [Alien AI] unloadAlienResources — процент от текущих, не от захваченных
 - **Где**: `internal/alien/holding.go::unloadAlienResources`.
@@ -1653,4 +1655,21 @@ handler'а.
 points в handler'е) — установлено эталоном Ф.1 плана 65.
 **План возврата**: не нужен — это согласованное архитектурное решение,
 не trade-off. Запись здесь только для прозрачности отличия от legacy.
+**Приоритет**: — (документация, не trade-off).
+
+### [66-Ф.4] HoldingAI 1% recheck (`checkAlientNeeds`) не реализуется
+**Где**: `projects/game-nova/backend/internal/origin/alien/holding_ai_handler.go::HoldingAIHandler`.
+**Что упрощено**: на каждом тике HOLDING_AI origin
+(`AlienAI.class.php:1006-1008`) с вероятностью 1% запускает
+`checkAlientNeeds()` — глобальный спавн новой alien-миссии. В nova
+эта ветка не реализована — спавн идёт через `scheduler.alien_spawn`
+(независимая cron-задача, см. `cmd/worker/main.go::sch.Register`).
+**Почему**: redundant 1%-trigger из тика HOLDING_AI излишен при
+наличии глобального scheduler'а. Архитектура nova явно отделяет
+spawn от tick-логики — это здоровее (spawn виден отдельной метрикой,
+тестируется изолированно).
+**План возврата**: не нужен — сознательное архитектурное расхождение,
+не упрощение функциональности (origin тоже фактически использует
+кронжоб для regular spawn'а, 1%-recheck в HOLDING_AI был лишним
+fallback'ом). Запись здесь только для прозрачности.
 **Приоритет**: — (документация, не trade-off).

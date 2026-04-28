@@ -11989,3 +11989,109 @@ destroy_building.go, no-op handler, регистрация worker, i18n),
 +~290 строк тестов, +~140 строк документации (план 65 шапка/Ф.3-5,
 divergence-log, simplifications, dev-log).
 
+## Итерация 66.Ф.4 (2026-04-28) — AlienAI HoldingAI 8 sub-phases (паритет с origin)
+
+Закрыта Ф.4 плана 66 — `KindAlienHoldingAI` расширен с 50/50 random
+extract/unload (упрощение плана 15) до полного паритета с origin
+`AlienAI.class.php:924-1014`: 8 sub-phases по 1/8 каждая, как в
+PHP-эталоне.
+
+Эталон применённого паттерна — `KindDemolishConstruction` (commit
+9a3992a384, план 65 Ф.1) + Ф.3 плана 66 (commit 856b5e105c) для
+typed payload, slog audit, регистрации worker'а.
+
+R0-исключение действует: HoldingAI работает во ВСЕХ вселенных
+(uni01/uni02 + origin), пакет `origin/alien` — источник кода, не
+таргет.
+
+**Что сделано**:
+
+- `internal/origin/alien/payload_holding_ai.go` — `HoldingAIPayload`
+  (R13 typed) с JSON-shape, совместимым со старым
+  `internal/alien.holdingPayload`. Поля
+  `control_times`/`paid_*`/`metal`/`silicon`/`hydrogen` добавлены
+  как `omitempty` — отсутствуют в старом payload, интерпретируются
+  как 0 при первом тике (плавная миграция без data-migration).
+- `internal/origin/alien/holding_ai_handler.go`:
+  - 8 типизированных подфаз (`HoldingSubphase` const'ы)
+    + равновесный `pickHoldingSubphase` (1/8).
+  - `HoldingAIHandler` — порт `onHoldingAIEvent`: проверка parent →
+    consume `paid_credit` → выбор subphase (switch на 8 веток) →
+    `control_times++` → продление `parent.fire_at` (формула
+    `2h × paid / 50`, capped HaltingMaxRealTime=15d) → планирование
+    следующего тика по `HoldingAISubphaseDuration` (origin:974,
+    `clamp(min(12h, 30s*times) ... max(24h, 60s*times))`),
+    capped на parent.fire_at-2s.
+  - 2 активные подфазы: `subphaseExtractAlienShips` (формула
+    `ceil(q × 0.01 × times²)` от случайного alien-стека, capped q-1)
+    + `subphaseUnloadAlienResources` (extract + подарок ресурсов
+    из parent-snapshot `ceil(min(snap×0.7, snap×0.1×times))`,
+    при good_bonus extract уменьшается ×0.3).
+  - 6 заглушек (`subphaseStub` × 6) с audit-log на каждом вызове
+    для отслеживания распределения 1/8.
+  - `closeHoldingScattered` — закрытие parent KindAlienHolding
+    (`state='ok'`, processed_at=now, сообщение
+    "пришельцы рассеялись").
+- `cmd/worker/main.go` — KindAlienHoldingAI переключён со старого
+  `internal/alien.HoldingAIHandler` на
+  `originAlienSvc.HoldingAIHandler()`. Старый handler остаётся в
+  коде (используются `LoadHoldingDefender`/`CloseHoldingIfWiped`),
+  но больше не регистрируется.
+
+**Тесты** (5 property + 6 integration):
+
+- `holding_ai_handler_test.go` (rapid):
+  `TestPickHoldingSubphase_Distribution` — все 8 веток встречаются;
+  `TestPickHoldingSubphase_Determinism` — детерминизм по seed;
+  `TestUnloadGift_Bounds` — cap snapshot×0.7, монотонность по times;
+  `TestHoldingAISubphaseDuration_GrowsWithControlTimes` — hi растёт;
+  `TestPowerScaleAfterControlTimes_Monotone` — `1+ct*1.5 >= 1.0`.
+
+- `holding_ai_integration_test.go` (с TEST_DATABASE_URL):
+  `TestHoldingAI_TickIncrementsControlTimes` (0→1, follow-up event);
+  `TestHoldingAI_PaidCreditExtendsParent` (paid=50 → +2h);
+  `TestHoldingAI_SkipParentGone` / `_SkipParentDone` (silent skip);
+  `TestHoldingAI_StubSubphasesAreNoop` (50 тиков без paid → fire_at
+  не сдвигается); `TestHoldingAI_NegativePayloadRejected`.
+
+**R-чек-лист (часть I.5 roadmap)**:
+
+- R0-исключение ✅ — пакет `origin/alien` применяется ко всем
+  вселенным (uni01/uni02 + origin), решение пользователя 2026-04-28.
+- R1 ✅ — snake_case в payload (HoldingAIPayload поля), оксары/оксариты
+  по ADR-0009 (paid_credit здесь — будущая Ф.5; в Ф.4 только формула
+  `2h × paid / 50` без реальной валюты).
+- R3 ✅ — slog с event_id/planet_id/subphase/control_times на каждом
+  тике; отдельный лог для extract/unload/stub/skip-веток.
+- R8 ✅ — Prometheus counter+histogram автоматом на уровне worker
+  (тот же паттерн что у demolish/Ф.3 handlers).
+- R10 ✅ — universe изоляция через FK на events.user_id (тот же
+  механизм, что у Ф.3 handlers).
+- R12 ✅ — i18n переиспользует существующие ключи `holding.giftSubject/
+  giftBody/scatteredSubject/scatteredBody` из плана 15 (нулевая
+  миграция).
+- R13 ✅ — typed `HoldingAIPayload` + `HoldingFleetUnit` +
+  `HoldingParentSnapshot` + `HoldingSubphase` const'ы.
+- R15 ✅ — без TODO/MVP-сокращений в Ф.4; два сознательных
+  расхождения с origin задокументированы в `simplifications.md`
+  (1% recheck checkAlientNeeds — заменён глобальным scheduler.alien_spawn;
+  HOLDING_AI 6 заглушек закрыто но остаются no-op как в origin).
+
+**Закрыто A-NNN из alien-ai-comparison.md**: A5 ✅ (HOLDING с 8
+действиями) + A14 ✅ (6 заглушек оставлены как no-op).
+
+**Шапка плана 66**: Ф.1+Ф.2 ✅ + Ф.3 ✅ + Ф.4 ✅ → остались Ф.5
+(buyout через billing — отдельная сессия после появления
+billing-client в nova), Ф.6 (50+ golden-итераций — отдельная сессия
+с PHP-дампером из live origin), Ф.7 (финал).
+
+**Параллельная сессия**: при работе обнаружены не-мои изменения
+(`internal/alliance/transfer*.go`, `migrations/0078_*.sql`,
+правки `cmd/server/main.go`) — план 67. Коммитим только свои файлы
+поимённо (memory: feedback_parallel_session_check).
+
+**Объём** — ~+530 строк продакшн-кода (HoldingAIPayload + handler
+с 8 sub-phases + helpers), +~280 строк тестов (5 property + 6
+integration), +~120 строк документации (план 66 Ф.4 итог,
+divergence-log A5/A14, simplifications обновление,
+project-creation итерация).

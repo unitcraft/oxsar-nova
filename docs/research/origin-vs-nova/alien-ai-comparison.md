@@ -325,7 +325,7 @@ unitid IN (200,201,202,203,204);`):
 | A2 | 5 видов кораблей UNIT_A_* | Есть в default `configs/units.yml`+`ships.yml` | ✅ | Закрыто планом 64 (Ф.2). |
 | A3 | Четверг ×5 флотов, ×1.5..2.0 мощь | Только триггер четверга | 🟠 → 🟡 | `Config.ThursdayPowerMin/Max` + `FleetsNumberAttackTime` (Ф.2). Spawn-проводка — Ф.3. |
 | A4 | EVENT_ALIEN_CHANGE_MISSION_AI | Нет | ✅ | `ChangeMissionAIHandler` зарегистрирован (Ф.3 плана 66, 2026-04-28). Replan-mode (>=8h) + extend-mode (<8h). Замена alien-флота через GenerateFleet — Ф.4. |
-| A5 | HOLDING с 8 действиями, control_times² | Простое HOLDING | 🟠 | Реализовать state в `internal/alien/holding.go` с теми же действиями (Ф.4 плана 66). |
+| A5 | HOLDING с 8 действиями, control_times² | Простое HOLDING | ✅ | `HoldingAIHandler` расширен с 50/50 до 8 sub-phases (Ф.4 плана 66, 2026-04-28): 2 активных (Extract / Unload, формула `q × 0.01 × times²`) + 6 заглушек как в origin PHP:1086-1124. Регистрация переключена с `internal/alien` на `internal/origin/alien`. control_times++ + длительность следующего тика по origin:974. |
 | A6 | Грабёж кредитов с state machine | Частично (applyGrabCredit) | ✅ | `GrabCreditHandler` (форсирует mode=GrabCredit) + ветка грабежа в `FlyUnknownHandler` (Ф.3 плана 66, 2026-04-28). Валюта = оксариты per ADR-0009. |
 | A7 | Подарки ресурсов/кредитов с вероятностями | Нет | ✅ | `FlyUnknownHandler` 5%-ветки подарков ресурсов и оксаритов (Ф.3 плана 66). |
 | A8 | Платный выкуп `end_time += 2h * paid/50` | Нет | 🟡 → 🟡 | Helper `HoldingExtension` готов (Ф.2). Платёж = оксары (R1, ADR-0009). Endpoint + событие продления — Ф.5. |
@@ -334,7 +334,7 @@ unitid IN (200,201,202,203,204);`):
 | A11 | UNIT_A_* в `na_ship_datasheet` (id 200-204) | Есть в default + origin override | ✅ | Закрыто планом 64. |
 | A12 | `ALIEN_FLEET_MAX_DERBIS = 1e9` | Нет ограничения | 🟢 → ✅ | `Config.FleetMaxDebris` + опция `WithMaxDebris` (Ф.2). |
 | A13 | Все 12+ ALIEN_* констант (тайминги, проценты) | Хардкод в Go или нет | 🟡 → ✅ | Все 25+ параметров в `Config` / `DefaultConfig()` (Ф.2). YAML-override — Ф.3. |
-| A14 | 6 заглушек в HOLDING_AI (Repair, AddUnits, ...) | Нет | 🟢 | **Не реализовывать** — origin сам их не вызывает (no-op). В журнал как «известное упрощение» |
+| A14 | 6 заглушек в HOLDING_AI (Repair, AddUnits, ...) | Нет | ✅ | Закрыто Ф.4 плана 66 (2026-04-28): `subphaseStub` (×6) с audit-log на каждом вызове. В origin (PHP:1086-1124) эти 6 — пустые тела; в nova повторяем 1-в-1, добавляя только slog для observability распределения 1/8. |
 
 ### Спецификация nova-стороны для legacy-вселенной
 

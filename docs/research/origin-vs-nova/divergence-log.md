@@ -785,6 +785,21 @@ vs 11 при basic=10000). Все cost_factor в origin.yaml override
     паттерн от plan-65 Ф.1 (KindDemolishConstruction, 9a3992a384):
     typed payload, slog audit (R3), R8 метрики автоматом на уровне
     worker, idempotency через FOR UPDATE SKIP LOCKED + state-machine.
+  - 2026-04-28 (Ф.4 плана 66): `KindAlienHoldingAI` расширен с
+    50/50 random extract/unload до 8 sub-phases как в origin
+    (`AlienAI.class.php:924-1014`): 2 активных
+    (`SubphaseExtractAlienShips`, `SubphaseUnloadAlienResources`)
+    + 6 заглушек (`SubphaseRepairUserUnits` /`AddUserUnits` /
+    `AddCredits` / `AddArtefact` / `GenerateAsteroid` /
+    `FindPlanetAfterBattle`) — пустые тела как в origin
+    (PHP:1086-1124). Добавлены `HoldingAIPayload` (R13 typed) +
+    `control_times++`, продление `parent.fire_at` платежом
+    (`2h × paid / 50`, capped HaltingMaxRealTime=15d), длительность
+    следующего тика растёт с control_times
+    (`HoldingAISubphaseDuration`). Регистрация worker'а перенесена
+    с `internal/alien.HoldingAIHandler` на
+    `originAlienSvc.HoldingAIHandler()`. Закрывает A5 / A14 в
+    alien-ai-comparison.md.
   - **Применимо**: ко всем вселенным (R0-исключение 2026-04-28,
     решение пользователя). Пакет `origin/alien/` — источник кода,
     не таргет вселенной.
