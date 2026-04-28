@@ -14,12 +14,19 @@ import (
 
 // TransportArrivePayload — payload KindTransport=7. Совпадает с тем,
 // что пишет transport.Send.
+//
+// План 65 Ф.3 (D-037): для KindAttackDestroyBuilding=26 в payload
+// допускается опциональное поле target_building_id (unit_id здания на
+// планете-цели) — атакующий выбирает заранее, какое здание он намерен
+// разрушить. Если поле не задано, при обработке боя выбирается
+// случайное здание планеты (зеркалит legacy Assault::getRandomTargetBuilding).
 type transportPayload struct {
-	FleetID       string           `json:"fleet_id"`
-	Carried       map[string]int64 `json:"carried"`
-	ColonyName    string           `json:"colony_name,omitempty"`    // только для COLONIZE
-	ReturnEventID string           `json:"return_event_id,omitempty"` // для delay/fast
-	FlightSeconds int64            `json:"flight_seconds,omitempty"`  // одно плечо
+	FleetID          string           `json:"fleet_id"`
+	Carried          map[string]int64 `json:"carried"`
+	ColonyName       string           `json:"colony_name,omitempty"`        // только для COLONIZE
+	ReturnEventID    string           `json:"return_event_id,omitempty"`    // для delay/fast
+	FlightSeconds    int64            `json:"flight_seconds,omitempty"`     // одно плечо
+	TargetBuildingID int              `json:"target_building_id,omitempty"` // план 65 Ф.3: цель для KindAttackDestroyBuilding
 }
 
 // ArriveHandler — event.Handler для KindTransport. В точке прибытия:

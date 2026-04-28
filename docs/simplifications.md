@@ -1612,3 +1612,45 @@ soft-delete смысла нет.
 нет потребителя — преждевременная функциональность.
 **Приоритет**: L — потеря записи о disband не критична для UI лога
 (альянс с удалёнными FK всё равно недоступен через UI).
+
+## 2026-04-28 — План 65 Ф.3-Ф.4: Building Destruction (Kind=26/29)
+
+### [65-Ф.3] Эвристика «у атакующего есть здание сравнимого уровня» НЕ реализована
+**Где**: `projects/game-nova/backend/internal/fleet/destroy_building.go` —
+`tryDestroyBuilding`, ветка random-выбора цели.
+**Что упрощено**: legacy origin (Assault.class.php:253-272, константа
+`DESTROY_BUILD_RESULT_MIN_OFFS_LEVEL`) при random-выборе target_building
+исключает здания, у которых уровень атакующего ниже defender'a более
+чем на N. В nova исключение не реализовано — random выбирает из всех
+buildings планеты, кроме UNIT_EXCHANGE/UNIT_NANO_FACTORY (origin-фильтр
+сохранён).
+**Почему**: эвристика — балансировочный компромисс legacy конкретного
+сервера, без аналитики «зачем именно так». Без её портирования миссия
+становится более прямолинейной (random eligible building), что
+соответствует упрощённому подходу nova. Реализация эвристики потребует
+загрузки buildings всех участников ACS-группы и пер-юзер сравнения —
++30-50 строк со сложным purpose, который не воспроизводится без
+мотивации legacy-балансера.
+**План возврата**: если в боях обнаружится дисбаланс (атакующий c
+mining-flot уверенно сносит nano factory у застроенного защитника без
+шансов), добавить фильтр через JOIN buildings на attacker(-ов) и
+исключать здания, для которых `defender.level - attacker.level >
+threshold`. Threshold вынести в `configs/balance/origin.yaml`
+(план 64).
+**Приоритет**: L — без эвристики миссия работоспособна; восстановление
+— на этапе балансовой настройки.
+
+### [65-Ф.3] Не пишем `b_count`/`b_points` декремент при сносе
+**Где**: `tryDestroyBuilding` — нет UPDATE `users.points/b_points/b_count`
+после понижения уровня.
+**Что упрощено**: legacy origin (Assault.class.php:638-643) при
+target_destroyed снижает `users.points`, `b_points`, `b_count`. В nova
+не делаем — score derived state (план 23): пересчитывается через
+`KindScoreRecalcAll` (батч) либо decorator `withScore` per-user после
+handler'а.
+**Почему**: соответствует общему паттерну event-loop'а в nova
+(KindBuildConstruction/KindDemolishConstruction тоже не инкрементят
+points в handler'е) — установлено эталоном Ф.1 плана 65.
+**План возврата**: не нужен — это согласованное архитектурное решение,
+не trade-off. Запись здесь только для прозрачности отличия от legacy.
+**Приоритет**: — (документация, не trade-off).

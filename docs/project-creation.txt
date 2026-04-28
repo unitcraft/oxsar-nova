@@ -11889,3 +11889,103 @@ go vet: единственное предупреждение — pre-existing d
 **Объём** — ~3 часа активного темпа. +870 строк нового кода,
 +~480 строк правок, +135 строк unit-тестов, +~250 строк openapi
 секций, +~80 строк документации (план 67 шапка + project-creation).
+
+## Итерация 2026-04-28 (поздняя): план 65 Ф.3+Ф.4+Ф.5 — destroy-building + ACS-additional referrer
+
+Завершены три фазы плана 65 в одной сессии (Ф.3+Ф.4+Ф.5 как
+согласованная пара/тройка по варианту A). Ф.6 (KindTeleportPlanet)
+оставлен на отдельную сессию из-за необходимости ввести billing-client
+в game-nova и подключить idempotency-middleware к API-роутеру —
+~600-800 строк в 3 новых подсистемах.
+
+**Что сделано**:
+
+- **Ф.3** `KindAttackDestroyBuilding=26` — атака с целью разрушить
+  здание. Переиспользует `TransportService.AttackHandler()` с новой
+  destroy-building веткой ([fleet/attack.go](../projects/game-nova/backend/internal/fleet/attack.go)).
+  Расширен `transportPayload` опциональным `target_building_id`.
+
+- **Ф.4** `KindAttackAllianceDestroyBuilding=29` — ACS-вариант. Та
+  же логика через `ACSAttackHandler` ([fleet/acs_attack.go](../projects/game-nova/backend/internal/fleet/acs_attack.go)).
+  `acsPayload` тоже расширен.
+
+- **Ф.5** `KindAllianceAttackAdditional=30` — no-op handler в
+  [event/handlers.go](../projects/game-nova/backend/internal/event/handlers.go).
+  В legacy этот тип события — служебный referrer для ACS-атаки
+  (`case EVENT_ALLIANCE_ATTACK_ADDITIONAL: break`); в nova ACS уже
+  консолидирован в KindAttackAlliance с `acs_group_id`, поэтому
+  KindAllianceAttackAdditional концептуально излишен — но
+  регистрируется как явный no-op для совместимости с возможной
+  репликацией events из game-origin-php.
+
+- Общая логика разрушения здания вынесена в новый
+  [fleet/destroy_building.go](../projects/game-nova/backend/internal/fleet/destroy_building.go)
+  (~180 строк): `tryDestroyBuilding` (выбор target + понижение
+  уровня + освобождение поля) + `sendBuildingDestroyedMessages`
+  (i18n bundle).
+
+- i18n-ключи `assaultReport.buildingDestroyed*` /
+  `enemyBuildingDestroyed*` в `en.yml` и `ru.yml`.
+
+- Регистрация в [worker/main.go](../projects/game-nova/backend/cmd/worker/main.go)
+  с декоратором `withAchievement` (без `withScore` — score derived
+  state).
+
+- Тесты: pure round-trip для обоих payload'ов (защита от случайного
+  rename JSON-тэга), property-based rapid (R4) для no-op-decision
+  (детерминированно `isMoon || winner != "attackers"`),
+  pure-тест Ф.5 no-op для 5 кейсов payload'а (включая невалидный
+  JSON), golden-сценарии с TEST_DATABASE_URL — 7 кейсов
+  (level 5→4, 1→0 + used_fields-1, defender-win no-op, moon no-op,
+  random skip excluded, random pick eligible, idempotent explicit).
+
+**Сознательные упрощения** (зафиксировано в
+[docs/simplifications.md](simplifications.md)):
+
+- Эвристика «у атакующего должно быть здание сравнимого уровня»
+  (legacy `DESTROY_BUILD_RESULT_MIN_OFFS_LEVEL`) НЕ реализована —
+  random-выбор из всех eligible зданий планеты, без тонкой
+  балансировки. Возврат — на этапе балансовой настройки, если
+  обнаружится дисбаланс. Приоритет L.
+
+- Декремент `users.points`/`b_points`/`b_count` при сносе НЕ пишется
+  — score derived state в nova (план 23), пересчитывается batch'ем
+  через `KindScoreRecalcAll`. Это не trade-off, а согласованное
+  отличие от legacy (установлено эталоном Ф.1).
+
+**R0-R15 чек-лист**:
+- R0 ✅ — все existing nova-тесты зелёные (`go test ./internal/event/...
+  ./internal/fleet/...`).
+- R3 ✅ — структурированный slog с полями event_id, planet_id, unit_id,
+  level_from, level_to, attacker/defender_user_id.
+- R4 ✅ — property-based rapid тест на детерминизм no-op-decision.
+- R8 ✅ — Prometheus метрики автоматически на уровне worker'а
+  (`oxsar_events_processed{kind="26|29|30"}`).
+- R9 — Idempotency-Key неприменим (это event-loop handler'ы, не REST
+  endpoint'ы; идемпотентность через `FOR UPDATE SKIP LOCKED` в
+  worker'е, см. план 09).
+- R10 ✅ — per-universe изоляция через FK на planets/users (universe-bound).
+- R12 ✅ — i18n-ключи `buildingDestroyed*` через bundle.
+- R13 ✅ — typed payload struct (`transportPayload`/`acsPayload`
+  расширены).
+- R15 ✅ — без TODO/MVP-сокращений; одно явное отклонение от legacy
+  (эвристика сравнимого уровня) задокументировано в simplifications.md.
+
+**Закрыто D-NNN**: D-037 ✅ (EVENT_ATTACK_DESTROY_BUILDING /
+ALLIANCE_DESTROY_BUILDING).
+
+**Шапка плана 65**: Ф.1 ✅ + Ф.2 ✅ + Ф.3 ✅ + Ф.4 ✅ + Ф.5 ✅ →
+осталась только Ф.6 (KindTeleportPlanet, отдельная сессия с
+обоснованием препятствий).
+
+**Параллельная сессия**: при работе обнаружены не-мои изменения
+(`internal/alliance/transfer*.go`, `internal/origin/alien/holding_ai*.go`,
+`migrations/0078_*.sql`, правки `cmd/server/main.go`, `openapi.yaml`,
+а также параллельные правки в `divergence-log.md`) — коммитим только
+свои файлы поимённо (memory: feedback_parallel_session_check).
+
+**Объём** — ~+450 строк продакшн-кода (3 Kind, payload-расширения,
+destroy_building.go, no-op handler, регистрация worker, i18n),
++~290 строк тестов, +~140 строк документации (план 65 шапка/Ф.3-5,
+divergence-log, simplifications, dev-log).
+

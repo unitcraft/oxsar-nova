@@ -27,9 +27,18 @@ import (
 	"oxsar/game-nova/pkg/ids"
 )
 
+// acsPayload — payload KindAttackAlliance=12 и его destroy-вариантов
+// (KindAttackAllianceDestroyMoon=27, KindAttackAllianceDestroyBuilding=29).
+//
+// План 65 Ф.4 (D-037): TargetBuildingID опционален для destroy-building
+// варианта; если не задан — будет выбран случайно (зеркало
+// legacy Assault::getRandomTargetBuilding). У всех флотов группы должен
+// быть одинаковый TargetBuildingID (валидация — на стороне инициатора
+// миссии, см. план 65 Ф.4 о роли клиента-инициатора).
 type acsPayload struct {
-	FleetID    string `json:"fleet_id"`
-	ACSGroupID string `json:"acs_group_id"`
+	FleetID          string `json:"fleet_id"`
+	ACSGroupID       string `json:"acs_group_id"`
+	TargetBuildingID int    `json:"target_building_id,omitempty"`
 }
 
 // ACSAttackHandler — event.Handler для KindAttackAlliance=12.
@@ -266,6 +275,24 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 					lead.ownerUserID, defenderUserID, survivingFleets, ripTotal,
 					report.Seed); err != nil {
 					return fmt.Errorf("acs attack: moon destroy: %w", err)
+				}
+			}
+		}
+		// План 65 Ф.4 (D-037): ACS Building Destruction (kind=29).
+		// Та же логика что у single (kind=26): при победе и не-луне
+		// понижается уровень здания. Атрибуция — leader (lead.ownerUserID),
+		// сообщения о победе шлются leader'у; defender получает одно
+		// сообщение о потере уровня.
+		if e.Kind == event.KindAttackAllianceDestroyBuilding {
+			unitID, lvlFrom, lvlTo, ok, err := tryDestroyBuilding(ctx, tx,
+				planetID, isMoon, report.Winner, pl.TargetBuildingID, report.Seed)
+			if err != nil {
+				return fmt.Errorf("acs attack: building destroy: %w", err)
+			}
+			if ok {
+				if err := sendBuildingDestroyedMessages(ctx, tx, s.tr,
+					defenderUserID, lead.ownerUserID, unitID, lvlFrom, lvlTo, e.ID); err != nil {
+					return fmt.Errorf("acs attack: building destroy msg: %w", err)
 				}
 			}
 		}

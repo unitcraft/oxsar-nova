@@ -301,6 +301,22 @@ func (s *TransportService) AttackHandler() event.Handler {
 				return fmt.Errorf("attack: moon destroy: %w", err)
 			}
 		}
+		// План 65 Ф.3 (D-037): Building Destruction. Только если цель —
+		// планета (не луна) и атакующий выжил. Понижает уровень здания
+		// на 1 (или удаляет, если level=1→0).
+		if e.Kind == event.KindAttackDestroyBuilding {
+			unitID, lvlFrom, lvlTo, ok, err := tryDestroyBuilding(ctx, tx,
+				planetID, isMoon, report.Winner, pl.TargetBuildingID, report.Seed)
+			if err != nil {
+				return fmt.Errorf("attack: building destroy: %w", err)
+			}
+			if ok {
+				if err := sendBuildingDestroyedMessages(ctx, tx, s.tr,
+					defenderUserID, attackerUserID, unitID, lvlFrom, lvlTo, e.ID); err != nil {
+					return fmt.Errorf("attack: building destroy msg: %w", err)
+				}
+			}
+		}
 		return finalizeAttack(ctx, tx, s.bundle, pl.FleetID, attackerUserID, defenderUserID, planetID,
 			report, loot, debrisM, debrisS, cm, csil, ch, atkPower, defPower)
 	}

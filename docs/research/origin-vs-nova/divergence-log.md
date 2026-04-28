@@ -789,19 +789,27 @@ vs 11 при basic=10000). Все cost_factor в origin.yaml override
     решение пользователя). Пакет `origin/alien/` — источник кода,
     не таргет вселенной.
 
-### D-037. EVENT_ATTACK_DESTROY_BUILDING / ALLIANCE_DESTROY_BUILDING
+### D-037. EVENT_ATTACK_DESTROY_BUILDING / ALLIANCE_DESTROY_BUILDING ✅ (закрыто 2026-04-28, план 65 Ф.3+Ф.4)
 
 - **Категория**: event-loop / механика
-- **Цвет**: 🟠
+- **Цвет**: 🟢
 - **Origin**: атака с целью разрушения постройки (не луны, а
   здания)
-- **Nova**: атака разрушения только луны
+- **Nova (было)**: атака разрушения только луны
   (`KindAttackDestroyMoon`, план 20 Ф.6)
-- **Разница**: разрушение конкретного здания — отдельная механика
-- **Как сделать**: новый Kind `KindAttackDestroyBuilding` +
-  параметр `target_building_id`
-- **Объём**: 1 неделя
-- **Связь**: backend + UI выбор здания
+- **Nova (стало)**: реализовано — `KindAttackDestroyBuilding=26` (single)
+  и `KindAttackAllianceDestroyBuilding=29` (ACS); общая логика разрушения
+  здания вынесена в [fleet/destroy_building.go](../../../projects/game-nova/backend/internal/fleet/destroy_building.go),
+  payload расширен опциональным `target_building_id` (omitempty); при
+  отсутствии — random-выбор из buildings планеты (с фильтром
+  UNIT_EXCHANGE/UNIT_NANO_FACTORY как в legacy). Сообщения через i18n
+  `assaultReport.buildingDestroyed*` / `enemyBuildingDestroyed*`.
+- **Сознательное упрощение**: legacy-эвристика «у атакующего должно
+  быть здание сравнимого уровня» (`DESTROY_BUILD_RESULT_MIN_OFFS_LEVEL`)
+  не реализована — в nova random-выбор из всех eligible зданий, без
+  тонкой балансировки ([simplifications.md](../../simplifications.md)).
+- **Связь**: backend готов; UI выбора здания — отдельным планом, когда
+  дойдёт оригинальный Mission UI.
 
 ### D-038. EVENT_ALIEN_ATTACK_CUSTOM (admin-инициируемая)
 

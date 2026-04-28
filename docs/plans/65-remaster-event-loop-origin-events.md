@@ -4,10 +4,21 @@
 **Статус**:
 - Ф.1 ✅ (KindDemolishConstruction — эталонный handler).
 - Ф.2 ✅ (KindDeliveryArtefacts — реальный handler по эталону, 2026-04-28).
-- Ф.3 KindAttackDestroyBuilding — TODO (отдельная сессия).
-- Ф.4 KindAttackAllianceDestroyBuilding (ACS) — TODO (отдельная сессия).
-- Ф.5 KindAllianceAttackAdditional (referer для ACS) — TODO (отдельная сессия).
-- Ф.6 KindTeleportPlanet — TODO (отдельная сессия, билинг + REST + OpenAPI + cooldown, ~500+ строк, заслуживает изоляции).
+- Ф.3 ✅ KindAttackDestroyBuilding (2026-04-28, см. Ф.3 ниже).
+- Ф.4 ✅ KindAttackAllianceDestroyBuilding ACS (2026-04-28, см. Ф.4 ниже).
+- Ф.5 ✅ KindAllianceAttackAdditional no-op referrer (2026-04-28, см. Ф.5 ниже).
+- Ф.6 KindTeleportPlanet — TODO (отдельная сессия). **Препятствия**:
+  (а) в `projects/game-nova/backend/` нет HTTP-клиента к billing-сервису
+  (oxsar credits) — есть только локальный `users.credits`, который не
+  годится для премиум-фичи;
+  (б) Idempotency-Key middleware есть в `projects/billing/`, но не
+  подключён к API-роутеру game-nova ([cmd/server/main.go]
+  paths /api/planets/...);
+  (в) телепорт требует REST + OpenAPI с нуля + cooldown handler +
+  artefact-проверки (ARTEFACT_PLANET_TELEPORTER в legacy) — связка
+  ~600-800 строк в 3 новых подсистемах.
+  Запланировано: ввести billing-client в game-nova → подключить idempotency
+  middleware → POST /api/planets/{id}/teleport + KindTeleportPlanet handler.
 - Kind'ы EXCHANGE_* (Expire/Ban) **перенесены в план 68** — биржа артефактов
   реализует их в рамках `internal/exchange/`. Обоснование (2026-04-28):
   stub-handler с `ErrSkip` нарушал бы R15 (без TODO/MVP-сокращений), а
@@ -139,16 +150,115 @@ EVENT_DELIVERY_ARTEFACTS, EventHandler.class.php:2718-2754 + Artefact::onOwnerCh
 
 **Не закрытый D-NNN**: D-035 в [divergence-log.md](../research/origin-vs-nova/divergence-log.md#d-035-event_delivery_artefacts-доставка-артефактов-флотом).
 
-### Ф.3-Ф.5. TODO по эталону Ф.1+Ф.2
+### Ф.3. KindAttackDestroyBuilding ✅ (2026-04-28)
 
-Каждый Kind — отдельная сессия, тот же паттерн (typed payload R13,
-idempotent skip, slog audit R3, R8 метрики автоматом):
+Атака с целью разрушить постройку — Kind=26. Обработчик переиспользует
+`TransportService.AttackHandler()` ([fleet/attack.go](../../projects/game-nova/backend/internal/fleet/attack.go))
+с новой веткой destroy-building, аналогично существующей destroy-moon
+(Kind=25). Реализация общей логики разрушения здания вынесена в
+[fleet/destroy_building.go](../../projects/game-nova/backend/internal/fleet/destroy_building.go).
 
-- Ф.3. `KindAttackDestroyBuilding` — атака с целью разрушить постройку
-  (новый параметр `target_building_id` в payload). Связан с
-  `internal/transport/`.
-- Ф.4. `KindAttackAllianceDestroyBuilding` — ACS-вариант Ф.3.
-- Ф.5. `KindAllianceAttackAdditional` — служебный referer для ACS.
+**Что сделано**:
+
+- `KindAttackDestroyBuilding Kind = 26` в [event/kinds.go](../../projects/game-nova/backend/internal/event/kinds.go)
+  (legacy origin EVENT_ATTACK_DESTROY_BUILDING=23, но 23 уже занят
+  KindDeliveryArtefacts из Ф.2 — берём свободный 26).
+- Расширен `transportPayload` опциональным `TargetBuildingID int`
+  (R13 typed payload). Поле omitempty — обратная совместимость с
+  существующими событиями.
+- Ветка в `AttackHandler`: после `applyDefenderLosses` и до
+  `finalizeAttack`, при `e.Kind == KindAttackDestroyBuilding`,
+  вызывается `tryDestroyBuilding(ctx, tx, planetID, isMoon, winner,
+  targetUnitID, seed)` — общая функция destroy_building.go.
+- Регистрация в [worker/main.go](../../projects/game-nova/backend/cmd/worker/main.go)
+  с `withAchievement` (без withScore — score derived state, batch-пересчёт).
+
+**Семантика** (порт от Assault.class.php:599-651):
+
+1. Срабатывает только при `winner=="attackers"` и `!isMoon` (для лун —
+   Kind=25, отдельная ветка).
+2. `target_building_id` берётся из payload (выбор атакующего на момент
+   запуска миссии) либо случайно из buildings планеты, кроме
+   UNIT_EXCHANGE=107 и UNIT_NANO_FACTORY=7 (origin-фильтр, consts.php:317-327).
+3. Уровень здания понижается на 1 (или удаляется, если level=1→0;
+   при удалении освобождается 1 used_field планеты — зеркало
+   HandleDemolishConstruction).
+4. Сообщения (i18n): защитнику — `assaultReport.buildingDestroyed*`,
+   атакующему — `assaultReport.enemyBuildingDestroyed*` (R12).
+5. Audit (R3): структурированный slog с полями event_id, planet_id,
+   unit_id, level_from, level_to, attacker/defender_user_id.
+6. Метрики (R8): автоматически на уровне worker'а
+   (`oxsar_events_processed{kind="26"}`).
+
+**Сознательное упрощение** (зафиксировано в
+[simplifications.md](../simplifications.md#план-65-фф3-ф4-разрушение-зданий-без-эвристики-сравнимого-уровня)):
+не реализована legacy-эвристика «у атакующего должно быть здание
+сравнимого уровня» (Assault.class.php:253-272, константа
+`DESTROY_BUILD_RESULT_MIN_OFFS_LEVEL`). В nova миссия более прямолинейна
+— random-выбор из всех eligible зданий, без тонкой балансировки.
+Возвратиться при балансовой настройке, если выяснится дисбаланс.
+
+### Ф.4. KindAttackAllianceDestroyBuilding ✅ (2026-04-28)
+
+ACS-вариант Ф.3 — Kind=29. Обработчик переиспользует
+`TransportService.ACSAttackHandler()` ([fleet/acs_attack.go](../../projects/game-nova/backend/internal/fleet/acs_attack.go))
+с веткой destroy-building после ACS Moon Destruction.
+
+**Что сделано**:
+
+- `KindAttackAllianceDestroyBuilding Kind = 29` в kinds.go
+  (legacy EVENT_ATTACK_ALLIANCE_DESTROY_BUILDING=24, но 24 свободен —
+  берём 29 для группировки рядом с 25/27/29 destroy-вариантами).
+- Расширен `acsPayload` опциональным `TargetBuildingID int`. У всех
+  флотов группы должен быть одинаковый TargetBuildingID — валидация
+  на стороне инициатора миссии (тот же контракт что у moon-destroy).
+- Та же `tryDestroyBuilding` что у Ф.3 — единая логика для single и ACS.
+  Атрибуция атакующего — `lead.ownerUserID` (leader группы).
+- Регистрация в worker/main.go.
+
+**Не закрытый D-NNN**: D-037 ✅ (closing comment в divergence-log).
+
+### Ф.5. KindAllianceAttackAdditional ✅ (2026-04-28, no-op handler)
+
+Служебный referrer для ACS — Kind=30. В legacy origin это no-op в
+event-loop (EventHandler.class.php:707-708: `case EVENT_ALLIANCE_ATTACK_ADDITIONAL: break`),
+сам тип события используется только как маркер «дополнительный флот,
+примыкающий к ACS-атаке».
+
+**В nova ACS архитектурно иной** — все флоты группы получают одно
+KindAttackAlliance с общим acs_group_id, и leader выполняет всю
+работу за группу (см. [fleet/acs_attack.go](../../projects/game-nova/backend/internal/fleet/acs_attack.go)).
+KindAllianceAttackAdditional концептуально излишен — но регистрируем
+его как явный no-op для:
+1. совместимости с возможной репликацией events из game-origin-php
+   (если когда-нибудь введём общую events-таблицу для legacy/nova);
+2. не давать событиям этого Kind'а уезжать в `StateError` при импорте
+   архива origin.
+
+**Что сделано**:
+
+- `KindAllianceAttackAdditional Kind = 30` в kinds.go.
+- `HandleAllianceAttackAdditional` в [event/handlers.go](../../projects/game-nova/backend/internal/event/handlers.go) —
+  тривиальный no-op handler с info-slog для отладки (R3).
+- Регистрация в worker/main.go (без декораторов).
+- Pure-тесты в [event/alliance_attack_additional_test.go](../../projects/game-nova/backend/internal/event/alliance_attack_additional_test.go) —
+  no-op для любого payload (включая невалидный JSON, nil tx).
+
+**R15-уточнение**: НЕ trade-off в simplifications.md — no-op handler
+адекватно отражает no-op-семантику legacy. R8/R9/R12 неприменимы (нет
+мутации, нет user-facing вывода).
+
+### Тесты Ф.3-Ф.5
+
+- [event/alliance_attack_additional_test.go](../../projects/game-nova/backend/internal/event/alliance_attack_additional_test.go):
+  pure-тесты Ф.5 no-op (5 кейсов: nil/empty/object/foreign/malformed payload).
+- [fleet/destroy_building_test.go](../../projects/game-nova/backend/internal/fleet/destroy_building_test.go):
+  payload round-trip Ф.3+Ф.4 (transportPayload + acsPayload), property-based
+  rapid (R4) на детерминизм no-op-decision, golden-сценарии для
+  `tryDestroyBuilding` через TEST_DATABASE_URL (7 сценариев: explicit
+  level 5→4, level 1→0 + used_fields-1, defenders-win no-op, moon
+  no-op, random skip excluded units, random pick eligible only,
+  idempotent explicit).
 
 ### Ф.6. KindTeleportPlanet — отдельная сессия
 
