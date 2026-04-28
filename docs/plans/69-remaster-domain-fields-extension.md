@@ -1,7 +1,7 @@
 # План 69 (ремастер): Расширение domain-полей в nova
 
 **Дата**: 2026-04-28
-**Статус**: Скелет (детали допишет агент-реализатор при старте)
+**Статус**: Ф.0 (дельта-аудит) выполнена. Ф.1 ждёт решения по R10 (home_planet_id).
 **Зависимости**: блокируется планом 64 (`configs/balance/origin.yaml` для дефолтных
 значений вселенной origin).
 **Связанные документы**:
@@ -24,17 +24,20 @@
 
 ## Что делаем (по D-NNN)
 
-| D-NNN | Поле | Назначение | R1 (имя) |
+> Уточнено в Ф.0 (дельта-аудит). Колонка **Статус** показывает
+> фактическое состояние: ✅ закрыто, ⚙️ ждёт Ф.1, ⏳ ждёт R10.
+
+| D-NNN | Поле | Назначение | Статус |
 |---|---|---|---|
-| D-001 | `users.max_points`, опц. `dm_points`, `be_points`, `of_points` | Достижения и категории очков | snake_case ОК |
-| D-004 | `users.protected_until_at` | Защита новичков от атак (timestamp) | `_at` суффикс по R1 |
-| D-005 | `users.role` enum + value `observer` ИЛИ `users.is_observer bool` | Наблюдатель без боя | `is_observer` если простая бинарная |
-| D-008 | `users.profession_changed_at` | Когда менял профессию (cooldown) | `_at` ОК |
-| D-020 | `users.last_global_chat_read_at`, `users.last_ally_chat_read_at`, `users.chat_language` | Маркеры прочтения чата | `_at` для timestamp, `chat_language` для locale |
-| D-019 | `users.home_planet_id` | Главная планета (FK на planets.id) | `_id` для FK по R1 |
-| D-016 | `users.last_planet_teleport_at` | Cooldown телепорта | `_at` ОК |
-| D-003 | `users.account_deletion_scheduled_at` | Soft-удаление с задержкой (для всех вселенных) | `_at` ОК |
-| W1 | `users.notes TEXT` | Приватные заметки игрока (notepad из legacy-PHP, S-Notepad экран в плане 72) | TEXT, nullable, размер ≤ 16KB по CHECK |
+| D-001 | `users.max_points` (категории dm/be/of — отказ, YAGNI) | Исторический пик очков | ⚙️ Ф.1 |
+| D-004 | `users.protected_until_at` | Защита новичков от атак (timestamp) | ⚙️ Ф.1 |
+| D-005 | `users.is_observer BOOLEAN` (домен-флаг, не RBAC) | Наблюдатель без боя | ⚙️ Ф.1 |
+| D-008 | `users.profession_changed_at` | Когда менял профессию (cooldown) | ✅ закрыто (миграция 0046_profession.sql) |
+| D-020 | `users.last_global_chat_read_at`, `users.last_ally_chat_read_at` (chat_language — отказ, есть `users.language`) | Маркеры прочтения чата | ⚙️ Ф.1 |
+| D-019 | `users.home_planet_id` | Главная планета (FK на planets.id) | ⏳ R10 |
+| D-016 | `users.last_planet_teleport_at` | Cooldown teleport-планеты (не путать со stargate_cooldowns per-planet) | ⚙️ Ф.1 |
+| D-003 | `users.account_deletion_scheduled_at` | Soft-удаление с задержкой | ✅ закрыто архитектурно лучше: `account_deletion_codes` (миграция 0051) — email-confirm flow |
+| W1 | `users.notes TEXT` | Приватные заметки игрока | ✅ закрыто архитектурно лучше: `user_notepad` (миграция 0050) — отдельная таблица |
 
 ---
 
@@ -55,14 +58,89 @@
 
 ## Этапы (детали — при старте)
 
-- Ф.1. Миграция БД (одна большая migration с 9 ALTER TABLE).
+- **Ф.0. Дельта-аудит** ✅ (выполнен 2026-04-28, см. ниже).
+- Ф.1. Миграция БД дельты (только реально отсутствующие поля).
 - Ф.2. Обновить sqlc-модели + регенерация.
 - Ф.3. Handler-обновления для тех endpoint'ов, где поля отдаются /
   читаются.
 - Ф.4. Защитная логика protected_until_at в attack-handler.
 - Ф.5. Cooldown teleport / профессии.
-- Ф.6. Endpoint для notes (GET/PUT `/api/users/me/notes`).
+- Ф.6. Endpoint для notes (GET/PUT `/api/users/me/notes`) — **переоценить**:
+  notes уже реализованы как отдельная таблица `user_notepad`
+  (миграция 0050). Возможно, endpoint существует или достаточно
+  расширения существующего модуля.
 - Ф.7. Финализация.
+
+---
+
+## Ф.0. Дельта-аудит (2026-04-28)
+
+Перед планированием миграции проверено фактическое состояние схемы
+`users` и связанных таблиц. Часть полей плана 69 уже закрыта
+независимыми миграциями (бэклог nova, выполненный параллельно с
+подготовкой ремастера); другая часть — закрыта **в иной форме**
+(отдельная таблица вместо колонки в `users`), что архитектурно
+лучше плана.
+
+### Закрыто полностью (исключаются из Ф.1)
+
+| D-NNN | План 69 (предложение) | Фактическое состояние | Решение |
+|---|---|---|---|
+| **D-002** | `vacation_*` (vacation mode) | `users.vacation_since`, `users.vacation_last_end` (миграция 0045_vacation_mode.sql) | ✅ Не часть плана 69 (был P-20). Учтено для контекста. |
+| **D-008** | `users.profession_changed_at` | `users.profession TEXT NOT NULL DEFAULT 'none'` + `users.profession_changed_at TIMESTAMPTZ` (миграция 0046_profession.sql) | ✅ Закрыто. **Из Ф.1 исключаем.** |
+| **W1**   | `users.notes TEXT` (CHECK 16KB) | Отдельная таблица `user_notepad (user_id PK, content text, updated_at)` (миграция 0050_notepad.sql) | ✅ Закрыто **архитектурно лучше** (отдельная таблица — не утяжеляет горячую `users`). **Из Ф.1 исключаем.** Ф.6 переоценить: проверить наличие endpoint `/api/users/me/notes`. CHECK на длину content стоит добавить отдельной микро-миграцией если ещё нет (verify в Ф.6). |
+| **D-003** | `users.account_deletion_scheduled_at` | Отдельная таблица `account_deletion_codes (user_id PK, code_hash, issued_at, expires_at, attempts)` (миграция 0051) | ✅ Закрыто **архитектурно лучше** (email-confirm flow вместо простого scheduled_at — соответствует roadmap-report «Часть III» для всех вселенных). **Из Ф.1 исключаем.** |
+
+### Закрыто частично (в плане 69 НЕ актуально, но имя поля иное)
+
+| D-NNN | План 69 предлагал | Фактически | Решение |
+|---|---|---|---|
+| **D-005** | `is_observer BOOLEAN` ИЛИ `role enum +'observer'` | `users.role` enum **удалён** миграцией 0070_drop_users_role.sql; роли мигрировали в identity-сервис (план 52, RBAC unification). | **Решение по R10 архитектуре**: identity-уровень. `is_observer` — это **домен-флаг**, не RBAC-роль. Хранить в `users` (game-nova) как `is_observer BOOLEAN DEFAULT false`. Identity-сервис не знает про "observer" — это per-universe game-state, не cross-universe identity. **Включаем в Ф.1.** |
+
+### НЕ закрыто (включаются в Ф.1)
+
+| D-NNN | Поле | Тип | Семантика |
+|---|---|---|---|
+| **D-001** | `users.max_points` | `numeric(20, 4) NOT NULL DEFAULT 0` | Исторический пик `points`. Категории `dm_points`/`be_points`/`of_points` — **отказ** для итерации (YAGNI: 6 текущих категорий u/r/b/a/e_points достаточно, dm/be/of — origin-only внутренняя сложность, не приносит UX). |
+| **D-004** | `users.protected_until_at` | `timestamptz` nullable | Защита новичков от атак. |
+| **D-005** | `users.is_observer` | `boolean NOT NULL DEFAULT false` | Наблюдатель без боя (домен-флаг, не RBAC-роль). |
+| **D-016** | `users.last_planet_teleport_at` | `timestamptz` nullable | Cooldown смены home-планеты. **Не дублирует** `stargate_cooldowns` (миграция 0062): stargate — это прыжок флота между лунами per planet_id; teleport — смена «домашней» планеты per user_id. Разные механики. |
+| **D-019** | `users.home_planet_id` | `uuid` nullable, FK на `planets(id) ON DELETE SET NULL` | Главная планета (целевая для миссий без явного origin). См. **открытый вопрос R10** ниже. |
+| **D-020** | `users.last_global_chat_read_at`, `users.last_ally_chat_read_at` | `timestamptz` nullable | Маркеры прочтения чата. **Без `chat_language`** — `users.language` (UI язык) уже есть с 0001, отдельный язык чата = YAGNI (одна тема, один язык per user). |
+
+### Отказы (зафиксированы в плане выше)
+
+- **D-007** `ui_theme/ui_pack` — YAGNI.
+- **D-021** `race` — мёртвое поле в legacy-PHP.
+- **D-001 расширенное**: `dm_points`, `be_points`, `of_points` — YAGNI
+  (origin-only внутренняя сложность). `max_points` — да.
+- **D-020 chat_language**: YAGNI, `users.language` достаточно.
+
+### Открытый вопрос R10 (home_planet_id)
+
+`users` per текущему паттерну nova — per-universe (схема users
+идентична в каждой uni-БД). Но R10 (roadmap-report) предписывает
+cross-universe identity. Конфликт: `home_planet_id` указывает на
+`planets.id` per-universe.
+
+Варианты:
+- (а) Cross-table `user_universe_state(user_id, universe_code, home_planet_id)`
+- (б) `users.home_planet_id UUID nullable` per-universe (текущий паттерн nova)
+- (в) Не вводить вообще (фича origin-only через session-state)
+
+**Решение пользователя ожидается перед миграцией Ф.1.**
+
+### Итог Ф.0
+
+- Изначально план 69: **9 полей**.
+- Из них уже закрыто (полностью или архитектурно лучше): **3** (D-008, D-003, W1).
+- Включаем в Ф.1: **6 полей** (D-001, D-004, D-005, D-016, D-019*, D-020 ×2).
+  *D-019 — после ответа по R10.
+- Объём правки: уменьшен с «одна большая миграция 9 ALTER» до
+  «одна миграция 5–6 ALTER». Handlers и тесты соответственно
+  сужены: убираем notes-endpoint и deletion-flow из Ф.6.
+
+---
 
 ## Конвенции (R1-R5)
 
@@ -76,7 +154,10 @@
 
 ## Объём
 
-2 недели. Одна большая миграция + handler-обновления + тесты.
+Изначально 2 недели. После Ф.0 (дельта-аудит): **~1 неделя**.
+Одна миграция (5–6 ALTER) + handler-обновления (attack-protection,
+teleport cooldown, observer-фильтры в highscore, chat read markers)
++ тесты.
 
 ## References
 
