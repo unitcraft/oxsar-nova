@@ -2329,3 +2329,109 @@ unit-тесты на форматтеры/валидаторы/router-маршр
 - **Что сделано**: openapi приведён в соответствие с реальным
   поведением backend в Ф.5 ч.1 (одной строкой в edit'е).
 - **Приоритет**: closed (документационный фикс, не trade-off).
+
+### [P72.S4.OFFICER_DTO] OpenAPI Officer/Profession DTO приведены к реальному backend (2026-04-28)
+- **Где**: `projects/game-nova/api/openapi.yaml` (схемы Officer,
+  Profession, ProfessionInfo + body /api/officers/{key}/activate).
+- **Что было**: Officer schema содержала только `{key, active,
+  expires_at}`; backend (`internal/officer/service.go`) реально отдаёт
+  полный набор полей `title/description/duration_days/cost_credit/
+  effect/activated_at/expires_at`. Аналогично Profession описывала
+  `{name, description, bonuses}`, а backend (`internal/profession/
+  service.go`) отдаёт `{key, label, bonus, malus}` (где bonus/malus —
+  целочисленные дельты уровня по техн. ключу). Body activate описывал
+  `{planet_id}`, а реальный handler принимает `{auto_renew}`.
+- **Что сделано**: openapi приведён в соответствие с реальным
+  поведением backend в Ф.5 ч.2 (Officer schema, Profession schema,
+  ProfessionInfo, request body activate). Это документационный фикс,
+  не trade-off.
+- **Приоритет**: closed.
+
+### [P72.S4.WIDGETS] S-046 Widgets закрыт через S-001 Main (R15 ✅, не упрощение)
+- **Где**: `projects/game-nova/frontends/origin/src/features/widgets/
+  WidgetsRedirect.tsx` — Navigate → / на /widgets.
+- **Что**: legacy `templates/standard/widgets.tpl` сам по себе —
+  заглушка (Yii widget CurrentEvents удалён в плане 37.5d.9). В origin-
+  фронте семантический эквивалент уже агрегирован в S-001 MainScreen
+  (Spring 1, коммит 47d1f0ef65): события (`/api/fleet`), непрочитанные
+  сообщения (`/api/messages/unread-count`), homeplanet+universe.
+- **Почему**: дубликат — нет смысла иметь /widgets и / отдельными
+  маршрутами с одинаковым контентом. Современный паттерн — единая
+  «главная» с виджетами на ней.
+- **Trade-off (R15 ✅, не упрощение)**: визуальное расхождение с
+  legacy (нет отдельного /widgets маршрута). В Spring 1 уже зафиксировано
+  «pixel-perfect только в рамках реализуемых экранов; semantic
+  equivalence важнее визуальной точности дубликатов». /widgets
+  делает Navigate → / с dev-notice в console.
+- **Как чинить (если понадобится)**: воссоздать legacy-вид как
+  отдельный экран, скопировав MainScreen и убрав header. Но проще —
+  не делать ничего, /widgets уже работает (через redirect).
+- **Приоритет**: closed.
+
+### [P72.S4.CHANGELOG] Changelog как bundled markdown (не backend endpoint)
+- **Где**: `projects/game-nova/frontends/origin/src/features/changelog/
+  CHANGELOG.md` + `parse.ts` + `ChangelogScreen.tsx`.
+- **Что**: список релизов хранится как markdown в bundle origin-фронта,
+  а не в БД через `/api/changelog`. Backend такого endpoint'а не имеет.
+- **Почему**: changelog меняется при релизах (не из runtime), markdown
+  в bundle — стандартный паттерн для редко-меняющегося контента
+  (документация / release-notes). Заводить таблицу в БД и админ-панель
+  для редактирования релизов — лишняя работа без выгоды.
+- **Trade-off**: НЕТ — это **правильный** паттерн, не упрощение. Запись
+  в simplifications для документирования факта, а не как «вернуться позже».
+- **Как чинить**: ничего не нужно. Если в будущем потребуется
+  динамический changelog (например, в админке) — отдельный план.
+- **Приоритет**: closed.
+
+### [P72.S4.USER_AGREEMENT] UserAgreement — cross-link на portal (единственный источник истины)
+- **Где**: `projects/game-nova/frontends/origin/src/features/user-agreement/
+  UserAgreementScreen.tsx`.
+- **Что**: /user-agreement в origin-фронте показывает короткую справку
+  и ссылку `${VITE_PORTAL_BASE_URL}/user-agreement` в новой вкладке, а
+  не дублирует юр-текст inline.
+- **Почему**: юр-документ должен иметь **единственный источник истины**,
+  иначе при правках появляется риск рассинхрона между порталом и игрой
+  (юр-риск, особенно по 149-ФЗ). Портал уже хостит /user-agreement +
+  /privacy с актуальным текстом (план 50). Origin-фронт делает
+  cross-link — full text живёт на одной площадке.
+- **Trade-off**: НЕТ (это правильный паттерн централизации юр-документов).
+  Запись для документирования факта.
+- **Как чинить (если изменится)**: если решим, что игроки должны видеть
+  agreement без выхода из игры — встроить iframe или fetch markdown с
+  портала. Но это только при явной потребности.
+- **Приоритет**: closed.
+
+### [P72.S4.SUPPORT_CROSS_SERVICE] Support → portal-backend (план 56), не game-nova
+- **Где**: `projects/game-nova/frontends/origin/src/api/support.ts` —
+  fetch на `${VITE_PORTAL_BASE_URL}/api/reports`.
+- **Что**: S-045 Support отправляет POST на portal-backend
+  /api/reports, а не на game-nova /api/* (которого не существует —
+  reports переехали в portal-backend в плане 56, коммиты 37ae65b430+).
+- **Почему**: единый реестр жалоб для всех вселенных (origin / nova /
+  будущих) централизован на портале. portal-backend сам управляет
+  дедупликацией (ключ {target_type, target_id, user_id, reason}),
+  поэтому R9 Idempotency-Key не передаём — это разъяснение, не
+  упрощение.
+- **Trade-off**: НЕТ. Запись для документирования факта (план 56
+  закрыт раньше — но S-045 это первый origin-экран, который реально
+  использует portal-backend, отсюда фиксация в simplifications).
+- **Приоритет**: closed.
+
+### [P72.S4.OFFICER_NO_BALANCE_FETCH] Officer-экран не показывает текущий баланс кредитов
+- **Где**: `projects/game-nova/frontends/origin/src/features/officer/
+  OfficerScreen.tsx`.
+- **Что**: legacy officer.tpl показывает кнопку «Нанять» и стоимость,
+  но не текущий баланс (баланс — в шапке legacy). nova-фронт
+  OfficersScreen отдельно фетчит /api/artefact-market/credit для
+  показа баланса. В origin-фронте баланс кредитов в Spring 4 ч.2
+  не рендерим — он будет доступен в шапке (header) когда финализируем
+  AppShell-header в Ф.9.
+- **Почему**: pixel-perfect зеркало legacy не требует баланс прямо в
+  таблице офицеров. Дополнительный fetch + дублирующий UI-блок —
+  отклонение от legacy без явной выгоды.
+- **Trade-off**: minor — игрок видит «Активировать (1000 cr)» но не
+  знает свой баланс прямо сейчас. Workaround — посмотреть в шапке
+  (когда она будет полная) или в /settings.
+- **Как чинить**: после финализации header'а в Ф.9 либо добавить
+  `<span className="balance">` в officer-table thead, если потребуется.
+- **Приоритет**: L.

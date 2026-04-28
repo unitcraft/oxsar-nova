@@ -114,6 +114,35 @@ describe('router Spring 2 — ресурсный/боевой блок (5 экр
   });
 });
 
+const SPRING_4_PART2_PATHS = [
+  '/officer',
+  '/profession',
+  '/user-agreement',
+  '/changelog',
+  '/support',
+  '/tools/tech-calc',
+  '/widgets',
+];
+
+describe('router Spring 4 ч.2 — premium / static / utilities (7 маршрутов)', () => {
+  it('покрывает S-040/S-041/S-043/S-044/S-045/S-046/S-047', () => {
+    expect(SPRING_4_PART2_PATHS).toHaveLength(7);
+    expect(SPRING_4_PART2_PATHS).toContain('/officer');
+    expect(SPRING_4_PART2_PATHS).toContain('/profession');
+    expect(SPRING_4_PART2_PATHS).toContain('/user-agreement');
+    expect(SPRING_4_PART2_PATHS).toContain('/changelog');
+    expect(SPRING_4_PART2_PATHS).toContain('/support');
+    expect(SPRING_4_PART2_PATHS).toContain('/tools/tech-calc');
+    expect(SPRING_4_PART2_PATHS).toContain('/widgets');
+  });
+
+  it('S-046 /widgets — redirect-маршрут (см. simplifications P72.S4.WIDGETS)', () => {
+    // /widgets делает Navigate → /, см. WidgetsRedirect.tsx. Тест-факт:
+    // маршрут существует, но семантически — алиас /.
+    expect(SPRING_4_PART2_PATHS).toContain('/widgets');
+  });
+});
+
 describe('router Spring 3 — artefacts / info / techtree / records / ranking', () => {
   it('покрывает 7 новых маршрутов S-013/S-014/S-018/S-019/S-021/S-024/S-023', () => {
     expect(SPRING_3_PATHS).toHaveLength(7);

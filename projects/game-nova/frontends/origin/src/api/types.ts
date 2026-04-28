@@ -557,3 +557,49 @@ export interface DeletionCodeResponse {
 export interface DeletionConfirmRequest {
   code: string;
 }
+
+// ===== Spring 4 ч.2 (план 72 Ф.5) =====
+
+// S-040 Officer — каталог + state. Backend (internal/officer/service.go)
+// возвращает Entry с полным набором полей (title/description/duration_days/
+// cost_credit/effect/activated_at/expires_at). OpenAPI обновлён под это
+// в Spring 4 ч.2.
+export interface Officer {
+  key: string;
+  title: string;
+  description: string;
+  duration_days: number;
+  cost_credit: number;
+  effect?: Record<string, number> | null;
+  activated_at?: string | null;
+  expires_at?: string | null;
+}
+
+export interface OfficersList {
+  officers: Officer[] | null;
+}
+
+export interface OfficerActivateRequest {
+  auto_renew?: boolean;
+}
+
+// S-041 Profession — backend (internal/profession/service.go) DTO:
+// {key, label, bonus, malus} для list + {profession, label,
+// next_change_allowed} для me. Bonus/malus — мапа техн.ключ → дельта
+// уровня (например, metalmine: +5, gun: -3).
+export interface Profession {
+  key: string;
+  label: string;
+  bonus?: Record<string, number>;
+  malus?: Record<string, number>;
+}
+
+export interface ProfessionsList {
+  professions: Profession[];
+}
+
+export interface ProfessionInfo {
+  profession: string;
+  label: string;
+  next_change_allowed?: string | null;
+}

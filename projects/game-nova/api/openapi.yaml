@@ -1341,17 +1341,22 @@ paths:
           name: key
           required: true
           schema: { type: string }
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
-              required: [planet_id]
               properties:
-                planet_id: { type: string, format: uuid }
+                auto_renew: { type: boolean, default: false, description: автоматически продлить по истечению при наличии credit }
       responses:
-        "200": { description: activated }
+        "200":
+          description: activated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Officer" }
         "402": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -3873,10 +3878,20 @@ components:
 
     Officer:
       type: object
+      required: [key, title, description, duration_days, cost_credit]
       properties:
-        key:        { type: string }
-        active:     { type: boolean }
-        expires_at: { type: string, format: date-time, nullable: true }
+        key:           { type: string }
+        title:         { type: string }
+        description:   { type: string }
+        duration_days: { type: integer }
+        cost_credit:   { type: integer, format: int64 }
+        effect:
+          type: object
+          additionalProperties: { type: number }
+          nullable: true
+          description: ключ эффекта → множитель (produce_factor=1.2 и т.п.)
+        activated_at:  { type: string, format: date-time, nullable: true }
+        expires_at:    { type: string, format: date-time, nullable: true }
 
     MarketRates:
       type: object
@@ -4352,22 +4367,26 @@ components:
 
     Profession:
       type: object
-      required: [key, name]
+      required: [key, label]
       properties:
-        key:         { type: string }
-        name:        { type: string }
-        description: { type: string }
-        bonuses:
+        key:   { type: string }
+        label: { type: string }
+        bonus:
           type: object
-          additionalProperties: { type: number }
-          description: ключ бонуса → множитель (например, production_metal = 1.1)
+          additionalProperties: { type: integer }
+          description: ключ техн. бонуса → дельта уровня (например, metalmine=+5)
+        malus:
+          type: object
+          additionalProperties: { type: integer }
+          description: ключ штрафа → отрицательная дельта уровня
 
     ProfessionInfo:
       type: object
+      required: [profession]
       properties:
-        profession:    { type: string, nullable: true, description: текущая профессия игрока }
-        chosen_at:     { type: string, format: date-time, nullable: true }
-        next_change_at: { type: string, format: date-time, nullable: true, description: дата когда снова доступна смена }
+        profession:           { type: string, description: "текущая профессия игрока (none = без профессии)" }
+        label:                { type: string }
+        next_change_allowed:  { type: string, format: date-time, nullable: true, description: дата когда снова доступна смена }
 
     Settings:
       type: object

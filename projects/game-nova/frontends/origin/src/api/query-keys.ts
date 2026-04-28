@@ -56,4 +56,8 @@ export const QK = {
   notepad: () => ['notepad'] as const,
   search: (type: string, q: string) => ['search', type, q] as const,
   settings: () => ['settings'] as const,
+  // Spring 4 ч.2 — premium / static / utilities
+  officers: () => ['officers'] as const,
+  professions: () => ['professions'] as const,
+  professionMe: () => ['professions', 'me'] as const,
 };
