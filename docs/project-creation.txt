@@ -13201,3 +13201,167 @@ gzip 24.55 kB).
 **Статус плана 72**: Ф.3 ✅ (Spring 2). Впереди: Ф.4 (Spring 3 —
 8 экранов: artefacts/info/techtree/records/...), Ф.5..Ф.6 (Spring
 4..5), Ф.7 i18n русский, Ф.8 TipTap чат, Ф.9 финал.
+
+────────────────────────────────────────────────────────────────────
+2026-04-28 (вечер) — План 80: cleanup auth-хвостов после
+identity-rename
+────────────────────────────────────────────────────────────────────
+
+**Контекст**: планы 51 (rename auth-service → identity-service)
+и 55 (doc-sync) оставили хвосты. Главный — `deploy/Dockerfile.migrate`
+копировал `projects/auth/migrations` (папки нет) вместо
+`projects/identity/migrations`. На multi-instance dev-стеке
+identity-БД стартовала с пустыми миграциями.
+
+**Что сделано** (3 коммита для blame-изоляции):
+
+1. **Ф.1 + Ф.2 — мёртвые Dockerfile'ы и migrate fix (CRITICAL)**:
+   - `git rm projects/game-nova/backend/Dockerfile.{auth,portal}` —
+     ссылались на `cmd/auth-service` и `cmd/portal`, давно
+     перенесённых в отдельные модули.
+   - `deploy/Dockerfile.migrate`: `COPY projects/auth/migrations` →
+     `COPY projects/identity/migrations`. Compose-сервисы и
+     `MIGRATE_DIR` тоже на `/migrations/identity`.
+
+2. **Ф.3 + Ф.4 — compose rename + sentinel-ошибки**:
+   - `deploy/docker-compose.yml` + `multiverse.yml` +
+     `.env.multiverse.example`: `auth-db`→`identity-db`,
+     `auth-migrate`→`identity-migrate`, `auth-db-data`→
+     `identity-db-data`, `authsvc` (POSTGRES_USER/PASSWORD/DB) →
+     `identitysvc`. ENV `AUTH_DB_PASSWORD`→`IDENTITY_DB_PASSWORD`.
+   - `projects/identity/backend/internal/identitysvc/service.go`:
+     13 sentinel-ошибок с префиксом `authsvc:` → `identitysvc:`
+     (errors.New + fmt.Errorf). Тесты identitysvc зелёные —
+     matchers по тексту нет, унификация через `errors.Is`.
+
+3. **Ф.5 + Ф.6 — комментарии и остальные потребители**:
+   - identity/cmd/server/main.go, identitysvc/{service,handler}.go:
+     "auth-service"/"auth-db" в doc-комментариях → identity-*.
+   - game-nova/backend: cmd/server/main.go, internal/auth/*.go,
+     internal/universeswitcher/*.go, internal/settings/handler.go,
+     internal/config/config.go (комментарии полей AuthConfig),
+     migrations/0067/0068 (комменты применённых миграций), Dockerfile.
+   - game-nova/frontends/nova: App.tsx, stores/auth.ts,
+     features/auth/{LoginScreen,HandoffPage}.tsx,
+     features/settings/SettingsScreen.tsx, vite.config.ts.
+   - portal/{backend,frontend}, billing/backend: 6 комментариев.
+   - НЕ тронуто: legacy-PHP, internal/auth/ folder names,
+     features/auth/ folder names, /api/auth/* endpoints,
+     auth_rsa_key.pem secret, struct field `AuthServiceURL`
+     (Auth — feature, имя валидно).
+
+**Конвенция (зафиксирована)**: `auth` = функциональная область
+(middleware, feature-folder, endpoint, e2e-spec); `identity` =
+имя микросервиса (БД, контейнер, ENV).
+
+**Smoke**: go build ./... зелёный для identity, game-nova,
+portal, billing. `go test ./internal/identitysvc/...` ✅.
+Docker compose smoke (`down -v` + up) — пользователь запустит
+вручную после согласования (destructive для dev-юзеров в
+identity-db; альтернатива ALTER USER/RENAME DATABASE с goose
+сложнее).
+
+**grep-проверка** (по плану): `auth-db|authsvc|projects/auth/
+migrations|Dockerfile.{auth,portal}` в active-коде (исключая
+legacy-php, auth_rsa_key, /api/auth/, internal/auth/,
+features/auth/) → 0 результатов. ✅
+
+**Файлы**:
+- Удалены: `projects/game-nova/backend/Dockerfile.{auth,portal}`.
+- Изменены (~25 файлов): deploy/{Dockerfile.migrate,
+  docker-compose.yml, docker-compose.multiverse.yml,
+  .env.multiverse.example}, projects/identity/backend/cmd/server/
+  main.go + internal/identitysvc/{service,handler}.go +
+  migrations/0003_drop_credits.sql, projects/game-nova/backend/
+  {Dockerfile, cmd/server/main.go, internal/auth/{middleware,
+  ensure_user,ensure_user_testhelpers_test,handler}.go,
+  internal/universeswitcher/{handoff,handler}.go, internal/
+  settings/handler.go, internal/config/config.go, migrations/
+  {0067,0068}*.sql}, projects/game-nova/frontends/nova/{App.tsx,
+  stores/auth.ts, features/auth/{LoginScreen,HandoffPage}.tsx,
+  features/settings/SettingsScreen.tsx, vite.config.ts},
+  projects/portal/{backend/cmd/server/main.go, backend/internal/
+  portalsvc/{handler,service,credits}.go, frontend/vite.config.ts,
+  frontend/src/pages/ProfilePage.tsx}, projects/billing/backend/
+  internal/billing/webhook.go, docs/plans/80-*.md (шапка ✅),
+  docs/active-sessions.md (удалена строка).
+
+**Статус плана 80**: ✅ Закрыт.
+
+
+================================================================================
+План 73 Ф.1+Ф.2 — baseline screenshots для origin-фронта (2026-04-28)
+================================================================================
+
+**Что**: создана инфраструктура pixel-diff CI (Playwright) для будущего
+сравнения нового origin-фронта с эталонами legacy-php. Сняты smoke-PNG
+7 экранов (из 22 запланированных Spring 1+2).
+
+**Зачем**: план 72 пишет новый origin-фронт «pixel-perfect к legacy».
+Без автоматического сравнения регрессии находятся вручную. План 73
+закрывает это; Ф.1+Ф.2 — фундамент: эталоны + регламент.
+
+**Что сделано**:
+
+- `tests/e2e/origin-baseline/` — отдельный standalone-пакет
+  Playwright (Chromium-only, 1440×900, ru-RU).
+  - `screens.ts` — 22 экрана Spring 1+2 (7 + 12 alliance + 4
+    resource/market/repair/battlestats), стабильные ID S-NNN из
+    docs/research/origin-vs-nova/origin-ui-replication.md.
+  - `baseline.spec.ts` — login через /dev-login.php, для каждого
+    экрана goto + page.screenshot fullPage. Блокирует CDN
+    (ajax.googleapis.com, fonts, yadro/liveinternet) — иначе
+    headless Chromium висит 30-60s на jQuery 1.5.1 из googleapis.
+  - `take-screenshots.sh` — поднимает legacy-php docker-стек,
+    ждёт /dev-login.php → 2xx/3xx (max 60s), npm install +
+    playwright install chromium, запуск spec, по умолчанию stop.
+  - `update-baselines.sh` — то же с явным confirmation prompt
+    (для намеренного обновления при изменении legacy-UI).
+  - README с регламентом обновления.
+
+**Запуск**:
+
+  bash tests/e2e/origin-baseline/take-screenshots.sh           # smoke 7
+  SMOKE=0 bash tests/e2e/origin-baseline/take-screenshots.sh   # все 22
+
+**Smoke (Ф.2)**: 7 PNG (~3 MB суммарно):
+
+  s-001-main.png                       284 KB
+  s-002-research.png                   1027 KB
+  s-003-constructions.png              907 KB
+  s-012-overview-alliance-overview.png 152 KB
+  s-025-resource.png                   201 KB
+  s-026-market.png                     220 KB
+  s-048-repair.png                     195 KB
+
+**Грабли**:
+
+1. Headless Chromium тянет jQuery 1.5.1 + jQuery-UI с
+   ajax.googleapis.com — 30-60s или таймаут. Решение: route.abort()
+   на список BLOCKED_HOSTS. JS-countdown из-за этого не работает,
+   но статический layout рендерится — для baseline достаточно.
+
+2. Первый goto после холодного старта legacy-php (cold MySQL
+   row cache + opcache) — 30-60s; повторы — 3-4s. Решение:
+   retries=1 в playwright.config.ts. На S-001 поймали flaky;
+   остальные 6 прошли с первой попытки.
+
+**Что отложено**:
+
+- Ф.2.5: остальные 15 экранов (Shipyard, Galaxy, Mission, Empire,
+  11 alliance-actions, Battlestats) — отдельная быстрая сессия.
+- Ф.3: Playwright suite на новый origin-фронт + diff через
+  pixelmatch (threshold 0.5%) — после Spring 3+4+5.
+- Ф.4: CI-job .github/workflows/screenshot-diff.yml.
+- Ф.5: регламент release notes.
+
+**Файлы**:
+
+- Созданы: `tests/e2e/origin-baseline/{README.md,package.json,
+  tsconfig.json,playwright.config.ts,screens.ts,baseline.spec.ts,
+  take-screenshots.sh,update-baselines.sh,.gitignore}` +
+  `screenshots/*.png` (7 файлов).
+- Изменены: `docs/plans/73-remaster-screenshot-diff-ci.md` (шапка
+  + блок «Прогресс»), `docs/active-sessions.md` (slot 1 удалён).
+
+**Статус плана 73**: 🟡 Ф.1 ✅, Ф.2 🟡 (smoke), остальное — отдельные сессии.

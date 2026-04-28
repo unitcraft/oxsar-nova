@@ -1,0 +1,16 @@
+{
+  "name": "origin-baseline",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Playwright baseline screenshots of legacy-php for plan 73 (origin pixel-diff CI).",
+  "scripts": {
+    "install-browsers": "playwright install chromium",
+    "test": "playwright test",
+    "take": "bash take-screenshots.sh",
+    "update": "bash update-baselines.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "typescript": "^5.6.0"
+  }
+}
