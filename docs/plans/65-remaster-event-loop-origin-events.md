@@ -1,8 +1,19 @@
 # План 65 (ремастер): Расширение event-loop — события origin
 
 **Дата**: 2026-04-28
-**Статус**: Ф.1 ✅ (KindDemolishConstruction — эталонный handler);
-остальные 6 Kind'ов — TODO по эталону
+**Статус**:
+- Ф.1 ✅ (KindDemolishConstruction — эталонный handler).
+- Ф.2 ✅ (KindDeliveryArtefacts — реальный handler по эталону, 2026-04-28).
+- Ф.3 KindAttackDestroyBuilding — TODO (отдельная сессия).
+- Ф.4 KindAttackAllianceDestroyBuilding (ACS) — TODO (отдельная сессия).
+- Ф.5 KindAllianceAttackAdditional (referer для ACS) — TODO (отдельная сессия).
+- Ф.6 KindTeleportPlanet — TODO (отдельная сессия, билинг + REST + OpenAPI + cooldown, ~500+ строк, заслуживает изоляции).
+- Kind'ы EXCHANGE_* (Expire/Ban) **перенесены в план 68** — биржа артефактов
+  реализует их в рамках `internal/exchange/`. Обоснование (2026-04-28):
+  stub-handler с `ErrSkip` нарушал бы R15 (без TODO/MVP-сокращений), а
+  концептуально оба Kind'а — биржевые и должны жить рядом со своим
+  service'ом, не в общем `internal/event/handlers.go`. Снижение scope
+  плана 65 с 6 Kind'ов до 5.
 **Зависимости**: блокируется планом 64 (`configs/balance/origin.yaml` — для balance numbers).
 **Связанные документы**:
 - [62-origin-on-nova-feasibility.md](62-origin-on-nova-feasibility.md)
@@ -85,21 +96,66 @@ service+API) расширила бы scope с эталонного Kind'а до 
 Проблема «handler пуст» не имела отдельного D-NNN — это inventory-bug,
 зафиксирован в [divergence-log.md D-031b](../research/origin-vs-nova/divergence-log.md#d-031b).
 
-### Ф.2-Ф.6 (TODO по эталону Ф.1)
+### Ф.2. KindDeliveryArtefacts ✅ (2026-04-28)
 
-Каждый из следующих Kind'ов реализуется по тому же паттерну:
+Реальный handler по эталону Ф.1 — доставка артефактов флотом-курьером
+(источник: биржа артефактов плана 68 либо premium-механика подарков).
+Закрывает D-035.
 
-- Ф.2. `KindExchangeExpire`, `KindExchangeBan` — для биржи (план 68 даст
-  таблицы; пока handler-stub с `ErrSkip`).
-- Ф.3. `KindDeliveryArtefacts` — расширение DELIVERY-семьи; payload
-  включает `artefact_id`. Связан с `internal/fleet/`.
-- Ф.4. `KindAttackDestroyBuilding`, `KindAttackAllianceDestroyBuilding`
-  — атака с целью разрушить постройку (новый параметр `target_building_id`
-  в payload). Связан с `internal/transport/`.
+**Что сделано**:
+
+- `KindDeliveryArtefacts Kind = 23` в [kinds.go](../../projects/game-nova/backend/internal/event/kinds.go)
+  (свободный номер рядом с DeliveryUnits=21 и DeliveryResources=22; в legacy
+  origin EVENT_DELIVERY_ARTEFACTS=29).
+- [HandleDeliveryArtefacts](../../projects/game-nova/backend/internal/event/handlers.go)
+  + typed payload `DeliveryArtefactsPayload{FleetID, ArtefactIDs[]}`
+  (R13).
+- [delivery_artefacts_test.go](../../projects/game-nova/backend/internal/event/delivery_artefacts_test.go):
+  pure round-trip + property-based (rapid, R4) + 4 golden-сценария +
+  payload-validation (5 негативных кейсов).
+- Регистрация в [cmd/worker/main.go](../../projects/game-nova/backend/cmd/worker/main.go):
+  `withAchievement(event.HandleDeliveryArtefacts)` — без `withScore`
+  (артефакты не входят в очки), без `withDailyQuest` (нет такого квеста).
+
+**Семантика handler'а** (порт от EventHandler::transport ветка
+EVENT_DELIVERY_ARTEFACTS, EventHandler.class.php:2718-2754 + Artefact::onOwnerChange):
+
+1. Флот в state ≠ `outbound` → no-op (ArriveHandler-паттерн).
+2. Для каждого артефакта в payload:
+   - `artefacts_user.user_id` ← `e.UserID`, `planet_id` ← `e.PlanetID`;
+   - active → held (см. ниже про revert);
+   - per-universe (R10): обе стороны в одной вселенной, иначе ошибка.
+3. Флот → `returning`.
+4. Идемпотентность: артефакт уже у получателя → skip; флот returning → no-op.
+
+**Сознательное упрощение** (зафиксировано в [simplifications.md](../simplifications.md)):
+не вызываем `applyChange(revert)` синхронно при `active → held` —
+полагаемся на то, что nova вычисляет effect-стек по списку активных
+артефактов на каждом чтении (`ActiveBattleModifiers`, `service.go:349`).
+Биржевая операция (план 68) обязана ставить артефакт в `held` ДО полёта
+— тогда delivery просто переписывает владельца. Если в проде поймаем
+`active`-артефакт в delivery — добавим явный revert-вызов отдельным
+планом.
+
+**Не закрытый D-NNN**: D-035 в [divergence-log.md](../research/origin-vs-nova/divergence-log.md#d-035-event_delivery_artefacts-доставка-артефактов-флотом).
+
+### Ф.3-Ф.5. TODO по эталону Ф.1+Ф.2
+
+Каждый Kind — отдельная сессия, тот же паттерн (typed payload R13,
+idempotent skip, slog audit R3, R8 метрики автоматом):
+
+- Ф.3. `KindAttackDestroyBuilding` — атака с целью разрушить постройку
+  (новый параметр `target_building_id` в payload). Связан с
+  `internal/transport/`.
+- Ф.4. `KindAttackAllianceDestroyBuilding` — ACS-вариант Ф.3.
 - Ф.5. `KindAllianceAttackAdditional` — служебный referer для ACS.
-- Ф.6. `KindTeleportPlanet` — премиум-фича через оксары. Зависит от
-  плана 69 (миграция `users.last_planet_teleport_at`) и интеграции
-  с billing-сервисом. POST /api/planets/{id}/teleport с Idempotency-Key.
+
+### Ф.6. KindTeleportPlanet — отдельная сессия
+
+Премиум-фича через оксары. Зависит от плана 69 (миграция
+`users.last_planet_teleport_at` — есть) и интеграции с billing-сервисом.
+POST /api/planets/{id}/teleport с Idempotency-Key. ~500+ строк (билинг
++ REST + OpenAPI + cooldown), заслуживает изоляции в отдельной сессии.
 
 ### Ф.7. Финализация (после Ф.2-Ф.6)
 
