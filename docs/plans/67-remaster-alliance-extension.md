@@ -1,7 +1,7 @@
 # План 67 (ремастер): Расширение alliance-системы
 
 **Дата**: 2026-04-28
-**Статус**: Скелет (детали допишет агент-реализатор при старте)
+**Статус**: Ф.0 дельта-аудит выполнен 2026-04-28; Ф.1 миграции в работе.
 **Зависимости**: нет критичных (можно параллелить).
 **Связанные документы**:
 - [62-origin-on-nova-feasibility.md](62-origin-on-nova-feasibility.md)
@@ -11,6 +11,28 @@
   U-004, U-005, U-012, U-013, U-015
 - [docs/research/origin-vs-nova/roadmap-report.md](../research/origin-vs-nova/roadmap-report.md) —
   R1-R5 + раздел плана 67
+
+---
+
+## Ф.0 Дельта-аудит (2026-04-28)
+
+Сверка плана 67 с фактическим состоянием схемы nova и кода
+`internal/alliance/` + `internal/friends/`. Цель — выкинуть
+дубликаты и зафиксировать что реально нужно делать в Ф.1.
+
+| Фича | План 67 | Текущее состояние | Решение |
+|---|---|---|---|
+| 3 описания альянса (D-041, U-015) | `description_external/internal/apply` | `alliances.description TEXT` (миграция 0017) — одно поле | **Ф.1**: добавить 3 nullable TEXT-поля; legacy `description` оставить как есть (Ф.2 решит маппинг). |
+| Передача лидерства (D-040, U-004) | endpoint `transfer-leadership` | endpoint отсутствует; в БД нет следов | **Ф.1**: добавить `alliances.leadership_transferred_at` (audit-метка для UI). Сам handler — Ф.3 (с email-подтверждением через identity, Idempotency-Key). |
+| Гранулярные права рангов (D-014, U-005) | таблица `alliance_ranks` + `permissions JSONB` | `alliance_members.rank TEXT` (`owner`\|`member`) + `rank_name TEXT` (миграция 0034, свободный текст без прав) | **Ф.1**: новая таблица `alliance_ranks (id, alliance_id, name, position, permissions JSONB)` + `alliance_members.rank_id` FK (nullable — fallback на builtin `rank`). |
+| Расширенные дипстатусы (D-014, B1) | enum `friend / neutral / hostile_neutral / nap / war` | enum `alliance_relation` = `('nap','war','ally')` (миграция 0028) | **Ф.1**: расширить enum. Маппинг: `ally → friend` (rename), `nap`/`war` остаются, добавляем `neutral`/`hostile_neutral`. **NB**: промпт говорил «nova-friend→friend» — но в nova `friend` не было; фактически мигрируем `ally→friend`. |
+| Альянсный лог (U-013) | таблица `alliance_audit_log` | отсутствует | **Ф.1**: создать по образцу `admin_audit_log` (миграция 0059). **R10**: nova однобазная (universe = отдельный инстанс БД), `universe_id` не добавляю. |
+| Полнотекстовый поиск (U-012) | tsvector + фильтры | отсутствует | **Откладывается на Ф.2**: индекс без handler-потребителя — преждевременная оптимизация. Миграция (GIN-индекс по name/tag) сделается одновременно с поиск-handler. |
+| Buddy-list (U-006/U-008 в backlog) | таблица `user_buddies (..., is_mutual)` | ✅ **закрыто в иной форме**: таблица `friends` (миграция 0053), `internal/friends/handler.go` (125 строк), `frontend/src/features/friends/FriendsScreen.tsx`. Endpoints `GET/POST/DELETE /api/friends{,/{userId}}` работают. Односторонний (без `is_mutual`) — намеренное упрощение (см. doccomment в handler.go). | **Отказ от дубликата** `user_buddies`. План 67 в этой части закрыт. Если потребуется `is_mutual` — отдельный план. |
+
+**Итог Ф.1**: 4 миграции (descriptions+leadership-метка, ranks,
+audit-log, relations-extend). Backend handlers / OpenAPI / RBAC
+middleware / frontend — фазы Ф.2-Ф.5 в следующих сессиях.
 
 ---
 
