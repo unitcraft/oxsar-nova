@@ -104,5 +104,7 @@ func Register() http.Handler {
 	RegisterNotepad()
 	// Billing-client метрики plan 77 R8.
 	RegisterBilling()
+	// Alien-buyout метрики plan 66 Ф.5 R8.
+	RegisterAlienBuyout()
 	return promhttp.Handler()
 }

@@ -12377,3 +12377,65 @@ property + coverage) + 22 KB golden_alien_ai.json.
 **Параллельные сессии**: slot G работает Ф.5 (buyout) — не пересекаемся
 по файлам; коммит поимённо с `--`.
 
+
+## Итерация 66.Ф.5 (2026-04-28) — AlienAI buyout: платный выкуп удержания оксарами
+
+**Цель**: завершить оставшуюся фазу плана 66 — endpoint
+`POST /api/alien-missions/{mission_id}/buyout`, который позволяет
+игроку одной операцией заплатить оксары через billing-service и
+снять удержание планеты пришельцами.
+
+**Ключевая особенность относительно legacy**: в `AlienAI.class.php`
+(1127 строк, прочитано в начале сессии) платного выкупа нет — там
+только `paid_credit` для продления окна HOLDING на 2h за 50
+оксаритов (это уже было реализовано в Ф.1-Ф.4 как
+`internal/alien.PayHolding`). Buyout — НОВАЯ фича ремастера, цена
+фиксированная (формулы в legacy не было), 100 оксаров по умолчанию.
+
+**Что сделано (~330 строк production + ~480 строк тестов)**:
+- `projects/game-nova/api/openapi.yaml`: новый tag `alien`,
+  endpoint с обязательным Idempotency-Key и кодами 200/401/402/404/409/503;
+  схема `AlienBuyoutResponse{mission_id, cost_oxsars, freed_at}`.
+- `internal/origin/alien/config.go`: поле `BuyoutBaseOxsars` в `Config`
+  + `DefaultConfig() = 100`.
+- `internal/origin/alien/buyout_handler.go`: основная функция
+  `Buyout(ctx, db, billing, cfg, userID, missionID, userToken,
+  idempotencyKey)` в 2 транзакциях (lock+pre-check → billing.Spend
+  ВНЕ tx → close HOLDING + DELETE тиков HOLDING_AI);
+  5 sentinel-ошибок; маппинг billing-client errors; R3 slog.
+- `internal/origin/alien/buyout_http.go`: `BuyoutHandler.Buyout`
+  HTTP-адаптер, маппинг sentinel → `httpx.Error{Status, Code}`.
+- `pkg/metrics/alien_buyout.go`: `oxsar_alien_buyout_total{status}`
+  + `oxsar_alien_buyout_oxsars_total` (counter sum); регистрация
+  автоматическая из `Register()`.
+- `cmd/server/main.go`: route с `idemMW.Wrap`-middleware (план 77 Ф.2).
+- `configs/i18n/{ru,en}.yml`: 5 новых ключей (buyoutSubject /
+  buyoutBody / buyoutSuccess / buyoutInsufficientOxsars /
+  buyoutNotInHolding), 0 переиспользовано.
+- Тесты: 3 unit/property (rapid R4) + 9 integration (auto-skip
+  без TEST_DATABASE_URL, паттерн handlers_integration_test.go),
+  покрывают все 5 кодов ответа + drop-AI-ticks инвариант.
+
+**Архитектурные решения** (зафиксированы в simplifications.md):
+- `BuyoutBaseOxsars` живёт в Go-Config, не в
+  `configs/balance/origin.yaml` — в репо такого файла нет, весь
+  alien-Config (25+ параметров) — в Go-DefaultConfig.
+- `UPDATE planets SET locked_by_alien=false` НЕ делается — колонки
+  в схеме нет, блокировка планеты моделируется самим присутствием
+  активного KindAlienHolding event'а.
+- billing.Spend ВНЕ DB-tx (между двумя tx), 2PC не реализован —
+  компромисс план 77: billing идемпотентен по ключу, окно
+  ~миллисекунды, повтор того же запроса закроет HOLDING без
+  второго списания. slog.Error `alien_buyout_db_after_spend` для
+  ручного следствия редких race'ов.
+
+**Параллельные сессии**:
+- Slot F (план 66 Ф.6+Ф.7) — закрылся успешно к моменту моего
+  коммита; обновил статус plan66 в шапке после его записи.
+- Slot A (план 65 Ф.6 KindTeleportPlanet) — пересекался по
+  `cmd/server/main.go` (новый route + idempotency-middleware
+  pattern), `openapi.yaml` (новый tag), `configs/i18n/*` —
+  без файловых конфликтов: разные строки/секции, изменения
+  ортогональны. Билд после обоих наборов правок зелёный.
+
+**План 66 ЗАКРЫТ полностью** (Ф.1-Ф.7).

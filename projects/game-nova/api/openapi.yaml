@@ -33,6 +33,7 @@ tags:
   - name: admin
   - name: i18n
   - name: payment
+  - name: alien
   - name: system
 
 paths:
@@ -213,6 +214,75 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/planets/{id}/teleport:
+    post:
+      tags: [planets]
+      security: [{ bearerAuth: [] }]
+      summary: Teleport planet to new coordinates (premium, paid in oxsars)
+      description: |
+        План 65 Ф.6 (D-032+U-009). Премиум-фича: платный телепорт планеты на
+        новые координаты в той же вселенной. Стоимость в оксарах списывается
+        через billing-service. Cooldown по `users.last_planet_teleport_at`
+        (24 часа по умолчанию). Координаты валидируются по CHECK-ограничениям
+        `planets.coords_range` (galaxy 1..16, system 1..999, position 1..15).
+        Артефактный гейтинг легаси (ARTEFACT_PLANET_TELEPORTER) в nova не
+        реализован — только оплата.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 128 }
+          description: Уникальный ключ для дедупа повторов запроса (RFC Idempotency-Key, R9).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_galaxy, target_system, target_position]
+              properties:
+                target_galaxy:   { type: integer, minimum: 1, maximum: 16 }
+                target_system:   { type: integer, minimum: 1, maximum: 999 }
+                target_position: { type: integer, minimum: 1, maximum: 15 }
+      responses:
+        "200":
+          description: Telepport scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [event_id, fire_at, cost_oxsars]
+                properties:
+                  event_id:    { type: string, format: uuid }
+                  fire_at:     { type: string, format: date-time }
+                  cost_oxsars: { type: integer, format: int64, minimum: 0 }
+        "400":
+          description: Invalid coordinates or cooldown still active
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402":
+          description: Insufficient oxsars to pay teleport cost
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Target slot occupied or Idempotency-Key conflict
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "503":
+          description: Billing service unavailable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
 
   /api/planets/{id}/resource-report:
     get:
@@ -2513,6 +2583,65 @@ paths:
                 items: { $ref: "#/components/schemas/Purchase" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /api/alien-missions/{mission_id}/buyout:
+    post:
+      tags: [alien]
+      summary: |
+        Платный выкуп удержания (HOLDING) пришельцами за оксары.
+        Списывает оксары через billing-service, закрывает HOLDING-event,
+        снимает все запланированные HOLDING_AI-тики этой миссии. Работает
+        во всех вселенных (uni01/uni02/origin) — план 66 Ф.5, R0-исключение.
+        Эта фича не существует в legacy oxsar2 (новая часть ремастера); цена
+        фиксированная, см. configs alien.BuyoutBaseOxsars.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: mission_id
+          required: true
+          schema: { type: string, format: uuid }
+          description: id события KindAlienHolding (parent), которое надо выкупить.
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+          description: |
+            Ключ дедупликации (R9). Рекомендуемый формат:
+            "<user_id>:alien_buyout:<mission_id>".
+      responses:
+        "200":
+          description: ok — оксары списаны, удержание снято.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AlienBuyoutResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402":
+          description: |
+            insufficient_oxsars — у игрока меньше оксаров, чем стоит выкуп.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "404":
+          description: |
+            mission_not_found — миссия не существует, чужая или уже закрыта.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "409":
+          description: |
+            not_in_holding_state — миссия не KindAlienHolding или уже завершена.
+            Также возвращается idempotency_conflict, если тот же
+            Idempotency-Key уже использовался с другим body.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "503":
+          description: |
+            billing_unavailable — billing-service недоступен (5xx/timeout
+            после retry); миссия НЕ закрыта, можно повторить.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2588,6 +2717,28 @@ components:
         id:       { type: string, format: uuid }
         username: { type: string }
         email:    { type: string, format: email }
+
+    AlienBuyoutResponse:
+      type: object
+      required: [mission_id, cost_oxsars, freed_at]
+      properties:
+        mission_id:
+          type: string
+          format: uuid
+          description: id выкупленной HOLDING-миссии.
+        cost_oxsars:
+          type: integer
+          format: int64
+          minimum: 0
+          description: |
+            Сумма оксаров, списанная через billing. Минимальные единицы
+            оксара (целые числа, ADR-0009).
+        freed_at:
+          type: string
+          format: date-time
+          description: |
+            Серверный timestamp снятия удержания (когда HOLDING-event
+            был помечен state='ok'). UTC.
 
     AdminAuditEntry:
       type: object

@@ -1727,3 +1727,69 @@ ui-state-error — у nova своя дизайн-система, паритет 
 Для остальных — отдельный план «X-NNN tail» в случае нехватки
 сигналов.
 **Приоритет**: L.
+
+## 2026-04-28 — План 66 Ф.5: платный выкуп удержания (alien buyout)
+
+### [66-Ф.5] BuyoutBaseOxsars живёт в Go-Config, а не в configs/balance/origin.yaml
+**Где**: `projects/game-nova/backend/internal/origin/alien/config.go`
+поле `Config.BuyoutBaseOxsars` (default 100); в
+`configs/balance/origin.yaml` параметра НЕТ (файла как такового тоже
+нет в репо на 2026-04-28).
+**Что упрощено**: ТЗ Ф.5 (промпт continuation/plan-66-fase-5-buyout.md)
+требовал «параметризуй в `configs/balance/origin.yaml` как
+`alien_buyout_base_oxsars`». Реально весь Config alien-сервиса (25+
+параметров AlienAI: AttackInterval, GrabMinCredit, …) живёт в Go-коде
+с `DefaultConfig()`, а не в YAML; per-universe override через
+`balance/<universe>.yaml` запланирован отдельно (Ф.3 plan66 явно
+оставила его на потом). Я следую существующей структуре пакета —
+добавляю BuyoutBaseOxsars туда же, где остальные alien-параметры.
+**Почему**: создание новой инфраструктуры YAML-override-loader для
+одного параметра не оправдано. Альтернатива (поднять файл с одним
+параметром) ломает paritет с тем, как живут все остальные alien-числа,
+и заставит Ф.6/Ф.7 рефакторить.
+**План возврата**: вместе с общей миграцией alien-Config на YAML
+(в плане Ф.3-отложение Ф.4 при пересборке payload-формата). Когда
+balance/origin.yaml появится для других alien-параметров —
+BuyoutBaseOxsars переедет туда без изменения Go-API
+(`DefaultConfig()` останется fallback'ом).
+**Приоритет**: L.
+
+### [66-Ф.5] UPDATE planets SET locked_by_alien=false НЕ делается
+**Где**: `internal/origin/alien/buyout_handler.go::Buyout` —
+закрывает HOLDING через `UPDATE events SET state='ok'` и удаляет
+тики, но не трогает таблицу planets.
+**Что упрощено**: ТЗ Ф.5 требовал «разблокировать планету через
+`UPDATE planets SET locked_by_alien=false`». В реальной схеме
+nova (миграции 0001-0080) колонки `planets.locked_by_alien` НЕТ —
+блокировка планеты моделируется самим присутствием активного
+KindAlienHolding event'а в `state='wait'`. Все остальные пути
+закрытия HOLDING (CloseHoldingIfWiped после битвы,
+closeHoldingScattered после извлечения всего флота, естественное
+истечение HoldingHandler'а) — тоже не трогают planets, только
+events.state. Buyout консистентно с этой моделью.
+**Почему**: добавлять колонку под одну фичу неоправданно — другие
+HOLDING-пути о ней не знают и не обновляют, источником истины
+останутся events. ТЗ Ф.5 написан без знания реальной схемы.
+**План возврата**: не требуется. Семантика «планета свободна ⇔
+нет активного HOLDING-event» — корректная и единственная в коде.
+**Приоритет**: — (документация уточнения, не trade-off).
+
+### [66-Ф.5] Полный 2PC Postgres↔billing не реализован
+**Где**: `internal/origin/alien/buyout_handler.go::Buyout` —
+billing.Spend выполняется ВНЕ DB-tx (между двумя tx).
+**Что упрощено**: если billing успешно списал оксары, а вторая
+DB-tx (close HOLDING + delete тиков) упала — оператор увидит
+slog.Error `alien_buyout_db_after_spend` для ручного следствия.
+Полного distributed-transaction (XA / saga) между Postgres и
+billing-микросервисом нет.
+**Почему**: окно ~миллисекунды; повторный запрос игрока с тем же
+Idempotency-Key вернёт billing-ответ без второго списания, и эта
+вторая попытка успешно закроет HOLDING. План 77 (billing-client)
+явно построен на идемпотентности по ключу как замене 2PC. Полный
+saga-протокол излишен для buyout-объёмов (~₽250-500 типовая цена,
+0-100 операций/день в начале).
+**План возврата**: при превышении 1000 buyout/день или при первом
+реальном случае «billing списал, DB упало» — ввести reconcile-job,
+читающий `oxsar_alien_buyout_total{status="error"}` и сверяющий
+billing-tx с events. Не требует кода в Buyout — внешний worker.
+**Приоритет**: M.
