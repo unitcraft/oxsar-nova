@@ -9,7 +9,7 @@
 - [docs/research/origin-vs-nova/origin-ui-replication.md](../research/origin-vs-nova/origin-ui-replication.md)
 - [docs/research/origin-vs-nova/roadmap-report.md](../research/origin-vs-nova/roadmap-report.md) —
   R1-R5 + раздел плана 73
-- [docs/legacy/game-origin-access.md](../legacy/game-origin-access.md) —
+- [docs/legacy/game-legacy-access.md](../legacy/game-legacy-access.md) —
   запущенный legacy-PHP origin на :8092 (источник эталонов)
 
 ---
@@ -17,7 +17,7 @@
 ## Цель
 
 Автоматизированное сравнение нового origin-фронта (план 72) со
-скриншотами эталонного game-origin-php. Гарантирует, что
+скриншотами эталонного game-legacy-php. Гарантирует, что
 pixel-perfect не «уплывает» при правках UI.
 
 ---
@@ -28,8 +28,8 @@ pixel-perfect не «уплывает» при правках UI.
 
 - Скрипт `tests/e2e/origin-baseline/take-screenshots.sh`
   (Playwright headed):
-  - Поднять `game-origin-php` на :8092 (через docker-compose из
-    плана 50 / docs/legacy/game-origin-access.md).
+  - Поднять `game-legacy-php` на :8092 (через docker-compose из
+    плана 50 / docs/legacy/game-legacy-access.md).
   - Залогиниться dev-логином.
   - Пройти **все 50 prod-экранов** S-NNN.
   - Сохранить PNG в `tests/e2e/origin-baseline/screenshots/`.
@@ -51,7 +51,7 @@ pixel-perfect не «уплывает» при правках UI.
 ### CI-job
 
 - `.github/workflows/screenshot-diff.yml`:
-  - Поднимает оба стека (game-origin-php + новый origin-frontend +
+  - Поднимает оба стека (game-legacy-php + новый origin-frontend +
     nova-backend) в matrix.
   - Запускает Playwright suite.
   - При diff > threshold — fail PR.
@@ -77,7 +77,7 @@ pixel-perfect не «уплывает» при правках UI.
 
 ## Этапы (детали — при старте)
 
-- Ф.1. Скрипт снятия эталонов с game-origin-php.
+- Ф.1. Скрипт снятия эталонов с game-legacy-php.
 - Ф.2. Snapshot первого набора (5-7 экранов, проверить процесс).
 - Ф.3. Playwright suite на новый origin-фронт.
 - Ф.4. CI-job + matrix.
@@ -109,6 +109,6 @@ pixel-perfect не «уплывает» при правках UI.
 ## References
 
 - origin-ui-replication.md — список 50 экранов для baseline.
-- docs/legacy/game-origin-access.md — как поднять game-origin-php.
+- docs/legacy/game-legacy-access.md — как поднять game-legacy-php.
 - Существующая Playwright-инфраструктура nova
   (`projects/game-nova/frontends/nova/e2e/`) — паттерны.

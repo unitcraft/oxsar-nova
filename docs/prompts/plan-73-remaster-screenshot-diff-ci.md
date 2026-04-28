@@ -15,7 +15,7 @@
 ВАЖНОЕ:
 - Зависит от плана 72 (хотя бы первые экраны Spring 1).
 - legacy-PHP origin доступен на :8092 (см. docs/legacy/
-  game-origin-access.md).
+  game-legacy-access.md).
 
 ПЕРЕД НАЧАЛОМ:
 
@@ -26,7 +26,7 @@
    - docs/research/origin-vs-nova/origin-ui-replication.md
    - docs/research/origin-vs-nova/roadmap-report.md «Часть I.5»
      (R0-R15)
-   - docs/legacy/game-origin-access.md — как поднять legacy-PHP
+   - docs/legacy/game-legacy-access.md — как поднять legacy-PHP
      origin на :8092.
 
 3) Выборочно:

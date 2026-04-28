@@ -3,7 +3,7 @@ package alien
 // План 66 Ф.6: golden-итерации формул AlienAI.
 //
 // Загружает testdata/golden_alien_ai.json (сгенерирован
-// projects/game-origin-php/tools/dump-alien-ai.php) и для каждого
+// projects/game-legacy-php/tools/dump-alien-ai.php) и для каждого
 // кейса вызывает соответствующий Go-helper. Для range-кейсов
 // проверяет [expected_min, expected_max]; для exact-кейсов
 // (expected_min == expected_max) — точное совпадение.
@@ -44,7 +44,7 @@ func loadGolden(t *testing.T) []goldenCase {
 	t.Helper()
 	data, err := os.ReadFile(goldenPath)
 	if errors.Is(err, fs.ErrNotExist) {
-		t.Skipf("%s not present; regenerate via projects/game-origin-php/tools/dump-alien-ai.php",
+		t.Skipf("%s not present; regenerate via projects/game-legacy-php/tools/dump-alien-ai.php",
 			goldenPath)
 	}
 	if err != nil {

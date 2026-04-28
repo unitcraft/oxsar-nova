@@ -5,7 +5,7 @@
 // всех вселенных, см. roadmap-report «Часть I.5» 2026-04-28).
 //
 // Подключается к docker-mysql-1 (порт 3307 на хосте — origin-стенд,
-// projects/game-origin-php/docker), читает na_construction,
+// projects/game-legacy-php/docker), читает na_construction,
 // na_ship_datasheet, na_rapidfire, na_options. DSL-формулы парсятся
 // в-process (см. dsl.go) и предвычисляются в таблицы стоимостей по
 // уровням 1..50.

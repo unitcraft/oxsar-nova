@@ -398,7 +398,7 @@ const StateActiveArtefact = "active"
 // по created_at) выполняет всю работу за группу — см. ACSAttackHandler
 // в [internal/fleet/acs_attack.go]. Поэтому KindAllianceAttackAdditional
 // в nova концептуально излишен — но мы регистрируем его как явный no-op
-// для совместимости с возможной репликацией events из game-origin-php
+// для совместимости с возможной репликацией events из game-legacy-php
 // (если когда-нибудь сделаем общую events-таблицу для legacy/nova) и
 // чтобы события этого Kind'а не шли в StateError при импорте архива
 // origin.

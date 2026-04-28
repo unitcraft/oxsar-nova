@@ -11,7 +11,7 @@ import (
 )
 
 // goldenSeries — формат testdata/golden_origin_prod.json (см.
-// projects/game-origin-php/tools/dump-balance-formulas.php).
+// projects/game-legacy-php/tools/dump-balance-formulas.php).
 type goldenSeries struct {
 	MetalMineProdMetal      []goldenPoint `json:"metal_mine_prod_metal"`
 	SiliconLabProdSilicon   []goldenPoint `json:"silicon_lab_prod_silicon"`
@@ -33,7 +33,7 @@ type goldenPoint struct {
 //   docker exec docker-php-1 php /var/www/dump-balance-formulas.php > \
 //     internal/origin/economy/testdata/golden_origin_prod.json
 //
-// (см. projects/game-origin-php/tools/dump-balance-formulas.php +
+// (см. projects/game-legacy-php/tools/dump-balance-formulas.php +
 // инструкцию в Makefile target "golden-origin-balance").
 func loadGolden(t *testing.T) *goldenSeries {
 	t.Helper()

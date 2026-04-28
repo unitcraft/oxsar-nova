@@ -141,7 +141,7 @@ ADD COLUMN display_name`). Нужно следить, чтобы имена не
   баланс, начало истории игры) на современном стеке.
 - Короткое, легко запоминающееся.
 - Не путается с `legacy` (legacy = только `d:\Sources\oxsar2`,
-  `d:\Sources\oxsar2-java`, `projects/game-origin-php/`).
+  `d:\Sources\oxsar2-java`, `projects/game-legacy-php/`).
 
 **Future-proof:** если когда-то появятся другие тематические
 вселенные (speed-сервер, hardcore-сервер, сезонная) — каждая

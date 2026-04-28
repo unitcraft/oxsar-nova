@@ -464,8 +464,8 @@ PHP, каждая запись — кандидат для эволюции nova
 
 ## References
 
-- 125 шаблонов: `projects/game-origin-php/src/templates/standard/`
-- 55 контроллеров: `projects/game-origin-php/src/game/page/`
+- 125 шаблонов: `projects/game-legacy-php/src/templates/standard/`
+- 55 контроллеров: `projects/game-legacy-php/src/game/page/`
 - nova frontend: `projects/game-nova/frontends/nova/src/features/`
 - [origin-ui-replication.md](origin-ui-replication.md) —
   S-NNN экраны (откуда берутся U-NNN)

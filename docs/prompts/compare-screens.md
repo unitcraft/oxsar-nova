@@ -4,7 +4,7 @@
 `src/core/`, замена шаблонизатора, миграции БД). Скопируй секцию ниже целиком
 в чат с Claude Code и запусти.
 
-Связано: `projects/game-origin-php/tools/compare-with-legacy.sh`,
+Связано: `projects/game-legacy-php/tools/compare-with-legacy.sh`,
 memory-reference `reference_game_origin_routing.md` (только `?go=Page`
 работает), `feedback_audit_agent_verify.md` (отчёты Explore-агентов
 надо верифицировать руками).
@@ -15,12 +15,12 @@ memory-reference `reference_game_origin_routing.md` (только `?go=Page`
 
 > Сравни экраны game-origin с legacy oxsar2.
 >
-> Запусти `bash projects/game-origin-php/tools/compare-with-legacy.sh` в фоне
+> Запусти `bash projects/game-legacy-php/tools/compare-with-legacy.sh` в фоне
 > (`run_in_background: true`, timeout 300000ms). Скрипт логинится в legacy
 > (localhost:8080, user `test` / `quoYaMe1wHo4xaci`) и в нашу dev-вселенную
 > (localhost:8092 через `dev-login.php`), curl'ит 41 страницу через
 > `?go=Page`, нормализует HTML (убирает таймстампы/числа/sid) и пишет
-> diff в `projects/game-origin-php/tools/compare-output/diff/<page>.diff`
+> diff в `projects/game-legacy-php/tools/compare-output/diff/<page>.diff`
 > плюс отчёт `report.md`.
 >
 > Жди завершения через `until grep -q "Report:" <output-file>; do sleep 6; done`
@@ -28,10 +28,10 @@ memory-reference `reference_game_origin_routing.md` (только `?go=Page`
 >
 > После завершения:
 >
-> 1. Сравни новый `projects/game-origin-php/tools/compare-output/report.md`
+> 1. Сравни новый `projects/game-legacy-php/tools/compare-output/report.md`
 >    с baseline `/tmp/report_baseline.md` через
 >    `python /tmp/compare_diff.py /tmp/report_baseline.md
->    projects/game-origin-php/tools/compare-output/report.md`.
+>    projects/game-legacy-php/tools/compare-output/report.md`.
 >    Если baseline или скрипт отсутствует — пересоздай скрипт (парсит
 >    markdown-таблицу `| Page | size | leg_size | diff | status |`,
 >    считает delta diff/size, печатает REGRESSIONS / IMPROVEMENTS /
@@ -39,7 +39,7 @@ memory-reference `reference_game_origin_routing.md` (только `?go=Page`
 > 2. Прочитай `tail -30` от output-файла compare-скрипта для краткой
 >    сводки (этого хватит чтобы увидеть «Итог»).
 > 3. Открой diff-файлы тех страниц, где регрессия
->    (`projects/game-origin-php/tools/compare-output/diff/<page>.diff`).
+>    (`projects/game-legacy-php/tools/compare-output/diff/<page>.diff`).
 >    Для каждой реальной регрессии (HTML-структура отличается) — найди
 >    причину в коде. Косметические разницы (контент БД, отсутствующие
 >    user-style CSS, `©Dominator` в title, `galaxy_distance_mult` value)
@@ -64,7 +64,7 @@ memory-reference `reference_game_origin_routing.md` (только `?go=Page`
 >   `curl -sc /tmp/oxsar.cookie http://localhost:8092/dev-login.php?userid=1 -o /dev/null`.
 > - Если `/tmp/report_baseline.md` потерян (новая машина) — текущий
 >   compare-report и есть новый baseline; сохрани его:
->   `cp projects/game-origin-php/tools/compare-output/report.md /tmp/report_baseline.md`.
+>   `cp projects/game-legacy-php/tools/compare-output/report.md /tmp/report_baseline.md`.
 >
 > Дай краткий итог: число регрессий, число улучшений, ошибок 4xx/5xx,
 > замечания по конкретным страницам. Если все 39+/41 без регрессий и 0
@@ -79,7 +79,7 @@ memory-reference `reference_game_origin_routing.md` (только `?go=Page`
 - [ ] Docker-стеки legacy (8080) и game-origin (8092) подняты:
   ```bash
   docker compose -f d:/Sources/oxsar2/docker-compose.yml ps
-  docker compose -f projects/game-origin-php/docker/docker-compose.yml ps
+  docker compose -f projects/game-legacy-php/docker/docker-compose.yml ps
   ```
 - [ ] В `na_user` есть юзер `test` (legacy) и `userid=1` (наш) с
   применённым snapshot-фикстурой
