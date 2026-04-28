@@ -106,5 +106,7 @@ func Register() http.Handler {
 	RegisterBilling()
 	// Alien-buyout метрики plan 66 Ф.5 R8.
 	RegisterAlienBuyout()
+	// Exchange-метрики plan 68 R8.
+	RegisterExchange()
 	return promhttp.Handler()
 }

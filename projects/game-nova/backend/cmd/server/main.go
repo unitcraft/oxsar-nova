@@ -25,6 +25,7 @@ import (
 	"oxsar/game-nova/internal/chat"
 	"oxsar/game-nova/internal/artefact"
 	"oxsar/game-nova/internal/artmarket"
+	"oxsar/game-nova/internal/exchange"
 	"oxsar/game-nova/internal/auth"
 	"oxsar/game-nova/internal/automsg"
 	"oxsar/game-nova/internal/balance"
@@ -264,6 +265,11 @@ func run() error {
 	artMarketSvc := artmarket.NewService(db)
 	artMarketH := artmarket.NewHandler(artMarketSvc, rdb)
 
+	// План 68: биржа артефактов (P2P пакетный обмен на оксариты).
+	exchangeRepo := exchange.NewPgRepo(db)
+	exchangeSvc := exchange.NewService(db, exchangeRepo, exchange.DefaultConfig())
+	exchangeH := exchange.NewHandler(exchangeSvc)
+
 	achSvc := achievement.NewService(db).WithBundle(i18nBundle)
 	achH := achievement.NewHandler(achSvc)
 
@@ -469,6 +475,9 @@ func run() error {
 		pr.Get("/artefact-market/credit", artMarketH.Credit)
 		pr.Post("/artefact-market/offers/{id}/buy", artMarketH.Buy)
 		pr.Delete("/artefact-market/offers/{id}", artMarketH.Cancel)
+
+		// План 68: биржа артефактов (player-to-player пакетный обмен).
+		exchangeH.Routes(pr)
 
 		pr.Get("/achievements", achH.List)
 
