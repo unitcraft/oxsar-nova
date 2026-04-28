@@ -86,8 +86,9 @@ export function I18nProvider({ lang, children }: I18nProviderProps) {
 }
 
 export function useTranslation() {
-  const ctx = useContext(I18nContext);
-  if (!ctx) throw new Error('useTranslation used outside I18nProvider');
+  const raw = useContext(I18nContext);
+  if (!raw) throw new Error('useTranslation used outside I18nProvider');
+  const ctx = raw;
 
   function t(
     group: string,
