@@ -15,7 +15,7 @@ import (
 type ctxKey int
 
 const (
-	userIDKey ctxKey = 1
+	UserIDKey ctxKey = 1
 	// План 36 Ф.12: lazy-create middleware читает username/email
 	// из RSA-claims, чтобы зеркалить юзера в game-db без HTTP-вызова в auth-service.
 	rsaClaimsKey ctxKey = 2
@@ -46,7 +46,7 @@ func RSAMiddleware(ver *jwtrs.Verifier) func(http.Handler) http.Handler {
 				httpx.WriteError(w, r, httpx.ErrUnauthorized)
 				return
 			}
-			ctx := context.WithValue(r.Context(), userIDKey, claims.Subject)
+			ctx := context.WithValue(r.Context(), UserIDKey, claims.Subject)
 			ctx = context.WithValue(ctx, rsaClaimsKey, claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -63,7 +63,7 @@ func RSAClaims(ctx context.Context) (*jwtrs.Claims, bool) {
 // UserID достаёт идентификатор пользователя, положенный Middleware.
 // Возвращает пустую строку и false, если middleware не стоял.
 func UserID(ctx context.Context) (string, bool) {
-	v, ok := ctx.Value(userIDKey).(string)
+	v, ok := ctx.Value(UserIDKey).(string)
 	return v, ok
 }
 
