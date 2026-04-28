@@ -214,6 +214,65 @@ alliance:
   colActions: Действия
   transferLeadership.codeTitle: Код для передачи лидерства альянса
   transferLeadership.codeBody: "Код подтверждения передачи лидерства альянса: {{code}}\nДействителен до {{expiresAt}}.\n\nЕсли это запросили не Вы — просто проигнорируйте, лидерство не будет передано."
+  # План 67 Ф.5: расширения alliance UI.
+  descriptions.title: Описания альянса
+  descriptions.tabExternal: Внешнее
+  descriptions.tabInternal: Для членов
+  descriptions.tabApply: Для заявок
+  descriptions.empty: Пусто
+  descriptions.editBtn: Редактировать
+  descriptions.saveBtn: Сохранить
+  descriptions.saved: Описания обновлены
+  descriptions.placeholderExternal: Видно всем — публичная страница альянса.
+  descriptions.placeholderInternal: Видно только членам — внутренние правила, расписание, контакты.
+  descriptions.placeholderApply: Видно подающим заявку — требования к кандидату.
+  ranks.title: Ранги и права
+  ranks.createBtn: Создать ранг
+  ranks.editBtn: Редактировать
+  ranks.deleteBtn: Удалить
+  ranks.saveBtn: Сохранить
+  ranks.colPosition: "№"
+  ranks.colName: Название
+  ranks.colPerms: Права
+  ranks.formCreate: Новый ранг
+  ranks.formEdit: Редактирование ранга
+  ranks.namePlaceholder: "Например: Офицер"
+  ranks.permsLegend: Полномочия
+  ranks.permsNone: Без прав
+  ranks.permsAll: Полные права
+  ranks.empty: Кастомные ранги ещё не созданы.
+  ranks.created: Ранг создан
+  ranks.updated: Ранг обновлён
+  ranks.deleted: Ранг удалён
+  ranks.deleteConfirm: "Удалить ранг «{{name}}»? Назначенные на него участники откатятся к роли по умолчанию."
+  relFriend: ДРУГ
+  relNeutral: НЕЙТРАЛ
+  relHostileNeutral: ВРАЖДЕБНЫЙ
+  diplomacy.filterAll: Все
+  diplomacy.colTarget: Альянс
+  diplomacy.colStatus: Состояние
+  diplomacy.statusOutgoing: Ожидает ответа
+  diplomacy.statusIncoming: Запрос на согласие
+  diplomacy.statusActive: Активно
+  diplomacy.targetPlaceholder: "ID альянса (UUID)"
+  diplomacy.proposeBtn: Предложить
+  diplomacy.breakBtn: Разорвать
+  diplomacy.empty: Дипломатических связей нет.
+  diplomacy.proposed: Предложение отправлено
+  perm.can_invite: Приглашать игроков
+  perm.can_kick: Изгонять игроков
+  perm.can_send_global_mail: Рассылка по альянсу
+  perm.can_manage_diplomacy: Управление дипломатией
+  perm.can_change_description: Менять описания
+  perm.can_propose_relations: Предлагать отношения
+  perm.can_manage_ranks: Управление рангами
+  perm.can_invite.short: пригл.
+  perm.can_kick.short: изгн.
+  perm.can_send_global_mail.short: рассылка
+  perm.can_manage_diplomacy.short: дипл.
+  perm.can_change_description.short: описания
+  perm.can_propose_relations.short: отношения
+  perm.can_manage_ranks.short: ранги
 artefactInfo:
   action: Действие
   activate: Активировать
@@ -2750,3 +2809,20 @@ userAgreement:
   userAgreementNewPreText: "<span class='true'>Чтобы продолжить игру, подтвердите Соглашение (кнопочка в конце этой страницы).</span>"
   userAgreementPostText: ""
   userAgreementPreText: ""
+feedback:
+  fleetSlots: "Слоты флота:"
+  fleetSlotsFull: "нет свободных"
+  expoSlots: "Слоты экспедиции:"
+  expoSlotsFull: "нет свободных"
+  expoSlotsHint: "(увеличивается с expo_tech)"
+  artefactActive: "активирован"
+  artefactCharging: "заряжается"
+  artefactListed: "на бирже"
+  artefactExpired: "истёк"
+  artefactConsumed: "израсходован"
+  artefactExpiringSoon: "скоро истекает"
+  newAchievementsAria: "{{n}} новых достижений"
+  energyDeficit: "энергодефицит"
+  insufficientRepairFields: "нет свободных ремонтных полей"
+  energyTipTitle: "⚡ Энергия"
+  energyTipBody: "Производство — зелёным, потребление — красным. При суммарном балансе ≤ 0 шахты и заводы работают с пониженной эффективностью."
