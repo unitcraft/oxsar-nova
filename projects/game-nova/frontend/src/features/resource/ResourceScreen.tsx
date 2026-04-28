@@ -9,6 +9,8 @@ const BUILDING_NAMES: Record<number, string> = Object.fromEntries(
 import type { ResourceBuilding } from '@/api/types';
 import { useToast } from '@/ui/Toast';
 import { ScreenSkeleton } from '@/ui/Skeleton';
+import { EnergyValue } from '@/components/feedback/EnergyValue';
+import { HelpTip } from '@/components/feedback/HelpTip';
 
 function fmt(v: number): string {
   const n = Math.round(v);
@@ -37,6 +39,7 @@ const TR_BASE: React.CSSProperties = {
 export function ResourceScreen({ planetId }: { planetId: string }) {
   const { t } = useTranslation('resource');
   const { t: tg } = useTranslation('global');
+  const { t: tf } = useTranslation('feedback');
   const qc = useQueryClient();
   const toast = useToast();
   const [factors, setFactors] = useState<Record<string, number>>({});
@@ -126,7 +129,14 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
               <th style={{ ...TD_NUM, fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>🟠</th>
               <th style={{ ...TD_NUM, fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>💎</th>
               <th style={{ ...TD_NUM, fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>💧</th>
-              <th style={{ ...TD_NUM, fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>⚡</th>
+              <th style={{ ...TD_NUM, fontSize: 13, fontWeight: 700, color: 'var(--ox-fg-muted)', paddingTop: 8, paddingBottom: 8 }}>
+                <HelpTip content={
+                  <>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>{tf('energyTipTitle')}</div>
+                    <div>{tf('energyTipBody')}</div>
+                  </>
+                }>⚡</HelpTip>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -173,7 +183,7 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
 
             {/* Storage */}
             <SummaryRow label={t('storage')} metal={report.storage_metal} silicon={report.storage_silicon} hydrogen={report.storage_hydrogen} energy={null} topBorder dim />
-            <SummaryRow label={t('perHour')}   metal={ph}          silicon={sh}          hydrogen={hh}          energy={te}   topBorder />
+            <SummaryRow label={t('perHour')}   metal={ph}          silicon={sh}          hydrogen={hh}          energy={te}   topBorder isPerHour />
             <SummaryRow label={t('perDay')}    metal={ph * 24}     silicon={sh * 24}     hydrogen={hh * 24}     energy={null} />
             <SummaryRow label={t('perWeek')}   metal={ph * 24 * 7} silicon={sh * 24 * 7} hydrogen={hh * 24 * 7} energy={null} />
           </tbody>
@@ -209,9 +219,12 @@ export function ResourceScreen({ planetId }: { planetId: string }) {
   );
 }
 
-function SummaryRow({ label, metal, silicon, hydrogen, energy, topBorder, dim }: {
+function SummaryRow({ label, metal, silicon, hydrogen, energy, topBorder, dim, isPerHour }: {
   label: string; metal: number; silicon: number; hydrogen: number;
   energy: number | null; topBorder?: boolean; dim?: boolean;
+  // isPerHour — на этой строке энергия = totalEnergy (баланс):
+  // X-010 красит её в красный при <= 0.
+  isPerHour?: boolean;
 }) {
   return (
     <tr style={{
@@ -224,7 +237,11 @@ function SummaryRow({ label, metal, silicon, hydrogen, energy, topBorder, dim }:
       <td style={{ ...TD_NUM, color: numColor(silicon) }}>{fmt(silicon)}</td>
       <td style={{ ...TD_NUM, color: numColor(hydrogen) }}>{fmt(hydrogen)}</td>
       <td style={{ ...TD_NUM, color: 'var(--ox-fg-dim)' }}>
-        {energy !== null ? <span style={{ color: numColor(energy) }}>{fmt(energy)}</span> : '—'}
+        {energy !== null
+          ? (isPerHour
+              ? <EnergyValue totalEnergy={energy} formatter={fmt} />
+              : <span style={{ color: numColor(energy) }}>{fmt(energy)}</span>)
+          : '—'}
       </td>
     </tr>
   );

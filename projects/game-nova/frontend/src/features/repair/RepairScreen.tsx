@@ -42,6 +42,7 @@ interface DamagedUnit {
 export function RepairScreen({ planet }: { planet: Planet }) {
   const { t } = useTranslation('repair');
   const { t: ti } = useTranslation('info');
+  const { t: tf } = useTranslation('feedback');
   const qc = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState<'repair' | 'disassemble'>('repair');
@@ -105,6 +106,9 @@ export function RepairScreen({ planet }: { planet: Planet }) {
 
   const storagePct = storage.total > 0 ? Math.min(100, (storage.used / storage.total) * 100) : 0;
   const storageVariant = storagePct > 80 ? 'danger' : storagePct > 50 ? 'warning' : 'success';
+  // X-014: явный сигнал, когда ремонтировать нечем — нет свободных
+  // полей в ангаре. Origin: класс .notavailable + текст «no free repair fields».
+  const noFreeRepairFields = storage.total > 0 && storage.free <= 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -114,11 +118,16 @@ export function RepairScreen({ planet }: { planet: Planet }) {
         </h2>
         {storage.total > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 160 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ox-fg-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: noFreeRepairFields ? 'var(--ox-danger)' : 'var(--ox-fg-muted)' }}>
               <span>{t('storage')}</span>
               <span style={{ fontFamily: 'var(--ox-mono)' }}>{storage.used} / {storage.total}</span>
             </div>
             <ProgressBar pct={storagePct} variant={storageVariant} height={6} />
+            {noFreeRepairFields && (
+              <div style={{ fontSize: 12, color: 'var(--ox-danger)', fontFamily: 'var(--ox-mono)' }}>
+                ⚠ {tf('insufficientRepairFields')}
+              </div>
+            )}
           </div>
         )}
       </div>

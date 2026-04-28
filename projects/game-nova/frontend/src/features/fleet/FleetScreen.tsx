@@ -7,6 +7,7 @@ import type { Planet } from '@/api/types';
 import { Countdown } from '@/ui/Countdown';
 import { useToast } from '@/ui/Toast';
 import { ScreenSkeleton } from '@/ui/Skeleton';
+import { FleetSlotsBadge } from '@/components/feedback/FleetSlotsBadge';
 
 const GAME_SPEED = 0.75;
 
@@ -67,6 +68,7 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
   const { t } = useTranslation('fleet');
   const { t: tg } = useTranslation('global');
   const { t: ti } = useTranslation('info');
+  const { t: tf } = useTranslation('feedback');
   const uS = tg('timeUnitSec');
   const uM = tg('timeUnitMin');
   const uH = tg('timeUnitHour');
@@ -164,14 +166,15 @@ export function FleetScreen({ planet, initialDst }: { planet: Planet; initialDst
         {t('title', { planetName: planet.name })}
       </h2>
 
-      {/* Fleet slots indicator (план 20 Ф.2) */}
+      {/* Fleet slots indicator (план 20 Ф.2 + план 71 X-007) */}
       {typeof fleets.data?.slots_max === 'number' && (
-        <div className="ox-panel" style={{ padding: '8px 16px', fontSize: 13, color: 'var(--ox-fg-muted)' }}>
-          {t('slots')} <strong style={{ color: (fleets.data.slots_used ?? 0) >= fleets.data.slots_max ? 'var(--ox-danger, #ff6b6b)' : 'var(--ox-fg)' }}>
-            {fleets.data.slots_used ?? 0} / {fleets.data.slots_max}
-          </strong>
-          {' '}<span style={{ opacity: 0.7 }}>{t('slotsHint')}</span>
-        </div>
+        <FleetSlotsBadge
+          used={fleets.data.slots_used ?? 0}
+          max={fleets.data.slots_max}
+          labelTitle={t('slots')}
+          labelFull={tf('fleetSlotsFull')}
+          labelHint={t('slotsHint')}
+        />
       )}
 
       {/* Active fleets */}

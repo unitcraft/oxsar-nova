@@ -1228,3 +1228,11 @@ label {
 @media (min-width: 641px) {
   .ox-hide-desktop { display: none !important; }
 }
+
+/* X-009: HelpTip — hover-/focus-tooltip для расширенных подсказок. */
+.ox-helptip:hover .ox-helptip-content,
+.ox-helptip:focus-within .ox-helptip-content {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+

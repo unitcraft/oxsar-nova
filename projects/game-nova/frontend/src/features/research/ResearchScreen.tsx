@@ -6,6 +6,7 @@ import { BUILDINGS, MOON_BUILDINGS, RESEARCH, imageOf, costForLevel, fmtReqs } f
 import type { Planet, QueueItem, ResearchState } from '@/api/types';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { useToast } from '@/ui/Toast';
+import { ResourceCostLine, ResourceDeficitBadge } from '@/components/feedback/ResourceDeficitBadge';
 
 function fmtDuration(secs: number, uS: string, uM: string, uH: string, uD: string): string {
   if (secs < 60) return `${secs}${uS}`;
@@ -158,32 +159,8 @@ export function ResearchScreen({ planet, onOpenInfo }: { planet: Planet; onOpenI
                   )}
                   {!isActive && (
                     <>
-                      <div style={{ fontSize: 13, fontFamily: 'var(--ox-mono)', lineHeight: 1.6 }}>
-                        {nextCost.metal > 0 && (
-                          <span style={{ marginRight: 6, color: planet.metal >= nextCost.metal ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                            🟠{nextCost.metal.toLocaleString('ru-RU')}
-                          </span>
-                        )}
-                        {nextCost.silicon > 0 && (
-                          <span style={{ marginRight: 6, color: planet.silicon >= nextCost.silicon ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                            💎{nextCost.silicon.toLocaleString('ru-RU')}
-                          </span>
-                        )}
-                        {nextCost.hydrogen > 0 && (
-                          <span style={{ color: planet.hydrogen >= nextCost.hydrogen ? 'var(--ox-fg-dim)' : 'var(--ox-danger)' }}>
-                            💧{nextCost.hydrogen.toLocaleString('ru-RU')}
-                          </span>
-                        )}
-                      </div>
-                      {!canAfford && (
-                        <div style={{ fontSize: 10, color: 'var(--ox-danger)', marginTop: 2, fontFamily: 'var(--ox-mono)' }}>
-                          {[
-                            nextCost.metal    > planet.metal    && `🟠−${(nextCost.metal    - planet.metal   ).toLocaleString('ru-RU')}`,
-                            nextCost.silicon  > planet.silicon  && `💎−${(nextCost.silicon  - planet.silicon ).toLocaleString('ru-RU')}`,
-                            nextCost.hydrogen > planet.hydrogen && `💧−${(nextCost.hydrogen - planet.hydrogen).toLocaleString('ru-RU')}`,
-                          ].filter(Boolean).join(' ')}
-                        </div>
-                      )}
+                      <ResourceCostLine cost={nextCost} have={planet} />
+                      <ResourceDeficitBadge cost={nextCost} have={planet} />
                       {secs > 0 && (
                         <div style={{ fontSize: 13, color: 'var(--ox-fg-muted)', marginTop: 2 }}>
                           ⏱ {fmtDuration(secs, uS, uM, uH, uD)}
