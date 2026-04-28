@@ -1,7 +1,8 @@
 # План 65 (ремастер): Расширение event-loop — события origin
 
 **Дата**: 2026-04-28
-**Статус**: Скелет (детали допишет агент-реализатор при старте)
+**Статус**: Ф.1 ✅ (KindDemolishConstruction — эталонный handler);
+остальные 6 Kind'ов — TODO по эталону
 **Зависимости**: блокируется планом 64 (`configs/balance/origin.yaml` — для balance numbers).
 **Связанные документы**:
 - [62-origin-on-nova-feasibility.md](62-origin-on-nova-feasibility.md)
@@ -47,13 +48,62 @@ audit_log, тесты.
 
 ---
 
-## Этапы (детали — при старте)
+## Этапы
 
-- Ф.1. Каждый Kind: payload-схема + handler + golden-тест.
-- Ф.2. Идемпотентность (advisory locks, как в существующих handler'ах).
-- Ф.3. Audit-log записи через `internal/audit/`.
-- Ф.4. Smoke с тестовой вселенной origin (после плана 64).
-- Ф.5. Финализация.
+### Ф.1. Эталонный handler — KindDemolishConstruction ✅ (2026-04-28)
+
+Реализован как «единичный end-to-end», задающий паттерн для остальных
+6 Kind'ов. См. [HandleDemolishConstruction](../../projects/game-nova/backend/internal/event/handlers.go)
++ [demolish_test.go](../../projects/game-nova/backend/internal/event/demolish_test.go).
+
+**Установленный паттерн** (для следующих Kind'ов следовать):
+
+| Аспект | Решение | Откуда |
+|---|---|---|
+| **Payload (R13)** | typed Go-struct `BuildingPayload` (переиспользован, идентичная форма с `BuildConstruction`); JSON-тэги snake_case | R1, R13 |
+| **Идемпотентность** | сравнение текущего состояния с целевым (`cur <= target_level`) → no-op + закрыть очередь. Нет нужды в advisory locks: worker уже даёт `FOR UPDATE SKIP LOCKED` per-event | план 09 |
+| **Prometheus (R8)** | автоматически на уровне worker'а: `oxsar_events_processed{kind,status}` counter + `oxsar_event_handler_seconds{kind}` histogram. Handler ничего сам не пишет | worker.go:278-345 |
+| **Audit** | структурированный `slog.InfoContext` с полями `event_id, planet_id, unit_id, level_from, level_to`. Отдельной таблицы для player-action audit в nova нет (`admin_audit_log` — admin-only). Slog уезжает в централизованный лог-агрегатор. Если понадобится SQL-доступ — payload остаётся в `events` / `events_dead` | R3 |
+| **Очки** | НЕ инкрементить в handler'е (отличие от legacy oxsar2). Очки derived state, пересчитываются `ScoreRecalcAll` (батч) или decorator `withScore` (per-user, после handler'а) | score/service.go |
+| **used_fields** | зеркало `HandleBuildConstruction`: при demolish до 0 → `used_fields - 1` через `GREATEST(...,0)` (защита от рассинхрона) | план 23 |
+| **Тесты** | (1) pure round-trip JSON payload, (2) property-based rapid (R4) на детерминизм skip-decision, (3) golden 3 сценария через `TEST_DATABASE_URL` (level 5→4, 1→0 с освобождением поля, idempotent replay), (4) валидация negative target_level | R4, helpers_test.go-стиль |
+| **Регистрация** | в `cmd/worker/main.go` рядом с BuildConstruction; декораторы `withAchievement(withScore(...))` (без `withDailyQuest`: квеста «снеси здание» в дизайне нет) | worker/main.go:213 |
+| **R10 (per-universe)** | соблюдено — `events.user_id/planet_id` уже фильтруются вселенной через FK на `users/planets` | план 36 |
+| **R12 (i18n)** | не применимо — handler не возвращает user-facing строк | — |
+| **R15** | без TODO/MVP-сокращений | R15 |
+
+**Сознательное упрощение** (зафиксировать в simplifications.md):
+NЕТ публичного API `POST /api/planets/{id}/demolish` и `building.Demolish()`
+service-метода — добавляется отдельным планом, когда дойдёт UI. Handler
+готов «принимать» события, кто бы их ни вставил. Альтернатива (полный
+service+API) расширила бы scope с эталонного Kind'а до полноценной
+фичи (~+400 строк, требует i18n, OpenAPI, FE), что нарушило бы
+«один Kind за сессию».
+
+**Не закрытый D-NNN**: записи D-031..D-037 в `divergence-log.md`
+относятся к разным событиям (D-031 = TOURNAMENT_*, не demolish).
+Проблема «handler пуст» не имела отдельного D-NNN — это inventory-bug,
+зафиксирован в [divergence-log.md D-031b](../research/origin-vs-nova/divergence-log.md#d-031b).
+
+### Ф.2-Ф.6 (TODO по эталону Ф.1)
+
+Каждый из следующих Kind'ов реализуется по тому же паттерну:
+
+- Ф.2. `KindExchangeExpire`, `KindExchangeBan` — для биржи (план 68 даст
+  таблицы; пока handler-stub с `ErrSkip`).
+- Ф.3. `KindDeliveryArtefacts` — расширение DELIVERY-семьи; payload
+  включает `artefact_id`. Связан с `internal/fleet/`.
+- Ф.4. `KindAttackDestroyBuilding`, `KindAttackAllianceDestroyBuilding`
+  — атака с целью разрушить постройку (новый параметр `target_building_id`
+  в payload). Связан с `internal/transport/`.
+- Ф.5. `KindAllianceAttackAdditional` — служебный referer для ACS.
+- Ф.6. `KindTeleportPlanet` — премиум-фича через оксары. Зависит от
+  плана 69 (миграция `users.last_planet_teleport_at`) и интеграции
+  с billing-сервисом. POST /api/planets/{id}/teleport с Idempotency-Key.
+
+### Ф.7. Финализация (после Ф.2-Ф.6)
+
+Smoke с тестовой вселенной origin, e2e-проверка, финализация плана.
 
 ## Конвенции (R1-R5)
 

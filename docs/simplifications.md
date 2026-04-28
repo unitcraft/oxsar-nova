@@ -1424,3 +1424,28 @@ session-cache (например, для локальной офлайн-разр
 из `$_static_includes` в AutoLoader.php и удалить файл + папку plugins/.
 **Приоритет**: L (5 минут работы, делать когда будет повод трогать
 AutoLoader).
+
+---
+
+## 2026-04-28 — План 65 Ф.1: KindDemolishConstruction
+
+### [65-Ф.1] Нет публичного API для demolish — только handler
+**Где**: `projects/game-nova/backend/internal/event/handlers.go` —
+`HandleDemolishConstruction` реализован end-to-end; но
+`building.Service.Demolish()` и `POST /api/planets/{id}/demolish`
+отсутствуют.
+**Что упрощено**: handler принимает события `KindDemolishConstruction`,
+кто бы их ни вставил в `events`. Нет ни service-метода, ни REST API,
+которые игрок мог бы вызвать.
+**Почему**: задача плана 65 Ф.1 — создать **эталонный handler**
+для последующих 6 Kind'ов плана 65, не полноценную demolish-фичу.
+Полный путь (service + endpoint + i18n + OpenAPI + frontend)
+расширил бы scope до ~+400 строк и нарушил «один Kind за сессию».
+**План возврата**: отдельный план «building/demolish API» — добавить
+`Service.Demolish(ctx, userID, planetID, unitID)` зеркально к
+`Enqueue` (списание ресурсов 0%, расчёт времени по building catalog,
+INSERT в construction_queue + INSERT events Kind=2), POST endpoint
+с rate-limit и Idempotency-Key (R9), UI-кнопка в Constructions
+экране. Ориентир — план 67/68/72 (UI-фаза для origin).
+**Приоритет**: M — без UI игрок не может снести здание, но handler
+уже работает.

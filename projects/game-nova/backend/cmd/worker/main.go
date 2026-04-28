@@ -209,6 +209,10 @@ func run() error {
 	// чтобы воркер видел весь список в одном месте и было проще
 	// отслеживать, что именно обрабатывается.
 	w.Register(event.KindBuildConstruction, withDailyQuest("building_done")(withAchievement(withScore(event.HandleBuildConstruction))))
+	// План 65 Ф.1: handler сноса здания. Зеркалит BuildConstruction.
+	// withScore — пересчёт очков после понижения уровня. Daily-quest
+	// «снеси здание» в дизайне нет, поэтому без withDailyQuest.
+	w.Register(event.KindDemolishConstruction, withAchievement(withScore(event.HandleDemolishConstruction)))
 	w.Register(event.KindResearch, withDailyQuest("research_done")(withAchievement(withScore(event.HandleResearch))))
 	w.Register(event.KindBuildFleet, withAchievement(withScore(event.HandleBuildFleet)))
 	w.Register(event.KindBuildDefense, withScore(event.HandleBuildFleet))

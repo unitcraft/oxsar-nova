@@ -579,6 +579,26 @@ vs 11 при basic=10000). Все cost_factor в origin.yaml override
   вселенных как опция). Связано с U-002.
 - **Объём**: 3-4 недели (полностью новая фича)
 
+### D-031b. EVENT_DEMOLISH_CONSTRUCTION (handler-stub)
+
+- **Категория**: event-loop / inventory-bug
+- **Цвет**: 🟢 (закрыт планом 65 Ф.1, 2026-04-28)
+- **Origin**: `EventHandler::demolish` (PHP, EventHandler.class.php:2257)
+  понижает уровень здания (`building2planet.level = data.level + added`),
+  при level=0 — DELETE строки. Уменьшает игроку `b_points`.
+- **Nova до фикса**: `KindDemolishConstruction (Kind=2)` объявлен в
+  [kinds.go:17](../../projects/game-nova/backend/internal/event/kinds.go),
+  но handler в `cmd/worker/main.go` не зарегистрирован → событие
+  валилось бы в `error` со статусом «no handler for kind 2».
+- **Nova после фикса**: `HandleDemolishConstruction` в
+  [handlers.go](../../projects/game-nova/backend/internal/event/handlers.go) —
+  идемпотентный handler, зеркалит `HandleBuildConstruction`.
+  Очки не инкрементятся (отличие от legacy: в nova очки derived
+  state, пересчитываются `withScore` decorator + `KindScoreRecalcAll`).
+- **Разница vs legacy oxsar2**: убран DELETE строки при level=0
+  (UPDATE level=0 эквивалентен по чтению, но даёт audit-trail).
+- **Объём**: реализовано (~120 строк handler + ~290 строк тестов).
+
 ### D-032. EVENT_TELEPORT_PLANET
 
 - **Категория**: event-loop / механика
