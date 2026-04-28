@@ -1,4 +1,4 @@
-# Fixtures для UI-сравнения с legacy
+﻿# Fixtures для UI-сравнения с legacy
 
 **Не коммитятся в git** — содержат реальные emails/passwords/IP реальных
 игроков (PII). См. `.gitignore`.
@@ -9,9 +9,9 @@
 `oxsar2-mysql-1`):
 
 ```bash
-bash projects/game-origin/tools/snapshot-legacy-user.sh
+bash projects/game-origin-php/tools/snapshot-legacy-user.sh
 # или для другого юзера:
-bash projects/game-origin/tools/snapshot-legacy-user.sh 2094833
+bash projects/game-origin-php/tools/snapshot-legacy-user.sh 2094833
 ```
 
 Создаст `test-user-snapshot.sql` (~80-100 KB) с данными test-юзера +
@@ -20,7 +20,7 @@ bash projects/game-origin/tools/snapshot-legacy-user.sh 2094833
 ## Как применить к нашей БД
 
 ```bash
-bash projects/game-origin/tools/apply-test-user-fixture.sh
+bash projects/game-origin-php/tools/apply-test-user-fixture.sh
 ```
 
 Скрипт сохранит `na_user.global_user_id` (наша надстройка для JWT),

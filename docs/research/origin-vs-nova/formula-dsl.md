@@ -1,4 +1,4 @@
-# Formula DSL legacy game-origin
+﻿# Formula DSL legacy game-origin
 
 **Дата сборки**: 2026-04-28
 **Контекст**: артефакт плана 62 — описание DSL формул баланса в
@@ -95,7 +95,7 @@ CREATE TABLE `na_construction` (
 
 ### `parseChargeFormula()` — базовый (без контекста планеты)
 
-**Файл**: `projects/game-origin/src/game/Functions.inc.php:41`
+**Файл**: `projects/game-origin-php/src/game/Functions.inc.php:41`
 
 ```php
 function parseChargeFormula($formula, $basic, $level)
@@ -127,7 +127,7 @@ function parseChargeFormula($formula, $basic, $level)
 
 ### `parseSpecialFormula()` — расширенный (с контекстом планеты)
 
-**Файл**: `projects/game-origin/src/game/Planet.class.php:592`
+**Файл**: `projects/game-origin-php/src/game/Planet.class.php:592`
 
 ```php
 protected function parseSpecialFormula($formula, $level)
@@ -309,11 +309,11 @@ PHP-`eval()`.
 
 ## References
 
-- `projects/game-origin/src/game/Functions.inc.php:41` — `parseChargeFormula`
-- `projects/game-origin/src/game/Planet.class.php:592` — `parseSpecialFormula`
-- `projects/game-origin/migrations/001_schema.sql:727-762` — DDL
+- `projects/game-origin-php/src/game/Functions.inc.php:41` — `parseChargeFormula`
+- `projects/game-origin-php/src/game/Planet.class.php:592` — `parseSpecialFormula`
+- `projects/game-origin-php/migrations/001_schema.sql:727-762` — DDL
   `na_construction`
-- `projects/game-origin/migrations/002_data.sql` — seed (фактический
+- `projects/game-origin-php/migrations/002_data.sql` — seed (фактический
   баланс)
 - [docs/balance/analysis.md](../../balance/analysis.md) — формулы nova
 - [docs/legacy/game-reference.md](../../legacy/game-reference.md) §

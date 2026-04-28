@@ -1,4 +1,4 @@
-# План 63: identity tokens по стандарту RFC 6749
+﻿# План 63: identity tokens по стандарту RFC 6749
 
 **Дата**: 2026-04-28
 **Статус**: ✅ Завершён 2026-04-28
@@ -157,7 +157,7 @@ grep -rn '\.tokens\.access\|\.tokens\.refresh\|"tokens"' \
 - `projects/billing/...`, `projects/portal/backend/...` — если они
   верифицируют JWKS, контракт токена самого не меняется (только
   обёртка), но проверить.
-- `projects/game-origin/src/core/JwtAuth.php` — если PHP-сторона
+- `projects/game-origin-php/src/core/JwtAuth.php` — если PHP-сторона
   парсит wrapper'ы login-ответа, тоже править.
 
 ### 3. Тесты
@@ -228,7 +228,7 @@ grep -rn '\.tokens\.access\|\.tokens\.refresh\|"tokens"' \
 
 ### Ф.5. PHP-сторона (game-origin)
 
-- `projects/game-origin/src/core/JwtAuth.php` — если парсит
+- `projects/game-origin-php/src/core/JwtAuth.php` — если парсит
   login-wrapper, обновить.
 
 ### Ф.6. E2E + Smoke

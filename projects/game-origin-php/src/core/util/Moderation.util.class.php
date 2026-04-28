@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Moderation — UGC blacklist для game-origin (план 46/48 Шаг 0).
  *
@@ -41,7 +41,7 @@ class Moderation
         if (defined('OXSAR_MODERATION_BLACKLIST')) {
             return OXSAR_MODERATION_BLACKLIST;
         }
-        // APP_ROOT_DIR = projects/game-origin/src/
+        // APP_ROOT_DIR = projects/game-origin-php/src/
         // YAML живёт в projects/game-nova/configs/moderation/blacklist.yaml
         return APP_ROOT_DIR . '../../game-nova/configs/moderation/blacklist.yaml';
     }

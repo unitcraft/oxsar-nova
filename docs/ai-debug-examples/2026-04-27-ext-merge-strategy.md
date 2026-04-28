@@ -1,4 +1,4 @@
-# Пример рассуждения: слияние ext/ → game/ в game-origin
+﻿# Пример рассуждения: слияние ext/ → game/ в game-origin
 
 **Дата**: 2026-04-27
 **Контекст**: план 37.5b. В legacy oxsar2 был отдельный override-слой
@@ -49,8 +49,8 @@ git log --oneline -5             # последний коммит — "перв
 ## Шаг 3. Инвентаризация: сколько и каких файлов
 
 ```bash
-for f in projects/game-origin/src/game/page/Ext*.class.php \
-         projects/game-origin/src/game/Ext*.class.php; do
+for f in projects/game-origin-php/src/game/page/Ext*.class.php \
+         projects/game-origin-php/src/game/Ext*.class.php; do
   base=$(basename "$f" .class.php)
   parent=$(grep -oP "class \w+ extends \K\w+" "$f" | head -1)
   printf "%-30s extends %-20s lines=%s\n" \
@@ -91,8 +91,8 @@ override базового**. Часть наследует прямо `Page` (с
 for cls in Achievements Construction ArtefactMarket Artefacts Mission \
            Notepad Payment Repair Shipyard Simulator Support Tutorial \
            UserAgreement Widgets EventHandler Menu PlanetCreator; do
-  pages=$(ls projects/game-origin/src/game/page/${cls}.class.php 2>/dev/null)
-  game=$(ls projects/game-origin/src/game/${cls}.class.php 2>/dev/null)
+  pages=$(ls projects/game-origin-php/src/game/page/${cls}.class.php 2>/dev/null)
+  game=$(ls projects/game-origin-php/src/game/${cls}.class.php 2>/dev/null)
   printf "%-20s page:%s  game:%s\n" \
     "$cls" "${pages:+YES}" "${game:+YES}"
 done
@@ -126,7 +126,7 @@ fatal error.
 
 ```bash
 grep -rn "ext.*Ext\|new Ext\|class_exists\|page_class" \
-  projects/game-origin/src/core/ projects/game-origin/src/game/NS.class.php \
+  projects/game-origin-php/src/core/ projects/game-origin-php/src/game/NS.class.php \
   | head
 ```
 
@@ -245,7 +245,7 @@ fatal error на Achievements и потерю override-логики на Menu/Ev
 
 1. **php -l каждого изменённого файла**:
    ```bash
-   find projects/game-origin/src -name "*.php" -exec php -l {} \; \
+   find projects/game-origin-php/src -name "*.php" -exec php -l {} \; \
      2>&1 | grep -v "^No syntax errors" | head
    ```
    Нашёл pre-existing ошибки (`Upload.util.class.php`,
@@ -254,7 +254,7 @@ fatal error на Achievements и потерю override-логики на Menu/Ev
 
 2. **Поиск осиротевших ссылок**:
    ```bash
-   grep -rEn "\bExt(Mission|Shipyard|Menu|...)\b" projects/game-origin/src/
+   grep -rEn "\bExt(Mission|Shipyard|Menu|...)\b" projects/game-origin-php/src/
    ```
    Нашёл только комментарии (например `// Из ExtShipyard:` в Shipyard
    после слияния — это документирующие маркеры, оставил). Реальных
@@ -335,7 +335,7 @@ fatal error на Achievements и потерю override-логики на Menu/Ev
 Файлы:
 - [docs/plans/37-game-origin.md](../plans/37-game-origin.md) — раздел 37.5b
 - [docs/project-creation.txt](../project-creation.txt) — итерация 37.5b
-- [projects/game-origin/src/game/](../../projects/game-origin/src/game/) —
+- [projects/game-origin-php/src/game/](../../projects/game-origin-php/src/game/) —
   результат слияния
 - [Memory: reference_legacy_ext](../../../../../../Users/Евгений/.claude/projects/d--Sources-oxsar-nova/memory/reference_legacy_ext.md) —
   обновлено («только для legacy, не game-origin»)

@@ -1,4 +1,4 @@
-# UI Development Log — oxsar-nova
+﻿# UI Development Log — oxsar-nova
 
 Дневник UI-доработок, начатых после завершения ядра игры (бэкенд M1–M5,
 battle engine, fleet, economy, chat). Предназначен как исходный материал
@@ -913,7 +913,7 @@ Frontend-only: `unitMeta.requires` из catalog, `fmtReqs()` для формат
 ### Что сделано
 
 **37.1–37.2 — Копирование и ревизия**
-- Слепое копирование `d:\Sources\oxsar2\www\` → `projects/game-origin/`
+- Слепое копирование `d:\Sources\oxsar2\www\` → `projects/game-origin-php/`
 - Ревизия: Yii-зависимостей 106+23 места, все управляемы
 - БД-слой уже PDO через Yii; два файла с `mysql_*` — один отключается (платежи)
 

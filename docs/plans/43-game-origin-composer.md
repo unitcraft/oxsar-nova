@@ -1,4 +1,4 @@
-# План 43: game-origin — заменить Recipe-фреймворк на Composer-зависимости
+﻿# План 43: game-origin — заменить Recipe-фреймворк на Composer-зависимости
 
 **Дата**: 2026-04-26
 **Статус**: ✅ Closed 2026-04-27 — 0 GPL-файлов в src/core/, см. project-creation.txt итерация 43.
@@ -13,7 +13,7 @@
 
 ## Цель
 
-В `projects/game-origin/src/core/` сейчас 54 PHP-файла внешнего фреймворка
+В `projects/game-origin-php/src/core/` сейчас 54 PHP-файла внешнего фреймворка
 (шапка `@package Recipe 1.1`, `@author Sebastian Noll`, `@license GPL`).
 GPL-лицензия фреймворка **несовместима** с PolyForm Noncommercial,
 которой защищён весь oxsar-nova: пользователь, скачивая oxsar-nova,
@@ -33,7 +33,7 @@ GPL-лицензия фреймворка **несовместима** с PolyFo
 
 ### 1. Подключить Composer
 
-В `projects/game-origin/` создать `composer.json` с зависимостями:
+В `projects/game-origin-php/` создать `composer.json` с зависимостями:
 
 | Recipe-класс | Замена | Лицензия |
 |---|---|---|
@@ -94,8 +94,8 @@ GPL-лицензия фреймворка **несовместима** с PolyFo
 
 ### 4. .gitignore + Dockerfile
 
-- В `.gitignore`: `projects/game-origin/vendor/`.
-- В `projects/game-origin/docker/Dockerfile.php`: добавить шаг
+- В `.gitignore`: `projects/game-origin-php/vendor/`.
+- В `projects/game-origin-php/docker/Dockerfile.php`: добавить шаг
   `composer install --no-dev --optimize-autoloader` при сборке образа.
 
 ### 5. CI
@@ -120,7 +120,7 @@ Apache-2.0); файлы Recipe удалены из репозитория."
 ### Ф.1. Бутстрап Composer
 
 - Установить Composer в Docker-окружение game-origin (если ещё не).
-- Создать `projects/game-origin/composer.json` с минимальным набором
+- Создать `projects/game-origin-php/composer.json` с минимальным набором
   зависимостей (Symfony Cache, Doctrine DBAL, Smarty, Monolog, Guzzle).
 - `composer install` — убедиться, что vendor/ создаётся, autoload работает.
 - Добавить `vendor/` в `.gitignore` для проектной папки.
@@ -237,7 +237,7 @@ check) можно выполнять без блокировки.
 во время работ по плану 50 Ф.4.
 
 **Причина:** clean-room rewrite `XMLObj`
-(`projects/game-origin/src/core/util/XMLObj.util.class.php`) — обёртка
+(`projects/game-origin-php/src/core/util/XMLObj.util.class.php`) — обёртка
 над `SimpleXMLElement` — был сделан как «тонкая обёртка» с методами
 `getAttribute/getName/getString/getChildren/getNode`, но **не реализовывал
 `IteratorAggregate`**. Legacy-Recipe `XMLObj` был Iterable.

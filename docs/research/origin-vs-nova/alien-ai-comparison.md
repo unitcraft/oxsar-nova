@@ -1,4 +1,4 @@
-# Alien AI: origin vs nova — углублённое сравнение
+﻿# Alien AI: origin vs nova — углублённое сравнение
 
 **Дата сборки**: 2026-04-28
 **Контекст**: артефакт плана 62, Категория 4 (event-loop). Самая
@@ -13,10 +13,10 @@
 
 ### Файлы
 
-- `projects/game-origin/src/game/AlienAI.class.php` (1127 строк)
-- `projects/game-origin/src/game/EventHandler.class.php:3532-3573`
+- `projects/game-origin-php/src/game/AlienAI.class.php` (1127 строк)
+- `projects/game-origin-php/src/game/EventHandler.class.php:3532-3573`
   (обработчики EVENT_ALIEN_*)
-- `projects/game-origin/config/consts.php:98-102, 440-445, 459-460,
+- `projects/game-origin-php/config/consts.php:98-102, 440-445, 459-460,
   764-782` — константы
 
 ### Public/Protected методы
@@ -360,9 +360,9 @@ internal/alien/
 
 ## References
 
-- `projects/game-origin/src/game/AlienAI.class.php` (основной)
-- `projects/game-origin/src/game/EventHandler.class.php:3532-3573`
-- `projects/game-origin/config/consts.php:98-102, 440-445, 459-460,
+- `projects/game-origin-php/src/game/AlienAI.class.php` (основной)
+- `projects/game-origin-php/src/game/EventHandler.class.php:3532-3573`
+- `projects/game-origin-php/config/consts.php:98-102, 440-445, 459-460,
   764-782`
 - [docs/legacy/game-reference.md § «Система инопланетян»](../../legacy/game-reference.md)
 - План 15 (alien-holding-thursday) — Этап 3 явно упрощён

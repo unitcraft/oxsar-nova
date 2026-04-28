@@ -54,6 +54,8 @@ make lint          # все линтеры
 - `projects/game-nova/backend/pkg/*`        — общие утилиты (rng, proto, ids)
 - `projects/game-nova/frontend/src/api`     — сгенерированный клиент из OpenAPI
 - `projects/game-nova/frontend/src/features/<domain>` — вертикальные срезы UI
+- `projects/game-origin-php/`          — legacy PHP реализация origin (clean-room rewrite, на удаление после готовности нового фронта; план 75)
+- `projects/game-origin/` (план 64+)   — зарезервировано под новый React-фронт origin (ремастер, планы 64-74)
 - `projects/portal/frontend/`          — портал oxsar-nova.ru (Vite/React)
 - `projects/portal/backend/` (plan 36) — portal API (новости, предложения)
 - `projects/identity/backend/` (plan 36, переименован в плане 51) — identity-service (JWT/JWKS, OAuth, users, global credits)

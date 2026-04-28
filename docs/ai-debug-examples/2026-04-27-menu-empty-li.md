@@ -1,4 +1,4 @@
-# Пример отладки: пустое меню в game-origin
+﻿# Пример отладки: пустое меню в game-origin
 
 **Дата**: 2026-04-27
 **Контекст**: после слияния ext/ → game/ в game-origin (план 37.5b) пользователь
@@ -244,7 +244,7 @@ return !empty($_SESSION["userid"]) && ($_SESSION["skin_type"] ?? ("standard" == 
 
 ## Файлы
 
-- [projects/game-origin/src/game/Functions.inc.php](../../projects/game-origin/src/game/Functions.inc.php) — функции `isMobileSkin()`, `isFacebookSkin()`
-- [projects/game-origin/src/game/Menu.class.php](../../projects/game-origin/src/game/Menu.class.php) — `generateMenu()` (десктоп) и `generateMenuMobile()`
-- [projects/game-origin/src/templates/standard/layout.tpl](../../projects/game-origin/src/templates/standard/layout.tpl) — рендер меню
-- [projects/game-origin/src/game/xml/Menu.xml](../../projects/game-origin/src/game/xml/Menu.xml) — структура меню
+- [projects/game-origin-php/src/game/Functions.inc.php](../../projects/game-origin-php/src/game/Functions.inc.php) — функции `isMobileSkin()`, `isFacebookSkin()`
+- [projects/game-origin-php/src/game/Menu.class.php](../../projects/game-origin-php/src/game/Menu.class.php) — `generateMenu()` (десктоп) и `generateMenuMobile()`
+- [projects/game-origin-php/src/templates/standard/layout.tpl](../../projects/game-origin-php/src/templates/standard/layout.tpl) — рендер меню
+- [projects/game-origin-php/src/game/xml/Menu.xml](../../projects/game-origin-php/src/game/xml/Menu.xml) — структура меню

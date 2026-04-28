@@ -1,4 +1,4 @@
-# Nova UI Backlog (U-NNN + X-NNN)
+﻿# Nova UI Backlog (U-NNN + X-NNN)
 
 **Дата сборки**: 2026-04-28
 **Контекст**: артефакт плана 62. Самостоятельный долгоживущий
@@ -460,8 +460,8 @@ PHP, каждая запись — кандидат для эволюции nova
 
 ## References
 
-- 125 шаблонов: `projects/game-origin/src/templates/standard/`
-- 55 контроллеров: `projects/game-origin/src/game/page/`
+- 125 шаблонов: `projects/game-origin-php/src/templates/standard/`
+- 55 контроллеров: `projects/game-origin-php/src/game/page/`
 - nova frontend: `projects/game-nova/frontend/src/features/`
 - [origin-ui-replication.md](origin-ui-replication.md) —
   S-NNN экраны (откуда берутся U-NNN)
