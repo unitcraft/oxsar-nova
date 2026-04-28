@@ -2,9 +2,11 @@
 
 **Дата**: 2026-04-28
 **Статус**: Скелет (детали допишет агент-реализатор при старте)
-**Зависимости**: блокируется планами **64, 65, 66, 67, 68, 69, 70**
+**Зависимости**: блокируется планами **64, 65, 66, 67, 68, 69**
 (вся backend-готовность); **57** (mail/TipTap для чата + почты);
-**75** (путь освобождён). Может быть **частично** запущен раньше —
+**75** (путь освобождён). План 70 (achievements) **выведен из
+обязательных** — отложен до пост-запуска (см. roadmap-report
+«Часть V»). Может быть **частично** запущен раньше —
 экраны, backend которых уже готов.
 **Связанные документы**:
 - [62-origin-on-nova-feasibility.md](62-origin-on-nova-feasibility.md)
@@ -59,12 +61,14 @@ S-NNN записи из `origin-ui-replication.md`. Разбиение на 5 с
   Shipyard, Galaxy, Mission, Empire.
 - **Spring 2** (~10 экранов): Alliance (12 шаблонов), Resource,
   Market, Repair, Battlestats, Fleet operations.
-- **Spring 3** (~10 экранов): Artefacts, ArtefactMarket,
+- **Spring 3** (~8 экранов): Artefacts, ArtefactMarket,
   ArtefactInfo, BuildingInfo, UnitInfo, Techtree, Records,
-  Statistics, Achievements, Daily quests.
-- **Spring 4** (~13 экранов): Friends, MSG, Chat, ChatAlly,
-  Notepad, Search, Officer, Profession, Settings, Tutorial,
+  Statistics, Daily quests.
+  - **Исключены из первой итерации**: Achievements (см. ниже).
+- **Spring 4** (~12 экранов): Friends, MSG, Chat, ChatAlly,
+  Notepad, Search, Officer, Profession, Settings,
   UserAgreement, Changelog, Support, Widgets, AdvTechCalculator.
+  - **Исключён из первой итерации**: Tutorial (см. ниже).
 - **Spring 5** (~5 экранов): Simulator, RocketAttack, MonitorPlanet,
   ResTransferStats, Stock/Exchange (зависит от плана 68).
 
@@ -86,6 +90,26 @@ BBCode origin **выкидывается** — заменяется TipTap (пл
 - Тёмная тема — после старта (legacy тема — единственная).
 - Перепроектирование экранов / новые UX-фичи — это новшества,
   делаются после стабилизации pixel-perfect клона.
+- **Achievements (S-Achievements)** — экран ачивок не реализуется
+  в origin-фронте на старте. В nova ачивки уже есть (план 17,
+  goal engine), для origin реализуем позже отдельным планом
+  (см. план 70 — отложен). Пункт меню «Достижения» в шапке/левом
+  меню в первой итерации скрыт ИЛИ ведёт на заглушку «Скоро».
+  Эталонный screenshot этого экрана для CI (план 73) не снимается.
+- **Tutorial (S-Tutorial)** — экран обучения не реализуется на
+  старте. nova имеет свой onboarding-flow, для origin вернёмся
+  отдельным планом после старта. Игроки приходят в origin через
+  portal с уже пройденным onboarding identity-сервиса (планы 36, 51).
+- **Баннеры и рекламные тексты** из legacy-PHP **не переносятся**
+  в новый фронт. В `projects/game-origin-php/` есть рекламные блоки
+  (промо-тексты, баннеры в шапке/футере/между секциями) — они
+  **не копируются** ни визуально, ни функционально. На старте
+  origin-фронт чист от рекламы. Решение по монетизации origin
+  принимается отдельно после запуска (если будет). Это **намеренное
+  визуальное расхождение** с legacy-PHP — отдельные «дыры»
+  на этих местах допустимы (или пустые контейнеры заполняются
+  нейтральным контентом — игровой статистикой, новостями portal,
+  etc.).
 
 ## Этапы (детали — при старте)
 
