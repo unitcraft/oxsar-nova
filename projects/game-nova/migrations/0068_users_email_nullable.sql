@@ -1,5 +1,5 @@
 -- План 36 Nice-10: email больше не источник истины в game-db.
--- Источник — auth-db (auth-service). Lazy-create в EnsureUserMiddleware пишет
+-- Источник — identity-db (identity-service). Lazy-create в EnsureUserMiddleware пишет
 -- NULL (email удалён из RSA-claims как PII).
 --
 -- UNIQUE constraint оставляем — он просто не действует на NULL-ы (PostgreSQL

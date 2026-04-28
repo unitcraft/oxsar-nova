@@ -39,11 +39,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   logout: () => {
     // План 36 Critical-4: revoke refresh-token через /auth/logout —
-    // auth-service кладёт его jti в Redis-blacklist. После этого
+    // identity-service кладёт его jti в Redis-blacklist. После этого
     // украденный refresh-token не работает до истечения TTL.
     //
     // Fire-and-forget: не ждём ответа, чтобы logout был мгновенным.
-    // Если запрос упал (offline / auth-service недоступен) — токен всё
+    // Если запрос упал (offline / identity-service недоступен) — токен всё
     // равно стирается локально, на сервере он истечёт по TTL (7d/30d).
     const refresh = get().refreshToken;
     if (refresh) {

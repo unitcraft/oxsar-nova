@@ -203,7 +203,7 @@ func (s *Service) ModerateFeedback(ctx context.Context, id, newStatus string) er
 	return nil
 }
 
-// VoteFeedback добавляет голос за предложение (вызывается после списания кредитов через auth-service).
+// VoteFeedback добавляет голос за предложение (вызывается после списания кредитов через billing-service).
 func (s *Service) VoteFeedback(ctx context.Context, postID, userID string, creditsSpent int64) error {
 	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `

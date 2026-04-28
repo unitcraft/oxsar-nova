@@ -60,9 +60,9 @@ export function SettingsScreen() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['settings'] }),
   });
 
-  // План 36 Critical-6: смена пароля переехала в auth-service.
-  // Хеш живёт в auth-db, в game-db password_hash IS NULL.
-  // /auth/* через vite proxy дёргает auth-service.
+  // План 36 Critical-6: смена пароля переехала в identity-service.
+  // Хеш живёт в identity-db, в game-db password_hash IS NULL.
+  // /auth/* через vite proxy дёргает identity-service.
   const passwordMutation = useMutation({
     mutationFn: (body: { current: string; new: string }) =>
       api.post('/auth/password', body),

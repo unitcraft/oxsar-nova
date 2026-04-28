@@ -12,7 +12,7 @@ import (
 
 // BillingClient вызывает billing-service для списания кредитов.
 //
-// План 38 Ф.6: portal больше не дёргает auth-service для credits — кошельки
+// План 38 Ф.6: portal больше не дёргает identity-service для credits — кошельки
 // переехали в billing-service.
 //
 // Использует тот же RSA-JWT, что прислал клиент (forwarded через Authorization

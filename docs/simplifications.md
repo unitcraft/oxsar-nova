@@ -2215,3 +2215,32 @@ unit-тесты на форматтеры/валидаторы/router-маршр
   Ф.3 сам отложен до Spring 3+4+5).
 
 **Связанный план**: [docs/plans/73-remaster-screenshot-diff-ci.md](plans/73-remaster-screenshot-diff-ci.md)
+
+## 2026-04-28 — План 80: smoke выявил баг миграции 0005
+
+### [P80.A] Миграция 0005_rbac_tables.sql валится на CROSS JOIN без ON CONFLICT
+- **Где**: `projects/identity/migrations/0005_rbac_tables.sql` —
+  финальный INSERT для роли `superadmin`:
+  ```sql
+  INSERT INTO role_permissions (role_id, permission_id)
+  SELECT r.id, p.id FROM roles r, permissions p;
+  ```
+- **Что упрощено**: до плана 80 identity-БД стартовала пустой
+  (Dockerfile.migrate ссылался на несуществующую `projects/auth/
+  migrations`), поэтому миграции 0001-0006 не выполнялись и баг
+  не проявлялся. После Ф.2 плана 80 миграция запустилась и упала
+  на 0005 с `duplicate key value violates unique constraint
+  "role_permissions_pkey"` (SQLSTATE 23505).
+- **Почему баг**: `FROM roles r, permissions p` без WHERE — это
+  CROSS JOIN для ВСЕХ ролей, включая `support`/`moderator`/
+  `admin`/`billing_admin`, которым выше в той же миграции уже
+  выданы permissions подмножествами. Конфликт PK
+  `(role_id, permission_id)`.
+- **Как чинить**: отдельный план/коммит — добавить
+  `ON CONFLICT (role_id, permission_id) DO NOTHING` к финальному
+  INSERT, либо явное `WHERE r.name = 'superadmin'`. Идемпотентно
+  и совместимо с уже накатанными prod-БД (если такие есть).
+- **Приоритет**: H (identity-стек не поднимается с нуля).
+
+**Связанный план**: [docs/plans/80-auth-leftovers-cleanup.md](plans/80-auth-leftovers-cleanup.md) (smoke раздел)
+

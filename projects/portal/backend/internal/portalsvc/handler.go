@@ -28,7 +28,7 @@ func NewHandler(svc *Service, reg *universe.Registry) *Handler {
 
 // NewHandlerWithBilling создаёт Handler с клиентом billing.
 //
-// План 38 Ф.6: вместо auth-service используется billing-service
+// План 38 Ф.6: вместо identity-service используется billing-service
 // (различные bounded context-ы — identity vs money).
 func NewHandlerWithBilling(svc *Service, reg *universe.Registry, billingURL string) *Handler {
 	return &Handler{svc: svc, reg: reg, credits: NewBillingClient(billingURL)}
@@ -182,7 +182,7 @@ func (h *Handler) ModerateFeedback(w http.ResponseWriter, r *http.Request) {
 
 // VoteFeedback — POST /api/feedback/{id}/vote
 //
-// План 38 Ф.6: списание идёт в billing-service, не auth-service.
+// План 38 Ф.6: списание идёт в billing-service, не identity-service.
 // Idempotency-Key = "vote:" + user + ":" + post → защита от двойного списания
 // при повторных кликах. Если billing вернул 402 (insufficient) — голос
 // не записывается, фронт получает 402.

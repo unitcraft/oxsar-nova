@@ -15,7 +15,7 @@ import (
 
 // contextWithFakeRSAClaims кладёт в context фиктивные RSA-claims —
 // эмулирует поведение RSAMiddleware без необходимости поднимать
-// auth-service в тестах.
+// identity-service в тестах.
 func contextWithFakeRSAClaims(ctx context.Context, userID, username string) context.Context {
 	claims := &jwtrs.Claims{
 		Username: username,

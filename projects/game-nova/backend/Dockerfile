@@ -1,8 +1,8 @@
 # Multi-stage build для game-nova: один образ, два бинаря (server, worker).
 # Выбор entrypoint — через command в docker-compose.
 #
-# auth-service и portal живут в отдельных Go-модулях:
-#   projects/auth/backend/Dockerfile
+# identity-service и portal живут в отдельных Go-модулях:
+#   projects/identity/backend/Dockerfile
 #   projects/portal/backend/Dockerfile
 
 FROM golang:1.23-alpine AS build

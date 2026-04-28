@@ -111,7 +111,7 @@ func run() error {
 	r.Get("/api/feedback/{id}", h.GetFeedback)
 	r.Get("/api/feedback/{id}/comments", h.ListComments)
 
-	// Защищённые endpoints (требуют JWT от auth-service).
+	// Защищённые endpoints (требуют JWT от identity-service).
 	// В dev-режиме без JWKS middleware пропускает все запросы (ver == nil).
 	r.Group(func(pr chi.Router) {
 		if ver != nil {

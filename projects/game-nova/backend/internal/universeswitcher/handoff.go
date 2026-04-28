@@ -10,7 +10,7 @@ import (
 
 // HandoffReceive — GET /auth/handoff?code=<token>
 // Вызывается браузером при переходе в эту вселенную из другой.
-// Обменивает handoff-токен на full JWT через auth-service и
+// Обменивает handoff-токен на full JWT через identity-service и
 // устанавливает access_token в localStorage через JS-страницу.
 func (h *Handler) HandoffReceive(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")

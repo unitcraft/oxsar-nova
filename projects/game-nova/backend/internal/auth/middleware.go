@@ -17,7 +17,7 @@ type ctxKey int
 const (
 	UserIDKey ctxKey = 1
 	// План 36 Ф.12: lazy-create middleware читает username/email
-	// из RSA-claims, чтобы зеркалить юзера в game-db без HTTP-вызова в auth-service.
+	// из RSA-claims, чтобы зеркалить юзера в game-db без HTTP-вызова в identity-service.
 	rsaClaimsKey ctxKey = 2
 )
 
