@@ -12,7 +12,7 @@
 - [nova-ui-backlog.md](../research/origin-vs-nova/nova-ui-backlog.md) — 15 U-NNN + 22 X-NNN
 - [alien-ai-comparison.md](../research/origin-vs-nova/alien-ai-comparison.md) — глубокое сравнение AlienAI (1127 стр PHP), 14 расхождений A1-A14
 - [formula-dsl.md](../research/origin-vs-nova/formula-dsl.md) — DSL формул origin (parseChargeFormula, parseSpecialFormula)
-- [roadmap-report.md](../research/origin-vs-nova/roadmap-report.md) — декомпозиция в 11 будущих планов 63-73 (6-9 мес.)
+- [roadmap-report.md](../research/origin-vs-nova/roadmap-report.md) — декомпозиция в 11 будущих планов 64-74 (6-9 мес.; план 63 занят identity-tokens-rfc6749)
 
 Дорожная карта ремастера в [docs/release-roadmap.md](../release-roadmap.md)
 § «Пост-запуск v3».
