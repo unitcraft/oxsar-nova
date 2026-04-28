@@ -1861,3 +1861,131 @@ ENV (config.GameConfig), а не из per-universe override.
 `cfg.Game.Teleport*` в `bundle.Globals.Teleport*`. Изменение
 обратимо одним rebase'ом.
 **Приоритет**: L.
+
+## 2026-04-28 — План 72 Ф.2 Spring 1: каркас 7 главных экранов origin
+
+Origin-фронт получил router + 7 главных экранов (Main, Constructions,
+Research, Shipyard, Galaxy, Mission, Empire) **поверхностной глубины**:
+HTML+CSS зеркало legacy `*.tpl + style.css`, базовые мутации (build /
+start research / dispatch fleet / cancel queue) с Idempotency-Key,
+unit-тесты на форматтеры/валидаторы/router-маршруты. По плану 72
+дальнейшая «глубина» доводится итеративно через план 73
+(screenshot-diff CI) и Spring 2-5 для остальных групп экранов.
+
+### [P72.S1.A] Empire — нижние блоки (constructions / shipyard / defense / moon / research per-planet) не реализованы
+- **Где**: `projects/game-nova/frontends/origin/src/features/empire/EmpireScreen.tsx`.
+- **Что упрощено**: legacy `empire.tpl` помимо верхней таблицы планет
+  имеет 5 матриц «здание/корабль/оборона/лунные/исследования × все
+  планеты». В Spring 1 рендерится только верхняя таблица.
+- **Почему**: агрегированный endpoint `GET /api/empire/buildings`
+  отсутствует в `openapi.yaml`. Делать N запросов
+  `/api/planets/{id}/buildings/queue` × N планет на каждом mount
+  Empire-экрана — anti-pattern (план 72 R12 backlog
+  «origin-фронт сразу на nova-имена API без backend-адаптеров» —
+  значит, нужен один endpoint, а не fan-out).
+- **Как чинить**: расширить openapi.yaml `GET /api/empire/buildings`
+  → `{ planets: [{ planet_id, buildings: {<id>: <level>}, ships, defense, research_levels }] }`,
+  отдельным backend-планом. Затем в EmpireScreen добавить 5 таблиц.
+- **Приоритет**: M.
+
+### [P72.S1.B] Main — нет агрегированного «обзора империи»
+- **Где**: `src/features/main/MainScreen.tsx`.
+- **Что упрощено**: legacy `main.tpl` показывает диаметр текущей
+  планеты, температуру, очки/ранг, опыт боев, профессию, серверное
+  время. В Spring 1 рендерим только имя/координаты планеты, ресурсы,
+  активные миссии, счётчик непрочитанных сообщений.
+- **Почему**: эти поля либо отсутствуют в `Planet` schema (diameter,
+  temperature, fields), либо не имеют endpoint'а
+  (`points`, `rank`, `battle_experience`, `profession`).
+- **Как чинить**: расширить `Planet` schema (план 72 backend-итерация
+  отдельным spring'ом) + добавить `GET /api/users/me/overview` →
+  `{ points, rank, total_users, battle_exp, profession, online_15, online_24h }`.
+- **Приоритет**: M.
+
+### [P72.S1.C] Constructions/Research — нет «уровней / стоимости / времени» в UI
+- **Где**: `src/features/constructions/ConstructionsScreen.tsx`,
+  `src/features/research/ResearchScreen.tsx`.
+- **Что упрощено**: legacy `constructions.tpl` для каждого здания
+  показывает текущий уровень + стоимость следующего апгрейда + время.
+  В Spring 1 рендерим только имя из CATALOG + кнопку «Построить»;
+  бэкенд вычислит цену сам, фронт не показывает её до постановки в
+  очередь.
+- **Почему**: openapi.yaml имеет `GET /api/research` с `levels`
+  (агрегированно), но не имеет аналога для зданий по планете.
+  `POST /api/planets/{id}/buildings` возвращает `QueueItem` с
+  `target_level`, но не «текущий level». Чтобы рисовать «level X →
+  X+1» нужен `GET /api/planets/{id}/buildings/levels`.
+- **Как чинить**: добавить
+  `GET /api/planets/{id}/buildings` → `{ levels: {<id>: <int>} }`
+  (по аналогии с `/api/research`). Затем оба экрана отрисуют уровни
+  и формулы (формулы — отдельный пакет на фронте, см. план 64
+  override-схемы).
+- **Приоритет**: M.
+
+### [P72.S1.D] Mission — нет распознавания «доступных кораблей» / расчёта топлива / времени полёта
+- **Где**: `src/features/mission/MissionScreen.tsx`.
+- **Что упрощено**: legacy `missions.tpl` рассчитывает
+  `flight_time = distance / (speed × ship_speed)`, лимит грузоподъёмности
+  по `ship.cargo`, расход водорода по `ship.fuel`. Spring 1 показывает
+  ввод количества + speed_percent + кнопку «Отправить»; backend сам
+  валидирует. Игрок не видит ETA до отправки.
+- **Почему**: формулы расстояния/времени/топлива — часть
+  балансировочного движка backend (`battle.calculator` / `fleet.dispatch`),
+  не вынесены в openapi schema. Дублировать формулы на TS — анти-паттерн
+  (R12: один источник истины).
+- **Как чинить**: добавить
+  `POST /api/fleet/dry-run` → `{ flight_time_seconds, fuel, max_cargo }`
+  (без записи в БД, чисто расчёт). На фронте — debounced query при
+  изменении ships/dst/speed.
+- **Приоритет**: L (UX-улучшение, не блокер MVP).
+
+### [P72.S1.E] Galaxy — нет alliance-tag, без иконок статусов (banned/vacation/inactive)
+- **Где**: `src/features/galaxy/GalaxyScreen.tsx`.
+- **Что упрощено**: legacy `galaxy.tpl` рисует alliance-аббревиатуру
+  при имени игрока + цветовую дифференциацию (banned, vacation,
+  inactive7, inactive21). `SystemView.GalaxyCell` в openapi.yaml имеет
+  только `owner_username`, не `owner_alliance_tag` и не статусы.
+- **Как чинить**: расширить `GalaxyCell` schema полями
+  `{ owner_alliance_tag, owner_status: 'active'|'banned'|'vacation'|'inactive7'|'inactive21' }`.
+- **Приоритет**: M.
+
+### [P72.S1.F] Shipyard — нет «hide locked» / max-from-resources
+- **Где**: `src/features/shipyard/ShipyardScreen.tsx`.
+- **Что упрощено**: legacy `shipyard.tpl` ограничивает поле «Количество»
+  значением `min(ship_cost_to_max_buildable, current_resources)`.
+  Spring 1 показывает только `min={0}`, без max — backend рейзит 400
+  если игрок ввёл больше, чем может построить.
+- **Как чинить**: либо расширить `inventory` endpoint полем
+  `max_buildable: {<id>: <count>}` (вычисляется по текущим ресурсам),
+  либо добавить `POST /api/planets/{id}/shipyard/dry-run`. На фронт —
+  debounced query на input.
+- **Приоритет**: L.
+
+### [P72.S1.G] Pixel-perfect доводка отложена на план 73
+- **Где**: все 7 экранов.
+- **Что упрощено**: HTML-структура и CSS-классы зеркалят legacy
+  (.ntable, .galaxy-browser, .center, .button, cur-planet/cur-moon),
+  но точная визуальная сверка (отступы/цвета/spacing на пиксел)
+  не проводилась — нет running legacy-стека для скриншотов.
+- **Почему**: pixel-perfect feedback loop возможен только с
+  screenshot-diff CI (план 73 — Visual regression CI на Playwright),
+  ручная сверка скриншотов даёт false negatives.
+- **Как чинить**: после завершения плана 73 каждый Spring 1-5 экран
+  пройдёт screenshot-diff и баги выявятся автоматически.
+- **Приоритет**: M (чисто эстетика, не функционал).
+
+### [P72.S1.H] Tests: unit-only, без рендера компонентов
+- **Где**: `*.test.ts` в `src/`.
+- **Что упрощено**: тесты покрывают форматтеры, idempotency,
+  query-keys, catalog, router-маршруты, mission-валидацию — без
+  рендера React-компонентов. Аналогичный подход в nova-фронте.
+- **Почему**: добавление `@testing-library/react + jsdom` — отдельный
+  инфраструктурный план; Spring 1 не блокировался на нём. Unit-тесты
+  ловят 80% регрессий по логике.
+- **Как чинить**: при добавлении screenshot-diff CI плана 73
+  одновременно подключить testing-library + jsdom для interaction-tests.
+- **Приоритет**: L.
+
+**Связанный план**: [docs/plans/72-remaster-origin-frontend-pixel-perfect.md](plans/72-remaster-origin-frontend-pixel-perfect.md)
+**Объединённое ТЗ для backend-расширений**: P72.S1.A + .B + .C + .D + .E + .F →
+один план «openapi для origin-фронта» с 6 endpoint'ами.

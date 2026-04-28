@@ -22,6 +22,7 @@ export function Footer() {
         Контакты
       </a>
       <span className="age-rating">12+</span>
+      <span className="universe-name"> · Oxsar Classic</span>
     </div>
   );
 }

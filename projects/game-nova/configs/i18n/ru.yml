@@ -2412,6 +2412,15 @@ info:
   usableArtefactFullDesc: Это артефакт с возможностью использования
   useNewAssault: Использовать новую систему боя
   wrongLeavePhrase: Вы неправильно ввели фразу. Фраза чувствительна к регистру.
+  # План 72 Ф.2 Spring 1: добавлены имена юнитов, отсутствующие в legacy
+  # nova-bundle. R12: переиспользование «по тексту» там, где есть точный
+  # nova-аналог; новые ключи только для legacy-юнитов без аналога.
+  allianceDepot: Депо альянса
+  bigShield: Большой щитовой купол
+  bigTransporter: Большой транспорт
+  heavyFighter: Тяжелый истребитель
+  heavyLaser: Тяжелый лазер
+  spyingTech: Шпионская технология
 main:
   abandonPlanet: Покинуть планету
   anigilationTimer: "Планета {@target_mission} самоуничтожится гравитационной аномалией."

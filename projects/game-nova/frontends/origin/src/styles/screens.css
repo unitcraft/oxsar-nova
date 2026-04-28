@@ -1,0 +1,76 @@
+/* Screens-specific CSS для origin-фронта (план 72 Ф.2 Spring 1).
+ *
+ * Добавляет к base/theme/layout те классы legacy `style.css`, которые
+ * нужны Spring 1 экранам (.center alignment, .galaxy-browser layout,
+ * cur-planet/cur-moon строки, link-button — кнопка-как-ссылка).
+ *
+ * Pixel-perfect: значения скопированы из
+ * `projects/game-legacy-php/public/style.css` (тема standard) с заменой
+ * на CSS-переменные из theme.css там, где это возможно.
+ */
+
+/* legacy: text-align center для inline-content внутри ntable */
+.ntable td.center,
+.ntable th.center,
+.ntable .center {
+  text-align: center;
+}
+
+/* legacy: input-инпуты внутри galaxy-browser центрируют значения */
+input.center {
+  text-align: center;
+}
+
+/* legacy: .galaxy-browser отступы */
+.galaxy-browser td,
+.galaxy-browser th {
+  padding: 4px 6px;
+}
+
+.galaxy-browser input[type='number'] {
+  width: 50px;
+}
+
+/* legacy #planets — фон-спрайт планеты/луны (упрощённая версия,
+ * полные спрайты из public/images/ переносятся в Ф.7 финализации). */
+#planets li.cur-planet,
+#planets li.cur-moon {
+  list-style: none;
+  padding: 4px 6px;
+  margin: 0;
+}
+
+#planets li.cur-planet.active,
+#planets li.cur-moon.active {
+  background-color: var(--color-row-alt, #1a2438);
+}
+
+/* link-button — кнопка, выглядящая как ссылка (для табличного
+ * клика по имени планеты в #planets и в Empire). */
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--color-link, #cccccc);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+/* legacy Footer — display name «Oxsar Classic» (ADR-0011). */
+.oxsar-footer .universe-name {
+  margin-left: 8px;
+  color: var(--color-muted, #888);
+  font-size: 0.9em;
+}
+
+/* legacy TopHeader — display name справа от ресурсов. */
+#topHeader li.universe-name {
+  font-weight: bold;
+  color: var(--color-accent, #ccc);
+}

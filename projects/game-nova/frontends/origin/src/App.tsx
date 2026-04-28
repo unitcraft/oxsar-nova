@@ -1,20 +1,12 @@
-// Корневой компонент origin-фронта (план 72 Ф.1).
+// Корневой компонент origin-фронта.
 //
-// На Ф.1 рендерится только Bootstrap-заглушка внутри AppShell —
-// она проверяет, что 3-frame layout, тема, шрифты и ассеты
-// загружаются корректно. Реальные экраны добавляются в Ф.2-Ф.6
-// (Spring 1-5).
+// План 72 Ф.1 — содержал Bootstrap-заглушку.
+// План 72 Ф.2 Spring 1 — переключён на AppRouter с 7 главными
+// игровыми экранами (Main, Constructions, Research, Shipyard, Galaxy,
+// Mission, Empire) и заглушкой /login.
 
-import { AppShell } from './layout/AppShell';
+import { AppRouter } from './router';
 
 export function App() {
-  return (
-    <AppShell>
-      <div className="topbox">Origin-frontend Bootstrap (план 72 Ф.1)</div>
-      <div className="idiv">
-        Каркас 3-frame layout. Экраны Spring 1-5 добавляются отдельными
-        итерациями. Тема: pixel-perfect клон legacy-PHP standard.
-      </div>
-    </AppShell>
-  );
+  return <AppRouter />;
 }

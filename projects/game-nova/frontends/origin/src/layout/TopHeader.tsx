@@ -18,6 +18,9 @@ export function TopHeader() {
         <li className="ressource">
           <span>—</span>
         </li>
+        <li className="universe-name">
+          <span>Oxsar Classic</span>
+        </li>
         <li>
           <span>{userId ?? '—'}</span>
         </li>
