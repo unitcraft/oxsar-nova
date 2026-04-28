@@ -19,7 +19,7 @@ legacy-PHP origin (тема standard) на современном стеке Rea
 - Зависит от завершения планов 64-69, 71. Можно начинать с
   Bootstrap (Ф.1) если backend ещё не полностью готов, и постепенно
   добавлять экраны по мере готовности эндпоинтов.
-- legacy = только d:\Sources\oxsar2 / oxsar2-java / game-origin-php.
+- legacy = только d:\Sources\oxsar2 / oxsar2-java / game-legacy-php.
   origin = projects/game-origin/. Не путать.
 
 ПЕРЕД НАЧАЛОМ:
@@ -37,10 +37,10 @@ legacy-PHP origin (тема standard) на современном стеке Rea
    - docs/plans/57-mail-service.md (TipTap-конфигурация).
 
 3) Выборочно:
-   - projects/game-origin-php/src/templates/standard/ — UX/layout
+   - projects/game-legacy-php/src/templates/standard/ — UX/layout
      референс (НЕ для копирования кода, для воспроизведения визуала).
-   - projects/game-origin-php/public/css/ — палитра, layout-системы.
-   - projects/game-origin-php/public/images/ — иконки, спрайты
+   - projects/game-legacy-php/public/css/ — палитра, layout-системы.
+   - projects/game-legacy-php/public/images/ — иконки, спрайты
      (с проверкой лицензий).
    - projects/game-nova/frontends/nova/ — стек/конвенции nova (для
      общности подходов, НЕ для переиспользования компонентов).
@@ -55,7 +55,7 @@ Bootstrap (Ф.1):
   к nova-API, TipTap (MIT) для чата + почты.
 - CSS-тема — переписать legacy-PHP public/css/ в современный CSS
   (CSS-переменные, без legacy-хаков, но с тем же визуалом).
-- Перенос ассетов из projects/game-origin-php/public/:
+- Перенос ассетов из projects/game-legacy-php/public/:
   · images/ — SVG/PNG спрайты (с проверкой лицензий, R4 от
     plan 41).
   · fonts/ — шрифты (с проверкой лицензий — критично).

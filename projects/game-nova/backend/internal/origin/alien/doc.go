@@ -1,5 +1,5 @@
 // Package alien — порт AlienAI движка из oxsar2-classic
-// (projects/game-origin-php/src/game/AlienAI.class.php, ~1127 строк PHP)
+// (projects/game-legacy-php/src/game/AlienAI.class.php, ~1127 строк PHP)
 // на Go, в рамках плана 66 (см. docs/plans/66-remaster-alien-ai-full-parity.md).
 //
 // R0-исключение: пакет применяется во ВСЕХ вселенных (uni01/uni02 + origin),

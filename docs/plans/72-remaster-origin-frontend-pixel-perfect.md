@@ -22,7 +22,7 @@
 Построить **новый фронт origin** — отдельный Vite-bundle в
 `projects/game-origin/frontend/` (путь освобождён планом 75), —
 который **визуально pixel-perfect** воспроизводит legacy
-game-origin-php (тема standard) на современном стеке React/TS, но
+game-legacy-php (тема standard) на современном стеке React/TS, но
 **функционально работает на nova-API** (без backend-адаптеров).
 
 Это самый большой план серии (~3-4 месяца).
@@ -39,7 +39,7 @@ game-origin-php (тема standard) на современном стеке React
   для чата + почты.
 - Тема — переписать `public/css/` legacy в современный CSS
   (CSS-переменные, без legacy-хаков но с тем же визуалом).
-- Перенос ассетов из `projects/game-origin-php/public/`:
+- Перенос ассетов из `projects/game-legacy-php/public/`:
   - `images/` — SVG/PNG спрайты (с проверкой лицензий).
   - `fonts/` — шрифты (с проверкой лицензий — это критично, см.
     Risk register).
@@ -124,7 +124,7 @@ BBCode origin **выкидывается** — заменяется TipTap (пл
   отдельным планом после старта. Игроки приходят в origin через
   portal с уже пройденным onboarding identity-сервиса (планы 36, 51).
 - **Баннеры и рекламные тексты** из legacy-PHP **не переносятся**
-  в новый фронт. В `projects/game-origin-php/` есть рекламные блоки
+  в новый фронт. В `projects/game-legacy-php/` есть рекламные блоки
   (промо-тексты, баннеры в шапке/футере/между секциями) — они
   **не копируются** ни визуально, ни функционально. На старте
   origin-фронт чист от рекламы. Решение по монетизации origin
@@ -165,5 +165,5 @@ BBCode origin **выкидывается** — заменяется TipTap (пл
   понадобиться.
 - План 57 — TipTap для чата.
 - План 75 — путь `projects/game-origin/frontend/` освобождён.
-- `projects/game-origin-php/public/` + `src/templates/standard/` —
+- `projects/game-legacy-php/public/` + `src/templates/standard/` —
   визуальный референс.

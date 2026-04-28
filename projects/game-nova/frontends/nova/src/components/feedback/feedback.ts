@@ -6,7 +6,7 @@
 // Функции pure: не имеют side-effects и не зависят от React,
 // тестируются как обычные ts-функции в vitest.
 //
-// Источник логики — projects/game-origin-php/src/templates/standard/
+// Источник логики — projects/game-legacy-php/src/templates/standard/
 // (resource.tpl, required_res_table.tpl, artefacts.tpl). См.
 // docs/research/origin-vs-nova/nova-ui-backlog.md X-001..X-022.
 
