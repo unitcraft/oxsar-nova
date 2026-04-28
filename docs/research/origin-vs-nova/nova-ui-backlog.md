@@ -19,12 +19,16 @@ PHP, каждая запись — кандидат для эволюции nova
 
 ### U-001. Биржа артефактов (Stock/StockNew/Exchange)
 
-✅ **BACKEND ГОТОВ** (план 68 Ф.1-Ф.4+Ф.6+Ф.7, 2026-04-28). Модуль
+✅ **BACKEND + NOVA UI ГОТОВЫ** (backend — план 68 Ф.1-Ф.4+Ф.6+Ф.7,
+2026-04-28; UI nova — план 76, 2026-04-28). Модуль
 `internal/exchange/` + миграция 0081 + 6 endpoint'ов в openapi.yaml
 (`/api/exchange/*`). Подробности — D-039 в divergence-log.
 
-UI — отдельный план 76 (для nova-фронта) и спринт 5 плана 72 (для
-origin-фронта). Использует тот же nova-API.
+UI nova — `frontends/nova/src/features/exchange/` (3 view'а:
+список с фильтрами + cursor-pagination, детали лота с buy/cancel,
+форма создания с inline-валидацией, R9 Idempotency-Key).
+UI origin (pixel-perfect) — спринт 5 плана 72 (отдельная сессия).
+Используют один и тот же nova-API.
 
 - **Где в origin**: `src/game/page/Stock.class.php` (757 стр),
   `StockNew.class.php` (850 стр), `Exchange.class.php` (1220 стр),
