@@ -23,6 +23,7 @@ tags:
   - name: fleet
   - name: battle
   - name: messages
+  - name: notepad
   - name: achievements
   - name: officers
   - name: market
@@ -1083,6 +1084,40 @@ paths:
         "204": { description: marked (or already was) }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/notepad:
+    get:
+      tags: [notepad]
+      security: [{ bearerAuth: [] }]
+      summary: Получить личный блокнот игрока.
+      description: |
+        Возвращает текст и время последнего обновления. Если запись
+        отсутствует — возвращает пустой блокнот (`content: ""`,
+        `updated_at: ""`), 200 OK.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Notepad" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      tags: [notepad]
+      security: [{ bearerAuth: [] }]
+      summary: Сохранить личный блокнот (идемпотентно).
+      description: |
+        Полная замена содержимого блокнота. Лимит: 50 000 символов
+        UTF-8 (защита от заливки больших объёмов; ориентир — крупные
+        списки координат и шаблоны атак). Превышение → 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NotepadSaveRequest" }
+      responses:
+        "204": { description: saved }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /api/battle-reports/{id}:
     get:
@@ -2460,6 +2495,21 @@ components:
               attack:   { type: array, items: { type: number } }
               shield:   { type: array, items: { type: number } }
               shell:    { type: number }
+
+    Notepad:
+      type: object
+      required: [content, updated_at]
+      properties:
+        content:    { type: string, description: "текст блокнота (до 50 000 символов)" }
+        updated_at: { type: string, description: "RFC3339 timestamp последнего обновления; пустая строка для пустого блокнота" }
+
+    NotepadSaveRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          maxLength: 50000
 
     Message:
       type: object

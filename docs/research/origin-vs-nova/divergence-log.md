@@ -28,6 +28,13 @@ nova-backend для поддержки legacy-вселенной.
 
 ### D-001. Множественность очков (dm_points / points / max_points)
 
+✅ **ЗАКРЫТО** (план 69, 2026-04-28). Поле `users.max_points numeric(20,4)
+NOT NULL DEFAULT 0` добавлено миграцией 0072. `internal/score/service.go`
+обновляет `max_points = GREATEST(max_points, total)` при каждом
+`RecalcUser` (исторический пик, никогда не убывает).
+Категории `dm_points` / `be_points` / `of_points` — **отказ** (YAGNI:
+6 текущих категорий u/r/b/a/e_points достаточно для UX).
+
 - **Категория**: домен
 - **Цвет**: 🟣
 - **Origin**:
@@ -84,6 +91,12 @@ nova-backend для поддержки legacy-вселенной.
 
 ### D-003. Account deletion (delete timestamp vs deletion codes)
 
+✅ **ЗАКРЫТО** (план 69 Ф.0, 2026-04-28; основная реализация — миграция
+0051). Архитектурно лучше плана: `account_deletion_codes (user_id,
+code_hash, expires_at, attempts)` — email-confirm flow вместо
+простого `scheduled_at`. Соответствует roadmap-report «Часть III»
+для всех вселенных.
+
 - **Категория**: домен
 - **Цвет**: 🔴
 - **Origin**:
@@ -107,6 +120,14 @@ nova-backend для поддержки legacy-вселенной.
 
 ### D-004. Protection time (новичковая защита)
 
+✅ **ЗАКРЫТО** (план 69, 2026-04-28). Поле `users.protected_until_at
+timestamptz` добавлено миграцией 0072. `internal/fleet/attack.go`
+расширен: проверка защиты срабатывает по global protectionPeriod ИЛИ
+per-user `protected_until_at` ИЛИ `is_observer = true` (флот возвращается
+без боя). Spy / acs / moon-destruction handlers НЕ обновлены — это
+существующая дыра pre-69 (защита новичков отсутствовала и там); вне
+scope плана 69, отдельный план при необходимости.
+
 - **Категория**: домен / механика
 - **Цвет**: 🔴
 - **Origin**: `na_user.protection_time INT(10)` — unix таймстамп до
@@ -121,6 +142,16 @@ nova-backend для поддержки legacy-вселенной.
   каждому attack
 
 ### D-005. Observer flag (привилегированный статус)
+
+✅ **ЗАКРЫТО** (план 69, 2026-04-28). Поле `users.is_observer boolean
+NOT NULL DEFAULT false` добавлено миграцией 0072 (домен-флаг, не
+RBAC-роль — `users.role` удалён ранее миграцией 0070, роли мигрировали
+в identity-сервис). Фильтр `is_observer = false` добавлен везде, где
+был фильтр `umode = false` для публичных рейтингов: `score.Top`,
+`score.TopAlliances`, `score.PlayerRank`, `records.topScore`,
+`score/handler.go` online-статистика, `galaxy/repository.go` рейтинг
+в галактика-обзоре. Не добавлен в `score.RecalcAll` (observer всё
+равно играет, очки считаем) и `score.VacationPlayers`.
 
 - **Категория**: домен
 - **Цвет**: 🔴
@@ -152,6 +183,11 @@ nova-backend для поддержки legacy-вселенной.
 
 ### D-007. UI customization (templatepackage/theme/skin)
 
+🚫 **ОТКАЗ** (план 69, 2026-04-28). YAGNI: у nova одна тема, у origin
+одна тема (pixel-perfect клон `standard`). Свободный выбор тем — отдельным
+планом если понадобится. В legacy-PHP-схеме поля присутствуют,
+но в первой итерации oxsar-nova не реплицируются.
+
 - **Категория**: домен
 - **Цвет**: 🔴
 - **Origin**: `templatepackage`, `imagepackage`, `theme`,
@@ -168,6 +204,12 @@ nova-backend для поддержки legacy-вселенной.
   (`projects/origin-frontend/themes/`)
 
 ### D-008. Profession (профессия игрока)
+
+✅ **ЗАКРЫТО** (миграция 0046, до плана 69). Поле `users.profession TEXT
+NOT NULL DEFAULT 'none'` + `users.profession_changed_at TIMESTAMPTZ`
++ полный handler с 14-day cooldown (`internal/profession/service.go`,
+`ErrChangeTooSoon`). План 69 Ф.0 (дельта-аудит) подтвердил: уже
+закрыто, в Ф.1 не включаем.
 
 - **Категория**: домен / механика
 - **Цвет**: 🔴
@@ -299,6 +341,13 @@ nova-backend для поддержки legacy-вселенной.
 
 ### D-016. Planet teleport rate-limiting
 
+✅ **ЗАКРЫТО** (план 69, 2026-04-28). Поле `users.last_planet_teleport_at
+timestamptz` добавлено миграцией 0072. Helper для проверки cooldown'а
+будет добавлен в плане 72 (origin-фронт смены home-планеты) — поле
+готово к использованию. **Не дублирует** `stargate_cooldowns`
+(миграция 0062): stargate — это прыжок флота между лунами per
+planet_id; teleport — смена «домашней» планеты per user_id.
+
 - **Категория**: домен
 - **Цвет**: 🟡
 - **Origin**: `na_user.planet_teleport_time INT(11)`
@@ -342,6 +391,14 @@ nova-backend для поддержки legacy-вселенной.
 
 ### D-019. Home planet (hp + curplanet vs только cur_planet_id)
 
+🚫 **ОТКАЗ** (план 69, 2026-04-28). Не вводим `home_planet_id` ни в
+каком виде. Обоснование (вариант «в»): в nova нет UI/UX концепции
+«домашней планеты» — игрок переключается через `cur_planet_id` /
+session-state. R10 (users cross-universe) + per-universe planets
+создали бы конфликт. Когда понадобится cross-universe state
+(preferred-планета per вселенная) — отдельный план с
+`user_universe_state`, не сейчас.
+
 - **Категория**: домен
 - **Цвет**: 🟡
 - **Origin**: `hp INT(10)` (главная планета — куда возвращаются
@@ -356,6 +413,14 @@ nova-backend для поддержки legacy-вселенной.
 
 ### D-020. Chat read tracking (last_chat / last_chatally / chat_languageid)
 
+✅ **ЗАКРЫТО** (план 69, 2026-04-28). Поля
+`users.last_global_chat_read_at`, `users.last_ally_chat_read_at`
+(timestamptz, nullable) добавлены миграцией 0072. Endpoints
+`POST /api/chat/{kind}/read` и `GET /api/chat/{kind}/unread` в
+`internal/chat/handler.go` (kind = global/ally). `chat_languageid` —
+**отказ** (YAGNI: `users.language` уже есть с миграции 0001, отдельный
+язык чата избыточен).
+
 - **Категория**: домен
 - **Цвет**: 🔴
 - **Origin**: `last_chat`, `last_chatally`, `chat_languageid`
@@ -367,6 +432,11 @@ nova-backend для поддержки legacy-вселенной.
 - **Объём**: миграция + frontend updates; 2-3 дня
 
 ### D-021. Race (раса персонажа)
+
+🚫 **ОТКАЗ** (план 69, 2026-04-28). Мёртвое поле в legacy-PHP-схеме:
+`na_user.race` есть с дефолтом 1, но в коде origin не используется
+(архитектурная заглушка без поведения). См. roadmap-report «Часть V».
+Не реплицируем.
 
 - **Категория**: домен / механика
 - **Цвет**: 🔴
@@ -636,13 +706,55 @@ vs 11 при basic=10000). Все cost_factor в origin.yaml override
 ### D-035. EVENT_DELIVERY_ARTEFACTS (доставка артефактов флотом)
 
 - **Категория**: event-loop / механика
-- **Цвет**: 🟠
+- **Цвет**: 🟢 (закрыто 2026-04-28, план 65 Ф.2)
 - **Origin**: доставка артефакта между планетами через флот
-- **Nova**: `KindDeliveryUnits/Resources` объявлены, но не
-  реализованы
-- **Как сделать**: реализовать handler в `internal/fleet/`
-- **Объём**: 5-7 дней
-- **Связь**: nova-backlog
+  (`EventHandler::transport` ветка `EVENT_DELIVERY_ARTEFACTS` +
+  `Artefact::onOwnerChange`).
+- **Nova**: `KindDeliveryArtefacts Kind = 23` + handler
+  `HandleDeliveryArtefacts` в
+  [internal/event/handlers.go](../../../projects/game-nova/backend/internal/event/handlers.go).
+- **Решение**:
+  - typed payload `DeliveryArtefactsPayload{FleetID, ArtefactIDs[]}`
+    (R13); получатель и планета назначения берутся из
+    `e.UserID`/`e.PlanetID` (как у demolish — не дублируем в payload);
+  - семантика: UPDATE `artefacts_user.user_id/planet_id` на получателя,
+    флот → `returning`, ресурсы НЕ трогаем (отличие от обычного
+    TRANSPORT — см. EventHandler.class.php:2688 «if mode != DELIVERY_ARTEFACTS»);
+  - `active → held` с обнулением `activated_at`/`expire_at`. Revert
+    эффектов не зовём синхронно — nova вычисляет effect-стек по списку
+    активных артефактов на каждом чтении (см.
+    [simplifications.md](../../simplifications.md));
+  - per-universe (R10): обе стороны (sender, recipient) проверяются в
+    одной вселенной через `users.universe_id` JOIN — защита от багов
+    биржи плана 68;
+  - идемпотентность: артефакт уже у получателя → skip; флот
+    `state ≠ outbound` → no-op (ArriveHandler-паттерн).
+- **Регистрация**: `withAchievement(HandleDeliveryArtefacts)` (без
+  `withScore` — артефакты не дают очков; без `withDailyQuest` — нет
+  такого квеста в дизайне).
+- **Тесты**:
+  [delivery_artefacts_test.go](../../../projects/game-nova/backend/internal/event/delivery_artefacts_test.go) —
+  round-trip JSON, rapid-property на skip-decision, 5 golden-сценариев
+  через `TEST_DATABASE_URL` (single/three artefacts delivered, idempotent
+  replay, active reset to held, fleet-not-outbound noop), 5 negative
+  payload-validation кейсов.
+- **Объём фактический**: ~210 строк handler + ~430 строк тестов.
+- **Связь**: план 65 Ф.2.
+
+### D-035b. KindExchangeExpire / KindExchangeBan — перенос в план 68
+
+- **Категория**: event-loop / scope
+- **Цвет**: ⚪ (отложено — перенесено)
+- **Решение 2026-04-28**: stub-handler с `ErrSkip` нарушал бы R15
+  (без TODO/MVP-сокращений). Концептуально оба Kind'а — биржевые и
+  должны жить рядом со своим service'ом в `internal/exchange/`, не в
+  общем `internal/event/handlers.go`.
+- **Где будут реализованы**: план 68 (биржа артефактов) — handler'ы
+  + регистрация в `cmd/worker/main.go` + миграция таблиц
+  `exchange_lots`/`exchange_bans`.
+- **Снижение scope плана 65** с 6 Kind'ов до 5 (Demolish ✅,
+  DeliveryArtefacts ✅, AttackDestroyBuilding, AttackAllianceDestroyBuilding,
+  AllianceAttackAdditional, TeleportPlanet).
 
 ### D-036. EVENT_ALIEN_FLY_UNKNOWN / GRAB_CREDIT / CHANGE_MISSION_AI
 

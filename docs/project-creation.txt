@@ -11586,3 +11586,92 @@ origin/alien.GenerateFleet.
 **Объём** — ~1.5 часа в активном темпе. ~700 строк Go (production:
 handlers/payload/service/loader_pgx) + ~600 строк тестов
 (round-trip/property/golden).
+
+================================================================================
+Итерация 69-Ф.6+Ф.7 (2026-04-28). План 69: финализация ремастера.
+================================================================================
+
+**Контекст**: план 69 был сильно продвинут предыдущими сессиями
+(Ф.0 дельта-аудит — 80c7ef08e0; Ф.1 миграция 0072 — 32d24a1f2b;
+Ф.3-Ф.5 handlers + защитная логика — b47eb98f81). Эта сессия
+закрывала Ф.6 (verify notes endpoint) + Ф.7 (финализация).
+
+**Результат**: notes endpoint УЖЕ существовал — `GET/PUT /api/notepad`
+backed by таблицей `user_notepad` (миграция 0050). Зарегистрирован
+в `cmd/server/main.go`, реализация в `internal/notepad/handler.go`
+(MaxLength=50_000 символов). Frontend `NotepadScreen.tsx` тоже на
+месте, i18n-ключи `notepad.*` в ru.yml/en.yml уже были (план 33-35).
+
+**Что добавлено**:
+
+1. **OpenAPI** (R2 — задним числом для уже работающего endpoint):
+   - `paths./api/notepad` (GET/PUT) — 401 для неаутентифицированных,
+     400 на превышение MaxLength или невалидный JSON, 204 на успех
+     PUT, 200 на GET (пустой объект если запись отсутствует).
+   - Tag `notepad` добавлен в список tags.
+   - Schemas `Notepad { content, updated_at }` и
+     `NotepadSaveRequest { content (maxLength: 50000) }`.
+
+2. **internal/notepad/handler_test.go** (новый файл, ~85 строк):
+   - `TestSave_Unauthorized` / `TestGet_Unauthorized` — без userID
+     в контексте → 401.
+   - `TestSave_InvalidJSON` — битое тело → 400 (handler не дойдёт
+     до БД, безопасно с pool=nil).
+   - `TestSave_TooLong` — content > MaxLength → 400 «too long»
+     (тоже до БД, pool=nil безопасен).
+   - `TestSave_AtMaxLength` — placeholder под TEST_DATABASE_URL
+     (full round-trip требует FK на users).
+
+3. **internal/auth/authtest/** (новый пакет, ~17 строк):
+   - `WithUserID(ctx, userID)` — helper для тестов, ставит userID
+     в контекст под публичным ключом `auth.UserIDKey`. Чтобы
+     тесты не выпускали JWT и не поднимали middleware-стек.
+   - `auth.userIDKey` → `auth.UserIDKey` (экспортирован).
+
+**Архитектурные решения**:
+
+- *CHECK на размер content в миграции — НЕ добавляем*. План 69
+  изначально упоминал «16KB CHECK», но handler уже валидирует
+  50_000 символов. SQL-CHECK дублирует серверную проверку,
+  усложняет будущие правки лимита (миграция вместо константы) и
+  не предохраняет от ничего, что уже не закрыто handler'ом.
+  Принимающий путь один — `/api/notepad`, прямых INSERT'ов в
+  `user_notepad` из других пакетов нет.
+- *Лимит 50_000 символов вместо «16KB»*. UTF-8 16KB = ~5K-16K
+  символов в зависимости от языка. 50K символов покрывают
+  типичные сценарии (списки координат, длинные стратегические
+  заметки) без риска перегрузки storage'а (1 row × 50KB max
+  per user — мизерный объём).
+- *R8 Prometheus метрики не добавлены*. Notepad — низкочастотный
+  endpoint, общие request-метрики Chi-router'а покрывают его без
+  custom labels. Защита от злоупотреблений — на rate-limiter'е
+  глобальном (план 32 multi-instance), не per-route.
+- *R9 Idempotency*. PUT идемпотентен по семантике (полная замена
+  + UPSERT). Idempotency-Key header не нужен — клиент дебаунсит
+  сохранения, повторная отправка идентичного тела даёт корректный
+  no-op в БД.
+
+**divergence-log.md статусы**:
+
+✅ закрыты:
+- D-001 (max_points — миграция 0072 + score.RecalcUser)
+- D-003 (account_deletion — архитектурно лучше через 0051 codes)
+- D-004 (protected_until_at — 0072 + fleet/attack.go)
+- D-005 (is_observer — 0072 + observer-фильтры в score/galaxy)
+- D-008 (profession — закрыто 0046 до плана 69)
+- D-016 (last_planet_teleport_at — 0072, helper в плане 72)
+- D-020 (last_global/ally_chat_read_at — 0072 + chat handlers)
+
+🚫 отказы:
+- D-007 (ui_theme/ui_pack — YAGNI, одна тема)
+- D-019 (home_planet_id — R10 / YAGNI, нет UI-концепции)
+- D-021 (race — мёртвое поле в legacy-PHP)
+
+**R0-инвариант** (modern не сломан): `go test
+./internal/notepad/ ./internal/auth/` зелёные. `go build ./...`
+зелёный. `go vet` — единственная warning «unreachable code» в
+internal/admin/handler.go:202 — pre-existing, не моя.
+
+**Объём** — ~30 минут. +50 строк OpenAPI (paths + schemas),
++85 строк тестов notepad, +17 строк auth/authtest, ~120 строк
+правок в плане 69 + divergence-log.md + project-creation.txt.
