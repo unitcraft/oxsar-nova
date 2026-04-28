@@ -1,9 +1,10 @@
-// Левое меню origin-фронта (план 72 Ф.1 + Ф.2 Spring 1).
+// Левое меню origin-фронта (план 72 Ф.1 + Ф.2 Spring 1 + Ф.3 Spring 2).
 //
-// План 72 Ф.2 Spring 1: пункты Spring 1-экранов (Обзор, Империя,
-// Строения, Исследования, Верфь, Галактика, Миссии) теперь ведут на
-// настоящие маршруты react-router-dom; остальные пункты остаются
-// заглушками `#…` до Spring 2-5.
+// Spring 1: Обзор, Империя, Строения, Исследования, Верфь, Галактика,
+// Миссии.
+// Spring 2 ч.1: Альянс. Spring 2 ч.2: Ресурсы (рынок ресурсов), Ремонт,
+// Флот (операции), Боевая статистика. Чат/Сообщения/Друзья/Статистика/
+// Настройки остаются заглушками до Spring 3-5.
 //
 // Намеренные расхождения с legacy:
 //   - **Achievements**, **Tutorial** — пункты скрыты (см. план 72 §«не
@@ -63,19 +64,21 @@ export function LeftMenu() {
         <MenuGroup className="menu-info" label="Империя" />
         <RouterLink to="/" label="Обзор" />
         <RouterLink to="/empire" label="Империя" />
-        <AnchorLink href="#resource" label="Ресурсы" />
+        <RouterLink to="/resource-market" label="Ресурсы" />
 
         <MenuGroup className="menu-prod" label="Производство" />
         <RouterLink to="/constructions" label="Строения" />
         <RouterLink to="/research" label="Исследования" />
         <RouterLink to="/shipyard" label="Верфь" />
-        <AnchorLink href="#repair" label="Ремонт" />
+        <RouterLink to="/repair" label="Ремонт" />
 
         <MenuGroup className="menu-user" label="Игрок" />
         <RouterLink to="/galaxy" label="Галактика" />
         <RouterLink to="/mission" label="Миссии" />
-        <AnchorLink href="#fleet" label="Флот" />
-        <AnchorLink href="#alliance" label="Альянс" />
+        <RouterLink to="/fleet-operations" label="Флот" />
+        <RouterLink to="/alliance" label="Альянс" />
+        <RouterLink to="/market" label="Артефакты" />
+        <RouterLink to="/battlestats" label="История боёв" />
 
         <MenuGroup className="menu-other" label="Прочее" />
         <AnchorLink href="#chat" label="Чат" />

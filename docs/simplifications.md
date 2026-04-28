@@ -1992,6 +1992,89 @@ unit-тесты на форматтеры/валидаторы/router-маршр
 
 ---
 
+## 2026-04-28 — План 72 Ф.3 Spring 2 ч.1: 12 alliance-экранов origin-фронта
+
+### [P72.S2.A] «Текущие заявки» (own applications) — пустой блок
+- **Где**: `frontends/origin/src/features/alliance/AllianceOverviewScreen.tsx`.
+- **Что упрощено**: legacy `ally.tpl` показывает блок «Текущие заявки»
+  пользователя (где он подал заявки на вступление, но альянс не одобрил).
+  В origin-фронте этот блок не реализован — backend nova не предоставляет
+  endpoint типа `GET /api/users/me/applications`.
+- **Почему**: nova-API ориентирован на actor-сторону: alliance-owner видит
+  pending applications через `GET /api/alliances/{id}/applications`, но
+  applicant своих pending не видит. В Spring 1 закрытие выглядит как
+  «в URL переход → экран альянса покажет appInProgress».
+- **Как чинить**: расширить openapi.yaml `GET /api/users/me/applications`
+  и подмешать блок в AllianceOverviewScreen.
+- **Приоритет**: L (UX-удобство, не блокер).
+
+### [P72.S2.B] PATCH alliance name/tag — read-only
+- **Где**: `frontends/origin/src/features/alliance/AllianceManageScreen.tsx`.
+- **Что упрощено**: legacy `manage_ally.tpl` имеет 2 формы для смены
+  tag и name альянса. В origin это поля read-only — backend на
+  `/api/alliances/{id}` экспонирует только `GET` и `DELETE`.
+- **Почему**: rename альянса — критическая операция (ребрендинг,
+  audit-log, рассылки). Backend плана 67 не закрыл её, а в Spring 2
+  делать backend-расширения R0 запрещает.
+- **Как чинить**: backend-PR на `PATCH /api/alliances/{id}` с rate-limit
+  (1 раз в 30 дней) + audit-запись.
+- **Приоритет**: M.
+
+### [P72.S2.C] Memberlist preferences (sortBy / showmember) не реализованы
+- **Где**: `frontends/origin/src/features/alliance/AllianceManageScreen.tsx`.
+- **Что упрощено**: legacy `manage_ally.tpl` имеет настройки
+  «Сортировать список членов по очкам/имени» + «Показывать список членов
+  всем». В origin-фронте только toggle is_open. Серверной модели нет.
+- **Почему**: эти поля в legacy жили в табличке `aks` (ally settings),
+  в nova-схеме `alliances` их аналога нет. Отображение списка членов
+  доступно владельцу + членам по умолчанию.
+- **Как чинить**: добавить колонки `member_visibility`, `member_sort` в
+  alliances + расширить openapi.yaml.
+- **Приоритет**: L.
+
+### [P72.S2.D] Granular permissions для не-owner'а UI пока не работают
+- **Где**: alliance-экраны — кнопки management (manage/ranks/diplomacy/
+  descriptions) видны только owner'у.
+- **Что упрощено**: nova frontend и origin frontend оба ограничивают
+  UI-проверки `isOwner`. Бэкенд проверяет `can_manage_ranks`,
+  `can_change_description` и т.д. полноценно — если кнопка случайно
+  будет видна, 403 защитит.
+- **Почему**: уже зафиксировано в плане 67 (P67.S5.B): Member DTO без
+  `rank_id`, поэтому frontend не может разрешить `hasPerm()` без owner'а.
+  Origin-фронт наследует то же ограничение.
+- **Как чинить**: общий fix с планом 67 — добавить `rank_id` (опционально
+  + `effective_perms`) в Member DTO. Один patch на nova и origin.
+- **Приоритет**: M.
+
+### [P72.S2.E] Alliance audit/diplomacy/transfer без RTL-тестов
+- **Где**: `src/features/alliance/*.test.ts`.
+- **Что упрощено**: тесты unit-only (utility-функции, контракт роутов,
+  i18n-маппинг). Рендеринг и взаимодействие (например, transfer-flow:
+  step1 → code → confirm) не покрыты автотестами.
+- **Почему**: testing-library/react не подключён в origin-фронте,
+  backend-инвариант лежит в плане 67 alliance-tests + alliance/api.go
+  (server-side покрыт).
+- **Как чинить**: добавить @testing-library/react + jsdom при подключении
+  screenshot-diff CI плана 73. Тогда же — interaction-тесты для transfer/
+  ranks/diplomacy.
+- **Приоритет**: L.
+
+### [P72.S2.F] Pixel-perfect доводка alliance отложена на план 73
+- **Где**: все alliance-экраны.
+- **Что упрощено**: HTML-структура и CSS-классы (`ntable`, `center`,
+  `idiv`, `false`/`true`, `button`) идентичны legacy-PHP, но
+  попиксельная сверка с legacy-screenshots не выполнена. Точная
+  визуальная сверка отложена до screenshot-diff CI (план 73).
+- **Почему**: то же обоснование что у P72.S1.G — без screenshot-diff
+  CI ручной pixel-perfect — это бесконечная регрессия.
+- **Как чинить**: план 73 (screenshot-diff CI) сравнит origin-фронт с
+  legacy-PHP в Docker-режиме, отчёт ≤ 0.5%.
+- **Приоритет**: L.
+
+**Связанный план**: [docs/plans/72-remaster-origin-frontend-pixel-perfect.md](plans/72-remaster-origin-frontend-pixel-perfect.md)
+
+---
+
 ## 2026-04-28 — План 68 Ф.1-Ф.7: биржа артефактов (backend)
 
 ### [P68.A] Currency: users.credit как оксариты (без переименования)
