@@ -50,7 +50,8 @@ Slot — натуральное число от `1` без ведущих нул
 
 | Slot | План / Задача | Файлы (паттерны) | Старт | Ожидаемый коммит |
 |---|---|---|---|---|
-| _(пусто)_ | | | | |
+| 1 | План 68 биржа артефактов backend | projects/game-nova/backend/internal/exchange/, internal/event/exchange_handlers*.go, internal/event/kinds.go, cmd/server/main.go, cmd/worker/main.go, pkg/metrics/exchange.go, api/openapi.yaml (секция /api/exchange/*), migrations/00NN_exchange.sql, configs/i18n/{ru,en}.yml (exchange.*), configs/balance/{default,origin}.yaml (exchange:) | 2026-04-28 | feat(exchange): backend (план 68) |
+| 2 | План 72 Ф.2 Spring 1 (7 экранов origin-фронта) | projects/game-nova/frontends/origin/, docs/plans/72-remaster-origin-frontend-pixel-perfect.md, docs/simplifications.md, docs/project-creation.txt, docs/active-sessions.md | 2026-04-28 | feat(origin/frontend): Ф.2 Spring 1 — 7 главных экранов |
 
 ## Примеры пересечений (история, для обучения)
 
