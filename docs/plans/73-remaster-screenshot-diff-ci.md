@@ -1,7 +1,7 @@
 # План 73 (ремастер): Screenshot-diff CI (Playwright + visual regression)
 
 **Дата**: 2026-04-28
-**Статус**: Ф.1 ✅, Ф.2 🟡 (smoke 7/22), Ф.2.5 / Ф.3-Ф.6 — отдельные сессии
+**Статус**: Ф.1 ✅, Ф.2 ✅ (22/22), Ф.3-Ф.6 — отдельные сессии
 **Зависимости**: блокируется планом 72 (хотя бы первые экраны
 готовы для эталонов).
 
@@ -10,13 +10,14 @@
 - ✅ **Ф.1** (2026-04-28): инфраструктура `tests/e2e/origin-baseline/` —
   Playwright spec, screens.ts (22 экрана Spring 1+2), `take-screenshots.sh`,
   `update-baselines.sh`, README с регламентом.
-- 🟡 **Ф.2** (2026-04-28): snapshot smoke-набора 7/22 экранов
-  (S-001 Main, S-002 Research, S-003 Constructions, S-012 Alliance overview,
-  S-025 Resource, S-026 Market, S-048 Repair) — закоммичены в
-  `tests/e2e/origin-baseline/screenshots/`.
-- ⏳ **Ф.2.5** (отдельная сессия): снять остальные 15 экранов
-  (Shipyard, Galaxy, Mission, Empire, 11 alliance-актионов, Battlestats)
-  командой `SMOKE=0 bash tests/e2e/origin-baseline/take-screenshots.sh`.
+- ✅ **Ф.2** (2026-04-28): snapshot всех 22/22 экранов Spring 1+2
+  закоммичен в `tests/e2e/origin-baseline/screenshots/`.
+  Spring 1 (7): Main, Research, Constructions, Shipyard, Galaxy,
+  Mission, Empire.
+  Spring 2 alliance (11): overview, members, diplomacy, ranks,
+  globalmail, search, applications, relations, found, manage,
+  apply, candidates (12 действий → 12 PNG).
+  Spring 2 прочее (4): Resource, Market, Repair, Battlestats.
 - ⏳ **Ф.3** (после Spring 3+4+5): Playwright suite на новый origin-фронт +
   diff через pixelmatch (threshold 0.5%).
 - ⏳ **Ф.4**: CI-job `.github/workflows/screenshot-diff.yml`.
