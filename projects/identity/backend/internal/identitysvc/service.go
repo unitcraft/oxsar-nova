@@ -21,16 +21,16 @@ import (
 )
 
 var (
-	ErrUserExists        = errors.New("authsvc: user already exists")
-	ErrInvalidCredential = errors.New("authsvc: invalid credentials")
-	ErrUserBanned        = errors.New("authsvc: account banned")
-	ErrConsentRequired   = errors.New("authsvc: pdn consent required")
+	ErrUserExists        = errors.New("identitysvc: user already exists")
+	ErrInvalidCredential = errors.New("identitysvc: invalid credentials")
+	ErrUserBanned        = errors.New("identitysvc: account banned")
+	ErrConsentRequired   = errors.New("identitysvc: pdn consent required")
 	// ErrTermsRequired — план 47: пользователь не принял Договор-оферту,
 	// Правила игры и Политику возврата.
-	ErrTermsRequired = errors.New("authsvc: terms acceptance required")
+	ErrTermsRequired = errors.New("identitysvc: terms acceptance required")
 	// ErrUsernameForbidden — план 46 (149-ФЗ): имя содержит запрещённый
 	// корень из UGC-blacklist.
-	ErrUsernameForbidden = errors.New("authsvc: username forbidden")
+	ErrUsernameForbidden = errors.New("identitysvc: username forbidden")
 )
 
 // PrivacyPolicyVersion — версия Политики конфиденциальности, которую
@@ -133,7 +133,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (User, jwtrs.T
 		return User{}, jwtrs.Tokens{}, ErrTermsRequired
 	}
 	if len(username) < 3 || len(username) > 24 {
-		return User{}, jwtrs.Tokens{}, fmt.Errorf("authsvc: username length 3..24")
+		return User{}, jwtrs.Tokens{}, fmt.Errorf("identitysvc: username length 3..24")
 	}
 	// План 46 (149-ФЗ): проверка никнейма по UGC-blacklist.
 	if s.blacklist != nil {
@@ -142,10 +142,10 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (User, jwtrs.T
 		}
 	}
 	if !strings.Contains(email, "@") {
-		return User{}, jwtrs.Tokens{}, fmt.Errorf("authsvc: invalid email")
+		return User{}, jwtrs.Tokens{}, fmt.Errorf("identitysvc: invalid email")
 	}
 	if len(in.Password) < 8 {
-		return User{}, jwtrs.Tokens{}, fmt.Errorf("authsvc: password >= 8 chars")
+		return User{}, jwtrs.Tokens{}, fmt.Errorf("identitysvc: password >= 8 chars")
 	}
 
 	hash, err := auth.HashPassword(in.Password)
@@ -273,7 +273,7 @@ func (s *Service) GetUser(ctx context.Context, userID string) (User, error) {
 	`, userID).Scan(&u.ID, &u.Username, &u.Email, &u.Roles)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return User{}, fmt.Errorf("authsvc: user not found")
+			return User{}, fmt.Errorf("identitysvc: user not found")
 		}
 		return User{}, fmt.Errorf("get user: %w", err)
 	}
@@ -305,7 +305,7 @@ func (s *Service) GetActiveUniverses(ctx context.Context, userID string) ([]stri
 // План 38 Ф.5: SpendCredits/AddCredits/CreditBalance/CreditHistory удалены.
 // Кошельки в billing-service (см. internal/billing/wallet.go).
 
-// DeleteAccount анонимизирует пользователя в auth-db (план 44, ст. 14 152-ФЗ).
+// DeleteAccount анонимизирует пользователя в identity-db (план 44, ст. 14 152-ФЗ).
 //
 // По 152-ФЗ достаточно деперсонализации (ст. 3 п. 9), а не физического
 // удаления записи: email и username заменяются на технические значения,
@@ -321,7 +321,7 @@ func (s *Service) GetActiveUniverses(ctx context.Context, userID string) ([]stri
 // что при Refresh пользователь отсекается через deleted_at IS NULL.
 //
 // Полное удаление игровых объектов (планет, флотов, рейтингов) — задача
-// игровых сервисов; в auth-service владелец становится «удалённым», и они
+// игровых сервисов; в identity-service владелец становится «удалённым», и они
 // сами разруливают (story-параллельно flow в game-nova/settings/delete.go,
 // который анонимизирует игровую таблицу users).
 //
@@ -332,12 +332,12 @@ func (s *Service) GetActiveUniverses(ctx context.Context, userID string) ([]stri
 // `id[:8]`. Последний блок — гарантированно случаен.
 func (s *Service) DeleteAccount(ctx context.Context, userID string) error {
 	if userID == "" {
-		return fmt.Errorf("authsvc: empty user id")
+		return fmt.Errorf("identitysvc: empty user id")
 	}
 	// UUIDv7: tttttttt-tttt-7xxx-yxxx-xxxxxxxxxxxx — берём последний блок.
 	idx := strings.LastIndex(userID, "-")
 	if idx < 0 || idx >= len(userID)-1 {
-		return fmt.Errorf("authsvc: invalid user id")
+		return fmt.Errorf("identitysvc: invalid user id")
 	}
 	suffix := userID[idx+1:]
 	tag, err := s.db.Pool().Exec(ctx, `
@@ -360,7 +360,7 @@ func (s *Service) DeleteAccount(ctx context.Context, userID string) error {
 // Минимальная длина нового пароля — 8 символов (как при регистрации).
 func (s *Service) ChangePassword(ctx context.Context, userID, current, newPwd string) error {
 	if len(newPwd) < 8 {
-		return fmt.Errorf("authsvc: password >= 8 chars")
+		return fmt.Errorf("identitysvc: password >= 8 chars")
 	}
 	var currentHash string
 	err := s.db.Pool().QueryRow(ctx,

@@ -1,4 +1,4 @@
-// Command auth-service — единая аутентификация для всех вселенных oxsar-nova.
+// Command identity-service — единая аутентификация для всех вселенных oxsar-nova.
 // Выпускает RSA-256 JWT, обслуживает OAuth, управляет global credits.
 package main
 
@@ -32,7 +32,7 @@ const drainDelay = 10 * time.Second
 
 func main() {
 	if err := run(); err != nil {
-		slog.Error("auth-service exit", slog.String("err", err.Error()))
+		slog.Error("identity-service exit", slog.String("err", err.Error()))
 		os.Exit(1)
 	}
 }
@@ -56,7 +56,7 @@ func run() error {
 
 	log := newLogger(envStr("LOG_LEVEL", "info"))
 	slog.SetDefault(log)
-	log.InfoContext(ctx, "starting auth-service", slog.String("addr", addr))
+	log.InfoContext(ctx, "starting identity-service", slog.String("addr", addr))
 
 	pool, err := storage.OpenPostgres(ctx, dbURL)
 	if err != nil {
