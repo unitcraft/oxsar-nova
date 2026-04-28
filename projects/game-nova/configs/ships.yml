@@ -278,3 +278,36 @@ ships:
     speed: 13000
     fuel: 100
     cost: { metal: 10000, silicon: 10000, hydrogen: 1000 }
+
+  armored_terran:    # план 64 R0-exception
+    id:     358
+    cost:   { metal: 900000000, silicon: 100000000, hydrogen: 50000 }
+    attack: 330
+    shield: 15000
+    shell:  100005000
+    cargo:  10000
+    speed:  3250
+    fuel:   100000
+    front:  24
+
+  ship_collector:    # план 64 R0-exception
+    id:     353
+    cost:   { metal: 2000, silicon: 1200, hydrogen: 500 }
+    attack: 0
+    shield: 5
+    shell:  370
+    cargo:  2000
+    speed:  1700
+    fuel:   1
+    front:  10
+
+  ship_transplantator:    # план 64 R0-exception
+    id:     352
+    cost:   { metal: 1000000, silicon: 500000, hydrogen: 200000 }
+    attack: 500
+    shield: 20000
+    shell:  170000
+    cargo:  2000000
+    speed:  4000
+    fuel:   400000
+    front:  12

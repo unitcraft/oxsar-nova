@@ -81,6 +81,9 @@ fleet:
   - { id: 203, key: unit_a_frigate,      name: "Alien Frigate" }
   - { id: 204, key: unit_a_torpedocarier, name: "Alien Torpedo Carrier" }
 
+  - { id: 352, key: ship_transplantator, name: "Transplantator" }    # план 64 R0-exception
+  - { id: 353, key: ship_collector, name: "Collector" }    # план 64 R0-exception
+  - { id: 358, key: armored_terran, name: "Armored Terran" }    # план 64 R0-exception
 defense:
   - { id: 43,  key: rocket_launcher,     name: "Rocket Launcher" }
   - { id: 44,  key: light_laser,         name: "Light Laser" }

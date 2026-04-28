@@ -1,0 +1,364 @@
+# configs/balance/origin.yaml
+# Override-файл для вселенной origin (oxsar2-classic balance).
+# Применяется поверх дефолтных configs/{buildings,units,rapidfire,...}.yml.
+# Источник: импорт из docker-mysql-1 (origin-стенд) таблиц
+# na_construction, na_ship_datasheet, na_rapidfire.
+# Сгенерировано cmd/tools/import-legacy-balance/main.go (план 64 Ф.2).
+# Дата импорта: 2026-04-28 09:54:45 UTC
+#
+# R0: дефолтный configs/buildings.yml не модифицируется. Этот файл —
+# единственный источник чисел origin, отличающихся от nova-defaults.
+# Для динамических формул (prod_*, cons_* с {temp}/{tech=N}) числа НЕ
+# предвычисляются — реализация остаётся в Go (internal/economy/
+# formulas.go и internal/origin/economy/), а коэффициенты — в Globals
+# bundle (internal/balance.Globals).
+
+version: 1
+universe: origin
+
+# globals: --- secret weapon. Origin-формулы prod_* совпадают с nova
+# (verify 2026-04-28 против live origin docker-mysql-1). Поэтому
+# Globals по умолчанию == ModernGlobals(); ничего перекрывать не нужно.
+
+# Здания. Override применяется поверх configs/buildings.yml.
+# Поля, не указанные здесь — наследуются из nova-defaults.
+buildings:
+  defense_factory:
+    # origin: id=101 name=DEFENSE_FACTORY
+    cost_base:
+      metal:    350
+      silicon:  200
+      hydrogen: 100
+    cost_factor: 2
+  exch_office:
+    # origin: id=108 name=EXCH_OFFICE
+    cost_base:
+      metal:    0
+      silicon:  1000
+      hydrogen: 500
+    cost_factor: 1.5
+  exchange:
+    # origin: id=107 name=EXCHANGE
+    cost_base:
+      metal:    0
+      silicon:  500000
+      hydrogen: 500000
+    cost_factor: 1.2
+  hydrogen_lab:
+    # origin: id=3 name=HYDROGEN_LAB
+    cost_base:
+      metal:    225
+      silicon:  75
+      hydrogen: 0
+    cost_factor: 1.5
+    # has_dynamic_production: true
+    # origin prod formula: floor(10 * {level} * pow(1.1+{tech=25}*0.0008, {level} )* (-0.002 * {temp} + 1.28))
+    # реализация — internal/origin/economy/buildings.go
+    # has_dynamic_consumption: true
+    # origin cons formula: floor(20 * {level} * pow(1.1-{tech=18}*0.0005, {level}))
+  hydrogen_plant:
+    # origin: id=5 name=HYDROGEN_PLANT
+    cost_base:
+      metal:    900
+      silicon:  360
+      hydrogen: 180
+    cost_factor: 1.8
+    # has_dynamic_production: true
+    # origin prod formula: floor(50 * {level} * pow(1.15+{tech=18} * 0.005, {level}))
+    # реализация — internal/origin/economy/buildings.go
+    # has_dynamic_consumption: true
+    # origin cons formula: floor(10 * {level} * pow(1.1-{tech=18} * 0.0005, {level}))
+  hydrogen_storage:
+    # origin: id=11 name=HYDROGEN_STORAGE
+    cost_base:
+      metal:    2000
+      silicon:  2000
+      hydrogen: 0
+    cost_factor: 2
+  metal_mine:
+    # origin: id=1 name=METALMINE
+    cost_base:
+      metal:    60
+      silicon:  15
+      hydrogen: 0
+    cost_factor: 1.5
+    # has_dynamic_production: true
+    # origin prod formula: floor(30 * {level} * pow(1.1+{tech=23}*0.0006, {level}))
+    # реализация — internal/origin/economy/buildings.go
+    # has_dynamic_consumption: true
+    # origin cons formula: floor(10 * {level} * pow(1.1-{tech=18}*0.0005, {level}))
+  metal_storage:
+    # origin: id=9 name=METAL_STORAGE
+    cost_base:
+      metal:    2000
+      silicon:  0
+      hydrogen: 0
+    cost_factor: 2
+  nano_factory:
+    # origin: id=7 name=NANO_FACTORY
+    cost_base:
+      metal:    1000000
+      silicon:  500000
+      hydrogen: 100000
+    cost_factor: 2
+  repair_factory:
+    # origin: id=100 name=REPAIR_FACTORY
+    cost_base:
+      metal:    800
+      silicon:  400
+      hydrogen: 200
+    cost_factor: 2
+  research_lab:
+    # origin: id=12 name=RESEARCH_LAB
+    cost_base:
+      metal:    200
+      silicon:  400
+      hydrogen: 200
+    cost_factor: 2
+  robotic_factory:
+    # origin: id=6 name=ROBOTIC_FACTORY
+    cost_base:
+      metal:    400
+      silicon:  120
+      hydrogen: 200
+    cost_factor: 2
+  rocket_station:
+    # origin: id=53 name=ROCKET_STATION
+    cost_base:
+      metal:    20000
+      silicon:  20000
+      hydrogen: 1000
+    cost_factor: 2
+  shipyard:
+    # origin: id=8 name=SHIPYARD
+    cost_base:
+      metal:    400
+      silicon:  200
+      hydrogen: 100
+    cost_factor: 2
+  silicon_lab:
+    # origin: id=2 name=SILICON_LAB
+    cost_base:
+      metal:    48
+      silicon:  24
+      hydrogen: 0
+    cost_factor: 1.6
+    # has_dynamic_production: true
+    # origin prod formula: floor(20 * {level} * pow(1.1+{tech=24}*0.0007, {level}))
+    # реализация — internal/origin/economy/buildings.go
+    # has_dynamic_consumption: true
+    # origin cons formula: floor(10 * {level} * pow(1.1-{tech=18}*0.0005, {level}))
+  silicon_storage:
+    # origin: id=10 name=SILICON_STORAGE
+    cost_base:
+      metal:    2000
+      silicon:  1000
+      hydrogen: 0
+    cost_factor: 2
+  solar_plant:
+    # origin: id=4 name=SOLAR_PLANT
+    cost_base:
+      metal:    75
+      silicon:  30
+      hydrogen: 0
+    cost_factor: 1.5
+    # has_dynamic_production: true
+    # origin prod formula: floor(20 * {level} * pow(1.1+{tech=18}*0.0005, {level}))
+    # реализация — internal/origin/economy/buildings.go
+  terra_former:
+    # origin: id=58 name=TERRA_FORMER
+    cost_base:
+      metal:    15000
+      silicon:  30000
+      hydrogen: 70000
+
+# Исследования. Override применяется поверх configs/research.yml.
+research:
+  ballistics_tech:
+    # origin: id=103 name=BALLISTICS_TECH
+    cost_base:
+      metal:    400
+      silicon:  500
+      hydrogen: 0
+    cost_factor: 2
+  combustion_engine:
+    # origin: id=20 name=COMBUSTION_ENGINE
+    cost_base:
+      metal:    400
+      silicon:  0
+      hydrogen: 600
+    cost_factor: 2
+  computer_tech:
+    # origin: id=14 name=COMPUTER_TECH
+    cost_base:
+      metal:    0
+      silicon:  400
+      hydrogen: 600
+  energy_tech:
+    # origin: id=18 name=ENERGY_TECH
+    cost_base:
+      metal:    0
+      silicon:  800
+      hydrogen: 400
+  expo_tech:
+    # origin: id=27 name=EXPO_TECH
+    cost_base:
+      metal:    4000
+      silicon:  8000
+      hydrogen: 4000
+    cost_factor: 2
+  gravi:
+    # origin: id=28 name=GRAVI
+  gun_tech:
+    # origin: id=15 name=GUN_TECH
+    cost_base:
+      metal:    800
+      silicon:  200
+      hydrogen: 0
+    cost_factor: 2
+  hyperspace_engine:
+    # origin: id=22 name=HYPERSPACE_ENGINE
+    cost_base:
+      metal:    10000
+      silicon:  20000
+      hydrogen: 6000
+    cost_factor: 2
+  hyperspace_tech:
+    # origin: id=19 name=HYPERSPACE_TECH
+    cost_base:
+      metal:    0
+      silicon:  4000
+      hydrogen: 2000
+  ign:
+    # origin: id=26 name=IGN
+    cost_base:
+      metal:    240000
+      silicon:  400000
+      hydrogen: 160000
+    cost_factor: 2
+  impulse_engine:
+    # origin: id=21 name=IMPULSE_ENGINE
+    cost_base:
+      metal:    2000
+      silicon:  4000
+      hydrogen: 600
+    cost_factor: 2
+  ion_tech:
+    # origin: id=24 name=ION_TECH
+    cost_base:
+      metal:    1000
+      silicon:  300
+      hydrogen: 100
+    cost_factor: 2
+  laser_tech:
+    # origin: id=23 name=LASER_TECH
+    cost_base:
+      metal:    200
+      silicon:  100
+      hydrogen: 0
+    cost_factor: 2
+  masking_tech:
+    # origin: id=104 name=MASKING_TECH
+    cost_base:
+      metal:    1000
+      silicon:  1000
+      hydrogen: 0
+    cost_factor: 2
+  plasma_tech:
+    # origin: id=25 name=PLASMA_TECH
+    cost_base:
+      metal:    2000
+      silicon:  4000
+      hydrogen: 1000
+    cost_factor: 2
+  shell_tech:
+    # origin: id=17 name=SHELL_TECH
+    cost_base:
+      metal:    1000
+      silicon:  0
+      hydrogen: 0
+    cost_factor: 2
+  shield_tech:
+    # origin: id=16 name=SHIELD_TECH
+    cost_base:
+      metal:    200
+      silicon:  600
+      hydrogen: 0
+    cost_factor: 2
+
+# Корабли. Override применяется поверх configs/ships.yml.
+# Числа nova-default — другие (план 22/26 + ADR-0007/0008);
+# для origin восстанавливаем legacy-числа из na_construction +
+# na_ship_datasheet.
+ships:
+  lancer_ship:
+    # origin: id=102 name=LANCER_SHIP
+    cost: { metal: 2500, silicon: 7500, hydrogen: 15000 }
+    attack: 5500
+    shield: 200
+    shell:  2500
+    cargo:  200
+    speed:  8000
+    fuel:   100
+    front:  8
+  shadow_ship:
+    # origin: id=325 name=SHADOW_SHIP
+    cost: { metal: 1000, silicon: 3000, hydrogen: 1000 }
+    attack: 30
+    shield: 30
+    shell:  500
+    cargo:  75
+    speed:  13000
+    fuel:   35
+    front:  9
+  unit_a_corvette:
+    # origin: id=200 name=UNIT_A_CORVETTE
+    cost: { metal: 19000, silicon: 6000, hydrogen: 2000 }
+    attack: 200
+    shield: 75
+    shell:  2700
+    cargo:  300
+    speed:  20000
+    fuel:   150
+    front:  10
+  unit_a_frigate:
+    # origin: id=203 name=UNIT_A_FRIGATE
+    cost: { metal: 40000, silicon: 30000, hydrogen: 15000 }
+    attack: 1250
+    shield: 150
+    shell:  8500
+    cargo:  2000
+    speed:  10000
+    fuel:   300
+    front:  10
+  unit_a_paladin:
+    # origin: id=202 name=UNIT_A_PALADIN
+    cost: { metal: 3000, silicon: 1000, hydrogen: 200 }
+    attack: 75
+    shield: 50
+    shell:  420
+    cargo:  50
+    speed:  8000
+    fuel:   20
+    front:  10
+  unit_a_screen:
+    # origin: id=201 name=UNIT_A_SCREEN
+    cost: { metal: 20000, silicon: 10000, hydrogen: 0 }
+    attack: 22
+    shield: 5000
+    shell:  3000
+    cargo:  800
+    speed:  10000
+    fuel:   75
+    front:  15
+  unit_a_torpedocarier:
+    # origin: id=204 name=UNIT_A_TORPEDOCARIER
+    cost: { metal: 10000, silicon: 10000, hydrogen: 1000 }
+    attack: 350
+    shield: 100
+    shell:  2100
+    cargo:  200
+    speed:  13000
+    fuel:   100
+    front:  10
+

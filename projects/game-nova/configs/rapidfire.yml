@@ -115,6 +115,13 @@ rapidfire:
     325: 300  # vs Shadow — новое
     # Удалено: 48: 50 (vs Plasma Gun) — не в legacy, было изобретение
 
+    200: 30    # план 64 R0-exception
+    201: 30    # план 64 R0-exception
+    202: 200    # план 64 R0-exception
+    203: 30    # план 64 R0-exception
+    204: 100    # план 64 R0-exception
+    352: 250    # план 64 R0-exception
+    353: 250    # план 64 R0-exception
   # Lancer Ship (102)
   102:
     42: 3     # vs Death Star
@@ -133,3 +140,34 @@ rapidfire:
     40: 25    # vs Bomber
     41: 15    # vs Star Destroyer
     42: 70    # vs Death Star
+    203: 25    # план 64 R0-exception
+    352: 100    # план 64 R0-exception
+    353: 30    # план 64 R0-exception
+
+  # План 64 R0-exception: RF алиен/спец-юнитов.
+  # Источник: oxsar2-mysql-1 / oxsar2/sql/new-for-dm/data.sql.
+  200:    # план 64 R0-exception
+    38: 5
+    39: 5
+    43: 10
+    202: 6
+  201:    # план 64 R0-exception
+    38: 5
+    39: 5
+  202:    # план 64 R0-exception
+    38: 5
+    39: 5
+  203:    # план 64 R0-exception
+    29: 2
+    30: 2
+    38: 5
+    39: 5
+    200: 4
+    201: 4
+  204:    # план 64 R0-exception
+    30: 2
+    38: 5
+    39: 5
+  352:    # план 64 R0-exception
+    38: 25
+    39: 25
