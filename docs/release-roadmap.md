@@ -1,4 +1,4 @@
-# Roadmap до запуска в прод
+﻿# Roadmap до запуска в прод
 
 **Дата составления**: 2026-04-24
 **Источники**: [status.md](status.md), [balance/audit.md](balance/audit.md),
@@ -111,28 +111,28 @@ React/TipTap, backend = game-nova с параметризацией под `lega
 
 | План | Что | Оценка | Зависит от |
 |---|---|---|---|
-| 63 | legacy.yaml + per-universe balance loading | 2 нед | — |
-| 64 | Расширение event-loop (TELEPORT_PLANET, DESTROY_BUILDING, DELIVERY_ARTEFACTS, Stargate, etc) | 3-4 нед | 63 |
-| 65 | AlienAI до полного паритета (план 15 этап 3) | 3 нед | 63 |
-| 66 | Расширение alliance: 3 описания, передача лидерства, гранулярные ранги, лог | 2-3 нед | — |
-| 67 | Биржа артефактов (player-to-player, с premium) | 3-4 нед | — |
-| 68 | Расширение domain-полей в users (max_points, race, protected_until, etc) | 2 нед | — |
-| 69 | Achievements расширение (~100 legacy ачивок в goal engine) | 1-2 нед | goal engine |
-| 70 | UX-микрологика origin → nova-frontend (X-NNN) | 2-3 нед | — |
-| **71** | **Origin-фронт — pixel-perfect клон (50 экранов)** | **12-16 нед** | **63-70 + 57** |
-| 72 | Screenshot-diff CI (Playwright + visual regression) | 2 нед | 71 |
-| 73 | legacy01 deploy + DNS + config | 1 нед | 71, 72 |
+| 64 | legacy.yaml + per-universe balance loading | 2 нед | — |
+| 65 | Расширение event-loop (TELEPORT_PLANET, DESTROY_BUILDING, DELIVERY_ARTEFACTS, Stargate, etc) | 3-4 нед | 64 |
+| 66 | AlienAI до полного паритета (план 15 этап 3) | 3 нед | 64 |
+| 67 | Расширение alliance: 3 описания, передача лидерства, гранулярные ранги, лог | 2-3 нед | — |
+| 68 | Биржа артефактов (player-to-player, с premium) | 3-4 нед | — |
+| 69 | Расширение domain-полей в users (max_points, race, protected_until, etc) | 2 нед | — |
+| 70 | Achievements расширение (~100 legacy ачивок в goal engine) | 1-2 нед | goal engine |
+| 71 | UX-микрологика origin → nova-frontend (X-NNN) | 2-3 нед | — |
+| **72** | **Origin-фронт — pixel-perfect клон (50 экранов)** | **12-16 нед** | **64-71 + 57** |
+| 73 | Screenshot-diff CI (Playwright + visual regression) | 2 нед | 72 |
+| 74 | legacy01 deploy + DNS + config | 1 нед | 72, 73 |
 
 **Итого**: 6-9 месяцев (минимальный путь), 9-10 месяцев с биржей
 и турнирами.
 
-**Предусловия для Ф.71** (origin-фронт): план 57 (mail-service /
+**Предусловия для Ф.72** (origin-фронт): план 57 (mail-service /
 TipTap), аудит лицензий шрифтов и иконок origin, имя legacy-вселенной
 (ADR-0010 — открытый вопрос).
 
 **Что реализуем cross-universe** (значит, получают и uni01/uni02):
-70 (UX-микрологика), 67 (биржа артефактов как фича для всех), 65
-(расширенный AlienAI), 66 (alliance-расширения).
+71 (UX-микрологика), 68 (биржа артефактов как фича для всех), 66
+(расширенный AlienAI), 67 (alliance-расширения).
 
 ---
 
