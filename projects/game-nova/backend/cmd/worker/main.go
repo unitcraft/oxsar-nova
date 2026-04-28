@@ -271,6 +271,9 @@ func run() error {
 	w.Register(event.KindExpedition, withAchievement(transportSvc.ExpeditionHandler()))
 	w.Register(event.KindOfficerExpire, officerSvc.ExpireHandler())
 	w.Register(event.KindExpirePlanet, event.HandleExpirePlanet)
+	// План 68 Ф.4: биржа артефактов.
+	w.Register(event.KindExchangeExpire, event.HandleExchangeExpire)
+	w.Register(event.KindExchangeBan, event.HandleExchangeBan)
 
 	alienSvc := alien.NewService(db, cat).WithBundle(i18nBundle)
 	w.Register(event.KindAlienAttack, alienSvc.AttackHandler())

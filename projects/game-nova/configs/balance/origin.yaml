@@ -377,3 +377,15 @@ ships:
 #   teleport_cooldown_hours:   24      # legacy PLANET_TELEPORT_MIN_INTERVAL_TIME = 24h
 #   teleport_duration_minutes: 0       # мгновенно (legacy: ext-вариант синхронный
 #                                      # apply на стороне миссии — упрощено в nova)
+
+# План 68: биржа артефактов. Override default.yaml. Для origin берём
+# близкие к legacy oxsar2 значения (EXCH_SELLER_MAX_PROFIT=1000% эквивалент).
+# Если значения совпадают с default — секцию можно пропустить, но
+# держим явно для прозрачности и предсказуемости.
+exchange:
+  max_quantity_per_lot: 100
+  max_active_lots_per_user: 10
+  price_cap_multiplier: 10.0  # legacy EXCH_SELLER_MAX_PROFIT эквивалент
+  reference_window_days: 30
+  expires_in_hours_min: 1
+  expires_in_hours_max: 168

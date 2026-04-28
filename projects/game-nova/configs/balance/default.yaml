@@ -1,0 +1,26 @@
+# configs/balance/default.yaml
+# Дефолтные параметры баланса для всех вселенных game-nova.
+# Override-файл для конкретной вселенной — origin.yaml (применяется поверх).
+#
+# Создан в плане 68 для централизации параметров биржи артефактов.
+# Существующий баланс (buildings/research/ships) остаётся в
+# configs/{buildings,research,ships}.yml — этот файл только для
+# межвселенных параметров новых фич (биржа, и т.п.).
+
+version: 1
+universe: default
+
+# Биржа артефактов (план 68). См. internal/exchange/service.go Config.
+# Значения должны совпадать с DefaultConfig() в Go: пока loader не
+# реализован, единый источник истины — Go-код, YAML — целевой
+# источник для будущей миграции (отдельный план).
+exchange:
+  max_quantity_per_lot: 100
+  max_active_lots_per_user: 10
+  # Cap = AVG(price/quantity по 30d 'bought') * multiplier. 10.0 = 1000%
+  # от reference (legacy EXCH_SELLER_MAX_PROFIT). Для новых артефактов
+  # без истории cap отключён.
+  price_cap_multiplier: 10.0
+  reference_window_days: 30
+  expires_in_hours_min: 1
+  expires_in_hours_max: 168  # 7 суток
