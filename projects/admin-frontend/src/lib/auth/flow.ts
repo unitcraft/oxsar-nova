@@ -19,8 +19,8 @@ export async function login(username: string, password: string): Promise<void> {
     {
       sub: body.sub,
       username: body.username,
-      roles: body.roles,
-      permissions: body.permissions,
+      roles: body.roles ?? [],
+      permissions: body.permissions ?? [],
     },
     body.csrf_token,
   );
@@ -44,8 +44,8 @@ export async function fetchMe(): Promise<void> {
       {
         sub: body.sub,
         username: body.username,
-        roles: body.roles,
-        permissions: body.permissions,
+        roles: body.roles ?? [],
+        permissions: body.permissions ?? [],
       },
       body.csrf_token,
     );
