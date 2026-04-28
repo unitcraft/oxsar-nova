@@ -324,10 +324,10 @@ unitid IN (200,201,202,203,204);`):
 | A1 | Подбор флота `generateFleet()` под мощь цели | Фиксированные 5 LF | 🟠 → 🟡 | Helper `GenerateFleet` готов (`internal/origin/alien/fleet_generator.go`, Ф.2 плана 66, 2026-04-28). Проводка в spawner — Ф.3. |
 | A2 | 5 видов кораблей UNIT_A_* | Есть в default `configs/units.yml`+`ships.yml` | ✅ | Закрыто планом 64 (Ф.2). |
 | A3 | Четверг ×5 флотов, ×1.5..2.0 мощь | Только триггер четверга | 🟠 → 🟡 | `Config.ThursdayPowerMin/Max` + `FleetsNumberAttackTime` (Ф.2). Spawn-проводка — Ф.3. |
-| A4 | EVENT_ALIEN_CHANGE_MISSION_AI | Нет | 🟠 | Новый Kind в kinds.go + обработчик с power_scale (Ф.3 плана 66). |
+| A4 | EVENT_ALIEN_CHANGE_MISSION_AI | Нет | ✅ | `ChangeMissionAIHandler` зарегистрирован (Ф.3 плана 66, 2026-04-28). Replan-mode (>=8h) + extend-mode (<8h). Замена alien-флота через GenerateFleet — Ф.4. |
 | A5 | HOLDING с 8 действиями, control_times² | Простое HOLDING | 🟠 | Реализовать state в `internal/alien/holding.go` с теми же действиями (Ф.4 плана 66). |
-| A6 | Грабёж кредитов с state machine | Частично (applyGrabCredit) | 🟡 | Helper `CalcGrabAmount` готов (Ф.2). Достроить отдельный Kind GrabCredit — Ф.3. |
-| A7 | Подарки ресурсов/кредитов с вероятностями | Нет | 🟠 → 🟡 | Helper `CalcGiftAmount` готов (Ф.2). Применение в FlyUnknown handler — Ф.3. |
+| A6 | Грабёж кредитов с state machine | Частично (applyGrabCredit) | ✅ | `GrabCreditHandler` (форсирует mode=GrabCredit) + ветка грабежа в `FlyUnknownHandler` (Ф.3 плана 66, 2026-04-28). Валюта = оксариты per ADR-0009. |
+| A7 | Подарки ресурсов/кредитов с вероятностями | Нет | ✅ | `FlyUnknownHandler` 5%-ветки подарков ресурсов и оксаритов (Ф.3 плана 66). |
 | A8 | Платный выкуп `end_time += 2h * paid/50` | Нет | 🟡 → 🟡 | Helper `HoldingExtension` готов (Ф.2). Платёж = оксары (R1, ADR-0009). Endpoint + событие продления — Ф.5. |
 | A9 | shuffleKeyValues — случайное ослабление техник | Нет | 🟢 → ✅ | Helper'ы `ShuffleKeyValues`, `ShuffleAllAlienTechGroups`, `ApplyShuffledTechWeakening` готовы (Ф.2). |
 | A10 | findCreditTarget с критериями ≥100k credit, ≥300k ships | Нет | 🟠 → 🟡 | Pure-функции `PickAttackTarget` / `PickCreditTarget` готовы (Ф.2). SQL-loader — Ф.3. |

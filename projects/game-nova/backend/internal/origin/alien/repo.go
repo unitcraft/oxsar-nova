@@ -2,7 +2,6 @@ package alien
 
 import (
 	"context"
-	"errors"
 
 	"oxsar/game-nova/internal/economy"
 )
@@ -54,6 +53,4 @@ var AlienResearchTechIDs = []int{
 	economy.IDTechHydrogen,   // 25 — UNIT_PLASMA_TECH
 }
 
-// ErrLoaderNotImplemented возвращается заглушками Loader'а, пока
-// pgx-реализация не написана (Ф.3 плана 66).
-var ErrLoaderNotImplemented = errors.New("alien: Loader не реализован (Ф.3 плана 66)")
+// PgxLoader реализующий Loader живёт в loader_pgx.go.
