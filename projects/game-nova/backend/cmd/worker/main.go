@@ -23,6 +23,7 @@ import (
 	"oxsar/game-nova/internal/alien"
 	"oxsar/game-nova/internal/artefact"
 	"oxsar/game-nova/internal/automsg"
+	"oxsar/game-nova/internal/balance"
 	"oxsar/game-nova/internal/dailyquest"
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/event"
@@ -73,10 +74,14 @@ func run() error {
 	if catalogDir == "" {
 		catalogDir = "../configs"
 	}
-	cat, err := config.LoadCatalog(catalogDir)
+	// Per-universe balance (план 64). Тот же loader, что и в server,
+	// читает override-файл configs/balance/<id>.yaml для UniverseID.
+	balanceLoader := balance.NewLoader(catalogDir)
+	balanceBundle, err := balanceLoader.LoadForCtx(ctx, log, cfg.Auth.UniverseID)
 	if err != nil {
 		return err
 	}
+	cat := balanceBundle.Catalog
 
 	// Feature flags (план 31 Ф.2). Worker читает тот же набор, что и
 	// server — позволяет event-handler'ам ветвиться по флагам
