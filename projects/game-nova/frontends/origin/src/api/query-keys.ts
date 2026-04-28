@@ -45,4 +45,15 @@ export const QK = {
     ['catalog', 'artefact', type] as const,
   techtree: (planetId?: string) => ['techtree', planetId ?? ''] as const,
   records: () => ['records'] as const,
+  // Spring 4 (Ф.5) — communication / notes / search / settings
+  friends: () => ['friends'] as const,
+  messages: (folder: 'inbox' | 'sent') => ['messages', folder] as const,
+  message: (id: string) => ['messages', 'detail', id] as const,
+  chatHistory: (kind: 'global' | 'alliance') =>
+    ['chat', kind, 'history'] as const,
+  chatUnread: (kind: 'global' | 'alliance') =>
+    ['chat', kind, 'unread'] as const,
+  notepad: () => ['notepad'] as const,
+  search: (type: string, q: string) => ['search', type, q] as const,
+  settings: () => ['settings'] as const,
 };

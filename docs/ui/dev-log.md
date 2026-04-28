@@ -949,3 +949,16 @@ Frontend-only: `unitMeta.requires` из catalog, `fmtReqs()` для формат
 
 ### Коммит
 `de4f56e31` feat(game-origin): план 37 + копирование legacy oxsar2 без Yii
+
+## 2026-04-28 — Origin-фронт Ф.5 Spring 4 ч.1: communication + notes + search + settings
+
+7 экранов pixel-perfect клон legacy шаблонов: Friends, MSG, Chat,
+ChatAlly, Notepad, Search, Settings. WebSocket-чат с edit/delete
+в 5-минутном окне, plain-text рендер сообщений (BBCode → trade-off
+P72.S4.BBCODE до Ф.8 TipTap). OpenAPI расширен для всех 14 экранов
+Spring 4 в одном проходе (R2 закрытие тех-долга). 100 vitest
+тестов passing. Ч.2 Spring 4 (officer / profession / static / utilities)
+— следующая сессия.
+
+### Коммит
+`feat(origin/frontend): Ф.5 Spring 4 ч.1 — communication + notes + search + settings + полное openapi-расширение Spring 4 (план 72)`

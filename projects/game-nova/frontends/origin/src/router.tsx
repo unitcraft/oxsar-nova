@@ -81,6 +81,19 @@ import { UnitInfoScreen } from './features/info/UnitInfoScreen';
 import { TechtreeScreen } from './features/techtree/TechtreeScreen';
 import { RecordsScreen } from './features/records/RecordsScreen';
 import { RankingScreen } from './features/ranking/RankingScreen';
+// Spring 4 ч.1 (Ф.5) — communication / notes / search / settings
+import { FriendsScreen } from './features/friends/FriendsScreen';
+import {
+  MessagesScreen,
+  MessageComposeScreen,
+} from './features/messages/MessagesScreen';
+import {
+  ChatGlobalScreen,
+  ChatAllyScreen,
+} from './features/chat/ChatScreen';
+import { NotepadScreen } from './features/notepad/NotepadScreen';
+import { SearchScreen } from './features/search/SearchScreen';
+import { SettingsScreen } from './features/settings/SettingsScreen';
 
 export function AppRouter() {
   return (
@@ -144,6 +157,17 @@ export function AppRouter() {
           <Route path="/techtree" element={<TechtreeScreen />} />
           <Route path="/records" element={<RecordsScreen />} />
           <Route path="/ranking" element={<RankingScreen />} />
+
+          {/* Spring 4 ч.1 (Ф.5) — communication / notes / search / settings */}
+          <Route path="/friends" element={<FriendsScreen />} />
+          <Route path="/msg" element={<Navigate to="/msg/inbox" replace />} />
+          <Route path="/msg/compose" element={<MessageComposeScreen />} />
+          <Route path="/msg/:folder" element={<MessagesScreen />} />
+          <Route path="/chat" element={<ChatGlobalScreen />} />
+          <Route path="/chat/ally" element={<ChatAllyScreen />} />
+          <Route path="/notepad" element={<NotepadScreen />} />
+          <Route path="/search" element={<SearchScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
 
           <Route path="/login" element={<LoginPlaceholder />} />
           <Route path="*" element={<Navigate to="/" replace />} />

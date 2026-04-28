@@ -13,7 +13,15 @@ backend пакет `internal/catalog/` с 3 catalog endpoints, real
 `/api/techtree` и `/api/records` подключены — реальные данные, не
 моки; catalog отдаёт current-universe-only данные modern-вселенной,
 см. simplifications P72.S3.A, 2026-04-28),
-Ф.5-Ф.9 — отдельными сессиями.
+Ф.5 🟡 Spring 4 ч.1 ✅ (7 экранов S-034 Friends / S-035 MSG /
+S-036 Chat / S-037 ChatAlly / S-038 Notepad / S-039 Search /
+S-042 Settings — communication+notes+search+settings; полное
+openapi-расширение для всех 14 экранов Spring 4 включая ч.2 —
+закрытие R2 тех-долга; BBCode → plain text trade-off P72.S4.BBCODE,
+TipTap отложен на Ф.8; legacy-only Settings поля P72.S4.SETTINGS;
+2026-04-28); Spring 4 ч.2 в очереди (6 экранов: Officer / Profession /
+UserAgreement / Changelog / Support / AdvTechCalc + Widgets-skip),
+Ф.6-Ф.9 — отдельными сессиями.
 **Зависимости** (актуализировано 2026-04-28):
 - ✅ План 64 — закрыт (override-схема балансов).
 - ✅ План 65 — закрыт (Ф.1-Ф.6, включая teleport).
