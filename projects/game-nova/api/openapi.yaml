@@ -1493,6 +1493,275 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # План 67 Ф.2: расширения alliance-системы. OpenAPI первым (R2).
+
+  /api/alliances/{id}/descriptions:
+    get:
+      tags: [alliances]
+      summary: 3 описания альянса (план 67 Ф.2, U-015).
+      description: |
+        Возвращает description_external (видно всем), description_internal
+        (только членам), description_apply (только подающим заявку),
+        legacy description и контекст вьюера ("member"|"applicant"|"outsider").
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AllianceDescriptionView" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Обновить одно или несколько описаний альянса.
+      description: |
+        Право: can_change_description (или owner). Поддерживает
+        Idempotency-Key. Каждое поле ограничено 4000 символов.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description_external: { type: string }
+                description_internal: { type: string }
+                description_apply:    { type: string }
+      responses:
+        "204": { description: updated }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/alliances/{id}/ranks:
+    get:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Список кастомных рангов альянса (план 67 Ф.2, U-005).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ranks:
+                    type: array
+                    items: { $ref: "#/components/schemas/AllianceRank" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Создать ранг с гранулярными правами.
+      description: |
+        Право: can_manage_ranks (или owner). Permissions — карта
+        ключ→bool с известными ключами (can_invite, can_kick,
+        can_send_global_mail, can_manage_diplomacy,
+        can_change_description, can_propose_relations,
+        can_manage_ranks). Поддерживает Idempotency-Key.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:        { type: string, minLength: 1, maxLength: 32 }
+                position:    { type: integer, default: 100 }
+                permissions: { $ref: "#/components/schemas/AlliancePermissions" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rank: { $ref: "#/components/schemas/AllianceRank" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/alliances/{id}/ranks/{rank_id}:
+    patch:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Изменить ранг (имя, позицию, права).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: rank_id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:        { type: string }
+                position:    { type: integer }
+                permissions: { $ref: "#/components/schemas/AlliancePermissions" }
+      responses:
+        "204": { description: updated }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Удалить ранг (члены откатятся к builtin-роли).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: rank_id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/alliances/{id}/members/{userID}:
+    delete:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Изгнать участника (план 67 Ф.2).
+      description: |
+        Право: can_kick (или owner). Owner кикнуть нельзя; для
+        самоудаления — POST /api/alliances/leave.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: userID
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: kicked }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/alliances/{id}/members/{userID}/rank-id:
+    patch:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Привязать кастомный ранг к участнику.
+      description: |
+        Право: can_manage_ranks (или owner). Body {"rank_id": null}
+        отвязывает ранг (откат на builtin). Поддерживает Idempotency-Key.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: userID
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rank_id: { type: string, format: uuid, nullable: true }
+      responses:
+        "204": { description: updated }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/alliances/{id}/audit:
+    get:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: Журнал событий альянса (план 67 Ф.2, U-013).
+      description: |
+        Доступ — любой член альянса. Запись пишется на каждое
+        значимое действие: создание, изменение описаний, изгнание,
+        смена ранга, дипломатия и т.д.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: action
+          schema: { type: string }
+        - in: query
+          name: actor_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 100, maximum: 200 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items: { $ref: "#/components/schemas/AllianceAuditEntry" }
+                  limit:  { type: integer }
+                  offset: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /api/artefacts/{id}/sell:
     post:
       tags: [artefacts]
@@ -2625,6 +2894,70 @@ components:
         members:
           type: array
           items: { $ref: "#/components/schemas/AllianceMember" }
+
+    # План 67 Ф.2: расширенные схемы.
+    AllianceDescriptionView:
+      type: object
+      description: |
+        3 описания + legacy + контекст вьюера. internal/apply пустые
+        для outsider'а; apply пустой для не-applicant'а.
+      properties:
+        description_external: { type: string }
+        description_internal: { type: string }
+        description_apply:    { type: string }
+        description:          { type: string, description: "legacy alliances.description" }
+        viewer:
+          type: string
+          enum: [member, applicant, outsider]
+
+    AlliancePermissions:
+      type: object
+      description: |
+        Карта permission→bool. Поддерживаемые ключи (snake_case):
+        can_invite, can_kick, can_send_global_mail, can_manage_diplomacy,
+        can_change_description, can_propose_relations, can_manage_ranks.
+        Отсутствующий ключ трактуется как false.
+      additionalProperties: { type: boolean }
+
+    AllianceRank:
+      type: object
+      properties:
+        id:          { type: string, format: uuid }
+        alliance_id: { type: string, format: uuid }
+        name:        { type: string }
+        position:    { type: integer }
+        permissions: { $ref: "#/components/schemas/AlliancePermissions" }
+        created_at:  { type: string, format: date-time }
+
+    AllianceAuditEntry:
+      type: object
+      properties:
+        id:          { type: string, format: uuid }
+        alliance_id: { type: string, format: uuid }
+        actor_id:    { type: string, description: "пустая строка если NULL (системное действие)" }
+        actor_name:  { type: string }
+        action:
+          type: string
+          description: |
+            Имя действия в snake_case. Известные значения:
+            alliance_created, alliance_disbanded, description_changed,
+            member_joined, member_left, member_kicked,
+            member_rank_assigned, rank_created, rank_updated,
+            rank_deleted, application_approved, application_rejected,
+            relation_proposed, relation_accepted, relation_rejected,
+            relation_cleared, leadership_transferred, open_changed.
+        target_kind: { type: string }
+        target_id:   { type: string }
+        payload:     { type: object, additionalProperties: true }
+        created_at:  { type: string, format: date-time }
+
+    # AllianceRelation — расширенный enum (план 67 Ф.2, D-014).
+    AllianceRelation:
+      type: string
+      enum: [friend, neutral, hostile_neutral, nap, war]
+      description: |
+        friend (был ally, мигрирован 0077), neutral, hostile_neutral
+        (атаковать без объявления войны), nap, war.
 
     AdminUserRow:
       type: object

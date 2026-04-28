@@ -4,18 +4,50 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
 
 	"oxsar/game-nova/internal/auth"
 	"oxsar/game-nova/internal/httpx"
+	"oxsar/game-nova/pkg/idempotency"
+	"oxsar/game-nova/pkg/metrics"
 )
 
 type Handler struct {
 	svc *Service
+	rdb *redis.Client // optional, для Idempotency-Key (план 67 R9)
 }
 
 func NewHandler(s *Service) *Handler { return &Handler{svc: s} }
+
+// WithRedis подключает Redis для Idempotency-Key middleware на
+// PATCH/POST-операциях альянса (R9). Если nil — idempotency no-op.
+func (h *Handler) WithRedis(rdb *redis.Client) *Handler {
+	h.rdb = rdb
+	return h
+}
+
+// recordAction увеличивает Prometheus-счётчик действия (R8).
+// status: ok|forbidden|error.
+func recordAction(action, status string) {
+	if metrics.AllianceActions != nil {
+		metrics.AllianceActions.WithLabelValues(action, status).Inc()
+	}
+}
+
+// statusFromErr — для метрик: классификация ошибок.
+func statusFromErr(err error) string {
+	switch {
+	case err == nil:
+		return "ok"
+	case errors.Is(err, ErrForbidden), errors.Is(err, ErrNotOwner), errors.Is(err, ErrNotMember):
+		return "forbidden"
+	default:
+		return "error"
+	}
+}
 
 // List GET /api/alliances
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
@@ -81,6 +113,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	al, err := h.svc.Create(r.Context(), uid, req.Tag, req.Name, req.Description)
+	recordAction(ActionAllianceCreated, statusFromErr(err))
 	switch {
 	case err == nil:
 		httpx.WriteJSON(w, r, http.StatusCreated, map[string]any{"alliance": al})
@@ -328,14 +361,15 @@ func (h *Handler) ProposeRelation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := h.svc.ProposeRelation(r.Context(), uid, id, targetID, body.Relation)
+	recordAction(ActionRelationProposed, statusFromErr(err))
 	switch {
 	case err == nil:
 		w.WriteHeader(http.StatusNoContent)
-	case errors.Is(err, ErrNotFound):
+	case errors.Is(err, ErrNotFound), errors.Is(err, ErrNotMember):
 		httpx.WriteError(w, r, httpx.ErrNotFound)
 	case errors.Is(err, ErrTargetNotFound):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrNotFound, err.Error()))
-	case errors.Is(err, ErrNotOwner):
+	case errors.Is(err, ErrNotOwner), errors.Is(err, ErrForbidden):
 		httpx.WriteError(w, r, httpx.ErrForbidden)
 	case errors.Is(err, ErrInvalidRelation), errors.Is(err, ErrRelationSelf):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
@@ -356,12 +390,13 @@ func (h *Handler) AcceptRelation(w http.ResponseWriter, r *http.Request) {
 	initiatorID := chi.URLParam(r, "initiator_id")
 
 	err := h.svc.AcceptRelation(r.Context(), uid, myID, initiatorID)
+	recordAction(ActionRelationAccepted, statusFromErr(err))
 	switch {
 	case err == nil:
 		w.WriteHeader(http.StatusNoContent)
-	case errors.Is(err, ErrNotFound), errors.Is(err, ErrTargetNotFound):
+	case errors.Is(err, ErrNotFound), errors.Is(err, ErrTargetNotFound), errors.Is(err, ErrNotMember):
 		httpx.WriteError(w, r, httpx.ErrNotFound)
-	case errors.Is(err, ErrNotOwner):
+	case errors.Is(err, ErrNotOwner), errors.Is(err, ErrForbidden):
 		httpx.WriteError(w, r, httpx.ErrForbidden)
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
@@ -380,12 +415,301 @@ func (h *Handler) RejectRelation(w http.ResponseWriter, r *http.Request) {
 	initiatorID := chi.URLParam(r, "initiator_id")
 
 	err := h.svc.RejectRelation(r.Context(), uid, myID, initiatorID)
+	recordAction(ActionRelationRejected, statusFromErr(err))
 	switch {
 	case err == nil:
 		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrNotFound), errors.Is(err, ErrNotMember):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotOwner), errors.Is(err, ErrForbidden):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// План 67 Ф.2: расширенные handlers (descriptions, ranks, kick, audit).
+
+// GetDescriptions GET /api/alliances/{id}/descriptions
+//
+// Возвращает 3 описания + legacy поле + контекст вьюера. Видимость
+// internal/apply фильтруется в сервисе (см. GetDescriptions).
+func (h *Handler) GetDescriptions(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	uid, _ := auth.UserID(r.Context()) // "" если анонимный
+	v, err := h.svc.GetDescriptions(r.Context(), uid, id)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, v)
 	case errors.Is(err, ErrNotFound):
 		httpx.WriteError(w, r, httpx.ErrNotFound)
-	case errors.Is(err, ErrNotOwner):
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// UpdateDescriptions PATCH /api/alliances/{id}/descriptions
+// Body: {"description_external"?:"...", "description_internal"?:"...", "description_apply"?:"..."}
+//
+// Право: PermChangeDescription. Поддерживает Idempotency-Key.
+func (h *Handler) UpdateDescriptions(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	idem := idempotency.FromRequest(r, h.rdb)
+	if idem.Replay(w) {
+		return
+	}
+	id := chi.URLParam(r, "id")
+	var body struct {
+		External *string `json:"description_external"`
+		Internal *string `json:"description_internal"`
+		Apply    *string `json:"description_apply"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	in := UpdateDescriptionsInput{External: body.External, Internal: body.Internal, Apply: body.Apply}
+	err := h.svc.UpdateDescriptions(r.Context(), uid, id, in)
+	recordAction(ActionDescriptionChanged, statusFromErr(err))
+	switch {
+	case err == nil:
+		idem.Record(http.StatusNoContent, nil)
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotMember), errors.Is(err, ErrForbidden):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrDescriptionTooLong):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// ListRanks GET /api/alliances/{id}/ranks
+func (h *Handler) ListRanks(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	out, err := h.svc.ListRanks(r.Context(), uid, id)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"ranks": out})
+	case errors.Is(err, ErrNotMember):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// CreateRank POST /api/alliances/{id}/ranks
+// Body: {"name":"...","position":100,"permissions":{"can_invite":true,...}}
+//
+// Право: PermManageRanks. Поддерживает Idempotency-Key.
+func (h *Handler) CreateRank(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	idem := idempotency.FromRequest(r, h.rdb)
+	if idem.Replay(w) {
+		return
+	}
+	id := chi.URLParam(r, "id")
+	var body struct {
+		Name        string          `json:"name"`
+		Position    int             `json:"position"`
+		Permissions map[string]bool `json:"permissions"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	rank, err := h.svc.CreateRank(r.Context(), uid, id, body.Name, body.Position, body.Permissions)
+	recordAction(ActionRankCreated, statusFromErr(err))
+	switch {
+	case err == nil:
+		buf := httpx.MarshalJSON(map[string]any{"rank": rank})
+		idem.Record(http.StatusCreated, buf)
+		httpx.WriteJSONBytes(w, r, http.StatusCreated, buf)
+	case errors.Is(err, ErrNotMember), errors.Is(err, ErrForbidden):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrRankNameTaken):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	case errors.Is(err, ErrRankNameInvalid), errors.Is(err, ErrInvalidPermission):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// UpdateRank PATCH /api/alliances/{id}/ranks/{rank_id}
+// Body: {"name"?:"...","position"?:100,"permissions"?:{...}}
+func (h *Handler) UpdateRank(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	idem := idempotency.FromRequest(r, h.rdb)
+	if idem.Replay(w) {
+		return
+	}
+	id := chi.URLParam(r, "id")
+	rankID := chi.URLParam(r, "rank_id")
+	var body struct {
+		Name        *string          `json:"name"`
+		Position    *int             `json:"position"`
+		Permissions *map[string]bool `json:"permissions"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	in := UpdateRankInput{Name: body.Name, Position: body.Position, Permissions: body.Permissions}
+	err := h.svc.UpdateRank(r.Context(), uid, id, rankID, in)
+	recordAction(ActionRankUpdated, statusFromErr(err))
+	switch {
+	case err == nil:
+		idem.Record(http.StatusNoContent, nil)
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrRankNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotMember), errors.Is(err, ErrForbidden):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrRankNameTaken):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	case errors.Is(err, ErrRankNameInvalid), errors.Is(err, ErrInvalidPermission):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// DeleteRank DELETE /api/alliances/{id}/ranks/{rank_id}
+func (h *Handler) DeleteRank(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	rankID := chi.URLParam(r, "rank_id")
+	err := h.svc.DeleteRank(r.Context(), uid, id, rankID)
+	recordAction(ActionRankDeleted, statusFromErr(err))
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrRankNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotMember), errors.Is(err, ErrForbidden):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// AssignMemberRank PATCH /api/alliances/{id}/members/{userID}/rank-id
+// Body: {"rank_id": "uuid" | null}
+func (h *Handler) AssignMemberRank(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	idem := idempotency.FromRequest(r, h.rdb)
+	if idem.Replay(w) {
+		return
+	}
+	id := chi.URLParam(r, "id")
+	memberUID := chi.URLParam(r, "userID")
+	var body struct {
+		RankID *string `json:"rank_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	rankID := ""
+	if body.RankID != nil {
+		rankID = *body.RankID
+	}
+	err := h.svc.AssignMemberRank(r.Context(), uid, id, memberUID, rankID)
+	recordAction(ActionMemberRankAssigned, statusFromErr(err))
+	switch {
+	case err == nil:
+		idem.Record(http.StatusNoContent, nil)
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrRankNotFound), errors.Is(err, ErrMemberNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotMember), errors.Is(err, ErrForbidden):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// Kick DELETE /api/alliances/{id}/members/{userID}
+//
+// Право: PermKick. Owner кикнуть нельзя; самого себя — Leave.
+func (h *Handler) Kick(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	memberUID := chi.URLParam(r, "userID")
+	err := h.svc.Kick(r.Context(), uid, id, memberUID)
+	recordAction(ActionMemberKicked, statusFromErr(err))
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrMemberNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotMember), errors.Is(err, ErrForbidden):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrCannotKickOwner), errors.Is(err, ErrCannotKickSelf):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// ListAudit GET /api/alliances/{id}/audit?action=&actor_id=&limit=&offset=
+func (h *Handler) ListAudit(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	q := r.URL.Query()
+	limit, _ := strconv.Atoi(q.Get("limit"))
+	offset, _ := strconv.Atoi(q.Get("offset"))
+	filters := AuditFilters{
+		Action:  q.Get("action"),
+		ActorID: q.Get("actor_id"),
+		Limit:   limit,
+		Offset:  offset,
+	}
+	entries, err := h.svc.ListAudit(r.Context(), uid, id, filters)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+			"entries": entries,
+			"limit":   filters.Limit,
+			"offset":  filters.Offset,
+		})
+	case errors.Is(err, ErrNotMember):
 		httpx.WriteError(w, r, httpx.ErrForbidden)
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))

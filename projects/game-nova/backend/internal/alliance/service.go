@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -86,6 +87,15 @@ var (
 	ErrCannotLeaveOwn    = errors.New("alliance: owner must transfer or disband before leaving")
 	ErrApplicationExists = errors.New("alliance: application already pending")
 	ErrApplicationNotFound = errors.New("alliance: application not found")
+
+	// План 67 Ф.2.
+	ErrRankNotFound      = errors.New("alliance: rank not found")
+	ErrRankNameTaken     = errors.New("alliance: rank name already taken")
+	ErrRankNameInvalid   = errors.New("alliance: rank name must be 1–32 characters")
+	ErrInvalidPermission = errors.New("alliance: unknown permission key")
+	ErrCannotKickOwner   = errors.New("alliance: cannot kick the owner")
+	ErrCannotKickSelf    = errors.New("alliance: use leave to remove yourself")
+	ErrDescriptionTooLong = errors.New("alliance: description too long")
 )
 
 // Alliance — полная запись для UI.
@@ -270,9 +280,183 @@ func (s *Service) Create(ctx context.Context, ownerID, tag, name, description st
 			ID: id, Tag: tag, Name: name, Description: description,
 			OwnerID: ownerID, OwnerName: ownerName, MemberCount: 1,
 		}
+		writeAuditTx(ctx, tx, id, ownerID, ActionAllianceCreated, TargetKindAlliance, id,
+			map[string]any{"tag": tag, "name": name})
 		return nil
 	})
 	return out, err
+}
+
+// Description — три варианта описаний альянса (план 67 Ф.2, D-041, U-015).
+//
+// External — публичное (видят все, в т.ч. не члены).
+// Internal — для членов альянса.
+// Apply    — для подающих заявку (заполняется при Join).
+type Description struct {
+	External string `json:"description_external"`
+	Internal string `json:"description_internal"`
+	Apply    string `json:"description_apply"`
+}
+
+// DescriptionView — описание + ссылка на legacy-поле и контекст
+// доступа: какие из 3 полей вернутся, зависит от того, кем
+// запрашивает пользователь (член/заявитель/посторонний).
+type DescriptionView struct {
+	// Все три поля присутствуют только для members. Для гостей и
+	// заявителей лишние поля будут пустыми (но JSON-форма стабильна).
+	External string `json:"description_external"`
+	Internal string `json:"description_internal"`
+	Apply    string `json:"description_apply"`
+	// Legacy: alliances.description, оставлено для обратной совместимости
+	// (R0 — старые UI/scripts могут читать). Новые клиенты должны
+	// использовать description_external.
+	Legacy string `json:"description"`
+	// Viewer — кем запрашивающий приходит к этому альянсу:
+	//   "member" — состоит в альянсе,
+	//   "applicant" — есть pending-заявка,
+	//   "outsider" — все остальные.
+	Viewer string `json:"viewer"`
+}
+
+// GetDescriptions возвращает описания, фильтруя по контексту доступа.
+//
+// requesterID может быть "" для анонимного доступа (увидит только
+// description_external + legacy).
+func (s *Service) GetDescriptions(ctx context.Context, requesterID, allianceID string) (DescriptionView, error) {
+	var v DescriptionView
+	var ext, intDesc, apply, legacy *string
+	err := s.db.Pool().QueryRow(ctx, `
+		SELECT description_external, description_internal,
+		       description_apply, description
+		FROM alliances WHERE id=$1
+	`, allianceID).Scan(&ext, &intDesc, &apply, &legacy)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return v, ErrNotFound
+		}
+		return v, fmt.Errorf("get descriptions: %w", err)
+	}
+	v.Legacy = strDeref(legacy)
+	v.External = strDeref(ext)
+
+	// Определяем контекст вьюера.
+	v.Viewer = "outsider"
+	if requesterID != "" {
+		var memAlliance *string
+		if err := s.db.Pool().QueryRow(ctx,
+			`SELECT alliance_id FROM alliance_members WHERE user_id=$1`, requesterID).Scan(&memAlliance); err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return v, fmt.Errorf("get descriptions: check member: %w", err)
+			}
+		}
+		if memAlliance != nil && *memAlliance == allianceID {
+			v.Viewer = "member"
+			v.Internal = strDeref(intDesc)
+			v.Apply = strDeref(apply)
+			return v, nil
+		}
+		var pending bool
+		if err := s.db.Pool().QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM alliance_applications
+				WHERE alliance_id=$1 AND user_id=$2)
+		`, allianceID, requesterID).Scan(&pending); err != nil {
+			return v, fmt.Errorf("get descriptions: check pending: %w", err)
+		}
+		if pending {
+			v.Viewer = "applicant"
+			v.Apply = strDeref(apply)
+			return v, nil
+		}
+	}
+	return v, nil
+}
+
+// UpdateDescriptionsInput — частичное обновление: nil = поле не трогаем.
+type UpdateDescriptionsInput struct {
+	External *string
+	Internal *string
+	Apply    *string
+}
+
+// UpdateDescriptions PATCH /api/alliances/{id}/descriptions
+//
+// Требует can_change_description (или owner). Каждое из 3 полей
+// обновляется независимо (snake_case по R1). Длина каждого поля
+// ограничена 4000 символами.
+func (s *Service) UpdateDescriptions(ctx context.Context, requesterID, allianceID string, in UpdateDescriptionsInput) error {
+	const maxLen = 4000
+	if in.External != nil && utf8.RuneCountInString(*in.External) > maxLen {
+		return ErrDescriptionTooLong
+	}
+	if in.Internal != nil && utf8.RuneCountInString(*in.Internal) > maxLen {
+		return ErrDescriptionTooLong
+	}
+	if in.Apply != nil && utf8.RuneCountInString(*in.Apply) > maxLen {
+		return ErrDescriptionTooLong
+	}
+
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		mem, err := LoadMembership(ctx, tx, requesterID, allianceID)
+		if err != nil {
+			return err
+		}
+		if mem == nil {
+			return ErrNotMember
+		}
+		ok, err := Has(ctx, tx, mem, PermChangeDescription)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return ErrForbidden
+		}
+
+		// Собираем UPDATE с COALESCE: nil — не трогаем.
+		args := []any{allianceID}
+		set := []string{}
+		changed := map[string]bool{}
+		add := func(col string, val *string) {
+			if val == nil {
+				return
+			}
+			args = append(args, *val)
+			set = append(set, col+"=$"+strconv.Itoa(len(args)))
+			changed[col] = true
+		}
+		add("description_external", in.External)
+		add("description_internal", in.Internal)
+		add("description_apply", in.Apply)
+		if len(set) == 0 {
+			return nil
+		}
+		q := "UPDATE alliances SET " + strings.Join(set, ", ") + " WHERE id=$1"
+		tag, err := tx.Exec(ctx, q, args...)
+		if err != nil {
+			return fmt.Errorf("update descriptions: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+
+		writeAuditTx(ctx, tx, allianceID, requesterID, ActionDescriptionChanged,
+			TargetKindAlliance, allianceID, map[string]any{"fields": keysOf(changed)})
+		return nil
+	})
+}
+
+func strDeref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func keysOf(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
 }
 
 // Join добавляет пользователя в альянс. Если альянс закрыт (is_open=false),
@@ -366,8 +550,12 @@ func (s *Service) SetOpen(ctx context.Context, userID, allianceID string, isOpen
 		if ownerID != userID {
 			return ErrNotOwner
 		}
-		_, err = tx.Exec(ctx, `UPDATE alliances SET is_open=$1 WHERE id=$2`, isOpen, allianceID)
-		return err
+		if _, err := tx.Exec(ctx, `UPDATE alliances SET is_open=$1 WHERE id=$2`, isOpen, allianceID); err != nil {
+			return err
+		}
+		writeAuditTx(ctx, tx, allianceID, userID, ActionOpenChanged,
+			TargetKindAlliance, allianceID, map[string]any{"is_open": isOpen})
+		return nil
 	})
 }
 
@@ -450,8 +638,14 @@ func (s *Service) Approve(ctx context.Context, ownerID, applicationID string) er
 			`UPDATE users SET alliance_id=$1 WHERE id=$2`, allianceID, applicantID); err != nil {
 			return fmt.Errorf("update user: %w", err)
 		}
-		_, err = tx.Exec(ctx, `DELETE FROM alliance_applications WHERE id=$1`, applicationID)
-		return err
+		if _, err = tx.Exec(ctx, `DELETE FROM alliance_applications WHERE id=$1`, applicationID); err != nil {
+			return err
+		}
+		writeAuditTx(ctx, tx, allianceID, ownerID, ActionApplicationApproved,
+			TargetKindUser, applicantID, nil)
+		writeAuditTx(ctx, tx, allianceID, ownerID, ActionMemberJoined,
+			TargetKindUser, applicantID, map[string]any{"via": "application"})
+		return nil
 	})
 	if err != nil {
 		return err
@@ -484,8 +678,12 @@ func (s *Service) Reject(ctx context.Context, ownerID, applicationID string) err
 		if allianceOwner != ownerID {
 			return ErrNotOwner
 		}
-		_, err = tx.Exec(ctx, `DELETE FROM alliance_applications WHERE id=$1`, applicationID)
-		return err
+		if _, err = tx.Exec(ctx, `DELETE FROM alliance_applications WHERE id=$1`, applicationID); err != nil {
+			return err
+		}
+		writeAuditTx(ctx, tx, allianceID, ownerID, ActionApplicationRejected,
+			TargetKindUser, applicantID, nil)
+		return nil
 	})
 	if err != nil {
 		return err
@@ -523,6 +721,60 @@ func (s *Service) Leave(ctx context.Context, userID string) error {
 			`UPDATE users SET alliance_id=NULL WHERE id=$1`, userID); err != nil {
 			return fmt.Errorf("update user: %w", err)
 		}
+		writeAuditTx(ctx, tx, allianceID, userID, ActionMemberLeft,
+			TargetKindUser, userID, nil)
+		return nil
+	})
+}
+
+// Kick удаляет участника. Право: PermKick (или owner).
+//
+// Нельзя кикнуть owner'а и самого себя (для самоудаления — Leave).
+func (s *Service) Kick(ctx context.Context, requesterID, allianceID, memberUserID string) error {
+	if requesterID == memberUserID {
+		return ErrCannotKickSelf
+	}
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		mem, err := LoadMembership(ctx, tx, requesterID, allianceID)
+		if err != nil {
+			return err
+		}
+		if mem == nil {
+			return ErrNotMember
+		}
+		can, err := Has(ctx, tx, mem, PermKick)
+		if err != nil {
+			return err
+		}
+		if !can {
+			return ErrForbidden
+		}
+
+		var targetRank string
+		err = tx.QueryRow(ctx,
+			`SELECT rank FROM alliance_members WHERE alliance_id=$1 AND user_id=$2`,
+			allianceID, memberUserID).Scan(&targetRank)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrMemberNotFound
+			}
+			return fmt.Errorf("kick: read member: %w", err)
+		}
+		if targetRank == "owner" {
+			return ErrCannotKickOwner
+		}
+
+		if _, err := tx.Exec(ctx,
+			`DELETE FROM alliance_members WHERE alliance_id=$1 AND user_id=$2`,
+			allianceID, memberUserID); err != nil {
+			return fmt.Errorf("kick: delete: %w", err)
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE users SET alliance_id=NULL WHERE id=$1`, memberUserID); err != nil {
+			return fmt.Errorf("kick: update user: %w", err)
+		}
+		writeAuditTx(ctx, tx, allianceID, requesterID, ActionMemberKicked,
+			TargetKindUser, memberUserID, nil)
 		return nil
 	})
 }
@@ -633,95 +885,154 @@ type Relationship struct {
 }
 
 var (
-	ErrInvalidRelation  = errors.New("alliance: relation must be 'nap', 'war', or 'ally'")
+	ErrInvalidRelation  = errors.New("alliance: relation must be one of: friend, neutral, hostile_neutral, nap, war, none")
 	ErrTargetNotFound   = errors.New("alliance: target alliance not found")
 	ErrRelationSelf     = errors.New("alliance: cannot set relation with own alliance")
 	ErrRelationPending  = errors.New("alliance: relation proposal already pending")
 )
 
+// validRelations — расширенный enum (план 67 Ф.2, D-014, B1).
+//   - friend         — союз (origin: ally → friend; миграция 0077),
+//   - neutral        — нейтрал,
+//   - hostile_neutral — враждебный нейтрал (атаковать без объявления войны
+//                      разрешено),
+//   - nap            — non-aggression pact,
+//   - war            — открытая война.
+// "ally" принимаем как алиас "friend" для обратной совместимости с
+// фикстурами/клиентами, не успевшими обновиться (миграция 0077 уже
+// перевела данные).
+// "none" — снять отношение (не enum-значение; обрабатывается отдельно).
+var validRelations = map[string]string{
+	"friend":          "friend",
+	"neutral":         "neutral",
+	"hostile_neutral": "hostile_neutral",
+	"nap":             "nap",
+	"war":             "war",
+	"ally":            "friend",
+	"none":            "none",
+}
+
+// normalizeRelation возвращает (canonical, ok). Если ok=false — relation
+// не принимается. Для "none" canonical="none".
+func normalizeRelation(relation string) (string, bool) {
+	v, ok := validRelations[relation]
+	return v, ok
+}
+
+// relationNeedsAccept — true если статус требует подтверждения target'а.
+// "war" и "hostile_neutral" — односторонние; остальные двусторонние.
+func relationNeedsAccept(relation string) bool {
+	switch relation {
+	case "war", "hostile_neutral":
+		return false
+	default:
+		return true
+	}
+}
+
 // ProposeRelation предлагает отношение от allianceID к targetID.
-// WAR — активно сразу (односторонне). NAP/ALLY — ждёт подтверждения от target.
-// Relation="none" — удаляет любые записи в обе стороны.
+//
+// Enum (план 67 Ф.2): friend / neutral / hostile_neutral / nap / war / none.
+// Односторонние (war, hostile_neutral) активны сразу; остальные ждут
+// подтверждения от target. relation="none" удаляет записи в обе стороны.
+//
+// Право: PermProposeRelations (или owner). Если у пользователя нет этого
+// права — ErrForbidden.
 func (s *Service) ProposeRelation(ctx context.Context, userID, allianceID, targetID, relation string) error {
 	if allianceID == targetID {
 		return ErrRelationSelf
 	}
-	if relation != "nap" && relation != "war" && relation != "ally" && relation != "none" {
+	canonical, ok := normalizeRelation(relation)
+	if !ok {
 		return ErrInvalidRelation
 	}
 
-	var ownerID string
-	err := s.db.Pool().QueryRow(ctx,
-		`SELECT owner_id FROM alliances WHERE id=$1`, allianceID).Scan(&ownerID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNotFound
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		mem, err := LoadMembership(ctx, tx, userID, allianceID)
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("propose relation: read alliance: %w", err)
-	}
-	if ownerID != userID {
-		return ErrNotOwner
-	}
-
-	var targetExists bool
-	if err := s.db.Pool().QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM alliances WHERE id=$1)`, targetID).Scan(&targetExists); err != nil {
-		return fmt.Errorf("propose relation: check target: %w", err)
-	}
-	if !targetExists {
-		return ErrTargetNotFound
-	}
-
-	if relation == "none" {
-		// Удаляем записи в обе стороны.
-		if _, err := s.db.Pool().Exec(ctx, `
-			DELETE FROM alliance_relationships
-			WHERE (alliance_id=$1 AND target_alliance_id=$2)
-			   OR (alliance_id=$2 AND target_alliance_id=$1)
-		`, allianceID, targetID); err != nil {
-			return fmt.Errorf("propose relation: delete: %w", err)
+		if mem == nil {
+			return ErrNotMember
 		}
+		// Manage и Propose — два разных уровня (Manage = принимать/отклонять,
+		// Propose = предлагать). Для совместимости с owner-only флоу до плана
+		// 67: owner всегда имеет оба.
+		can, err := Has(ctx, tx, mem, PermProposeRelations)
+		if err != nil {
+			return err
+		}
+		if !can {
+			return ErrForbidden
+		}
+
+		var targetExists bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM alliances WHERE id=$1)`, targetID).Scan(&targetExists); err != nil {
+			return fmt.Errorf("propose relation: check target: %w", err)
+		}
+		if !targetExists {
+			return ErrTargetNotFound
+		}
+
+		if canonical == "none" {
+			if _, err := tx.Exec(ctx, `
+				DELETE FROM alliance_relationships
+				WHERE (alliance_id=$1 AND target_alliance_id=$2)
+				   OR (alliance_id=$2 AND target_alliance_id=$1)
+			`, allianceID, targetID); err != nil {
+				return fmt.Errorf("propose relation: delete: %w", err)
+			}
+			writeAuditTx(ctx, tx, allianceID, userID, ActionRelationCleared,
+				TargetKindAlliance, targetID, nil)
+			return nil
+		}
+
+		status := "pending"
+		if !relationNeedsAccept(canonical) {
+			status = "active"
+		}
+
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO alliance_relationships (alliance_id, target_alliance_id, relation, status)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (alliance_id, target_alliance_id)
+			DO UPDATE SET relation=$3, status=$4, set_at=now()
+		`, allianceID, targetID, canonical, status); err != nil {
+			return fmt.Errorf("propose relation: upsert: %w", err)
+		}
+		writeAuditTx(ctx, tx, allianceID, userID, ActionRelationProposed,
+			TargetKindAlliance, targetID,
+			map[string]any{"relation": canonical, "status": status})
 		return nil
-	}
-
-	// WAR немедленно активен; NAP/ALLY — pending.
-	status := "pending"
-	if relation == "war" {
-		status = "active"
-	}
-
-	if _, err := s.db.Pool().Exec(ctx, `
-		INSERT INTO alliance_relationships (alliance_id, target_alliance_id, relation, status)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (alliance_id, target_alliance_id)
-		DO UPDATE SET relation=$3, status=$4, set_at=now()
-	`, allianceID, targetID, relation, status); err != nil {
-		return fmt.Errorf("propose relation: upsert: %w", err)
-	}
-	return nil
+	})
 }
 
-// AcceptRelation подтверждает входящее предложение NAP/ALLY.
-// Вызывается owner'ом targetID. После accept — обе записи становятся active.
+// AcceptRelation подтверждает входящее предложение (двустороннее:
+// friend/neutral/nap). После accept — обе записи становятся active.
+//
+// Право: PermManageDiplomacy (или owner).
 func (s *Service) AcceptRelation(ctx context.Context, userID, myAllianceID, initiatorAllianceID string) error {
 	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		// Проверяем что userID — owner myAllianceID.
-		var ownerID string
-		if err := tx.QueryRow(ctx,
-			`SELECT owner_id FROM alliances WHERE id=$1`, myAllianceID).Scan(&ownerID); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return ErrNotFound
-			}
-			return fmt.Errorf("accept relation: %w", err)
+		mem, err := LoadMembership(ctx, tx, userID, myAllianceID)
+		if err != nil {
+			return err
 		}
-		if ownerID != userID {
-			return ErrNotOwner
+		if mem == nil {
+			return ErrNotMember
+		}
+		can, err := Has(ctx, tx, mem, PermManageDiplomacy)
+		if err != nil {
+			return err
+		}
+		if !can {
+			return ErrForbidden
 		}
 
 		// Читаем pending предложение от initiatorAllianceID → myAllianceID.
 		var relation string
 		var status string
-		err := tx.QueryRow(ctx, `
+		err = tx.QueryRow(ctx, `
 			SELECT relation::text, status
 			FROM alliance_relationships
 			WHERE alliance_id=$1 AND target_alliance_id=$2
@@ -753,23 +1064,31 @@ func (s *Service) AcceptRelation(ctx context.Context, userID, myAllianceID, init
 		`, myAllianceID, initiatorAllianceID, relation); err != nil {
 			return fmt.Errorf("accept relation: insert mirror: %w", err)
 		}
+		writeAuditTx(ctx, tx, myAllianceID, userID, ActionRelationAccepted,
+			TargetKindAlliance, initiatorAllianceID,
+			map[string]any{"relation": relation})
 		return nil
 	})
 }
 
-// RejectRelation отклоняет входящее предложение NAP/ALLY — удаляет pending запись.
+// RejectRelation отклоняет входящее предложение — удаляет pending запись.
+//
+// Право: PermManageDiplomacy (или owner).
 func (s *Service) RejectRelation(ctx context.Context, userID, myAllianceID, initiatorAllianceID string) error {
 	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		var ownerID string
-		if err := tx.QueryRow(ctx,
-			`SELECT owner_id FROM alliances WHERE id=$1`, myAllianceID).Scan(&ownerID); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return ErrNotFound
-			}
-			return fmt.Errorf("reject relation: %w", err)
+		mem, err := LoadMembership(ctx, tx, userID, myAllianceID)
+		if err != nil {
+			return err
 		}
-		if ownerID != userID {
-			return ErrNotOwner
+		if mem == nil {
+			return ErrNotMember
+		}
+		can, err := Has(ctx, tx, mem, PermManageDiplomacy)
+		if err != nil {
+			return err
+		}
+		if !can {
+			return ErrForbidden
 		}
 
 		if _, err := tx.Exec(ctx, `
@@ -778,6 +1097,8 @@ func (s *Service) RejectRelation(ctx context.Context, userID, myAllianceID, init
 		`, initiatorAllianceID, myAllianceID); err != nil {
 			return fmt.Errorf("reject relation: delete: %w", err)
 		}
+		writeAuditTx(ctx, tx, myAllianceID, userID, ActionRelationRejected,
+			TargetKindAlliance, initiatorAllianceID, nil)
 		return nil
 	})
 }
