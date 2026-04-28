@@ -66,6 +66,14 @@ PHP, каждая запись — кандидат для эволюции nova
 
 ### U-004. Передача лидерства альянса (abandonAlly)
 
+✅ **ЗАКРЫТО** (план 67 Ф.5 ч.2, 2026-04-28). Backend в Ф.3
+(`POST /transfer-leadership/code` + `/transfer-leadership` с
+8-символьным кодом из system-message, TTL 10 мин, R9 idempotency,
+rate-limit 3/час). UI — TransferLeadershipDialog с 2-step flow
+(выбор кандидата → ввод кода), кнопка «Передать лидерство» в
+header MyAlliancePanel (только owner, видна если есть другие
+члены). См. [D-040](divergence-log.md#d-040).
+
 - **Где в origin**: `Alliance.class.php::abandonAlly` +
   `referFounderStatus`
 - **Что делает игрок**: текущий owner может передать лидерство
@@ -77,6 +85,12 @@ PHP, каждая запись — кандидат для эволюции nova
   кнопка; 1 день
 
 ### U-005. Гранулярные права рангов альянса
+
+✅ **ЗАКРЫТО** (план 67 Ф.5 ч.1, 2026-04-28). Backend Ф.2 — таблица
+`alliance_ranks (id, alliance_id, name, position, permissions JSONB)`
++ FK `alliance_members.rank_id`, 7 ключей permissions (snake_case),
+owner-fallback. UI — RanksPanel (CRUD рангов с чекбокс-набором прав),
+commit 669af55dae. См. [D-014](divergence-log.md#d-014).
 
 - **Где в origin**: `Alliance.class.php::manageRanks`,
   `getRankSelect`, `getRights`; шаблон `manage_ranks.tpl`
@@ -151,6 +165,15 @@ PHP, каждая запись — кандидат для эволюции nova
 
 ### U-012. Полнотекстовый поиск альянсов
 
+✅ **ЗАКРЫТО** (план 67 Ф.5 ч.2, 2026-04-28). Backend Ф.4 (commit
+d7988572c4): `GET /api/alliances?q=&is_open=&min_members=&max_members=`
+с GIN-индексом `ix_alliances_search` (миграция 0080) на
+`to_tsvector('simple', name || ' ' || tag)`. Поддержка prefix-match
+для одного слова и `websearch_to_tsquery` для фраз. UI —
+AllianceSearchPanel в view='list' AllianceScreen, debounced 300ms,
+4 фильтра (q / openness / min / max). См. [D-NNN-ALLIANCE-SEARCH в
+roadmap-report].
+
 - **Где в origin**: `Alliance.class.php::allySearch`,
   шаблон `allysearch.tpl`, `ally_search_result.tpl`
 - **Что делает**: поиск с фильтрами (открытый/закрытый, размер)
@@ -161,6 +184,15 @@ PHP, каждая запись — кандидат для эволюции nova
 - **Объём**: 2-3 дня
 
 ### U-013. Альянсный лог активности
+
+✅ **ЗАКРЫТО** (план 67 Ф.5 ч.2, 2026-04-28). Backend Ф.2 — таблица
+`alliance_audit_log` + writer `writeAuditTx` (best-effort внутри
+транзакций), 18 known actions (alliance_created, member_kicked,
+relation_proposed, leadership_transferred, …) + 4 target_kind.
+`GET /api/alliances/{id}/audit?action=&actor_id=&limit=&offset=`,
+доступ — любой member. UI — AuditLogPanel: фильтры по action и
+actor (dropdown членов), пагинация offset/50, relative-time
+формат («5m ago»).
 
 - **Где в origin**: вероятно через сообщения/события (не явно)
 - **Что делает**: кто вступил/вышел/изгнан/повышен
@@ -174,6 +206,14 @@ PHP, каждая запись — кандидат для эволюции nova
 - зависит от U-002
 
 ### U-015. Multiple alliance descriptions (3 описания)
+
+✅ **ЗАКРЫТО** (план 67 Ф.5 ч.1, 2026-04-28). Backend Ф.1 (миграция
+0073: `description_external/internal/apply TEXT` на `alliances`) +
+Ф.2 (handlers `GET/PATCH /api/alliances/{id}/descriptions` с
+viewer-контекстом, право `can_change_description`, R9 idempotency).
+UI — DescriptionsPanel с табами видимости (external/internal/apply),
+permissions-gated edit-mode (commit 669af55dae). См.
+[D-041](divergence-log.md#d-041).
 
 - **Где в origin**: `Alliance.class.php::updateAllyPrefs`
 - **Что делает**: лидер устанавливает 3 разных описания —

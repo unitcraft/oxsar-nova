@@ -302,6 +302,13 @@ NOT NULL DEFAULT 'none'` + `users.profession_changed_at TIMESTAMPTZ`
 
 ### D-014. Alliance ranks (битовые права vs enum)
 
+✅ **ЗАКРЫТО** (план 67, 2026-04-28). Backend Ф.2 (миграция 0074
+`alliance_ranks` + `alliance_members.rank_id` FK + `permissions JSONB`),
+расширенные дипстатусы 5 enum (миграция 0076 + 0077 mapping
+`ally→friend`). UI Ф.5 ч.1 (RanksPanel + DiplomacyPanel, commit
+669af55dae); audit-log/transfer/search Ф.5 ч.2 (этот коммит).
+Owner-fallback на builtin-роли сохранён.
+
 - **Категория**: домен / механика
 - **Цвет**: 🔴
 - **Origin**: `na_allyrank` с битовыми правами
@@ -877,6 +884,14 @@ vs 11 при basic=10000). Все cost_factor в origin.yaml override
 
 ### D-040. Передача лидерства альянса (abandonAlly)
 
+✅ **ЗАКРЫТО** (план 67, 2026-04-28). Backend Ф.3 (commit 556baa8483):
+2-step flow `POST /transfer-leadership/code` (8-символьный одноразовый
+код в system-message folder=13, TTL 10 мин, rate-limit 3/час) и
+`POST /transfer-leadership` (commit с проверкой кода в одной транзакции:
+смена `owner_id`, переразметка ranks, audit-запись, удаление кода).
+Идемпотентность через Idempotency-Key (R9). UI Ф.5 ч.2
+(TransferLeadershipDialog, этот коммит).
+
 - **Категория**: api
 - **Цвет**: 🟠
 - **Origin**: `Alliance.class.php::abandonAlly`,
@@ -888,6 +903,15 @@ vs 11 при basic=10000). Все cost_factor в origin.yaml override
 - **Связь**: U-004
 
 ### D-041. Три описания альянса (external/internal/application)
+
+✅ **ЗАКРЫТО** (план 67, 2026-04-28). Backend Ф.1 (миграция 0073:
+`description_external/internal/apply TEXT`) + Ф.2 (handlers
+GET/PATCH `/api/alliances/{id}/descriptions` с viewer-контекстом
+`member|applicant|outsider`, право `can_change_description`,
+Idempotency-Key). UI Ф.5 ч.1 — DescriptionsPanel с табами и
+permissions-gated edit-mode (commit 669af55dae). Legacy
+`alliances.description` сохранён для обратной совместимости с
+listing'ом.
 
 - **Категория**: api / домен
 - **Цвет**: 🟠

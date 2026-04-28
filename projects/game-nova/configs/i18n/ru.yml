@@ -273,6 +273,75 @@ alliance:
   perm.can_change_description.short: описания
   perm.can_propose_relations.short: отношения
   perm.can_manage_ranks.short: ранги
+  # План 67 Ф.5 ч.2: audit-log + поиск + transfer-leadership UI.
+  audit.title: Журнал событий
+  audit.filterAction: Действие
+  audit.filterActor: Кто
+  audit.empty: Записей нет.
+  audit.actorSystem: Система
+  audit.colWhen: Когда
+  audit.colActor: Кто
+  audit.colAction: Что
+  audit.colTarget: Цель
+  audit.prevPage: Назад
+  audit.nextPage: Дальше
+  audit.pageInfo: "{{from}}–{{to}}"
+  audit.time.justNow: только что
+  audit.time.mAgo: "{{n}} мин назад"
+  audit.time.hAgo: "{{n}} ч назад"
+  audit.time.dAgo: "{{n}} дн назад"
+  audit.time.moAgo: "{{n}} мес назад"
+  audit.action.alliance_created: Альянс создан
+  audit.action.alliance_disbanded: Альянс распущен
+  audit.action.description_changed: Изменено описание
+  audit.action.member_joined: Игрок принят
+  audit.action.member_left: Игрок ушёл
+  audit.action.member_kicked: Игрок изгнан
+  audit.action.member_rank_assigned: Назначен ранг
+  audit.action.rank_created: Ранг создан
+  audit.action.rank_updated: Ранг обновлён
+  audit.action.rank_deleted: Ранг удалён
+  audit.action.application_approved: Заявка принята
+  audit.action.application_rejected: Заявка отклонена
+  audit.action.relation_proposed: Предложено отношение
+  audit.action.relation_accepted: Отношение подтверждено
+  audit.action.relation_rejected: Отношение отклонено
+  audit.action.relation_cleared: Отношение разорвано
+  audit.action.leadership_transferred: Передано лидерство
+  audit.action.open_changed: Изменён режим набора
+  audit.action.unknown: "{{name}}"
+  audit.targetKind.member: Игрок
+  audit.targetKind.rank: Ранг
+  audit.targetKind.alliance: Альянс
+  audit.targetKind.relation: Отношение
+  audit.targetKind.unknown: "{{kind}}"
+  search.q: Поиск
+  search.qPlaceholder: Название или тег
+  search.openness: Набор
+  search.opennessAll: Любой
+  search.opennessOpen: Открытый
+  search.opennessClosed: Закрытый
+  search.minMembers: От
+  search.maxMembers: До
+  search.reset: Сбросить
+  transferLeadership.openBtn: Передать лидерство
+  transferLeadership.title: Передача лидерства
+  transferLeadership.pickIntro: Выберите члена альянса, которому передадите права владельца. После запроса кода придёт системное сообщение с подтверждением.
+  transferLeadership.noCandidates: В альянсе нет других участников. Сначала пригласите хотя бы одного.
+  transferLeadership.requestCodeBtn: Запросить код
+  transferLeadership.codeSent: Код отправлен сообщением. Откройте Сообщения → Системные.
+  transferLeadership.codeIntro: "Код придёт системным сообщением и действует {{ttl}} мин. Введите его ниже для подтверждения."
+  transferLeadership.codeLabel: Код подтверждения
+  transferLeadership.codeHint: 8 символов, регистр не важен.
+  transferLeadership.backBtn: Назад
+  transferLeadership.success: Лидерство передано.
+  transferLeadership.errInvalidCode: Неверный код.
+  transferLeadership.errExpiredCode: Срок действия кода истёк. Запросите новый.
+  transferLeadership.errNotMember: Выбранный игрок не состоит в альянсе.
+  transferLeadership.errNotOwner: Только текущий владелец может передать лидерство.
+  transferLeadership.errBillingUnavailable: Сервис недоступен, попробуйте позже.
+  transferLeadership.errRateLimited: Слишком много запросов. Попробуйте через час.
+  transferLeadership.errAttemptsExhausted: Лимит попыток исчерпан. Запросите новый код.
 artefactInfo:
   action: Действие
   activate: Активировать
