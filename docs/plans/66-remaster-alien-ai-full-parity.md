@@ -63,13 +63,56 @@
 
 ## Этапы (детали — при старте)
 
-- Ф.1. Расширение state machine + переходы.
-- Ф.2. generateFleet + findTarget + shuffleKeyValues (helper-логика).
+- **Ф.1. Расширение state machine + переходы.** — ✅ закрыто 2026-04-28
+- **Ф.2. generateFleet + findTarget + shuffleKeyValues (helper-логика).** — ✅ закрыто 2026-04-28
 - Ф.3. Реализация Kind'ов FlyUnknown, GrabCredit, ChangeMissionAI.
+  Зависит от плана 65 (typed payload R13, Idempotency R9, метрики R8).
 - Ф.4. Расширение HoldingAI до 8 действий (2 активных + 6 заглушек).
-- Ф.5. Платный выкуп удержания через billing.
+- Ф.5. Платный выкуп удержания через billing (оксары — R1, ADR-0009).
 - Ф.6. Golden-тесты на 50+ итераций (property-based).
 - Ф.7. Финализация.
+
+### Ф.1+Ф.2 — итог (2026-04-28)
+
+Создан пакет `projects/game-nova/backend/internal/origin/alien/`
+(R0-исключение: пакет применяется во ВСЕХ вселенных, не только origin):
+
+- `doc.go` — комментарий о R0-исключении и составе пакета.
+- `config.go` — `Config` + `DefaultConfig()` (25+ параметров,
+  1-в-1 с `consts.php:752-770`). Защита R15: значения семантически
+  идентичны origin.
+- `state.go` — типизированные структуры `Mission`, `Fleet`,
+  `FleetUnit`, `HoldingState`, `PlanetSnapshot`, `TechProfile`,
+  `MissionMode` (R13).
+- `fleet_generator.go` — `GenerateFleet(target, available, scale,
+  cfg, r, opts...) Fleet` — порт PHP:405-622. Поддерживает
+  спец-юниты (Death Star, Transplantator, Armored Terran,
+  Espionage Sensor, Alien Screen).
+- `target.go` — `PickAttackTarget`, `PickCreditTarget` (порт
+  PHP:299-370). Pure-функции; loader отделён.
+- `shuffle.go` — `ShuffleKeyValues`, `ShuffleAllAlienTechGroups`,
+  `ApplyShuffledTechWeakening` (PHP:251-264, 138).
+- `helpers.go` — `IsAttackTime`, `RandRoundRange*`, `FlightDuration`,
+  `HoldingDuration`, `ChangeMissionDelay`, `HoldingExtension`,
+  `HoldingAISubphaseDuration`, `PowerScale*`, `CalcGrabAmount`,
+  `CalcGiftAmount`. Все pure-функции с детерминированным `*rng.R`.
+- `repo.go` — интерфейс `Loader` (4 метода: LoadAttackCandidates,
+  LoadCreditCandidates, LoadPlanetShips, LoadUserResearches,
+  LoadActiveAlienMissionsCount). Pgx-реализация — Ф.3.
+
+Тесты: `config_test.go`, `helpers_test.go`, `shuffle_test.go`,
+`target_test.go`, `fleet_generator_test.go` — все зелёные.
+
+Что **не делается** в Ф.1+Ф.2:
+- Kind handlers — Ф.3.
+- Spawner-проводка `internal/alien/Spawn` под `origin/alien` — Ф.3.
+- pgx-реализация Loader — Ф.3.
+- Prometheus-метрики (R8) — Ф.3 (после плана 65).
+- Idempotency-Key (R9) — Ф.3.
+- Audit-log — Ф.3.
+- 50+ golden-тестов — Ф.6.
+
+Объём Ф.1+Ф.2: ~700 строк Go (production) + ~500 строк тестов.
 
 ## Конвенции (R1-R5)
 
