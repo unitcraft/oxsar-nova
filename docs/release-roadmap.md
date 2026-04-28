@@ -99,40 +99,72 @@
 
 ---
 
-## Пост-запуск v3: Ремастер origin на nova-backend (legacy01)
+## Пост-запуск v3: Ремастер origin на nova-backend
 
 Реализуется после стабилизации v2. Подробное обоснование и
 декомпозиция — [docs/research/origin-vs-nova/roadmap-report.md](research/origin-vs-nova/roadmap-report.md).
 
-Стратегия зафиксирована планом 62: pixel-perfect клон legacy-UI на
-React/TipTap, backend = game-nova с параметризацией под `legacy01`.
-55 экранов origin → S-NNN, 46 расхождений → D-NNN, 15+22 UI-функций
-и UX-микрологики → U-NNN/X-NNN.
+Стратегия зафиксирована планом 62: pixel-perfect клон UI origin на
+React/TipTap, backend = game-nova с override-схемой для вселенной
+**origin** (ADR-0010 Accepted: `origin.oxsar-nova.ru`,
+`universes.code = 'origin'`). 55 экранов origin → S-NNN, 46
+расхождений → D-NNN, 15+22 UI-функций и UX-микрологики → U-NNN/X-NNN.
+
+15 правил R0-R15 в roadmap-report «Часть I.5» — обязательны для
+всей серии (R0 геймплей nova заморожен, R15 без упрощений как
+для прода, R6 REST API с нуля и т.д.).
 
 | План | Что | Оценка | Зависит от |
 |---|---|---|---|
-| 64 | legacy.yaml + per-universe balance loading | 2 нед | — |
-| 65 | Расширение event-loop (TELEPORT_PLANET, DESTROY_BUILDING, DELIVERY_ARTEFACTS, Stargate, etc) | 3-4 нед | 64 |
-| 66 | AlienAI до полного паритета (план 15 этап 3) | 3 нед | 64 |
-| 67 | Расширение alliance: 3 описания, передача лидерства, гранулярные ранги, лог | 2-3 нед | — |
+| 64 | origin.yaml override + per-universe balance loading | 2 нед | — |
+| 65 | Расширение event-loop (7 событий: TELEPORT_PLANET, DESTROY_BUILDING ×2, DELIVERY_ARTEFACTS, EXCHANGE ×2, ALLIANCE_ATTACK_ADDITIONAL) | 3-4 нед | 64 |
+| 66 | AlienAI полный паритет во всех вселенных + спец-юниты (R0-исключение) | 3 нед | 64 |
+| 67 | Расширение alliance: 3 описания, передача лидерства, гранулярные ранги, лог, расширенные дипстатусы (5 enum), buddy-list | 2-3 нед | — |
 | 68 | Биржа артефактов (player-to-player, с premium) | 3-4 нед | — |
-| 69 | Расширение domain-полей в users (max_points, race, protected_until, etc) | 2 нед | — |
-| 70 | Achievements расширение (~100 legacy ачивок в goal engine) | 1-2 нед | goal engine |
+| 69 | Расширение domain-полей в users (без race и ui_theme — отказ; +notes для notepad) | 2 нед | — |
+| 70 | Achievements расширение | ⏸ **Отложен** до пост-запуска | — |
 | 71 | UX-микрологика origin → nova-frontend (X-NNN) | 2-3 нед | — |
-| **72** | **Origin-фронт — pixel-perfect клон (50 экранов)** | **12-16 нед** | **64-71 + 57** |
+| **72** | **Origin-фронт — pixel-perfect клон (50 экранов; без Achievements/Tutorial/баннеров)** | **12-16 нед** | **64-69, 71 + 57** |
 | 73 | Screenshot-diff CI (Playwright + visual regression) | 2 нед | 72 |
-| 74 | legacy01 deploy + DNS + config | 1 нед | 72, 73 |
+| 74 | origin deploy + DNS + config | 1 нед | 72, 73 |
+| 76 | nova-frontend UI для биржи (uni01/uni02) | 1-2 нед | 68 |
 
-**Итого**: 6-9 месяцев (минимальный путь), 9-10 месяцев с биржей
-и турнирами.
+**Итого**: 6-9 месяцев (минимальный путь без отложенного 70).
 
-**Предусловия для Ф.72** (origin-фронт): план 57 (mail-service /
-TipTap), аудит лицензий шрифтов и иконок origin, имя legacy-вселенной
-(ADR-0010 — открытый вопрос).
+**Предусловия для плана 72** (origin-фронт): план 57 (mail-service /
+TipTap), аудит лицензий шрифтов и иконок origin (план 72 Ф.1),
+план 75 закрыт (`projects/game-origin/` свободна — ✅).
 
-**Что реализуем cross-universe** (значит, получают и uni01/uni02):
-71 (UX-микрологика), 68 (биржа артефактов как фича для всех), 66
-(расширенный AlienAI), 67 (alliance-расширения).
+**Что реализуем cross-universe** (получают и uni01/uni02):
+- 65 — TELEPORT_PLANET, DESTROY_BUILDING (общие game-механики).
+- 66 — AlienAI + спец-юниты (R0-исключение по решению пользователя).
+- 67 — alliance-расширения (диплома́тия, ранги, buddy-list).
+- 68 — биржа артефактов (через план 76 для UI nova).
+- 71 — UX-микрологика.
+
+### Breaking changes для modern-вселенных перед запуском origin
+
+Перед запуском origin (план 74) — release notes для игроков
+uni01/uni02 о следующих изменениях, появляющихся в их вселенных:
+
+- **AlienAI становится активной**: по четвергам в 19:00
+  инопланетные флоты могут прилетать на планеты игроков
+  (грабёж оксаритов, удержание планеты, подарки). Раньше
+  AlienAI в nova была в упрощённом виде (план 15 этапы 1-2).
+- **Спец-юниты доступны для постройки**: после посещения
+  AlienAI-флотом своей планеты игрок открывает доступ к
+  Lancer / Shadow / Transplantator / Collector / Planet Shield /
+  Armored Terran (как в legacy-PHP origin).
+- **Биржа артефактов**: новый экран в навигации, можно покупать
+  и продавать артефакты за оксариты с premium-маркером.
+- **Расширенная alliance-дипломатия**: 5 статусов вместо 3
+  (`hostile_neutral` и `nap` добавлены).
+- **Buddy-list**: новый экран друзей.
+- **TELEPORT_PLANET**: премиум-фича через оксары.
+
+Эти изменения — **намеренные upgrade'ы игрового опыта modern**,
+не R0-нарушения (зафиксированы в roadmap-report «Часть I.5» как
+явные исключения R0 по решению пользователя 2026-04-28).
 
 ---
 

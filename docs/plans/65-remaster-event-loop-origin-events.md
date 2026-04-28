@@ -28,7 +28,7 @@ origin. Расширить существующие хендлеры под orig
 | D-035 | `KindDeliveryUnits`, `KindDeliveryResources`, `KindDeliveryArtefacts` | Доставка флотом разных payload |
 | план 20 Ф.5 | `KindStargateTransport`, `KindStargateJump` | Уже частично |
 | D-037 | `KindAttackDestroyBuilding`, `KindAttackAllianceDestroyBuilding` | Атака с целью разрушения постройки |
-| D-032 + U-009 | `KindTeleportPlanet` | Телепорт планеты на новые координаты |
+| D-032 + U-009 | `KindTeleportPlanet` | Телепорт планеты на новые координаты — премиум-фича через оксары (общий знаменатель для всех вселенных, по решению 2026-04-28) |
 | — | `KindArtefactDisappear` | Артефакт исчезает |
 | D-034 (опц.) | `KindRunSimAssault` | Отложенный запуск симулятора боя |
 
