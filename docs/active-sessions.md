@@ -50,6 +50,7 @@ Slot — натуральное число от `1` без ведущих нул
 
 | Slot | План / Задача | Файлы (паттерны) | Старт | Ожидаемый коммит |
 |---|---|---|---|---|
+| 3 | План 72 Ф.4 Spring 3 (8 экранов origin: artefacts/info/techtree/stats) | projects/game-nova/frontends/origin/, docs/plans/72-..., docs/active-sessions.md, docs/project-creation.txt, docs/simplifications.md | 2026-04-28 21:50 | feat(origin/frontend): Ф.4 Spring 3 — artefacts + info + techtree + stats |
 
 ## Примеры пересечений (история, для обучения)
 

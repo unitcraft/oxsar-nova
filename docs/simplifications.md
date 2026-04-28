@@ -2173,3 +2173,45 @@ unit-тесты на форматтеры/валидаторы/router-маршр
 - **Приоритет**: M (compliance-blocker для аналитики, не для запуска).
 
 **Связанный план**: [docs/plans/68-remaster-exchange-artifacts.md](plans/68-remaster-exchange-artifacts.md)
+
+## 2026-04-28 — План 73 Ф.1+Ф.2: baseline screenshots без JS
+
+### [P73.A] CDN-зависимости заблокированы — JS-countdown в эталонах не работает
+- **Где**: `tests/e2e/origin-baseline/baseline.spec.ts` —
+  `BLOCKED_HOSTS` (ajax.googleapis.com, fonts.googleapis.com,
+  fonts.gstatic.com, counter.yadro.ru, www.liveinternet.ru,
+  cakeuniverse.ru).
+- **Что упрощено**: legacy-php грузит jQuery 1.5.1 + jQuery-UI
+  1.8.14 с ajax.googleapis.com. В headless Chromium эта загрузка
+  висит 30-60s или таймаутит. Блокируем CDN — JS не выполняется,
+  countdown'ы (стройка/исследование/флот) показывают начальные
+  серверные значения, не тикают.
+- **Почему**: для baseline-pixel-diff важен статический layout
+  (HTML+CSS), а не JS-поведение. Серверный HTML рендерит
+  начальное состояние корректно. Альтернатива — поднять local
+  proxy с jQuery — overhead не окупается на этапе Ф.1+Ф.2.
+- **Как чинить (если понадобится)**: захостить jQuery 1.5.1 +
+  jQuery-UI 1.8.14 локально как static asset legacy-php (через
+  правку `layout.tpl` либо отдельный nginx-fallback proxy).
+  Альтернатива — заменить CDN на локальную копию через
+  Playwright `route.fulfill`.
+- **Приоритет**: L (Ф.3 pixel-diff применяет масок к динамичным
+  зонам; статический snapshot достаточен).
+
+### [P73.B] Smoke-набор 7 экранов из 22, остальные 15 не сняты
+- **Где**: `tests/e2e/origin-baseline/screens.ts::SMOKE_SCREEN_IDS`.
+- **Что упрощено**: snapshot-ом покрыты только 7 экранов (Main,
+  Research, Constructions, Alliance overview, Resource, Market,
+  Repair). Остальные 15 (Shipyard, Galaxy, Mission, Empire,
+  11 alliance-actions, Battlestats) перечислены в `SCREENS` но
+  не сняты.
+- **Почему**: Ф.2 — smoke процесса; цель — убедиться что pipeline
+  работает end-to-end. Снятие всех 22 — Ф.2.5, отдельная сессия.
+  Запускается одной командой:
+  `SMOKE=0 bash tests/e2e/origin-baseline/take-screenshots.sh`.
+- **Как чинить**: запустить указанную команду; ожидаемое время
+  ~3-5 минут (1 worker, без параллелизма из-за общей БД).
+- **Приоритет**: M (Ф.3 не запустится без полного набора, но
+  Ф.3 сам отложен до Spring 3+4+5).
+
+**Связанный план**: [docs/plans/73-remaster-screenshot-diff-ci.md](plans/73-remaster-screenshot-diff-ci.md)
