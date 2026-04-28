@@ -223,6 +223,8 @@ services:
       NUM_GALAXIES:      "8"
       NUM_SYSTEMS:       "600"
       UNIVERSES_CONFIG:  /app/configs/universes.yaml
+      # План 77: billing-client для премиум-фич (Spend/Refund оксаров).
+      BILLING_URL:       ${BILLING_URL:-http://billing-service:9100}
     ports: ["8081:8080"]
 
   uni01-worker:
@@ -259,6 +261,8 @@ services:
       NUM_SYSTEMS:       "300"
       PROTECTION_PERIOD: "43200"
       UNIVERSES_CONFIG:  /app/configs/universes.yaml
+      # План 77: billing-client для премиум-фич (Spend/Refund оксаров).
+      BILLING_URL:       ${BILLING_URL:-http://billing-service:9100}
     ports: ["8082:8080"]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/ready"]

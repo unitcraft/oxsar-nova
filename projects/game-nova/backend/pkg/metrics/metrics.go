@@ -102,5 +102,7 @@ func Register() http.Handler {
 	RegisterAlliance()
 	// Notepad-метрики plan 69 R8 (post-fix).
 	RegisterNotepad()
+	// Billing-client метрики plan 77 R8.
+	RegisterBilling()
 	return promhttp.Handler()
 }

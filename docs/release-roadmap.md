@@ -128,12 +128,19 @@ React/TipTap, backend = game-nova с override-схемой для вселенн
 | 73 | Screenshot-diff CI (Playwright + visual regression) | 2 нед | 72 |
 | 74 | origin deploy + DNS + config | 1 нед | 72, 73 |
 | 76 | nova-frontend UI для биржи (uni01/uni02) | 1-2 нед | 68 |
+| **77** | **billing-client integration в game-nova (✅ 2026-04-28)** | **— завершён** | **—** |
 
 **Итого**: 6-9 месяцев (минимальный путь без отложенного 70).
 
 **Предусловия для плана 72** (origin-фронт): план 57 (mail-service /
 TipTap), аудит лицензий шрифтов и иконок origin (план 72 Ф.1),
 план 75 закрыт (`projects/game-origin/` свободна — ✅).
+
+**План 77** ✅ (2026-04-28) — `internal/billing/client` (Spend/Refund
+оксаров через POST /billing/wallet/{spend,credit}) + chi-middleware
+`pkg/idempotency` (body-hash + 24h TTL) + Prometheus метрики
+(`oxsar_billing_client_*`). Разблокировал план 65 Ф.6
+KindTeleportPlanet и план 66 Ф.5 платный выкуп удержания.
 
 **Что реализуем cross-universe** (получают и uni01/uni02):
 - 65 — TELEPORT_PLANET, DESTROY_BUILDING (общие game-механики).

@@ -15,6 +15,7 @@ import (
 // Config агрегирует все настройки, необходимые приложению на старте.
 //
 // План 38 Ф.5: Payment удалён — платежи в billing-service (отдельный домен).
+// План 77: добавлен Billing для исходящего HTTP-клиента (Spend/Refund оксаров).
 type Config struct {
 	Server    ServerConfig
 	DB        DBConfig
@@ -22,6 +23,7 @@ type Config struct {
 	Auth      AuthConfig
 	Game      GameConfig
 	AIAdvisor AIAdvisorConfig
+	Billing   BillingConfig
 }
 
 type ServerConfig struct {
@@ -64,6 +66,15 @@ type GameConfig struct {
 	BashingPeriod          int     // seconds, 0 = disabled
 	BashingMaxAttacks      int     // max attacks per BashingPeriod
 	ProtectionPeriod       int     // seconds new player is protected from attacks
+}
+
+// BillingConfig — настройки исходящих вызовов к billing-service (план 77).
+//
+// URL пустой → клиент возвращает ErrNotConfigured на каждом вызове.
+// Это допустимо для dev-окружений без billing (премиум-фичи в этом случае
+// просто отключены), но в production BILLING_URL обязателен.
+type BillingConfig struct {
+	URL string
 }
 
 type AIAdvisorConfig struct {
@@ -128,6 +139,10 @@ func Load() (Config, error) {
 				Unit:     envFloat("POINTS_K_UNIT", 0.002),
 			},
 		},
+	}
+
+	cfg.Billing = BillingConfig{
+		URL: env("BILLING_URL", ""),
 	}
 
 	cfg.AIAdvisor = AIAdvisorConfig{
