@@ -15,7 +15,7 @@ COPY --from=build /go/bin/goose /usr/local/bin/goose
 # Все миграции по доменам; конкретная папка выбирается через MIGRATE_DIR
 # (или через command в compose: ["goose", "-dir", "/migrations/game-nova", ...]).
 COPY projects/game-nova/migrations /migrations/game-nova
-COPY projects/auth/migrations      /migrations/auth
+COPY projects/identity/migrations  /migrations/identity
 COPY projects/portal/migrations    /migrations/portal
 COPY projects/billing/migrations   /migrations/billing
 
