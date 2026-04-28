@@ -50,7 +50,6 @@ Slot — натуральное число от `1` без ведущих нул
 
 | Slot | План / Задача | Файлы (паттерны) | Старт | Ожидаемый коммит |
 |---|---|---|---|---|
-| 1 | План 72 Ф.5 Spring 4 ч.1 (7 экранов communication+notes+search+settings + полное openapi-расширение всех 14 экранов Spring 4) | projects/game-nova/frontends/origin/, projects/game-nova/api/openapi.yaml, docs/active-sessions.md, docs/project-creation.txt, docs/simplifications.md, docs/plans/72-remaster-origin-frontend-pixel-perfect.md | 2026-04-28 22:55 | feat(origin/frontend): Ф.5 Spring 4 ч.1 — communication + notes + search + settings + openapi |
 
 ## Примеры пересечений (история, для обучения)
 

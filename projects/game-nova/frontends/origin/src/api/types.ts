@@ -435,3 +435,125 @@ export interface RecordEntry {
   value: number;
   my_value: number;
 }
+
+// ===== Spring 4 (план 72 Ф.5) =====
+
+// S-034 Friends
+export interface Friend {
+  user_id: string;
+  username: string;
+  points: number;
+  last_seen?: string;
+  alliance_tag?: string;
+}
+
+export interface FriendsList {
+  friends: Friend[];
+}
+
+// S-035 Messages
+export type MessageFolder = 'inbox' | 'sent';
+
+export interface Message {
+  id: string;
+  from_user_id?: string;
+  from_username: string;
+  subject: string;
+  body: string;
+  folder: number;
+  created_at: string;
+  read_at?: string;
+  battle_report_id?: string;
+  espionage_report_id?: string;
+  expedition_report_id?: string;
+}
+
+export interface MessagesList {
+  messages: Message[] | null;
+}
+
+export interface MessageCompose {
+  to: string; // username получателя (backend ожидает поле "to")
+  subject: string;
+  body: string;
+}
+
+// S-036 / S-037 Chat
+export type ChatChannelKind = 'global' | 'alliance';
+
+export interface ChatMessage {
+  id: string;
+  channel: string;
+  author_id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
+  edited_at?: string;
+  kind?: 'msg' | 'edit' | 'delete';
+}
+
+export interface ChatUnreadCount {
+  channel: string;
+  unread: number;
+  last_read_at?: string;
+}
+
+// S-038 Notepad
+export interface NotepadContent {
+  content: string;
+  updated_at: string;
+}
+
+// S-039 Search
+export interface SearchPlayer {
+  user_id: string;
+  username: string;
+  alliance_tag?: string;
+  points: number;
+}
+
+export interface SearchAlliance {
+  tag: string;
+  name: string;
+  members: number;
+  points: number;
+}
+
+export interface SearchPlanet {
+  planet_id: string;
+  name: string;
+  galaxy: number;
+  system: number;
+  position: number;
+  owner: string;
+}
+
+export interface SearchResults {
+  players: SearchPlayer[];
+  alliances: SearchAlliance[];
+  planets: SearchPlanet[];
+}
+
+export type SearchType = 'player' | 'alliance' | 'planet';
+
+// S-042 Settings
+export interface SettingsResponse {
+  email: string;
+  language: 'ru' | 'en';
+  timezone: string;
+  vacation_since: string | null;
+}
+
+export interface SettingsUpdate {
+  email?: string;
+  language?: 'ru' | 'en';
+  timezone?: string;
+}
+
+export interface DeletionCodeResponse {
+  expires_at: string;
+}
+
+export interface DeletionConfirmRequest {
+  code: string;
+}

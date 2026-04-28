@@ -1095,20 +1095,52 @@ paths:
       tags: [messages]
       security: [{ bearerAuth: [] }]
       summary: Отправить сообщение игроку.
+      description: |
+        Backend ожидает поле `to` (username получателя), не user_id.
+        План 72 Ф.5 Spring 4 — корректирует прошлую документацию,
+        в которой ошибочно стояло to_username.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [to_username, subject, body]
+              required: [to, subject, body]
               properties:
-                to_username: { type: string }
-                subject: { type: string }
-                body: { type: string }
+                to:      { type: string, description: username получателя }
+                subject: { type: string, maxLength: 50 }
+                body:    { type: string }
       responses:
-        "201": { description: sent }
+        "204": { description: sent }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [messages]
+      security: [{ bearerAuth: [] }]
+      summary: Удалить все сообщения inbox.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: deleted }
+
+  /api/messages/sent:
+    get:
+      tags: [messages]
+      security: [{ bearerAuth: [] }]
+      summary: Отправленные сообщения (последние 100).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items: { $ref: "#/components/schemas/Message" }
 
   /api/messages/unread-count:
     get:
@@ -3000,12 +3032,373 @@ paths:
                         last_30d_volume:  { type: integer, format: int64 }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  # =====================================================================
+  # Spring 4 (план 72 Ф.5) — communication / settings / utilities
+  # Документирование existing endpoints: handlers уже работают (см.
+  # cmd/server/main.go), но в openapi их не было. Закрытие R2 тех-долга.
+  # =====================================================================
+
+  /api/friends:
+    get:
+      tags: [friends]
+      security: [{ bearerAuth: [] }]
+      summary: Список друзей текущего игрока.
+      description: |
+        Односторонний friend-list (legacy buddylist): добавление не
+        требует подтверждения второй стороной.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  friends:
+                    type: array
+                    items: { $ref: "#/components/schemas/Friend" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/friends/{userId}:
+    post:
+      tags: [friends]
+      security: [{ bearerAuth: [] }]
+      summary: Добавить пользователя в друзья.
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: added }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [friends]
+      security: [{ bearerAuth: [] }]
+      summary: Удалить пользователя из друзей.
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: removed }
+
+  /api/chat/{kind}/history:
+    get:
+      tags: [chat]
+      security: [{ bearerAuth: [] }]
+      summary: Последние N (≤50) сообщений канала.
+      parameters:
+        - $ref: "#/components/parameters/ChatKind"
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ChatMessage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/chat/{kind}/ws:
+    get:
+      tags: [chat]
+      security: [{ bearerAuth: [] }]
+      summary: WebSocket upgrade для подписки на канал.
+      description: |
+        После апгрейда сервер шлёт JSON-сообщения формата ChatMessage
+        (`kind=msg|edit|delete`). Клиент шлёт `{body: string}`.
+        План 32 Ф.5: Hub использует Redis pub/sub для multi-instance.
+      parameters:
+        - $ref: "#/components/parameters/ChatKind"
+      responses:
+        "101": { description: switching protocols }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/chat/{kind}/send:
+    post:
+      tags: [chat]
+      security: [{ bearerAuth: [] }]
+      summary: Отправить сообщение через REST-fallback (без WS).
+      parameters:
+        - $ref: "#/components/parameters/ChatKind"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, maxLength: 500 }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatMessage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429":
+          description: rate limit exceeded (10 msg/min на автора, план 46 Ф.4)
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+
+  /api/chat/{kind}/unread:
+    get:
+      tags: [chat]
+      security: [{ bearerAuth: [] }]
+      summary: Число непрочитанных сообщений в канале.
+      parameters:
+        - $ref: "#/components/parameters/ChatKind"
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatUnread" }
+
+  /api/chat/{kind}/read:
+    post:
+      tags: [chat]
+      security: [{ bearerAuth: [] }]
+      summary: Отметить канал прочитанным (план 69 D-020).
+      parameters:
+        - $ref: "#/components/parameters/ChatKind"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel: { type: string }
+                  last_read_at: { type: string, format: date-time }
+
+  /api/chat/messages/{id}:
+    patch:
+      tags: [chat]
+      security: [{ bearerAuth: [] }]
+      summary: Отредактировать своё сообщение (5-минутное окно).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, maxLength: 500 }
+      responses:
+        "200":
+          description: updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatMessage" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [chat]
+      security: [{ bearerAuth: [] }]
+      summary: Удалить своё сообщение (5-минутное окно).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/search:
+    get:
+      tags: [search]
+      security: [{ bearerAuth: [] }]
+      summary: Глобальный поиск по игрокам / альянсам / планетам.
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string, minLength: 2 }
+          description: подстрока для ILIKE
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+            enum: [player, alliance, planet]
+          description: ограничить поиск одной категорией
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResults" }
+
+  /api/professions:
+    get:
+      tags: [profession]
+      security: [{ bearerAuth: [] }]
+      summary: Список доступных профессий с описаниями.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  professions:
+                    type: array
+                    items: { $ref: "#/components/schemas/Profession" }
+
+  /api/professions/me:
+    get:
+      tags: [profession]
+      security: [{ bearerAuth: [] }]
+      summary: Текущая профессия игрока + cooldown до смены.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProfessionInfo" }
+    post:
+      tags: [profession]
+      security: [{ bearerAuth: [] }]
+      summary: Сменить профессию (раз в N дней, требует credit).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profession]
+              properties:
+                profession: { type: string, description: ключ профессии }
+      responses:
+        "204": { description: changed }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/settings:
+    get:
+      tags: [settings]
+      security: [{ bearerAuth: [] }]
+      summary: Текущие настройки аккаунта (email/language/timezone/vacation).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      tags: [settings]
+      security: [{ bearerAuth: [] }]
+      summary: Обновить настройки (частичный PATCH-семантика на PUT).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:    { type: string, format: email }
+                language: { type: string, enum: [ru, en] }
+                timezone: { type: string }
+      responses:
+        "204": { description: updated }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/me/deletion/code:
+    post:
+      tags: [settings]
+      security: [{ bearerAuth: [] }]
+      summary: Запросить одноразовый код для удаления аккаунта (rate-limit 3/час).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expires_at: { type: string, format: date-time }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/me:
+    delete:
+      tags: [settings]
+      security: [{ bearerAuth: [] }]
+      summary: Удалить аккаунт (soft-delete) по одноразовому коду.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, description: 8-символьный код из email }
+      responses:
+        "204": { description: deleted (soft) }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  # ---- Spring 4 ч.2 (S-040 Officer расширения, S-041 Profession) ----
+  # /api/officers и /api/officers/{key}/activate уже задокументированы
+  # выше; добавлены поля body для activate (auto_renew).
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: false
+      schema: { type: string, format: uuid }
+      description: |
+        Idempotency-Key (R9 ТЗ §16.10). Отправляется фронтом для
+        всех мутирующих запросов (POST/PUT/PATCH/DELETE). Backend
+        кеширует первый ответ под этим ключом и при повторе с тем
+        же ключом возвращает кешированный ответ (anti-double-submit).
+    ChatKind:
+      in: path
+      name: kind
+      required: true
+      schema:
+        type: string
+        enum: [global, alliance]
+      description: |
+        Тип канала: `global` — общий чат (channel="global"),
+        `alliance` — альянс-чат (channel="ally:<alliance_id>"
+        текущего пользователя; для не-членов 400).
 
   responses:
     BadRequest:
@@ -3881,3 +4274,107 @@ components:
           type: string
           format: date-time
           nullable: true
+
+    # =====================================================================
+    # Spring 4 (план 72 Ф.5) — DTO communication / settings / utilities
+    # =====================================================================
+
+    Friend:
+      type: object
+      required: [user_id, username, points]
+      properties:
+        user_id:      { type: string, format: uuid }
+        username:     { type: string }
+        points:       { type: number, format: double }
+        last_seen:    { type: string, format: date-time, nullable: true }
+        alliance_tag: { type: string, nullable: true }
+
+    ChatMessage:
+      type: object
+      required: [id, channel, author_id, body, created_at]
+      properties:
+        id:          { type: string, format: uuid }
+        channel:     { type: string, description: "global или ally:<alliance_id>" }
+        author_id:   { type: string, format: uuid }
+        author_name: { type: string }
+        body:        { type: string, maxLength: 500 }
+        created_at:  { type: string, format: date-time }
+        edited_at:   { type: string, format: date-time, nullable: true }
+        kind:
+          type: string
+          enum: [msg, edit, delete]
+          description: тип события WS-broadcast (msg=новое, edit=правка, delete=soft-delete)
+
+    ChatUnread:
+      type: object
+      required: [channel, unread]
+      properties:
+        channel:      { type: string }
+        unread:       { type: integer, format: int64 }
+        last_read_at: { type: string, format: date-time, nullable: true }
+
+    SearchPlayer:
+      type: object
+      required: [user_id, username, points]
+      properties:
+        user_id:      { type: string, format: uuid }
+        username:     { type: string }
+        alliance_tag: { type: string, nullable: true }
+        points:       { type: number, format: double }
+
+    SearchAlliance:
+      type: object
+      required: [tag, name, members, points]
+      properties:
+        tag:     { type: string }
+        name:    { type: string }
+        members: { type: integer }
+        points:  { type: number, format: double }
+
+    SearchPlanet:
+      type: object
+      required: [planet_id, name, galaxy, system, position, owner]
+      properties:
+        planet_id: { type: string, format: uuid }
+        name:      { type: string }
+        galaxy:    { type: integer }
+        system:    { type: integer }
+        position:  { type: integer }
+        owner:     { type: string }
+
+    SearchResults:
+      type: object
+      required: [players, alliances, planets]
+      properties:
+        players:   { type: array, items: { $ref: "#/components/schemas/SearchPlayer" } }
+        alliances: { type: array, items: { $ref: "#/components/schemas/SearchAlliance" } }
+        planets:   { type: array, items: { $ref: "#/components/schemas/SearchPlanet" } }
+
+    Profession:
+      type: object
+      required: [key, name]
+      properties:
+        key:         { type: string }
+        name:        { type: string }
+        description: { type: string }
+        bonuses:
+          type: object
+          additionalProperties: { type: number }
+          description: ключ бонуса → множитель (например, production_metal = 1.1)
+
+    ProfessionInfo:
+      type: object
+      properties:
+        profession:    { type: string, nullable: true, description: текущая профессия игрока }
+        chosen_at:     { type: string, format: date-time, nullable: true }
+        next_change_at: { type: string, format: date-time, nullable: true, description: дата когда снова доступна смена }
+
+    Settings:
+      type: object
+      required: [email, language, timezone]
+      properties:
+        email:          { type: string, format: email }
+        language:       { type: string, enum: [ru, en] }
+        timezone:       { type: string }
+        vacation_since: { type: string, format: date-time, nullable: true }
+

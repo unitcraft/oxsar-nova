@@ -112,4 +112,18 @@ export const api = {
       ...(extra ? { headers: extra } : {}),
     });
   },
+  // deleteWithBody — DELETE с JSON body. Нужен для /api/me (settings),
+  // backend ждёт {code} в теле. fetch + DELETE-body разрешён в HTTP/1.1.
+  deleteWithBody: <T>(
+    path: string,
+    body: unknown,
+    opts?: MutationOpts,
+  ): Promise<T> => {
+    const extra = withMutationHeaders(opts);
+    return request<T>(path, {
+      method: 'DELETE',
+      body: JSON.stringify(body),
+      ...(extra ? { headers: extra } : {}),
+    });
+  },
 };

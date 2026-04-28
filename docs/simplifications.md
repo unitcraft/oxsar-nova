@@ -2277,3 +2277,55 @@ unit-тесты на форматтеры/валидаторы/router-маршр
 
 **Связанный план**: [docs/plans/80-auth-leftovers-cleanup.md](plans/80-auth-leftovers-cleanup.md) (smoke раздел), [docs/plans/84-rbac-migration-0005-hotfix.md](plans/84-rbac-migration-0005-hotfix.md) (фикс).
 
+
+
+## 2026-04-28 — План 72 Ф.5 Spring 4 ч.1: communication / notes / search / settings
+
+### [P72.S4.BBCODE] BBCode чата → plain text (отложено в Ф.8)
+- **Где**: `projects/game-nova/frontends/origin/src/features/chat/ChatScreen.tsx`.
+- **Что упрощено**: legacy chat (`templates/standard/chat.tpl`) использовал
+  BBCode-toolbar (`[b]bold[/b]`, `[url]…[/url]`, smileys через
+  jQuery-плагин). В Spring 4 Spring origin-фронта чат рендерит сообщение
+  как `<span style="white-space: pre-wrap">{body}</span>` — без парсинга
+  BBCode и без HTML-render.
+- **Почему**: TipTap-интеграция — отдельная фаза Ф.8 плана 72.
+  Plain-text безопаснее (нет XSS) и приемлем для переходного периода.
+  Существующие BBCode-сообщения из legacy chat_messages таблицы
+  отрендерятся как литералы (`[b]hi[/b]`), что не идеально визуально, но
+  не ломает UX.
+- **Как чинить**: Ф.8 плана 72 — TipTap RichTextEditor + санитайзер
+  на backend (см. план 57 mail-service для аналогичной задачи).
+- **Приоритет**: M (визуальная косметика, функционально чат работает).
+
+### [P72.S4.SETTINGS] Settings экран не реализует legacy-only поля
+- **Где**: `projects/game-nova/frontends/origin/src/features/settings/SettingsScreen.tsx`.
+- **Что упрощено**: legacy `templates/standard/preferences.tpl` (176 строк)
+  включал поля `templatepackage`, `skin_type`, `user_bg_style`,
+  `user_table_style`, `imagepackage`, `show_all_constructions`,
+  `show_all_research`, `show_all_shipyard`, `show_all_defense`,
+  `planetorder`, `esps`, `ipcheck`. В origin-фронте оставлены только
+  поля, поддерживаемые backend-эндпоинтом `/api/settings`: `email`,
+  `language`, `timezone`, плюс смена пароля (через identity-service)
+  и удаление аккаунта по коду.
+- **Почему**: legacy-only поля — это настройки legacy-PHP темы и
+  персонификации, которые не имеют смысла в pixel-perfect клонe origin
+  (стиль зашит в legacy CSS-классы `.ntable` / `.idiv`). `show_all_*`
+  / `planetorder` — не реализовано в backend (нет соответствующих
+  колонок в users), реализация = новая backend-фича, не «pixel-perfect
+  клон».
+- **Как чинить (если понадобится)**: добавить эти настройки сначала
+  в backend (миграция + handler), затем в origin-фронт. Не блокирует
+  Ф.5 ч.1, не входит в scope Ф.5 ч.2 — TBD при необходимости.
+- **Приоритет**: L (legacy-only косметика).
+
+### [P72.S4.MSG_TO] OpenAPI POST /api/messages: исправлено поле `to_username` → `to`
+- **Где**: `projects/game-nova/api/openapi.yaml`.
+- **Что было**: openapi-схема ошибочно описывала тело как
+  `{to_username, subject, body}`. Реальный handler (`internal/message/
+  handler.go::Compose`) ожидает `{to, subject, body}`. nova-фронт
+  уже корректно отправляет `{to, ...}` (см.
+  `features/messages/MessagesScreen.tsx:348`) — это была чистая ошибка
+  документации, не runtime-баг.
+- **Что сделано**: openapi приведён в соответствие с реальным
+  поведением backend в Ф.5 ч.1 (одной строкой в edit'е).
+- **Приоритет**: closed (документационный фикс, не trade-off).
