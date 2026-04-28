@@ -27,6 +27,7 @@ import (
 	"oxsar/game-nova/internal/artmarket"
 	"oxsar/game-nova/internal/auth"
 	"oxsar/game-nova/internal/automsg"
+	"oxsar/game-nova/internal/balance"
 	"oxsar/game-nova/internal/battle"
 	"oxsar/game-nova/internal/battlestats"
 	"oxsar/game-nova/internal/building"
@@ -109,13 +110,15 @@ func run() error {
 		univReg, _ = universe.NewRegistryFromSlice(nil)
 	}
 
-	cat, err := config.LoadCatalog(catalogDir)
+	// Per-universe balance (план 64). Для modern-вселенных (uni01, uni02
+	// и любых, у которых нет configs/balance/<id>.yaml) bundle == чистый
+	// дефолт; для origin-вселенной — applies override-файл.
+	balanceLoader := balance.NewLoader(catalogDir)
+	balanceBundle, err := balanceLoader.LoadForCtx(ctx, log, cfg.Auth.UniverseID)
 	if err != nil {
 		return err
 	}
-	log.InfoContext(ctx, "catalog loaded",
-		slog.Int("buildings", len(cat.Buildings.Buildings)),
-		slog.Int("ships", len(cat.Ships.Ships)))
+	cat := balanceBundle.Catalog
 
 	// Feature flags. Отсутствие файла — не ошибка (все флаги false). План 31 Ф.2.
 	featuresPath := os.Getenv("FEATURES_FILE")

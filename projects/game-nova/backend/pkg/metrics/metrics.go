@@ -95,5 +95,8 @@ func Register() http.Handler {
 		prometheus.MustRegister(EventsProcessed, EventHandlerSec, EventsQueue, EventsLagSec,
 			SchedulerJobRuns, SchedulerJobDuration, SchedulerJobLastRun)
 	})
+	// Balance-метрики plan 64 R8: регистрируем здесь, отдельный sync.Once
+	// внутри RegisterBalance гарантирует идемпотентность.
+	RegisterBalance()
 	return promhttp.Handler()
 }
