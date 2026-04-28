@@ -11085,3 +11085,93 @@ projects/game-origin-php (план 75)`. Поимённый `git add`
 **Объём** — ~1.5 часа в активном темпе (включая разбор с
 Permission denied на Windows из-за чужих процессов). На нижней
 границе оценки плана 1-2 часа.
+
+## Итерация 64 (2026-04-28) — origin.yaml override + per-universe balance loader
+
+**План** — [docs/plans/64-remaster-origin-yaml-override.md](plans/64-remaster-origin-yaml-override.md).
+Стартовый план серии ремастера 64-74 (`projects/game-origin/`
+на nova-backend). Параметризовать game-nova так, чтобы один backend
+обслуживал modern-вселенные (uni01/uni02 — на дефолтных configs/
+buildings.yml et al.) и origin (с override-файлом).
+
+**Что сделано** — 3 коммита, ~1500 строк Go-кода + 395 строк
+YAML-автогенерации (origin.yaml).
+
+1. **Коммит 1** (Ф.1+Ф.3): `internal/balance` пакет — `Bundle`
+   оборачивает существующий `config.Catalog` через composition,
+   добавляет `Globals` с коэффициентами production-формул.
+   `Loader.LoadDefaults()` / `LoadFor(universeID)` с in-memory
+   кешем per-universe. Override-схема — partial pointer-fields в
+   YAML (deep-merge: ключи перекрывают, отсутствующие наследуются).
+   `LoadForCtx` добавляет slog (R3) + Prometheus метрики (R8 —
+   `oxsar_balance_load_total/duration_seconds`). `cmd/server/main.go`
+   и `cmd/worker/main.go` переключены на `balance.NewLoader`.
+   10 unit-тестов (concurrent-safe, parse-errors, override-merge
+   immutability default-bundle).
+
+2. **Коммит 2** (Ф.2): `cmd/tools/import-legacy-balance/` — CLI
+   для оффлайн-импорта origin balance. DSL-парсер
+   (recursive-descent, `pow/floor/ceil/round/abs/min/max`,
+   `+ - * / **`, `{level}/{basic}/{temp}/{tech=N}/{building=N}`,
+   PHP-eval-compatible round half-away-from-zero). MySQL подключение
+   к `docker-mysql-1` (origin-стенд порт 3307); fallback на
+   `oxsar2-mysql-1` (legacy dump, 150 RF) если основная БД пустая.
+   Mapping origin CAPSCASE → nova snake_case (R1). Вывод:
+   `configs/balance/origin.yaml` (override для buildings/research/
+   ships) + добавки в `configs/units.yml`/`ships.yml`/`rapidfire.yml`
+   (R0-исключение для алиен/спец-юнитов: `ship_transplantator`,
+   `ship_collector`, `armored_terran` + RF алиенов в существующие
+   shooter-блоки с inline-merge).
+
+3. **Коммит 3** (Ф.4-Ф.7): `internal/origin/economy/` — production
+   функции (Metal/Silicon/Hydrogen/Solar/Hydrogen plant), читающие
+   коэффициенты из `bundle.Globals` (modern = `ModernGlobals()`).
+   Golden-эталоны через PHP CLI (`projects/game-origin-php/tools/
+   dump-balance-formulas.php` парсит DSL через PHP eval, дампит JSON
+   в `internal/origin/economy/testdata/golden_origin_prod.json`).
+   Property-based тесты с pgregory.net/rapid (4 теста ×100 random
+   cases, инварианты positive+monotonic). Закрытие D-022 / D-026 /
+   D-027 / D-028 / D-029 / D-030 в divergence-log.
+
+**Verify против live origin** (`docker-mysql-1`):
+- METALMINE basic 60/15/0, charge factor 1.5 ✅
+- HYDROGEN_LAB prod = `floor(10*L*pow(1.1+tech*0.0008,L)*
+  (-0.002*temp+1.28))` — origin-формула совпадает с
+  `internal/economy/HydrogenLabProdHydrogen` byte-for-byte (verify
+  pixel-perfect через golden 105 точек) ✅
+- LANCER_SHIP origin cost 2500/7500/15000 + attack 5500;
+  nova default 15000/35000/60000 + attack 5000 (R0: разные).
+
+**R0-инвариант** (modern не сломан): все 36 пакетов backend test
+suite зелёные после изменений, включая existing economy/battle/fleet
+property-based тесты. Один pre-existing fail в `internal/i18n` был
+починен параллельной сессией между моими коммитами 1 и 2.
+
+**Препятствия**:
+- Origin docker-mysql-1 `na_rapidfire` пустой (origin фронт
+  использует ext-перекрытия). Импорт RF — fallback на oxsar2-mysql-1.
+- Имена алиен-юнитов в nova default — `unit_a_corvette..
+  torpedocarier` (план 22), а не `alien_unit_1..5` как в плане 64.
+  Решение — использовать existing nova-имена (R1 удовлетворён,
+  R0 не ломается).
+- Lancer/Shadow/planet_shields — уже в nova-default с другим
+  балансом (план 22 + ADR-0007/0008). Решение — origin override
+  через `configs/balance/origin.yaml::ships` восстанавливает
+  legacy-числа только для origin-вселенной.
+- Inline-комментарии rapidfire.yml терялись при первой версии
+  yaml.v3 marshal-обратно. Переписано на text-merge с сохранением
+  комментариев.
+- BOM от PowerShell `Out-File` в golden-JSON — пофикшено через
+  `[System.IO.File]::WriteAllLines` с UTF8(false).
+
+**Что после**:
+- Game-nova может работать с двумя балансовыми профилями.
+- `origin.yaml` — фиксированная база origin-чисел в репо.
+- Динамические производственные формулы реализованы для origin
+  (через bundle.Globals).
+- Разблокированы планы 65 (event-loop origin), 66 (AlienAI полный
+  паритет), 69 (расширение domain-полей).
+
+**Объём** — ~6 часов в активном темпе (вписалось в верхнюю
+границу оценки плана «~2 недели агента» — в активной сессии
+объём задачи переоценился).

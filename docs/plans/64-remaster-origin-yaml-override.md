@@ -1,8 +1,14 @@
 # План 64 (ремастер): origin.yaml override + per-universe balance loading
 
 **Дата**: 2026-04-28
-**Статус**: Активный
+**Статус**: ✅ Завершён 2026-04-28
 **Зависимости**: нет блокирующих. Стартовый план серии ремастера 64-74.
+
+**Результат**: 3 коммита, ~1500 строк Go-кода + ~395 строк YAML
+автогенерации (origin.yaml). Loader (internal/balance), импортёр
+(cmd/tools/import-legacy-balance), origin/economy с golden + property-
+based тестами. Все 36 пакетов backend test suite зелёные (R0).
+Разблокированы планы 65, 66, 69.
 **Связанные документы**:
 - [62-origin-on-nova-feasibility.md](62-origin-on-nova-feasibility.md) —
   исследование, источник журнала D-NNN.
