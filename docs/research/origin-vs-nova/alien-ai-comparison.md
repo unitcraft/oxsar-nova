@@ -321,19 +321,19 @@ unitid IN (200,201,202,203,204);`):
 
 | # | Что в origin | Что в nova | Цвет | Что нужно в nova |
 |---|---|---|---|---|
-| A1 | Подбор флота `generateFleet()` под мощь цели | Фиксированные 5 LF | 🟠 | Реализовать `internal/alien/fleet_generator.go` с алгоритмом из 405-622 |
-| A2 | 5 видов кораблей UNIT_A_* | Нет | 🟠 | Добавить в `configs/units.yml` секцию `alien:`, в БД — 5 новых ship-id'ов под legacy-режимом |
-| A3 | Четверг ×5 флотов, ×1.5..2.0 мощь | Только триггер четверга | 🟠 | Параметризовать `attack_time_fleets_number`, `attack_time_power_scale` в `configs/balance/legacy.yaml` |
-| A4 | EVENT_ALIEN_CHANGE_MISSION_AI | Нет | 🟠 | Новый Kind в kinds.go + обработчик с power_scale |
-| A5 | HOLDING с 8 действиями, control_times² | Простое HOLDING | 🟠 | Реализовать state в `internal/alien/holding.go` с теми же действиями |
-| A6 | Грабёж кредитов с state machine | Частично (applyGrabCredit) | 🟡 | Достроить `EVENT_ALIEN_GRAB_CREDIT` отдельным Kind, переход FLY_UNKNOWN ↔ GRAB |
-| A7 | Подарки ресурсов/кредитов с вероятностями | Нет | 🟠 | Реализовать в обработчике FlyUnknown |
-| A8 | Платный выкуп `end_time += 2h * paid/50` | Нет | 🟡 | Endpoint `POST /api/alien/holding/{id}/pay` + событие продления |
-| A9 | shuffleKeyValues — случайное ослабление техник | Нет | 🟢 | Опционально (балансовая особенность, можно вынести в legacy.yaml) |
-| A10 | findCreditTarget с критериями ≥100k credit, ≥300k ships | Нет | 🟠 | Новый запрос в `internal/alien/target.go` |
-| A11 | UNIT_A_* в `na_ship_datasheet` (id 200-204) | Нет в `configs/units.yml` | 🟠 | Добавить 5 юнитов под флагом `legacy_alien_units: true` |
-| A12 | `ALIEN_FLEET_MAX_DERBIS = 1e9` | Нет ограничения | 🟢 | Параметр `alien.fleet_max_debris` в legacy.yaml |
-| A13 | Все 12+ ALIEN_* констант (тайминги, проценты) | Хардкод в Go или нет | 🟡 | Вынести в `configs/balance/legacy.yaml` (секция `alien:`) |
+| A1 | Подбор флота `generateFleet()` под мощь цели | Фиксированные 5 LF | 🟠 → 🟡 | Helper `GenerateFleet` готов (`internal/origin/alien/fleet_generator.go`, Ф.2 плана 66, 2026-04-28). Проводка в spawner — Ф.3. |
+| A2 | 5 видов кораблей UNIT_A_* | Есть в default `configs/units.yml`+`ships.yml` | ✅ | Закрыто планом 64 (Ф.2). |
+| A3 | Четверг ×5 флотов, ×1.5..2.0 мощь | Только триггер четверга | 🟠 → 🟡 | `Config.ThursdayPowerMin/Max` + `FleetsNumberAttackTime` (Ф.2). Spawn-проводка — Ф.3. |
+| A4 | EVENT_ALIEN_CHANGE_MISSION_AI | Нет | 🟠 | Новый Kind в kinds.go + обработчик с power_scale (Ф.3 плана 66). |
+| A5 | HOLDING с 8 действиями, control_times² | Простое HOLDING | 🟠 | Реализовать state в `internal/alien/holding.go` с теми же действиями (Ф.4 плана 66). |
+| A6 | Грабёж кредитов с state machine | Частично (applyGrabCredit) | 🟡 | Helper `CalcGrabAmount` готов (Ф.2). Достроить отдельный Kind GrabCredit — Ф.3. |
+| A7 | Подарки ресурсов/кредитов с вероятностями | Нет | 🟠 → 🟡 | Helper `CalcGiftAmount` готов (Ф.2). Применение в FlyUnknown handler — Ф.3. |
+| A8 | Платный выкуп `end_time += 2h * paid/50` | Нет | 🟡 → 🟡 | Helper `HoldingExtension` готов (Ф.2). Платёж = оксары (R1, ADR-0009). Endpoint + событие продления — Ф.5. |
+| A9 | shuffleKeyValues — случайное ослабление техник | Нет | 🟢 → ✅ | Helper'ы `ShuffleKeyValues`, `ShuffleAllAlienTechGroups`, `ApplyShuffledTechWeakening` готовы (Ф.2). |
+| A10 | findCreditTarget с критериями ≥100k credit, ≥300k ships | Нет | 🟠 → 🟡 | Pure-функции `PickAttackTarget` / `PickCreditTarget` готовы (Ф.2). SQL-loader — Ф.3. |
+| A11 | UNIT_A_* в `na_ship_datasheet` (id 200-204) | Есть в default + origin override | ✅ | Закрыто планом 64. |
+| A12 | `ALIEN_FLEET_MAX_DERBIS = 1e9` | Нет ограничения | 🟢 → ✅ | `Config.FleetMaxDebris` + опция `WithMaxDebris` (Ф.2). |
+| A13 | Все 12+ ALIEN_* констант (тайминги, проценты) | Хардкод в Go или нет | 🟡 → ✅ | Все 25+ параметров в `Config` / `DefaultConfig()` (Ф.2). YAML-override — Ф.3. |
 | A14 | 6 заглушек в HOLDING_AI (Repair, AddUnits, ...) | Нет | 🟢 | **Не реализовывать** — origin сам их не вызывает (no-op). В журнал как «известное упрощение» |
 
 ### Спецификация nova-стороны для legacy-вселенной

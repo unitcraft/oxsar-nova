@@ -11175,3 +11175,113 @@ property-based тесты. Один pre-existing fail в `internal/i18n` был
 **Объём** — ~6 часов в активном темпе (вписалось в верхнюю
 границу оценки плана «~2 недели агента» — в активной сессии
 объём задачи переоценился).
+
+
+--------------------------------------------------------------------
+**Итерация 65 (2026-04-28). План 66 Ф.1+Ф.2 — AlienAI helper-логика
+и state machine.**
+
+**Контекст**: план 66 декомпозирован на 3 итерации (решение 2026-04-28
+по результатам разговора). В этой итерации — helper-логика +
+state-машина без проводки в event-loop. Ф.3-Ф.5 отложены до
+закрытия плана 65 (event-loop, типизированный payload R13,
+Idempotency R9, метрики R8). Ф.6-Ф.7 — golden-тесты и финализация.
+
+**R0-исключение**: AlienAI применяется ко ВСЕМ вселенным
+(uni01/uni02 + origin), не только origin. Решение пользователя
+2026-04-28 — это сознательный upgrade игрового опыта modern.
+Пакет `internal/origin/alien/` назван так потому, что код
+портирован 1-в-1 из origin (PHP `AlienAI.class.php`); origin
+здесь — источник кода, не таргет вселенной.
+
+**Сделано**:
+1. `projects/game-nova/backend/internal/origin/alien/` — новый
+   пакет, ~700 строк production + ~500 строк тестов.
+   - `config.go` — `Config` + `DefaultConfig()` (25+ параметров,
+     1-в-1 с consts.php:752-770). Все ALIEN_* константы (timing,
+     percent, threshold) — здесь.
+   - `state.go` — типизированные структуры (`Mission`, `Fleet`,
+     `FleetUnit`, `HoldingState`, `PlanetSnapshot`, `TechProfile`,
+     `MissionMode`). R13 typed-payload базис для Ф.3.
+   - `fleet_generator.go` — порт `AlienAI::generateFleet`
+     (PHP:405-622). Поддерживает спец-юниты (Death Star,
+     Transplantator, Armored Terran, Espionage Sensor, Alien Screen)
+     с их специальными лимитами по массе и количеству.
+   - `target.go` — `PickAttackTarget`, `PickCreditTarget` —
+     порт findTarget/findCreditTarget. Pure-функции, loader
+     отделён через интерфейс `Loader` в repo.go.
+   - `shuffle.go` — `ShuffleKeyValues`, `ShuffleAllAlienTechGroups`,
+     `ApplyShuffledTechWeakening`. Порт PHP:251-264 + 138
+     (random ослабление техник: max(0, rand(floor(L*0.7),
+     L<3?L:L+1))).
+   - `helpers.go` — все остальные random-помощники: `IsAttackTime`,
+     `RandRoundRange*`, `FlightDuration`, `HoldingDuration`,
+     `ChangeMissionDelay`, `HoldingExtension`,
+     `HoldingAISubphaseDuration`, `PowerScale*`, `CalcGrabAmount`,
+     `CalcGiftAmount`. Все pure-функции на детерминированном
+     `*rng.R`.
+   - `repo.go` — интерфейс `Loader` (5 методов: candidates,
+     planet ships, user researches, active count). Pgx-реализация
+     не написана (Ф.3 плана 66).
+
+2. **Тесты** (5 файлов, все зелёные):
+   - `config_test.go` — sanity-проверка DefaultConfig против
+     consts.php (regression guard для R15).
+   - `helpers_test.go` — bounds-проверки RandRoundRange,
+     RandFloatRange, ChangeMissionDelay, HoldingAISubphaseDuration,
+     CalcGrabAmount, CalcGiftAmount, HoldingExtension (включая
+     cap до 15 дней).
+   - `shuffle_test.go` — preserved-multiset, не мутирует вход,
+     missing-key как 0, all groups touched.
+   - `target_test.go` — eligibility-фильтры, satellite-фильтр
+     балансирует normal/sat-only.
+   - `fleet_generator_test.go` — 8 сценариев: non-empty, meets
+     target_power, max_debris cap, scales up, no-target,
+     determinism, ARMORED_TERRAN-break, default shell_percent.
+
+3. **Документация**:
+   - D-036 в divergence-log.md — обновлено с прогрессом Ф.1+Ф.2.
+   - alien-ai-comparison.md A1-A14 — переоценены цвета по итогам:
+     A2/A11/A12/A13/A9 → ✅ закрыто; A1/A3/A6/A7/A8/A10 → 🟡
+     (helper готов, нужен handler в Ф.3).
+   - plan-66 — добавлена секция «Ф.1+Ф.2 — итог».
+
+**Архитектурные решения**:
+- *Расположение*: `internal/origin/alien/` (НЕ `internal/legacy/alien/`).
+  Парный к `internal/origin/economy/` (план 64 Ф.4).
+- *Pure-helpers + Loader-interface*: вся логика тестируется без
+  pgx; в Ф.3 PgxLoader заменит интерфейсные заглушки.
+- *Детерминизм через rng.R*: тесты воспроизводимы по seed; без
+  global state.
+- *Param-objects (functional options)*: `WithMaxDebris`,
+  `WithFindMode` — расширяемо без ломки сигнатур.
+
+**Препятствия**:
+- В nova `IDTechSilicon=24` совпадает с `UNIT_ION_TECH=24` origin
+  (commission collision — два разных смысла на один ID). Решение:
+  переиспользую те же константы (это уже принятое решение в
+  internal/alien/helpers.go:104).
+- PHP `array_rand($map)` в generateFleet — порядок ключей в map
+  не определён; поэтому в Go реализован отсортированный pick
+  (`pickRandomKey`), что гарантирует детерминизм по rng. Бит-
+  совместимость с PHP — Ф.6 (golden via PHP CLI).
+- ChangeMissionDelay — для коротких полётов <30s оригинальная
+  PHP-формула может давать отрицательную задержку; добавил clamp
+  на 0.
+
+**Что после**:
+- Ф.3 (следующая итерация) — Kind handlers FlyUnknown/GrabCredit/
+  ChangeMissionAI с типизированным payload (R13), Idempotency-Key
+  (R9), Prometheus метриками (R8) — паттерны от плана 65.
+- Ф.4 — расширение HoldingAI до 8 действий (2 активных + 6 заглушек).
+- Ф.5 — платный выкуп удержания через billing (оксары — R1, ADR-0009).
+- Ф.6 — 50+ golden-итераций с PHP eval.
+
+**R15** — без упрощений: все origin-параметры портированы,
+ничего не выбрано. Где есть упрощения от семантики PHP
+(детерминизированный array_rand, weakening clamp) — задокументированы
+в коде как «бит-совместимость через golden Ф.6».
+
+**Объём** — ~3 часа в активном темпе (Ф.1+Ф.2 = 1/3 плана 66,
+оценочно 1 неделя на полный план в активном темпе вместо
+заявленных 3 недель).

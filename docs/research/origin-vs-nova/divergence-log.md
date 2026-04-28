@@ -627,17 +627,28 @@ vs 11 при basic=10000). Все cost_factor в origin.yaml override
 ### D-036. EVENT_ALIEN_FLY_UNKNOWN / GRAB_CREDIT / CHANGE_MISSION_AI
 
 - **Категория**: event-loop / механика
-- **Цвет**: 🟠
+- **Цвет**: 🟠 (в работе — план 66)
 - **Origin**: 3 типа алиен-событий с богатой логикой (см.
   `alien-ai-comparison.md`)
 - **Nova**: KindAlienFlyUnknown (33) и KindAlienChangeMissionAI (81)
   объявлены без обработчиков; KindAlienGrabCredit (37) встроено в
   Attack
 - **Как сделать**: реализовать все 3 как отдельные обработчики в
-  `internal/alien/`. Подробнее — `alien-ai-comparison.md` записи
+  `internal/origin/alien/`. Подробнее — `alien-ai-comparison.md` записи
   A4-A11
-- **Объём**: 2 недели
-- **Связь**: alien-ai-comparison.md A1-A14
+- **Объём**: 3 недели (3 итерации плана 66)
+- **Связь**: alien-ai-comparison.md A1-A14, план 66
+- **Прогресс**:
+  - 2026-04-28 (Ф.1+Ф.2 плана 66): создан пакет
+    `internal/origin/alien/` с state machine, Config (1-в-1 с
+    consts.php:752-770), helper'ами `GenerateFleet`/`PickAttackTarget`/
+    `PickCreditTarget`/`ShuffleKeyValues`/`ApplyShuffledTechWeakening`/
+    `CalcGrabAmount`/`CalcGiftAmount`/`HoldingExtension` и
+    интерфейсом Loader. Kind handlers и pgx-проводка отложены в
+    Ф.3 плана 66 (после плана 65 / R8/R9 паттернов).
+  - **Применимо**: ко всем вселенным (R0-исключение 2026-04-28,
+    решение пользователя). Пакет `origin/alien/` — источник кода,
+    не таргет вселенной.
 
 ### D-037. EVENT_ATTACK_DESTROY_BUILDING / ALLIANCE_DESTROY_BUILDING
 
