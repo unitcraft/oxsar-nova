@@ -2059,6 +2059,35 @@ unit-тесты на форматтеры/валидаторы/router-маршр
   ranks/diplomacy.
 - **Приоритет**: L.
 
+### [P72.S2.G] Repair и Battlestats — нет nova-API endpoint'ов
+- **Где**: `frontends/origin/src/features/repair/RepairScreen.tsx`,
+  `frontends/origin/src/features/battlestats/BattleStatsScreen.tsx`.
+- **Что упрощено**: nova-API не предоставляет `/api/planets/{id}/repair`
+  (повреждённые юниты + ремонт) и `/api/users/me/battles` (детальная
+  история боёв). Pixel-perfect-каркас (форма фильтров, таблица) рендерим,
+  но список пустой; Battlestats показывает только ранг через
+  `/api/highscore/me` как proxy.
+- **Почему**: backend repair-домена в nova ещё не написан (legacy ремонт
+  завязан на `repair.tpl` контроллер с очередью аналогичной shipyard);
+  battlestats — отдельный план агрегации боёв (планы 17/41 не покрывают).
+- **Как чинить**: открыть отдельные планы — repair-домен (миграции +
+  service + handler) и battlestats-агрегатор (выборка из messages folder=2
+  battle reports + индекс по дате).
+- **Приоритет**: M (геймплейные фичи).
+
+### [P72.S2.H] Artefact market — DTO без названия артефакта/иконки
+- **Где**: `frontends/origin/src/features/market/MarketScreen.tsx`.
+- **Что упрощено**: `ArtMarketOffer` в openapi содержит только {id,
+  seller_id, unit_id, price, created_at}. Имя артефакта (например,
+  «Знак торговца») и описание/иконка/duration не приходят в offer-list
+  endpoint, поэтому в UI отображаем «Артефакт #unit_id».
+- **Почему**: backend nova `/api/artefact-market/offers` упрощён под
+  legacy-механизм EXT_MODE; обогащение требует JOIN с unit-каталогом или
+  ArtefactCatalog query на каждой строке.
+- **Как чинить**: расширить ArtMarketOffer схемой + добавить join в
+  repo_pgx.go артефактного market.
+- **Приоритет**: L (UX-улучшение, не блокер).
+
 ### [P72.S2.F] Pixel-perfect доводка alliance отложена на план 73
 - **Где**: все alliance-экраны.
 - **Что упрощено**: HTML-структура и CSS-классы (`ntable`, `center`,
