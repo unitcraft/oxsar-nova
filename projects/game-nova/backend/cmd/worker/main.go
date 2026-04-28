@@ -32,6 +32,7 @@ import (
 	"oxsar/game-nova/internal/health"
 	"oxsar/game-nova/internal/i18n"
 	"oxsar/game-nova/internal/officer"
+	originalien "oxsar/game-nova/internal/origin/alien"
 	"oxsar/game-nova/internal/planet"
 	"oxsar/game-nova/internal/repair"
 	"oxsar/game-nova/internal/repo"
@@ -242,6 +243,15 @@ func run() error {
 	w.Register(event.KindAlienHalt, alienSvc.HaltHandler())
 	w.Register(event.KindAlienHolding, alienSvc.HoldingHandler())
 	w.Register(event.KindAlienHoldingAI, alienSvc.HoldingAIHandler())
+
+	// План 66 Ф.3: handlers FlyUnknown / GrabCredit / ChangeMissionAI
+	// (origin/alien — порт AlienAI.class.php). loader=nil для handlers
+	// этой фазы — pure-логика без поиска целей; loader потребуется в
+	// Ф.4 для Spawner / generateMission replan-mode.
+	originAlienSvc := originalien.NewService(cat, nil).WithBundle(i18nBundle)
+	w.Register(event.KindAlienFlyUnknown, originAlienSvc.FlyUnknownHandler())
+	w.Register(event.KindAlienGrabCredit, originAlienSvc.GrabCreditHandler())
+	w.Register(event.KindAlienChangeMissionAI, originAlienSvc.ChangeMissionAIHandler())
 
 	automsgSvc := automsg.NewService(db).WithBundle(i18nBundle)
 

@@ -1449,3 +1449,79 @@ INSERT в construction_queue + INSERT events Kind=2), POST endpoint
 экране. Ориентир — план 67/68/72 (UI-фаза для origin).
 **Приоритет**: M — без UI игрок не может снести здание, но handler
 уже работает.
+
+---
+
+## 2026-04-28 — План 66 Ф.3: AlienAI Kind handlers
+
+### [66-Ф.3] ChangeMissionAI replan-mode не пересобирает alien-флот
+**Где**: `projects/game-nova/backend/internal/origin/alien/handlers.go`
+— `ChangeMissionAIHandler`, ветка `remaining >= ChangeMissionMinTime`.
+**Что упрощено**: при срабатывании AI «передумал миссию» (≥8h до
+прибытия) handler обновляет `parent.payload`:
+- `mode` → random из {Attack, FlyUnknown}
+- `power_scale` = `1 + control_times*1.5`
+- `control_times++`
+
+**НЕ обновляется** `parent.payload.ships` (alien-флот). В origin
+(`AlienAI.class.php:884`) при replan вызывается `generateMission()`
+заново, который генерирует новый флот через `generateFleet` под
+новый `power_scale`. Без этого power_scale-инкремент не отражается
+на фактической силе при бою.
+**Почему**: replan требует доступа к `loader.LoadPlanetShips` +
+`loader.LoadUserResearches` (для ship_target в `GenerateFleet`),
+что разворачивает scope до полноценного `GenerateMission`-pipeline.
+Это работа Ф.4 (Spawner-проводка через pgx-Loader).
+**План возврата**: Ф.4 плана 66 — выносим `GenerateMission(ctx,
+loader, cfg, target)` в отдельную функцию, переиспользуем её
+в `internal/alien.Service.Spawn` и в `ChangeMissionAIHandler.replan`.
+**Приоритет**: L — power_scale всё равно учитывается в HOLDING_AI
+subphase duration (`HoldingAISubphaseDuration` использует
+`control_times`); потеря — только в финальном Assault при
+изменённой миссии. Сценарий редкий (60% шанс CHANGE_MISSION_AI ×
+≥8h до прибытия), не блокирует MVP.
+
+### [66-Ф.3] Spawner internal/alien.Spawn не использует origin/alien.GenerateFleet
+**Где**: `projects/game-nova/backend/internal/alien/alien.go::Spawn`,
+`scaledAlienFleet` помощник.
+**Что упрощено**: текущий nova-spawner использует `scaledAlienFleet`
+(простой алгоритм 90-110% от `defPower`), а не `origin/alien.GenerateFleet`
+(полный порт PHP:405-622 с поддержкой Death Star / Transplantator /
+Armored Terran / Espionage Sensor / Alien Screen).
+**Почему**: переключение spawner'а потребует:
+- читать catalog для построения `[]ShipSpec` (alien_available_ships);
+- читать `target.Ships` через `loader.LoadPlanetShips`;
+- мигрировать payload-формат с `alienPayload{tier}` на
+  `MissionPayload{ships, control_times, ...}`;
+- обновить существующий `internal/alien.Service.AttackHandler` под
+  новый payload — это ломает текущие 4 рабочих handler'а
+  (Attack/Halt/Holding/HoldingAI).
+
+В Ф.3 цель — добавить новые handlers без регрессий, поэтому
+spawner не трогаем.
+**План возврата**: Ф.4 плана 66 — после расширения HoldingAI до 8
+действий и перевода `holdingPayload` под typed-схему, заменить
+`scaledAlienFleet` на `origin/alien.GenerateFleet` через loader.
+**Приоритет**: M — текущий nova-флот всё равно работает (тесты
+плана 15 зелёные), но не использует UNIT_A_* по тиру и не
+учитывает спец-юниты цели. Origin-паритет = после Ф.4.
+
+### [66-Ф.3] Idempotency для Mission-handler'ов через worker, не payload
+**Где**: `projects/game-nova/backend/internal/origin/alien/handlers.go`
+— все три handler'а (FlyUnknown, GrabCredit, ChangeMissionAI).
+**Что упрощено**: handlers не делают повторных no-op проверок
+по событию (как demolish'ный `cur <= TargetLevel`). Защита от
+двойного грабежа / двойного подарка возложена на worker:
+`FOR UPDATE SKIP LOCKED` per-event + `state` enum переходит в
+`done`/`error` после handler. Retry на handler не приводит к
+повторному списанию, потому что worker не вызывает handler
+второй раз для уже-обработанного event.
+**Почему**: нет естественного «target_level» в alien-механиках —
+грабёж по семантике origin делается ровно один раз, что и
+обеспечивает worker. Дополнительная защита (например, флаг
+`grabbed_at` в users) увеличила бы schema без выгоды.
+**План возврата**: при появлении сценария с ручным retry (admin
+заново триггерит alien-event) — добавить `grab_idempotency_key`
+в users или в `messages` таблицу. Сейчас не нужно.
+**Приоритет**: L — соответствует общему паттерну event-loop в nova
+(см. эталон HandleDemolishConstruction).

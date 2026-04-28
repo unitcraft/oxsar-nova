@@ -664,8 +664,15 @@ vs 11 при basic=10000). Все cost_factor в origin.yaml override
     consts.php:752-770), helper'ами `GenerateFleet`/`PickAttackTarget`/
     `PickCreditTarget`/`ShuffleKeyValues`/`ApplyShuffledTechWeakening`/
     `CalcGrabAmount`/`CalcGiftAmount`/`HoldingExtension` и
-    интерфейсом Loader. Kind handlers и pgx-проводка отложены в
-    Ф.3 плана 66 (после плана 65 / R8/R9 паттернов).
+    интерфейсом Loader.
+  - 2026-04-28 (Ф.3 плана 66): добавлены handlers
+    `FlyUnknownHandler` / `GrabCreditHandler` / `ChangeMissionAIHandler`
+    + `MissionPayload` / `ChangeMissionPayload` (R13 typed) +
+    pgx-реализация `Loader`. Зарегистрированы в `cmd/worker/main.go`
+    рядом с существующими alien-handler'ами. Применён эталонный
+    паттерн от plan-65 Ф.1 (KindDemolishConstruction, 9a3992a384):
+    typed payload, slog audit (R3), R8 метрики автоматом на уровне
+    worker, idempotency через FOR UPDATE SKIP LOCKED + state-machine.
   - **Применимо**: ко всем вселенным (R0-исключение 2026-04-28,
     решение пользователя). Пакет `origin/alien/` — источник кода,
     не таргет вселенной.
