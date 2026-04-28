@@ -2,7 +2,7 @@
 
 Clean-room PHP-порт legacy oxsar2 (план 37, 43) запущен в Docker
 рядом с oxsar-nova. Это **не** legacy oxsar2 — это новый PHP-проект
-в репозитории oxsar-nova (`projects/game-origin-php/`). Использовать
+в репозитории oxsar-nova (`projects/game-legacy-php/`). Использовать
 для сверки UI/механик при работе по плану 62 и далее.
 
 ## Параметры доступа
@@ -13,7 +13,7 @@ Clean-room PHP-порт legacy oxsar2 (план 37, 43) запущен в Docker
   `na_user.userid=1` (`username=test`, 9 планет, 4 луны, ~36M очков,
   роль admin).
 - **Стек**: PHP 8.3 + nginx + MySQL 5.7 + memcached. Docker Compose
-  в `projects/game-origin-php/docker/docker-compose.yml`.
+  в `projects/game-legacy-php/docker/docker-compose.yml`.
 - **JWT**: `alg=none` в dev-режиме (когда `IDENTITY_JWKS_URL` пустой).
   Куки `oxsar-jwt`, SameSite=Strict, httponly.
 
@@ -90,7 +90,7 @@ docker exec docker-mysql-1 mysql -uoxsar_user -poxsar_pass oxsar_db \
   на http://localhost:8080 — описан в [game-reference.md](game-reference.md).
 - **game-origin** = clean-room PHP-порт legacy в репозитории oxsar-nova
   (план 43). Источник данных и формул — копия `legacy_dump.sql`,
-  затем правки/миграции в `projects/game-origin-php/migrations/`.
+  затем правки/миграции в `projects/game-legacy-php/migrations/`.
 
 При сверке для плана 62:
 - **game-origin** — основной источник «как это работает в legacy

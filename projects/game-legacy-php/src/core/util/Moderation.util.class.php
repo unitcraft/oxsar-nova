@@ -41,7 +41,7 @@ class Moderation
         if (defined('OXSAR_MODERATION_BLACKLIST')) {
             return OXSAR_MODERATION_BLACKLIST;
         }
-        // APP_ROOT_DIR = projects/game-origin-php/src/
+        // APP_ROOT_DIR = projects/game-legacy-php/src/
         // YAML живёт в projects/game-nova/configs/moderation/blacklist.yaml
         return APP_ROOT_DIR . '../../game-nova/configs/moderation/blacklist.yaml';
     }

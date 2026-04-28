@@ -3,10 +3,10 @@
 # для использования как dev-fixture в game-origin (UI-сравнение).
 #
 # Запускать ДО старта game-origin:
-#   bash projects/game-origin-php/tools/snapshot-legacy-user.sh
+#   bash projects/game-legacy-php/tools/snapshot-legacy-user.sh
 #
 # Результат:
-#   projects/game-origin-php/migrations/fixtures/test-user-snapshot.sql
+#   projects/game-legacy-php/migrations/fixtures/test-user-snapshot.sql
 
 set -euo pipefail
 

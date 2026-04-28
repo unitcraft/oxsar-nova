@@ -27,7 +27,7 @@
  *     поэтому PHP служит источником формулы, а не байтов.
  *
  * Запуск:
- *   php projects/game-origin-php/tools/dump-alien-ai.php > \
+ *   php projects/game-legacy-php/tools/dump-alien-ai.php > \
  *     projects/game-nova/backend/internal/origin/alien/testdata/golden_alien_ai.json
  *
  * Output schema:

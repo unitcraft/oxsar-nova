@@ -14,7 +14,7 @@ alien-ai A1-A14 — даёт **серию будущих планов 63+** дл
 > освобождён под новый React-фронт ремастера. Текущая legacy-PHP
 > реализация переименована в `projects/game-origin-php/`. Серия
 > планов 64-74 пишется уже с правильными путями: новый фронт →
-> `projects/game-origin/frontend/`, ссылки на legacy →
+> `projects/game-nova/frontends/origin/`, ссылки на legacy →
 > `projects/game-origin-php/...`.
 
 ---

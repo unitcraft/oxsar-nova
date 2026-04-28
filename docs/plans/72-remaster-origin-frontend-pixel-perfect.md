@@ -20,7 +20,7 @@
 ## Цель
 
 Построить **новый фронт origin** — отдельный Vite-bundle в
-`projects/game-origin/frontend/` (путь освобождён планом 75), —
+`projects/game-nova/frontends/origin/` (путь освобождён планом 75), —
 который **визуально pixel-perfect** воспроизводит legacy
 game-legacy-php (тема standard) на современном стеке React/TS, но
 **функционально работает на nova-API** (без backend-адаптеров).
@@ -33,7 +33,7 @@ game-legacy-php (тема standard) на современном стеке React
 
 ### Bootstrap
 
-- `projects/game-origin/frontend/` — новый Vite-проект.
+- `projects/game-nova/frontends/origin/` — новый Vite-проект.
 - Стек по nova-конвенциям: TypeScript strict, TanStack Query,
   Zustand, OpenAPI-сгенерированный клиент к nova-API, TipTap
   для чата + почты.
@@ -164,6 +164,6 @@ BBCode origin **выкидывается** — заменяется TipTap (пл
 - nova-ui-backlog.md U-NNN + X-NNN — фичи и UX, которые могут
   понадобиться.
 - План 57 — TipTap для чата.
-- План 75 — путь `projects/game-origin/frontend/` освобождён.
+- План 75 — путь `projects/game-nova/frontends/origin/` освобождён.
 - `projects/game-legacy-php/public/` + `src/templates/standard/` —
   визуальный референс.
