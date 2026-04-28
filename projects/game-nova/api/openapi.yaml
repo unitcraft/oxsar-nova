@@ -1762,100 +1762,6 @@ paths:
                   offset: { type: integer }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  /api/alliances/{id}/transfer-leadership/code:
-    post:
-      tags: [alliances]
-      security: [{ bearerAuth: [] }]
-      summary: Запросить код подтверждения передачи лидерства (план 67 Ф.3).
-      description: |
-        Только текущий owner альянса. Генерирует 8-символьный
-        одноразовый код, отправляет его текущему owner'у системным
-        сообщением (folder=13). Код действует 10 минут, лимит
-        попыток подтверждения — 5. Rate-limit на запросы кода —
-        3 в час на альянс.
-
-        Запрос идемпотентен через Idempotency-Key (R9): повторный
-        запрос с тем же ключом вернёт сохранённый ответ без
-        повторной отправки сообщения. Внутри БД код всегда UPSERT —
-        последний запрос затирает предыдущий.
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string, format: uuid }
-        - in: header
-          name: Idempotency-Key
-          required: false
-          schema: { type: string, maxLength: 255 }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [new_owner_id]
-              properties:
-                new_owner_id:
-                  type: string
-                  format: uuid
-                  description: |
-                    Будущий лидер. Должен быть членом этого же
-                    альянса, не равным текущему owner'у.
-      responses:
-        "202":
-          description: code issued and sent
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/AllianceTransferCodeIssued" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
-  /api/alliances/{id}/transfer-leadership:
-    post:
-      tags: [alliances]
-      security: [{ bearerAuth: [] }]
-      summary: Подтвердить передачу лидерства кодом (план 67 Ф.3).
-      description: |
-        Только текущий owner альянса. Проверяет код, выпущенный
-        предыдущим запросом /transfer-leadership/code. В одной
-        транзакции:
-          - alliances.owner_id = new_owner_id
-          - alliances.leadership_transferred_at = now()
-          - alliance_members.rank: прежний owner → 'member',
-            новый → 'owner'
-          - audit-запись (action=leadership_transferred)
-          - удаление кода
-
-        Idempotency-Key (R9): повторный confirm с тем же ключом
-        вернёт сохранённый ответ без повторной передачи.
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string, format: uuid }
-        - in: header
-          name: Idempotency-Key
-          required: false
-          schema: { type: string, maxLength: 255 }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [new_owner_id, code]
-              properties:
-                new_owner_id: { type: string, format: uuid }
-                code:         { type: string, minLength: 8, maxLength: 8 }
-      responses:
-        "204": { description: leadership transferred }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
   /api/artefacts/{id}/sell:
     post:
       tags: [artefacts]
@@ -3044,14 +2950,6 @@ components:
         target_id:   { type: string }
         payload:     { type: object, additionalProperties: true }
         created_at:  { type: string, format: date-time }
-
-    # AllianceTransferCodeIssued — ответ POST /transfer-leadership/code (план 67 Ф.3).
-    AllianceTransferCodeIssued:
-      type: object
-      required: [expires_at, ttl_seconds]
-      properties:
-        expires_at:  { type: string, format: date-time }
-        ttl_seconds: { type: integer, description: "TTL кода в секундах (10 мин)" }
 
     # AllianceRelation — расширенный enum (план 67 Ф.2, D-014).
     AllianceRelation:

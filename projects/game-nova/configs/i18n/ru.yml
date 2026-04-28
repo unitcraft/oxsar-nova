@@ -212,8 +212,6 @@ alliance:
   colPoints: Очки
   colRelation: Отношение
   colActions: Действия
-  transferLeadership.codeTitle: Код для передачи лидерства альянса
-  transferLeadership.codeBody: "Код подтверждения передачи лидерства альянса: {{code}}\nДействителен до {{expiresAt}}.\n\nЕсли это запросили не Вы — просто проигнорируйте, лидерство не будет передано."
 artefactInfo:
   action: Действие
   activate: Активировать
