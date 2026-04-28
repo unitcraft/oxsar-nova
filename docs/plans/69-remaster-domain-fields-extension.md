@@ -1,7 +1,7 @@
 # План 69 (ремастер): Расширение domain-полей в nova
 
 **Дата**: 2026-04-28
-**Статус**: Ф.0 (дельта-аудит) выполнена. Ф.1 ждёт решения по R10 (home_planet_id).
+**Статус**: Ф.0 (дельта-аудит) выполнена. R10 (home_planet_id) — отказ. Ф.1 в работе.
 **Зависимости**: блокируется планом 64 (`configs/balance/origin.yaml` для дефолтных
 значений вселенной origin).
 **Связанные документы**:
@@ -34,7 +34,7 @@
 | D-005 | `users.is_observer BOOLEAN` (домен-флаг, не RBAC) | Наблюдатель без боя | ⚙️ Ф.1 |
 | D-008 | `users.profession_changed_at` | Когда менял профессию (cooldown) | ✅ закрыто (миграция 0046_profession.sql) |
 | D-020 | `users.last_global_chat_read_at`, `users.last_ally_chat_read_at` (chat_language — отказ, есть `users.language`) | Маркеры прочтения чата | ⚙️ Ф.1 |
-| D-019 | `users.home_planet_id` | Главная планета (FK на planets.id) | ⏳ R10 |
+| D-019 | `users.home_planet_id` | Главная планета (FK на planets.id) | ❌ отказ (R10 / YAGNI, см. ниже) |
 | D-016 | `users.last_planet_teleport_at` | Cooldown teleport-планеты (не путать со stargate_cooldowns per-planet) | ⚙️ Ф.1 |
 | D-003 | `users.account_deletion_scheduled_at` | Soft-удаление с задержкой | ✅ закрыто архитектурно лучше: `account_deletion_codes` (миграция 0051) — email-confirm flow |
 | W1 | `users.notes TEXT` | Приватные заметки игрока | ✅ закрыто архитектурно лучше: `user_notepad` (миграция 0050) — отдельная таблица |
@@ -105,7 +105,6 @@
 | **D-004** | `users.protected_until_at` | `timestamptz` nullable | Защита новичков от атак. |
 | **D-005** | `users.is_observer` | `boolean NOT NULL DEFAULT false` | Наблюдатель без боя (домен-флаг, не RBAC-роль). |
 | **D-016** | `users.last_planet_teleport_at` | `timestamptz` nullable | Cooldown смены home-планеты. **Не дублирует** `stargate_cooldowns` (миграция 0062): stargate — это прыжок флота между лунами per planet_id; teleport — смена «домашней» планеты per user_id. Разные механики. |
-| **D-019** | `users.home_planet_id` | `uuid` nullable, FK на `planets(id) ON DELETE SET NULL` | Главная планета (целевая для миссий без явного origin). См. **открытый вопрос R10** ниже. |
 | **D-020** | `users.last_global_chat_read_at`, `users.last_ally_chat_read_at` | `timestamptz` nullable | Маркеры прочтения чата. **Без `chat_language`** — `users.language` (UI язык) уже есть с 0001, отдельный язык чата = YAGNI (одна тема, один язык per user). |
 
 ### Отказы (зафиксированы в плане выше)
@@ -115,29 +114,41 @@
 - **D-001 расширенное**: `dm_points`, `be_points`, `of_points` — YAGNI
   (origin-only внутренняя сложность). `max_points` — да.
 - **D-020 chat_language**: YAGNI, `users.language` достаточно.
+- **D-019 `home_planet_id`**: R10 / YAGNI (см. раздел ниже).
 
-### Открытый вопрос R10 (home_planet_id)
+### Решение по R10 (home_planet_id) — ОТКАЗ (2026-04-28)
 
-`users` per текущему паттерну nova — per-universe (схема users
-идентична в каждой uni-БД). Но R10 (roadmap-report) предписывает
-cross-universe identity. Конфликт: `home_planet_id` указывает на
-`planets.id` per-universe.
+`users` per текущему паттерну nova — per-universe; R10
+(roadmap-report) предписывает cross-universe identity. Конфликт:
+`home_planet_id` указывает на `planets.id` per-universe.
 
-Варианты:
-- (а) Cross-table `user_universe_state(user_id, universe_code, home_planet_id)`
-- (б) `users.home_planet_id UUID nullable` per-universe (текущий паттерн nova)
-- (в) Не вводить вообще (фича origin-only через session-state)
+**Решение: вариант (в) — НЕ вводим `home_planet_id` ни в каком виде.**
 
-**Решение пользователя ожидается перед миграцией Ф.1.**
+Обоснование:
+- В nova **нет UI/UX концепции «домашней планеты»**. Игрок
+  переключается между планетами через `cur_planet_id` /
+  session-state (текущий паттерн nova).
+- R10 (users cross-universe) + per-universe planets создали бы
+  конфликт. Не создавать поле = не создавать конфликт.
+- **YAGNI / R15**: пока origin-фронт (план 72) не реализован,
+  `home_planet_id` не используется. Когда понадобится — origin
+  может работать через session/Zustand без БД-поля.
+- Если в будущем потребуется cross-universe state (например,
+  preferred-планета per вселенная) — отдельный план с
+  cross-table `user_universe_state`. Сейчас не делаем.
+
+D-019 закрывается **отказом**, не миграцией.
 
 ### Итог Ф.0
 
 - Изначально план 69: **9 полей**.
-- Из них уже закрыто (полностью или архитектурно лучше): **3** (D-008, D-003, W1).
-- Включаем в Ф.1: **6 полей** (D-001, D-004, D-005, D-016, D-019*, D-020 ×2).
-  *D-019 — после ответа по R10.
+- Уже закрыто (полностью или архитектурно лучше): **3** (D-008, D-003, W1).
+- Отказы: **1** (D-019 — R10/YAGNI).
+- Включаем в Ф.1: **5 полей** — `max_points`, `protected_until_at`,
+  `is_observer`, `last_planet_teleport_at`,
+  `last_global_chat_read_at` + `last_ally_chat_read_at`.
 - Объём правки: уменьшен с «одна большая миграция 9 ALTER» до
-  «одна миграция 5–6 ALTER». Handlers и тесты соответственно
+  «одна миграция 5 ALTER». Handlers и тесты соответственно
   сужены: убираем notes-endpoint и deletion-flow из Ф.6.
 
 ---
