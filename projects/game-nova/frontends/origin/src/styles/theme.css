@@ -1,0 +1,78 @@
+/*
+ * Тема origin-фронта (план 72 Ф.1).
+ *
+ * Цветовая палитра, шрифты, размеры — извлечены 1:1 из
+ * projects/game-legacy-php/public/css/style.css (тема standard).
+ * Цель — pixel-perfect клон визуала legacy без переноса CSS-хаков.
+ *
+ * Источник истины (legacy.css → переменные):
+ *   - body bg                    → animspace.gif
+ *   - text                       → #fff
+ *   - таблицы (th)               → #001C37 / border #39435C
+ *   - таблицы (td)               → #2B3553 / bg2.gif
+ *   - таблицы (odd td)           → bg2_odd.gif
+ *   - links                      → #B6C6E5 (bold, no underline)
+ *   - inputs/buttons             → bg #001C37, text #B6C6E5, border 2px #39435C
+ *   - input:focus                → border 2px #B5B5B5
+ *   - .available / .true         → #00ff00
+ *   - .false / damage            → #fc3232
+ *   - .galaxysub                 → #A58C05
+ *   - .own (свой игрок)          → #4EA63D
+ *   - left menu width            → 150px (layout.css → 160px fixed)
+ *   - .topbox text               → #DF1818 bold 8pt
+ *   - размер шрифта              → 9pt (Georgia, Verdana, Arial)
+ */
+
+:root {
+  --c-bg: #000;
+  --c-bg-image: url('/assets/origin/images/animspace.gif');
+  --c-text: #fff;
+  --c-text-muted: #888;
+
+  --c-link: #B6C6E5;
+  --c-link-hover: #B6C6E5;
+
+  --c-th-bg: #001C37;
+  --c-th-text: #B6C6E5;
+  --c-th-border: #39435C;
+
+  --c-td-bg: #2B3553;
+  --c-td-text: #B6C6E5;
+  --c-td-border: #39435C;
+  --c-td-bg-image: url('/assets/origin/images/bg2.gif');
+  --c-td-bg-image-odd: url('/assets/origin/images/bg2_odd.gif');
+
+  --c-input-bg: #001C37;
+  --c-input-text: #B6C6E5;
+  --c-input-border: #39435C;
+  --c-input-focus-border: #B5B5B5;
+
+  --c-positive: #00ff00;
+  --c-negative: #fc3232;
+  --c-negative-soft: #fd7171;
+  --c-warning: #d57c08;
+  --c-galaxysub: #A58C05;
+  --c-own-player: #4EA63D;
+  --c-error-text: #DF1818;
+
+  --c-leftmenu-bg: #1F273C;
+  --c-leftmenu-bg-hover: #333947;
+  --c-menu-info-bg: #001C37;
+
+  --c-topheader-bg: rgba(0, 0, 0, 0.4);
+  --c-footer-bg: rgba(0, 0, 0, 0.65);
+  --c-footer-text: #888;
+  --c-footer-border: #333;
+
+  --font-base: Georgia, Verdana, Arial, Helvetica, sans-serif;
+  --font-size-base: 9pt;
+  --font-size-small: 8pt;
+  --font-size-footer: 11px;
+
+  --w-leftmenu: 150px;
+  --w-leftmenu-fixed: 160px;
+  --w-table: 700px;
+  --w-planets: 150px;
+
+  --z-footer: 100;
+}

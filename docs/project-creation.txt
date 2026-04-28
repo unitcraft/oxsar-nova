@@ -12571,3 +12571,76 @@ Refactor-only: подготовка раскладки под архитекту
 2. `7b45b3d14a refactor(legacy): game-origin-php → game-legacy-php (план 78 Ф.1.2)` — 1535 файлов.
 
 **План 78 ✅ ЗАВЕРШЁН** (Ф.1-Ф.6).
+
+
+---
+
+## Итерация 72 Ф.1 (2026-04-28): origin-фронт Bootstrap
+
+**Цель**: запустить разработку pixel-perfect клона legacy-PHP origin
+на современном стеке React/TS — отдельный Vite-bundle в
+`projects/game-nova/frontends/origin/`, работающий на nova-API.
+
+**Зависимости** (актуализированы в шапке плана 72):
+- ✅ Планы 64-66, 68-69, 71, 75, 78 — закрыты.
+- 🟡 План 67 — backend закрыт; frontend Ф.5 ч.2 + Ф.6 идут параллельно
+  в slot 2 (трогает nova/alliance/, origin не задевает).
+- 🚫 План 57 (mail) — справочный документ-эпик, для Bootstrap не
+  блокер.
+
+**Что сделано**:
+- `package.json` / `tsconfig.json` / `vite.config.ts` / `index.html` /
+  `.eslintrc.cjs` / `.gitignore` — каркас Vite+TS-проекта на
+  стандартах nova-фронта (React 18 strict, TanStack Query, Zustand,
+  Vite 5, ESLint). Порт dev-сервера 5174 (5173 = nova).
+- `src/api/client.ts` — HTTP-клиент с Bearer + Idempotency-Key + 401-logout
+  (R1: snake_case, R6: nova-имена эндпоинтов без адаптеров).
+- `src/stores/auth.ts` — Zustand auth-store с **отдельным**
+  localStorage-namespace `oxsar-origin-auth` (origin/nova-сессии не
+  конфликтуют).
+- `src/i18n/i18n.tsx` — I18nProvider + useTranslation; тянет тот же
+  `/api/i18n/{lang}` что и nova (R12: переиспользование bundle).
+- `src/styles/theme.css` — CSS-переменные (палитра, типографика,
+  размеры) извлечены 1:1 из `legacy-php/public/css/style.css`.
+- `src/styles/base.css` — переписанные стили таблиц / форм / утилит.
+- `src/styles/layout.css` — 3-frame layout (#topHeader / #leftMenu /
+  #planets / #content / .oxsar-footer).
+- `src/layout/{TopHeader,LeftMenu,PlanetsList,Footer,AppShell}.tsx` —
+  layout-компоненты. На Ф.1 — каркас с placeholder'ами; данные
+  привязываются в Spring 1.
+- `src/App.tsx` + `src/main.tsx` — корневой рендер с Bootstrap-
+  заглушкой внутри AppShell.
+- `public/assets/origin/images/` — минимальный набор UI-фонов
+  (animspace.gif, bg2*.gif, moonbg*.gif, planetbg*.gif, darker*.png,
+  external.png, arrow_*.png, bg.jpg, favicon.ico) — суммарно ~80 KB.
+- `public/assets/origin/images/LICENSING.md` — лицензионный отчёт:
+  что перенесено и почему; **шрифты AGHELV/FUTUR_* НЕ перенесены**
+  (проприетарные клоны Helvetica/Futura, в legacy не подключены через
+  @font-face — заменены системным fallback Georgia → R12).
+- `README.md` — onboarding для разработчиков origin-фронта.
+
+**Намеренные расхождения с legacy** (зафиксированы в плане 72):
+- Шрифты AGHELV/FUTUR → системный fallback (лицензионная чистота).
+- Реклама/баннеры — не перенесены.
+- Achievements/Tutorial/Реферальный экран — отложены/заглушки.
+- BBCode-чат → TipTap (Ф.8).
+
+**i18n-метрика для Ф.1**: 0 новых ключей создано (Bootstrap не
+содержит UI-текстов кроме hardcoded layout-меток в LeftMenu —
+"Империя", "Производство", "Игрок", "Прочее" — это секционные
+заголовки, в Spring 1 заменим на ключи из nova-bundle через `t()`).
+
+**Параллельная сессия (slot 2)**: трогает nova/alliance/ + i18n —
+наши пути не пересекаются. `git add` только `docs/plans/72-...md` +
+`projects/game-nova/frontends/origin/`.
+
+**Следующие шаги**:
+- Ф.2-Ф.6: Spring 1-5 (50 экранов) — отдельные сессии.
+- Ф.7: i18n русификация всех экранов с обязательным grep nova-bundle.
+- Ф.8: TipTap-чат.
+- Ф.9: финализация + screenshot-diff (план 73).
+
+**Коммит**:
+1. `feat(origin/frontend): Ф.1 Bootstrap (план 72)`.
+
+**Статус плана 72**: Ф.1 ✅, Ф.2-Ф.9 — отдельными итерациями.

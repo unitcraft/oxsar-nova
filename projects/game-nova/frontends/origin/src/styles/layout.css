@@ -1,0 +1,161 @@
+/*
+ * 3-frame layout origin-фронта (план 72 Ф.1).
+ *
+ * Воспроизводит layout legacy-PHP (тема standard):
+ *   - #topHeader   — фиксированная шапка с балансом ресурсов и
+ *                    user-controls; bg rgba(0,0,0,0.4).
+ *   - #leftMenu    — левое меню, fixed top:5 left:5, width 160px.
+ *   - #content     — main content area, margin 20px 0, ширина auto.
+ *   - #planets     — список планет справа (absolute, top 0, right 20).
+ *   - .oxsar-footer — фиксирован внизу между #leftMenu и #planets,
+ *                     z-index 100. План 50 Ф.5 — юр-ссылки + 12+
+ *                     маркировка.
+ *
+ * Источник: projects/game-legacy-php/public/css/layout.css.
+ */
+
+#topHeader {
+  margin: 10px;
+  padding: 2px;
+  width: auto;
+  background-color: var(--c-topheader-bg);
+}
+
+#topHeader ul {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+#topHeader li {
+  text-align: center;
+  vertical-align: middle;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+#topHeader .ressource {
+  font-weight: bold;
+}
+
+#leftMenu {
+  position: fixed;
+  top: 5px;
+  left: 5px;
+  width: var(--w-leftmenu-fixed);
+}
+
+#leftMenu ul, #leftMenu li {
+  margin: 0;
+  padding: 0;
+}
+
+#leftMenu ul {
+  border: 0.1em solid var(--c-link);
+}
+
+#leftMenu li {
+  font-size: var(--font-size-small);
+  text-align: center;
+  border: 0;
+  clear: both;
+}
+
+#leftMenu li ul {
+  border: none;
+}
+
+#leftMenu li a, #leftMenu li a:hover {
+  background: var(--c-leftmenu-bg);
+  margin-top: 1px;
+  padding: 2px 0;
+  display: block;
+}
+
+#leftMenu li a:hover {
+  background-color: var(--c-leftmenu-bg-hover);
+  text-decoration: none;
+}
+
+.menu-info, .menu-info:hover {
+  height: 14px;
+  font-size: var(--font-size-base);
+  padding-bottom: 2px;
+  background-color: var(--c-menu-info-bg);
+  margin-top: 1px;
+}
+
+.menu-prod, .menu-user, .menu-other,
+.menu-prod:hover, .menu-user:hover, .menu-other:hover {
+  height: 10px;
+  padding: 0;
+  background-color: var(--c-menu-info-bg);
+  margin-top: 1px;
+}
+
+#content {
+  width: auto;
+  margin: 20px 0;
+  margin-left: 180px;
+  margin-right: 180px;
+}
+
+#contentHtml {
+  padding-bottom: 48px;
+}
+
+#planets {
+  position: absolute;
+  top: 0;
+  right: 20px;
+  width: var(--w-planets);
+  font-size: var(--font-size-small);
+}
+
+#planets li, #planets li:hover {
+  cursor: pointer;
+  width: 100px;
+  height: 75px;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+/* ------- Footer (план 50 Ф.5) ------- */
+
+.oxsar-footer {
+  position: fixed;
+  bottom: 0;
+  left: 170px;
+  right: 180px;
+  padding: 4px 8px;
+  background: var(--c-footer-bg);
+  border-top: 1px solid var(--c-footer-border);
+  text-align: center;
+  color: var(--c-footer-text);
+  font-size: var(--font-size-footer);
+  font-family: Tahoma, Verdana, sans-serif;
+  z-index: var(--z-footer);
+}
+
+.oxsar-footer a, .oxsar-footer a:link, .oxsar-footer a:visited {
+  color: var(--c-footer-text);
+  font-weight: normal;
+}
+
+.oxsar-footer a:hover {
+  color: var(--c-link);
+  text-decoration: underline;
+}
+
+.oxsar-footer .age-rating {
+  font-weight: bold;
+  margin-left: 8px;
+}
+
+.poweredby {
+  width: 100%;
+  text-align: center;
+  font-size: smaller;
+  margin-top: 10px;
+}

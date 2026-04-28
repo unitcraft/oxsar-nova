@@ -1,0 +1,237 @@
+/*
+ * Базовые стили origin-фронта (план 72 Ф.1).
+ *
+ * Переписано из legacy-PHP `style.css` (875 строк) с использованием
+ * CSS-переменных из theme.css. Без legacy-хаков (!important,
+ * `cursor: n-resize` на меню и т.п.) — но с тем же визуалом.
+ *
+ * R5: pixel-perfect клон. Не менять цвета/размеры/отступы без
+ * соответствующего ADR (план 73 проверит screenshot-diff ≤ 0.5%).
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background-image: var(--c-bg-image);
+  background-attachment: fixed;
+  background-color: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-base);
+  font-size: var(--font-size-base);
+  font-style: normal;
+}
+
+body, input, select, textarea, pre, cite {
+  font-family: var(--font-base);
+  font-size: var(--font-size-base);
+  font-style: normal;
+}
+
+li {
+  list-style-type: none;
+}
+
+img {
+  border: 0;
+  text-align: center;
+  vertical-align: middle;
+}
+
+a, a:link, a:hover, a:active, a:visited {
+  color: var(--c-link);
+  font-weight: bold;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+hr {
+  color: #fff;
+  background-color: #fff;
+  height: 1px;
+  border: 0;
+}
+
+/* ------- Таблицы ------- */
+
+.ntable, fieldset, .idiv, .topbox, .content_width {
+  width: var(--w-table);
+}
+
+.ntable th, .ttable th, .atable th, .th {
+  background-color: var(--c-th-bg);
+  color: var(--c-th-text);
+  border: 1px solid var(--c-th-border);
+  text-align: left;
+}
+
+.ntable td, .atable td, .ttable td, .strongBorderTop, fieldset, .topbox, .td {
+  background-color: var(--c-td-bg);
+  color: var(--c-td-text);
+  border: 1px solid var(--c-td-border);
+  background-image: var(--c-td-bg-image);
+}
+
+.ntable tfoot td {
+  text-align: center;
+}
+
+.ntable th, .ntable td {
+  padding: 1px 5px;
+}
+
+.odd td {
+  background-image: var(--c-td-bg-image-odd);
+}
+
+.atable {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.atable td, .atable th {
+  text-align: center;
+}
+
+.itable td {
+  border: 0;
+  text-align: center;
+}
+
+.strongBorderTop {
+  border-top: 3px solid var(--c-td-border);
+}
+
+/* ------- Состояния ------- */
+
+.available, .true {
+  color: var(--c-positive);
+}
+
+.false, .rep_quantity_diff, .rep_quantity_damage {
+  color: var(--c-negative);
+}
+
+.odd .false, .odd .rep_quantity_diff, .odd .rep_quantity_damage {
+  color: #ff5555;
+}
+
+.rep_quantity_damage_low {
+  color: var(--c-warning);
+}
+
+.rep_quantity_grasped {
+  color: var(--c-positive);
+}
+
+.notavailable, .false2 {
+  color: var(--c-negative-soft);
+}
+
+.own {
+  color: var(--c-own-player);
+}
+
+.galaxysub {
+  color: var(--c-galaxysub);
+}
+
+.topbox {
+  color: var(--c-error-text);
+  font-weight: bold;
+  font-size: var(--font-size-small);
+  text-align: center;
+  margin-bottom: 0.625em;
+  padding: 3px;
+}
+
+/* ------- Формы / кнопки ------- */
+
+.button, .SignButton, input, select, textarea {
+  background-color: var(--c-input-bg);
+  color: var(--c-input-text);
+  font-weight: bold;
+  border: 2px solid var(--c-input-border);
+}
+
+input, textarea {
+  padding: 2px;
+}
+
+input:focus, textarea:focus {
+  border: 2px solid var(--c-input-focus-border);
+  outline: none;
+}
+
+.SignButton {
+  padding: 5px 20px;
+}
+
+.SignButton:hover, .button:hover {
+  border: 2px solid var(--c-input-focus-border);
+  cursor: pointer;
+}
+
+fieldset {
+  padding: 0.625em;
+}
+
+fieldset li {
+  margin-bottom: 5px;
+}
+
+fieldset ul, fieldset li {
+  margin-left: 0;
+  padding: 0;
+}
+
+fieldset label {
+  width: 130px;
+  float: left;
+}
+
+/* ------- Утилиты ------- */
+
+.idiv {
+  text-align: center;
+  margin-top: 0.625em;
+  margin-bottom: 0.625em;
+}
+
+.normal {
+  font-weight: bold;
+}
+
+.small {
+  font-size: var(--font-size-small);
+}
+
+.right {
+  margin-top: 8px;
+  text-align: right;
+}
+
+.leftImage {
+  margin-right: 5px;
+  float: left;
+}
+
+.centered {
+  position: absolute;
+  top: 30%;
+  left: 30%;
+}
+
+.external {
+  padding-right: 13px;
+}
