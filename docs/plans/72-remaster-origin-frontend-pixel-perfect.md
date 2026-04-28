@@ -13,15 +13,22 @@ backend пакет `internal/catalog/` с 3 catalog endpoints, real
 `/api/techtree` и `/api/records` подключены — реальные данные, не
 моки; catalog отдаёт current-universe-only данные modern-вселенной,
 см. simplifications P72.S3.A, 2026-04-28),
-Ф.5 🟡 Spring 4 ч.1 ✅ (7 экранов S-034 Friends / S-035 MSG /
-S-036 Chat / S-037 ChatAlly / S-038 Notepad / S-039 Search /
-S-042 Settings — communication+notes+search+settings; полное
-openapi-расширение для всех 14 экранов Spring 4 включая ч.2 —
-закрытие R2 тех-долга; BBCode → plain text trade-off P72.S4.BBCODE,
-TipTap отложен на Ф.8; legacy-only Settings поля P72.S4.SETTINGS;
-2026-04-28); Spring 4 ч.2 в очереди (6 экранов: Officer / Profession /
-UserAgreement / Changelog / Support / AdvTechCalc + Widgets-skip),
-Ф.6-Ф.9 — отдельными сессиями.
+Ф.5 ✅ Spring 4 (13 экранов реализованы + 1 закрыт через дубликат):
+ч.1 (7 экранов S-034 Friends / S-035 MSG / S-036 Chat / S-037 ChatAlly /
+S-038 Notepad / S-039 Search / S-042 Settings) + полное openapi-
+расширение для всех 14 экранов Spring 4 — коммит 716b5a518b;
+ч.2 (6 экранов S-040 Officer / S-041 Profession / S-043 UserAgreement /
+S-044 Changelog / S-045 Support / S-047 AdvTechCalculator + S-046
+Widgets закрыт через S-001 Main, см. simplifications P72.S4.WIDGETS) —
+коммит [этой сессии]; trade-off'ы: BBCode → plain text P72.S4.BBCODE,
+legacy-only Settings P72.S4.SETTINGS, S-046 Widgets-skip P72.S4.WIDGETS,
+Changelog как bundled markdown P72.S4.CHANGELOG, UserAgreement
+cross-link на portal P72.S4.USER_AGREEMENT, Support cross-service
+на portal-backend P72.S4.SUPPORT_CROSS_SERVICE, Officer/Profession
+DTO uточнения OpenAPI P72.S4.OFFICER_DTO; 2026-04-28).
+Ф.6 (Spring 5 — Simulator/RocketAttack/MonitorPlanet/ResTransferStats/
+Stock-Exchange), Ф.7 (i18n русский), Ф.8 (TipTap-чат, зависит от
+плана 57), Ф.9 (финал) — отдельными сессиями.
 **Зависимости** (актуализировано 2026-04-28):
 - ✅ План 64 — закрыт (override-схема балансов).
 - ✅ План 65 — закрыт (Ф.1-Ф.6, включая teleport).

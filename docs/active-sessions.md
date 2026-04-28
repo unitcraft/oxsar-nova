@@ -50,7 +50,6 @@ Slot — натуральное число от `1` без ведущих нул
 
 | Slot | План / Задача | Файлы (паттерны) | Старт | Ожидаемый коммит |
 |---|---|---|---|---|
-| 2 | План 72 Ф.5 Spring 4 ч.2 (6 экранов origin: premium+static+utilities + Widgets-skip + финализация) | projects/game-nova/frontends/origin/, docs/plans/72-remaster-origin-frontend-pixel-perfect.md, docs/active-sessions.md, docs/project-creation.txt, docs/simplifications.md | 2026-04-28 23:35 | feat(origin/frontend): Ф.5 Spring 4 ч.2 — premium+static+utilities (план 72) |
 
 ## Примеры пересечений (история, для обучения)
 

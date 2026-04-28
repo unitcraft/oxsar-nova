@@ -41,6 +41,15 @@
 //   /records                   → S-024 Records
 //   /ranking                   → S-023 Ranking + публичная статистика (S-032)
 //
+// Spring 4 ч.2 (Ф.5):
+//   /officer                   → S-040 Officer (наём за credits)
+//   /profession                → S-041 Profession (выбор профессии)
+//   /user-agreement            → S-043 UserAgreement (cross-link на portal)
+//   /changelog                 → S-044 Changelog (bundled markdown)
+//   /support                   → S-045 Support (кросс-сервис на portal)
+//   /tools/tech-calc           → S-047 AdvTechCalculator (pure client)
+//   /widgets                   → S-046 Widgets — redirect на / (см. simplifications)
+//
 //   /login                     → placeholder
 //   *                          → redirect на /
 //
@@ -94,6 +103,14 @@ import {
 import { NotepadScreen } from './features/notepad/NotepadScreen';
 import { SearchScreen } from './features/search/SearchScreen';
 import { SettingsScreen } from './features/settings/SettingsScreen';
+// Spring 4 ч.2 (Ф.5) — premium / static / utilities
+import { OfficerScreen } from './features/officer/OfficerScreen';
+import { ProfessionScreen } from './features/profession/ProfessionScreen';
+import { UserAgreementScreen } from './features/user-agreement/UserAgreementScreen';
+import { ChangelogScreen } from './features/changelog/ChangelogScreen';
+import { SupportScreen } from './features/support/SupportScreen';
+import { AdvTechCalculatorScreen } from './features/tech-calc/AdvTechCalculatorScreen';
+import { WidgetsRedirect } from './features/widgets/WidgetsRedirect';
 
 export function AppRouter() {
   return (
@@ -168,6 +185,15 @@ export function AppRouter() {
           <Route path="/notepad" element={<NotepadScreen />} />
           <Route path="/search" element={<SearchScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
+
+          {/* Spring 4 ч.2 (Ф.5) — premium / static / utilities */}
+          <Route path="/officer" element={<OfficerScreen />} />
+          <Route path="/profession" element={<ProfessionScreen />} />
+          <Route path="/user-agreement" element={<UserAgreementScreen />} />
+          <Route path="/changelog" element={<ChangelogScreen />} />
+          <Route path="/support" element={<SupportScreen />} />
+          <Route path="/tools/tech-calc" element={<AdvTechCalculatorScreen />} />
+          <Route path="/widgets" element={<WidgetsRedirect />} />
 
           <Route path="/login" element={<LoginPlaceholder />} />
           <Route path="*" element={<Navigate to="/" replace />} />
