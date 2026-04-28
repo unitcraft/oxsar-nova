@@ -10784,3 +10784,152 @@ admin-bff/proxy без шума. Шаблон Rewrite-proxy готов к
 
 **Коммит**: один коммит, ~150 строк (рефактор + новый тестовый файл
 + 6 строк ContextWithSession + шапка плана + dev-log).
+
+## Итерация 62 (2026-04-28) — Feasibility/audit ремастера origin на nova-backend
+
+**Контекст.** Стратегическое решение принято заранее: ремастер
+game-origin на nova-backend с pixel-perfect клоном legacy-UI.
+План 62 не выбирает стратегию, а **раскладывает её на конкретные
+последующие планы 63-73**. Это исследовательская работа без кода:
+~5000 строк аудита распределённых по 9 markdown-артефактам в
+[docs/research/origin-vs-nova/](research/origin-vs-nova/).
+
+**Источники аудита.**
+- game-origin: `projects/game-origin/` (PHP 8.3, ~43 500 строк
+  игровой логики). Запущенный инстанс на http://localhost:8092 +
+  `/dev-login.php` для проверки экранов под `test`/userid=1.
+- БД origin: `oxsar_db` через `docker-mysql-1`, 216 таблиц.
+- game-nova: `projects/game-nova/` (Go, 54 internal-пакета +
+  41 frontend-feature) и identity-service.
+- legacy oxsar2: `d:\Sources\oxsar2\` для сверки оригинального
+  PHP при необходимости.
+
+**Что собрано.**
+
+1. **`origin-inventory.md`** — 28 классов src/game/ + 55
+   контроллеров src/game/page/ (с actions и шаблонами) + 75
+   EVENT_* типов с обработчиками EventHandler (file:line) + 216
+   БД-таблиц + 5 миграций.
+
+2. **`nova-inventory.md`** — 54 internal-пакета (от auth до
+   universeswitcher) + 71 миграция + 80+ REST-роутов из openapi.yaml +
+   41 frontend-feature + полный список Kind* событий (24 реализ.
+   + 8 объявленных без handler) + worker dispatcher (FOR UPDATE
+   SKIP LOCKED, retry 10s/60s/300s, DLQ events_dead).
+
+3. **`comparison.md`** — 8 сравнительных таблиц по категориям
+   плана 62 (домен, формулы, механики, event-loop, API, UI,
+   assets, cross-universe) с цветовой классификацией. ~99
+   элементов сравнения.
+
+4. **`divergence-log.md`** — **46 записей D-NNN** (порог плана
+   ≥30 ✓):
+   - D-001..D-025 (домен, 25 шт): множественные очки, vacation
+     семантика, account deletion, observer flag, координаты,
+     UI customization, profession+timing, race, chat tracking,
+     home planet, asteroid slots, alliance ranks, achievements
+     (32 поля → 3), officer-юниты, event payload, event chains
+   - D-026..D-030 (формулы, 5): источник истины (DSL-строки в БД
+     vs YAML+Go), температура водорода, RF алиенов, спец-юниты,
+     экспоненты charge_*
+   - D-031..D-038 (event-loop, 8): TOURNAMENT, TELEPORT_PLANET,
+     RUN_SIM_ASSAULT, DELIVERY_ARTEFACTS, ALIEN_FLY_UNKNOWN/
+     GRAB_CREDIT/CHANGE_MISSION_AI, DESTROY_BUILDING, ATTACK_CUSTOM
+   - D-039..D-045 (API, 7): биржа артефактов, передача лидерства
+     альянса, 3 описания, global mail, phalanx, resource transfers,
+     ExchangeOpts
+   - D-046 (assets): runtime-генератор PNG артефактов
+     (`public/artefact-image.php`, 153 стр PHP-GD)
+
+5. **`origin-ui-replication.md`** — **все 55 контроллеров**
+   сопоставлены с экранами S-001..S-055 (минимум плана: пропуск =
+   баг). Шаблоны/actions/backend nova-endpoint/сложность.
+   Layout-системы (3-frame: leftMenu + main + header), глобальные
+   ассеты (палитра `#fc3232`/`#00ff00`/`#fd7171`/`#6cd8bc`,
+   ~200 PNG/GIF), 10 типовых таблиц (Constructions/Shipyard/
+   Galaxy/Mission/Research/Stock/Messages/Alliance/Ranking/Repair).
+
+6. **`nova-ui-backlog.md`** — **15 U-NNN** (UI-функции: биржа
+   артефактов, передача лидерства, гранулярные права, 3 описания,
+   telepor планеты, кастомные ранги, лог альянса, real-time
+   валидация форм) + **22 X-NNN** (UX-микрологика: дефицит
+   ресурсов с скобками `(нужно X)`, причины disabled-кнопок,
+   прогресс артефактов, переполнение хранилища, blocked корабли,
+   нет слотов, helptip, energy deficit, rep_destroyed бар,
+   added_level +/-, новые ачивки счётчик). Минимумы плана
+   (≥10 + ≥20) ✓.
+
+7. **`alien-ai-comparison.md`** — углублённое сравнение AI
+   инопланетян (origin AlienAI.class.php 1127 стр vs nova
+   internal/alien/ 1662 стр). Полная state machine (Halt → Holding →
+   HoldingAI с 8 действиями), алгоритм generateFleet (target_power),
+   все 8 EVENT_ALIEN_*, четверг ×5 флотов / ×1.5..2.0 мощь,
+   корабли UNIT_A_* (id 200-204). 14 расхождений A1-A14.
+   План 15 этап 3 явно упрощён (2 действия из 8 в HOLDING_AI;
+   нет CHANGE_MISSION_AI / FLY_UNKNOWN).
+
+8. **`formula-dsl.md`** — описание DSL формул origin
+   (`na_construction.prod_*/cons_*/charge_*` как varbinary(255)
+   PHP-выражения, парсятся через `eval()`). Парсеры:
+   `Functions.inc.php:41 parseChargeFormula` (без контекста),
+   `Planet.class.php:592 parseSpecialFormula` (с `{temp}`,
+   `{tech=N}`, `{building=N}`). Архитектурное расхождение с nova:
+   формулы в БД vs YAML+Go-код. Решение для legacy01: гибрид
+   B1+B3 (предвычислить charge_* в legacy.yaml, динамику в Go).
+
+9. **`roadmap-report.md`** — декомпозиция в **11 будущих планов
+   63-73**:
+   - 63: legacy.yaml + per-universe balance loading (2 нед)
+   - 64: расширение event-loop (3-4 нед)
+   - 65: AlienAI до полного паритета (3 нед)
+   - 66: расширение alliance (2-3 нед)
+   - 67: биржа артефактов (3-4 нед)
+   - 68: расширение domain-полей в users (2 нед)
+   - 69: achievements расширение (1-2 нед)
+   - 70: UX-микрологика на nova-frontend (2-3 нед)
+   - **71: origin-фронт pixel-perfect клон (12-16 нед)** —
+     главный план серии, 5 spring'ов
+   - 72: screenshot-diff CI (2 нед)
+   - 73: legacy01 deploy + DNS + config (1 нед)
+   Зависимости в графе. Минимум 6-9 месяцев, полный паритет
+   9-10 месяцев. Матрица «D-NNN → план» для всех 46 записей.
+
+**Что нового в плане 62 относительно черновика.**
+- Архитектурная вводная #11: live game-origin на :8092
+  ([docs/legacy/game-origin-access.md](legacy/game-origin-access.md)) —
+  основной источник для сверки UI/поведения, dev-login через
+  `public/dev-login.php` мгновенно как `test` (userid=1, 9 планет,
+  36M очков).
+- Промпт `docs/prompts/plan-62-execute.md` обновлён: точные
+  curl-команды через `/dev-login.php` + `docker exec` в БД
+  origin.
+
+**Параллельные сессии.** В соседней сессии шёл план 61 (admin-bff
+proxy refactor). Изоляция: `git status --short` перед каждым
+add/commit, `git add` только своими путями
+(`docs/research/origin-vs-nova/...`,
+`docs/plans/62-...md`,
+`docs/prompts/plan-62-execute.md`,
+`docs/legacy/game-origin-access.md`,
+`docs/release-roadmap.md`,
+`docs/project-creation.txt`).
+
+**Что разблокирует.** После 62 пользователь может запустить любой
+будущий план словами «реализуй план 63» / «делай D-042» / «сделай
+экран S-015», и агент-реализатор соберёт всё нужное из артефактов
+без повторного аудита. `roadmap-report.md` — точка входа в
+дерево планов 63-73.
+
+**Коммиты**: 4 промежуточных + 1 финальный.
+- Ф.1 (origin-inventory + formula-dsl + alien-ai-origin)
+- Ф.2 (nova-inventory)
+- Ф.3 + Ф.3.5 (comparison + divergence-log + origin-ui-replication
+  + nova-ui-backlog)
+- Финал (roadmap-report + шапка плана 62 + release-roadmap +
+  project-creation.txt)
+
+**Объём** — около 4 рабочих дней агента (на нижней границе
+оценки плана 4-6 дней). Распараллеливание Explore-агентов на
+ёмкие сборы (controllers/events/DSL/AlienAI и
+domain-comparisons/UI-replication/UX-microlog) уложило работу в
+одну сессию с полнотой ≥порогов.

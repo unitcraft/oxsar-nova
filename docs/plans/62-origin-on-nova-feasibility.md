@@ -1,7 +1,21 @@
 # План 62: feasibility-исследование — game-nova как бэкенд для game-origin
 
 **Дата**: 2026-04-28
-**Статус**: Активный (исследовательский, без кода)
+**Статус**: Завершён 2026-04-28 (исследовательский, без кода)
+
+**Артефакты** в [docs/research/origin-vs-nova/](../research/origin-vs-nova/):
+- [origin-inventory.md](../research/origin-vs-nova/origin-inventory.md) — 28 классов src/game/, 55 контроллеров, 75 EVENT_*, 216 БД-таблиц, 5 миграций
+- [nova-inventory.md](../research/origin-vs-nova/nova-inventory.md) — 54 пакета internal/, 71 миграция, 80+ API-роутов, 41 frontend-feature
+- [comparison.md](../research/origin-vs-nova/comparison.md) — 8 категорий, ~99 элементов сравнения с цветовой классификацией
+- [divergence-log.md](../research/origin-vs-nova/divergence-log.md) — **46 записей D-NNN** (минимум 30 ✓)
+- [origin-ui-replication.md](../research/origin-vs-nova/origin-ui-replication.md) — все 55 контроллеров → S-001..S-055
+- [nova-ui-backlog.md](../research/origin-vs-nova/nova-ui-backlog.md) — 15 U-NNN + 22 X-NNN
+- [alien-ai-comparison.md](../research/origin-vs-nova/alien-ai-comparison.md) — глубокое сравнение AlienAI (1127 стр PHP), 14 расхождений A1-A14
+- [formula-dsl.md](../research/origin-vs-nova/formula-dsl.md) — DSL формул origin (parseChargeFormula, parseSpecialFormula)
+- [roadmap-report.md](../research/origin-vs-nova/roadmap-report.md) — декомпозиция в 11 будущих планов 63-73 (6-9 мес.)
+
+Дорожная карта ремастера в [docs/release-roadmap.md](../release-roadmap.md)
+§ «Пост-запуск v3».
 **Зависимости**: нет блокирующих. Не запускает миграцию — только её оценку.
 **Связанные документы**:
 - [37-game-origin.md](37-game-origin.md) — план переписывания game-origin
