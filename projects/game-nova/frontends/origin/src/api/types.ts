@@ -118,3 +118,164 @@ export interface FleetList {
 export interface UnreadCount {
   count: number;
 }
+
+// ===== Alliance (план 67 backend, план 72 Ф.3 Spring 2 ч.1) =====
+
+export interface Alliance {
+  id: string;
+  tag: string;
+  name: string;
+  description: string;
+  is_open: boolean;
+  owner_id: string;
+  owner_name: string;
+  member_count: number;
+  created_at: string;
+}
+
+export interface AllianceMember {
+  user_id: string;
+  username: string;
+  rank: string;
+  rank_name: string;
+  joined_at: string;
+}
+
+export interface AllianceDetail {
+  alliance: Alliance;
+  members: AllianceMember[];
+}
+
+export interface AllianceListResult {
+  alliances: Alliance[] | null;
+  limit: number;
+  offset: number;
+}
+
+export interface AllianceListFilters {
+  q?: string | undefined;
+  is_open?: boolean | undefined;
+  min_members?: number | undefined;
+  max_members?: number | undefined;
+  limit?: number | undefined;
+  offset?: number | undefined;
+}
+
+export interface AllianceApplication {
+  id: string;
+  alliance_id: string;
+  user_id: string;
+  username: string;
+  message: string;
+  created_at: string;
+}
+
+export type AllianceViewer = 'member' | 'applicant' | 'outsider';
+
+export interface AllianceDescriptionView {
+  description_external: string;
+  description_internal: string;
+  description_apply: string;
+  description: string;
+  viewer: AllianceViewer;
+}
+
+export type AlliancePermissionKey =
+  | 'can_invite'
+  | 'can_kick'
+  | 'can_send_global_mail'
+  | 'can_manage_diplomacy'
+  | 'can_change_description'
+  | 'can_propose_relations'
+  | 'can_manage_ranks';
+
+export type AlliancePermissionMap = Partial<Record<AlliancePermissionKey, boolean>>;
+
+export interface AllianceRank {
+  id: string;
+  alliance_id: string;
+  name: string;
+  position: number;
+  permissions: AlliancePermissionMap;
+}
+
+export type AllianceRelationStatus =
+  | 'protection'
+  | 'confederation'
+  | 'war'
+  | 'trade'
+  | 'ceasefire';
+
+export type AllianceRelationState = 'outgoing' | 'incoming' | 'active';
+
+export interface AllianceRelation {
+  initiator_id: string;
+  target_id: string;
+  initiator_tag: string;
+  target_tag: string;
+  initiator_name: string;
+  target_name: string;
+  status: AllianceRelationStatus;
+  state: AllianceRelationState;
+  message: string;
+  proposed_at: string;
+  established_at: string | null;
+}
+
+export interface AllianceAuditEntry {
+  id: string;
+  alliance_id: string;
+  actor_id: string | null;
+  actor_name: string;
+  action: string;
+  target_kind: string | null;
+  target_id: string | null;
+  target_name: string | null;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface AllianceAuditPage {
+  entries: AllianceAuditEntry[] | null;
+  limit: number;
+  offset: number;
+}
+
+export interface AllianceTransferCodeIssued {
+  expires_at: string;
+  ttl_seconds: number;
+}
+
+// ===== Resource market / Artefact market / Repair / Battlestats =====
+// (план 72 Ф.3 Spring 2 ч.2)
+
+export type ResourceKind = 'metal' | 'silicon' | 'hydrogen';
+
+export interface MarketRates {
+  global_rate: { metal: number; silicon: number; hydrogen: number };
+  user_rate: number;
+  cooldown_until?: string | null;
+}
+
+export interface ExchangeResult {
+  delta: { metal: number; silicon: number; hydrogen: number };
+  rate: number;
+}
+
+export interface ArtMarketOffer {
+  id: string;
+  artefact_id: string;
+  artefact_name: string;
+  artefact_type: string;
+  seller_id: string;
+  seller_name: string;
+  price: number;
+  created_at: string;
+}
+
+export interface BattleStatsTotals {
+  total: number;
+  wins: number;
+  losses: number;
+  draws: number;
+}
