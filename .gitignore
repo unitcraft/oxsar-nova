@@ -52,3 +52,6 @@ projects/game-nova/configs/*_generated.yml
 /configs/
 
 helpful.txt
+
+# Deploy — локальные per-environment конфиги (есть .example шаблон)
+deploy/admin-ips.conf
