@@ -88,9 +88,11 @@ func (s *Service) RecalcUser(ctx context.Context, userID string) error {
 		return fmt.Errorf("score.achievements: %w", err)
 	}
 	total := bPoints + rPoints + uPoints
+	// max_points (план 69 D-001) — исторический пик, никогда не убывает.
 	_, err = s.db.Pool().Exec(ctx, `
 		UPDATE users
-		SET b_points=$2, r_points=$3, u_points=$4, a_points=$5, points=$6
+		SET b_points=$2, r_points=$3, u_points=$4, a_points=$5, points=$6,
+		    max_points=GREATEST(max_points, $6)
 		WHERE id=$1
 	`, userID, roundPts(bPoints), roundPts(rPoints),
 		roundPts(uPoints), roundPts(aPoints), roundPts(total))
@@ -118,7 +120,7 @@ func (s *Service) Top(ctx context.Context, scoreType string, limit int) ([]Entry
 			WHERE user_id = u.id AND destroyed_at IS NULL AND is_moon = false
 			ORDER BY created_at ASC LIMIT 1
 		) hp ON true
-		WHERE u.umode = false
+		WHERE u.umode = false AND u.is_observer = false
 		ORDER BY u.%s DESC
 		LIMIT $1
 	`, col), limit)
@@ -170,7 +172,7 @@ func (s *Service) TopAlliances(ctx context.Context, limit int) ([]AllianceEntry,
 	rows, err := s.db.Pool().Query(ctx, `
 		SELECT a.tag, a.name, COUNT(u.id), SUM(u.points)
 		FROM alliances a
-		JOIN users u ON u.alliance_id = a.id AND u.umode = false
+		JOIN users u ON u.alliance_id = a.id AND u.umode = false AND u.is_observer = false
 		GROUP BY a.id, a.tag, a.name
 		ORDER BY SUM(u.points) DESC
 		LIMIT $1
@@ -238,7 +240,7 @@ func (s *Service) PlayerRank(ctx context.Context, userID, scoreType string) (int
 	}
 	var rank int
 	if err := s.db.Pool().QueryRow(ctx, fmt.Sprintf(`
-		SELECT COUNT(*)+1 FROM users WHERE %s > $1 AND umode=false
+		SELECT COUNT(*)+1 FROM users WHERE %s > $1 AND umode=false AND is_observer=false
 	`, col), pts).Scan(&rank); err != nil {
 		return 0, fmt.Errorf("score.player_rank: %w", err)
 	}

@@ -1,7 +1,7 @@
 # План 69 (ремастер): Расширение domain-полей в nova
 
 **Дата**: 2026-04-28
-**Статус**: Ф.0 (дельта-аудит) выполнена. R10 (home_planet_id) — отказ. Ф.1 в работе.
+**Статус**: Ф.0 ✅ Ф.1 ✅ Ф.3 ✅ Ф.4 ✅ Ф.5 (частично — profession уже был; teleport отложен до плана 72). Осталось: Ф.6 (verify notes endpoint), Ф.7 (финализация).
 **Зависимости**: блокируется планом 64 (`configs/balance/origin.yaml` для дефолтных
 значений вселенной origin).
 **Связанные документы**:
@@ -58,18 +58,47 @@
 
 ## Этапы (детали — при старте)
 
-- **Ф.0. Дельта-аудит** ✅ (выполнен 2026-04-28, см. ниже).
-- Ф.1. Миграция БД дельты (только реально отсутствующие поля).
-- Ф.2. Обновить sqlc-модели + регенерация.
-- Ф.3. Handler-обновления для тех endpoint'ов, где поля отдаются /
-  читаются.
-- Ф.4. Защитная логика protected_until_at в attack-handler.
-- Ф.5. Cooldown teleport / профессии.
-- Ф.6. Endpoint для notes (GET/PUT `/api/users/me/notes`) — **переоценить**:
-  notes уже реализованы как отдельная таблица `user_notepad`
-  (миграция 0050). Возможно, endpoint существует или достаточно
-  расширения существующего модуля.
-- Ф.7. Финализация.
+- **Ф.0. Дельта-аудит** ✅ (2026-04-28, см. ниже).
+- **Ф.1. Миграция БД дельты** ✅ (миграция `0072_users_remaster_fields.sql`,
+  5 ALTER: max_points, protected_until_at, is_observer,
+  last_planet_teleport_at, last_global_chat_read_at, last_ally_chat_read_at).
+- **Ф.2. sqlc-регенерация** — N/A: sqlc в `game-nova` не используется,
+  все запросы — сырые pgx (см. CLAUDE.md → требует обновления).
+- **Ф.3 + Ф.4. Handler-обновления + защитная логика** ✅:
+  - `internal/fleet/attack.go`: расширена проверка защиты —
+    срабатывает по global protectionPeriod ИЛИ per-user
+    `protected_until_at` ИЛИ `is_observer = true` (флот возвращается
+    без боя). Spy / acs / moon-destruction handlers НЕ обновлены —
+    это уже существующая дыра pre-69 (защита новичков отсутствовала
+    и там); вне scope плана.
+  - `internal/score/service.go`: `RecalcUser` обновляет
+    `max_points = GREATEST(max_points, total)` (D-001 — исторический
+    пик, никогда не убывает).
+  - Фильтр `is_observer = false` добавлен везде, где был фильтр
+    `umode = false` для публичных рейтингов: `score.Top`,
+    `score.TopAlliances`, `score.PlayerRank`, `records.topScore`,
+    `score/handler.go` online-статистика, `galaxy/repository.go`
+    рейтинг в галактика-обзоре. НЕ добавлен в `score.RecalcAll`
+    (observer всё равно играет, очки считаем) и
+    `score.VacationPlayers` (observer + vacation — состояние данных).
+  - `internal/chat/handler.go`: новые endpoints
+    `POST /api/chat/{kind}/read` и `GET /api/chat/{kind}/unread`
+    (D-020). Используют новые поля `last_global_chat_read_at` /
+    `last_ally_chat_read_at` per kind.
+- **Ф.5. Cooldowns**:
+  - **Profession**: ✅ уже реализован полностью в
+    `internal/profession/service.go` (миграция 0046 + handler с
+    14-day cooldown, `ErrChangeTooSoon`).
+  - **Teleport**: ⏸ отложен до плана 72. Поле
+    `last_planet_teleport_at` уже добавлено миграцией 0072 — готово
+    к использованию когда механика смены home-планеты будет
+    реализована. Сейчас helper'а нет — добавлять "на будущее"
+    противоречит KISS.
+- Ф.6. Endpoint для notes — **переоценить**: notes уже реализованы
+  как отдельная таблица `user_notepad` (миграция 0050).
+  В отдельной сессии: проверить наличие endpoint, при отсутствии
+  добавить GET/PUT `/api/users/me/notes`.
+- Ф.7. Финализация (отдельная сессия).
 
 ---
 

@@ -89,7 +89,7 @@ func (r *Repository) ReadSystem(ctx context.Context, galaxyNum, systemNum int, v
 			p.planet_type, p.user_id,
 			u.username,
 			CASE WHEN u.id IS NULL THEN NULL
-			     ELSE (SELECT COUNT(*)+1 FROM users u2 WHERE u2.points > u.points AND u2.umode=false)::int
+			     ELSE (SELECT COUNT(*)+1 FROM users u2 WHERE u2.points > u.points AND u2.umode=false AND u2.is_observer=false)::int
 			END AS rank,
 			u.last_seen,
 			COALESCE(u.umode, false) AS vacation,

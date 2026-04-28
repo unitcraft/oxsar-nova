@@ -336,6 +336,104 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 
 const editWindow = 5 * time.Minute
 
+// MarkRead POST /api/chat/{kind}/read — обновляет маркер прочтения
+// канала текущим пользователем (план 69 D-020). Возвращает unread_count
+// до отметки и новое значение last_read_at.
+func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	kind := chi.URLParam(r, "kind")
+	col, channel, err := h.readMarkerColumn(r.Context(), kind, uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+		return
+	}
+
+	now := time.Now().UTC()
+	if _, err := h.db.Pool().Exec(r.Context(),
+		`UPDATE users SET `+col+`=$1 WHERE id=$2`, now, uid,
+	); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+		"channel":      channel,
+		"last_read_at": now.Format(time.RFC3339),
+	})
+}
+
+// UnreadCount GET /api/chat/{kind}/unread — счётчик непрочитанных
+// сообщений в канале с момента last_*_chat_read_at пользователя
+// (план 69 D-020). Если маркер NULL, считает все сообщения канала
+// (нижняя граница 200 для дешевизны).
+func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	kind := chi.URLParam(r, "kind")
+	col, channel, err := h.readMarkerColumn(r.Context(), kind, uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+		return
+	}
+
+	var lastRead *time.Time
+	if err := h.db.Pool().QueryRow(r.Context(),
+		`SELECT `+col+` FROM users WHERE id=$1`, uid,
+	).Scan(&lastRead); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+
+	var count int64
+	if lastRead == nil {
+		err = h.db.Pool().QueryRow(r.Context(), `
+			SELECT COUNT(*) FROM (
+				SELECT 1 FROM chat_messages
+				WHERE channel=$1 AND deleted_at IS NULL
+				LIMIT 200
+			) t
+		`, channel).Scan(&count)
+	} else {
+		err = h.db.Pool().QueryRow(r.Context(), `
+			SELECT COUNT(*) FROM chat_messages
+			WHERE channel=$1 AND deleted_at IS NULL AND created_at > $2
+		`, channel, *lastRead).Scan(&count)
+	}
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+
+	resp := map[string]any{"channel": channel, "unread": count}
+	if lastRead != nil {
+		resp["last_read_at"] = lastRead.UTC().Format(time.RFC3339)
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, resp)
+}
+
+// readMarkerColumn возвращает имя колонки last_*_chat_read_at для
+// заданного kind и резолвленный channel (для последующих запросов).
+func (h *Handler) readMarkerColumn(ctx context.Context, kind, userID string) (col, channel string, err error) {
+	channel, err = h.channelFor(ctx, kind, userID)
+	if err != nil {
+		return "", "", err
+	}
+	switch kind {
+	case "global":
+		return "last_global_chat_read_at", channel, nil
+	case "alliance":
+		return "last_ally_chat_read_at", channel, nil
+	default:
+		return "", "", fmt.Errorf("chat: unknown channel kind %q", kind)
+	}
+}
+
 // EditMessage PATCH /api/chat/messages/{id}
 // Только автор, только в течение editWindow после создания.
 func (h *Handler) EditMessage(w http.ResponseWriter, r *http.Request) {
