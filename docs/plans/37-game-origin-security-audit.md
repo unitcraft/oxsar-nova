@@ -1,8 +1,8 @@
-# Security Audit game-origin (план 37.6)
+﻿# Security Audit game-origin (план 37.6)
 
 **Дата**: 2026-04-27
 **Аудитор**: Claude (statических анализ через grep + анализ кода)
-**Scope**: `projects/game-origin/src/` + `templates/` + `public/`
+**Scope**: `projects/game-origin-php/src/` + `templates/` + `public/`
 
 ## Резюме
 

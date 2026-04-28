@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 # План 37.5d.2: применить test-user-snapshot.sql к нашей game-origin БД.
 #
 # 1. Сохранить global_user_id текущего dev-юзера (userid=1) в /tmp.
@@ -7,7 +7,7 @@
 # 4. Восстановить global_user_id (или поставить 'dev-user-001' если не было).
 #
 # Использование:
-#   bash projects/game-origin/tools/apply-test-user-fixture.sh
+#   bash projects/game-origin-php/tools/apply-test-user-fixture.sh
 set -eu
 
 CONT="docker-mysql-1"
@@ -16,7 +16,7 @@ SNAPSHOT="$(dirname "$0")/../migrations/fixtures/test-user-snapshot.sql"
 
 if [ ! -f "$SNAPSHOT" ]; then
   echo "ERROR: snapshot not found: $SNAPSHOT" >&2
-  echo "Run first: bash projects/game-origin/tools/snapshot-legacy-user.sh" >&2
+  echo "Run first: bash projects/game-origin-php/tools/snapshot-legacy-user.sh" >&2
   exit 1
 fi
 
@@ -91,7 +91,7 @@ echo "  cleanup done"
 # Останавливаем event-monitor чтобы он не пересоздавал юзера 1 пока мы
 # заливаем snapshot (он мог получить EVENT_COLONIZE_NEW_USER_PLANET).
 echo "Step 2.5: stop event-monitor..."
-docker compose -f projects/game-origin/docker/docker-compose.yml stop event-monitor 2>&1 | tail -1
+docker compose -f projects/game-origin-php/docker/docker-compose.yml stop event-monitor 2>&1 | tail -1
 
 # === Step 3: apply snapshot ===
 echo "Step 3: apply snapshot ($(wc -l < "$SNAPSHOT") lines)..."

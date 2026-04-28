@@ -1,4 +1,4 @@
-# Промпт: выполнить план 62 (feasibility/audit ремастера origin на nova-backend)
+﻿# Промпт: выполнить план 62 (feasibility/audit ремастера origin на nova-backend)
 
 **Дата создания**: 2026-04-28
 **План**: [docs/plans/62-origin-on-nova-feasibility.md](../plans/62-origin-on-nova-feasibility.md)
@@ -78,7 +78,7 @@
   ты схалтурил.
 - nova-ui-backlog.md: ≥ 10 записей U-NNN + ≥ 20 X-NNN.
 - origin-ui-replication.md: ВСЕ 55 контроллеров из
-  projects/game-origin/src/game/page/ должны быть сопоставлены
+  projects/game-origin-php/src/game/page/ должны быть сопоставлены
   с экранами S-NNN. Пропуск = баг.
 - Все 🟣-записи (тихая семантика — одинаковые имена, разная
   семантика) должны иметь конкретный пример расходящегося
@@ -129,7 +129,7 @@
    твой DSL, опиши в formula-dsl.md.
 
 9. Известный пример runtime-генерируемого ассета:
-   projects/game-origin/public/artefact-image.php (PHP-GD,
+   projects/game-origin-php/public/artefact-image.php (PHP-GD,
    композитная PNG артефакта). Найди другие через grep по
    imagecreate|imagecopy|imagepng|imagejpeg|imagettftext.
 

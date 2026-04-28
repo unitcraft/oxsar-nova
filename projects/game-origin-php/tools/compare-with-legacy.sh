@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 # План 37.5d.3: сравнение всех страниц game-origin с legacy oxsar2.
 #
 # Pre-condition: snapshot test-юзера применён к нашей БД через
@@ -19,7 +19,7 @@
 #   - report.md               — итоговый отчёт
 #
 # Использование:
-#   bash projects/game-origin/tools/compare-with-legacy.sh
+#   bash projects/game-origin-php/tools/compare-with-legacy.sh
 
 set -eu
 

@@ -1,4 +1,4 @@
-# Промпт: выполнить план 63 (identity tokens по RFC 6749)
+﻿# Промпт: выполнить план 63 (identity tokens по RFC 6749)
 
 **Дата создания**: 2026-04-28
 **План**: [docs/plans/63-identity-tokens-rfc6749.md](../plans/63-identity-tokens-rfc6749.md)
@@ -118,7 +118,7 @@ Smoke в браузере:
 
 Ф.5. PHP-сторона (game-origin)
 
-- projects/game-origin/src/core/JwtAuth.php — если парсит
+- projects/game-origin-php/src/core/JwtAuth.php — если парсит
   login-wrapper (handoff из portal с токенами в URL?), обновить.
 - Найти все места обращения к identity API в game-origin.
 - НЕ ЛОМАТЬ: handoff-механизм должен продолжать работать.
@@ -155,7 +155,7 @@ docs/release-roadmap.md. Не пересекайтесь.
   · projects/admin-bff/...
   · projects/billing/... (если правил)
   · projects/mail/... (если правил)
-  · projects/game-origin/src/core/JwtAuth.php (если правил)
+  · projects/game-origin-php/src/core/JwtAuth.php (если правил)
   · docs/plans/63-identity-tokens-rfc6749.md
   · docs/project-creation.txt
 - git status --short ПЕРЕД каждым git commit (убедись что не

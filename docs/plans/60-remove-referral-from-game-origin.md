@@ -1,4 +1,4 @@
-# План 60: Удаление legacy реферальной системы из game-origin
+﻿# План 60: Удаление legacy реферальной системы из game-origin
 
 **Дата**: 2026-04-27
 **Статус**: Завершён 2026-04-28
@@ -17,7 +17,7 @@ admin-bff + admin-frontend), legacy-реализация в game-origin не
 
 ## Цель
 
-Полностью удалить legacy реферальную систему из `projects/game-origin/`.
+Полностью удалить legacy реферальную систему из `projects/game-origin-php/`.
 
 **Обоснование:**
 - Новая реферальная программа (план 59) реализуется с нуля на portal-backend
@@ -37,31 +37,31 @@ admin-bff + admin-frontend), legacy-реализация в game-origin не
 
 ### 1. PHP-код
 
-- `projects/game-origin/src/game/page/Referral.class.php` — основной
+- `projects/game-origin-php/src/game/page/Referral.class.php` — основной
   класс страницы рефералов.
 - Упоминания `Referral` в:
-  - `projects/game-origin/src/game/Menu.class.php` — пункт меню;
-  - `projects/game-origin/src/game/xml/Menu.xml` — XML-описание меню;
-  - `projects/game-origin/src/game/page/Page.class.php` — роутинг;
-  - `projects/game-origin/src/game/EventHandler.class.php` — если есть
+  - `projects/game-origin-php/src/game/Menu.class.php` — пункт меню;
+  - `projects/game-origin-php/src/game/xml/Menu.xml` — XML-описание меню;
+  - `projects/game-origin-php/src/game/page/Page.class.php` — роутинг;
+  - `projects/game-origin-php/src/game/EventHandler.class.php` — если есть
     обработчики реферальных событий;
-  - `projects/game-origin/src/game/cronjob/RemoveInactiveUser.php` —
+  - `projects/game-origin-php/src/game/cronjob/RemoveInactiveUser.php` —
     если есть логика очистки реферальных связей;
-  - `projects/game-origin/src/game/AccountCreator.class.php` — если
+  - `projects/game-origin-php/src/game/AccountCreator.class.php` — если
     при регистрации проверяется реферальный код;
-  - `projects/game-origin/src/game/Functions.inc.php` — общие
+  - `projects/game-origin-php/src/game/Functions.inc.php` — общие
     функции (если есть `referralBonus()` и т.п.);
-  - `projects/game-origin/src/core/legacy_payment/payment.inc.php` —
+  - `projects/game-origin-php/src/core/legacy_payment/payment.inc.php` —
     если payment'ы давали реферальный bonus.
 
 ### 2. Шаблоны
 
-- `projects/game-origin/src/templates/standard/referral.tpl` — основной
+- `projects/game-origin-php/src/templates/standard/referral.tpl` — основной
   шаблон страницы.
 - Упоминания реферала в:
-  - `projects/game-origin/src/templates/standard/before_content.tpl`;
-  - `projects/game-origin/src/templates/standard/main.tpl`.
-- Кэши: `projects/game-origin/src/cache/templates/standard/referral.cache.php`
+  - `projects/game-origin-php/src/templates/standard/before_content.tpl`;
+  - `projects/game-origin-php/src/templates/standard/main.tpl`.
+- Кэши: `projects/game-origin-php/src/cache/templates/standard/referral.cache.php`
   и любые другие связанные кэши (Smarty компилирует автоматически —
   при удалении исходного `.tpl` кэш инвалидируется).
 
@@ -91,7 +91,7 @@ admin-bff + admin-frontend), legacy-реализация в game-origin не
 
 ### 5. Тестовые данные
 
-- `projects/game-origin/tools/compare-output/` — там есть `Referral.html`
+- `projects/game-origin-php/tools/compare-output/` — там есть `Referral.html`
   снапшоты. Они в gitignore? Если нет — удалить как часть очистки.
 - В sample-данных (`apply-test-user-fixture.sh`, `snapshot-legacy-user.sh`)
   — если есть реферальные fixtures, убрать.
@@ -132,17 +132,17 @@ admin-bff + admin-frontend), legacy-реализация в game-origin не
 ```bash
 # Код PHP
 grep -rln "реферал\|referral\|referer\|referrer\|invite_by\|invited_by" \
-  projects/game-origin/src/ 2>/dev/null | grep -v cache/
+  projects/game-origin-php/src/ 2>/dev/null | grep -v cache/
 
 # Шаблоны
-grep -rln "referral\|реферал" projects/game-origin/src/templates/
+grep -rln "referral\|реферал" projects/game-origin-php/src/templates/
 
 # БД миграции (если есть)
 grep -rln "referral\|referrer\|invited_by" \
-  projects/game-origin/migrations/ 2>/dev/null
+  projects/game-origin-php/migrations/ 2>/dev/null
 
 # Конфиги
-grep -rln "referral\|реферал" projects/game-origin/config/ 2>/dev/null
+grep -rln "referral\|реферал" projects/game-origin-php/config/ 2>/dev/null
 ```
 
 Документировать результат как **inventory** в коммит-сообщении.
@@ -158,7 +158,7 @@ docker exec game-origin-postgres psql -U postgres -d game_origin -c "\d users" \
 
 ### Ф.2. Удаление PHP-кода
 
-- `git rm projects/game-origin/src/game/page/Referral.class.php`.
+- `git rm projects/game-origin-php/src/game/page/Referral.class.php`.
 - В `Menu.class.php` / `Menu.xml` — удалить пункт меню.
 - В `Page.class.php` — удалить роутинг (case `'Referral'` → удалить).
 - В `EventHandler.class.php`, `cronjob/RemoveInactiveUser.php` — удалить
@@ -171,14 +171,14 @@ docker exec game-origin-postgres psql -U postgres -d game_origin -c "\d users" \
 
 ### Ф.3. Удаление шаблонов
 
-- `git rm projects/game-origin/src/templates/standard/referral.tpl`.
+- `git rm projects/game-origin-php/src/templates/standard/referral.tpl`.
 - В `before_content.tpl`, `main.tpl` — удалить блоки/ссылки на
   «Рефералы».
 - Кэши пересоберутся автоматически при следующем запуске.
 
 ### Ф.4. Удаление БД-структур
 
-По результатам Ф.1 создать миграцию `projects/game-origin/migrations/0NNN_drop_referral.sql`:
+По результатам Ф.1 создать миграцию `projects/game-origin-php/migrations/0NNN_drop_referral.sql`:
 
 ```sql
 -- Если есть отдельная таблица:
@@ -212,7 +212,7 @@ ALTER TABLE na_user
 - Магазин / payment.
 - Меню навигации (нет битых ссылок).
 - Регистрация нового пользователя (если применимо).
-- Через `bash projects/game-origin/tools/compare-with-legacy.sh`
+- Через `bash projects/game-origin-php/tools/compare-with-legacy.sh`
   если работает — отличия от legacy ожидаемы (Referral исчез).
 
 Никаких 500-х, никаких пустых страниц, никаких «class not found».

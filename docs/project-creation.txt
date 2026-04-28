@@ -11016,3 +11016,72 @@ portal в game-origin. Сборка `go build ./...` и `go test ./...`
 
 **Объём** — ~2 часа в активном темпе. На нижней границе оценки
 плана 2-4 часа.
+
+---
+
+## Итерация 75 — переименование game-origin → game-origin-php (2026-04-28)
+
+**Задача**: освободить путь `projects/game-origin/` под целевую папку
+нового React-фронта ремастера (планы 64-74); текущую PHP-реализацию
+перенести в `projects/game-origin-php/`. План 75 — чистый рефакторинг
+путей перед запуском ремастер-серии.
+
+**Контекст.** После плана 62 в `docs/research/origin-vs-nova/`
+накоплены 9 артефактов с сотнями file:line ссылок. Ещё 8-10 будущих
+планов (64-74) будут писать file:line — каждый день откладывания
+переименования удваивает работу по позднему find-replace.
+
+**Что сделано.**
+- `git mv projects/game-origin projects/game-origin-php` — git распознал
+  rename со 100% match (никаких add+delete, история сохранена).
+- Find-replace `projects/game-origin/` → `projects/game-origin-php/`
+  в `docs/` (26 файлов, 246 замен; project-creation.txt **исключён**
+  как исторический документ — упоминания старого пути в записях
+  итераций 37/41/43/50/60/62/63 фиксируют состояние мира на момент
+  написания, замена бы исказила историю).
+- Find-replace в самом `projects/game-origin-php/` (5 файлов,
+  10 замен — это комментарии в shell-скриптах и в одном PHP-файле
+  с относительной отсылкой к `APP_ROOT_DIR`).
+- `CLAUDE.md`, секция «Структура» — добавлена парная пара
+  `projects/game-origin-php/` (legacy PHP) и
+  `projects/game-origin/` (зарезервировано под новый React-фронт).
+- `docs/research/origin-vs-nova/roadmap-report.md` — отметка о
+  переименовании.
+
+**Что не трогали.** `docs/project-creation.txt` (исторические
+записи), git-историю (никаких filter-branch — `git mv` достаточно),
+`projects/game-origin-php/config/consts.php` и другие PHP-конфиги
+(абсолютных путей нет, `GAME_ORIGIN_DIR` определяется через
+`dirname(__FILE__, 2)` — после rename автоматически указывает на
+новый путь). Пути в `docker-compose.yml` внутри
+`projects/game-origin-php/docker/` — все относительные (`../src`,
+`../public`), правок не требуют. `deploy/`, `scripts/`, `Makefile`
+не упоминают game-origin.
+
+**Препятствия.**
+- Параллельная сессия (admin-frontend) оставила 2 зависших процесса
+  (`bash.exe` + `docker compose up nginx | head -20`) с CWD в
+  `projects/game-origin/docker/`. На Windows это блокирует rename
+  каталога с `Permission denied`. Также пришлось остановить
+  работающий PHP-стек (docker-php, nginx, mysql, memcached,
+  event-monitor) — bind-mount в Docker Desktop держит файлы
+  даже после `compose down`, пока не убиты compose-процессы.
+  После `Stop-Process` для зависших процессов и `compose down`
+  для PHP-стека `git mv` прошёл успешно.
+
+**Verify.**
+- `docker compose -f projects/game-origin-php/docker/docker-compose.yml
+  config --quiet` — OK.
+- Финальный `grep -rn "projects/game-origin/" .` (без -php) даёт
+  только две ожидаемых группы: исторические записи в
+  project-creation.txt + комментарий в CLAUDE.md о зарезервированной
+  папке для нового фронта.
+
+**Коммит**: 1 большой коммит `refactor(repo): projects/game-origin →
+projects/game-origin-php (план 75)`. Поимённый `git add`
+(параллельная сессия трогала admin-frontend — её изменения не
+стейджились).
+
+**Объём** — ~1.5 часа в активном темпе (включая разбор с
+Permission denied на Windows из-за чужих процессов). На нижней
+границе оценки плана 1-2 часа.

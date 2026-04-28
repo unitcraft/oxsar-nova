@@ -1,4 +1,4 @@
-# Промпт: выполнить план 75 (переименование game-origin → game-origin-php)
+﻿# Промпт: выполнить план 75 (переименование game-origin → game-origin-php)
 
 **Дата создания**: 2026-04-28
 **План**: [docs/plans/75-rename-game-origin-to-php.md](../plans/75-rename-game-origin-to-php.md)
@@ -13,7 +13,7 @@
 ---
 
 ```
-Задача: выполнить план 75 — переименование projects/game-origin/ →
+Задача: выполнить план 75 — переименование projects/game-origin-php/ →
 projects/game-origin-php/ для освобождения пути под новый
 React-фронт ремастера.
 
@@ -61,19 +61,19 @@ git распознаёт переименование автоматически
   исказит историю. Только новая запись «итерация 75» в Ф.7.
 
 Поиск:
-  grep -rn "projects/game-origin/" docs/ | grep -v "project-creation.txt"
+  grep -rn "projects/game-origin-php/" docs/ | grep -v "project-creation.txt"
 
 Замена (адаптируй под Windows-окружение):
-  - На Linux/macOS: sed -i 's|projects/game-origin/|projects/game-origin-php/|g'
+  - На Linux/macOS: sed -i 's|projects/game-origin-php/|projects/game-origin-php/|g'
   - На Windows: использовать Edit-tool с replace_all=true
     или PowerShell
 
 КРИТИЧНО: использовать **точный паттерн с слэшем** —
-"projects/game-origin/" (с финальным слэшем), чтобы НЕ зацепить
+"projects/game-origin-php/" (с финальным слэшем), чтобы НЕ зацепить
 "projects/game-origin-php/" уже после первого этапа. Без слэша
 зацепит и сломает.
 
-Verify: grep -rn "projects/game-origin/" docs/ — должно
+Verify: grep -rn "projects/game-origin-php/" docs/ — должно
 возвращать только:
 - исторические записи в docs/project-creation.txt
 - комментарии «зарезервировано под новый фронт» (если есть)
@@ -120,7 +120,7 @@ APP_ROOT_DIR. Должно быть ОК без правок.
 - projects/game-origin-php/   — legacy PHP реализация origin
                                 (clean-room rewrite, на удаление
                                 после готовности нового фронта)
-- projects/game-origin/       — зарезервировано под новый
+- projects/game-origin-php/       — зарезервировано под новый
                                 React-фронт origin (ремастер,
                                 планы 64-74)
 - projects/portal/...
@@ -130,7 +130,7 @@ APP_ROOT_DIR. Должно быть ОК без правок.
 
 - git diff --stat показывает в основном rename (100% match) +
   правки file:line в docs.
-- grep -rn "projects/game-origin/" . (БЕЗ -php суффикса) —
+- grep -rn "projects/game-origin-php/" . (БЕЗ -php суффикса) —
   должно остаться только:
   · исторические записи в docs/project-creation.txt (ожидаемо)
   · комментарии «зарезервировано под новый фронт» (ожидаемо)
@@ -142,7 +142,7 @@ APP_ROOT_DIR. Должно быть ОК без правок.
 2. Запись в docs/project-creation.txt — итерация 75 (хронология,
    что переименовано и зачем).
 3. Обновить docs/research/origin-vs-nova/roadmap-report.md —
-   отметить, что путь projects/game-origin/ теперь свободен под
+   отметить, что путь projects/game-origin-php/ теперь свободен под
    новый фронт.
 4. Финальный коммит:
    refactor(repo): projects/game-origin → projects/game-origin-php (план 75)
@@ -154,7 +154,7 @@ APP_ROOT_DIR. Должно быть ОК без правок.
 ```
 refactor(repo): projects/game-origin → projects/game-origin-php (план 75)
 
-Освобождает путь projects/game-origin/ под целевую папку нового
+Освобождает путь projects/game-origin-php/ под целевую папку нового
 React-фронта (ремастер, планы 64-74). Текущая PHP-реализация
 переименована в projects/game-origin-php/ — будет удалена после
 готовности нового фронта.
@@ -187,7 +187,7 @@ Generated-with: Claude Code
 
 - НЕ трогать исторические записи в docs/project-creation.txt
   (они фиксируют состояние мира).
-- НЕ создавать projects/game-origin/ в этом плане — это для
+- НЕ создавать projects/game-origin-php/ в этом плане — это для
   будущих планов ремастера.
 - НЕ менять содержимое migrations / SQL / .tpl шаблонов —
   только пути в конфигах.
@@ -206,7 +206,7 @@ Generated-with: Claude Code
 ИЗВЕСТНЫЕ РИСКИ (см. план 75, секция «Известные риски»):
 
 - sed/replace зацепил больше, чем надо → точный паттерн
-  "projects/game-origin/" (с слэшем).
+  "projects/game-origin-php/" (с слэшем).
 - git не распознал rename → проверить через git status, должен
   быть R100.
 - docker-compose сломался → docker-compose config в Ф.6.
@@ -215,7 +215,7 @@ Generated-with: Claude Code
 
 УСПЕШНЫЙ ИСХОД:
 
-- projects/game-origin-php/ существует, projects/game-origin/ нет.
+- projects/game-origin-php/ существует, projects/game-origin-php/ нет.
 - Все file:line ссылки в docs обновлены.
 - docker-compose config / make build парсятся.
 - 1 большой коммит, шапка плана 75 ✅.

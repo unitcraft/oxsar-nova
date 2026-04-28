@@ -1,7 +1,7 @@
-# Инвентарь game-origin (Ф.1 плана 62)
+﻿# Инвентарь game-origin (Ф.1 плана 62)
 
 **Дата сборки**: 2026-04-28
-**Источники**: `projects/game-origin/`, БД `oxsar_db` через `docker-mysql-1`.
+**Источники**: `projects/game-origin-php/`, БД `oxsar_db` через `docker-mysql-1`.
 
 Это полный инвентарь PHP-проекта game-origin (clean-room порт legacy oxsar2,
 план 43). Используется как базис для сравнения с game-nova и составления
@@ -356,7 +356,7 @@ protected/public методы, используют `setPostAction`/`setGetActio
 
 ### Полный список типов EVENT_* (75 уникальных)
 
-Определены в `projects/game-origin/config/consts.php:402-461` как `define()`.
+Определены в `projects/game-origin-php/config/consts.php:402-461` как `define()`.
 
 **Конструктивные** (строительство/исследование):
 - EVENT_BUILD_CONSTRUCTION (1), EVENT_DEMOLISH_CONSTRUCTION (2),
@@ -600,7 +600,7 @@ type_stats), `na_res_transfer`.
 
 ## Runtime-генерируемые ассеты
 
-Найден через `grep -rln "imagecreate\|imagepng\|imagejpeg" projects/game-origin/`:
+Найден через `grep -rln "imagecreate\|imagepng\|imagejpeg" projects/game-origin-php/`:
 
 - **`public/artefact-image.php`** (153 строки) — PHP-GD endpoint,
   отдающий композитную PNG артефакта: фон постройки/исследования +

@@ -1,12 +1,12 @@
-#!/bin/bash
+﻿#!/bin/bash
 # План 37.5d.1: снять снимок test-юзера (userid=1) из боевой legacy БД
 # для использования как dev-fixture в game-origin (UI-сравнение).
 #
 # Запускать ДО старта game-origin:
-#   bash projects/game-origin/tools/snapshot-legacy-user.sh
+#   bash projects/game-origin-php/tools/snapshot-legacy-user.sh
 #
 # Результат:
-#   projects/game-origin/migrations/fixtures/test-user-snapshot.sql
+#   projects/game-origin-php/migrations/fixtures/test-user-snapshot.sql
 
 set -euo pipefail
 

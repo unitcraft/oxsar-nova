@@ -1,4 +1,4 @@
-# План 48: Moderation Service — общий микросервис UGC-модерации
+﻿# План 48: Moderation Service — общий микросервис UGC-модерации
 
 **Дата**: 2026-04-27
 **Статус**: Черновик (запускать при наступлении триггера, см. ниже)
@@ -18,7 +18,7 @@
   `configs/moderation/blacklist.yaml`.
 - `projects/identity/backend/internal/moderation/` — Go, копия того же кода
   (разные модули → не получилось общего пакета).
-- В `projects/game-origin/` (PHP) сейчас **нет фильтра вообще** — план 48
+- В `projects/game-origin-php/` (PHP) сейчас **нет фильтра вообще** — план 48
   Шаг 0 закроет это локальной PHP-обёрткой над тем же YAML, без сети.
 
 Когда захочется заменить простой blacklist на что-то посильнее (Yandex
@@ -135,7 +135,7 @@ decision, reason, backend, score
 **Делается прямо сейчас**, до запуска основного плана. Закрывает
 «один источник истины» без микросервиса.
 
-- `projects/game-origin/src/core/moderation/Blacklist.class.php` —
+- `projects/game-origin-php/src/core/moderation/Blacklist.class.php` —
   читает `projects/game-nova/configs/moderation/blacklist.yaml` (путь
   через конфиг), реализует `isForbidden(string $input): bool`.
 - Нормализация — точно такая же, как в Go-версии (lowercase, удаление

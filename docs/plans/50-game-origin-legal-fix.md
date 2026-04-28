@@ -1,4 +1,4 @@
-# План 50: game-origin — закрытие юридических пробелов legacy-вселенной
+﻿# План 50: game-origin — закрытие юридических пробелов legacy-вселенной
 
 **Дата**: 2026-04-27
 **Статус**: ✅ Завершён 2026-04-28 (все 8 фаз закрыты)
@@ -38,7 +38,7 @@ oxsar2) в соответствие с теми же юридическими т
 
 ### 1. Замена TinyMCE LGPL → MIT
 
-В `projects/game-origin/public/js/tiny_mce/` лежит TinyMCE 3.x под
+В `projects/game-origin-php/public/js/tiny_mce/` лежит TinyMCE 3.x под
 LGPL 2.1. Используется в `src/templates/standard/chat.tpl` как
 WYSIWYG для сообщений чата.
 
@@ -87,7 +87,7 @@ portal?
 ### 4. 149-ФЗ — UGC-модерация на все точки
 
 Класс `Moderation` (введён планом 48 шаг 0,
-`projects/game-origin/src/core/util/Moderation.util.class.php`) — это
+`projects/game-origin-php/src/core/util/Moderation.util.class.php`) — это
 PHP-обёртка над общим blacklist'ом `projects/game-nova/configs/moderation/blacklist.yaml`.
 Сейчас применяется **только** в `AccountCreator.class.php` при
 регистрации (проверка ника).
@@ -106,8 +106,8 @@ PHP-обёртка над общим blacklist'ом `projects/game-nova/configs/
 #### Поиск точек
 
 ```bash
-grep -rn "getPOST\|getGET\|->post\|input(" projects/game-origin/src/game/ projects/game-origin/src/core/
-grep -rn "INSERT INTO\|UPDATE.*SET" projects/game-origin/src/game/ | grep -iE "msg|chat|message|alliance|note|description"
+grep -rn "getPOST\|getGET\|->post\|input(" projects/game-origin-php/src/game/ projects/game-origin-php/src/core/
+grep -rn "INSERT INTO\|UPDATE.*SET" projects/game-origin-php/src/game/ | grep -iE "msg|chat|message|alliance|note|description"
 ```
 
 Для каждой точки прочитать релевантный фрагмент, понять имя
@@ -266,8 +266,8 @@ compare-скрипта 200 OK, user-style CSS теперь идентично
 **Что сделано:**
 - Удалены `if[0 && isAdmin()]`-блоки (init TinyMCE + tinymce_chat_form
   с `<input id="tinymce_chat_message">`) — заменены HTML-комментариями.
-- `git rm -r projects/game-origin/public/js/tiny_mce/` — **430 файлов**
-  библиотеки TinyMCE удалены. Размер `projects/game-origin/`
+- `git rm -r projects/game-origin-php/public/js/tiny_mce/` — **430 файлов**
+  библиотеки TinyMCE удалены. Размер `projects/game-origin-php/`
   уменьшился с 3.7G до 3.2G.
 - В `jquery.form.js` (сторонний пакет) осталось одно упоминание в
   док-комментарии — это сторонняя документация плагина, не наша.
@@ -296,7 +296,7 @@ plain text + bbcode (см. функцию `bbcode($source)` в Chat.class.php
 
 Действия:
 - Проверено grep'ом: внешних вызовов `AccountCreator::registerUser`
-  / `new AccountCreator(...)` в `projects/game-origin/src/` и
+  / `new AccountCreator(...)` в `projects/game-origin-php/src/` и
   `public/` **нет** (единственное упоминание — комментарий в
   `core/AjaxRequestHelper.abstract_class.php`).
 - В шапку `src/game/AccountCreator.class.php` добавлен
@@ -363,7 +363,7 @@ smoke-тест из 8 шагов, что отложено).
 ### Ф.5. Кнопка «Пожаловаться» ✅ (2026-04-28)
 
 - Smarty-шаблон-партиал
-  `projects/game-origin/src/templates/standard/_report_button.tpl` —
+  `projects/game-origin-php/src/templates/standard/_report_button.tpl` —
   CSS+HTML модалки + JS-обёртка `oxReport.open(type, id)` /
   `submit()`. Подключён один раз через `{include}"_report_button"{/include}`
   в `layout.tpl` перед футером.
@@ -471,7 +471,7 @@ docker-compose game-origin (на dev-стенде запущен на :8092 — 
 - Кнопка «Пожаловаться» работает — жалоба появляется в
   AdminReportsTab game-nova.
 - Footer содержит ссылки на оферту, правила, refund, privacy.
-- В `git grep "UnitPoint" projects/game-origin/src/templates/`
+- В `git grep "UnitPoint" projects/game-origin-php/src/templates/`
   нет упоминаний.
 - Повторный аудит (`docs/prompts/legal-compliance-audit.md`) даёт 0
   gap'ов в game-origin.

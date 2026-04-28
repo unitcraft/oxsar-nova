@@ -1,4 +1,4 @@
-# План 58: Ребрендинг валюты — Оксары + Оксариты (двухвалютная схема)
+﻿# План 58: Ребрендинг валюты — Оксары + Оксариты (двухвалютная схема)
 
 **Дата**: 2026-04-27 (обновлён 2026-04-27 после согласования архитектуры)
 **Статус**: Активный
@@ -330,10 +330,10 @@ react-intl / Format.JS).
 2. `projects/portal/frontend/src/i18n/` (если используется) или
    inline-строки в `.tsx`-файлах.
 3. `projects/admin-frontend/src/i18n/` — админка (план 53).
-4. `projects/game-origin/src/templates/standard/*.tpl` —
+4. `projects/game-origin-php/src/templates/standard/*.tpl` —
    Smarty-шаблоны legacy (фразы вида «у вас N кредитов», «купите
    кредиты», «кредитов не хватает»).
-5. `projects/game-origin/src/db/na_phrases` (если используется
+5. `projects/game-origin-php/src/db/na_phrases` (если используется
    таблица фраз legacy для перевода) — обновить русские/английские
    значения.
 6. PHP-код game-origin: hardcoded-фразы в `src/game/page/*.class.php`
@@ -404,7 +404,7 @@ oxsarit:
 После корректировки прогнать поиск:
 
 ```bash
-grep -ri "кредит" projects/*/frontend/ projects/game-origin/src/templates/ \
+grep -ri "кредит" projects/*/frontend/ projects/game-origin-php/src/templates/ \
   projects/game-nova/configs/i18n/
 grep -ri "credit" projects/*/frontend/src/i18n/ \
   projects/admin-frontend/src/i18n/

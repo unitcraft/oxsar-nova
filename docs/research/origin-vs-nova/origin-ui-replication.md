@@ -1,9 +1,9 @@
-# Origin UI Replication Inventory (S-NNN)
+﻿# Origin UI Replication Inventory (S-NNN)
 
 **Дата сборки**: 2026-04-28
 **Контекст**: артефакт плана 62 — репродукционный инвентарь
 game-origin для будущего pixel-perfect-клонирования на React.
-**ВСЕ 55 контроллеров** из `projects/game-origin/src/game/page/`
+**ВСЕ 55 контроллеров** из `projects/game-origin-php/src/game/page/`
 сопоставлены с экранами S-NNN. Пропуск контроллера = баг, потому
 что приведёт к пропуску экрана при разработке клона.
 
@@ -16,7 +16,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-001. Главный экран (Main)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Main.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Main.class.php`
 - **Шаблоны**: `templates/standard/main.tpl`, `planetOptions.tpl`
 - **URL**: `?go=Main` (+ &action=changePlanetOptions, retreatFleet)
 - **Назначение**: Обзор аккаунта, информация о текущей планете,
@@ -31,7 +31,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-002. Исследования (Research)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Research.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Research.class.php`
 - **Шаблоны**: `templates/standard/research.tpl`
 - **URL**: `?go=Research` (+ &action=upgradeResearch, abort, upgradeResearchVIP, researchInfo)
 - **Назначение**: Список технологий, очередь, запуск/отмена.
@@ -45,7 +45,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-003. Здания (Constructions)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Constructions.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Constructions.class.php`
 - **Шаблоны**: `templates/standard/constructions.tpl`,
   `cons_chart.tpl`
 - **URL**: `?go=Constructions` (+ &action=upgradeConstruction, abort,
@@ -61,7 +61,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-004. Верфь (Shipyard)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Shipyard.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Shipyard.class.php`
 - **Шаблоны**: `templates/standard/shipyard.tpl`
 - **URL**: `?go=Shipyard` (+ &action=order, abortShipyard, abortDefense, abortEvent, startShipyardVIP, startDefenseVIP, startEventVIP)
 - **Назначение**: Постройка флота и обороны.
@@ -76,7 +76,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-005. Галактика (Galaxy)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Galaxy.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Galaxy.class.php`
 - **Шаблоны**: `templates/standard/galaxy.tpl`
 - **URL**: `?go=Galaxy&galaxy=X&system=Y` (+ &action=setCoordinatesByGet/Post)
 - **Назначение**: Карта галактики, обзор систем, отправка флотов.
@@ -91,7 +91,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-006. Миссии (Mission)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Mission.class.php` (3096 строк)
+- **Контроллер**: `projects/game-origin-php/src/game/page/Mission.class.php` (3096 строк)
 - **Шаблоны**: `templates/standard/missions.tpl`, `missions2.tpl`,
   `missions3.tpl`, `missions4.tpl`, `mission_control.tpl`,
   `alliance_attack.tpl`, `stargatejump.tpl`
@@ -111,7 +111,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-007. Сообщения (MSG)
 
-- **Контроллер**: `projects/game-origin/src/game/page/MSG.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/MSG.class.php`
 - **Шаблоны**: `templates/standard/folder.tpl`, `messages.tpl`,
   `writemessages.tpl`
 - **URL**: `?go=MSG` (+ &action=sendMessage, deleteMessages,
@@ -127,7 +127,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-008. Чат (Chat)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Chat.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Chat.class.php`
 - **Шаблоны**: `templates/standard/chat.tpl`
 - **URL**: `?go=Chat` (+ &action=sendMessage, checkRO)
 - **Назначение**: Глобальный чат с BBCode (legacy).
@@ -141,7 +141,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-009. Чат альянса (ChatAlly)
 
-- **Контроллер**: `projects/game-origin/src/game/page/ChatAlly.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/ChatAlly.class.php`
 - **Шаблоны**: `templates/standard/chatally.tpl`
 - **URL**: `?go=ChatAlly` (+ &action=sendMessage, checkRO)
 - **Назначение**: Только для членов альянса.
@@ -152,14 +152,14 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-010. ChatPro (зарезервирован, не отдельный экран)
 
-- **Контроллер**: `projects/game-origin/src/game/page/ChatPro.class.php` (33 стр)
+- **Контроллер**: `projects/game-origin-php/src/game/page/ChatPro.class.php` (33 стр)
 - **Назначение**: Заглушка для расширенного чата (вынесена в
   `/novax/chat/`). Не отдельный экран — пропускаемый контроллер.
 - **Сложность воспроизведения**: не воспроизводится
 
 ### S-011. Друзья (Friends)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Friends.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Friends.class.php`
 - **Шаблоны**: `templates/standard/buddylist.tpl`
 - **URL**: `?go=Friends` (+ &action=removeFromList, acceptRequest, addToBuddylist)
 - **Назначение**: Список друзей + запросы.
@@ -169,7 +169,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-012. Альянс (Alliance) — самый сложный экран
 
-- **Контроллер**: `projects/game-origin/src/game/page/Alliance.class.php` (1413 стр)
+- **Контроллер**: `projects/game-origin-php/src/game/page/Alliance.class.php` (1413 стр)
 - **Шаблоны**: `ally.tpl`, `allypage_own.tpl`, `memberlist.tpl`,
   `manage_ranks.tpl`, `globalmail.tpl`, `relation_applications.tpl`,
   `ally_diplomacy.tpl`, `allysearch.tpl`, `foundally.tpl`,
@@ -191,7 +191,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-013. Артефакты (Artefacts)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Artefacts.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Artefacts.class.php`
 - **Шаблоны**: `templates/standard/artefacts.tpl`
 - **URL**: `?go=Artefacts` (+ &action=activateArtefact, deactivateArtefact, showArtefact)
 - **Назначение**: Инвентарь артефактов.
@@ -204,7 +204,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-014. Информация об артефакте (ArtefactInfo)
 
-- **Контроллер**: `projects/game-origin/src/game/page/ArtefactInfo.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/ArtefactInfo.class.php`
 - **Шаблоны**: `artefactinfo.tpl`, `artefact_row_info.tpl`
 - **URL**: `?go=ArtefactInfo` (+ &action=showInfo, useArtefact, activateArtefact, deactivateArtefact)
 - **Назначение**: Модальный просмотр артефакта.
@@ -212,7 +212,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-015. Рынок артефактов (ArtefactMarket)
 
-- **Контроллер**: `projects/game-origin/src/game/page/ArtefactMarket.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/ArtefactMarket.class.php`
 - **Шаблоны**: `templates/standard/artefactmarket2.tpl`
 - **URL**: `?go=ArtefactMarket` (+ &action=buyArtefact)
 - **Backend nova-endpoint**: `GET/POST /api/artefact-market/offers{,/{id}/buy}`
@@ -220,7 +220,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-016. Рынок артефактов старый (ArtefactMarketOld)
 
-- **Контроллер**: `projects/game-origin/src/game/page/ArtefactMarketOld.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/ArtefactMarketOld.class.php`
 - **Шаблоны**: `templates/standard/artefactmarket.tpl`
 - **URL**: `?go=ArtefactMarketOld` (+ &action=buyArtefactRes, buyArtefactCred)
 - **Назначение**: Legacy-версия (вероятно для уни01-стиля игры
@@ -229,7 +229,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-017. Боевая статистика (Battlestats)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Battlestats.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Battlestats.class.php`
 - **Шаблоны**: `templates/standard/battlestats.tpl`,
   `assault_report.tpl`, `_report_button.tpl`
 - **URL**: `?go=Battlestats` (+ &action=showBattles)
@@ -241,7 +241,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-018. Информация о здании (BuildingInfo)
 
-- **Контроллер**: `projects/game-origin/src/game/page/BuildingInfo.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/BuildingInfo.class.php`
 - **Шаблоны**: `templates/standard/buildinginfo.tpl`
 - **URL**: `?go=BuildingInfo` (+ &action=showInfo, packCurrentConstruction, packCurrentResearch)
 - **Backend nova-endpoint**: derived из `GET /api/research`/buildings
@@ -249,7 +249,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-019. Информация о юните (UnitInfo)
 
-- **Контроллер**: `projects/game-origin/src/game/page/UnitInfo.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/UnitInfo.class.php`
 - **Шаблоны**: `templates/standard/unitinfo.tpl`
 - **URL**: `?go=UnitInfo` (+ &action=showInfo)
 - **Backend nova-endpoint**: derived из catalog (frontend/src/api/catalog.ts)
@@ -263,7 +263,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-021. Tech Tree (Techtree)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Techtree.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Techtree.class.php`
 - **Шаблоны**: `templates/standard/techtree.tpl`
 - **URL**: `?go=Techtree`
 - **Назначение**: Граф зависимостей.
@@ -273,7 +273,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-022. Достижения (Achievements)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Achievements.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Achievements.class.php`
 - **Шаблоны**: `templates/standard/achievement.tpl`,
   `achievements.tpl`
 - **URL**: `?go=Achievements` (+ 9 actions)
@@ -282,7 +282,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-023. Рейтинг (Ranking)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Ranking.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Ranking.class.php`
 - **Шаблоны**: `playerstats.tpl`, `allystats.tpl`
 - **URL**: `?go=Ranking` (+ &action=playerRanking, allianceRanking, dmpointsRanking, epointsRanking, maxpointsRanking)
 - **Backend nova-endpoint**: `GET /api/highscore{,/me}`
@@ -290,7 +290,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-024. Рекорды (Records)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Records.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Records.class.php`
 - **Шаблоны**: `templates/standard/records.tpl`
 - **URL**: `?go=Records`
 - **Backend nova-endpoint**: `GET /api/records`
@@ -298,7 +298,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-025. Ресурсы (Resource)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Resource.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Resource.class.php`
 - **Шаблоны**: `templates/standard/resource.tpl`
 - **URL**: `?go=Resource` (+ &action=updateResources, loadBuildingData)
 - **Backend nova-endpoint**: `GET /api/planets/{id}/resource-report`
@@ -306,7 +306,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-026. Рынок ресурсов (Market)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Market.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Market.class.php`
 - **Шаблоны**: `market.tpl`, `market_credit.tpl`,
   `market_metal.tpl`, `market_silicon.tpl`, `market_hydrogen.tpl`
 - **URL**: `?go=Market` (+ &action=Metal_ex, Silicon_ex, Hydrogen_ex, Credit_ex)
@@ -316,7 +316,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-027. Опции рынка (ExchangeOpts)
 
-- **Контроллер**: `projects/game-origin/src/game/page/ExchangeOpts.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/ExchangeOpts.class.php`
 - **Шаблоны**: `exchange.tpl`
 - **URL**: `?go=ExchangeOpts`
 - **Backend nova-endpoint**: вероятно отсутствует — D-NNN
@@ -324,7 +324,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-028. Биржа (Exchange)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Exchange.class.php` (154 стр)
+- **Контроллер**: `projects/game-origin-php/src/game/page/Exchange.class.php` (154 стр)
 - **Шаблоны**: `exchange.tpl`
 - **URL**: `?go=Exchange`
 - **Назначение**: история обменов / стат.
@@ -333,7 +333,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-029. Настройки (Preferences)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Preferences.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Preferences.class.php`
 - **Шаблоны**: `templates/standard/preferences.tpl`
 - **URL**: `?go=Preferences` (+ &action=updateUserData, disableUmode, resendActivationMail, updateDeletion)
 - **Backend nova-endpoint**: `GET /api/me`, `PATCH /api/me/*`
@@ -341,7 +341,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-030. Профессия (Profession)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Profession.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Profession.class.php`
 - **Шаблоны**: `templates/standard/profession.tpl`
 - **URL**: `?go=Profession` (+ &action=changeProfession)
 - **Backend nova-endpoint**: `GET /api/professions`
@@ -349,7 +349,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-031. Офицеры (Officer)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Officer.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Officer.class.php`
 - **Шаблоны**: `templates/standard/officer.tpl`
 - **URL**: `?go=Officer` (+ &action=hireOfficer)
 - **Backend nova-endpoint**: `GET /api/officers`,
@@ -358,7 +358,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-032. Платежи (Payment)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Payment.class.php` (513 стр)
+- **Контроллер**: `projects/game-origin-php/src/game/page/Payment.class.php` (513 стр)
 - **Шаблоны**: 8 шаблонов (paymentRobokassa, paymentWebmoney,
   paymentVkontakte, paymentA1, ...)
 - **URL**: `?go=Payment` (+ много actions для разных шлюзов)
@@ -371,7 +371,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-033. User Agreement (UserAgreement)
 
-- **Контроллер**: `projects/game-origin/src/game/page/UserAgreement.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/UserAgreement.class.php`
 - **Шаблоны**: `front_user_areement.tpl`, `user_agreemet.tpl`
 - **URL**: `?go=UserAgreement` (+ &action=actionAgree)
 - **Backend nova-endpoint**: `GET /api/legal/terms` + `POST /api/me/accept-terms`
@@ -380,7 +380,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-034. Changelog
 
-- **Контроллер**: `projects/game-origin/src/game/page/Changelog.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Changelog.class.php`
 - **Шаблоны**: `templates/standard/changelog.tpl`
 - **URL**: `?go=Changelog`
 - **Backend nova-endpoint**: возможно через wiki или отдельный
@@ -389,7 +389,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-035. Tutorial
 
-- **Контроллер**: `projects/game-origin/src/game/page/Tutorial.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Tutorial.class.php`
 - **Шаблоны**: `templates/standard/tutorials.tpl`
 - **URL**: `?go=Tutorial`
 - **Backend nova-endpoint**: единый goal engine (`internal/goal/`)
@@ -397,14 +397,14 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-036. Виджеты (Widgets)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Widgets.class.php` (31 стр)
+- **Контроллер**: `projects/game-origin-php/src/game/page/Widgets.class.php` (31 стр)
 - **Шаблоны**: `templates/standard/widgets.tpl`
 - **URL**: `?go=Widgets`
 - **Сложность воспроизведения**: средняя (drag-drop)
 
 ### S-037. Поддержка (Support)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Support.class.php` (31 стр)
+- **Контроллер**: `projects/game-origin-php/src/game/page/Support.class.php` (31 стр)
 - **Шаблоны**: `templates/standard/support.tpl`
 - **URL**: `?go=Support`
 - **Backend nova-endpoint**: ссылка на portal (внешняя)
@@ -412,7 +412,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-038. Поиск (Search)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Search.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Search.class.php`
 - **Шаблоны**: `searchheader.tpl`, `player_search_result.tpl`,
   `ally_search_result.tpl`
 - **URL**: `?go=Search` (+ &action=playerSearch, allianceSearch, planetSearch, seek)
@@ -421,7 +421,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-039. Модератор (Moderator)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Moderator.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Moderator.class.php`
 - **Шаблоны**: `templates/standard/moderate_user.tpl`
 - **URL**: `?go=Moderator` (+ &action=proceedBan, proceedRO, annulBan, annulRO, proceed)
 - **Backend nova-endpoint**: модерация — отдельный admin-bff
@@ -430,7 +430,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-040. Мониторинг планеты (MonitorPlanet)
 
-- **Контроллер**: `projects/game-origin/src/game/page/MonitorPlanet.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/MonitorPlanet.class.php`
 - **Шаблоны**: `templates/standard/monitor_planet.tpl`
 - **URL**: `?go=MonitorPlanet/X`
 - **Backend nova-endpoint**: вероятно через `GET /api/phalanx`
@@ -439,7 +439,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-041. Блокнот (Notepad)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Notepad.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Notepad.class.php`
 - **Шаблоны**: `templates/standard/notes.tpl`
 - **URL**: `?go=Notepad` (+ &action=saveNotes)
 - **Backend nova-endpoint**: `GET /api/notepad`,
@@ -448,7 +448,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-042. Империя (Empire)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Empire.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/Empire.class.php`
 - **Шаблоны**: `templates/standard/empire.tpl`
 - **URL**: `?go=Empire`
 - **Backend nova-endpoint**: `GET /api/empire`
@@ -456,7 +456,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-043. Редактирование здания (EditConstruction, admin)
 
-- **Контроллер**: `projects/game-origin/src/game/page/EditConstruction.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/EditConstruction.class.php`
 - **Шаблоны**: `templates/standard/edit_construction.tpl`
 - **URL**: `?go=EditConstruction` (+ &action=saveConstruction, addRequirement, deleteRequirement)
 - **Назначение**: Админ-инструмент. **Не для прода клона** —
@@ -465,7 +465,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-044. Редактирование юнита (EditUnit, admin)
 
-- **Контроллер**: `projects/game-origin/src/game/page/EditUnit.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/EditUnit.class.php`
 - **Шаблоны**: `templates/standard/edit_unit.tpl`
 - **URL**: `?go=EditUnit` (+ &action=saveConstruction)
 - **Назначение**: Админ-инструмент.
@@ -473,7 +473,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-045. Калькулятор технологий (AdvTechCalculator)
 
-- **Контроллер**: `projects/game-origin/src/game/page/AdvTechCalculator.class.php` (58 стр)
+- **Контроллер**: `projects/game-origin-php/src/game/page/AdvTechCalculator.class.php` (58 стр)
 - **Шаблоны**: `templates/standard/adv_tech_calc.tpl`
 - **URL**: `?go=AdvTechCalculator`
 - **Backend nova-endpoint**: client-side только
@@ -481,7 +481,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-046. Симулятор боя (Simulator)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Simulator.class.php` (749 стр)
+- **Контроллер**: `projects/game-origin-php/src/game/page/Simulator.class.php` (749 стр)
 - **Шаблоны**: `templates/standard/simulator.tpl`
 - **URL**: `?go=Simulator` (+ &action=simulate, addParticipant, resetAssault)
 - **Backend nova-endpoint**: `POST /api/battle-sim` (есть в nova)
@@ -489,7 +489,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-047. Ракетная атака (RocketAttack)
 
-- **Контроллер**: `projects/game-origin/src/game/page/RocketAttack.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/RocketAttack.class.php`
 - **Шаблоны**: `templates/standard/rocket_attack.tpl`
 - **URL**: `?go=RocketAttack` (+ &action=sendRockets)
 - **Backend nova-endpoint**: `POST /api/planets/{id}/rockets/launch`,
@@ -498,7 +498,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-048. Ремонт (Repair)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Repair.class.php` (688 стр)
+- **Контроллер**: `projects/game-origin-php/src/game/page/Repair.class.php` (688 стр)
 - **Шаблоны**: использует общие
 - **URL**: `?go=Repair` (+ &action=order, abortRepair, abortDefense, abortDisassemble, abortEvent + VIP-варианты)
 - **Backend nova-endpoint**: `POST /api/planets/{id}/repair/{repair,disassemble}`,
@@ -512,7 +512,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-050. Биржа (Stock, legacy)
 
-- **Контроллер**: `projects/game-origin/src/game/page/Stock.class.php` (757 стр)
+- **Контроллер**: `projects/game-origin-php/src/game/page/Stock.class.php` (757 стр)
 - **Шаблоны**: `templates/standard/stock.tpl`,
   `lot_details.tpl`
 - **URL**: `?go=Stock` (+ &action=buyLot, recall, premiumLot, ban,
@@ -523,7 +523,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-051. Биржа новая (StockNew)
 
-- **Контроллер**: `projects/game-origin/src/game/page/StockNew.class.php` (850 стр)
+- **Контроллер**: `projects/game-origin-php/src/game/page/StockNew.class.php` (850 стр)
 - **Шаблоны**: `stock_new_1.tpl`, `stock_new_2.tpl`,
   `stock_new_3.tpl`, `lot_details.tpl`, `empty.tpl`,
   `missions.tpl`
@@ -534,7 +534,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-052. Статистика обмена ресурсами (ResTransferStats)
 
-- **Контроллер**: `projects/game-origin/src/game/page/ResTransferStats.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/ResTransferStats.class.php`
 - **Шаблоны**: `templates/standard/restransfers.tpl`
 - **URL**: `?go=ResTransferStats` (+ &action=showResTransfer)
 - **Backend nova-endpoint**: возможно через `resource_transfers`
@@ -543,7 +543,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-053. Тестирование AlienAI (TestAlienAI, admin)
 
-- **Контроллер**: `projects/game-origin/src/game/page/TestAlienAI.class.php` (32 стр)
+- **Контроллер**: `projects/game-origin-php/src/game/page/TestAlienAI.class.php` (32 стр)
 - **Шаблоны**: нет
 - **URL**: `?go=TestAlienAI`
 - **Назначение**: Dev-only. Не для прода.
@@ -551,7 +551,7 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ### S-054. FleetAjax (AJAX-эндпоинт, не отдельный экран)
 
-- **Контроллер**: `projects/game-origin/src/game/page/FleetAjax.class.php`
+- **Контроллер**: `projects/game-origin-php/src/game/page/FleetAjax.class.php`
 - **Назначение**: AJAX из Galaxy/Mission (espionage, format, index).
 - **Сложность**: встроено в S-005, S-006
 
@@ -731,10 +731,10 @@ game-origin для будущего pixel-perfect-клонирования на 
 
 ## References
 
-- 55 контроллеров: `projects/game-origin/src/game/page/`
-- 125 шаблонов: `projects/game-origin/src/templates/standard/`
-- Стили: `projects/game-origin/public/css/`
-- Иконки: `projects/game-origin/public/images/`
+- 55 контроллеров: `projects/game-origin-php/src/game/page/`
+- 125 шаблонов: `projects/game-origin-php/src/templates/standard/`
+- Стили: `projects/game-origin-php/public/css/`
+- Иконки: `projects/game-origin-php/public/images/`
 - [docs/legacy/game-origin-access.md](../../legacy/game-origin-access.md)
   — доступ к запущенному game-origin
 - [origin-inventory.md](origin-inventory.md) — детально по

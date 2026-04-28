@@ -1,7 +1,7 @@
-# План 75: переименование `projects/game-origin/` → `projects/game-origin-php/`
+﻿# План 75: переименование `projects/game-origin/` → `projects/game-origin-php/`
 
 **Дата**: 2026-04-28
-**Статус**: Активный
+**Статус**: ✅ Завершён 2026-04-28
 **Зависимости**: нет блокирующих. Желательно выполнить **до** запуска
 первого плана из ремастер-серии (64-74), чтобы не обновлять file:line
 во всех артефактах исследования плана 62.
@@ -16,12 +16,12 @@
 
 ## Цель
 
-Освободить путь `projects/game-origin/` под **новый React-фронт**
+Освободить путь `projects/game-origin-php/` под **новый React-фронт**
 (будущая целевая реализация origin-вселенной), а текущую
 PHP-реализацию переименовать в `projects/game-origin-php/`.
 
 После этого:
-- `projects/game-origin/` — целевая папка для ремастера. Внутри
+- `projects/game-origin-php/` — целевая папка для ремастера. Внутри
   появится `frontend/` (новый React-клон по pixel-perfect стратегии
   плана 62).
 - `projects/game-origin-php/` — временная legacy-реализация. Удалится
@@ -37,7 +37,7 @@ PHP-реализацию переименовать в `projects/game-origin-php
 ### Почему сейчас
 
 После плана 62 у нас 9 артефактов исследования (`docs/research/origin-vs-nova/`),
-содержащих сотни file:line ссылок на `projects/game-origin/...`.
+содержащих сотни file:line ссылок на `projects/game-origin-php/...`.
 Грядут планы 64-74 (ремастер) — они будут писаться с привязкой к этим
 file:line. Каждый день откладывания добавляет ссылок.
 
@@ -129,7 +129,7 @@ grep -rl "projects/game-origin" \
 
 В разделе «Структура» поправить пример с `projects/game-nova/...`:
 добавить парную пару `projects/game-origin-php/...` (PHP) +
-зарезервированную `projects/game-origin/` (целевая).
+зарезервированную `projects/game-origin-php/` (целевая).
 
 ---
 
@@ -141,7 +141,7 @@ grep -rl "projects/game-origin" \
   «итерация 75 — переименование».
 - **Не трогаем git-историю** (никаких filter-branch / filter-repo).
   `git mv` достаточно.
-- **Не создаём новую `projects/game-origin/`** в этом плане — она
+- **Не создаём новую `projects/game-origin-php/`** в этом плане — она
   появится при создании первого React-кода (план N из ремастер-серии).
   Здесь только освобождаем путь.
 - **Не меняем содержимое migrations / SQL** — путь к файлам внутри
@@ -173,12 +173,12 @@ git распознаёт переименование без правок сод
 ```bash
 grep -rl "projects/game-origin" docs/ \
   | grep -v "project-creation.txt" \
-  | xargs sed -i 's|projects/game-origin/|projects/game-origin-php/|g'
+  | xargs sed -i 's|projects/game-origin-php/|projects/game-origin-php/|g'
 ```
 
 (адаптировать под Windows-окружение и BSD/GNU sed разницу)
 
-После — verify: `grep -rn "projects/game-origin/" docs/` должно
+После — verify: `grep -rn "projects/game-origin-php/" docs/` должно
 возвращать только то, что ожидаемо (исторические записи в
 project-creation.txt, и опечатки если есть).
 
@@ -195,7 +195,7 @@ project-creation.txt, и опечатки если есть).
 Но проверить:
 - `grep -rn "game-origin" projects/ --include="*.go" --include="*.ts" --include="*.tsx"`
 - Конфиги PHP внутри `projects/game-origin-php/` — если есть
-  абсолютные пути типа `define('GAME_ORIGIN_DIR', '/projects/game-origin/...')`.
+  абсолютные пути типа `define('GAME_ORIGIN_DIR', '/projects/game-origin-php/...')`.
 
 ### Ф.5. CLAUDE.md
 
@@ -207,7 +207,7 @@ project-creation.txt, и опечатки если есть).
 - projects/game-origin-php/   — legacy PHP реализация origin (clean-room
                                 rewrite, на удаление после готовности
                                 нового фронта)
-- projects/game-origin/       — зарезервировано под новый React-фронт
+- projects/game-origin-php/       — зарезервировано под новый React-фронт
                                 origin (план N из ремастер-серии 64-74)
 - ...
 ```
@@ -216,7 +216,7 @@ project-creation.txt, и опечатки если есть).
 
 - `git diff --stat` показывает в основном rename (100% match) +
   правки file:line в docs.
-- `grep -rn "projects/game-origin/" .` (без `-php` суффикса) —
+- `grep -rn "projects/game-origin-php/" .` (без `-php` суффикса) —
   должно остаться только:
   · исторические записи в `docs/project-creation.txt` (ожидаемо)
   · комментарии «зарезервировано под новый фронт» (ожидаемо)
@@ -269,7 +269,7 @@ project-creation.txt, и опечатки если есть).
 
 | Риск | Митигация |
 |---|---|
-| sed съел больше, чем надо (например, `game-origin-something` где это другое имя) | Точный паттерн `projects/game-origin/` (с слэшем после) — не зацепит `game-origin-php/`, `game-origin-frontend/`, и т.п. |
+| sed съел больше, чем надо (например, `game-origin-something` где это другое имя) | Точный паттерн `projects/game-origin-php/` (с слэшем после) — не зацепит `game-origin-php/`, `game-origin-frontend/`, и т.п. |
 | Сломался docker-compose / Dockerfile | Ф.3 + verify: `docker-compose config` парсит YAML. |
 | Сломались PHP-include внутри origin | Большинство относительные через `APP_ROOT_DIR`. Если что-то абсолютное — Ф.4 поправит. |
 | Сломались артефакты плана 62 (file:line) | Ф.2 — массовая замена в `docs/research/origin-vs-nova/*.md`. После — verify через grep. |
@@ -280,10 +280,10 @@ project-creation.txt, и опечатки если есть).
 
 ## Что после плана 75
 
-- `projects/game-origin/` свободна.
+- `projects/game-origin-php/` свободна.
 - Ремастер-серия 64-74 запускается с уже правильными путями.
 - Когда новый React-фронт будет готов — он создаётся в
-  `projects/game-origin/frontend/` без дополнительных переименований.
+  `projects/game-origin-php/frontend/` без дополнительных переименований.
 - После полной готовности и перевода игроков — `git rm -r
   projects/game-origin-php/` одной операцией.
 
