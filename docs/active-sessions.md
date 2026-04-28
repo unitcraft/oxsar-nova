@@ -50,7 +50,6 @@ Slot — натуральное число от `1` без ведущих нул
 
 | Slot | План / Задача | Файлы (паттерны) | Старт | Ожидаемый коммит |
 |---|---|---|---|---|
-| 4 | План 73 Ф.2.5 — снять остальные 15 baseline-экранов | tests/e2e/origin-baseline/screenshots/, docs/plans/73-..., docs/active-sessions.md, docs/project-creation.txt, docs/simplifications.md | 2026-04-28 22:10 | feat(e2e): Ф.2.5 baseline 15 остальных экранов (план 73) |
 
 ## Примеры пересечений (история, для обучения)
 
