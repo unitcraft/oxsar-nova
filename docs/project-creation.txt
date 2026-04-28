@@ -12767,3 +12767,132 @@ ranks + diplomacy UI, commit 669af55dae). После этой итерации *
 только alliance/ + i18n + 4 doc-файла, без захвата чужих.
 
 **Статус плана 67**: ✅ ЗАКРЫТ 2026-04-28.
+
+================================================================================
+Итерация: 2026-04-28 (вечер) — План 72 Ф.2 Spring 1 — каркас 7 главных экранов origin-фронта
+================================================================================
+
+**Цель**: построить каркас 7 главных игровых экранов origin-фронта
+(Main, Constructions, Research, Shipyard, Galaxy, Mission, Empire) на
+инфраструктуре Ф.1 Bootstrap. По решению пользователя глубина
+выбрана «поверхностной»: HTML+CSS зеркало legacy, базовые мутации,
+unit-тесты, без pixel-perfect доводки (отложена на план 73 + Spring
+2-5 итерации).
+
+**Подход** (компромисс «полнота 7 экранов > глубины 2-3»):
+- Router работает, все 7 routes доступны.
+- HTML-структура и CSS-классы зеркалят legacy `*.tpl + style.css`.
+- Данные грузятся через существующие openapi endpoints; недостающее
+  (empire-overview, building-levels, fleet-dry-run, alliance-tag в
+  GalaxyCell, max_buildable в shipyard) — записано в simplifications.md
+  пунктами P72.S1.A-H.
+- Базовые mutations с Idempotency-Key (R9): build/research/dispatch/
+  cancel-queue.
+- Unit-тесты: 7 файлов / 37 кейсов (форматтеры, idempotency,
+  query-keys, catalog, router-маршруты, mission-валидация, galaxy-clamp).
+- Pixel-perfect доводка → план 73 (screenshot-diff CI).
+
+**Что сделано конкретно**:
+
+1. **Зависимости**: добавлен `react-router-dom@^6.30.3` в package.json.
+
+2. **API-инфра** (8 модулей в `src/api/`):
+   - `query-keys.ts` — TanStack Query keys.
+   - `types.ts` — DTO-типы (Planet, QueueItem, ShipyardQueueItem,
+     ShipyardInventory, ResearchOverview, SystemView, GalaxyCell,
+     FleetDispatchInput, Fleet, FleetList, UnreadCount, MissionCode).
+   - `idempotency.ts` — генератор UUID-ключей для R9 mutations.
+   - `planets.ts`, `buildings.ts`, `research.ts`, `shipyard.ts`,
+     `galaxy.ts`, `fleet.ts`, `messages.ts` — query/mutation функции.
+
+3. **Router** в `src/router.tsx` — react-router v6 BrowserRouter с
+   13 маршрутами (7 экранов × 1-2 варианта :planetId, /login, 404→/).
+
+4. **7 экранов** в `src/features/<screen>/`:
+   - `main/MainScreen.tsx` — обзор империи (планета + ресурсы + флоты + unread).
+   - `constructions/ConstructionsScreen.tsx` — список зданий + очередь.
+   - `research/ResearchScreen.tsx` — tech-tree + уровни.
+   - `shipyard/ShipyardScreen.tsx` — корабли + оборона + очередь.
+   - `galaxy/GalaxyScreen.tsx` — навигация g/s + 15 ячеек системы.
+   - `mission/MissionScreen.tsx` — форма отправки флота.
+   - `empire/EmpireScreen.tsx` — обзор всех планет.
+   - `login/LoginPlaceholder.tsx` — заглушка (Ф.3 Spring 2).
+
+5. **Хуки и утилиты**:
+   - `features/common/useResolvedPlanet.ts` — резолв активной планеты
+     (URL > Zustand > /planets[0]).
+   - `features/common/catalog.ts` — справочник unit_id → группа +
+     i18n-ключ (46 юнитов: 14 buildings, 10 research, 12 ships, 10 defense).
+   - `lib/format.ts` — formatNumber (NBSP-разделитель), formatCoords,
+     formatDuration, secondsUntil.
+   - `stores/currentPlanet.ts` — Zustand-store активной планеты с
+     localStorage persist (отдельный namespace 'oxsar-origin-current-planet').
+
+6. **AppShell wiring**:
+   - `App.tsx` — переключён с Bootstrap-заглушки на `<AppRouter />`.
+   - `LeftMenu.tsx` — пункты Spring 1-экранов теперь Link to=/route,
+     остальные — anchor-заглушки до Spring 2-5.
+   - `PlanetsList.tsx` — подключён к /api/planets, клик меняет
+     активную планету.
+   - `TopHeader.tsx` + `Footer.tsx` — добавлен display name «Oxsar Classic»
+     (ADR-0011: технический slug `origin` остаётся в URL/импортах,
+     UI-имя — «Oxsar Classic»).
+   - `index.html` — title=«Oxsar Classic».
+
+7. **CSS-классы legacy** в новом `src/styles/screens.css`
+   (.center alignment, .galaxy-browser, link-button,
+   cur-planet/cur-moon active, universe-name); подключён в app.css.
+
+8. **i18n переиспользование** (R12, цель ≥95%):
+   - **Использовано nova-ключей**: ~80 (overview/research/shipyard/
+     fleet/mission/main/galaxy/empire/info groups).
+   - **Заведено новых**: 6 ключей (info.allianceDepot, info.bigShield,
+     info.bigTransporter, info.heavyFighter, info.heavyLaser,
+     info.spyingTech) в обоих ru.yml + en.yml.
+   - **Ratio: 80/86 ≈ 93%** (близко к цели 95%; для оставшихся юнитов
+     либо нет nova-аналога, либо они слишком legacy-специфичны).
+
+9. **Тесты vitest**:
+   - `lib/format.test.ts` — 13 кейсов.
+   - `api/idempotency.test.ts` — 3 кейса (uniqueness, 1000 без коллизий).
+   - `api/query-keys.test.ts` — 5 кейсов (структурное равенство).
+   - `features/common/catalog.test.ts` — 6 кейсов.
+   - `features/galaxy/galaxy.test.ts` — 3 кейса (clamp).
+   - `features/mission/mission-validate.test.ts` — 4 кейса.
+   - `router.test.ts` — 3 кейса (Spring 1 paths inventory).
+   - **Итого: 7 файлов / 37 кейсов / все проходят.**
+
+10. **Документация**:
+    - `docs/simplifications.md` — раздел «План 72 Ф.2 Spring 1» с 8
+      записями (P72.S1.A–H): нехватающие endpoints, отложенные UX,
+      pixel-perfect доводка → план 73.
+    - `docs/plans/72-*.md` шапка обновлена: Ф.2 ✅ Spring 1.
+    - `docs/active-sessions.md` — slot 2 удалён по завершении.
+    - `docs/project-creation.txt` — эта запись.
+
+**Объём**:
+- Router + 7 screens: ~870 строк TSX.
+- 8 API-модулей: ~190 строк TS.
+- helper-модули: ~330 строк TS.
+- 7 тестовых файлов: ~270 строк (37 кейсов).
+- CSS screens.css: ~70 строк.
+- Layout patches: ~50 строк изменений.
+- i18n ru.yml + en.yml: 14 строк (6 ключей × 2 + комментарии).
+- Документация: ~190 строк.
+- **Суммарно: ~1990 строк** (план просил 1500-2500 — попал в коридор).
+
+**Тесты**:
+- `npx vitest run`: **7 файлов / 37 кейсов проходят**.
+- `npx tsc -b --force`: **зелёный**.
+- `npx vite build`: **зелёный** (124 модуля, gzip 75 KB).
+
+**Pixel-perfect**: HTML+CSS-классы зеркалят legacy `*.tpl + style.css`,
+визуальная сверка с running-стеком отложена на план 73 (screenshot-diff CI).
+
+**Коммит**: `feat(origin/frontend): Ф.2 Spring 1 — 7 главных экранов (план 72)`.
+
+**Параллельные сессии**: одновременно с slot 1 (план 68 биржа
+артефактов backend). Папки не пересекались (origin/frontend vs
+backend/internal/exchange), CC_AGENT_PATHS строгий.
+
+**Статус плана 72**: 🟡 в работе (Ф.1 ✅, Ф.2 ✅ Spring 1; Ф.3-Ф.9 впереди).

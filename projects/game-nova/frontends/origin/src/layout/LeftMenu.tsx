@@ -1,21 +1,19 @@
-// Левое меню origin-фронта (план 72 Ф.1).
+// Левое меню origin-фронта (план 72 Ф.1 + Ф.2 Spring 1).
 //
-// Воспроизводит legacy `#leftMenu` — фиксированная боковая навигация
-// шириной 160px с группами: производство (menu-prod), пользовательские
-// разделы (menu-user), прочее (menu-other).
-//
-// На Ф.1 — каркас со ссылками на основные экраны Spring 1 (Main,
-// Constructions, Research, Shipyard, Galaxy, Mission, Empire). Полный
-// набор разделов добавляется по мере реализации экранов в Spring 2-5.
+// План 72 Ф.2 Spring 1: пункты Spring 1-экранов (Обзор, Империя,
+// Строения, Исследования, Верфь, Галактика, Миссии) теперь ведут на
+// настоящие маршруты react-router-dom; остальные пункты остаются
+// заглушками `#…` до Spring 2-5.
 //
 // Намеренные расхождения с legacy:
-//   - **Achievements** — пункт скрыт (план 70 отложен, см. шапку плана 72).
-//   - **Tutorial** — пункт скрыт (тот же раздел плана 72 «не делаем»).
+//   - **Achievements**, **Tutorial** — пункты скрыты (см. план 72 §«не
+//     делаем» и план 70 отложен).
 //   - **Реклама/баннеры** — не переносятся.
 //   - **Реферальный экран** — отдельного пункта нет, ведёт в portal
 //     (план 59) — будет реализовано на этапе Spring 4.
 
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 interface MenuGroupProps {
   className: string;
@@ -32,12 +30,25 @@ function MenuGroup({ className, label, children }: MenuGroupProps) {
   );
 }
 
-interface MenuLinkProps {
+interface RouterLinkProps {
+  to: string;
+  label: string;
+}
+
+function RouterLink({ to, label }: RouterLinkProps) {
+  return (
+    <li>
+      <Link to={to}>{label}</Link>
+    </li>
+  );
+}
+
+interface AnchorLinkProps {
   href: string;
   label: string;
 }
 
-function MenuLink({ href, label }: MenuLinkProps) {
+function AnchorLink({ href, label }: AnchorLinkProps) {
   return (
     <li>
       <a href={href}>{label}</a>
@@ -50,28 +61,28 @@ export function LeftMenu() {
     <div id="leftMenu">
       <ul>
         <MenuGroup className="menu-info" label="Империя" />
-        <MenuLink href="#main" label="Обзор" />
-        <MenuLink href="#empire" label="Империя" />
-        <MenuLink href="#resource" label="Ресурсы" />
+        <RouterLink to="/" label="Обзор" />
+        <RouterLink to="/empire" label="Империя" />
+        <AnchorLink href="#resource" label="Ресурсы" />
 
         <MenuGroup className="menu-prod" label="Производство" />
-        <MenuLink href="#constructions" label="Строения" />
-        <MenuLink href="#research" label="Исследования" />
-        <MenuLink href="#shipyard" label="Верфь" />
-        <MenuLink href="#repair" label="Ремонт" />
+        <RouterLink to="/constructions" label="Строения" />
+        <RouterLink to="/research" label="Исследования" />
+        <RouterLink to="/shipyard" label="Верфь" />
+        <AnchorLink href="#repair" label="Ремонт" />
 
         <MenuGroup className="menu-user" label="Игрок" />
-        <MenuLink href="#galaxy" label="Галактика" />
-        <MenuLink href="#mission" label="Миссии" />
-        <MenuLink href="#fleet" label="Флот" />
-        <MenuLink href="#alliance" label="Альянс" />
+        <RouterLink to="/galaxy" label="Галактика" />
+        <RouterLink to="/mission" label="Миссии" />
+        <AnchorLink href="#fleet" label="Флот" />
+        <AnchorLink href="#alliance" label="Альянс" />
 
         <MenuGroup className="menu-other" label="Прочее" />
-        <MenuLink href="#chat" label="Чат" />
-        <MenuLink href="#msg" label="Сообщения" />
-        <MenuLink href="#friends" label="Друзья" />
-        <MenuLink href="#statistics" label="Статистика" />
-        <MenuLink href="#settings" label="Настройки" />
+        <AnchorLink href="#chat" label="Чат" />
+        <AnchorLink href="#msg" label="Сообщения" />
+        <AnchorLink href="#friends" label="Друзья" />
+        <AnchorLink href="#statistics" label="Статистика" />
+        <AnchorLink href="#settings" label="Настройки" />
       </ul>
     </div>
   );

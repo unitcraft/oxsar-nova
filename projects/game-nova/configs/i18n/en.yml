@@ -2415,6 +2415,13 @@ info:
   usableArtefactFullDesc: ""
   useNewAssault: ""
   wrongLeavePhrase: ""
+  # План 72 Ф.2 Spring 1: legacy-units missing in nova-bundle.
+  allianceDepot: Alliance Depot
+  bigShield: Large Shield Dome
+  bigTransporter: Large Cargo
+  heavyFighter: Heavy Fighter
+  heavyLaser: Heavy Laser
+  spyingTech: Espionage Technology
 main:
   abandonPlanet: Abandon planet
   anigilationTimer: Time until annihilation
