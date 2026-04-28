@@ -132,7 +132,7 @@ func (h *Handler) topScore(ctx context.Context, uid string) (record, error) {
 	rec := record{Category: "score", Key: "total"}
 	err := h.pool.QueryRow(ctx,
 		`SELECT id, username, points FROM users
-		 WHERE deleted_at IS NULL AND umode = false
+		 WHERE deleted_at IS NULL AND umode = false AND is_observer = false
 		 ORDER BY points DESC LIMIT 1`,
 	).Scan(&rec.HolderID, &rec.HolderName, &rec.Value)
 	if err != nil {

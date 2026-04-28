@@ -184,7 +184,8 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 	// Игроки, заходившие в течение последних 24 часов (не забанены).
 	err := h.db.Pool().QueryRow(r.Context(), `
 		SELECT COUNT(*) FROM users
-		WHERE umode = false AND last_seen > now() - interval '24 hours'
+		WHERE umode = false AND is_observer = false
+		  AND last_seen > now() - interval '24 hours'
 	`).Scan(&online24h)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
@@ -195,7 +196,8 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 	// Игроки, активные в последние 5 минут (приблизительный онлайн).
 	err = h.db.Pool().QueryRow(r.Context(), `
 		SELECT COUNT(*) FROM users
-		WHERE umode = false AND last_seen > now() - interval '5 minutes'
+		WHERE umode = false AND is_observer = false
+		  AND last_seen > now() - interval '5 minutes'
 	`).Scan(&onlineNow)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))

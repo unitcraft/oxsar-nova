@@ -132,17 +132,28 @@ func (s *TransportService) AttackHandler() event.Handler {
 			return uerr
 		}
 
-		// Если защитник ещё в периоде защиты нового игрока — возвращаемся.
-		if s.protectionPeriod > 0 {
-			var newPlayer int
-			_ = tx.QueryRow(ctx,
-				`SELECT 1 FROM users WHERE id=$1 AND created_at > NOW() - ($2 || ' seconds')::interval`,
-				defenderUserID, s.protectionPeriod).Scan(&newPlayer)
-			if newPlayer == 1 {
-				_, uerr := tx.Exec(ctx,
-					`UPDATE fleets SET state='returning' WHERE id=$1`, pl.FleetID)
-				return uerr
-			}
+		// Защита защитника от атаки. Срабатывает если активен любой
+		// из трёх механизмов:
+		//  - global protectionPeriod (новички — created_at > NOW() - X);
+		//  - per-user protected_until_at > NOW() (план 69 D-004);
+		//  - is_observer = true (план 69 D-005, наблюдатель не участвует
+		//    в боях).
+		var protected bool
+		_ = tx.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM users
+				WHERE id = $1
+				  AND (
+				    ($2 > 0 AND created_at > NOW() - ($2 || ' seconds')::interval)
+				    OR (protected_until_at IS NOT NULL AND protected_until_at > NOW())
+				    OR is_observer = true
+				  )
+			)
+		`, defenderUserID, s.protectionPeriod).Scan(&protected)
+		if protected {
+			_, uerr := tx.Exec(ctx,
+				`UPDATE fleets SET state='returning' WHERE id=$1`, pl.FleetID)
+			return uerr
 		}
 
 		defenderShips, err := readPlanetShips(ctx, tx, planetID)

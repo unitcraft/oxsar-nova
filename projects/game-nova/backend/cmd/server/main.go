@@ -509,6 +509,8 @@ func run() error {
 		pr.Get("/chat/{kind}/history", chatH.History)
 		pr.Post("/chat/{kind}/send", chatH.Send)
 		pr.Get("/chat/{kind}/ws", chatH.Connect)
+		pr.Get("/chat/{kind}/unread", chatH.UnreadCount)
+		pr.Post("/chat/{kind}/read", chatH.MarkRead)
 		pr.Patch("/chat/messages/{id}", chatH.EditMessage)
 		pr.Delete("/chat/messages/{id}", chatH.DeleteMessage)
 
