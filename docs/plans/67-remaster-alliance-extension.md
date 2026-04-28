@@ -29,9 +29,11 @@
 |---|---|---|
 | D-041, U-015 | 3 описания альянса | Поля `description_external`, `description_internal`, `description_apply` (snake_case по R1) — публичное / для членов / для заявок |
 | D-040, U-004 | Передача лидерства | `POST /api/alliances/{id}/transfer-leadership/{userId}` + email-подтверждение через identity (как в D-003) |
-| D-014, U-005 | Гранулярные права рангов | Таблица `alliance_ranks` с `permissions JSONB` (см. R1: snake_case колонки, JSONB для флагов прав) |
-| U-012 | Полнотекстовый поиск альянсов | Расширить `GET /api/alliances` фильтрами (тип, размер, открытость) + полнотекст по name/tag |
+| D-014, U-005 | Гранулярные права рангов | Таблица `alliance_ranks` с `permissions JSONB`: `can_invite`, `can_kick`, `can_send_global_mail`, `can_manage_diplomacy`, `can_change_description`, `can_propose_relations` (snake_case по R1) |
+| D-014 | Расширенные дипломатические статусы | enum `friend / neutral / hostile_neutral / nap / war` (5 значений, B1). TEXT с CHECK по R1, не int magic numbers. Старые nova `friend / neutral / war` мигрируются: nova-friend→friend, nova-neutral→neutral, nova-war→war (без потерь). Новые `hostile_neutral` и `nap` — origin-инспирированы, доступны во всех вселенных. |
+| U-012 | Полнотекстовый поиск альянсов | Расширить `GET /api/alliances` фильтрами (тип, размер, открытость) + полнотекст по name/tag (Postgres tsvector) |
 | U-013 | Альянсный лог активности | Таблица `alliance_audit_log` (по образцу `admin_audit_log` плана 14) |
+| U-006 | Buddy-list (друзья игрока) | Таблица `user_buddies` (`user_id`, `buddy_user_id`, `created_at`, `is_mutual`). Endpoints: `GET/POST/DELETE /api/users/{id}/buddies`. Применимо ко всем вселенным (J2 — общий знаменатель). По R10: per-universe изоляция (если дружба per-universe) ИЛИ глобальная (если дружба cross-universe — решение при реализации, склонность к per-universe для простоты). |
 
 **Не входит в этот план** (отдельные задачи):
 - U-011 (custom logo альянса) — нужны storage + moderation, после
