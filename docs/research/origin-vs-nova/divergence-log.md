@@ -1,0 +1,763 @@
+# Divergence Log: origin ↔ nova
+
+**Дата сборки**: 2026-04-28
+**Контекст**: артефакт плана 62 Ф.3.5. Журнал технических
+расхождений между game-origin (PHP/MySQL) и game-nova
+(Go/PostgreSQL). Каждая запись D-NNN — кандидат на вынос
+параметра в `configs/balance/legacy.yaml` или новую механику в
+nova-backend для поддержки legacy-вселенной.
+
+**Принципы** (из плана 62):
+- Каждая запись формулируется как «какой ключ конфигурации/код-путь
+  нужен в nova», а не «вернуть число к origin».
+- Для современных вселенных (uni01/uni02) баланс nova **не
+  меняется**. Параметризуется только для legacy01.
+- Тривиальные имена (`user_id` vs `userid`) НЕ записываются.
+- Семантически идентичные поля с разными именами решаются на этапе
+  реализации origin-фронта (он сразу пишется на nova-API).
+
+**Цвета**:
+- 🟡 Жёлтый: правка конфига или флаг (≤50 строк)
+- 🟠 Оранжевый: фича только в origin (нужно реализовать в nova)
+- 🔴 Красный: формула/механика расходится (нужен code-path)
+- 🟣 Фиолетовый: тихая семантика (одинаковые имена, разная семантика)
+
+---
+
+## Категория «домен» (D-001 .. D-025)
+
+### D-001. Множественность очков (dm_points / points / max_points)
+
+- **Категория**: домен
+- **Цвет**: 🟣
+- **Origin**:
+  - Файл: `migrations/001_schema.sql` (DDL `na_user`)
+  - Что: 9 разных полей очков — `dm_points`, `points`, `max_points`,
+    `u_points`, `r_points`, `b_points`, `e_points`, `be_points`,
+    `of_points`
+  - Конкретно: `dm_points` — внутренний рейтинг, `points` —
+    отображаемый, `max_points` — исторический пик, остальные —
+    разрезы (units / research / buildings / espionage /
+    battle-experience / officer)
+- **Nova**:
+  - Файл: миграция `0001_users.sql` + 0066+
+  - Что: `points`, `u_points`, `r_points`, `b_points`, `a_points`,
+    `e_points` (numeric)
+  - Конкретно: 6 полей, нет `dm_points`, нет `max_points`,
+    нет `be_points`, нет `of_points`
+- **Разница**: Origin различает «внутренний» рейтинг от
+  отображаемого; nova хранит только текущие очки.
+  `max_points` теряется при миграции (для топа «когда-либо»).
+- **Как сделать nova-конфигурируемой**: добавить миграцию
+  `users.max_points DOUBLE` в nova; для legacy01 заполняется при
+  каждом росте `points`. Опционально `dm_points`, `be_points`,
+  `of_points` — только если решим выносить отдельные рейтинги.
+- **Объём правки nova**: миграция (5 строк) + триггер на UPDATE +
+  legacy.yaml; 1-2 дня
+- **Риски**: тихая регрессия рейтинга при миграции уни01/uni02 на
+  новую модель — добавление nullable поля безопасно
+
+### D-002. Vacation mode (umode/umodemin vs vacation_since/last_end)
+
+- **Категория**: домен
+- **Цвет**: 🟣
+- **Origin**:
+  - Файл: `na_user.umode TINYINT(1)`, `umodemin INT(10)`
+  - Что: `umode` = флаг включён/нет, `umodemin` = unix timestamp
+    окончания vacation
+- **Nova**:
+  - Файл: миграция `0045_vacation.sql`
+  - Что: `vacation_since timestamptz`, `vacation_last_end timestamptz`
+  - Конкретно: «с какого момента в отпуске» + «когда последний раз
+    закончился»
+- **Разница**: Полностью противоположная семантика. Origin: «до
+  когда»; nova: «с когда + когда закончился прошлый». При миграции
+  тихо потеряется `umodemin` или будет интерпретирован
+  неправильно.
+- **Как сделать nova-конфигурируемой**: либо добавить
+  `vacation_until timestamptz` (синоним `umodemin`), либо явный
+  трансформер при миграции уни-данных (legacy01 умеет читать оба).
+  Предпочтительно — добавить поле, оставить оба представления.
+- **Объём**: миграция + helper; 1 день
+- **Риски**: 🟣 ТИХАЯ СЕМАНТИКА — при миграции игроков из origin
+  в nova vacation-таймеры могут сбиться
+
+### D-003. Account deletion (delete timestamp vs deletion codes)
+
+- **Категория**: домен
+- **Цвет**: 🔴
+- **Origin**:
+  - Файл: `na_user.delete INT(10)` (unix timestamp удаления)
+  - Что: простое отложенное удаление по таймстампу
+- **Nova**:
+  - Файл: миграция `0051_account_deletion_codes.sql`
+  - Что: `account_deletion_codes (user_id, code_hash, expires_at,
+    attempts)`
+  - Конкретно: код подтверждения по email, multi-step flow
+- **Разница**: Совершенно разные механики (auto-delete vs
+  email-confirm).
+- **Как сделать nova-конфигурируемой**: добавить
+  `users.account_deletion_scheduled_at timestamptz nullable`. В
+  legacy01 поведение — старое (без email-кода). В uni01/uni02 —
+  через коды.
+- **Объём**: миграция + ветка в handler по
+  `universe.deletion_flow`; 2-3 дня
+- **Риски**: разные UX для разных вселенных, потребитель должен
+  читать `universe.deletion_flow`
+
+### D-004. Protection time (новичковая защита)
+
+- **Категория**: домен / механика
+- **Цвет**: 🔴
+- **Origin**: `na_user.protection_time INT(10)` — unix таймстамп до
+  которого новичок защищён от атак
+- **Nova**: ОТСУТСТВУЕТ
+- **Разница**: Нет механики защиты новичков
+- **Как сделать nova-конфигурируемой**: добавить
+  `users.protected_until timestamptz` + проверки в `fleet/attack.go`
+- **Объём**: миграция (5 строк) + проверка в attack-логике;
+  3-5 дней
+- **Риски**: нужен фоновый процесс снятия защиты или проверка по
+  каждому attack
+
+### D-005. Observer flag (привилегированный статус)
+
+- **Категория**: домен
+- **Цвет**: 🔴
+- **Origin**: `na_user.observer TINYINT(1)`
+- **Nova**: `users.role ENUM ('player'|'support'|'admin'|'superadmin')`
+- **Разница**: Observer как флаг отдельной семантики (наблюдатель,
+  не участвует в рейтинге)
+- **Как сделать nova-конфигурируемой**: либо ввести роль
+  `'observer'` в enum, либо добавить boolean `is_observer`
+- **Объём**: миграция + ветки в score/highscore queries; 2 дня
+- **Риски**: фильтрация observer из рейтинга в нескольких местах
+
+### D-006. Координаты (umi vs galaxy/system/position)
+
+- **Категория**: домен
+- **Цвет**: 🟣
+- **Origin**: `na_planet.umi FLOAT` (формула:
+  `galaxy*1000000+system*1000+position`)
+- **Nova**: явные `galaxy INT, system INT, position INT` с CHECK
+  constraints
+- **Разница**: Float-encoding имеет precision errors при больших
+  galaxy. В origin все запросы используют умножение/деление; в
+  nova — индекс по 3 полям.
+- **Как сделать nova-конфигурируемой**: helper-функция
+  `decodeUmi(float) → (g, s, p)` для миграции legacy-данных. В
+  nova схема не меняется.
+- **Объём**: helper в legacy migration script; 1 день
+- **Риски**: 🟣 ТИХАЯ — при миграции legacy01 округление float
+
+### D-007. UI customization (templatepackage/theme/skin)
+
+- **Категория**: домен
+- **Цвет**: 🔴
+- **Origin**: `templatepackage`, `imagepackage`, `theme`,
+  `user_bg_style`, `user_table_style`, `skin_type` (varbinary в
+  na_user)
+- **Nova**: ОТСУТСТВУЕТ
+- **Разница**: Origin позволяет каждому игроку сменить тему,
+  фоны, стиль таблиц.
+- **Как сделать nova-конфигурируемой**: добавить
+  `users.ui_theme TEXT` + `ui_pack TEXT` (с whitelist в
+  `configs/themes.yml`)
+- **Объём**: миграция + handler + frontend выбор темы; 1 неделя
+- **Риски**: ассеты тем для legacy01 — отдельный набор
+  (`projects/origin-frontend/themes/`)
+
+### D-008. Profession (профессия игрока)
+
+- **Категория**: домен / механика
+- **Цвет**: 🔴
+- **Origin**: `na_user.profession TINYINT(3)` + `prof_time INT(10)`
+- **Nova**: `users.profession TEXT` (миграция 0046), но
+  `prof_time` потеряна
+- **Разница**: Origin хранит время последней смены — нужно для
+  rate-limit (мин. интервал 14 дней + стоимость 1000 кредитов)
+- **Как сделать nova-конфигурируемой**: добавить
+  `users.profession_changed_at timestamptz` в миграцию 0046
+- **Объём**: миграция + проверка в handler; 1-2 дня
+- **Риски**: legacy01 без таймера — игроки могут менять свободно
+
+### D-009. Email/password activation tokens
+
+- **Категория**: домен / инфра
+- **Цвет**: 🔴
+- **Origin**: `na_user.activation`, `password_activation`,
+  `email_activation` (varbinary коды)
+- **Nova**: email и password управляются identity-service
+  (план 36/52); токены не в users
+- **Разница**: Origin self-contained, nova зависит от identity
+- **Как сделать nova-конфигурируемой**: для legacy01 — все вызовы
+  через identity API. Если identity не поддерживает определённый
+  flow — расширить identity, не возвращать токены в game-БД.
+- **Объём**: уточнить, какие flow legacy не покрыты identity;
+  1 день анализ
+- **Риски**: блокирует если identity не реализует часть legacy
+  flow
+
+### D-010. Last activity (last vs last_seen)
+
+- **Категория**: домен
+- **Цвет**: 🟡
+- **Origin**: `na_user.last INT(10)` — любая активность
+- **Nova**: `users.last_seen TIMESTAMPTZ` — page visits
+- **Разница**: гранулярность может отличаться (origin записывает
+  ЛЮБУЮ активность, nova — только страницы)
+- **Как сделать nova-конфигурируемой**: документировать в схеме
+  семантику; синхронизировать при миграции
+- **Объём**: 0.5 дня доку
+- **Риски**: alien AI требует «активен в последние 30 мин» — должен
+  работать одинаково
+
+### D-011. Battle reports (нормализованные vs JSONB)
+
+- **Категория**: домен / API
+- **Цвет**: 🟣
+- **Origin**: `na_assault` (44 поля) + `na_assaultparticipant`
+  (отдельная таблица)
+- **Nova**: `battle_reports (report JSONB + 8 summary полей)`
+- **Разница**: Origin нормализованный, nova денормализованный —
+  при миграции данных нужен трансформер
+- **Как сделать nova-конфигурируемой**: миграционный скрипт
+  origin → nova. В nova схема не меняется. Опционально добавить
+  `battle_report_participants` для аналитики, если нужно.
+- **Объём**: трансформер 1-2 дня
+- **Риски**: legacy-отчёты могут не отображаться корректно если
+  payload отличается
+
+### D-012. Espionage reports (events.mode=11 vs отдельная таблица)
+
+- **Категория**: домен / API
+- **Цвет**: 🟡
+- **Origin**: SPY-отчёты как event mode=11 в `na_events.data
+  MEDIUMBLOB`
+- **Nova**: `espionage_reports` отдельная таблица с `ratio`,
+  `probes`, `report JSONB`
+- **Разница**: одна таблица событий с blob vs нормализованная
+- **Как сделать**: миграционный скрипт парсит origin
+  `mode=11.data` → nova `espionage_reports`
+- **Объём**: 1-2 дня
+- **Риски**: PHP-сериализация blob нужна расшифровка
+
+### D-013. Event-loop (mode-based vs kind-based)
+
+- **Категория**: event-loop
+- **Цвет**: 🟣
+- **Origin**: `na_events (mode INT(2), processed TINYINT,
+  processed_mode INT, data MEDIUMBLOB)` — статус через 4 поля
+- **Nova**: `events (kind INT, state ENUM('wait'|'start'|'ok'|'error'),
+  payload JSONB)`
+- **Разница**: разные state-машины. У origin
+  `EVENT_PROCESSED_WAIT/START/ERROR/OK`, у nova `state ENUM`. Маппинг
+  есть, но нужен трансформер.
+- **Как сделать**: маппинг таблица + миграционный скрипт.
+  В nova схема не меняется.
+- **Объём**: 2-3 дня
+- **Риски**: при миграции running events — race-условия
+
+### D-014. Alliance ranks (битовые права vs enum)
+
+- **Категория**: домен / механика
+- **Цвет**: 🔴
+- **Origin**: `na_allyrank` с битовыми правами
+  (`CAN_SEE_MEMBERLIST`, `CAN_MANAGE`, `CAN_BAN_MEMBER`,
+  `CAN_DIPLOMACY`, `CAN_GLOBAL_MAIL`, ...)
+- **Nova**: `alliance_members.rank TEXT` ('owner'|'member' +
+  `rank_name` свободная строка из 0034)
+- **Разница**: Origin полная система разрешений, nova
+  минималистична
+- **Как сделать nova-конфигурируемой**: новая таблица
+  `alliance_ranks (id, alliance_id, name, permissions JSONB,
+  position INT)`. `alliance_members.rank_id` FK. Endpoint'ы:
+  `GET/POST/PUT/DELETE /api/alliances/{id}/ranks`.
+- **Объём**: 1-2 недели (миграция + 4 endpoint'а + frontend
+  manage_ranks.tpl-аналог)
+- **Риски**: совместимость с существующим `rank='owner'` — оставить
+  как builtin role
+
+### D-015. Officer units (юниты vs subscription)
+
+- **Категория**: домен / механика
+- **Цвет**: 🔴
+- **Origin**: `na_officer (of_1, of_2, of_3, of_4 = юнит-IDs,
+  of_level, of_points)` — офицеры как боевые юниты на планете
+- **Nova**: `officer_defs (key, ...)` + `officer_active (user_id,
+  expires_at)` — офицеры как временные эффекты-buff'ы
+- **Разница**: концептуально разные модели. Origin — **юниты**,
+  которые могут участвовать в бою; nova — **подписка** на бонус.
+- **Как сделать nova-конфигурируемой**: документировать как
+  **намеренное расхождение**. Для legacy01 — реализовать
+  origin-стиль (отдельный пакет `internal/legacy/officers/` под
+  флагом). Альтернатива: оставить nova-модель и для legacy01.
+  **Рекомендация**: оставить nova-модель — legacy-механика
+  устаревшая.
+- **Объём**: 0 (если оставляем nova) или 2 недели
+- **Риски**: legacy-игроки не получат привычные офицер-юниты
+
+### D-016. Planet teleport rate-limiting
+
+- **Категория**: домен
+- **Цвет**: 🟡
+- **Origin**: `na_user.planet_teleport_time INT(11)`
+- **Nova**: ОТСУТСТВУЕТ (т.к. сама механика TELEPORT_PLANET
+  отсутствует)
+- **Разница**: связан с D-NNN-TELEPORT
+- **Как сделать**: при добавлении teleport-механики (см.
+  U-009) — `users.last_planet_teleport_at timestamptz`
+- **Объём**: ~5 дней (вместе с механикой)
+- **Риски**: rate-limit нужен — иначе спам теле-портации
+
+### D-017. Achievements (32 поля условий vs 3 поля)
+
+- **Категория**: домен / механика
+- **Цвет**: 🔴
+- **Origin**: `na_achievement_datasheet (req_points,
+  req_u_points, ..., bonus_metal, bonus_*_unit)` — 32 поля условий
+  и наград, ~100+ ачивок
+- **Nova**: `achievement_defs (key, title, description, points)` +
+  goal engine — 5 базовых ачивок
+- **Разница**: nova ачивки минималистичны, origin богатые
+- **Как сделать nova-конфигурируемой**: расширить
+  `achievement_defs (requirements JSONB, rewards JSONB)` или
+  использовать существующий goal engine (план 65) — добавить
+  legacy-цели в `configs/goals.yml`.
+- **Объём**: 1-2 недели (загрузка origin данных + UI)
+- **Риски**: рефакторинг goal engine может сломать существующие
+
+### D-018. Asteroid slots (creature creation limit)
+
+- **Категория**: домен / механика
+- **Цвет**: 🔴
+- **Origin**: `na_user.asteroid INT(10)` — лимит на создание
+  астероидов
+- **Nova**: ОТСУТСТВУЕТ
+- **Разница**: legacy-механика отсутствует
+- **Как сделать**: `users.available_asteroid_slots INT` если
+  механика будет
+- **Объём**: ~3 дня (если делаем механику)
+- **Риски**: новая механика — нужна декомпозиция
+
+### D-019. Home planet (hp + curplanet vs только cur_planet_id)
+
+- **Категория**: домен
+- **Цвет**: 🟡
+- **Origin**: `hp INT(10)` (главная планета — куда возвращаются
+  миссии без явного origin), `curplanet INT(10)` (просмотр)
+- **Nova**: `cur_planet_id UUID` (только просмотр), home_planet =
+  первая по `created_at`
+- **Разница**: nova отбрасывает «мою главную» как отдельное
+  понятие
+- **Как сделать**: `users.home_planet_id UUID` + endpoint
+  `POST /api/me/set-home/{planet_id}`
+- **Объём**: миграция + endpoint; 1 день
+
+### D-020. Chat read tracking (last_chat / last_chatally / chat_languageid)
+
+- **Категория**: домен
+- **Цвет**: 🔴
+- **Origin**: `last_chat`, `last_chatally`, `chat_languageid`
+- **Nova**: ОТСУТСТВУЮТ в users
+- **Разница**: nova-чат не помечает «прочитано до сюда»
+- **Как сделать**: миграция users +
+  `last_global_chat_read_at timestamptz`,
+  `last_ally_chat_read_at timestamptz`, `chat_language TEXT`
+- **Объём**: миграция + frontend updates; 2-3 дня
+
+### D-021. Race (раса персонажа)
+
+- **Категория**: домен / механика
+- **Цвет**: 🔴
+- **Origin**: `na_user.race TINYINT(3) DEFAULT 1`
+- **Nova**: ОТСУТСТВУЕТ
+- **Разница**: legacy-фича выбора расы
+- **Как сделать**: `users.race TEXT` + `configs/races.yml`
+- **Объём**: миграция + UI; ~3 дня (без бонусов)
+- **Риски**: если есть game-effects от расы — больше работы
+
+### D-022. Building production override (prod_factor)
+
+- **Категория**: домен / формула
+- **Цвет**: 🟡
+- **Origin**: `na_building2planet.prod_factor INT(3) DEFAULT 100`
+  — per-planet процент производства
+- **Nova**: `buildings` без production_factor
+- **Разница**: нет per-planet override
+- **Как сделать**: `buildings.production_factor REAL DEFAULT 1.0`,
+  читать в economy
+- **Объём**: миграция + формула + UI; 1-2 дня
+
+### D-023. Event payload serialization (PHP serialized blob vs JSONB)
+
+- **Категория**: event-loop
+- **Цвет**: 🟡
+- **Origin**: `na_events.data MEDIUMBLOB` (PHP serialized)
+- **Nova**: `events.payload JSONB`
+- **Разница**: при миграции running events нужен трансформер
+- **Как сделать**: миграционный PHP-скрипт
+  `unserialize → json_encode`
+- **Объём**: 1 день
+- **Риски**: PHP serialize-формат с custom-classами может не
+  декодироваться
+
+### D-024. Event chains (parent_eventid, ally_eventid)
+
+- **Категория**: event-loop
+- **Цвет**: 🟡
+- **Origin**: `na_events.parent_eventid`, `ally_eventid`
+- **Nova**: ОТСУТСТВУЮТ явные ссылки
+- **Разница**: в nova цепочки только в коде, не в БД
+- **Как сделать**: `events.parent_event_id UUID FK`,
+  `events.related_event_ids JSONB` для ACS
+- **Объём**: миграция + использование в alien chains; 2-3 дня
+
+### D-025. User agreement tracking
+
+- **Категория**: домен / инфра
+- **Цвет**: 🟡
+- **Origin**: `na_user.user_agreement_read INT(10)`
+- **Nova**: ОТСУТСТВУЕТ как поле (план 47 — terms_accepted в
+  identity)
+- **Разница**: для legacy01 нужно знать дату принятия last
+  agreement
+- **Как сделать**: использовать identity-service `terms_accepted_at`
+  (план 47) — легко
+- **Объём**: 0 если identity покрывает
+
+---
+
+## Категория «формула / баланс» (D-026 .. D-030)
+
+### D-026. Источник истины формул (БД-строки vs YAML-числа)
+
+- **Категория**: формула
+- **Цвет**: 🟣
+- **Origin**: `na_construction.prod_*, cons_*, charge_*` —
+  varbinary(255) DSL-строки парсятся PHP `eval()`. Источник
+  истины — **продакшн БД**.
+- **Nova**: `configs/buildings.yml`, `units.yml`, формулы в
+  Go-коде. Источник — **репо**.
+- **Разница**: фундаментально разное хранение баланса.
+- **Как сделать**: предвычислить формулы origin по уровням и
+  сохранить в `configs/balance/legacy.yaml` как числа. Динамику
+  prod_* (с `{temp}`, `{tech=N}`) реализовать в Go в
+  `internal/legacy/economy/` под флагом
+  `universe.balance_profile = legacy`. **B1+B3 гибрид**.
+- **Объём**: 2 недели (импорт формул + Go-формулы для динамики)
+- **Риски**: расхождение в округлении PHP `eval round()` vs Go
+  `math.Round` — несколько единиц на больших уровнях
+- **Связь**: см. `formula-dsl.md`
+
+### D-027. RF-таблица (rapidfire) — алиен-юниты
+
+- **Категория**: формула
+- **Цвет**: 🟠
+- **Origin**: `na_rapidfire` содержит entries для UNIT_A_*
+  (200-204) — RF алиенов между собой и против игрока
+- **Nova**: `configs/rapidfire.yml` — нет UNIT_A_* (см. также
+  game-reference.md § «Параметры юнитов из БД легаси»)
+- **Разница**: в nova нет алиен-кораблей вообще
+- **Как сделать**: добавить алиен-юниты в `configs/units.yml` и
+  RF в `configs/rapidfire.yml` под флагом
+  `universe.legacy_alien_units = true`
+- **Объём**: 1-2 дня (числа известны из game-reference)
+- **Связь**: D-028, alien-ai-comparison.md
+
+### D-028. Юниты UNIT_A_* (id 200-204) и Lancer/Shadow/etc
+
+- **Категория**: формула / домен
+- **Цвет**: 🟠
+- **Origin**: `na_ship_datasheet` содержит unitid 200, 201, 202,
+  203, 204 (Alien*), 102 (Lancer Ship), 325 (Shadow Ship), 352
+  (Ship Transplantator), 353 (Ship Collector), 354 (Small Planet
+  Shield), 355 (Large Planet Shield), 358 (Armored Terran)
+- **Nova**: `configs/ships.yml` содержит только базовые юниты
+- **Разница**: ~10 «специальных» legacy-юнитов отсутствуют
+- **Как сделать**: добавить в `configs/units.yml` секцию
+  `legacy:` с этими юнитами под флагом
+- **Объём**: 2-3 дня (числа в game-reference.md)
+- **Связь**: D-027
+
+### D-029. Температура влияет на производство водорода
+
+- **Категория**: формула
+- **Цвет**: 🔴
+- **Origin**: формула `prod_hydrogen` для Hydrogen Lab содержит
+  `(-0.002 * {temp} + 1.28)` — холодные планеты производят больше
+- **Nova**: вероятно нет температурного модификатора (нужна
+  верификация)
+- **Разница**: сила водородного производства зависит от температуры
+- **Как сделать**: реализовать в Go-функции
+  `economy.HydrogenProduction(level, tech, temp)` с условием
+  `if balance_profile == "legacy" { applyTempModifier }`
+- **Объём**: 2-3 дня (включая тесты)
+- **Связь**: D-026, formula-dsl.md
+
+### D-030. Charge_* экспоненты (×1.5 vs ×1.6 vs другие)
+
+- **Категория**: формула
+- **Цвет**: 🟡
+- **Origin**: charge формулы у разных зданий разные:
+  Metal Mine `pow(1.5, level-1)`, Silicon Lab `pow(1.6, level-1)`,
+  Solar Plant простая `50 * pow(1.5, level)`
+- **Nova**: `configs/buildings.yml` имеет `cost_factor`
+- **Разница**: nova может иметь унифицированный `cost_factor`
+  vs origin per-building
+- **Как сделать**: проверить, что nova поддерживает per-building
+  factor; если нет — расширить `buildings.yml`
+- **Объём**: 1 день верификация
+- **Связь**: D-026
+
+---
+
+## Категория «event-loop / механика» (D-031 .. D-038)
+
+### D-031. EVENT_TOURNAMENT_* (3 типа)
+
+- **Категория**: event-loop / механика
+- **Цвет**: 🟠
+- **Origin**: EVENT_TOURNAMENT_SCHEDULE, RESCHEDULE, PARTICIPANT
+  объявлены, но обработчики не реализованы (зарезервировано)
+- **Nova**: ОТСУТСТВУЮТ
+- **Разница**: legacy фича не реализована даже в origin
+- **Как сделать**: новая фича в nova-backend (план для всех
+  вселенных как опция). Связано с U-002.
+- **Объём**: 3-4 недели (полностью новая фича)
+
+### D-032. EVENT_TELEPORT_PLANET
+
+- **Категория**: event-loop / механика
+- **Цвет**: 🟠
+- **Origin**: артефакт перемещает планету
+- **Nova**: ОТСУТСТВУЕТ
+- **Как сделать**: `KindTeleportPlanet` + handler +
+  `users.last_planet_teleport_at` (D-016)
+- **Объём**: 5-7 дней
+- **Связь**: U-009, D-016
+
+### D-033. EVENT_TEMP_PLANET_DISAPEAR
+
+- **Категория**: event-loop / механика
+- **Цвет**: 🟠
+- **Origin**: временные планеты живут TTL и исчезают
+- **Nova**: `KindExpirePlanet (65)` есть — soft-delete по `expires_at`.
+  **Совпадает по семантике**, верифицировать payload-схему
+- **Цвет**: пересмотрел на 🟢 — фактически реализовано
+- **Объём**: 0-1 день верификация
+- **Связь**: возможно НЕ расхождение
+
+### D-034. EVENT_RUN_SIM_ASSAULT (отложенный симулятор)
+
+- **Категория**: event-loop
+- **Цвет**: 🟠
+- **Origin**: запускает симуляцию боя как событие
+- **Nova**: симулятор синхронный (`POST /api/battle-sim`)
+- **Разница**: origin может ставить симуляцию в очередь
+- **Как сделать**: для legacy01 опционально — Kind +
+  endpoint-альтернатива
+- **Объём**: 2 дня
+- **Риски**: вероятно не нужно — синхронный симулятор удобнее
+
+### D-035. EVENT_DELIVERY_ARTEFACTS (доставка артефактов флотом)
+
+- **Категория**: event-loop / механика
+- **Цвет**: 🟠
+- **Origin**: доставка артефакта между планетами через флот
+- **Nova**: `KindDeliveryUnits/Resources` объявлены, но не
+  реализованы
+- **Как сделать**: реализовать handler в `internal/fleet/`
+- **Объём**: 5-7 дней
+- **Связь**: nova-backlog
+
+### D-036. EVENT_ALIEN_FLY_UNKNOWN / GRAB_CREDIT / CHANGE_MISSION_AI
+
+- **Категория**: event-loop / механика
+- **Цвет**: 🟠
+- **Origin**: 3 типа алиен-событий с богатой логикой (см.
+  `alien-ai-comparison.md`)
+- **Nova**: KindAlienFlyUnknown (33) и KindAlienChangeMissionAI (81)
+  объявлены без обработчиков; KindAlienGrabCredit (37) встроено в
+  Attack
+- **Как сделать**: реализовать все 3 как отдельные обработчики в
+  `internal/alien/`. Подробнее — `alien-ai-comparison.md` записи
+  A4-A11
+- **Объём**: 2 недели
+- **Связь**: alien-ai-comparison.md A1-A14
+
+### D-037. EVENT_ATTACK_DESTROY_BUILDING / ALLIANCE_DESTROY_BUILDING
+
+- **Категория**: event-loop / механика
+- **Цвет**: 🟠
+- **Origin**: атака с целью разрушения постройки (не луны, а
+  здания)
+- **Nova**: атака разрушения только луны
+  (`KindAttackDestroyMoon`, план 20 Ф.6)
+- **Разница**: разрушение конкретного здания — отдельная механика
+- **Как сделать**: новый Kind `KindAttackDestroyBuilding` +
+  параметр `target_building_id`
+- **Объём**: 1 неделя
+- **Связь**: backend + UI выбор здания
+
+### D-038. EVENT_ALIEN_ATTACK_CUSTOM (admin-инициируемая)
+
+- **Категория**: event-loop
+- **Цвет**: 🟡
+- **Origin**: admin может инициировать атаку с custom параметрами
+- **Nova**: ОТСУТСТВУЕТ
+- **Как сделать**: admin endpoint
+  `POST /api/admin/alien/custom-attack`, переиспользует
+  `KindAlienAttack` с custom payload
+- **Объём**: 1-2 дня
+
+---
+
+## Категория «API» (D-039 .. D-045)
+
+### D-039. Биржа артефактов (Exchange / Stock / StockNew)
+
+- **Категория**: api / механика
+- **Цвет**: 🟠 (главное расхождение)
+- **Origin**: 3 контроллера
+  (`Exchange.class.php` 1220 стр, `Stock.class.php` 757 стр,
+  `StockNew.class.php` 850 стр) + 5+ шаблонов + таблицы
+  `na_exchange*`
+- **Nova**: ОТСУТСТВУЕТ как player-to-player биржа. Только
+  `artmarket` (продажа от системы).
+- **Как сделать**: новый модуль `internal/exchange/` ~2000 стр
+  Go + 5+ endpoint'ов:
+  - `GET /api/exchange/lots` — список лотов
+  - `POST /api/exchange/lots` — создать
+  - `GET /api/exchange/lots/{id}` — детали
+  - `POST /api/exchange/lots/{id}/buy` — купить
+  - `DELETE /api/exchange/lots/{id}` — отозвать
+- **Объём**: 2-3 недели backend + frontend
+- **Связь**: U-001
+
+### D-040. Передача лидерства альянса (abandonAlly)
+
+- **Категория**: api
+- **Цвет**: 🟠
+- **Origin**: `Alliance.class.php::abandonAlly`,
+  `referFounderStatus`
+- **Nova**: ОТСУТСТВУЕТ endpoint
+- **Как сделать**:
+  `POST /api/alliances/{id}/transfer-ownership/{userID}`
+- **Объём**: 1 день backend + frontend кнопка
+- **Связь**: U-004
+
+### D-041. Три описания альянса (external/internal/application)
+
+- **Категория**: api / домен
+- **Цвет**: 🟠
+- **Origin**: `Alliance.class.php::updateAllyPrefs` устанавливает
+  3 поля
+- **Nova**: одно `description`
+- **Как сделать**: миграция `alliances` —
+  `description_external, description_internal, description_apply
+  TEXT`. Backend + DTO + frontend.
+- **Объём**: миграция + handler + frontend; 2-3 дня
+- **Связь**: U-015
+
+### D-042. Global mail членам альянса
+
+- **Категория**: api / механика
+- **Цвет**: 🟠 (заблокировано планом 57)
+- **Origin**: `Alliance.class.php::globalMail`
+- **Nova**: ОТСУТСТВУЕТ (после плана 57 mail-service —
+  сделаем легко)
+- **Как сделать**: после плана 57 — endpoint
+  `POST /api/alliances/{id}/global-mail` с TipTap-payload
+- **Объём**: после 57 — 3-5 дней
+- **Связь**: U-006
+
+### D-043. Phalanx vs MonitorPlanet
+
+- **Категория**: api
+- **Цвет**: 🟡
+- **Origin**: `MonitorPlanet.class.php` показывает события на
+  чужой планете (через сенсорную фалангу)
+- **Nova**: `GET /api/phalanx` есть
+- **Разница**: верифицировать паритет (UI и payload)
+- **Объём**: 1 день верификации
+
+### D-044. ResTransferStats
+
+- **Категория**: api
+- **Цвет**: 🟡
+- **Origin**: `ResTransferStats.class.php` — статистика передачи
+  ресурсов между членами альянса
+- **Nova**: таблица `resource_transfers` есть, endpoint`а нет
+- **Как сделать**: `GET /api/alliances/{id}/resource-transfers`
+- **Объём**: 2 дня
+
+### D-045. ExchangeOpts (auto-exchange при переполнении)
+
+- **Категория**: api / механика
+- **Цвет**: 🟡
+- **Origin**: `ExchangeOpts.class.php` — настройки автоматического
+  обмена при переполнении хранилища
+- **Nova**: ОТСУТСТВУЕТ
+- **Как сделать**: настройки в `users` (поля `auto_exchange_*`) +
+  обработка в economy
+- **Объём**: 3-5 дней
+- **Риски**: авто-операции могут ломать ожидания игрока
+
+---
+
+## Категория «assets» (D-046)
+
+### D-046. Runtime-генерируемые ассеты артефактов
+
+- **Категория**: assets
+- **Цвет**: 🟠
+- **Origin**: `public/artefact-image.php` (153 строки PHP-GD) —
+  композитные PNG артефактов
+- **Nova**: статические иконки
+- **Как сделать**: Go-генератор в `internal/artefact/image.go`
+  через `image/draw`. Кеш на диск.
+- **Объём**: 100-200 строк Go + endpoint + кеш; 1 неделя
+- **Риски**: лицензии шрифтов и базовых иконок (план 40)
+
+---
+
+## Сводка
+
+**Всего записей**: 46 (D-001 .. D-046).
+
+По категориям:
+| Категория | Кол-во | Цвета |
+|---|---|---|
+| Домен (поля) | 25 | 🟡×8, 🟠×0, 🔴×11, 🟣×6 |
+| Формула / баланс | 5 | 🟡×2, 🟠×2, 🔴×1, 🟣×0 |
+| Event-loop / механика | 8 | 🟡×1, 🟠×7, 🔴×0, 🟣×0 |
+| API | 7 | 🟡×4, 🟠×3, 🔴×0, 🟣×0 |
+| Assets | 1 | 🟠×1 |
+
+По цветам:
+- 🟡 Жёлтых: 15 (правка конфига или флаг)
+- 🟠 Оранжевых: 13 (нужно реализовать в nova)
+- 🔴 Красных: 12 (формула/механика расходятся)
+- 🟣 Фиолетовых: 6 (тихая семантика)
+
+**Минимальный порог плана 62 (≥30 записей)**: ✅ выполнен (46).
+
+## Связь с другими артефактами
+
+- `alien-ai-comparison.md` записи A1-A14 — расширение D-036
+- `nova-ui-backlog.md` U-NNN ↔ D-NNN: U-001↔D-039, U-004↔D-040,
+  U-005↔D-014, U-006↔D-042, U-009↔D-032, U-015↔D-041
+- `formula-dsl.md` § «Архитектурное расхождение» ↔ D-026
+- `origin-ui-replication.md` S-NNN — что воспроизводится
+  pixel-perfect (отличается от D-NNN, который про backend)
+
+## Правила использования
+
+1. Каждое D-NNN получает **рабочий статус** при начале реализации:
+   `🔵 в работе`, `✅ закрыто`, `🚫 отказано`.
+2. При смене стратегии через 6-12 месяцев журнал **дополняется/
+   верифицируется**, не пересоставляется с нуля.
+3. Записи 🟣 при реализации **обязательно покрываются
+   golden/property-based тестами на паритет**.
+4. Группировка в будущие планы 63+ — см. `roadmap-report.md` (Ф.5).
