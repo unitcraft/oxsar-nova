@@ -257,16 +257,23 @@ func run() error {
 	w.Register(event.KindAlienAttack, alienSvc.AttackHandler())
 	w.Register(event.KindAlienHalt, alienSvc.HaltHandler())
 	w.Register(event.KindAlienHolding, alienSvc.HoldingHandler())
-	w.Register(event.KindAlienHoldingAI, alienSvc.HoldingAIHandler())
 
-	// План 66 Ф.3: handlers FlyUnknown / GrabCredit / ChangeMissionAI
-	// (origin/alien — порт AlienAI.class.php). loader=nil для handlers
-	// этой фазы — pure-логика без поиска целей; loader потребуется в
-	// Ф.4 для Spawner / generateMission replan-mode.
+	// План 66 Ф.3+Ф.4: handlers AlienAI (origin/alien — порт
+	// AlienAI.class.php). loader=nil для пост-event handler'ов
+	// (FlyUnknown / GrabCredit / ChangeMissionAI / HoldingAI) —
+	// pure-логика на содержимом payload + parent event'а;
+	// loader потребуется только Spawner'у (план 66 Ф.5+).
 	originAlienSvc := originalien.NewService(cat, nil).WithBundle(i18nBundle)
 	w.Register(event.KindAlienFlyUnknown, originAlienSvc.FlyUnknownHandler())
 	w.Register(event.KindAlienGrabCredit, originAlienSvc.GrabCreditHandler())
 	w.Register(event.KindAlienChangeMissionAI, originAlienSvc.ChangeMissionAIHandler())
+	// План 66 Ф.4: HOLDING_AI переехал из internal/alien в origin/alien
+	// и теперь имеет 8 sub-phases как в origin (2 активных +
+	// 6 заглушек, AlienAI.class.php:940-947). Старый
+	// internal/alien.HoldingAIHandler остаётся в коде, но не
+	// регистрируется — он содержал 50/50 random extract/unload
+	// (упрощение плана 15).
+	w.Register(event.KindAlienHoldingAI, originAlienSvc.HoldingAIHandler())
 
 	automsgSvc := automsg.NewService(db).WithBundle(i18nBundle)
 
