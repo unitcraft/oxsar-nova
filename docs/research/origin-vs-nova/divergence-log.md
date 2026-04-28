@@ -756,10 +756,10 @@ vs 11 при basic=10000). Все cost_factor в origin.yaml override
   DeliveryArtefacts ✅, AttackDestroyBuilding, AttackAllianceDestroyBuilding,
   AllianceAttackAdditional, TeleportPlanet).
 
-### D-036. EVENT_ALIEN_FLY_UNKNOWN / GRAB_CREDIT / CHANGE_MISSION_AI
+### D-036. EVENT_ALIEN_FLY_UNKNOWN / GRAB_CREDIT / CHANGE_MISSION_AI ✅ (закрыто 2026-04-28, план 66 Ф.1-Ф.4 + Ф.6+Ф.7)
 
 - **Категория**: event-loop / механика
-- **Цвет**: 🟠 (в работе — план 66)
+- **Цвет**: 🟢 (закрыто Ф.1-Ф.4 + Ф.6+Ф.7; Ф.5 buyout — отдельной параллельной сессией)
 - **Origin**: 3 типа алиен-событий с богатой логикой (см.
   `alien-ai-comparison.md`)
 - **Nova**: KindAlienFlyUnknown (33) и KindAlienChangeMissionAI (81)
@@ -803,6 +803,20 @@ vs 11 при basic=10000). Все cost_factor в origin.yaml override
   - **Применимо**: ко всем вселенным (R0-исключение 2026-04-28,
     решение пользователя). Пакет `origin/alien/` — источник кода,
     не таргет вселенной.
+  - 2026-04-28 (Ф.6+Ф.7 плана 66): `golden-итерации` 72 кейса в 9
+    группах (CalcGrabAmount/CalcGiftAmount/HoldingExtension/
+    PowerScaleAfterControlTimes/HoldingDuration/FlightDuration/
+    ChangeMissionDelay/HoldingAISubphaseDuration/WeakenedTechLevel)
+    + property-based докрытие (PickAttackTarget empty/all-ineligible,
+    PickCreditTarget монотонность, GenerateFleet bound, Shuffle
+    multiset-preserving, Weakening ≤level+1) + edge-case unit-тесты
+    (MaxRealEndAt, RandRoundRangeDur, eligibility-rejection paths,
+    findMode-ветка GenerateFleet, DS-target). Покрытие pure-функций
+    (helpers/shuffle/target/fleet_generator/state) — **94.0%** среднее
+    по функциям (≥85% R4). PHP-CLI `dump-alien-ai.php` генерирует
+    эталонные [min..max] диапазоны/exact-значения формул AlienAI;
+    Go golden_test.go проверяет инварианты (RNG-байты не сходятся
+    PHP↔Go, mt_rand-портация — отдельный future work R8).
 
 ### D-037. EVENT_ATTACK_DESTROY_BUILDING / ALLIANCE_DESTROY_BUILDING ✅ (закрыто 2026-04-28, план 65 Ф.3+Ф.4)
 

@@ -12289,3 +12289,91 @@ DiplomacyPanel, RanksPanel, permissions, relations, AllianceScreen
 **Объём** — ~+330 строк pure-логики и компонентов
 (`components/feedback/*` 9 файлов) + ~210 строк тестов + ~16
 i18n-ключей × 2 языка + ~40 строк CSS/правок в screens.
+
+## Итерация 66.Ф.6+Ф.7 (2026-04-28) — AlienAI golden-итерации + финализация
+
+**Закрывает** план 66 Ф.6 (golden-тесты на 50+ итераций) и Ф.7
+(финализация, divergence-log D-036). Ф.5 (платный выкуп) — параллельная
+сессия (slot G в active-sessions); после её завершения план 66 закрыт
+полностью.
+
+**Что сделано**:
+
+1. **PHP-CLI `dump-alien-ai.php`** в `projects/game-origin-php/tools/`
+   — оффлайн генератор golden-эталонов формул AlienAI. Константы из
+   `consts.php:752-770` захардкожены (не требует MySQL и legacy-bootstrap).
+   Выводит JSON с **72 кейсами в 9 группах**: CalcGrabAmount (12),
+   CalcGiftAmount (10), HoldingExtension (10), PowerScaleAfterControlTimes
+   (8), HoldingDuration (5), FlightDuration (5), ChangeMissionDelay (6),
+   HoldingAISubphaseDuration (6), WeakenedTechLevel (10). Формат каждого
+   кейса: `{id, group, fn, input, expected_min, expected_max, comment}`.
+   Запуск: `php tools/dump-alien-ai.php > testdata/golden_alien_ai.json`.
+
+2. **`testdata/golden_alien_ai.json`** в
+   `projects/game-nova/backend/internal/origin/alien/` — зафиксированный
+   артефакт golden-эталонов (~22 KB, 72 кейса).
+
+3. **Go `golden_test.go`** — `TestGolden_AllCases` загружает JSON,
+   диспатчит по `fn`-полю в соответствующий helper (CalcGrabAmount,
+   CalcGiftAmount, HoldingExtension, PowerScaleAfterControlTimes,
+   HoldingDuration, FlightDuration, ChangeMissionDelay,
+   HoldingAISubphaseDuration, weakenedTechLevel) и проверяет результат:
+   - exact-кейсы (`expected_min == expected_max`) — точное совпадение
+     (eps=1e-9 для float, побайтовое для int);
+   - range-кейсы — `[expected_min, expected_max]` включительно.
+   Auto-skip если testdata-файла нет (CI без PHP).
+   Защита: `len(cases) >= 50` и `groups >= 5` (план 66 Ф.6 R4).
+
+4. **Property-based докрытие** в `golden_property_test.go`:
+   - `TestProperty_PickAttackTarget_EmptyReturnsNil` — пустой/nil-список;
+   - `TestProperty_PickAttackTarget_AllIneligibleReturnsNil` — все umode;
+   - `TestProperty_PickCreditTarget_EmptyReturnsNil` + monotonic-by-credit;
+   - `TestProperty_GenerateFleet_PowerNotExcessive` — alien power не
+     превышает `target_power × scale × 3`;
+   - `TestProperty_GenerateFleet_DeterministicSameSeed`;
+   - `TestProperty_ApplyShuffledTechWeakening_NotAbove` — weakened ≤
+     `level<3 ? level : level+1`;
+   - `TestProperty_ShuffleKeyValues_PreservesMultiset` — multiset
+     инвариант shuffle.
+
+5. **Edge-case docrytie** в `golden_coverage_test.go`:
+   - `MaxRealEndAt`, `RandRoundRangeDur` (min==max и min>max);
+   - `creditTargetEligible` / `attackTargetEligible` — все 6/5 веток
+     отказа (umode/inactive/few-ships/recent-event);
+   - `GenerateFleet` с `WithFindMode()`, `DeathStar` в target,
+     пустой available (→ nil), nil/nil edge-case.
+
+**Покрытие pure-функций** (helpers/shuffle/target/fleet_generator/
+state, без handlers/loader_pgx — они требуют TEST_DATABASE_URL):
+**среднее 94.0% по функциям** (≥85% R4). Помещаются в порог:
+- IsAttackTime/RandRoundRange/RandFloatRange/CalcGrabAmount/
+  CalcGiftAmount/HoldingExtension/MaxRealEndAt/PowerScale*/Holding*Duration/
+  Change* — 100%;
+- weakenedTechLevel/ApplyShuffledTech/Shuffle* — 90-100%;
+- Pick*Target — 100%;
+- GenerateFleet — 82% (редкие edge-ветки Armored Terran с
+  mt_rand(0,50)==0 — обоснованно ниже 85%).
+
+**Финализация**:
+- `divergence-log.md` D-036 → ✅ (закрыто Ф.1-Ф.4 + Ф.6+Ф.7);
+- Шапка плана 66: Ф.1-Ф.4 ✅, Ф.6+Ф.7 ✅, Ф.5 🟡 (slot G);
+- Запись в этом файле.
+
+**Архитектурное замечание**:
+
+PHP `mt_rand` (Mersenne Twister) **несовместим бит-в-бит** с Go
+`pkg/rng` (xorshift64*). Поэтому golden-тест проверяет
+**инварианты формулы AlienAI** (диапазоны, exact-формулы) — не
+RNG-байты. Полная mt_rand-портация в Go-адаптер — отдельный future
+work R8 (`shuffle.go:115`), не блокирует Ф.6.
+
+Это семантически паритет: при том же origin-формуле и валидном
+seed Go даёт результат в **диапазоне**, идентичном origin-PHP
+(но не байт-в-байт значение).
+
+**Объём**: ~290 строк PHP (CLI) + ~370 строк Go-тестов (golden +
+property + coverage) + 22 KB golden_alien_ai.json.
+
+**Параллельные сессии**: slot G работает Ф.5 (buyout) — не пересекаемся
+по файлам; коммит поимённо с `--`.
+

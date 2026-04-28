@@ -1,0 +1,858 @@
+[
+    {
+        "id": "calcgrabamount_001",
+        "group": "CalcGrabAmount",
+        "fn": "CalcGrabAmount",
+        "input": {
+            "user_credit": 50000,
+            "seed": 1001
+        },
+        "expected_min": 0,
+        "expected_max": 0,
+        "comment": "below threshold"
+    },
+    {
+        "id": "calcgrabamount_002",
+        "group": "CalcGrabAmount",
+        "fn": "CalcGrabAmount",
+        "input": {
+            "user_credit": 99999,
+            "seed": 1002
+        },
+        "expected_min": 0,
+        "expected_max": 0,
+        "comment": "below threshold"
+    },
+    {
+        "id": "calcgrabamount_003",
+        "group": "CalcGrabAmount",
+        "fn": "CalcGrabAmount",
+        "input": {
+            "user_credit": 100000,
+            "seed": 1003
+        },
+        "expected_min": 0,
+        "expected_max": 0,
+        "comment": "below threshold"
+    },
+    {
+        "id": "calcgrabamount_004",
+        "group": "CalcGrabAmount",
+        "fn": "CalcGrabAmount",
+        "input": {
+            "user_credit": 100001,
+            "seed": 1004
+        },
+        "expected_min": 80,
+        "expected_max": 101,
+        "comment": "0.0008..0.001 of 100001"
+    },
+    {
+        "id": "calcgrabamount_005",
+        "group": "CalcGrabAmount",
+        "fn": "CalcGrabAmount",
+        "input": {
+            "user_credit": 250000,
+            "seed": 1005
+        },
+        "expected_min": 200,
+        "expected_max": 250,
+        "comment": "0.0008..0.001 of 250000"
+    },
+    {
+        "id": "calcgrabamount_006",
+        "group": "CalcGrabAmount",
+        "fn": "CalcGrabAmount",
+        "input": {
+            "user_credit": 500000,
+            "seed": 1006
+        },
+        "expected_min": 400,
+        "expected_max": 500,
+        "comment": "0.0008..0.001 of 500000"
+    },
+    {
+        "id": "calcgrabamount_007",
+        "group": "CalcGrabAmount",
+        "fn": "CalcGrabAmount",
+        "input": {
+            "user_credit": 1000000,
+            "seed": 1007
+        },
+        "expected_min": 800,
+        "expected_max": 1000,
+        "comment": "0.0008..0.001 of 1000000"
+    },
+    {
+        "id": "calcgrabamount_008",
+        "group": "CalcGrabAmount",
+        "fn": "CalcGrabAmount",
+        "input": {
+            "user_credit": 5000000,
+            "seed": 1008
+        },
+        "expected_min": 4000,
+        "expected_max": 5000,
+        "comment": "0.0008..0.001 of 5000000"
+    },
+    {
+        "id": "calcgrabamount_009",
+        "group": "CalcGrabAmount",
+        "fn": "CalcGrabAmount",
+        "input": {
+            "user_credit": 10000000,
+            "seed": 1009
+        },
+        "expected_min": 8000,
+        "expected_max": 10000,
+        "comment": "0.0008..0.001 of 10000000"
+    },
+    {
+        "id": "calcgrabamount_010",
+        "group": "CalcGrabAmount",
+        "fn": "CalcGrabAmount",
+        "input": {
+            "user_credit": 100000000,
+            "seed": 1010
+        },
+        "expected_min": 80000,
+        "expected_max": 100000,
+        "comment": "0.0008..0.001 of 100000000"
+    },
+    {
+        "id": "calcgrabamount_011",
+        "group": "CalcGrabAmount",
+        "fn": "CalcGrabAmount",
+        "input": {
+            "user_credit": 1000000000,
+            "seed": 1011
+        },
+        "expected_min": 800000,
+        "expected_max": 1000000,
+        "comment": "0.0008..0.001 of 1000000000"
+    },
+    {
+        "id": "calcgrabamount_012",
+        "group": "CalcGrabAmount",
+        "fn": "CalcGrabAmount",
+        "input": {
+            "user_credit": 1000000000000,
+            "seed": 1012
+        },
+        "expected_min": 800000000,
+        "expected_max": 1000000000,
+        "comment": "0.0008..0.001 of 1000000000000"
+    },
+    {
+        "id": "calcgiftamount_001",
+        "group": "CalcGiftAmount",
+        "fn": "CalcGiftAmount",
+        "input": {
+            "user_credit": 0,
+            "seed": 2001
+        },
+        "expected_min": 0,
+        "expected_max": 510,
+        "comment": "\u2264510 (cap MaxGift*1.02), credit=0"
+    },
+    {
+        "id": "calcgiftamount_002",
+        "group": "CalcGiftAmount",
+        "fn": "CalcGiftAmount",
+        "input": {
+            "user_credit": 1000,
+            "seed": 2002
+        },
+        "expected_min": 0,
+        "expected_max": 510,
+        "comment": "\u2264510 (cap MaxGift*1.02), credit=1000"
+    },
+    {
+        "id": "calcgiftamount_003",
+        "group": "CalcGiftAmount",
+        "fn": "CalcGiftAmount",
+        "input": {
+            "user_credit": 10000,
+            "seed": 2003
+        },
+        "expected_min": 0,
+        "expected_max": 510,
+        "comment": "\u2264510 (cap MaxGift*1.02), credit=10000"
+    },
+    {
+        "id": "calcgiftamount_004",
+        "group": "CalcGiftAmount",
+        "fn": "CalcGiftAmount",
+        "input": {
+            "user_credit": 50000,
+            "seed": 2004
+        },
+        "expected_min": 0,
+        "expected_max": 510,
+        "comment": "\u2264510 (cap MaxGift*1.02), credit=50000"
+    },
+    {
+        "id": "calcgiftamount_005",
+        "group": "CalcGiftAmount",
+        "fn": "CalcGiftAmount",
+        "input": {
+            "user_credit": 100000,
+            "seed": 2005
+        },
+        "expected_min": 0,
+        "expected_max": 510,
+        "comment": "\u2264510 (cap MaxGift*1.02), credit=100000"
+    },
+    {
+        "id": "calcgiftamount_006",
+        "group": "CalcGiftAmount",
+        "fn": "CalcGiftAmount",
+        "input": {
+            "user_credit": 500000,
+            "seed": 2006
+        },
+        "expected_min": 0,
+        "expected_max": 510,
+        "comment": "\u2264510 (cap MaxGift*1.02), credit=500000"
+    },
+    {
+        "id": "calcgiftamount_007",
+        "group": "CalcGiftAmount",
+        "fn": "CalcGiftAmount",
+        "input": {
+            "user_credit": 1000000,
+            "seed": 2007
+        },
+        "expected_min": 0,
+        "expected_max": 510,
+        "comment": "\u2264510 (cap MaxGift*1.02), credit=1000000"
+    },
+    {
+        "id": "calcgiftamount_008",
+        "group": "CalcGiftAmount",
+        "fn": "CalcGiftAmount",
+        "input": {
+            "user_credit": 10000000,
+            "seed": 2008
+        },
+        "expected_min": 0,
+        "expected_max": 510,
+        "comment": "\u2264510 (cap MaxGift*1.02), credit=10000000"
+    },
+    {
+        "id": "calcgiftamount_009",
+        "group": "CalcGiftAmount",
+        "fn": "CalcGiftAmount",
+        "input": {
+            "user_credit": 100000000,
+            "seed": 2009
+        },
+        "expected_min": 0,
+        "expected_max": 510,
+        "comment": "\u2264510 (cap MaxGift*1.02), credit=100000000"
+    },
+    {
+        "id": "calcgiftamount_010",
+        "group": "CalcGiftAmount",
+        "fn": "CalcGiftAmount",
+        "input": {
+            "user_credit": 1000000000,
+            "seed": 2010
+        },
+        "expected_min": 0,
+        "expected_max": 510,
+        "comment": "\u2264510 (cap MaxGift*1.02), credit=1000000000"
+    },
+    {
+        "id": "holdingextension_001",
+        "group": "HoldingExtension",
+        "fn": "HoldingExtension",
+        "input": {
+            "start_ts": 1735689600,
+            "holds_ts": 1735732800,
+            "paid_hard": 0
+        },
+        "expected_min": 1735732800,
+        "expected_max": 1735732800,
+        "comment": "no extension"
+    },
+    {
+        "id": "holdingextension_002",
+        "group": "HoldingExtension",
+        "fn": "HoldingExtension",
+        "input": {
+            "start_ts": 1735689600,
+            "holds_ts": 1735732800,
+            "paid_hard": 1
+        },
+        "expected_min": 1735732944,
+        "expected_max": 1735732944,
+        "comment": "+144s, capped at start+15d"
+    },
+    {
+        "id": "holdingextension_003",
+        "group": "HoldingExtension",
+        "fn": "HoldingExtension",
+        "input": {
+            "start_ts": 1735689600,
+            "holds_ts": 1735732800,
+            "paid_hard": 10
+        },
+        "expected_min": 1735734240,
+        "expected_max": 1735734240,
+        "comment": "+1440s, capped at start+15d"
+    },
+    {
+        "id": "holdingextension_004",
+        "group": "HoldingExtension",
+        "fn": "HoldingExtension",
+        "input": {
+            "start_ts": 1735689600,
+            "holds_ts": 1735732800,
+            "paid_hard": 50
+        },
+        "expected_min": 1735740000,
+        "expected_max": 1735740000,
+        "comment": "+7200s, capped at start+15d"
+    },
+    {
+        "id": "holdingextension_005",
+        "group": "HoldingExtension",
+        "fn": "HoldingExtension",
+        "input": {
+            "start_ts": 1735689600,
+            "holds_ts": 1735732800,
+            "paid_hard": 100
+        },
+        "expected_min": 1735747200,
+        "expected_max": 1735747200,
+        "comment": "+14400s, capped at start+15d"
+    },
+    {
+        "id": "holdingextension_006",
+        "group": "HoldingExtension",
+        "fn": "HoldingExtension",
+        "input": {
+            "start_ts": 1735689600,
+            "holds_ts": 1735732800,
+            "paid_hard": 500
+        },
+        "expected_min": 1735804800,
+        "expected_max": 1735804800,
+        "comment": "+72000s, capped at start+15d"
+    },
+    {
+        "id": "holdingextension_007",
+        "group": "HoldingExtension",
+        "fn": "HoldingExtension",
+        "input": {
+            "start_ts": 1735689600,
+            "holds_ts": 1735732800,
+            "paid_hard": 1000
+        },
+        "expected_min": 1735876800,
+        "expected_max": 1735876800,
+        "comment": "+144000s, capped at start+15d"
+    },
+    {
+        "id": "holdingextension_008",
+        "group": "HoldingExtension",
+        "fn": "HoldingExtension",
+        "input": {
+            "start_ts": 1735689600,
+            "holds_ts": 1735732800,
+            "paid_hard": 10000
+        },
+        "expected_min": 1736985600,
+        "expected_max": 1736985600,
+        "comment": "+1440000s, capped at start+15d"
+    },
+    {
+        "id": "holdingextension_009",
+        "group": "HoldingExtension",
+        "fn": "HoldingExtension",
+        "input": {
+            "start_ts": 1735689600,
+            "holds_ts": 1736985540,
+            "paid_hard": 5
+        },
+        "expected_min": 1736985600,
+        "expected_max": 1736985600,
+        "comment": "+720s, capped at start+15d"
+    },
+    {
+        "id": "holdingextension_010",
+        "group": "HoldingExtension",
+        "fn": "HoldingExtension",
+        "input": {
+            "start_ts": 1735689600,
+            "holds_ts": 1735776000,
+            "paid_hard": 200
+        },
+        "expected_min": 1735804800,
+        "expected_max": 1735804800,
+        "comment": "+28800s, capped at start+15d"
+    },
+    {
+        "id": "powerscaleaftercontroltimes_001",
+        "group": "PowerScaleAfterControlTimes",
+        "fn": "PowerScaleAfterControlTimes",
+        "input": {
+            "control_times": 0
+        },
+        "expected_min": 1,
+        "expected_max": 1,
+        "comment": "1 + 0*1.5"
+    },
+    {
+        "id": "powerscaleaftercontroltimes_002",
+        "group": "PowerScaleAfterControlTimes",
+        "fn": "PowerScaleAfterControlTimes",
+        "input": {
+            "control_times": 1
+        },
+        "expected_min": 2.5,
+        "expected_max": 2.5,
+        "comment": "1 + 1*1.5"
+    },
+    {
+        "id": "powerscaleaftercontroltimes_003",
+        "group": "PowerScaleAfterControlTimes",
+        "fn": "PowerScaleAfterControlTimes",
+        "input": {
+            "control_times": 2
+        },
+        "expected_min": 4,
+        "expected_max": 4,
+        "comment": "1 + 2*1.5"
+    },
+    {
+        "id": "powerscaleaftercontroltimes_004",
+        "group": "PowerScaleAfterControlTimes",
+        "fn": "PowerScaleAfterControlTimes",
+        "input": {
+            "control_times": 3
+        },
+        "expected_min": 5.5,
+        "expected_max": 5.5,
+        "comment": "1 + 3*1.5"
+    },
+    {
+        "id": "powerscaleaftercontroltimes_005",
+        "group": "PowerScaleAfterControlTimes",
+        "fn": "PowerScaleAfterControlTimes",
+        "input": {
+            "control_times": 5
+        },
+        "expected_min": 8.5,
+        "expected_max": 8.5,
+        "comment": "1 + 5*1.5"
+    },
+    {
+        "id": "powerscaleaftercontroltimes_006",
+        "group": "PowerScaleAfterControlTimes",
+        "fn": "PowerScaleAfterControlTimes",
+        "input": {
+            "control_times": 10
+        },
+        "expected_min": 16,
+        "expected_max": 16,
+        "comment": "1 + 10*1.5"
+    },
+    {
+        "id": "powerscaleaftercontroltimes_007",
+        "group": "PowerScaleAfterControlTimes",
+        "fn": "PowerScaleAfterControlTimes",
+        "input": {
+            "control_times": 50
+        },
+        "expected_min": 76,
+        "expected_max": 76,
+        "comment": "1 + 50*1.5"
+    },
+    {
+        "id": "powerscaleaftercontroltimes_008",
+        "group": "PowerScaleAfterControlTimes",
+        "fn": "PowerScaleAfterControlTimes",
+        "input": {
+            "control_times": 100
+        },
+        "expected_min": 151,
+        "expected_max": 151,
+        "comment": "1 + 100*1.5"
+    },
+    {
+        "id": "holdingduration_001",
+        "group": "HoldingDuration",
+        "fn": "HoldingDuration",
+        "input": {
+            "seed": 3001
+        },
+        "expected_min": 43200,
+        "expected_max": 86400,
+        "comment": "12h..24h"
+    },
+    {
+        "id": "holdingduration_002",
+        "group": "HoldingDuration",
+        "fn": "HoldingDuration",
+        "input": {
+            "seed": 3002
+        },
+        "expected_min": 43200,
+        "expected_max": 86400,
+        "comment": "12h..24h"
+    },
+    {
+        "id": "holdingduration_003",
+        "group": "HoldingDuration",
+        "fn": "HoldingDuration",
+        "input": {
+            "seed": 3003
+        },
+        "expected_min": 43200,
+        "expected_max": 86400,
+        "comment": "12h..24h"
+    },
+    {
+        "id": "holdingduration_004",
+        "group": "HoldingDuration",
+        "fn": "HoldingDuration",
+        "input": {
+            "seed": 3004
+        },
+        "expected_min": 43200,
+        "expected_max": 86400,
+        "comment": "12h..24h"
+    },
+    {
+        "id": "holdingduration_005",
+        "group": "HoldingDuration",
+        "fn": "HoldingDuration",
+        "input": {
+            "seed": 3005
+        },
+        "expected_min": 43200,
+        "expected_max": 86400,
+        "comment": "12h..24h"
+    },
+    {
+        "id": "flightduration_001",
+        "group": "FlightDuration",
+        "fn": "FlightDuration",
+        "input": {
+            "seed": 4001
+        },
+        "expected_min": 54000,
+        "expected_max": 86400,
+        "comment": "15h..24h"
+    },
+    {
+        "id": "flightduration_002",
+        "group": "FlightDuration",
+        "fn": "FlightDuration",
+        "input": {
+            "seed": 4002
+        },
+        "expected_min": 54000,
+        "expected_max": 86400,
+        "comment": "15h..24h"
+    },
+    {
+        "id": "flightduration_003",
+        "group": "FlightDuration",
+        "fn": "FlightDuration",
+        "input": {
+            "seed": 4003
+        },
+        "expected_min": 54000,
+        "expected_max": 86400,
+        "comment": "15h..24h"
+    },
+    {
+        "id": "flightduration_004",
+        "group": "FlightDuration",
+        "fn": "FlightDuration",
+        "input": {
+            "seed": 4004
+        },
+        "expected_min": 54000,
+        "expected_max": 86400,
+        "comment": "15h..24h"
+    },
+    {
+        "id": "flightduration_005",
+        "group": "FlightDuration",
+        "fn": "FlightDuration",
+        "input": {
+            "seed": 4005
+        },
+        "expected_min": 54000,
+        "expected_max": 86400,
+        "comment": "15h..24h"
+    },
+    {
+        "id": "changemissiondelay_001",
+        "group": "ChangeMissionDelay",
+        "fn": "ChangeMissionDelay",
+        "input": {
+            "flight_seconds": 20,
+            "seed": 5001
+        },
+        "expected_min": 10,
+        "expected_max": 10,
+        "comment": "flight\u226430s special"
+    },
+    {
+        "id": "changemissiondelay_002",
+        "group": "ChangeMissionDelay",
+        "fn": "ChangeMissionDelay",
+        "input": {
+            "flight_seconds": 60,
+            "seed": 5002
+        },
+        "expected_min": 30,
+        "expected_max": 50,
+        "comment": "60%/40% branch span"
+    },
+    {
+        "id": "changemissiondelay_003",
+        "group": "ChangeMissionDelay",
+        "fn": "ChangeMissionDelay",
+        "input": {
+            "flight_seconds": 600,
+            "seed": 5003
+        },
+        "expected_min": 570,
+        "expected_max": 590,
+        "comment": "60%/40% branch span"
+    },
+    {
+        "id": "changemissiondelay_004",
+        "group": "ChangeMissionDelay",
+        "fn": "ChangeMissionDelay",
+        "input": {
+            "flight_seconds": 3600,
+            "seed": 5004
+        },
+        "expected_min": 3570,
+        "expected_max": 3590,
+        "comment": "60%/40% branch span"
+    },
+    {
+        "id": "changemissiondelay_005",
+        "group": "ChangeMissionDelay",
+        "fn": "ChangeMissionDelay",
+        "input": {
+            "flight_seconds": 43200,
+            "seed": 5005
+        },
+        "expected_min": 28800,
+        "expected_max": 43190,
+        "comment": "60%/40% branch span"
+    },
+    {
+        "id": "changemissiondelay_006",
+        "group": "ChangeMissionDelay",
+        "fn": "ChangeMissionDelay",
+        "input": {
+            "flight_seconds": 86400,
+            "seed": 5006
+        },
+        "expected_min": 28800,
+        "expected_max": 86390,
+        "comment": "60%/40% branch span"
+    },
+    {
+        "id": "holdingaisubphaseduration_001",
+        "group": "HoldingAISubphaseDuration",
+        "fn": "HoldingAISubphaseDuration",
+        "input": {
+            "control_times": 0,
+            "seed": 6001
+        },
+        "expected_min": 0,
+        "expected_max": 86400,
+        "comment": "clamp ct=0"
+    },
+    {
+        "id": "holdingaisubphaseduration_002",
+        "group": "HoldingAISubphaseDuration",
+        "fn": "HoldingAISubphaseDuration",
+        "input": {
+            "control_times": 1,
+            "seed": 6002
+        },
+        "expected_min": 30,
+        "expected_max": 86400,
+        "comment": "clamp ct=1"
+    },
+    {
+        "id": "holdingaisubphaseduration_003",
+        "group": "HoldingAISubphaseDuration",
+        "fn": "HoldingAISubphaseDuration",
+        "input": {
+            "control_times": 5,
+            "seed": 6003
+        },
+        "expected_min": 150,
+        "expected_max": 86400,
+        "comment": "clamp ct=5"
+    },
+    {
+        "id": "holdingaisubphaseduration_004",
+        "group": "HoldingAISubphaseDuration",
+        "fn": "HoldingAISubphaseDuration",
+        "input": {
+            "control_times": 30,
+            "seed": 6004
+        },
+        "expected_min": 900,
+        "expected_max": 86400,
+        "comment": "clamp ct=30"
+    },
+    {
+        "id": "holdingaisubphaseduration_005",
+        "group": "HoldingAISubphaseDuration",
+        "fn": "HoldingAISubphaseDuration",
+        "input": {
+            "control_times": 100,
+            "seed": 6005
+        },
+        "expected_min": 3000,
+        "expected_max": 86400,
+        "comment": "clamp ct=100"
+    },
+    {
+        "id": "holdingaisubphaseduration_006",
+        "group": "HoldingAISubphaseDuration",
+        "fn": "HoldingAISubphaseDuration",
+        "input": {
+            "control_times": 500,
+            "seed": 6006
+        },
+        "expected_min": 15000,
+        "expected_max": 86400,
+        "comment": "clamp ct=500"
+    },
+    {
+        "id": "weakenedtechlevel_001",
+        "group": "WeakenedTechLevel",
+        "fn": "WeakenedTechLevel",
+        "input": {
+            "level": 0,
+            "seed": 7001
+        },
+        "expected_min": 0,
+        "expected_max": 0,
+        "comment": "level=0"
+    },
+    {
+        "id": "weakenedtechlevel_002",
+        "group": "WeakenedTechLevel",
+        "fn": "WeakenedTechLevel",
+        "input": {
+            "level": 1,
+            "seed": 7002
+        },
+        "expected_min": 0,
+        "expected_max": 1,
+        "comment": "level=1"
+    },
+    {
+        "id": "weakenedtechlevel_003",
+        "group": "WeakenedTechLevel",
+        "fn": "WeakenedTechLevel",
+        "input": {
+            "level": 2,
+            "seed": 7003
+        },
+        "expected_min": 1,
+        "expected_max": 2,
+        "comment": "level=2"
+    },
+    {
+        "id": "weakenedtechlevel_004",
+        "group": "WeakenedTechLevel",
+        "fn": "WeakenedTechLevel",
+        "input": {
+            "level": 3,
+            "seed": 7004
+        },
+        "expected_min": 2,
+        "expected_max": 4,
+        "comment": "level=3"
+    },
+    {
+        "id": "weakenedtechlevel_005",
+        "group": "WeakenedTechLevel",
+        "fn": "WeakenedTechLevel",
+        "input": {
+            "level": 5,
+            "seed": 7005
+        },
+        "expected_min": 3,
+        "expected_max": 6,
+        "comment": "level=5"
+    },
+    {
+        "id": "weakenedtechlevel_006",
+        "group": "WeakenedTechLevel",
+        "fn": "WeakenedTechLevel",
+        "input": {
+            "level": 10,
+            "seed": 7006
+        },
+        "expected_min": 7,
+        "expected_max": 11,
+        "comment": "level=10"
+    },
+    {
+        "id": "weakenedtechlevel_007",
+        "group": "WeakenedTechLevel",
+        "fn": "WeakenedTechLevel",
+        "input": {
+            "level": 15,
+            "seed": 7007
+        },
+        "expected_min": 10,
+        "expected_max": 16,
+        "comment": "level=15"
+    },
+    {
+        "id": "weakenedtechlevel_008",
+        "group": "WeakenedTechLevel",
+        "fn": "WeakenedTechLevel",
+        "input": {
+            "level": 20,
+            "seed": 7008
+        },
+        "expected_min": 14,
+        "expected_max": 21,
+        "comment": "level=20"
+    },
+    {
+        "id": "weakenedtechlevel_009",
+        "group": "WeakenedTechLevel",
+        "fn": "WeakenedTechLevel",
+        "input": {
+            "level": 30,
+            "seed": 7009
+        },
+        "expected_min": 21,
+        "expected_max": 31,
+        "comment": "level=30"
+    },
+    {
+        "id": "weakenedtechlevel_010",
+        "group": "WeakenedTechLevel",
+        "fn": "WeakenedTechLevel",
+        "input": {
+            "level": 50,
+            "seed": 7010
+        },
+        "expected_min": 35,
+        "expected_max": 51,
+        "comment": "level=50"
+    }
+]
