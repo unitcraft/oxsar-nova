@@ -11779,3 +11779,113 @@ delivery_artefacts_test.go}`,
 **Объём** — ~1 час. +210 строк handler + doc, +430 строк тестов,
 +8 строк регистрация в worker, ~70 строк правок плана 65 +
 divergence-log + simplifications + dev-log.
+
+## Итерация 67.Ф.2 (2026-04-28) — alliance-ремастер: handlers + RBAC + дипстатусы + audit-log
+
+**Что сделано**: Backend Ф.2 плана 67 — расширение alliance-системы
+(D-014, D-041, U-005, U-013, U-015 backend-частью). Поверх миграций
+0073-0077 (Ф.1, коммит 99895ae230) построены handlers, гранулярная
+система прав, расширенные дипстатусы, audit-log.
+
+**Новые файлы (backend, ~870 строк):**
+- `internal/alliance/permissions.go` (~140 строк) — модель прав:
+  7 permission-констант (`can_invite`, `can_kick`, `can_send_global_mail`,
+  `can_manage_diplomacy`, `can_change_description`, `can_propose_relations`,
+  `can_manage_ranks`); helpers `LoadMembership` / `Has` / `HasViaPool`;
+  builtin-fallback (rank='owner' → все true; rank='member' → все false);
+  JSONB-резолвер (отсутствующий ключ = false).
+- `internal/alliance/audit.go` (~165 строк) — `writeAuditTx` (audit
+  best-effort внутри транзакции) + `ListAudit` для GET endpoint.
+  18 action-констант, 4 target_kind. Доступ к логу — любой член.
+- `internal/alliance/ranks.go` (~290 строк) — CRUD кастомных рангов
+  (List/Create/Update/Delete) + `AssignMemberRank` (привязать ранг
+  к участнику или отвязать).
+- `internal/alliance/permissions_test.go` (~135 строк) — unit-тесты
+  RBAC и normalize-helpers.
+- `pkg/metrics/alliance.go` (~40 строк) — Prometheus counter
+  `oxsar_alliance_actions_total{action,status}` (status=ok|forbidden|error).
+
+**Изменённые файлы (~480 строк правок):**
+- `internal/alliance/service.go` — добавлены `GetDescriptions`/
+  `UpdateDescriptions` (3 описания + viewer-контекст), `Kick` (с
+  guard на owner/self), переписан `ProposeRelation` под 5 enum
+  (`friend`/`neutral`/`hostile_neutral`/`nap`/`war`, `ally` как
+  legacy-alias), `relationNeedsAccept` для war/hostile_neutral
+  (односторонние). audit-writes в Create/SetOpen/Approve/Reject/
+  Leave/Propose/Accept/RejectRelation.
+- `internal/alliance/handler.go` — 9 новых endpoints:
+  GetDescriptions/UpdateDescriptions, ListRanks/CreateRank/UpdateRank/
+  DeleteRank, AssignMemberRank, Kick, ListAudit. Idempotency-Key (R9)
+  на PATCH/POST мутациях. Prometheus-метрики `recordAction`.
+- `cmd/server/main.go` — роуты + `WithRedis(rdb)` для idempotency.
+- `api/openapi.yaml` — 6 новых path-секций + 5 schemas
+  (AllianceDescriptionView, AlliancePermissions, AllianceRank,
+  AllianceAuditEntry, AllianceRelation).
+- `pkg/metrics/metrics.go` — `RegisterAlliance()` в `Register()`.
+
+**Дизайн-решения (отличия от промпта):**
+1. **Permissions через guards в сервисе, не HTTP-middleware.**
+   Continuation-промпт говорил «middleware-decorator». Но для
+   большинства действий нужно прочитать `alliance_id` из
+   `alliance_members` — это работа сервиса, а не middleware
+   (URL не всегда содержит alliance_id, например `Leave`). Поэтому
+   `Has(ctx, tx, mem, perm)` вызывается из сервисных методов
+   внутри транзакции через `LoadMembership`. Builtin owner всегда
+   имеет все права независимо от rank_id.
+2. **7 permissions (а не 6 из промпта)**: `can_manage_ranks` нужен
+   для CRUD рангов (этого права в промпте не было, но без него
+   нельзя отделить «может настроить ранги» от «может пригласить»).
+   Промпт упомянул 6, миграция 0074 — 7; беру за истину миграцию.
+3. **`alliance_audit_log` для disband не пишется**: ON DELETE CASCADE
+   удалит все записи альянса вместе с самим альянсом — запись была
+   бы немедленно потеряна. Если потребуется глобальный лог
+   действий — отдельная таблица или soft-delete (отдельная задача).
+4. **`viewer` поле в DescriptionView** (`member`/`applicant`/`outsider`):
+   фронт может показать подсказку «вы видите внешнее описание;
+   для членов есть отдельное», а на бэке проще — один эндпоинт
+   с context-aware фильтрацией.
+5. **`relation_needs_accept`**: war и hostile_neutral односторонние
+   (можно навязать без согласия target), friend/neutral/nap —
+   двусторонние (требуют Accept от target).
+
+**R-чеки:**
+- R0 ✅ — добавление функциональности, не правка существующих чисел.
+  Старые члены без `rank_id` работают через builtin (rank='member' →
+  нет прав, rank='owner' → все права). Старые клиенты, использовавшие
+  `relation: ally`, продолжают работать (alias на friend).
+- R1 ✅ — snake_case везде (description_external, can_invite,
+  alliance_audit_log, target_kind).
+- R2 ✅ — OpenAPI расширен 6 path + 5 schemas.
+- R8 ✅ — Prometheus counter alliance_actions_total{action,status}.
+- R9 ✅ — Idempotency-Key на PATCH/POST description, ranks CRUD,
+  AssignMemberRank.
+- R10 ✅ — universe_id не добавляется (nova однобазная, см. план 67
+  Ф.0).
+- R12 ✅ — нет новых пользовательских строк наружу (audit использует
+  symbolic action-имена; UI Ф.5 будет переводить через bundle).
+- R13 ✅ — typed payload (UpdateDescriptionsInput, UpdateRankInput,
+  AuditFilters); audit-payload — тонкий map[string]any только потому,
+  что сама форма зависит от action.
+- R15 ✅ — без упрощений в реализованной части. Кикнуть owner'а
+  нельзя; permission `can_propose_relations` отделён от
+  `can_manage_diplomacy` (разные обязанности); все дипстатусы
+  (5 значений + alias `ally` + `none` для снятия) валидируются.
+
+**Тесты**: unit для permissionInJSON / IsValidPermission /
+normalizeRelation / relationNeedsAccept / decodePermissions /
+validatePermissions / validateRankName. Все existing nova-тесты
+(`go test ./...`) зелёные. Полный билд (`go build ./...`) clean.
+go vet: единственное предупреждение — pre-existing dead code в
+`internal/admin/handler.go:202` (не моё).
+
+**Ф.3-Ф.6 — отдельные сессии** (continuation-promptы в
+`docs/prompts/continuation/`):
+- Ф.3 transfer-leadership с email через identity (как D-003).
+- Ф.4 полнотекстовый поиск (миграция 0078 GIN-индекс + tsvector).
+- Ф.5 frontend (3 описания UI, ranks UI, дипломатия 5 значений,
+  audit UI).
+- Ф.6 финализация (divergence-log, ui-backlog).
+
+**Объём** — ~3 часа активного темпа. +870 строк нового кода,
++~480 строк правок, +135 строк unit-тестов, +~250 строк openapi
+секций, +~80 строк документации (план 67 шапка + project-creation).

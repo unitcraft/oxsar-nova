@@ -98,5 +98,7 @@ func Register() http.Handler {
 	// Balance-метрики plan 64 R8: регистрируем здесь, отдельный sync.Once
 	// внутри RegisterBalance гарантирует идемпотентность.
 	RegisterBalance()
+	// Alliance-метрики plan 67 R8.
+	RegisterAlliance()
 	return promhttp.Handler()
 }

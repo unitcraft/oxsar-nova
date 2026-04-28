@@ -1574,3 +1574,41 @@ spawner не трогаем.
 в users или в `messages` таблицу. Сейчас не нужно.
 **Приоритет**: L — соответствует общему паттерну event-loop в nova
 (см. эталон HandleDemolishConstruction).
+
+### [67-Ф.2] RBAC permissions через guards в сервисе, не HTTP-middleware
+**Где**: `projects/game-nova/backend/internal/alliance/permissions.go`,
+вызовы `Has(ctx, tx, mem, perm)` из методов сервиса.
+**Что упрощено**: continuation-промпт описывал «middleware-decorator»
+для проверки прав на каждом alliance-action. Реализация — explicit
+guards внутри сервисных методов внутри транзакции.
+**Почему**: для большинства действий нужно сначала прочитать
+`alliance_id` участника из `alliance_members` — а это работа сервиса.
+Middleware пришлось бы дублировать SELECT по `alliance_members`
+и/или принимать `alliance_id` отдельным параметром (что не для всех
+URL применимо: `Leave` не содержит alliance_id в URL). Guards в
+сервисе используют тот же tx, что и основная операция, что даёт
+консистентность view (перед мутацией).
+**План возврата**: если появятся endpoints, где membership можно
+определить чисто из URL (`/api/alliances/{id}/...`) и где не нужна
+читать-проверка-мутация в одной tx — можно вынести thin middleware,
+читающий membership и проверяющий permission из header. Пока
+смешанная картина (есть endpoints без alliance_id в URL — Leave,
+MyAlliance) — guards дешевле.
+**Приоритет**: L — функционально эквивалентно middleware,
+переключение тривиально при необходимости.
+
+### [67-Ф.2] alliance_audit_log для disband не пишется
+**Где**: `projects/game-nova/backend/internal/alliance/service.go`
+`Disband` — нет вызова `writeAuditTx`.
+**Что упрощено**: при роспуске альянса (DELETE) запись «alliance_disbanded»
+в `alliance_audit_log` не создаётся.
+**Почему**: ON DELETE CASCADE на `alliances.id` удаляет все записи
+audit-лога этого альянса вместе с самим альянсом — добавленная запись
+была бы немедленно потеряна. Сохранять `disbanded` событие без
+soft-delete смысла нет.
+**План возврата**: если потребуется глобальная история действий
+(например, для GM-аудита/анти-чита), создать `alliance_history`
+без FK CASCADE, или сделать soft-delete `alliances.deleted_at`. Сейчас
+нет потребителя — преждевременная функциональность.
+**Приоритет**: L — потеря записи о disband не критична для UI лога
+(альянс с удалёнными FK всё равно недоступен через UI).

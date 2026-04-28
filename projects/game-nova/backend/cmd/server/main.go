@@ -290,7 +290,7 @@ func run() error {
 			slog.String("path", blPath), slog.String("err", blErr.Error()))
 	}
 
-	allianceH := alliance.NewHandler(allianceSvc)
+	allianceH := alliance.NewHandler(allianceSvc).WithRedis(rdb)
 
 	// План 46 Ф.3 (149-ФЗ) → план 56: жалобы перенесены в portal-backend.
 	// game-nova больше не владеет user_reports, см. portal/internal/report.
@@ -505,6 +505,16 @@ func run() error {
 		pr.Post("/alliances/{id}/relations/{initiator_id}/accept", allianceH.AcceptRelation)
 		pr.Delete("/alliances/{id}/relations/{initiator_id}", allianceH.RejectRelation)
 		pr.Patch("/alliances/{id}/members/{userID}/rank", allianceH.SetMemberRank)
+		// План 67 Ф.2: расширения (3 описания, ranks CRUD, kick, audit).
+		pr.Get("/alliances/{id}/descriptions", allianceH.GetDescriptions)
+		pr.Patch("/alliances/{id}/descriptions", allianceH.UpdateDescriptions)
+		pr.Get("/alliances/{id}/ranks", allianceH.ListRanks)
+		pr.Post("/alliances/{id}/ranks", allianceH.CreateRank)
+		pr.Patch("/alliances/{id}/ranks/{rank_id}", allianceH.UpdateRank)
+		pr.Delete("/alliances/{id}/ranks/{rank_id}", allianceH.DeleteRank)
+		pr.Patch("/alliances/{id}/members/{userID}/rank-id", allianceH.AssignMemberRank)
+		pr.Delete("/alliances/{id}/members/{userID}", allianceH.Kick)
+		pr.Get("/alliances/{id}/audit", allianceH.ListAudit)
 
 		pr.Get("/chat/{kind}/history", chatH.History)
 		pr.Post("/chat/{kind}/send", chatH.Send)
