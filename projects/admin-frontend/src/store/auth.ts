@@ -35,6 +35,6 @@ export const useAuth = create<AuthState>((set, get) => ({
   clearSession: () =>
     set({ status: 'anonymous', claims: null, csrfToken: null }),
   setAnonymous: () => set({ status: 'anonymous', claims: null, csrfToken: null }),
-  hasPermission: (perm) => get().claims?.permissions.includes(perm) ?? false,
-  hasRole: (role) => get().claims?.roles.includes(role) ?? false,
+  hasPermission: (perm) => get().claims?.permissions?.includes(perm) ?? false,
+  hasRole: (role) => get().claims?.roles?.includes(role) ?? false,
 }));
