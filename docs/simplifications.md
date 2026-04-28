@@ -1989,3 +1989,75 @@ unit-тесты на форматтеры/валидаторы/router-маршр
 **Связанный план**: [docs/plans/72-remaster-origin-frontend-pixel-perfect.md](plans/72-remaster-origin-frontend-pixel-perfect.md)
 **Объединённое ТЗ для backend-расширений**: P72.S1.A + .B + .C + .D + .E + .F →
 один план «openapi для origin-фронта» с 6 endpoint'ами.
+
+---
+
+## 2026-04-28 — План 68 Ф.1-Ф.7: биржа артефактов (backend)
+
+### [P68.A] Currency: users.credit как оксариты (без переименования)
+- **Где**: `internal/exchange/repo_pgx.go` (UPDATE users SET credit=...).
+- **Что упрощено**: биржа использует существующую колонку
+  `users.credit bigint` как backing-storage для оксаритов вместо
+  введения отдельной `users.oxsarit` как требует ADR-0009.
+- **Почему**: семантически `credit bigint` уже соответствует ADR
+  «оксариты» (soft-currency, ст. 1062 ГК) — все остальные места nova
+  (expedition.go, market.fleet_lots, officer.service, goal.rewarder)
+  тоже используют credit как soft-currency. Переименование колонки
+  затрагивает 10+ файлов — отдельный план migration-серии.
+- **Как чинить**: серия миграций credit→oxsarit (rename column +
+  обновление всех call-sites), отдельный план после плана 74.
+- **Приоритет**: L (имя колонки не влияет на корректность).
+
+### [P68.B] Permit-gating отключён (AlwaysAllowPermit MVP)
+- **Где**: `internal/exchange/service.go` PermitChecker DI.
+- **Что упрощено**: интерфейс `PermitChecker.HasMerchantPermit()`
+  существует, но дефолтная реализация `AlwaysAllowPermit{}` всегда
+  возвращает true. ErrPermitRequired остаётся в errors.go и i18n.
+- **Почему**: legacy `Artefact::getMerchantMark()` зависит от
+  premium-вселенных, которых в nova на текущий момент нет. Гейтинг
+  без премиум-инфраструктуры — преждевременная оптимизация.
+- **Как чинить**: добавить `DBPermitChecker` (SELECT FROM
+  artefacts_user WHERE state='active' AND unit_id=ARTEFACT_MERCHANT_PERMIT)
+  и активировать его в DI при включении premium-фич.
+- **Приоритет**: L (фича не блокирующая).
+
+### [P68.C] Балансовый конфиг: YAML создан, loader не подключён
+- **Где**: `configs/balance/{default,origin}.yaml` секция `exchange`.
+- **Что упрощено**: YAML-файлы содержат корректные значения, но
+  service.go использует `DefaultConfig()` из Go-кода (значения
+  продублированы). Loader из YAML не реализован.
+- **Почему**: подключение loader'а требует расширения
+  `internal/balance` (которая управляет buildings/research/ships) —
+  это touch широко расходится по коду; в плане 68 это вне scope.
+- **Как чинить**: пост-фикс плана 68 — `LoadConfigFromYAML(path)
+  (Config, error)` + wiring в cmd/server/main.go.
+- **Приоритет**: L (значения совпадают; пока YAML — документация).
+
+### [P68.D] Integration-тесты с реальной БД пропущены
+- **Где**: `internal/exchange/repo_pgx_test.go` отсутствует.
+- **Что упрощено**: PgRepo (450 строк pgx) не покрыт unit-тестами.
+  Service.go покрыт через fakeRepo (mock); event-handlers — через
+  smoke-тесты (parsing payload).
+- **Почему**: Integration-тесты с TEST_DATABASE_URL требуют отдельной
+  CI-инфраструктуры (Postgres + миграции в pipeline); плановый объём
+  68 уже большой. Service.go покрыт 80-100% по основным методам
+  через mock-repo (fakeRepo); pgx-логика — преимущественно SQL-запросы.
+- **Как чинить**: создать `repo_pgx_test.go` с auto-skip
+  (`if os.Getenv("TEST_DATABASE_URL") == "" { t.Skip(...) }`) и
+  тестами CRUD + FOR UPDATE concurrent buy.
+- **Приоритет**: M (для prod-готовности).
+
+### [P68.E] Общий oxsarit_transactions журнал не создан
+- **Где**: ADR-0009 предполагает таблицу
+  `game-nova.oxsarit_transactions` для всех движений soft-currency.
+- **Что упрощено**: биржа имеет собственный audit `exchange_history`
+  (это требование R13). Общий журнал движений credit (expedition,
+  market, officer, goal, exchange) — не реализован.
+- **Почему**: тех долг существует и без биржи — `expedition.go:691`
+  и др. пишут `UPDATE users SET credit` без audit-trail. Решение
+  по общему журналу — отдельный архитектурный план.
+- **Как чинить**: отдельный план «реализация ADR-0009 audit-trail»
+  с миграцией + рефакторингом всех call-sites.
+- **Приоритет**: M (compliance-blocker для аналитики, не для запуска).
+
+**Связанный план**: [docs/plans/68-remaster-exchange-artifacts.md](plans/68-remaster-exchange-artifacts.md)
