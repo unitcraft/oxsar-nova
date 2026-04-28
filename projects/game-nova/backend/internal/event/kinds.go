@@ -57,6 +57,8 @@ const (
 	KindArtefactDelay              Kind = 63
 	KindRaidWarning                Kind = 64 // уведомление защитнику за 10 мин до атаки
 	KindExpirePlanet               Kind = 65 // soft-удаление временной планеты при expires_at
+	KindExchangeExpire             Kind = 66 // план 68 Ф.4: истечение лота на бирже артефактов — возврат escrow
+	KindExchangeBan                Kind = 67 // план 68 Ф.4: бан seller'а → отзыв всех его активных лотов
 	KindScoreRecalcAll             Kind = 70 // ежедневный batch-пересчёт очков всех игроков
 	KindBatchProcessIntervalSecond      = 10
 )
