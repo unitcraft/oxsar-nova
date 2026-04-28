@@ -99,12 +99,14 @@
     зарегистрирован в `cmd/server/main.go`, реализация в
     `internal/notepad/handler.go`. Backed by таблица `user_notepad`
     (миграция 0050).
-  - Лимит размера: `MaxLength = 50_000` символов в handler (R15:
-    отклонение от первоначального плана «16KB CHECK в миграции» —
-    handler-level лимит достаточен; in-row CHECK добавит миграционные
-    риски при будущей правке константы и не предохраняет от
-    серверной логики, которая уже валидирует. CHECK на уровне SQL
-    не добавляем).
+  - Лимит размера: `MaxLength = 50_000` символов в handler (50K
+    вместо изначальных 16KB — handler уже работал с этим значением,
+    обоснованное отклонение).
+    DB-level CHECK на 50000 ~~не добавляем (handler-level
+    достаточно)~~ **добавлен пост-фиксом 2026-04-28** —
+    миграция `0078_notepad_check_length.sql` (defense-in-depth,
+    защита от обхода handler'а через bg-jobs / future endpoints,
+    R15 уточнённый: DB-level CHECK не считается trade-off).
   - **Что добавлено в этой сессии**:
     1. OpenAPI: `paths./api/notepad` (GET/PUT) + tag `notepad` +
        schemas `Notepad`, `NotepadSaveRequest` (R2). Документирует
@@ -116,10 +118,14 @@
        userID)` для тестов, чтобы не выпускать JWT и не поднимать
        middleware-стек ради unit-теста. `auth.userIDKey`
        переименован в `auth.UserIDKey` (экспортируемый).
-  - **R8 Prometheus**: метрики не добавлены. Notepad — низкочастотный
-    endpoint (1 GET при открытии экрана + 1 PUT раз в N секунд при
-    редактировании); общие request-метрики Chi-router'а покрывают
-    его без дополнительных custom labels. Не делаем.
+  - **R8 Prometheus**: ~~метрики не добавлены. Низкочастотный
+    endpoint, общие Chi-метрики покрывают.~~ **Закрыто пост-фиксом
+    2026-04-28** — после уточнения R15 «низкочастотный endpoint»
+    не считается trade-off. Добавлены `pkg/metrics/notepad.go`
+    (`oxsar_notepad_actions_total{action,status}` +
+    `oxsar_notepad_duration_seconds{action}`), вызовы `recordAction`
+    в handler.go (4 ветки: ok / unauthorized / bad_request /
+    too_long / error), регистрация в `metrics.Register()`.
   - **R9 Idempotency**: PUT идемпотентен по семантике (полная замена
     контента + UPSERT). Idempotency-Key header не добавляем — клиент
     дебаунсит сохранения, повторная отправка того же тела — корректный
