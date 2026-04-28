@@ -1,9 +1,41 @@
 # План 76 (ремастер): nova-frontend UI для биржи артефактов
 
 **Дата**: 2026-04-28
-**Статус**: Скелет (детали допишет агент-реализатор при старте)
+**Статус**: ✅ ЗАВЕРШЁН Ф.1-Ф.6 (2026-04-28)
 **Зависимости**: блокируется планом 68 (биржа артефактов в
-nova-backend).
+nova-backend) — backend закрыт.
+
+## Шапка готовности
+
+- [x] Ф.1. UI-каркас + API-клиент (`src/api/exchange.ts`,
+  `ExchangeScreen` + sub-routing через hash, tab `exchange` в App,
+  пункт меню `menuExchangeArtefacts` в sidebar+more sheet).
+- [x] Ф.2. Список лотов: `ExchangeListPage` с filters-bar
+  (artifact_unit_id, min/max price, status, seller_id), debounce 300ms,
+  cursor-pagination через `useInfiniteQuery`, IntersectionObserver
+  sentinel, empty-state с CTA «Создать лот».
+- [x] Ф.3. Детали лота: `ExchangeLotPage` с buy/cancel modals,
+  Idempotency-Key (R9), маппинг 402/409 ошибок в i18n-сообщения,
+  invalidate `exchange|me|artefacts` queries.
+- [x] Ф.4. Создание лота: `CreateLotPage` с фильтром артефактов
+  по state='held', live-валидация (qty ≤ available, ≤ MAX 100,
+  positive price, expires из EXPIRES_OPTIONS), Idempotency-Key.
+- [x] Ф.5. Тесты: `filters.test.ts` — 24 теста (EMPTY_FILTERS,
+  hasActiveFilters, buildQueryParams, validatePriceRange,
+  validateCreateLot, errorMessageKey). Все зелёные.
+- [x] Ф.6. i18n: переиспользованы существующие
+  `exchange.{lotCreated, lotBought, lotCancelled, errors.*}` из плана 68
+  (12 ключей); добавлены UI-специфичные ключи (titles, кнопки,
+  столбцы таблицы, validation, expires-опции) — ~70 новых ключей в
+  `exchange:` группе обоих языков (ru/en) + 1 в `global:`
+  (`menuExchangeArtefacts`).
+
+## Что не закрыли
+
+- **X-017 (скидки trade-union)** и **X-020 (Знак торговца)** —
+  оставлены в backlog ⏳. Backend-стороны для них пока заглушки
+  (план 68 simplifications: discount отложен, permit всегда true).
+  Без backend-поддержки UI-маркер бессмыслен.
 **Связанные документы**:
 - [68-remaster-exchange-artifacts.md](68-remaster-exchange-artifacts.md) —
   backend биржи + 3 экрана в origin-фронте

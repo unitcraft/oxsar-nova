@@ -31,6 +31,7 @@ const MessagesScreen     = lazy(() => import('./features/messages/MessagesScreen
 const MarketScreen       = lazy(() => import('./features/market/MarketScreen').then(m => ({ default: m.MarketScreen })));
 const RocketsScreen      = lazy(() => import('./features/rockets/RocketsScreen').then(m => ({ default: m.RocketsScreen })));
 const ArtefactMarketScreen = lazy(() => import('./features/artmarket/ArtefactMarketScreen').then(m => ({ default: m.ArtefactMarketScreen })));
+const ExchangeScreen     = lazy(() => import('./features/exchange/ExchangeScreen').then(m => ({ default: m.ExchangeScreen })));
 const OfficersScreen     = lazy(() => import('./features/officers/OfficersScreen').then(m => ({ default: m.OfficersScreen })));
 const ScoreScreen        = lazy(() => import('./features/score/ScoreScreen').then(m => ({ default: m.ScoreScreen })));
 const AllianceScreen     = lazy(() => import('./features/alliance/AllianceScreen').then(m => ({ default: m.AllianceScreen })));
@@ -56,14 +57,14 @@ const RecordsScreen      = lazy(() => import('./features/records/RecordsScreen')
 type Tab =
   | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
   | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
-  | 'art-market' | 'officers' | 'achievements' | 'daily-quests' | 'score'
+  | 'art-market' | 'exchange' | 'officers' | 'achievements' | 'daily-quests' | 'score'
   | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource'
   | 'credits' | 'unit-info' | 'profession' | 'empire' | 'settings' | 'referral' | 'notepad' | 'techtree' | 'battlestats' | 'friends' | 'records' | 'wiki';
 
 const VALID_TABS = new Set<string>([
   'overview', 'buildings', 'research', 'shipyard', 'repair',
   'artefacts', 'galaxy', 'fleet', 'market', 'rockets',
-  'art-market', 'officers', 'achievements', 'daily-quests', 'score',
+  'art-market', 'exchange', 'officers', 'achievements', 'daily-quests', 'score',
   'messages', 'alliance', 'chat', 'sim', 'admin', 'planet-options', 'resource',
   'credits', 'unit-info', 'profession', 'empire', 'settings',
   'referral', 'notepad', 'techtree', 'battlestats', 'friends', 'records', 'wiki',
@@ -81,6 +82,12 @@ function parseHash(): { tab: Tab; infoUnit: InfoUnit | null } {
     if (!isNaN(id)) {
       return { tab: 'unit-info', infoUnit: { kind: parts[1] as InfoUnit['kind'], id, level: 0, fromTab: 'overview' } };
     }
+  }
+  // План 76: биржа поддерживает sub-route'ы #exchange/new и
+  // #exchange/lots/<uuid>. Внешний tab — всегда 'exchange',
+  // внутренний роутинг — в ExchangeScreen (он сам читает hash).
+  if (parts[0] === 'exchange') {
+    return { tab: 'exchange', infoUnit: null };
   }
   const tab = VALID_TABS.has(parts[0] ?? '') ? (parts[0] as Tab) : 'overview';
   return { tab, infoUnit: null };
@@ -350,6 +357,7 @@ function AuthenticatedApp() {
             {tab === 'messages'   && <MessagesScreen onFleetMission={(g, s, pos, isMoon, mission) => { setFleetDst({ g, s, pos, isMoon, mission }); navigateTo('fleet'); }} />}
             {tab === 'artefacts'  && <ArtefactsScreen />}
             {tab === 'art-market' && <ArtefactMarketScreen />}
+            {tab === 'exchange'   && <ExchangeScreen />}
             {tab === 'officers'   && <OfficersScreen />}
             {tab === 'achievements' && <AchievementsScreen />}
             {tab === 'daily-quests' && <DailyQuestScreen />}
@@ -734,6 +742,7 @@ function MoreSheet({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
     { key: 'market',      icon: '💱', label: t('global', 'menuMarket') },
     { key: 'artefacts',   icon: '💎', label: t('global', 'menuArtefacts') },
     { key: 'art-market',  icon: '🏪', label: t('global', 'menuArtMarket') },
+    { key: 'exchange',    icon: '🛒', label: t('global', 'menuExchangeArtefacts') },
     { key: 'officers',    icon: '⭐', label: t('global', 'menuOfficers') },
     { key: 'score',       icon: '🏆', label: t('global', 'menuHighscore') },
     { key: 'achievements',icon: '🥇', label: t('global', 'menuAchievements') },
@@ -803,6 +812,7 @@ function buildNavItems(t: (ns: string, key: string) => string, unreadCount: numb
     { key: 'market',     icon: '💱', label: t('global', 'menuMarket') },
     { key: 'artefacts',  icon: '💎', label: t('global', 'menuArtefacts') },
     { key: 'art-market', icon: '🏪', label: t('global', 'menuArtMarket') },
+    { key: 'exchange',   icon: '🛒', label: t('global', 'menuExchangeArtefacts') },
     { key: 'officers',   icon: '⭐', label: t('global', 'menuOfficers') },
     { key: 's4', sep: true },
     { key: 'stats', groupLabel: t('global', 'navGroupStats') },

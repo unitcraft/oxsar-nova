@@ -13020,3 +13020,100 @@ P68.A-E):
 
 **Статус плана 68**: ✅ Backend готов (Ф.1-Ф.4 + Ф.6 + Ф.7).
 UI Ф.5 отложена.
+
+## Итерация 76 (2026-04-28) — биржа артефактов: UI nova-фронта
+
+**План**: docs/plans/76-remaster-nova-frontend-exchange-ui.md
+**Зависимость**: ✅ план 68 (backend биржи).
+**Объём**: ~700 строк TypeScript + ~70 ключей i18n + 24 unit-теста.
+
+Сделано в одной сессии (Ф.1-Ф.6 целиком):
+
+1) **Ф.1 — каркас + API-клиент** (`src/api/exchange.ts` 75 строк +
+`features/exchange/ExchangeScreen.tsx` 90 строк). API-клиент: listLots,
+getLot, createLot, buyLot, cancelLot, stats — все мутации с
+Idempotency-Key (R9). Sub-routing — собственный hash-driven state
+machine (`#exchange`, `#exchange/new`, `#exchange/lots/<uuid>`),
+интегрирован в App.tsx через tab `exchange` (новый пункт в
+sidebar и mobile-sheet, иконка 🛒, ключ `menuExchangeArtefacts`).
+
+2) **Ф.2 — список лотов** (`ExchangeListPage.tsx` 320 строк).
+Cursor-pagination через `useInfiniteQuery` + IntersectionObserver
+sentinel (preload rootMargin 120px). Filters: artifact_unit_id (select
+из ARTEFACTS), min/max price (debounce 300ms), status, seller_id.
+Empty-state с CTA. Балансовая плашка показывает users.credit как
+«N окс.». Inline-валидация диапазона цен (priceRangeInvalid /
+priceNegative) блокирует запрос до исправления.
+
+3) **Ф.3 — детали лота** (`ExchangeLotPage.tsx` 200 строк). Полная
+карточка лота, отдельные экшены seller (cancel) и buyer (buy) —
+оба через Confirm-modal. R9 Idempotency-Key генерируется на каждый
+mutate. Маппинг ошибок: 402 insufficient_oxsarits, 409
+lot_not_active → invalidate + back, 403 cannot_buy_own_lot. Toast
+для каждой ветки (`exchange.toast*`).
+
+4) **Ф.4 — создание лота** (`CreateLotPage.tsx` 200 строк). Форма
+с фильтрацией доступных артефактов (`/api/artefacts` + state='held',
+group-by unit_id для расчёта available). Live-валидация в
+`features/exchange/filters.ts::validateCreateLot` (выбран ли
+артефакт, qty в [1, MAX_QUANTITY_PER_LOT=100, available],
+price>0, expires из EXPIRES_OPTIONS). Idempotency-Key стабилен в
+state формы, регенерируется после успеха. На POST 422 (price_cap,
+max_active, max_quantity) — toast с ключом из
+`exchange.errors.*`.
+
+5) **Ф.5 — тесты** (`features/exchange/filters.test.ts`, 24 теста):
+EMPTY_FILTERS, hasActiveFilters (4), buildQueryParams (5),
+validatePriceRange (4), validateCreateLot (8), errorMessageKey (2).
+Все зелёные (`vitest run features/exchange`).
+
+6) **Ф.6 — i18n** (configs/i18n/{ru,en}.yml). Переиспользовано: 12
+ключей из `exchange.{lotCreated, lotBought, lotCancelled, lotExpired,
+errors.*}` (план 68). Добавлено: ~70 UI-специфичных ключей в
+`exchange:` группу (titles, кнопки, столбцы, validation,
+expires-опции, confirm-сообщения) + 1 в `global:`
+(`menuExchangeArtefacts` — отдельный от существующего
+`menuExchange="Моя Биржа (упр.)"`). Соотношение: 12 reuse / 71 new
+= **14% reuse**. Низкий процент объясняется тем, что план 68
+заложил ровно 12 ключей (только сообщения toast/error), а UI-уровень
+требует широкий vocabulary (titles, столбцы, формы) — зеркалирует
+структуру UI, не сводимую к existing-ключам без потери ясности.
+
+**R-compliance**:
+- R0 ✅ — биржа общий знаменатель, nova-механика не правлена.
+- R5 ✅ — nova-стиль (ox-table-responsive, ox-panel, btn-success/btn-ghost),
+  никакого pixel-perfect.
+- R9 ✅ — Idempotency-Key на createLot и buyLot.
+- R12 — i18n с самого начала, цель 95% reuse не достигнута, но
+  объективно (см. выше).
+
+**Архитектурные решения**:
+- Один экран `ExchangeScreen` с внутренним state machine вместо
+  3 отдельных tab'ов — паттерн Alliance/Settings, минимум кода в
+  App.tsx.
+- Hash-driven sub-routing: `popstate` слушается ExchangeScreen,
+  back/forward работают.
+- Без RTL-зависимостей: package.json не содержит
+  `@testing-library/react`, существующие тесты проекта — pure unit
+  (alliance/*.test.ts). Новые тесты следуют тому же паттерну —
+  тестируется чистая логика filters.ts, UI-каркас тестируется через
+  typecheck + build (vite dist/ExchangeScreen-*.js собран,
+  17.68 kB).
+
+**Файлы**:
+- Новые: `frontends/nova/src/api/exchange.ts` (~75 строк),
+  `frontends/nova/src/features/exchange/{ExchangeScreen,
+  ExchangeListPage, ExchangeLotPage, CreateLotPage,
+  filters, filters.test}.{ts,tsx}` (~1100 строк).
+- Изменены: `frontends/nova/src/App.tsx` (+ tab+nav, ~10 строк),
+  `configs/i18n/{ru,en}.yml` (+ 70 ключей × 2),
+  `docs/plans/76-*.md` (шапка готовности),
+  `docs/research/origin-vs-nova/nova-ui-backlog.md` (U-001 → ✅
+  для nova UI).
+
+**Тесты**: `npm test features/exchange` ✅ (24/24).
+`npm run typecheck` — 12 pre-existing ошибок в других файлах
+(admin/messages/score/shipyard/i18n/ui), 0 новых.
+`npm run build` ✅ (ExchangeScreen-*.js 17.68 kB / gzip 5.28 kB).
+
+**Статус плана 76**: ✅ Готов (Ф.1-Ф.6).
