@@ -35,7 +35,10 @@ const (
 	KindDeliveryResources          Kind = 22
 	KindDeliveryArtefacts          Kind = 23 // план 65 Ф.2 (D-035): доставка артефактов флотом — груз — записи artefacts_user, не ресурсы
 	KindAttackDestroyMoon          Kind = 25 // план 20 Ф.6: атака с целью уничтожить луну
+	KindAttackDestroyBuilding      Kind = 26 // план 65 Ф.3 (D-037): атака с целью разрушить здание
 	KindAttackAllianceDestroyMoon  Kind = 27 // план 20 Ф.6: ACS-вариант
+	KindAttackAllianceDestroyBuilding Kind = 29 // план 65 Ф.4 (D-037): ACS-вариант разрушения здания
+	KindAllianceAttackAdditional   Kind = 30 // план 65 Ф.5: служебный referrer для ACS (no-op в nova, см. handler-doc)
 	KindStargateTransport          Kind = 28
 	KindStargateJump               Kind = 32 // план 20 Ф.5: мгновенный прыжок флота между лунами с jump_gate
 	KindAlienFlyUnknown            Kind = 33 // миссия пришельцев без явной цели (план 15, этап 3)

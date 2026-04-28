@@ -387,6 +387,36 @@ func HandleDeliveryArtefacts(ctx context.Context, tx pgx.Tx, e Event) error {
 // artefact уже импортирует event для KindArtefactExpire/Delay).
 const StateActiveArtefact = "active"
 
+// HandleAllianceAttackAdditional — handler для KindAllianceAttackAdditional=30
+// (план 65 Ф.5). В legacy origin (EventHandler.class.php:707-708) этот
+// тип события — служебный referrer для основного EVENT_ATTACK_ALLIANCE
+// (Kind=12): он маркирует «дополнительный флот, примыкающий к ACS-атаке»,
+// и сам по себе ничего не делает (`case EVENT_ALLIANCE_ATTACK_ADDITIONAL: break`).
+//
+// **В nova ACS архитектурно иной**: все флоты группы получают одно и то
+// же событие KindAttackAlliance с общим acs_group_id, и leader (первый
+// по created_at) выполняет всю работу за группу — см. ACSAttackHandler
+// в [internal/fleet/acs_attack.go]. Поэтому KindAllianceAttackAdditional
+// в nova концептуально излишен — но мы регистрируем его как явный no-op
+// для совместимости с возможной репликацией events из game-origin-php
+// (если когда-нибудь сделаем общую events-таблицу для legacy/nova) и
+// чтобы события этого Kind'а не шли в StateError при импорте архива
+// origin.
+//
+// Идемпотентность: тривиальная — handler ничего не меняет, повтор
+// безопасен.
+//
+// **R15 уточнение**: это НЕ trade-off в simplifications.md — no-op
+// handler в nova адекватно отражает no-op-семантику legacy. R8/R9/R12
+// неприменимы (нет мутации, нет user-facing вывода). R3 audit — пишем
+// info-slog для отладки (если событие появится — увидим в логах).
+func HandleAllianceAttackAdditional(ctx context.Context, tx pgx.Tx, e Event) error {
+	slog.InfoContext(ctx, "event_alliance_attack_additional_noop",
+		slog.String("event_id", e.ID),
+		slog.Int("kind", int(e.Kind)))
+	return nil
+}
+
 // HandleDemolishConstruction понижает уровень здания на планете до
 // TargetLevel (обычно curLevel-1, допускается 0 = полное удаление).
 // Зеркалит HandleBuildConstruction.

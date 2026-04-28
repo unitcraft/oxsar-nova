@@ -233,6 +233,15 @@ func run() error {
 	// План 20 Ф.6: moon destruction — те же handlers с веткой rip-roll.
 	w.Register(event.KindAttackDestroyMoon, withAchievement(transportSvc.AttackHandler()))
 	w.Register(event.KindAttackAllianceDestroyMoon, withAchievement(transportSvc.ACSAttackHandler()))
+	// План 65 Ф.3-Ф.4 (D-037): building destruction — те же handlers
+	// с веткой destroy-building. Декораторы как у destroy-moon: только
+	// withAchievement; withScore не нужен (decorator пересчитывает очки
+	// по e.UserID — атакующему, чьи очки от сноса не меняются; очки
+	// защитника пересчитаются ScoreRecalcAll batch'ем).
+	w.Register(event.KindAttackDestroyBuilding, withAchievement(transportSvc.AttackHandler()))
+	w.Register(event.KindAttackAllianceDestroyBuilding, withAchievement(transportSvc.ACSAttackHandler()))
+	// План 65 Ф.5: служебный referrer для ACS — no-op в nova (см. handler-doc).
+	w.Register(event.KindAllianceAttackAdditional, event.HandleAllianceAttackAdditional)
 	w.Register(event.KindRaidWarning, transportSvc.RaidWarningHandler())
 	w.Register(event.KindRecycling, withAchievement(transportSvc.RecyclingHandler()))
 	w.Register(event.KindSpy, withAchievement(transportSvc.SpyHandler()))
