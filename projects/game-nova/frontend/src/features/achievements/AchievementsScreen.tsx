@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { useTranslation } from '@/i18n/i18n';
+import { useMarkAchievementsSeen } from '@/components/feedback/useNewAchievementCount';
 
 interface Entry {
   key: string;
@@ -62,6 +63,9 @@ function AchievementCard({ e }: { e: Entry }) {
 export function AchievementsScreen() {
   const { t } = useTranslation('achievements');
   const [filter, setFilter] = useState<CategoryFilter>('all');
+  // X-021: при заходе на экран сбрасываем «новые» — навигационный
+  // бейдж в App.tsx читает ту же метку.
+  useMarkAchievementsSeen();
 
   const q = useQuery({
     queryKey: ['achievements'],

@@ -7,6 +7,7 @@ import { useToast } from '@/ui/Toast';
 import { Countdown } from '@/ui/Countdown';
 import { ScreenSkeleton } from '@/ui/Skeleton';
 import { useTranslation } from '@/i18n/i18n';
+import { artefactStatusKind, expiryUrgency, type ArtefactStatusKind } from '@/components/feedback/feedback';
 
 export function ArtefactsScreen() {
   const { t } = useTranslation('artefacts');
@@ -110,6 +111,17 @@ export function ArtefactsScreen() {
     if (state === 'consumed') return t('stateConsumed');
     return state;
   };
+  // X-008: цвет статуса. active — зелёный, delayed (заряжается) —
+  // красный, listed — нейтральный, expired/consumed — приглушённый.
+  const stateColor = (kind: ArtefactStatusKind): string => {
+    switch (kind) {
+      case 'active':   return 'var(--ox-success)';
+      case 'charging': return 'var(--ox-danger)';
+      case 'listed':   return 'var(--ox-fg)';
+      case 'gone':     return 'var(--ox-fg-muted)';
+      default:         return 'var(--ox-fg-dim)';
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -128,7 +140,7 @@ export function ArtefactsScreen() {
           setPriceInput={setPriceInput} openSellForm={openSellForm} confirmSell={confirmSell}
           onActivate={(id) => activate.mutate(id)} onDeactivate={(id) => deactivate.mutate(id)}
           pending={activate.isPending || deactivate.isPending || sell.isPending}
-          stateLabel={stateLabel} t={t}
+          stateLabel={stateLabel} stateColor={stateColor} t={t}
         />
       )}
       {held.length > 0 && (
@@ -136,7 +148,7 @@ export function ArtefactsScreen() {
           setPriceInput={setPriceInput} openSellForm={openSellForm} confirmSell={confirmSell}
           onActivate={(id) => activate.mutate(id)} onDeactivate={(id) => deactivate.mutate(id)}
           pending={activate.isPending || deactivate.isPending || sell.isPending}
-          stateLabel={stateLabel} t={t}
+          stateLabel={stateLabel} stateColor={stateColor} t={t}
         />
       )}
       {other.length > 0 && (
@@ -144,7 +156,7 @@ export function ArtefactsScreen() {
           setPriceInput={setPriceInput} openSellForm={openSellForm} confirmSell={confirmSell}
           onActivate={(id) => activate.mutate(id)} onDeactivate={(id) => deactivate.mutate(id)}
           pending={activate.isPending || deactivate.isPending || sell.isPending}
-          stateLabel={stateLabel} t={t}
+          stateLabel={stateLabel} stateColor={stateColor} t={t}
         />
       )}
     </div>
@@ -153,7 +165,7 @@ export function ArtefactsScreen() {
 
 function ArtefactGroup({
   title, items, sellingID, priceInput, setPriceInput,
-  openSellForm, confirmSell, onActivate, onDeactivate, pending, stateLabel, t,
+  openSellForm, confirmSell, onActivate, onDeactivate, pending, stateLabel, stateColor, t,
 }: {
   title: string;
   items: Artefact[];
@@ -166,6 +178,7 @@ function ArtefactGroup({
   onDeactivate: (id: string) => void;
   pending: boolean;
   stateLabel: (state: string) => string;
+  stateColor: (kind: ArtefactStatusKind) => string;
   t: (key: string, params?: Record<string, string>) => string;
 }) {
   return (
@@ -190,11 +203,27 @@ function ArtefactGroup({
             </div>
             <div className="ox-unit-card-body">
               <div className="ox-unit-card-name">{nameOf(a.unit_id, ti)}</div>
-              <div style={{ fontSize: 14, color: 'var(--ox-fg-dim)', marginBottom: 2 }}>
-                {stateLabel(a.state)}
-              </div>
+              {(() => {
+                const kind = artefactStatusKind(a.state);
+                const urgency = expiryUrgency(a.expire_at, Date.now());
+                const expiringSoon = a.state === 'active' && (urgency === 'soon' || urgency === 'imminent');
+                return (
+                  <div style={{
+                    fontSize: 14,
+                    color: expiringSoon ? 'var(--ox-warn, #f59e0b)' : stateColor(kind),
+                    fontWeight: kind === 'active' ? 600 : 400,
+                    marginBottom: 2,
+                  }}>
+                    {stateLabel(a.state)}
+                    {expiringSoon && ' ⏰'}
+                  </div>
+                );
+              })()}
               {a.expire_at && a.state === 'active' && (
-                <div style={{ fontSize: 14, color: 'var(--ox-fg-muted)' }}>
+                <div style={{
+                  fontSize: 14,
+                  color: expiryUrgency(a.expire_at, Date.now()) === 'imminent' ? 'var(--ox-danger)' : 'var(--ox-fg-muted)',
+                }}>
                   {t('expires')} <Countdown finishAt={a.expire_at} />
                 </div>
               )}

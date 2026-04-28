@@ -17,6 +17,7 @@ import { ScreenSkeleton } from './ui/Skeleton';
 import { useKeyboardShortcuts } from './lib/useKeyboardShortcuts';
 import { GlobalSearch } from './features/search/GlobalSearch';
 import { AgeRating } from './components/AgeRating';
+import { useNewAchievementCount } from './components/feedback/useNewAchievementCount';
 
 const BuildingsScreen    = lazy(() => import('./features/buildings/BuildingsScreen').then(m => ({ default: m.BuildingsScreen })));
 const ResearchScreen     = lazy(() => import('./features/research/ResearchScreen').then(m => ({ default: m.ResearchScreen })));
@@ -202,6 +203,19 @@ function AuthenticatedApp() {
   });
 
   const unreadCount = unread.data?.count ?? 0;
+
+  // X-021 (план 71): счётчик новых достижений в navbar.
+  // Backend ещё не возвращает new_count (план 70 — реактивация),
+  // поэтому пока считаем «новыми» те, что unlocked после
+  // последнего захода игрока на экран achievements (отметка в
+  // localStorage). Когда план 70 даст поле — переключим источник.
+  const ach = useQuery({
+    queryKey: ['achievements', 'count'],
+    queryFn: () => api.get<{ achievements: Array<{ unlocked_at?: string | null }> | null }>('/api/achievements'),
+    refetchInterval: 60000,
+    staleTime: 30000,
+  });
+  const newAchCount = useNewAchievementCount(ach.data?.achievements ?? []);
   // План 14 Ф.8.1: support — модератор (read-only + ban/unban), тоже видит админку.
   const isAdmin = me.data?.role === 'support' || me.data?.role === 'admin' || me.data?.role === 'superadmin';
   const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
@@ -242,7 +256,7 @@ function AuthenticatedApp() {
   );
   if (!planet) return <LoadingSkeleton />;
 
-  const navItems = buildNavItems(t, unreadCount, isAdmin);
+  const navItems = buildNavItems(t, unreadCount, newAchCount, isAdmin);
 
   const incomingFleets = (incoming.data?.fleets ?? []).filter(
     (f) => new Date(f.arrive_at).getTime() > Date.now()
@@ -758,7 +772,7 @@ function MoreSheet({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
 }
 
 /* ── Навигационные пункты ── */
-function buildNavItems(t: (ns: string, key: string) => string, unreadCount: number, isAdmin: boolean) {
+function buildNavItems(t: (ns: string, key: string) => string, unreadCount: number, newAchCount: number, isAdmin: boolean) {
   return [
     { key: 'planet', groupLabel: t('global', 'navGroupPlanet') },
     { key: 'overview',   icon: '🏠', label: t('global', 'menuMain') },
@@ -793,7 +807,7 @@ function buildNavItems(t: (ns: string, key: string) => string, unreadCount: numb
     { key: 's4', sep: true },
     { key: 'stats', groupLabel: t('global', 'navGroupStats') },
     { key: 'score',      icon: '🏆', label: t('global', 'menuHighscore') },
-    { key: 'achievements',icon:'🥇', label: t('global', 'menuAchievements') },
+    { key: 'achievements',icon:'🥇', label: t('global', 'menuAchievements'), badge: newAchCount || undefined },
     { key: 'daily-quests',icon: '📋', label: t('global', 'menuDailyQuests') },
     { key: 'wiki',       icon: '📖', label: t('global', 'menuWiki') },
     { key: 'battlestats',icon: '⚔', label: t('global', 'menuBattlestats') },

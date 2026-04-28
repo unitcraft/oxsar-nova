@@ -12217,3 +12217,75 @@ metrics + middleware + testing helper + config + main + compose)
 +~520 строк тестов (10 unit client + 6 unit middleware + 2
 integration end-to-end) + ~140 строк документации (план 77 шапка
 закрыта, project-creation итерация).
+
+## Итерация 71.Ф.1 (2026-04-28) — UX-микрологика origin → nova-frontend
+
+**Контекст**: план 71 — забор UX-сигналов, накопленных в legacy
+oxsar2 за годы (X-001..X-022 в `docs/research/origin-vs-nova/nova-ui-backlog.md`).
+Применимо ко всем вселенным nova, не только origin: это «общий
+знаменатель», а не редизайн.
+
+**Что сделано (Ф.1)**:
+
+1. **Pure helper-функции** в `frontend/src/components/feedback/feedback.ts`:
+   `computeDeficit`, `canAfford`, `numKind`, `energyKind`,
+   `addedLevelKind`, `formatAddedLevel`, `slotsState`,
+   `artefactStatusKind`, `expiryUrgency`. Покрытие — 27 vitest-
+   тестов (`feedback.test.ts`), все edge-кейсы (полный/нулевой
+   дефицит, нулевая энергия как deficit, expired-в-прошлом).
+
+2. **React-helper компоненты** в той же папке:
+   - `ResourceDeficitBadge` — X-001 (cost line + deficit row).
+   - `RequirementHint` (`UnmetRequirementList`) — X-003 с
+     именами технологий из `info`-группы (snake→camel).
+   - `EnergyValue` + `NumValue` — X-010 + X-002.
+   - `AddedLevelBadge` — X-013 (готов, ждёт DTO с added_level).
+   - `FleetSlotsBadge` — X-007 (full/almost/ok).
+   - `NewBadge` + `useNewAchievementCount` — X-021 (через
+     localStorage `lastSeenAt`, до плана 70).
+   - `HelpTip` — X-009 (чистый CSS hover, без JS-либ).
+
+3. **Применение** в существующих экранах (расширение, не новый
+   функционал):
+   - `BuildingsScreen` — X-001 (cost+deficit), X-003 (unmet).
+   - `ResearchScreen` — X-001.
+   - `ShipyardScreen` — X-001 (с total = cost × count).
+   - `RepairScreen` — X-014 (явный alert при `storage.free <= 0`).
+   - `ResourceScreen` — X-002 + X-010 (EnergyValue в perHour) +
+     X-009 (HelpTip на колонке ⚡).
+   - `FleetScreen` — X-007 (FleetSlotsBadge).
+   - `ArtefactsScreen` — X-008 (цветной статус + ⏰ на expiringSoon).
+   - `App.tsx` + `AchievementsScreen` — X-021 (бейдж в navbar).
+
+4. **i18n**: новая группа `feedback:` в `configs/i18n/{ru,en}.yml`
+   (~16 ключей). Метрика **переиспользования ~95% / новых ~5%**:
+   имена технологий, levelAbbr, youHave, error, slots/slotsHint —
+   взяты из existing `info`/`buildings`/`global`/`fleet`.
+
+**Trade-off (R15)**: 22 X-NNN записи приоритизированы. Реализовано
+8 ключевых (✅) + 1 частично (✱ X-012 ≡ часть X-003). Отложены
+**Приоритет L** (12 записей): X-004, X-005, X-006, X-011, X-015,
+X-016, X-017, X-018, X-019, X-020, X-022. Каждая отложенная
+помечена ⏳ в `nova-ui-backlog.md` с причиной (требует U-001 биржу,
+DTO-расширения, или своя дизайн-система не нуждается в паритете
+с jQuery UI).
+
+**Что НЕ сделано**:
+- React-render тесты (нет @testing-library в зависимостях; все
+  pure-функции покрыты unit-тестами, что закрывает основную
+  логику. UI-тесты остаются под Playwright/e2e).
+- Низкоприоритетные X-NNN (см. выше).
+- Расширение OpenAPI DTO (R2): для X-013 (added_level) — после
+  плана 70 (achievements реактивация, поле `new_count`) и для
+  X-015/X-016 (active/inactive артефактов) понадобится поле
+  `max_active`, но этот функционал отложен.
+
+**Параллельные сессии**: при работе обнаружены не-мои файлы
+(billing/* в game-nova/backend, alliance/* DescriptionsPanel,
+DiplomacyPanel, RanksPanel, permissions, relations, AllianceScreen
+изменён, api/client изменён, simplifications.md изменён). Коммит
+поимённо с двойным тире `--`.
+
+**Объём** — ~+330 строк pure-логики и компонентов
+(`components/feedback/*` 9 файлов) + ~210 строк тестов + ~16
+i18n-ключей × 2 языка + ~40 строк CSS/правок в screens.
