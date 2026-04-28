@@ -33,13 +33,13 @@ alien-ai A1-A14 — даёт **серию будущих планов 63+** дл
 
 ### По объёму работ (сумма)
 
-- **Backend в nova**: ~12-16 недель (legacy.yaml, новые модули,
+- **Backend в nova**: ~12-16 недель (origin.yaml override, новые модули,
   расширение event-loop, alien AI до полного, биржа, телепор,
   3 описания альянса, гранулярные ранги, global mail, и т.п.)
 - **Frontend (origin pixel-perfect клон)**: ~12-16 недель (55
   экранов на React + воссоздание layout/themes из game-origin)
 - **CI / тестирование (screenshot-diff)**: ~2-3 недели
-- **Deploy / DNS / config (legacy01 universe)**: ~1 неделя
+- **Deploy / DNS / config (origin universe)**: ~1 неделя
 
 **Итого**: 27-36 недель (6-9 месяцев) команды из 1-2 разработчиков.
 Часть фронта и бэка можно параллелить.
@@ -182,6 +182,68 @@ alien-ai A1-A14 — даёт **серию будущих планов 63+** дл
 шрифты) на новом React-стеке. Новые UX-улучшения — отдельная
 итерация после старта.
 
+### Правило R6. Новые API проектируем с нуля по современным стандартам
+
+Когда план серии 64-74 вводит новый endpoint — origin-API служит
+**семантическим референсом** (что эта операция делает в игре), но
+**не источником конкретных URL/методов/параметров**. Проектируем
+API по нынешним индустриальным стандартам, не калькой с
+`?go=Page&action=...`.
+
+**Конкретные требования:**
+
+1. **REST-стиль, ресурсо-ориентированный**:
+   - origin: `?go=Mission&action=send` → nova: `POST /api/fleet/missions`
+   - origin: `?go=Constructions&action=build&id=N` → nova: `POST /api/planets/{planetId}/buildings/{buildingId}/queue`
+   - Ресурсы во множественном числе (`/missions`, `/buildings`),
+     ID в path, не query.
+2. **HTTP-методы по семантике**:
+   - GET — чтение без побочных эффектов.
+   - POST — создание ресурса / нерезидентное действие
+     (`/cancel`, `/repair`).
+   - PUT/PATCH — обновление существующего ресурса.
+   - DELETE — удаление.
+   - НЕ использовать GET для действий с побочными эффектами
+     (origin часто грешит этим).
+3. **JSON / OpenAPI первым** (R2). HTML-фрагменты не возвращаем.
+4. **Версионирование**: `/api/v1/...` если уже есть, иначе
+   подкатегория-namespace (`/api/exchange/lots`,
+   `/api/alliances/{id}/diplomacy`). Решение — по существующему
+   стилю nova-API (см. `projects/game-nova/api/openapi.yaml`).
+5. **Идемпотентность платежей** (R1 валюта + план 38) — через
+   `Idempotency-Key` header для всех операций со списанием
+   ресурсов или валюты.
+6. **Pagination**: cursor-based (через `?cursor=...&limit=...`),
+   не offset/page для списков с >100 элементов. Для коротких
+   списков можно без пагинации.
+7. **Errors**: единый формат
+   `{"error": {"code": "ERROR_CODE", "message": "..."}}`,
+   как в существующих nova-handler'ах. HTTP-коды по семантике
+   (400 валидация, 401 auth, 403 forbidden, 404 not found,
+   409 conflict, 429 rate-limit, 500 server-error).
+8. **Authorization** — Bearer JWT всегда, никаких legacy-cookie
+   (план 63 RFC 6749).
+9. **Имена параметров** — snake_case в JSON, snake_case в query
+   (consistency с БД и SQL).
+10. **Никаких backend-адаптеров под legacy-имена.** origin-фронт
+    (план 72) сразу пишется на новые API без обёрток.
+
+**Источник правил**: фактически — это **R2** (OpenAPI первым) +
+дополнительные конкретные практики. Origin-API смотрим только
+чтобы понять «что делает эта операция игроку», саму форму API
+проектируем заново.
+
+### Правило R7. Backward compat — N/A
+
+В проде нет игроков (плана 36 «0 живых юзеров»; план 62 ещё раз
+подтвердил). Любое breaking change в API/БД/конфигах допустимо
+без feature-flag'ов и миграционных мостов. Удалять старый код
+сразу, не оставлять «// removed in plan N» комментариев.
+
+Это применимо до **публичного запуска** (плана 74). После запуска —
+правило меняется (вводится backward compat / deprecation policy).
+До запуска: смело ломаем, чище код.
+
 ---
 
 ## Часть II. Декомпозиция в будущие планы
@@ -189,19 +251,23 @@ alien-ai A1-A14 — даёт **серию будущих планов 63+** дл
 Нумерация ориентировочная — согласовать с текущим состоянием
 docs/plans на момент старта.
 
-### План 64: legacy.yaml + per-universe balance loading
+### План 64: origin.yaml override + per-universe balance loading
 
-**Что**: параметризация балансовых констант nova под профили
-`modern` / `legacy`. Все 🟡 расхождения D-NNN из категории формула.
+**Что**: параметризация балансовых констант nova через
+override-схему. Modern-вселенные работают на дефолтных YAML без
+изменений. Origin получает override-файл. Все 🟡 расхождения
+D-NNN из категории формула.
 
 **Содержит**:
-- `configs/balance/legacy.yaml` — числовые предвычисленные значения
-  charge_*, basic_*, prod_* для всех buildings/units/research/defense
+- `configs/balance/origin.yaml` — override с числовыми
+  предвычисленными значениями charge_*, basic_*, prod_* для всех
+  buildings/units/research/defense origin
 - Парсер origin-формул в Go (для предвычисления)
-- Расширение `internal/config/` для загрузки per-universe профиля
-- Поле `universes.balance_profile` ('modern'|'legacy')
+- Расширение `internal/balance/` с функциями `LoadDefaults()` и
+  `LoadFor(universeCode)` (deep-merge override поверх дефолта)
+- Без изменений в БД — идентификация по `universes.code`
 
-**Закрывает**: D-026, D-027 (RF алиенов в legacy.yaml), D-028
+**Закрывает**: D-026, D-027 (RF алиенов в origin.yaml), D-028
 (спец-юниты), D-030 (per-building cost_factor), D-022 (prod_factor).
 
 **Объём**: 2 недели.
@@ -229,7 +295,7 @@ docs/plans на момент старта.
 **Закрывает**: D-031..D-037, частично U-009.
 
 **Объём**: 3-4 недели.
-**Зависит от**: 63 (legacy.yaml — для balance numbers).
+**Зависит от**: 64 (origin.yaml — для balance numbers).
 
 ---
 
@@ -246,7 +312,7 @@ docs/plans на момент старта.
   для 6 неактивных, как в origin)
 - Алгоритм `generateFleet()` (target_power, итеративное добавление)
 - 5 алиен-кораблей UNIT_A_* в `configs/units.yml` под флагом
-- Четверг-множитель ×5 / ×1.5..2.0 (вынос в legacy.yaml)
+- Четверг-множитель ×5 / ×1.5..2.0 (вынос в origin.yaml)
 - `findTarget` / `findCreditTarget` с критериями
 - `shuffleKeyValues` (случайное ослабление техник)
 - Платный выкуп удержания
@@ -254,7 +320,7 @@ docs/plans на момент старта.
 **Закрывает**: D-036, alien-ai-comparison.md A1-A14.
 
 **Объём**: 3 недели.
-**Зависит от**: 63 (alien-units в legacy.yaml).
+**Зависит от**: 64 (alien-units в origin.yaml).
 
 ---
 
@@ -320,7 +386,7 @@ docs/plans на момент старта.
   `chat_language` (D-020)
 - `users.home_planet_id` (D-019)
 - `users.last_planet_teleport_at` (D-016)
-- `users.account_deletion_scheduled_at` (D-003 для legacy01)
+- `users.account_deletion_scheduled_at` (D-003 для origin)
 - `users.ui_theme`, `ui_pack` (D-007)
 
 **Закрывает**: D-001, D-003 (для legacy), D-004, D-005, D-007,
@@ -351,7 +417,7 @@ D-008, D-019, D-020, D-021.
 ### План 71: UX-микрологика origin → nova-frontend
 
 **Что**: применить X-NNN записи на nova-frontend (для всех
-вселенных, не только legacy01).
+вселенных, не только origin).
 
 **Содержит** (приоритеты):
 - ⭐ X-001 (дефицит ресурсов с скобками `(нужно X)`),
@@ -430,7 +496,7 @@ backend которых уже готов.
 
 ---
 
-### План 74: legacy01 deploy + DNS + config
+### План 74: origin deploy + DNS + config
 
 **Что**: подъём legacy-вселенной как третей рядом с uni01/uni02.
 
@@ -438,7 +504,9 @@ backend которых уже готов.
 - DNS / поддомен (имя по ADR-0010 — открытый вопрос)
 - Свой Vite-bundle deploy (CDN)
 - CORS / `ALLOWED_ORIGINS` расширение
-- `universes.code = 'legacy01'`, `balance_profile = 'legacy'`
+- `universes.code = 'origin'` (или другое из ADR-0010);
+  override активируется автоматически наличием
+  `configs/balance/origin.yaml`
 - Регистрация в registry-системе (план 36)
 - Smoke-тесты после деплоя
 
@@ -452,7 +520,7 @@ backend которых уже готов.
 ## Часть III. Зависимости между планами
 
 ```
-64 (legacy.yaml) ──┬──→ 65 (event-loop)
+64 (origin.yaml) ──┬──→ 65 (event-loop)
                    ├──→ 66 (AlienAI)
                    └──→ 69 (domain fields)
 
@@ -473,7 +541,7 @@ backend которых уже готов.
 
 | Риск | Митигация |
 |---|---|
-| Точность баланса при предвычислении формул origin → legacy.yaml | Golden-tests на 5+ ключевых уровней каждого здания, сравнение с PHP `eval()` через скрипт |
+| Точность баланса при предвычислении формул origin → origin.yaml | Golden-tests на 5+ ключевых уровней каждого здания, сравнение с PHP `eval()` через скрипт |
 | Тихая регрессия 🟣 при миграции уни01/uni02 на новые поля D-001..D-025 | Все миграции nullable; CI на текущие fixtures |
 | AlienAI расхождения сложно отловить (тестируется днями) | Property-based тесты + golden-логи на 50+ итераций |
 | pixel-perfect клон будет «уплывать» при правках UI | Screenshot-diff CI (План 73) — баг сразу виден |
@@ -493,7 +561,7 @@ backend которых уже готов.
 | 6 заглушек HOLDING_AI (Repair/AddUnits/...) | не реализуем в nova | В origin они тоже no-op |
 | Officer-юниты как боевые | оставляем nova-модель (subscription) | D-015 — устаревшая legacy-механика |
 | `delete INT(10)` auto-deletion в users | для всех вселенных через email-коды | D-003 — безопаснее |
-| `templatepackage` per-user тёмные темы для legacy01 | `users.ui_theme` enum, не свободная строка | UGC-мрак |
+| `templatepackage` per-user тёмные темы для origin | `users.ui_theme` enum, не свободная строка | UGC-мрак |
 | Турниры (D-031, U-002) в первой итерации | отдельный план **после** плана 74 | Не блокирует ремастер |
 | Кастомные logo альянса (U-011) | отдельный план после storage/moderation | UGC требует инфраструктуры |
 | EditConstruction / EditUnit / TestAlienAI | переход в admin-frontend (план 53) | dev/admin only |
@@ -502,20 +570,18 @@ backend которых уже готов.
 
 ## Часть VI. Известные неизвестные (требуют ещё одного round'а)
 
-1. **Имя legacy-вселенной** — `legacy01` ли (по convention) или
-   что-то иное (oxsar2 / classic / origin-skin?). Решение в
-   ADR-0010 (открытый).
+1. **Имя поддомена origin-вселенной** — `origin.oxsar-nova.ru` /
+   `classic.oxsar-nova.ru` / иное. Имя `universes.code` мы
+   зафиксировали как **`origin`**, но поддомен решает ADR-0010
+   (открытый).
 2. **Точные цвета палитры origin** — взять из `style.css`
    программно или вручную. План 72 решит.
 3. **Шрифты в legacy** — какие именно, лицензии. План 72 решит
    аудитом.
 4. **Какие именно из 100+ ачивок origin переносить** — нужен
    отбор приоритетных vs «исторических». План 70 решит.
-5. **Поведение balance_profile в multi-universe DB** — каждая
-   вселенная в одной DB или отдельные shard'ы? Уточнить с
-   архитектором перед планом 64.
-6. **Лицензии иконок origin** — критичный блокер. Аудит до плана 72.
-7. **Чат фан-аут с TipTap-payload** — план 32 готов, но
+5. **Лицензии иконок origin** — критичный блокер. Аудит до плана 72.
+6. **Чат фан-аут с TipTap-payload** — план 32 готов, но
    протестировать на ~100 одновременных пользователей до плана 72.
 
 ---
@@ -523,7 +589,7 @@ backend которых уже готов.
 ## Часть VII. Сводный график (Gantt-стиль)
 
 ```
-Месяц 1-2:   [64 legacy.yaml]──┐
+Месяц 1-2:   [64 origin.yaml]──┐
                                 │
 Месяц 2-3:   [65 event-loop]   │  [67 alliance]   [68 exchange]
                                 │
@@ -536,7 +602,7 @@ backend которых уже готов.
                                 
 Месяц 9-10:  [73 CI screenshot-diff]
                                 
-Месяц 10:    [74 legacy01 deploy]
+Месяц 10:    [74 origin deploy]
 ```
 
 **Минимальный путь к запуску** (если нет U-001 биржи и U-002
@@ -551,7 +617,7 @@ backend которых уже готов.
 |---|---|---|
 | D-001 (multi-points) | домен | 69 |
 | D-002 (vacation семантика) | домен | 68 (нужна аккуратная миграция) |
-| D-003 (account deletion) | домен | 68 (legacy01 ветка) |
+| D-003 (account deletion) | домен | 69 (origin ветка) |
 | D-004 (protection_time) | домен/механика | 69 |
 | D-005 (observer) | домен | 69 |
 | D-006 (umi координаты) | домен | 73 (миграционный скрипт) |
