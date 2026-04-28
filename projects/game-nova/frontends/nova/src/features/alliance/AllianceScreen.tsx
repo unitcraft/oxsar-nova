@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { Confirm } from '@/ui/Confirm';
@@ -8,6 +8,14 @@ import { ReportButton } from '@/components/ReportButton';
 import { DescriptionsPanel } from './DescriptionsPanel';
 import { RanksPanel } from './RanksPanel';
 import { DiplomacyPanel } from './DiplomacyPanel';
+import { AuditLogPanel } from './AuditLogPanel';
+import { AllianceSearchPanel } from './AllianceSearchPanel';
+import { TransferLeadershipDialog } from './TransferLeadershipDialog';
+import {
+  type AllianceSearchFilters,
+  EMPTY_FILTERS,
+  buildSearchQuery,
+} from './search-filters';
 
 interface Alliance {
   id: string;
@@ -44,6 +52,17 @@ export function AllianceScreen() {
   const toast = useToast();
   const [view, setView] = useState<'mine' | 'list' | 'create'>('mine');
   const [selectedID, setSelectedID] = useState<string | null>(null);
+  const [filters, setFilters] = useState<AllianceSearchFilters>(EMPTY_FILTERS);
+  // debouncedQuery — то, что реально идёт в queryKey TanStack Query.
+  // Меняется через 300ms после последнего keystroke — иначе кеш
+  // разрастается на каждый ввод и мы дёргаем бэк по N раз вместо 1.
+  const [debouncedQuery, setDebouncedQuery] = useState<string>('');
+
+  useEffect(() => {
+    const next = buildSearchQuery(filters);
+    const tid = window.setTimeout(() => setDebouncedQuery(next), 300);
+    return () => window.clearTimeout(tid);
+  }, [filters]);
 
   const mine = useQuery({
     queryKey: ['alliances', 'me'],
@@ -52,8 +71,11 @@ export function AllianceScreen() {
   });
 
   const list = useQuery({
-    queryKey: ['alliances'],
-    queryFn: () => api.get<{ alliances: Alliance[] | null }>('/api/alliances'),
+    queryKey: ['alliances', 'search', debouncedQuery],
+    queryFn: () => {
+      const url = debouncedQuery ? `/api/alliances?${debouncedQuery}` : '/api/alliances';
+      return api.get<{ alliances: Alliance[] | null }>(url);
+    },
     enabled: view === 'list',
   });
 
@@ -139,7 +161,9 @@ export function AllianceScreen() {
       )}
 
       {view === 'list' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <AllianceSearchPanel value={filters} onChange={setFilters} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
           <div className="ox-panel" style={{ overflow: 'hidden' }}>
             {list.isLoading && <div style={{ padding: 16 }}><div className="ox-skeleton" style={{ height: 60 }} /></div>}
             {!list.isLoading && (
@@ -179,6 +203,7 @@ export function AllianceScreen() {
               onJoin={(msg) => join.mutate({ id: selectedID, message: msg })}
             />
           )}
+          </div>
         </div>
       )}
 
@@ -207,6 +232,7 @@ function MyAlliancePanel({
   const qc = useQueryClient();
   const toast = useToast();
   const [confirmDisband, setConfirmDisband] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
 
   const setOpen = useMutation({
     mutationFn: ({ id, isOpen }: { id: string; isOpen: boolean }) =>
@@ -263,6 +289,15 @@ function MyAlliancePanel({
               {t('leaveBtn')}
             </button>
           )}
+          {isOwner && members.length > 1 && (
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              onClick={() => setTransferOpen(true)}
+            >
+              👑 {t('transferLeadership.openBtn')}
+            </button>
+          )}
           {isOwner && (
             <button type="button" className="btn-ghost btn-sm" style={{ color: 'var(--ox-danger)' }} onClick={() => setConfirmDisband(true)}>
               {t('disbandBtn')}
@@ -282,6 +317,9 @@ function MyAlliancePanel({
 
       {/* Diplomacy: 5 enum-статусов, accept/reject/break — план 67 D-014 B1 */}
       <DiplomacyPanel allianceID={alliance.id} canManage={isOwner} />
+
+      {/* Audit-log: журнал событий альянса — план 67 U-013 */}
+      <AuditLogPanel allianceID={alliance.id} members={members} />
 
       {/* Applications */}
       {isOwner && !alliance.is_open && (
@@ -314,6 +352,15 @@ function MyAlliancePanel({
           danger
           onConfirm={() => { setConfirmDisband(false); onDisband(); }}
           onCancel={() => setConfirmDisband(false)}
+        />
+      )}
+
+      {transferOpen && (
+        <TransferLeadershipDialog
+          allianceID={alliance.id}
+          members={members}
+          currentOwnerID={alliance.owner_id}
+          onClose={() => setTransferOpen(false)}
         />
       )}
     </div>

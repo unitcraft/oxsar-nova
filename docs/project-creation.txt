@@ -12644,3 +12644,126 @@ Refactor-only: подготовка раскладки под архитекту
 1. `feat(origin/frontend): Ф.1 Bootstrap (план 72)`.
 
 **Статус плана 72**: Ф.1 ✅, Ф.2-Ф.9 — отдельными итерациями.
+
+## Итерация 67.Ф.5 ч.2 + Ф.6 (2026-04-28) — alliance-ремастер: audit + search + transfer-leadership UI + финализация
+
+План: [docs/plans/67-remaster-alliance-extension.md](plans/67-remaster-alliance-extension.md).
+Зависимости — все backend-фазы 67 (Ф.1-Ф.4) и Ф.5 ч.1 (descriptions +
+ranks + diplomacy UI, commit 669af55dae). После этой итерации **весь
+план 67 ЗАКРЫТ**.
+
+**Что сделано:**
+
+*Frontend (3 новых компонента + 2 helper-модуля + 2 теста):*
+- `AuditLogPanel.tsx` (~150 строк) — журнал событий: dropdown-фильтр
+  по action (18 known) + actor (выбор из members), пагинация
+  offset/50/page, relative-time («5m ago» / «3d ago»). Доступ — любой
+  member (бэк проверяет).
+- `AllianceSearchPanel.tsx` (~80 строк) — фильтры списка: текстовый q
+  (полнотекст backend), select по openness (all/open/closed),
+  number-input от/до по числу членов, кнопка reset (видна только если
+  фильтры активны).
+- `TransferLeadershipDialog.tsx` (~200 строк) — модалка передачи
+  лидерства, 2-step flow: pick (radio-выбор кандидата → POST /code) →
+  code (ввод 8-символьного кода → POST /transfer-leadership). 7
+  локализованных error-codes (invalid_code / expired_code / not_member /
+  not_owner / billing_unavailable / rate_limited / attempts_exhausted).
+  Idempotency-Key шарится между retry-attempts одной стадии (R9).
+- `audit.ts` (~60 строк) — `AUDIT_ACTIONS` (18 строк snake_case,
+  зеркало backend `audit.go`), `auditActionLabelKey` /
+  `auditTargetKindLabelKey` с fallback на unknown,
+  `formatRelativeTime` (clamp на 0 для будущих дат, минуты/часы/дни/
+  месяцы).
+- `search-filters.ts` (~50 строк) — `AllianceSearchFilters` тип,
+  `EMPTY_FILTERS`, `hasActiveFilters`, `buildSearchQuery`
+  (URLSearchParams; non-negative int валидация для min/max;
+  невалидные числа игнорируются).
+- `audit.test.ts` — 15 кейсов (snake_case проверка, isKnownAction,
+  formatRelativeTime границы 60s/60m/24h/30d).
+- `search-filters.test.ts` — 13 кейсов (URL-кодирование, частичные
+  диапазоны, невалидные числа).
+
+*Интеграция:*
+- `AllianceScreen.tsx` — расширен:
+  - `view='list'`: `AllianceSearchPanel` над таблицей, debouncedQuery
+    через `useEffect + setTimeout(300)` для стабильности TanStack
+    Query cache-key.
+  - `MyAlliancePanel` header: кнопка «👑 Передать лидерство» (видна
+    только owner'у при `members.length > 1`); state `transferOpen`
+    открывает `TransferLeadershipDialog`.
+  - `MyAlliancePanel` секции: `AuditLogPanel` после `DiplomacyPanel`
+    (доступ — все члены).
+
+*i18n (configs/i18n/{ru,en}.yml):*
+- ~60 новых ключей (audit.* ~33, search.* ~9, transferLeadership.*
+  ~17), переиспользовано ~14 существующих (`confirmBtn`, `cancelBtn`,
+  `acceptBtn`, `rejectBtn`, `colMember`, `colActions`,
+  `diplomacy.filterAll`, `disbandBtn`, `descriptions.title`,
+  `ranks.title`, `sectionRelations`, `transferLeadership.codeTitle`/
+  `codeBody` для system-message bodies).
+- Переиспользование ~17% (целились в 95% Ф.5 ч.1, но audit/transfer —
+  новые UX-домены без аналогов; 18 action-меток × 2 языка физически
+  не могли быть переиспользованы).
+
+*Документация (Ф.6):*
+- `docs/research/origin-vs-nova/divergence-log.md` — D-014, D-040,
+  D-041 → ✅ ЗАКРЫТО блок добавлен перед заголовком (стиль D-016).
+- `docs/research/origin-vs-nova/nova-ui-backlog.md` — U-004, U-005,
+  U-012, U-013, U-015 → ✅ ЗАКРЫТО.
+- `docs/plans/67-remaster-alliance-extension.md` — шапка («ЗАКРЫТ»),
+  раздел «Ф.5 ч.2 Реализация» с 6 дизайн-решениями, раздел «Ф.6
+  Финализация».
+
+**Дизайн-решения и выбор подхода:**
+
+1. **Тесты pure-helpers, не RTL.** В nova-frontend нет
+   `@testing-library/react`; стиль Ф.5 ч.1 — pure-function-тесты
+   (permissions.test.ts + relations.test.ts). Подняли по той же модели:
+   28 unit-тестов на helpers, 42 теста секции alliance проходят.
+   Добавление RTL — отдельная инфра-задача.
+2. **Расширение `ListAlliancesPage` через AllianceSearchPanel внутри
+   `AllianceScreen`, не отдельной страницей.** Меньше дублирования,
+   фильтры органично ложатся в существующий листинг.
+3. **Идемпотентность transfer-leadership** — codeKey отдельный
+   (request /code), confirmKey отдельный (POST /transfer-leadership);
+   confirmKey сбрасывается при ошибке (новый attempt = новая
+   транзакция).
+4. **Audit-log в `MyAlliancePanel`, не в `AllianceDetail`** — бэк
+   ограничивает доступ членами, аутсайдеру в детали-карточке смысла
+   нет.
+5. **Дебаунс search в родителе, не в SearchPanel** — единственный
+   `setTimeout` в `useEffect` родительского компонента, queryKey
+   меняется только после debounce → TanStack Query cache не
+   разрастается мусором.
+
+**Объём:**
+- 3 компонента: ~430 строк TSX.
+- 2 helper-модуля: ~110 строк TS.
+- 2 теста: ~150 строк (28 кейсов).
+- AllianceScreen.tsx интеграция: ~30 строк изменений.
+- i18n ru.yml + en.yml: ~120 строк (60 ключей × 2 языка).
+- Документация: ~150 строк (план + divergence-log + ui-backlog +
+  project-creation).
+- **Суммарно: ~990 строк.**
+
+**Тесты:**
+- vitest для секции alliance/: **42 теста проходят** (28 новых + 14
+  старых). Запуск: `npx vitest run src/features/alliance/`.
+- typecheck `tsc -b`: alliance/ чистый (pre-existing ошибки в
+  admin/artefacts/messages/score/settings/shipyard/i18n/Toast — не
+  моего кода).
+- ESLint: проект на ESLint v9 без flat config (eslint.config.js
+  отсутствует) — pre-existing инфра-проблема, не блок плана 67.
+
+**Закрыто этой итерацией:**
+- D-014, D-040, D-041 → ✅ полностью (backend Ф.1-Ф.4 + UI Ф.5 ч.1+ч.2).
+- U-004, U-005, U-012, U-013, U-015 → ✅ полностью.
+- **План 67 целиком ЗАКРЫТ.**
+
+**Коммит:** `feat(alliance,frontend): audit + search + transfer-leadership UI (план 67 Ф.5 ч.2 + Ф.6)`.
+
+**Параллельные сессии**: на момент старта active-sessions.md была пуста
+(slot 1 занят этой сессией). Изоляция через CC_AGENT_PATHS строгая —
+только alliance/ + i18n + 4 doc-файла, без захвата чужих.
+
+**Статус плана 67**: ✅ ЗАКРЫТ 2026-04-28.

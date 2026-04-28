@@ -273,6 +273,75 @@ alliance:
   perm.can_change_description.short: desc
   perm.can_propose_relations.short: rels
   perm.can_manage_ranks.short: ranks
+  # Plan 67 Ph.5 part 2: audit-log + search + transfer-leadership UI.
+  audit.title: Activity log
+  audit.filterAction: Action
+  audit.filterActor: Actor
+  audit.empty: No entries.
+  audit.actorSystem: System
+  audit.colWhen: When
+  audit.colActor: Actor
+  audit.colAction: Action
+  audit.colTarget: Target
+  audit.prevPage: Back
+  audit.nextPage: Next
+  audit.pageInfo: "{{from}}–{{to}}"
+  audit.time.justNow: just now
+  audit.time.mAgo: "{{n}}m ago"
+  audit.time.hAgo: "{{n}}h ago"
+  audit.time.dAgo: "{{n}}d ago"
+  audit.time.moAgo: "{{n}}mo ago"
+  audit.action.alliance_created: Alliance created
+  audit.action.alliance_disbanded: Alliance disbanded
+  audit.action.description_changed: Description changed
+  audit.action.member_joined: Member joined
+  audit.action.member_left: Member left
+  audit.action.member_kicked: Member kicked
+  audit.action.member_rank_assigned: Rank assigned
+  audit.action.rank_created: Rank created
+  audit.action.rank_updated: Rank updated
+  audit.action.rank_deleted: Rank deleted
+  audit.action.application_approved: Application approved
+  audit.action.application_rejected: Application rejected
+  audit.action.relation_proposed: Relation proposed
+  audit.action.relation_accepted: Relation accepted
+  audit.action.relation_rejected: Relation rejected
+  audit.action.relation_cleared: Relation cleared
+  audit.action.leadership_transferred: Leadership transferred
+  audit.action.open_changed: Recruitment mode changed
+  audit.action.unknown: "{{name}}"
+  audit.targetKind.member: Member
+  audit.targetKind.rank: Rank
+  audit.targetKind.alliance: Alliance
+  audit.targetKind.relation: Relation
+  audit.targetKind.unknown: "{{kind}}"
+  search.q: Search
+  search.qPlaceholder: Name or tag
+  search.openness: Recruitment
+  search.opennessAll: Any
+  search.opennessOpen: Open
+  search.opennessClosed: Closed
+  search.minMembers: From
+  search.maxMembers: To
+  search.reset: Reset
+  transferLeadership.openBtn: Transfer leadership
+  transferLeadership.title: Transfer leadership
+  transferLeadership.pickIntro: Choose the alliance member who will become the new owner. A confirmation code will arrive as a system message after you request it.
+  transferLeadership.noCandidates: No other members in the alliance. Invite at least one player first.
+  transferLeadership.requestCodeBtn: Request code
+  transferLeadership.codeSent: Code sent as a system message. Open Messages → System.
+  transferLeadership.codeIntro: "The code will arrive as a system message and is valid for {{ttl}} min. Enter it below to confirm."
+  transferLeadership.codeLabel: Confirmation code
+  transferLeadership.codeHint: 8 characters, case-insensitive.
+  transferLeadership.backBtn: Back
+  transferLeadership.success: Leadership transferred.
+  transferLeadership.errInvalidCode: Invalid code.
+  transferLeadership.errExpiredCode: Code expired. Request a new one.
+  transferLeadership.errNotMember: Selected player is not a member of this alliance.
+  transferLeadership.errNotOwner: Only the current owner can transfer leadership.
+  transferLeadership.errBillingUnavailable: Service unavailable, try again later.
+  transferLeadership.errRateLimited: Too many requests. Try again in an hour.
+  transferLeadership.errAttemptsExhausted: Attempt limit reached. Request a new code.
 artefactInfo:
   action: ""
   activate: ""
