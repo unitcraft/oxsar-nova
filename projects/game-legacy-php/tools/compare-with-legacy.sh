@@ -19,7 +19,7 @@
 #   - report.md               — итоговый отчёт
 #
 # Использование:
-#   bash projects/game-origin-php/tools/compare-with-legacy.sh
+#   bash projects/game-legacy-php/tools/compare-with-legacy.sh
 
 set -eu
 

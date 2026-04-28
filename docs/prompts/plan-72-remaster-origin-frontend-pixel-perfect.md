@@ -10,7 +10,7 @@
 
 ```
 Задача: выполнить план 72 (ремастер) — построить новый origin-фронт
-в projects/game-origin/frontend/ как pixel-perfect клон визуала
+в projects/game-nova/frontends/origin/ как pixel-perfect клон визуала
 legacy-PHP origin (тема standard) на современном стеке React/TS,
 работающий на nova-API.
 
@@ -50,7 +50,7 @@ legacy-PHP origin (тема standard) на современном стеке Rea
 ЧТО НУЖНО СДЕЛАТЬ:
 
 Bootstrap (Ф.1):
-- Создать projects/game-origin/frontend/ — отдельный Vite-проект.
+- Создать projects/game-nova/frontends/origin/ — отдельный Vite-проект.
 - Стек: TypeScript strict, TanStack Query, Zustand, OpenAPI-клиент
   к nova-API, TipTap (MIT) для чата + почты.
 - CSS-тема — переписать legacy-PHP public/css/ в современный CSS
@@ -131,7 +131,7 @@ R15: без упрощений — все экраны полностью фун
   (план 59 на portal-frontend), без своего экрана в origin.
 
 GIT-ИЗОЛЯЦИЯ:
-- Свои пути: projects/game-origin/frontend/ (всё),
+- Свои пути: projects/game-nova/frontends/origin/ (всё),
   projects/game-nova/configs/i18n/ (если новые ключи —
   СОВМЕСТНО с nova-frontend, осторожно),
   docs/plans/72-..., docs/research/origin-vs-nova/* (S-NNN/U-NNN

@@ -14,7 +14,7 @@
  *   docker exec docker-php-1 php /var/www/tools/dump-balance-formulas.php > golden.json
  *
  * Или через docker compose:
- *   cd projects/game-origin-php/docker && docker compose exec php \
+ *   cd projects/game-legacy-php/docker && docker compose exec php \
  *     php /var/www/tools/dump-balance-formulas.php
  *
  * Output schema:

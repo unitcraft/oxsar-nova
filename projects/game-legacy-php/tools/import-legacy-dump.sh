@@ -8,7 +8,7 @@
 # - Запущен game-origin: docker ps | grep docker-mysql-1
 #
 # Использование:
-#   bash projects/game-origin-php/tools/import-legacy-dump.sh
+#   bash projects/game-legacy-php/tools/import-legacy-dump.sh
 #
 # Дамп (~1.5GB) кладётся в legacy_dump.sql (в .gitignore, не коммитится).
 
