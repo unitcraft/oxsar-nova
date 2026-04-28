@@ -86,6 +86,25 @@ R12: i18n — grep nova-bundle перед созданием новых ключ
 R13: typed payload для Kind'ов.
 R15: без упрощений (anti-fraud cap, rate-limit, full tests со старта).
 
+R15 УТОЧНЕНО (обязательно прочитай — roadmap-report.md "Часть I.5 / R15"):
+
+🚫 НЕ КЛАССИФИЦИРУЙ КАК TRADE-OFF В simplifications.md:
+- R8 Prometheus метрики (counter+histogram) — для каждого endpoint.
+  Особенно критично для биржи: создание/покупка/expire/cancel —
+  всё с метриками со старта, financial flow должен быть наблюдаемым.
+- R9 Idempotency-Key для buy/create — критично, без неё двойное
+  списание оксаритов.
+- R12 i18n — все user-facing strings через Tr().
+- R10 universe_id в exchange_lots / exchange_history.
+- DB CHECK для status enum (active/sold/cancelled/expired).
+- FK constraint + index на user_id, artifact_type, universe_id.
+
+✅ TRADE-OFF (можно с обоснованием в simplifications.md):
+- Полнотекстовый поиск в Ф.5 если нужно отложить — ок, явный
+  «Приоритет M, Ф.X».
+- Премиум-permit «Знак торговца» — если интеграция с artifact-доменом
+  займёт много времени, можно отложить cap-проверку с явным TODO.
+
 GIT-ИЗОЛЯЦИЯ:
 - Свои пути: internal/exchange/, migrations/, openapi.yaml,
   internal/event/handlers.go (для регистрации Kind'ов exchange),
