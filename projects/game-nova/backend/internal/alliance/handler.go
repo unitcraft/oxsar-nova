@@ -50,13 +50,53 @@ func statusFromErr(err error) string {
 }
 
 // List GET /api/alliances
+//
+// Query (план 67 Ф.4, U-012):
+//   - q              — полнотекст по name+tag (prefix-match для одного слова,
+//     websearch для фраз)
+//   - is_open        — true|false, фильтр по открытости
+//   - min_members    — минимальное число участников
+//   - max_members    — максимальное число участников
+//   - limit          — 1..100, default 50
+//   - offset         — пагинация, default 0
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	list, err := h.svc.List(r.Context(), 50)
+	q := r.URL.Query()
+	f := ListFilters{
+		Q:      q.Get("q"),
+		Limit:  parseIntDefault(q.Get("limit"), 50),
+		Offset: parseIntDefault(q.Get("offset"), 0),
+	}
+	if v := q.Get("is_open"); v != "" {
+		b := v == "true" || v == "1"
+		f.IsOpen = &b
+	}
+	if v := q.Get("min_members"); v != "" {
+		f.MinMembers = parseIntDefault(v, 0)
+	}
+	if v := q.Get("max_members"); v != "" {
+		f.MaxMembers = parseIntDefault(v, 0)
+	}
+	list, err := h.svc.List(r.Context(), f)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"alliances": list})
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+		"alliances": list,
+		"limit":     f.Limit,
+		"offset":    f.Offset,
+	})
+}
+
+func parseIntDefault(s string, def int) int {
+	if s == "" {
+		return def
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return def
+	}
+	return n
 }
 
 // Get GET /api/alliances/{id}
