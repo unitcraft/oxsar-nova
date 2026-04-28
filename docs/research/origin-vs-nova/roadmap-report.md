@@ -1009,15 +1009,23 @@ ARTEFACT_DELAY, плюс все 8 ALIEN_* (план 66 расширит).
 
 ### → Добавить в nova как общий знаменатель (план 65)
 
-| origin EVENT | nova Kind | Закрывает |
-|---|---|---|
-| EVENT_EXCH_EXPIRE | KindExchangeExpire | план 68 биржа |
-| EVENT_EXCH_BAN | KindExchangeBan | план 68 биржа |
-| EVENT_DELIVERY_ARTEFACTS | KindDeliveryArtefacts | расширение DELIVERY-семьи |
-| EVENT_ATTACK_DESTROY_BUILDING | KindAttackDestroyBuilding | боевая механика |
-| EVENT_ATTACK_ALLIANCE_DESTROY_BUILDING | KindAttackAllianceDestroyBuilding | ACS-вариант |
-| EVENT_ALLIANCE_ATTACK_ADDITIONAL | KindAllianceAttackAdditional | служебный referer ACS |
-| EVENT_TELEPORT_PLANET | KindTeleportPlanet | премиум-фича через оксары |
+| origin EVENT | nova Kind | Закрывает | Статус |
+|---|---|---|---|
+| EVENT_DEMOLISH_CONSTRUCTION | KindDemolishConstruction | inventory-bug (handler был пуст) | ✅ план 65 Ф.1 (2026-04-28) |
+| EVENT_DELIVERY_ARTEFACTS | KindDeliveryArtefacts | расширение DELIVERY-семьи | ✅ план 65 Ф.2 (2026-04-28) |
+| EVENT_ATTACK_DESTROY_BUILDING | KindAttackDestroyBuilding | боевая механика | план 65 Ф.3 — TODO |
+| EVENT_ATTACK_ALLIANCE_DESTROY_BUILDING | KindAttackAllianceDestroyBuilding | ACS-вариант | план 65 Ф.4 — TODO |
+| EVENT_ALLIANCE_ATTACK_ADDITIONAL | KindAllianceAttackAdditional | служебный referer ACS | план 65 Ф.5 — TODO |
+| EVENT_TELEPORT_PLANET | KindTeleportPlanet | премиум-фича через оксары | план 65 Ф.6 — TODO (отдельная сессия, billing+REST+OpenAPI+cooldown) |
+| EVENT_EXCH_EXPIRE | KindExchangeExpire | биржа артефактов | ⚪ перенесено в план 68 (биржа реализует в `internal/exchange/`) |
+| EVENT_EXCH_BAN | KindExchangeBan | биржа артефактов | ⚪ перенесено в план 68 |
+
+**Решение 2026-04-28**: `KindExchangeExpire`/`KindExchangeBan` вынесены
+из плана 65 — концептуально события биржи принадлежат биржевой
+подсистеме, а не общему `internal/event/handlers.go`. План 68 (биржа
+артефактов) реализует оба handler'а в рамках `internal/exchange/`.
+Stub-handler с `ErrSkip` в плане 65 нарушал бы R15. См. divergence-log
+D-035b и шапку плана 65.
 
 ### → Используют существующие nova-механизмы
 

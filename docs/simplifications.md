@@ -1452,6 +1452,55 @@ INSERT в construction_queue + INSERT events Kind=2), POST endpoint
 
 ---
 
+## 2026-04-28 — План 65 Ф.2: KindDeliveryArtefacts
+
+### [65-Ф.2] Active-артефакт сбрасывается в held без revert эффектов
+**Где**: `projects/game-nova/backend/internal/event/handlers.go` —
+`HandleDeliveryArtefacts`, ветка `state = 'active' → 'held'`.
+**Что упрощено**: при доставке артефакта, который оказался в `active`
+(теоретически возможно, если биржевой код не сбросил состояние перед
+выставлением лота), handler переводит его в `held` с обнулением
+`activated_at`/`expire_at`, но НЕ зовёт `applyChange(revert)`
+синхронно — то есть значения колонок в `users.*`/`planets.*`
+(если артефакт был типа `factor_user` / `factor_planet`) остаются
+с применённой дельтой у старого владельца.
+**Почему**: nova вычисляет effect-стек по списку **активных**
+артефактов на каждом чтении (см. `artefact/service.go:349`
+`ActiveBattleModifiers`, `effects.go`). Для `battle_bonus` revert
+не нужен — стек пересобирается. Для `factor_*` (которые
+применяются через `applyChange` и остаются в колонках до явного
+Deactivate) — да, есть теоретическое расхождение, но биржевая
+операция плана 68 обязана ставить артефакт в `held` ДО полёта,
+тогда delivery просто переписывает владельца. Полноценный
+синхронный revert требует доступа к `artefact.Service` из
+event-пакета (циклический импорт) либо вынести `applyChange` в
+общий пакет — это +200 строк рефакторинга, нарушает «один Kind
+за сессию».
+**План возврата**: если в проде поймаем `active`-артефакт в
+delivery (метрика `oxsar_delivery_artefacts_active_count`) —
+вынести `artefact.RevertChange` в публичный API пакета `artefact`
+без зависимости на `Service`, вызывать из handler'а через
+конструктор-инъекцию (паттерн `transportSvc.ArriveHandler()`).
+**Приоритет**: L — сценарий не должен возникать при корректной
+работе биржи плана 68; защита через инвариант «лот = held».
+
+### [65-Ф.2] Per-universe проверка делается через JOIN на каждом артефакте
+**Где**: `HandleDeliveryArtefacts` — `SELECT (... universe_id ...) =
+(... universe_id ...)` для каждого `artefact_id` в payload.
+**Что упрощено**: при `len(ArtefactIDs) = N` делаем N+1 запросов
+к БД (1 за артефакт + 1 проверка вселенной + 1 UPDATE), вместо
+batch-чтения через `WHERE id = ANY($1)` и одной проверки
+вселенной для всех.
+**Почему**: типичная доставка — 1-3 артефакта (биржевой лот). При
+N=3 это ~9 запросов внутри одной транзакции — приемлемо. Batch
+требует динамического SQL для UPDATE `CASE`-логики (active→held)
+и усложняет idempotent-skip per-artefact.
+**План возврата**: если в проде увидим payload с N>10 — переписать
+на batch-SQL.
+**Приоритет**: L.
+
+---
+
 ## 2026-04-28 — План 66 Ф.3: AlienAI Kind handlers
 
 ### [66-Ф.3] ChangeMissionAI replan-mode не пересобирает alien-флот

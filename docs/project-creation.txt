@@ -11675,3 +11675,107 @@ internal/admin/handler.go:202 — pre-existing, не моя.
 **Объём** — ~30 минут. +50 строк OpenAPI (paths + schemas),
 +85 строк тестов notepad, +17 строк auth/authtest, ~120 строк
 правок в плане 69 + divergence-log.md + project-creation.txt.
+
+----
+
+### Итерация 2026-04-28 (вечер): план 65 Ф.2 — KindDeliveryArtefacts handler
+
+**Контекст**: продолжение плана 65 после Ф.1 (KindDemolishConstruction
+эталонный handler, commit 9a3992a384). Continuation-промпт
+[plan-65-remaining-kinds.md](prompts/continuation/plan-65-remaining-kinds.md)
+описывал 6 оставшихся Kind'ов end-to-end (~2-3 нед). По договорённости
+— один Kind за сессию по эталону.
+
+**Решение по scope**:
+- Stub-handler с `ErrSkip` для `KindExchangeExpire`/`KindExchangeBan`
+  отвергнут — нарушает R15 (без TODO/MVP-сокращений). Концептуально
+  оба Kind'а — биржевые и должны жить в `internal/exchange/` (план 68).
+- Перенос Exchange*-Kind'ов в план 68 зафиксирован в шапке плана 65 +
+  divergence-log.md D-035b.
+- В этой сессии — только `KindDeliveryArtefacts` (Ф.2), реальный
+  handler по эталону Ф.1.
+
+**Что сделано**:
+
+1. **kinds.go** — добавлен `KindDeliveryArtefacts Kind = 23` (свободный
+   номер рядом с DeliveryUnits=21 / DeliveryResources=22; в legacy
+   origin EVENT_DELIVERY_ARTEFACTS=29).
+
+2. **handlers.go** — `HandleDeliveryArtefacts` (~210 строк включая
+   doc-комментарий) + typed `DeliveryArtefactsPayload{FleetID,
+   ArtefactIDs[]}` (R13). Семантика — порт от
+   `EventHandler::transport` ветка `EVENT_DELIVERY_ARTEFACTS` +
+   `Artefact::onOwnerChange`:
+   - флот state ≠ outbound → no-op (ArriveHandler-паттерн);
+   - для каждого артефакта: UPDATE `artefacts_user.user_id/planet_id`
+     на получателя (e.UserID/e.PlanetID); active → held с обнулением
+     activated_at/expire_at; per-universe (R10) проверка через
+     `users.universe_id` JOIN — защита от багов биржи плана 68;
+   - флот → returning;
+   - идемпотентность: артефакт уже у получателя → skip; флот
+     returning → no-op.
+   Ресурсы НЕ трогаем (отличие от обычного TRANSPORT — см.
+   EventHandler.class.php:2688 «if mode != DELIVERY_ARTEFACTS»).
+
+3. **delivery_artefacts_test.go** (~430 строк):
+   - `TestDeliveryArtefacts_PayloadRoundTrip` — pure JSON round-trip;
+   - `TestProperty_DeliveryArtefactsPayload_Determinism` — rapid (R4)
+     property-based на skip-decision (curUser/curPlanet/state →
+     детерминированное skip);
+   - `TestDeliveryArtefacts_PayloadValidation` — 5 негативных
+     payload-кейсов (no_user, no_planet, no_fleet_id,
+     empty_artefact_ids, bad_json) без БД;
+   - `TestDeliveryArtefacts_GoldenScenarios` — 5 golden через
+     TEST_DATABASE_URL (single artefact, three artefacts,
+     idempotent_replay, active_reset_to_held, fleet_not_outbound_noop).
+
+4. **cmd/worker/main.go** — регистрация
+   `withAchievement(event.HandleDeliveryArtefacts)` (без `withScore`
+   — артефакты не в формуле очков; без `withDailyQuest` — нет такого
+   квеста).
+
+**R0-инвариант**: `go test ./internal/event/... ./internal/fleet/...
+./internal/artefact/...` зелёные. `go build ./...` зелёный. `go vet
+./internal/event/... ./cmd/worker/...` чист. (Чужой `go vet ./...`
+warning в `admin/handler.go:202` — pre-existing, не из этой сессии).
+
+**Сознательные упрощения** (зафиксированы в
+[simplifications.md](simplifications.md) §«2026-04-28 — План 65 Ф.2»):
+- [65-Ф.2] active-артефакт сбрасывается в held БЕЗ синхронного
+  revert эффектов — nova вычисляет effect-стек на каждом чтении.
+  Защита: биржа плана 68 обязана ставить артефакт в held ДО полёта.
+  Приоритет L.
+- [65-Ф.2] per-universe проверка через JOIN per-artefact (N+1
+  запросов) — типичный N=1-3, batch-SQL расширяет scope. Приоритет L.
+
+**divergence-log.md статусы**:
+
+✅ закрыто:
+- D-035 (DELIVERY_ARTEFACTS — реализован handler)
+
+⚪ отложено:
+- D-035b (Exchange*-Kind'ы перенесены в план 68 — биржа их
+  закроет в рамках `internal/exchange/`)
+
+**План 65 после Ф.2**:
+- Ф.1 ✅ KindDemolishConstruction
+- Ф.2 ✅ KindDeliveryArtefacts (эта сессия)
+- Ф.3 KindAttackDestroyBuilding — TODO
+- Ф.4 KindAttackAllianceDestroyBuilding (ACS) — TODO
+- Ф.5 KindAllianceAttackAdditional — TODO
+- Ф.6 KindTeleportPlanet — TODO (отдельная сессия, ~500+ строк)
+
+**Параллельная сессия**: в этой же ветке параллельная сессия
+работала над планом 69 Ф.6+Ф.7 (notepad endpoint + OpenAPI).
+Изоляция через поимённый git add — мои файлы:
+`projects/game-nova/backend/internal/event/{kinds.go,handlers.go,
+delivery_artefacts_test.go}`,
+`projects/game-nova/backend/cmd/worker/main.go`,
+`docs/plans/65-remaster-event-loop-origin-events.md`,
+`docs/research/origin-vs-nova/divergence-log.md`,
+`docs/simplifications.md`,
+`docs/project-creation.txt`. Чужие — план 69 + notepad — не трогаю.
+
+**Объём** — ~1 час. +210 строк handler + doc, +430 строк тестов,
++8 строк регистрация в worker, ~70 строк правок плана 65 +
+divergence-log + simplifications + dev-log.

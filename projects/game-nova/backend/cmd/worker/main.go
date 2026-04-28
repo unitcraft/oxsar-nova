@@ -214,6 +214,12 @@ func run() error {
 	// withScore — пересчёт очков после понижения уровня. Daily-quest
 	// «снеси здание» в дизайне нет, поэтому без withDailyQuest.
 	w.Register(event.KindDemolishConstruction, withAchievement(withScore(event.HandleDemolishConstruction)))
+	// План 65 Ф.2 (D-035): доставка артефактов. withScore НЕ нужен —
+	// артефакты не дают очков (score derived state, артефакты не входят
+	// в формулу). withAchievement покрывает «получено N артефактов»
+	// (achievement-движок сам решит по slog/event-attempt'у). DailyQuest
+	// «получи артефакт» в дизайне нет.
+	w.Register(event.KindDeliveryArtefacts, withAchievement(event.HandleDeliveryArtefacts))
 	w.Register(event.KindResearch, withDailyQuest("research_done")(withAchievement(withScore(event.HandleResearch))))
 	w.Register(event.KindBuildFleet, withAchievement(withScore(event.HandleBuildFleet)))
 	w.Register(event.KindBuildDefense, withScore(event.HandleBuildFleet))

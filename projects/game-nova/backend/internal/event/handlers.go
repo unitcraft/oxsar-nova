@@ -167,6 +167,226 @@ func HandleBuildFleet(ctx context.Context, tx pgx.Tx, e Event) error {
 	return nil
 }
 
+// DeliveryArtefactsPayload — payload события KindDeliveryArtefacts (план 65 Ф.2,
+// D-035). Доставка артефактов флотом-курьером (источник — биржа артефактов
+// плана 68 либо premium-механика подарков).
+//
+// Поля:
+//   - FleetID — UUID записи fleets (флот, везущий груз; по прибытии переходит
+//     в state='returning' для возврата домой).
+//   - ArtefactIDs — список UUID artefacts_user.id, чьи владельцы должны быть
+//     переписаны на e.UserID/e.PlanetID (получатель + планета назначения
+//     достаются из самого Event'а, как у demolish — см. R10).
+type DeliveryArtefactsPayload struct {
+	FleetID     string   `json:"fleet_id"`
+	ArtefactIDs []string `json:"artefact_ids"`
+}
+
+// HandleDeliveryArtefacts применяет доставку артефактов адресату.
+//
+// Семантика origin (EventHandler::transport ветка EVENT_DELIVERY_ARTEFACTS,
+// EventHandler.class.php:2718-2754 + Artefact::onOwnerChange,
+// Artefact.class.php:379):
+//   - для каждого артефакта в payload: UPDATE user_id, planet_id на
+//     получателя (destuser/destination в legacy → e.UserID/e.PlanetID
+//     в nova);
+//   - активный артефакт деактивируется (active=0 + revert эффекта),
+//     запланированные delay/expire события снимаются;
+//   - флот переходит в state='returning' и улетает обратно (sendBack);
+//   - ресурсы НЕ передаются (отличие от EVENT_TRANSPORT/DELIVERY_RESOURSES,
+//     см. EventHandler.class.php:2688 — ветка `if mode != DELIVERY_ARTEFACTS`
+//     пропускает updateUserRes).
+//
+// Решения для nova:
+//
+//   - **Состояние артефакта после доставки** — переводим в `held`. Это
+//     отличие от origin, где `active=0` без явного состояния «в инвентаре»
+//     (в legacy active=0 ↔ держится в инвентаре). В nova у нас artefact_state
+//     enum (held/delayed/active/expired/consumed); `held` — точный аналог
+//     «в инвентаре, не активирован». Если артефакт прилетел `active` (что
+//     возможно, если биржевой код не сбросил состояние перед выставлением
+//     лота), просто откидываем active → held: revert-эффекта пройдёт лениво
+//     при следующей пересборке через ScoreRecalc/ActiveBattleModifiers
+//     (effect-стек в nova вычисляется по списку активных артефактов
+//     каждый раз, см. service.go:349).
+//
+//     **Сознательное упрощение** (фиксируем в simplifications.md): не
+//     зовём `applyChange(revert)` синхронно для `active → held` — в origin
+//     это нужно, потому что эффекты артефактов зашиты как инкременты
+//     полей `users.*`/`planets.*`. В nova зашиты так же (см. effects.go),
+//     но дельта суммируется при чтении (`ActiveBattleModifiers`,
+//     `applyChange` зовётся только при Activate/Deactivate), поэтому
+//     откат значений колонок не требуется. Для `factor_user` /
+//     `factor_planet` (которые применяются через `applyChange` и
+//     остаются в колонках до явного Deactivate) handler полагается на
+//     то, что биржевая операция ставит артефакт в `held` ДО полёта.
+//     Если в проде поймаем `active`-артефакт в delivery — добавим
+//     явный revert-вызов (отдельный план).
+//
+//   - **Идемпотентность** — артефакт уже принадлежит e.UserID и e.PlanetID:
+//     skip (no-op); state уже не active: skip revert. Флот в state ≠
+//     'outbound' (returning/done): skip всё (как и ArriveHandler в
+//     fleet/events.go:52).
+//
+//   - **Per-universe (R10)** — соблюдается через FK artefacts_user.user_id
+//     → users.id (universe-bound) и e.UserID/e.PlanetID, которые
+//     гарантированно из той же вселенной (event создан в её контексте).
+//     Дополнительно проверяем, что user_id артефакта-источника из той же
+//     вселенной что и e.UserID — защита от рассинхрона на стыке с биржей
+//     (план 68): если поломается — лучше падать с ошибкой, чем перенести
+//     груз через границу вселенной.
+//
+//   - **Audit** — структурированный slog (R3) с полями event_id, fleet_id,
+//     planet_id_to, user_id_to, artefact_count, transferred (после
+//     handler'а — фактически переписанные ID).
+//
+//   - **Метрики (R8)** — автоматически на уровне worker'а
+//     (`oxsar_events_processed{kind="23"}`).
+//
+// Граничные случаи:
+//
+//   - payload.ArtefactIDs пустой → ошибка: пустая доставка не имеет смысла.
+//   - artefact не найден в БД (удалён до прибытия): пропускаем с warning,
+//     не падаем — биржевой код мог уже расформировать лот.
+//   - artefact принадлежит уже e.UserID + e.PlanetID: идемпотентный skip.
+//   - флот не найден: возвращаем nil (как ArriveHandler).
+func HandleDeliveryArtefacts(ctx context.Context, tx pgx.Tx, e Event) error {
+	var pl DeliveryArtefactsPayload
+	if err := json.Unmarshal(e.Payload, &pl); err != nil {
+		return fmt.Errorf("parse payload: %w", err)
+	}
+	if e.UserID == nil {
+		return fmt.Errorf("delivery_artefacts event without user_id (recipient)")
+	}
+	if e.PlanetID == nil {
+		return fmt.Errorf("delivery_artefacts event without planet_id (destination)")
+	}
+	if pl.FleetID == "" {
+		return fmt.Errorf("delivery_artefacts payload missing fleet_id")
+	}
+	if len(pl.ArtefactIDs) == 0 {
+		return fmt.Errorf("delivery_artefacts payload has empty artefact_ids")
+	}
+
+	// Шаг 1: проверка состояния флота. Зеркалит ArriveHandler
+	// (fleet/events.go:41-54): только outbound доставляется, остальное —
+	// идемпотентный no-op.
+	var fleetState string
+	err := tx.QueryRow(ctx,
+		`SELECT state FROM fleets WHERE id=$1 FOR UPDATE`,
+		pl.FleetID,
+	).Scan(&fleetState)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Флот удалён — груз уже доставлен ранее или отозван. Не падаем.
+			slog.InfoContext(ctx, "event_delivery_artefacts_skip_no_fleet",
+				slog.String("event_id", e.ID),
+				slog.String("fleet_id", pl.FleetID))
+			return nil
+		}
+		return fmt.Errorf("select fleet: %w", err)
+	}
+	if fleetState != "outbound" {
+		slog.InfoContext(ctx, "event_delivery_artefacts_skip_fleet_state",
+			slog.String("event_id", e.ID),
+			slog.String("fleet_id", pl.FleetID),
+			slog.String("state", fleetState))
+		return nil
+	}
+
+	// Шаг 2: для каждого артефакта — переписать владельца. Идемпотентность
+	// через сравнение текущих user_id/planet_id с целевыми (зеркалит
+	// idempotency-паттерн demolish handler'а).
+	transferred := make([]string, 0, len(pl.ArtefactIDs))
+	for _, artID := range pl.ArtefactIDs {
+		var (
+			curUser   string
+			curPlanet *string
+			curState  string
+		)
+		err := tx.QueryRow(ctx, `
+			SELECT user_id, planet_id, state
+			FROM artefacts_user WHERE id=$1 FOR UPDATE
+		`, artID).Scan(&curUser, &curPlanet, &curState)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				// Артефакт удалён до прибытия — не падаем (биржа могла
+				// расформировать лот, см. exchange ttl план 68).
+				slog.WarnContext(ctx, "event_delivery_artefacts_skip_no_artefact",
+					slog.String("event_id", e.ID),
+					slog.String("artefact_id", artID))
+				continue
+			}
+			return fmt.Errorf("select artefact %s: %w", artID, err)
+		}
+
+		// Per-universe (R10): артефакт-источник и получатель должны быть
+		// в одной вселенной. Защита от багов биржи плана 68. Сравнение
+		// через JOIN users.universe_id.
+		var sameUniverse bool
+		if err := tx.QueryRow(ctx, `
+			SELECT (
+				SELECT universe_id FROM users WHERE id=$1
+			) = (
+				SELECT universe_id FROM users WHERE id=$2
+			)
+		`, curUser, *e.UserID).Scan(&sameUniverse); err != nil {
+			return fmt.Errorf("check universe parity for artefact %s: %w", artID, err)
+		}
+		if !sameUniverse {
+			return fmt.Errorf("delivery_artefacts: artefact %s sender %s and recipient %s in different universes",
+				artID, curUser, *e.UserID)
+		}
+
+		// Идемпотентный skip: уже у получателя.
+		var planetMatches bool
+		if curPlanet != nil && *curPlanet == *e.PlanetID {
+			planetMatches = true
+		}
+		if curUser == *e.UserID && planetMatches && curState != StateActiveArtefact {
+			slog.InfoContext(ctx, "event_delivery_artefacts_skip_idempotent",
+				slog.String("event_id", e.ID),
+				slog.String("artefact_id", artID))
+			continue
+		}
+
+		// Переписываем владельца + сбрасываем active → held (см. doc-комментарий
+		// о упрощении: revert эффектов лежит на пересборке effect-стека).
+		if _, err := tx.Exec(ctx, `
+			UPDATE artefacts_user
+			SET user_id   = $1,
+			    planet_id = $2,
+			    state     = CASE WHEN state = 'active' THEN 'held'::artefact_state ELSE state END,
+			    activated_at = CASE WHEN state = 'active' THEN NULL ELSE activated_at END,
+			    expire_at    = CASE WHEN state = 'active' THEN NULL ELSE expire_at END
+			WHERE id = $3
+		`, *e.UserID, *e.PlanetID, artID); err != nil {
+			return fmt.Errorf("transfer artefact %s: %w", artID, err)
+		}
+		transferred = append(transferred, artID)
+	}
+
+	// Шаг 3: флот → returning (зеркалит ArriveHandler).
+	if _, err := tx.Exec(ctx,
+		`UPDATE fleets SET state='returning' WHERE id=$1`, pl.FleetID); err != nil {
+		return fmt.Errorf("update fleet returning: %w", err)
+	}
+
+	slog.InfoContext(ctx, "event_delivery_artefacts_applied",
+		slog.String("event_id", e.ID),
+		slog.String("fleet_id", pl.FleetID),
+		slog.String("planet_id_to", *e.PlanetID),
+		slog.String("user_id_to", *e.UserID),
+		slog.Int("artefact_count", len(pl.ArtefactIDs)),
+		slog.Int("transferred_count", len(transferred)))
+	return nil
+}
+
+// StateActiveArtefact — копия `artefact.StateActive`. Дублируем константу,
+// чтобы пакет event не зависел от пакета artefact (избегаем циклов:
+// artefact уже импортирует event для KindArtefactExpire/Delay).
+const StateActiveArtefact = "active"
+
 // HandleDemolishConstruction понижает уровень здания на планете до
 // TargetLevel (обычно curLevel-1, допускается 0 = полное удаление).
 // Зеркалит HandleBuildConstruction.

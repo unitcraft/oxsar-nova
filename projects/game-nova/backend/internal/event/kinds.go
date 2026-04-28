@@ -33,6 +33,7 @@ const (
 	KindReturn                     Kind = 20
 	KindDeliveryUnits              Kind = 21
 	KindDeliveryResources          Kind = 22
+	KindDeliveryArtefacts          Kind = 23 // план 65 Ф.2 (D-035): доставка артефактов флотом — груз — записи artefacts_user, не ресурсы
 	KindAttackDestroyMoon          Kind = 25 // план 20 Ф.6: атака с целью уничтожить луну
 	KindAttackAllianceDestroyMoon  Kind = 27 // план 20 Ф.6: ACS-вариант
 	KindStargateTransport          Kind = 28
