@@ -227,9 +227,12 @@ endpoint'ов. По R15 (без MVP-сокращений / mock'ов «как д
 
   Universe-aware расширение catalog-endpoint (через `?universe=origin`
   query-param или per-user JWT-routing к `internal/origin/economy/`) —
-  отдельная архитектурная задача после плана 74. Это **не упрощение**
-  текущей реализации (catalog данные **полные**, real numbers, не
-  mock), а сознательно отложенное расширение области применения.
+  отдельная архитектурная задача после плана 74. Создан черновик
+  [план 83 «Universe-aware catalog-endpoints»](83-catalog-endpoints-universe-aware.md)
+  — триггер запуска: после плана 74 либо при жалобах от origin-
+  тестеров. Это **не упрощение** текущей реализации (catalog данные
+  **полные**, real numbers, не mock), а сознательно отложенное
+  расширение области применения.
 
   Это **не R15-нарушение**: catalog отдаёт реальные данные, frontend
   получает реальные числа. Universe-aware — это про **routing**,
