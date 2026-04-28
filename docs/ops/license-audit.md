@@ -63,7 +63,7 @@ BSD-2-Clause и ISC. `go-licenses check` возвращает exit 0 для вс
 
 | Проект                            | Production-зависимостей | MIT | Unlicense |
 |-----------------------------------|------------------------:|----:|----------:|
-| `projects/game-nova/frontend`     | 22                      | 21  | 1 (`isbot`)|
+| `projects/game-nova/frontends/nova`     | 22                      | 21  | 1 (`isbot`)|
 | `projects/portal/frontend`        | 0                       | 0   | 0         |
 
 `projects/portal/frontend` на момент аудита не имеет внешних

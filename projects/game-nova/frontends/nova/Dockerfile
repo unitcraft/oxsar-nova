@@ -12,15 +12,15 @@ WORKDIR /app
 
 # Кешируем слой с npm install: package.json/package-lock.json меняется
 # редко, исходники — часто.
-COPY projects/game-nova/frontend/package.json ./
+COPY projects/game-nova/frontends/nova/package.json ./
 # package-lock.json может отсутствовать на первой сборке — не падаем.
-COPY projects/game-nova/frontend/package-lock.json* ./
+COPY projects/game-nova/frontends/nova/package-lock.json* ./
 RUN npm install --no-audit --no-fund
 
 # Копируем исходники; в dev compose-окружении эта директория
 # перекроется bind-mount'ом из хоста — код редактируется без ребилда
 # образа.
-COPY projects/game-nova/frontend ./
+COPY projects/game-nova/frontends/nova ./
 
 EXPOSE 5173
 

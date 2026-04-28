@@ -111,4 +111,4 @@ pixel-perfect не «уплывает» при правках UI.
 - origin-ui-replication.md — список 50 экранов для baseline.
 - docs/legacy/game-origin-access.md — как поднять game-origin-php.
 - Существующая Playwright-инфраструктура nova
-  (`projects/game-nova/frontend/e2e/`) — паттерны.
+  (`projects/game-nova/frontends/nova/e2e/`) — паттерны.

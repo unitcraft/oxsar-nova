@@ -27,11 +27,13 @@
 ```markdown
 | Slot | План / Задача | Файлы (паттерны) | Старт | Ожидаемый коммит |
 |---|---|---|---|---|
-| A | План 65 Ф.6 KindTeleportPlanet | internal/event/, internal/billing/client/, openapi.yaml | 2026-04-29 10:30 | feat(event-loop): KindTeleportPlanet |
+| 1 | План 65 Ф.6 KindTeleportPlanet | internal/event/, internal/billing/client/, openapi.yaml | 2026-04-29 10:30 | feat(event-loop): KindTeleportPlanet |
 ```
 
-Slot — `A`/`B`/`C`/`D`/`E` — короткое имя, чтобы при координации можно
-было сказать «слот A конфликтует с B».
+Slot — натуральное число от `1` без ведущих нулей (`1`, `2`, …).
+Каждая новая сессия берёт следующий свободный номер. Не переиспользуй
+номера завершённых сессий — нумерация сквозная, чтобы при координации
+было однозначно («слот 3 конфликтует с 5»).
 
 ### При finish сессии
 
@@ -48,7 +50,7 @@ Slot — `A`/`B`/`C`/`D`/`E` — короткое имя, чтобы при ко
 
 | Slot | План / Задача | Файлы (паттерны) | Старт | Ожидаемый коммит |
 |---|---|---|---|---|
-| _(пусто)_ | | | | |
+| 1 | План 78 frontends + legacy-PHP rename | projects/, Makefile, CLAUDE.md, .gitignore, .github/, deploy/, docs/ | 2026-04-28 | refactor(repo): план 78 |
 
 ## Примеры пересечений (история, для обучения)
 

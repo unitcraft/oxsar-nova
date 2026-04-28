@@ -218,7 +218,7 @@
 
 ---
 
-## Frontend (`projects/game-nova/frontend/src/`)
+## Frontend (`projects/game-nova/frontends/nova/src/`)
 
 ### Features (41 вертикальный срез)
 
@@ -505,7 +505,7 @@ type Mission struct {
 - `projects/game-nova/backend/internal/` — все доменные пакеты
 - `projects/game-nova/migrations/` — 71 миграция
 - `projects/game-nova/api/openapi.yaml` — контракт REST API
-- `projects/game-nova/frontend/src/features/` — 41 frontend-feature
+- `projects/game-nova/frontends/nova/src/features/` — 41 frontend-feature
 - [docs/balance/analysis.md](../../balance/analysis.md) — анализ
   балансных формул nova
 - [docs/status.md](../../status.md) — матрица готовности модулей

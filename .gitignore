@@ -15,7 +15,7 @@ projects/*/backend/testseed
 node_modules/
 .vite/
 .pnpm-store/
-projects/game-nova/frontend/dist/
+projects/game-nova/frontends/nova/dist/
 projects/portal/frontend/dist/
 
 # Editor
@@ -38,8 +38,8 @@ projects/portal/frontend/dist/
 /tmp/
 
 # Playwright e2e output
-projects/game-nova/frontend/playwright-report/
-projects/game-nova/frontend/test-results/
+projects/game-nova/frontends/nova/playwright-report/
+projects/game-nova/frontends/nova/test-results/
 
 # Одноразовый выхлоп cmd/tools/import-datasheets
 projects/game-nova/configs/*_generated.yml

@@ -25,7 +25,7 @@ nova-frontend, в современном дизайне.
 
 ## Что делаем
 
-3 экрана в `projects/game-nova/frontend/src/features/exchange/`:
+3 экрана в `projects/game-nova/frontends/nova/src/features/exchange/`:
 
 - **Список лотов** с фильтрами (тип артефакта, диапазон цен,
   владелец).

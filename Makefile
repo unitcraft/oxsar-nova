@@ -3,7 +3,7 @@ SHELL := /bin/bash
 
 ROOT := $(shell pwd)
 BACKEND := $(ROOT)/projects/game-nova/backend
-FRONTEND := $(ROOT)/projects/game-nova/frontend
+FRONTEND := $(ROOT)/projects/game-nova/frontends/nova
 PORTAL_FRONTEND := $(ROOT)/projects/portal/frontend
 MIGRATIONS := $(ROOT)/projects/game-nova/migrations
 
