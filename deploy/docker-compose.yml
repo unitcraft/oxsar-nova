@@ -249,36 +249,36 @@ services:
       - ../projects/game-nova/frontends/nova:/app
       - frontend-node-modules:/app/node_modules
 
-  # ── Auth stack ───────────────────────────────────────────────────────────
+  # ── Identity stack ───────────────────────────────────────────────────────
   # План 36 Ф.11. RSA-ключ генерируется identity-service-ом сам при первом старте
   # и кладётся в volume auth-rsa-key (pem-файл). На проде он подкладывается
   # как docker secret — см. docker-compose.multiverse.yml.
 
-  auth-db:
+  identity-db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: authsvc
-      POSTGRES_PASSWORD: authsvc
-      POSTGRES_DB: authsvc
+      POSTGRES_USER: identitysvc
+      POSTGRES_PASSWORD: identitysvc
+      POSTGRES_DB: identitysvc
     ports: ["5435:5432"]
     volumes:
-      - auth-db-data:/var/lib/postgresql/data
+      - identity-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U authsvc"]
+      test: ["CMD-SHELL", "pg_isready -U identitysvc"]
       interval: 5s
       timeout: 3s
       retries: 10
 
-  auth-migrate:
+  identity-migrate:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.migrate
     depends_on:
-      auth-db:
+      identity-db:
         condition: service_healthy
     environment:
-      DB_URL: postgres://authsvc:authsvc@auth-db:5432/authsvc?sslmode=disable
-      MIGRATE_DIR: /migrations/auth
+      DB_URL: postgres://identitysvc:identitysvc@identity-db:5432/identitysvc?sslmode=disable
+      MIGRATE_DIR: /migrations/identity
     restart: "no"
 
   identity-service:
@@ -286,15 +286,15 @@ services:
       context: ..
       dockerfile: projects/identity/backend/Dockerfile
     depends_on:
-      auth-db:
+      identity-db:
         condition: service_healthy
       redis:
         condition: service_healthy
-      auth-migrate:
+      identity-migrate:
         condition: service_completed_successfully
     environment:
       IDENTITY_ADDR: ":9000"
-      IDENTITY_DB_URL: postgres://authsvc:authsvc@auth-db:5432/authsvc?sslmode=disable
+      IDENTITY_DB_URL: postgres://identitysvc:identitysvc@identity-db:5432/identitysvc?sslmode=disable
       REDIS_URL: redis://redis:6379/2
       # В dev RSA-ключ генерируется при первом старте и сохраняется в volume.
       # AUTH_KEY_AUTOGEN=1 включает auto-generate (только для dev/test).
@@ -468,7 +468,7 @@ volumes:
   pg-data:
   redis-data:
   portal-db-data:
-  auth-db-data:
+  identity-db-data:
   auth-rsa-key:
   billing-db-data:
   uni02-db-data:
