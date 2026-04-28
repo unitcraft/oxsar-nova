@@ -7,18 +7,10 @@
 - Ф.3 ✅ KindAttackDestroyBuilding (2026-04-28, см. Ф.3 ниже).
 - Ф.4 ✅ KindAttackAllianceDestroyBuilding ACS (2026-04-28, см. Ф.4 ниже).
 - Ф.5 ✅ KindAllianceAttackAdditional no-op referrer (2026-04-28, см. Ф.5 ниже).
-- Ф.6 KindTeleportPlanet — TODO (отдельная сессия). **Препятствия**:
-  (а) в `projects/game-nova/backend/` нет HTTP-клиента к billing-сервису
-  (oxsar credits) — есть только локальный `users.credits`, который не
-  годится для премиум-фичи;
-  (б) Idempotency-Key middleware есть в `projects/billing/`, но не
-  подключён к API-роутеру game-nova ([cmd/server/main.go]
-  paths /api/planets/...);
-  (в) телепорт требует REST + OpenAPI с нуля + cooldown handler +
-  artefact-проверки (ARTEFACT_PLANET_TELEPORTER в legacy) — связка
-  ~600-800 строк в 3 новых подсистемах.
-  Запланировано: ввести billing-client в game-nova → подключить idempotency
-  middleware → POST /api/planets/{id}/teleport + KindTeleportPlanet handler.
+- Ф.6 ✅ KindTeleportPlanet (2026-04-28, см. Ф.6 ниже). Все три
+  препятствия плана разблокированы планом 77 (billing-client +
+  idempotency-middleware) — fallthrough реализован за одну сессию.
+  **План 65 ЗАКРЫТ ПОЛНОСТЬЮ.**
 - Kind'ы EXCHANGE_* (Expire/Ban) **перенесены в план 68** — биржа артефактов
   реализует их в рамках `internal/exchange/`. Обоснование (2026-04-28):
   stub-handler с `ErrSkip` нарушал бы R15 (без TODO/MVP-сокращений), а
@@ -260,12 +252,93 @@ KindAllianceAttackAdditional концептуально излишен — но 
   no-op, random skip excluded units, random pick eligible only,
   idempotent explicit).
 
-### Ф.6. KindTeleportPlanet — отдельная сессия
+### Ф.6. KindTeleportPlanet ✅ (2026-04-28)
 
-Премиум-фича через оксары. Зависит от плана 69 (миграция
-`users.last_planet_teleport_at` — есть) и интеграции с billing-сервисом.
-POST /api/planets/{id}/teleport с Idempotency-Key. ~500+ строк (билинг
-+ REST + OpenAPI + cooldown), заслуживает изоляции в отдельной сессии.
+Премиум-фича через оксары — платный телепорт планеты на новые
+координаты. Закрыта в одну сессию после того, как план 77 разблокировал
+все три препятствия (billing-client, idempotency-middleware,
+схема для премиум-операций).
+
+**Что сделано**:
+
+- `KindTeleportPlanet Kind = 31` в [kinds.go](../../projects/game-nova/backend/internal/event/kinds.go)
+  (legacy origin EVENT_TELEPORT_PLANET=39, в nova берём свободный 31
+  для группировки рядом с stargate=28/32).
+- `TeleportPlanetPayload{TargetGalaxy, TargetSystem, TargetPosition,
+  CostOxsars, IdempotencyKey}` — typed payload (R13).
+- [event/teleport_handler.go](../../projects/game-nova/backend/internal/event/teleport_handler.go):
+  `HandleTeleportPlanet(refunder)` — handler с DI-callback для refund'а
+  (через worker замыкается на `billingclient.Refund`). Семантика:
+  SELECT planet FOR UPDATE → проверка ownership → проверка занятости
+  целевого slot'а → UPDATE planets coords + UPDATE users.last_planet_teleport_at,
+  при отказе — Refund + audit-slog. Idempotency: повторный запуск с
+  совпадающими целевыми координатами = no-op skip.
+- [planet/teleport_handler.go](../../projects/game-nova/backend/internal/planet/teleport_handler.go):
+  `TeleportHandler` — POST /api/planets/{id}/teleport. Pre-check в
+  одной tx (ownership, не-та-же-позиция, cooldown,
+  occupied slot) → billing.Spend → INSERT events. На отказе INSERT'а
+  делается best-effort Refund.
+- Координатные диапазоны (`coordGalaxyMin/Max`, ...) хардкодим в
+  пакете planet — зеркалит CHECK `planets.coords_range` из миграции
+  0002_planets_galaxy.sql (galaxy 1..16, system 1..999, position 1..15).
+- OpenAPI: новый POST endpoint в [openapi.yaml](../../projects/game-nova/api/openapi.yaml)
+  с обязательным заголовком Idempotency-Key, кодами ответов 200/400/401/402/404/409/503.
+- Регистрация Kind в [cmd/worker/main.go](../../projects/game-nova/backend/cmd/worker/main.go)
+  с замыканием на `billingclient.Refund`.
+- Регистрация route в [cmd/server/main.go](../../projects/game-nova/backend/cmd/server/main.go)
+  с подключением `idempotency.Middleware` (тот же, что у alien-buyout
+  плана 66 Ф.5; общий Redis-namespace).
+- Метрики (R8): [pkg/metrics/teleport.go](../../projects/game-nova/backend/pkg/metrics/teleport.go) —
+  `oxsar_planet_teleport_total{status}` counter + `oxsar_planet_teleport_duration_seconds` histogram.
+  Lazy-регистрация (sync.Once) — независимо от metrics.go.
+- Конфиг (R0): три поля в `config.GameConfig` (TeleportCostOxsars=50000,
+  TeleportCooldownHours=24, TeleportDurationMinutes=0) — читаются из ENV.
+  В [configs/balance/origin.yaml](../../projects/game-nova/configs/balance/origin.yaml) — справочный
+  комментарий с дефолтами; per-universe override отложен (см.
+  [simplifications.md](../simplifications.md) запись «origin.yaml override teleport_* не введён»).
+- i18n (R12): новая секция `teleport.*` в
+  [ru.yml](../../projects/game-nova/configs/i18n/ru.yml) и
+  [en.yml](../../projects/game-nova/configs/i18n/en.yml) — 10 новых ключей,
+  переиспользования нет (нужный домен «teleport» отсутствовал).
+- Тесты:
+  - [event/teleport_handler_test.go](../../projects/game-nova/backend/internal/event/teleport_handler_test.go) —
+    pure round-trip JSON, property-based (rapid, R4) детерминизм skip-decision,
+    отказы по UserID/PlanetID/JSON, contract-checks Refunder типа.
+  - [planet/teleport_handler_test.go](../../projects/game-nova/backend/internal/planet/teleport_handler_test.go) —
+    HTTP-handler validation paths без БД: 401, 400 missing IK, 400 invalid JSON,
+    400 invalid coords (7 кейсов), 400 missing planet_id.
+  - Integration-тесты с реальной БД не написаны — обоснование в
+    [simplifications.md](../simplifications.md) (рассинхрон test-fixture-ов
+    плана 65 с актуальной схемой nova).
+
+**Сверка с legacy** (EVENT_TELEPORT_PLANET в oxsar2):
+
+- `EventHandler::teleportPlanet` (game/EventHandler.class.php:2061) —
+  trivial removeEvent + return. Реальная работа в `ExtEventHandler::teleportPlanet`
+  (ext/ExtEventHandler.class.php:630): clamp координат, проверка наличия
+  ARTEFACT_PLANET_TELEPORTER, occupied slot, UPDATE galaxy.galaxy/system/
+  position, активация артефакта, UPDATE user.planet_teleport_time.
+  В nova телепорт упрощён: артефакт-гейтинг убран (см. simplifications.md),
+  координаты валидируются на HTTP-уровне (400 вместо silent clamp), update
+  координат планеты — в event-handler'е после успешного Spend.
+- `PLANET_TELEPORT_MIN_INTERVAL_TIME = 24h` (consts.php:622) → ровно
+  совпадает с TeleportCooldownHours=24 (default).
+
+**Семантика handler'а** (порт от teleportPlanet, упрощённый):
+
+1. SELECT planet (FOR UPDATE) — ownership + текущие координаты + is_moon.
+2. Если planet удалена/не наша → refund + return nil (no-op-event).
+3. Если новые координаты совпадают с текущими → idempotent skip
+   (handler уже отработал ранее).
+4. SELECT target slot (galaxy, system, position, is_moon, destroyed_at IS NULL).
+   Если занят → refund + warn-slog + return nil.
+5. UPDATE planets SET galaxy=?, system=?, position=? WHERE id=?.
+6. UPDATE users SET last_planet_teleport_at = now() WHERE id=?.
+7. info-slog с from/to координатами и cost'ом.
+
+**Не закрытый D-NNN**: D-032 (план 65 §«Что делаем» строка
+KindTeleportPlanet, U-009 в roadmap-report.md) — закрывается этим
+коммитом.
 
 ### Ф.7. Финализация (после Ф.2-Ф.6)
 

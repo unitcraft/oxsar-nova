@@ -48,7 +48,7 @@ Slot — `A`/`B`/`C`/`D`/`E` — короткое имя, чтобы при ко
 
 | Slot | План / Задача | Файлы (паттерны) | Старт | Ожидаемый коммит |
 |---|---|---|---|---|
-| A | План 65 Ф.6 KindTeleportPlanet | projects/game-nova/backend/internal/event/{teleport_handler.go,teleport_handler_test.go,payload_teleport.go,kinds.go}, projects/game-nova/backend/internal/planet/{teleport_handler.go,teleport_handler_test.go}, projects/game-nova/api/openapi.yaml (только секция teleport), projects/game-nova/backend/cmd/server/main.go (только новый route), projects/game-nova/backend/cmd/worker/main.go (только KindTeleportPlanet), projects/game-nova/configs/i18n/{ru,en}.yml (только teleport.*), projects/game-nova/configs/balance/origin.yaml (только teleport_*), projects/game-nova/backend/pkg/metrics/teleport.go (новый файл), projects/game-nova/backend/internal/config/config.go (только Teleport* поля GameConfig), docs/plans/65-remaster-event-loop-origin-events.md, docs/simplifications.md, docs/project-creation.txt, docs/active-sessions.md | 2026-04-28 | feat(event-loop): KindTeleportPlanet (план 65 Ф.6) |
+| _(пусто)_ | | | | |
 
 ## Примеры пересечений (история, для обучения)
 

@@ -339,6 +339,16 @@ func run() error {
 	// внутрипакетный, как у HoldingAIHandler в Ф.4.
 	alienBuyoutH := originalien.NewBuyoutHandler(db, billingC, originalien.DefaultConfig())
 
+	// План 65 Ф.6: телепорт планеты (премиум, оплата оксарами).
+	// Idempotency-Key обязателен (R9). Параметры из cfg.Game.Teleport*;
+	// per-universe override Ф.6 не вводит — modern-default == origin-default
+	// (24h cooldown зеркалит legacy PLANET_TELEPORT_MIN_INTERVAL_TIME).
+	planetTeleportH := planet.NewTeleportHandler(db, billingC, planet.TeleportConfig{
+		CostOxsars:      cfg.Game.TeleportCostOxsars,
+		CooldownHours:   cfg.Game.TeleportCooldownHours,
+		DurationMinutes: cfg.Game.TeleportDurationMinutes,
+	})
+
 	// План 32 Ф.5: chat.Hub использует Redis pub/sub для multi-instance
 	// fan-out'а. При rdb=nil деградирует до single-instance broadcast.
 	chatHub := chat.NewHubWithRedis(ctx, rdb, log)
@@ -486,6 +496,11 @@ func run() error {
 		// Idempotency-Key обязателен (R9), middleware дедуплицирует
 		// повторы по ключу + body-hash (план 77 Ф.2).
 		pr.With(idemMW.Wrap).Post("/alien-missions/{mission_id}/buyout", alienBuyoutH.Buyout)
+
+		// План 65 Ф.6: телепорт планеты на новые координаты (премиум,
+		// оксары). Idempotency-Key обязателен; общий dedup-namespace по
+		// ключу + body-hash, как у alien-buyout.
+		pr.With(idemMW.Wrap).Post("/planets/{id}/teleport", planetTeleportH.Teleport)
 
 		pr.Get("/galaxy/{g}/{s}", galaxyH.System)
 

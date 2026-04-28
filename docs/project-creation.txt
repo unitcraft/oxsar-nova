@@ -12439,3 +12439,86 @@ property + coverage) + 22 KB golden_alien_ai.json.
   ортогональны. Билд после обоих наборов правок зелёный.
 
 **План 66 ЗАКРЫТ полностью** (Ф.1-Ф.7).
+
+═══════════════════════════════════════════════════════════════════
+Итерация 65 (Ф.6) — KindTeleportPlanet (премиум-телепорт планеты)
+═══════════════════════════════════════════════════════════════════
+
+Дата: 2026-04-28
+Коммит: feat(event-loop): KindTeleportPlanet (план 65 Ф.6)
+План: docs/plans/65-remaster-event-loop-origin-events.md
+
+**Цель**: реализовать KindTeleportPlanet — премиум-фичу платного
+телепорта планеты на новые координаты, с оплатой через
+billing-сервис (план 77). Закрыть план 65 полностью.
+
+**Что сделано**:
+
+- Kind=31 в `internal/event/kinds.go`; payload
+  `TeleportPlanetPayload{TargetGalaxy, TargetSystem, TargetPosition,
+  CostOxsars, IdempotencyKey}` (R13).
+- Event-handler `internal/event/teleport_handler.go` —
+  `HandleTeleportPlanet(refunder)`. SELECT planet FOR UPDATE,
+  проверка ownership/координат/занятости целевого slot'а, UPDATE
+  planets coords + UPDATE users.last_planet_teleport_at, при
+  отказе — Refund через DI-callback + audit-slog.
+- HTTP-handler `internal/planet/teleport_handler.go` — POST
+  /api/planets/{id}/teleport. Pre-check (ownership,
+  не-та-же-позиция, cooldown, occupied slot) → billing.Spend →
+  INSERT events. На отказе INSERT'а — best-effort Refund.
+- OpenAPI: новый POST endpoint с обязательным заголовком
+  Idempotency-Key, кодами ответов 200/400/401/402/404/409/503.
+- Регистрация Kind в worker/main.go с замыканием на
+  `billingclient.Refund`. Регистрация route в server/main.go с
+  подключением `idempotency.Middleware` (общий Redis-namespace с
+  alien-buyout плана 66 Ф.5).
+- Метрики (R8): `pkg/metrics/teleport.go` —
+  `oxsar_planet_teleport_total{status}` counter +
+  `oxsar_planet_teleport_duration_seconds` histogram. Lazy-регистрация
+  (sync.Once).
+- Конфиг (R0): три поля в `config.GameConfig`
+  (TeleportCostOxsars=50000, TeleportCooldownHours=24,
+  TeleportDurationMinutes=0) — из ENV. В origin.yaml — справочный
+  комментарий с дефолтами.
+- i18n (R12): новая секция `teleport.*` в ru.yml/en.yml — 10 новых
+  ключей, переиспользования нет.
+- Тесты:
+  - `event/teleport_handler_test.go` — pure round-trip + property-based
+    (rapid R4) + validation-paths.
+  - `planet/teleport_handler_test.go` — HTTP-handler pre-validation
+    paths без БД (7 кейсов invalid coords + 401/400 paths).
+  - Integration-тесты с реальной БД не написаны (обоснование в
+    simplifications.md — рассинхрон test-fixture-ов плана 65
+    с актуальной схемой nova).
+
+**Сверка с legacy** (EVENT_TELEPORT_PLANET в oxsar2):
+- В legacy real-логика в `ExtEventHandler::teleportPlanet` —
+  артефакт `ARTEFACT_PLANET_TELEPORTER`, clamp координат, occupied
+  slot check, UPDATE galaxy. В nova упрощено: артефакт-гейтинг
+  убран (премиум через оксары), координаты валидируются с 400
+  вместо silent clamp.
+- `PLANET_TELEPORT_MIN_INTERVAL_TIME = 24h` (consts.php:622) →
+  точное совпадение с TeleportCooldownHours=24 default.
+
+**Архитектурные решения** (зафиксированы в simplifications.md):
+- Артефактный гейтинг (ARTEFACT_PLANET_TELEPORTER) не реализован —
+  только оплата оксарами (явное решение пользователя 2026-04-28).
+- Полный 2PC Postgres↔billing не реализован — best-effort Refund +
+  reconcile через метрики (зеркало решения 66 Ф.5).
+- Per-universe override teleport_* отложен — параметры из ENV,
+  modern-default == origin-default; расширение Globals при
+  первой нужде разделить баланс.
+- Координатные диапазоны хардкодим в пакете planet — зеркалит
+  CHECK `planets.coords_range` из миграции 0002.
+
+**Параллельные сессии**:
+- Slot G (план 66 Ф.5 alien-buyout) — пересекался по
+  `cmd/server/main.go` (соседний идемпотентный route), не было
+  файловых конфликтов: разные строки в одной секции `r.Route`.
+  Slot G также подключал idemMW первым — мы переиспользовали
+  его инициализацию.
+- Slot F (план 66 Ф.6+Ф.7 финализация) — пересекался только по
+  docs/active-sessions.md и docs/project-creation.txt. Append'ом.
+
+**План 65 ЗАКРЫТ полностью** (Ф.1-Ф.6, EXCHANGE_*-Kind'ы вынесены
+в план 68).

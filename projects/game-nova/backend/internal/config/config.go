@@ -66,6 +66,14 @@ type GameConfig struct {
 	BashingPeriod          int     // seconds, 0 = disabled
 	BashingMaxAttacks      int     // max attacks per BashingPeriod
 	ProtectionPeriod       int     // seconds new player is protected from attacks
+
+	// План 65 Ф.6: премиум-телепорт планеты на новые координаты, оплата
+	// оксарами через billing-service. Артефактный гейтинг легаси
+	// (ARTEFACT_PLANET_TELEPORTER) в nova не реализован — только оплата
+	// (см. docs/simplifications.md).
+	TeleportCostOxsars      int64 // TELEPORT_COST_OXSARS, default 50000
+	TeleportCooldownHours   int   // TELEPORT_COOLDOWN_HOURS, default 24 (legacy PLANET_TELEPORT_MIN_INTERVAL_TIME = 24h)
+	TeleportDurationMinutes int   // TELEPORT_DURATION_MINUTES, default 0 (мгновенно)
 }
 
 // BillingConfig — настройки исходящих вызовов к billing-service (план 77).
@@ -133,6 +141,9 @@ func Load() (Config, error) {
 			BashingPeriod:          envInt("BASHING_PERIOD", 18000),
 			BashingMaxAttacks:      envInt("BASHING_MAX_ATTACKS", 4),
 			ProtectionPeriod:       envInt("PROTECTION_PERIOD", 86400),
+			TeleportCostOxsars:      envInt64("TELEPORT_COST_OXSARS", 50000),
+			TeleportCooldownHours:   envInt("TELEPORT_COOLDOWN_HOURS", 24),
+			TeleportDurationMinutes: envInt("TELEPORT_DURATION_MINUTES", 0),
 			Points: PointsCoefficients{
 				Building: envFloat("POINTS_K_BUILDING", 0.00005),
 				Research: envFloat("POINTS_K_RESEARCH", 0.0005),
@@ -208,6 +219,15 @@ func envDuration(key string, def time.Duration) time.Duration {
 func envInt(key string, def int) int {
 	if v, ok := os.LookupEnv(key); ok && v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return def
+}
+
+func envInt64(key string, def int64) int64 {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 			return n
 		}
 	}
