@@ -50,7 +50,6 @@ Slot — натуральное число от `1` без ведущих нул
 
 | Slot | План / Задача | Файлы (паттерны) | Старт | Ожидаемый коммит |
 |---|---|---|---|---|
-| 2 | План 72 Ф.3 Spring 2 (10 alliance+ экранов origin) | projects/game-nova/frontends/origin/, docs/plans/72-remaster-origin-frontend-pixel-perfect.md, docs/active-sessions.md, docs/project-creation.txt, docs/simplifications.md | 2026-04-28 | feat(origin/frontend): Ф.3 Spring 2 ч.1 — 12 alliance экранов; ч.2 — resource+market+repair+battlestats+fleet-ops |
 
 ## Примеры пересечений (история, для обучения)
 

@@ -13117,3 +13117,87 @@ expires-опции, confirm-сообщения) + 1 в `global:`
 `npm run build` ✅ (ExchangeScreen-*.js 17.68 kB / gzip 5.28 kB).
 
 **Статус плана 76**: ✅ Готов (Ф.1-Ф.6).
+
+
+## Итерация 72 Ф.3 — Spring 2 (origin-фронт)
+
+**Дата**: 2026-04-28
+**Объём**: 17 экранов (12 alliance + 5 resource/market/repair/battlestats/fleet-ops),
+2 коммита.
+
+**Что сделано**:
+
+Ч.1 (коммит 48ef07cf19):
+- 11 React-компонентов покрывают S-008..S-019 alliance-блока
+  legacy-PHP (12 *.tpl шаблонов сгруппированы).
+- Все endpoint'ы плана 67 (alliance overview/list/create/join,
+  descriptions × 3, ranks с granular permissions, diplomacy 5 enum-
+  статусов, audit-log, transfer-leadership 2-step с email-кодом)
+  подключены без backend-расширений (R0).
+- Pixel-perfect HTML+CSS (ntable / center / idiv / button / true/false
+  спаны).
+- 18 vitest-юнитов: queries (sat URL-параметры), permissions
+  (hasPerm + relationStatusKey + 7 ключей), router contract,
+  diplomacy counterpart-вычисление.
+- I18n: 100% переиспользование nova-bundle (план 67 уже добавил
+  ~70 alliance-ключей, новых не заведено).
+- LeftMenu: пункты «Альянс», «Артефакты», «История боёв», «Ресурсы»,
+  «Ремонт», «Флот» переведены с anchor `#…` на роутерные ссылки.
+
+Ч.2 (коммит — следующий):
+- ResourceMarketScreen — pixel-perfect к `market.tpl`
+  (галактический обменник): курсы M/Si/H, расчёт ожидаемого
+  to_amount, POST /api/planets/{id}/market/exchange с idempotency.
+- MarketScreen — артефактный EXT_MODE рынок (legacy
+  `artefactmarket.tpl`): GET /api/artefact-market/offers + buy/cancel
+  с проверкой credit. P72.S2.H зафиксирован: DTO без названия артефакта.
+- RepairScreen — pixel-perfect каркас `repair.tpl`, пустой список
+  (P72.S2.G: backend nova не предоставляет repair-домен).
+- BattleStatsScreen — pixel-perfect фильтры `battlestats.tpl`,
+  highscore/me как proxy для общего ранга (P72.S2.G).
+- FleetOperationsScreen — реальный, GET /api/fleet + recall с
+  Idempotency-Key, MISSION_LABEL_KEY 8 кодов.
+- 9 новых тестов: rate (ResourceMarket формула), mission-label
+  (FleetOps маппинг). Всего 66 тестов проходят.
+
+**Архитектурные решения**:
+- Pure-функции (queries.ts, permissions.ts) выделены в отдельные
+  модули — vitest без jsdom не имеет localStorage, импорт api/client
+  ломает sub-tree. Фикс: тесты импортируют только pure-функции, без
+  api/auth.
+- Alliance member-view (`/alliance/me`) — отдельный экран, не нав-tab
+  внутри overview. Это ближе к legacy: каждый legacy-action имеет свой
+  URL `?go=Alliance&action=…`.
+- Granular permissions UI: проверки только `isOwner` (не-owner кнопки
+  скрыты); backend защитит 403. P72.S2.D зафиксирован.
+- Spring 2 ч.2 не требует новых i18n-ключей: все market/repair/
+  battlestats/fleet строки уже в nova-bundle (план 67 + ранее).
+
+**Simplifications**: P72.S2.A..H — 8 записей trade-off'ов:
+own-applications (нет endpoint'а), PATCH name/tag (нет PATCH в openapi),
+memberlist prefs, granular perms для не-owner'а, отсутствие RTL,
+pixel-perfect доводка до плана 73, repair/battlestats backend (G),
+artefact DTO без имени (H).
+
+**Файлы (ч.1)**:
+- Новые: `frontends/origin/src/api/alliance.ts` (~330 строк),
+  `frontends/origin/src/features/alliance/` (12 .tsx + 4 .ts +
+  4 .test.ts, ~2700 строк), 5 placeholder'ов для ч.2.
+- Изменены: query-keys.ts, types.ts, router.tsx, router.test.ts,
+  layout/LeftMenu.tsx, simplifications.md.
+
+**Файлы (ч.2)**:
+- Новые: `frontends/origin/src/api/market.ts` (~75 строк),
+  `frontends/origin/src/features/{resource-market, market, repair,
+  battlestats, fleet-operations}/*.tsx` (~700 строк),
+  rate.test.ts + mission-label.test.ts (~80 строк тестов).
+- Изменены: types.ts (MarketRates/ExchangeResult/ArtMarketOffer
+  align с openapi), simplifications.md, plans/72-*.md (шапка
+  Ф.3 ✅), active-sessions.md (удалена строка).
+
+**Тесты**: 66/66 ✅. typecheck ✅. build ✅ (146 modules, 97.86 kB
+gzip 24.55 kB).
+
+**Статус плана 72**: Ф.3 ✅ (Spring 2). Впереди: Ф.4 (Spring 3 —
+8 экранов: artefacts/info/techtree/records/...), Ф.5..Ф.6 (Spring
+4..5), Ф.7 i18n русский, Ф.8 TipTap чат, Ф.9 финал.

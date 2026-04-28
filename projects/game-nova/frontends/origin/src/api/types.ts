@@ -252,25 +252,30 @@ export interface AllianceTransferCodeIssued {
 export type ResourceKind = 'metal' | 'silicon' | 'hydrogen';
 
 export interface MarketRates {
-  global_rate: { metal: number; silicon: number; hydrogen: number };
+  metal: number;
+  silicon: number;
+  hydrogen: number;
   user_rate: number;
-  cooldown_until?: string | null;
 }
 
 export interface ExchangeResult {
-  delta: { metal: number; silicon: number; hydrogen: number };
+  from: ResourceKind;
+  to: ResourceKind;
+  from_amount: number;
+  to_amount: number;
   rate: number;
 }
 
 export interface ArtMarketOffer {
   id: string;
-  artefact_id: string;
-  artefact_name: string;
-  artefact_type: string;
   seller_id: string;
-  seller_name: string;
+  unit_id: number;
   price: number;
   created_at: string;
+}
+
+export interface ArtMarketCredit {
+  credit: number;
 }
 
 export interface BattleStatsTotals {

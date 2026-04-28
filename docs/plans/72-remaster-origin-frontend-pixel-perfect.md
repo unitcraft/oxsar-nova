@@ -4,7 +4,10 @@
 **Статус**: Ф.1 ✅ (Bootstrap, коммит 54fabbdf46, 2026-04-28),
 Ф.2 ✅ Spring 1 (7 главных экранов: Main, Constructions, Research,
 Shipyard, Galaxy, Mission, Empire — каркас pixel-perfect HTML+CSS,
-2026-04-28), Ф.3-Ф.9 — отдельными сессиями.
+2026-04-28), Ф.3 ✅ Spring 2 (12 alliance-экранов S-008..S-019 +
+5 экранов S-020..S-024: resource-market/market/repair/battlestats/
+fleet-operations — коммиты 48ef07cf19 + следующий, 2026-04-28),
+Ф.4-Ф.9 — отдельными сессиями.
 **Зависимости** (актуализировано 2026-04-28):
 - ✅ План 64 — закрыт (override-схема балансов).
 - ✅ План 65 — закрыт (Ф.1-Ф.6, включая teleport).
