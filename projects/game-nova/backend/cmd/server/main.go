@@ -29,6 +29,7 @@ import (
 	"oxsar/game-nova/internal/automsg"
 	"oxsar/game-nova/internal/balance"
 	"oxsar/game-nova/internal/battle"
+	billingclient "oxsar/game-nova/internal/billing/client"
 	"oxsar/game-nova/internal/battlestats"
 	"oxsar/game-nova/internal/building"
 	"oxsar/game-nova/internal/config"
@@ -65,6 +66,7 @@ import (
 	"oxsar/game-nova/internal/universe"
 	"oxsar/game-nova/internal/universeswitcher"
 	"oxsar/game-nova/internal/wiki"
+	"oxsar/game-nova/pkg/idempotency"
 	"oxsar/game-nova/pkg/metrics"
 )
 
@@ -316,6 +318,23 @@ func run() error {
 
 	adminH := admin.NewHandler(db)
 	alienH := alien.NewHandler(db)
+
+	// План 77: billing-client для списания/возврата оксаров. URL пустой →
+	// клиент возвращает ErrNotConfigured (премиум-фичи отключены, остальные
+	// endpoint'ы работают). В production BILLING_URL обязателен.
+	billingC := billingclient.New(cfg.Billing.URL)
+	if cfg.Billing.URL == "" {
+		log.WarnContext(ctx, "BILLING_URL not set; premium features (oxsar spend/refund) disabled")
+	} else {
+		log.InfoContext(ctx, "billing client configured", slog.String("url", cfg.Billing.URL))
+	}
+	_ = billingC // использование появится в планах 65 Ф.6 / 66 Ф.5.
+
+	// План 77 Ф.2: idempotency-middleware. Производственное TTL 24h.
+	// Пока не подключаем к конкретным роутам — это сделают планы, вводящие
+	// мутирующие платные endpoint'ы (65 Ф.6 KindTeleportPlanet, 66 Ф.5).
+	idemMW := idempotency.NewMiddleware(rdb, 0)
+	_ = idemMW
 
 	// План 32 Ф.5: chat.Hub использует Redis pub/sub для multi-instance
 	// fan-out'а. При rdb=nil деградирует до single-instance broadcast.
