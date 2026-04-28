@@ -1,0 +1,1210 @@
+{
+    "metal_mine_prod_metal": [
+        {
+            "level": 1,
+            "tech": {
+                "23": 0
+            },
+            "temp": 0,
+            "value": 33
+        },
+        {
+            "level": 1,
+            "tech": {
+                "23": 5
+            },
+            "temp": 0,
+            "value": 33
+        },
+        {
+            "level": 1,
+            "tech": {
+                "23": 12
+            },
+            "temp": 0,
+            "value": 33
+        },
+        {
+            "level": 5,
+            "tech": {
+                "23": 0
+            },
+            "temp": 0,
+            "value": 241
+        },
+        {
+            "level": 5,
+            "tech": {
+                "23": 5
+            },
+            "temp": 0,
+            "value": 244
+        },
+        {
+            "level": 5,
+            "tech": {
+                "23": 12
+            },
+            "temp": 0,
+            "value": 249
+        },
+        {
+            "level": 10,
+            "tech": {
+                "23": 0
+            },
+            "temp": 0,
+            "value": 778
+        },
+        {
+            "level": 10,
+            "tech": {
+                "23": 5
+            },
+            "temp": 0,
+            "value": 799
+        },
+        {
+            "level": 10,
+            "tech": {
+                "23": 12
+            },
+            "temp": 0,
+            "value": 830
+        },
+        {
+            "level": 20,
+            "tech": {
+                "23": 0
+            },
+            "temp": 0,
+            "value": 4036
+        },
+        {
+            "level": 20,
+            "tech": {
+                "23": 5
+            },
+            "temp": 0,
+            "value": 4262
+        },
+        {
+            "level": 20,
+            "tech": {
+                "23": 12
+            },
+            "temp": 0,
+            "value": 4599
+        },
+        {
+            "level": 30,
+            "tech": {
+                "23": 0
+            },
+            "temp": 0,
+            "value": 15704
+        },
+        {
+            "level": 30,
+            "tech": {
+                "23": 5
+            },
+            "temp": 0,
+            "value": 17041
+        },
+        {
+            "level": 30,
+            "tech": {
+                "23": 12
+            },
+            "temp": 0,
+            "value": 19099
+        }
+    ],
+    "silicon_lab_prod_silicon": [
+        {
+            "level": 1,
+            "tech": {
+                "24": 0
+            },
+            "temp": 0,
+            "value": 22
+        },
+        {
+            "level": 1,
+            "tech": {
+                "24": 5
+            },
+            "temp": 0,
+            "value": 22
+        },
+        {
+            "level": 1,
+            "tech": {
+                "24": 12
+            },
+            "temp": 0,
+            "value": 22
+        },
+        {
+            "level": 5,
+            "tech": {
+                "24": 0
+            },
+            "temp": 0,
+            "value": 161
+        },
+        {
+            "level": 5,
+            "tech": {
+                "24": 5
+            },
+            "temp": 0,
+            "value": 163
+        },
+        {
+            "level": 5,
+            "tech": {
+                "24": 12
+            },
+            "temp": 0,
+            "value": 167
+        },
+        {
+            "level": 10,
+            "tech": {
+                "24": 0
+            },
+            "temp": 0,
+            "value": 518
+        },
+        {
+            "level": 10,
+            "tech": {
+                "24": 5
+            },
+            "temp": 0,
+            "value": 535
+        },
+        {
+            "level": 10,
+            "tech": {
+                "24": 12
+            },
+            "temp": 0,
+            "value": 559
+        },
+        {
+            "level": 20,
+            "tech": {
+                "24": 0
+            },
+            "temp": 0,
+            "value": 2690
+        },
+        {
+            "level": 20,
+            "tech": {
+                "24": 5
+            },
+            "temp": 0,
+            "value": 2867
+        },
+        {
+            "level": 20,
+            "tech": {
+                "24": 12
+            },
+            "temp": 0,
+            "value": 3133
+        },
+        {
+            "level": 30,
+            "tech": {
+                "24": 0
+            },
+            "temp": 0,
+            "value": 10469
+        },
+        {
+            "level": 30,
+            "tech": {
+                "24": 5
+            },
+            "temp": 0,
+            "value": 11516
+        },
+        {
+            "level": 30,
+            "tech": {
+                "24": 12
+            },
+            "temp": 0,
+            "value": 13153
+        }
+    ],
+    "hydrogen_lab_prod_hydrogen": [
+        {
+            "level": 1,
+            "tech": {
+                "25": 0
+            },
+            "temp": -150,
+            "value": 17
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 5
+            },
+            "temp": -150,
+            "value": 17
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 12
+            },
+            "temp": -150,
+            "value": 17
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 0
+            },
+            "temp": -100,
+            "value": 16
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 5
+            },
+            "temp": -100,
+            "value": 16
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 12
+            },
+            "temp": -100,
+            "value": 16
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 0
+            },
+            "temp": -50,
+            "value": 15
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 5
+            },
+            "temp": -50,
+            "value": 15
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 12
+            },
+            "temp": -50,
+            "value": 15
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 0
+            },
+            "temp": 0,
+            "value": 14
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 5
+            },
+            "temp": 0,
+            "value": 14
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 12
+            },
+            "temp": 0,
+            "value": 14
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 0
+            },
+            "temp": 50,
+            "value": 12
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 5
+            },
+            "temp": 50,
+            "value": 13
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 12
+            },
+            "temp": 50,
+            "value": 13
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 0
+            },
+            "temp": 100,
+            "value": 11
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 5
+            },
+            "temp": 100,
+            "value": 11
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 12
+            },
+            "temp": 100,
+            "value": 11
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 0
+            },
+            "temp": 150,
+            "value": 10
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 5
+            },
+            "temp": 150,
+            "value": 10
+        },
+        {
+            "level": 1,
+            "tech": {
+                "25": 12
+            },
+            "temp": 150,
+            "value": 10
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 0
+            },
+            "temp": -150,
+            "value": 127
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 5
+            },
+            "temp": -150,
+            "value": 129
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 12
+            },
+            "temp": -150,
+            "value": 132
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 0
+            },
+            "temp": -100,
+            "value": 119
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 5
+            },
+            "temp": -100,
+            "value": 121
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 12
+            },
+            "temp": -100,
+            "value": 124
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 0
+            },
+            "temp": -50,
+            "value": 111
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 5
+            },
+            "temp": -50,
+            "value": 113
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 12
+            },
+            "temp": -50,
+            "value": 116
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 0
+            },
+            "temp": 0,
+            "value": 103
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 5
+            },
+            "temp": 0,
+            "value": 104
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 12
+            },
+            "temp": 0,
+            "value": 107
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 0
+            },
+            "temp": 50,
+            "value": 95
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 5
+            },
+            "temp": 50,
+            "value": 96
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 12
+            },
+            "temp": 50,
+            "value": 99
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 0
+            },
+            "temp": 100,
+            "value": 86
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 5
+            },
+            "temp": 100,
+            "value": 88
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 12
+            },
+            "temp": 100,
+            "value": 90
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 0
+            },
+            "temp": 150,
+            "value": 78
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 5
+            },
+            "temp": 150,
+            "value": 80
+        },
+        {
+            "level": 5,
+            "tech": {
+                "25": 12
+            },
+            "temp": 150,
+            "value": 82
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 0
+            },
+            "temp": -150,
+            "value": 409
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 5
+            },
+            "temp": -150,
+            "value": 424
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 12
+            },
+            "temp": -150,
+            "value": 447
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 0
+            },
+            "temp": -100,
+            "value": 383
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 5
+            },
+            "temp": -100,
+            "value": 398
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 12
+            },
+            "temp": -100,
+            "value": 418
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 0
+            },
+            "temp": -50,
+            "value": 357
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 5
+            },
+            "temp": -50,
+            "value": 371
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 12
+            },
+            "temp": -50,
+            "value": 390
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 0
+            },
+            "temp": 0,
+            "value": 331
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 5
+            },
+            "temp": 0,
+            "value": 344
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 12
+            },
+            "temp": 0,
+            "value": 362
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 0
+            },
+            "temp": 50,
+            "value": 306
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 5
+            },
+            "temp": 50,
+            "value": 317
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 12
+            },
+            "temp": 50,
+            "value": 333
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 0
+            },
+            "temp": 100,
+            "value": 280
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 5
+            },
+            "temp": 100,
+            "value": 290
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 12
+            },
+            "temp": 100,
+            "value": 305
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 0
+            },
+            "temp": 150,
+            "value": 254
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 5
+            },
+            "temp": 150,
+            "value": 263
+        },
+        {
+            "level": 10,
+            "tech": {
+                "25": 12
+            },
+            "temp": 150,
+            "value": 277
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 0
+            },
+            "temp": -150,
+            "value": 2125
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 5
+            },
+            "temp": -150,
+            "value": 2285
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 12
+            },
+            "temp": -150,
+            "value": 2529
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 0
+            },
+            "temp": -100,
+            "value": 1991
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 5
+            },
+            "temp": -100,
+            "value": 2141
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 12
+            },
+            "temp": -100,
+            "value": 2369
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 0
+            },
+            "temp": -50,
+            "value": 1856
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 5
+            },
+            "temp": -50,
+            "value": 1996
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 12
+            },
+            "temp": -50,
+            "value": 2209
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 0
+            },
+            "temp": 0,
+            "value": 1722
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 5
+            },
+            "temp": 0,
+            "value": 1851
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 12
+            },
+            "temp": 0,
+            "value": 2049
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 0
+            },
+            "temp": 50,
+            "value": 1587
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 5
+            },
+            "temp": 50,
+            "value": 1707
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 12
+            },
+            "temp": 50,
+            "value": 1889
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 0
+            },
+            "temp": 100,
+            "value": 1453
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 5
+            },
+            "temp": 100,
+            "value": 1562
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 12
+            },
+            "temp": 100,
+            "value": 1728
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 0
+            },
+            "temp": 150,
+            "value": 1318
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 5
+            },
+            "temp": 150,
+            "value": 1417
+        },
+        {
+            "level": 20,
+            "tech": {
+                "25": 12
+            },
+            "temp": 150,
+            "value": 1568
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 0
+            },
+            "temp": -150,
+            "value": 8271
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 5
+            },
+            "temp": -150,
+            "value": 9222
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 12
+            },
+            "temp": -150,
+            "value": 10734
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 0
+            },
+            "temp": -100,
+            "value": 7747
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 5
+            },
+            "temp": -100,
+            "value": 8638
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 12
+            },
+            "temp": -100,
+            "value": 10054
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 0
+            },
+            "temp": -50,
+            "value": 7224
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 5
+            },
+            "temp": -50,
+            "value": 8055
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 12
+            },
+            "temp": -50,
+            "value": 9375
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 0
+            },
+            "temp": 0,
+            "value": 6700
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 5
+            },
+            "temp": 0,
+            "value": 7471
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 12
+            },
+            "temp": 0,
+            "value": 8696
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 0
+            },
+            "temp": 50,
+            "value": 6177
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 5
+            },
+            "temp": 50,
+            "value": 6887
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 12
+            },
+            "temp": 50,
+            "value": 8016
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 0
+            },
+            "temp": 100,
+            "value": 5653
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 5
+            },
+            "temp": 100,
+            "value": 6304
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 12
+            },
+            "temp": 100,
+            "value": 7337
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 0
+            },
+            "temp": 150,
+            "value": 5130
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 5
+            },
+            "temp": 150,
+            "value": 5720
+        },
+        {
+            "level": 30,
+            "tech": {
+                "25": 12
+            },
+            "temp": 150,
+            "value": 6657
+        }
+    ],
+    "solar_plant_prod_energy": [
+        {
+            "level": 1,
+            "tech": {
+                "18": 0
+            },
+            "temp": 0,
+            "value": 22
+        },
+        {
+            "level": 1,
+            "tech": {
+                "18": 5
+            },
+            "temp": 0,
+            "value": 22
+        },
+        {
+            "level": 1,
+            "tech": {
+                "18": 12
+            },
+            "temp": 0,
+            "value": 22
+        },
+        {
+            "level": 5,
+            "tech": {
+                "18": 0
+            },
+            "temp": 0,
+            "value": 161
+        },
+        {
+            "level": 5,
+            "tech": {
+                "18": 5
+            },
+            "temp": 0,
+            "value": 162
+        },
+        {
+            "level": 5,
+            "tech": {
+                "18": 12
+            },
+            "temp": 0,
+            "value": 165
+        },
+        {
+            "level": 10,
+            "tech": {
+                "18": 0
+            },
+            "temp": 0,
+            "value": 518
+        },
+        {
+            "level": 10,
+            "tech": {
+                "18": 5
+            },
+            "temp": 0,
+            "value": 530
+        },
+        {
+            "level": 10,
+            "tech": {
+                "18": 12
+            },
+            "temp": 0,
+            "value": 547
+        },
+        {
+            "level": 20,
+            "tech": {
+                "18": 0
+            },
+            "temp": 0,
+            "value": 2690
+        },
+        {
+            "level": 20,
+            "tech": {
+                "18": 5
+            },
+            "temp": 0,
+            "value": 2815
+        },
+        {
+            "level": 20,
+            "tech": {
+                "18": 12
+            },
+            "temp": 0,
+            "value": 3000
+        },
+        {
+            "level": 30,
+            "tech": {
+                "18": 0
+            },
+            "temp": 0,
+            "value": 10469
+        },
+        {
+            "level": 30,
+            "tech": {
+                "18": 5
+            },
+            "temp": 0,
+            "value": 11207
+        },
+        {
+            "level": 30,
+            "tech": {
+                "18": 12
+            },
+            "temp": 0,
+            "value": 12325
+        }
+    ]
+}

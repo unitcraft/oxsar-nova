@@ -379,6 +379,11 @@ nova-backend для поддержки legacy-вселенной.
 
 ### D-022. Building production override (prod_factor)
 
+✅ **ЗАКРЫТО** (план 64, 2026-04-28). Параметризация production
+коэффициентов через `internal/balance.Globals` теперь возможна. Полная
+per-planet `production_factor` колонка — отдельный план (когда понадобится
+конкретно эта механика; loader-инфраструктура готова).
+
 - **Категория**: домен / формула
 - **Цвет**: 🟡
 - **Origin**: `na_building2planet.prod_factor INT(3) DEFAULT 100`
@@ -432,6 +437,14 @@ nova-backend для поддержки legacy-вселенной.
 
 ### D-026. Источник истины формул (БД-строки vs YAML-числа)
 
+✅ **ЗАКРЫТО** (план 64, 2026-04-28). origin balance теперь живёт в
+`configs/balance/origin.yaml` (override-файл, ~395 строк автогенерации).
+Импортёр `cmd/tools/import-legacy-balance` парсит DSL-формулы из live
+docker-mysql-1, статика предвычисляется в таблицы (1..50 уровней),
+динамика (`{temp}`, `{tech=N}`) реализуется в Go в `internal/origin/
+economy/` через bundle.Globals. Pixel-perfect совпадение с PHP eval()
+проверено golden-тестами (verify 2026-04-28).
+
 - **Категория**: формула
 - **Цвет**: 🟣
 - **Origin**: `na_construction.prod_*, cons_*, charge_*` —
@@ -452,6 +465,14 @@ nova-backend для поддержки legacy-вселенной.
 
 ### D-027. RF-таблица (rapidfire) — алиен-юниты
 
+✅ **ЗАКРЫТО** (план 64, 2026-04-28). RF алиен/спец-юнитов
+(200, 201, 202, 203, 204, 102 Lancer, 325 Shadow, 348 Transmitter,
+352 Transplantator, 353 Collector) импортированы из oxsar2-mysql-1
+legacy в `configs/rapidfire.yml` (R0-исключение: применяется во всех
+вселенных, +38 строк). Debug-юнит 358 (×900 ко всему) и 348
+(TRANSMITTER, не в nova) исключены. Существующие nova-RF числа не
+тронуты (R0 inplace-merge).
+
 - **Категория**: формула
 - **Цвет**: 🟠
 - **Origin**: `na_rapidfire` содержит entries для UNIT_A_*
@@ -466,6 +487,16 @@ nova-backend для поддержки legacy-вселенной.
 - **Связь**: D-028, alien-ai-comparison.md
 
 ### D-028. Юниты UNIT_A_* (id 200-204) и Lancer/Shadow/etc
+
+✅ **ЗАКРЫТО** (план 64, 2026-04-28). Алиен-флот UNIT_A_* (200-204)
++ planet shields (354/355) уже были в nova `configs/units.yml` через
+план 22 (с именами `unit_a_corvette..torpedocarier`). Lancer (102) и
+Shadow (325) — там же с balance из плана 22+ADR-0007/0008 (отличается
+от origin для modern). Origin override восстанавливает legacy-числа
+для них (configs/balance/origin.yaml::ships). Новые добавки в дефолт:
+`ship_transplantator` (352), `ship_collector` (353), `armored_terran`
+(358) — отсутствовали в nova, теперь в дефолтных units.yml +
+ships.yml (R0-исключение для всех вселенных).
 
 - **Категория**: формула / домен
 - **Цвет**: 🟠
@@ -482,6 +513,18 @@ nova-backend для поддержки legacy-вселенной.
 
 ### D-029. Температура влияет на производство водорода
 
+✅ **ЗАКРЫТО** (план 64, 2026-04-28). Verify против live origin
+docker-mysql-1: `na_construction.prod_hydrogen` HYDROGEN_LAB =
+`floor(10 * {level} * pow(1.1+{tech=25}*0.0008, {level}) *
+(-0.002*{temp} + 1.28))`. nova `internal/economy/HydrogenLabProdHydrogen`
+УЖЕ реализует это с того же plan-03 (origin-формулы и nova-формулы
+совпали по факту). План 64 параметризовал коэффициенты через
+`balance.Globals.HydrogenTempCoefficient/HydrogenTempIntercept` —
+теперь origin override может изменить их, не меняя кода. Закрыто
+golden-тестом TestGolden_HydrogenLabProduction (level={1,5,10,20,30}
+× temp={-150..150} × tech={0,5,12} = 105 точек, pixel-perfect совпадение
+Go vs PHP eval).
+
 - **Категория**: формула
 - **Цвет**: 🔴
 - **Origin**: формула `prod_hydrogen` для Hydrogen Lab содержит
@@ -496,6 +539,16 @@ nova-backend для поддержки legacy-вселенной.
 - **Связь**: D-026, formula-dsl.md
 
 ### D-030. Charge_* экспоненты (×1.5 vs ×1.6 vs другие)
+
+✅ **ЗАКРЫТО** (план 64, 2026-04-28). nova `BuildingSpec.CostFactor`
+поддерживает per-building factor (verify в configs/buildings.yml:
+metal_mine 1.5, silicon_lab 1.6, robotic_factory 2.0, hydrogen_plant
+1.8 — все совпадают с origin). Импортёр инфериит cost_factor из
+charge_metal-формул origin через эмпирическое отношение (level=10
+vs 11 при basic=10000). Все cost_factor в origin.yaml override
+сгенерированы автоматически и совпадают с nova-defaults в большинстве
+случаев (origin = nova по cost_factor для зданий; ships override
+переопределяет cost_base для специальных юнитов Lancer/Shadow).
 
 - **Категория**: формула
 - **Цвет**: 🟡

@@ -1,7 +1,10 @@
 package balance
 
 import (
+	"math"
 	"testing"
+
+	"oxsar/game-nova/internal/economy"
 )
 
 // TestLoadFor_OriginAppliesRealOverride — integration-тест: реальный
@@ -60,5 +63,69 @@ func TestLoadFor_OriginAppliesRealOverride(t *testing.T) {
 	if lancerDef.Cost.Metal != 15000 {
 		t.Errorf("nova default Lancer cost.metal = %d, ожидался 15000 (R0: не модифицировать)",
 			lancerDef.Cost.Metal)
+	}
+}
+
+// TestE2E_BuildingCostsThroughBundle — Ф.6 smoke: для двух вселенных
+// (uni01 modern и origin) construction cost через bundle отличается.
+//
+// Эмулирует то, что делает internal/building/service.go (Enqueue):
+//   bundle.Catalog.Buildings[<key>] → economy.CostForLevel(...)
+//
+// Это критерий приёма Ф.6 («стоимость постройки в origin =
+// origin.yaml; в uni01 — текущий nova»). Реальный E2E с поднятыми
+// docker-stack откладывается на план 65 (deploy-инфра вселенной origin
+// — отдельная задача).
+func TestE2E_BuildingCostsThroughBundle(t *testing.T) {
+	t.Parallel()
+	l := NewLoader(configsRoot)
+	uni01, err := l.LoadFor("uni01")
+	if err != nil {
+		t.Fatal(err)
+	}
+	origin, err := l.LoadFor("origin")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// metal_mine cost_base 60/15/0 совпадает в nova и origin (verify
+	// 2026-04-28). Стоимость лвл 1 — 60/15/0; лвл 5 — floor(60*1.5^4)=303.
+	mmUni := uni01.Catalog.Buildings.Buildings["metal_mine"]
+	mmOrigin := origin.Catalog.Buildings.Buildings["metal_mine"]
+	if mmUni.CostBase.Metal != mmOrigin.CostBase.Metal {
+		t.Errorf("metal_mine cost_base divergence: uni01=%d origin=%d",
+			mmUni.CostBase.Metal, mmOrigin.CostBase.Metal)
+	}
+	costUni := economy.CostForLevelFloor(economy.Cost{
+		Metal: mmUni.CostBase.Metal, Silicon: mmUni.CostBase.Silicon,
+	}, mmUni.CostFactor, 5)
+	costOrigin := economy.CostForLevelFloor(economy.Cost{
+		Metal: mmOrigin.CostBase.Metal, Silicon: mmOrigin.CostBase.Silicon,
+	}, mmOrigin.CostFactor, 5)
+	if costUni.Metal != costOrigin.Metal {
+		t.Errorf("metal_mine lvl 5 cost: uni01=%d origin=%d (ожидался paritet)",
+			costUni.Metal, costOrigin.Metal)
+	}
+	const wantMetalLvl5 = 303 // floor(60 * 1.5^4)
+	if costUni.Metal != wantMetalLvl5 {
+		t.Errorf("metal_mine lvl 5 cost.metal = %d, expected %d", costUni.Metal, wantMetalLvl5)
+	}
+
+	// Lancer (специальный юнит): origin cost 2500/7500/15000, nova
+	// cost 15000/35000/60000. Это R0 design-divergence — каждая вселенная
+	// со своим балансом.
+	lancerUni := uni01.Catalog.Ships.Ships["lancer_ship"]
+	lancerOrigin := origin.Catalog.Ships.Ships["lancer_ship"]
+	if lancerUni.Cost.Metal != 15000 {
+		t.Errorf("uni01 Lancer cost.metal = %d, want 15000 (modern default)", lancerUni.Cost.Metal)
+	}
+	if lancerOrigin.Cost.Metal != 2500 {
+		t.Errorf("origin Lancer cost.metal = %d, want 2500 (origin override)", lancerOrigin.Cost.Metal)
+	}
+
+	// Globals идентичны (verify 2026-04-28: формулы prod совпадают).
+	if math.Abs(uni01.Globals.MetalMineBasicProd-origin.Globals.MetalMineBasicProd) > 1e-9 {
+		t.Errorf("MetalMineBasicProd divergence: uni01=%v origin=%v",
+			uni01.Globals.MetalMineBasicProd, origin.Globals.MetalMineBasicProd)
 	}
 }
