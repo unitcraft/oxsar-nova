@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Universe, NewsItem, FeedbackPost, FeedbackComment, AuthUser, Tokens } from './types';
+import type { Universe, NewsItem, FeedbackPost, FeedbackComment, AuthUser, TokenResponse } from './types';
 
 export const portalApi = {
   universes: {
@@ -43,7 +43,7 @@ export const portalApi = {
       consentAccepted: boolean,
       termsAccepted: boolean,
     ) =>
-      api.post<{ user: AuthUser; tokens: Tokens }>('/auth/register', {
+      api.post<TokenResponse>('/auth/register', {
         username,
         email,
         password,
@@ -51,9 +51,9 @@ export const portalApi = {
         terms_accepted: termsAccepted,
       }),
     login: (login: string, password: string) =>
-      api.post<{ user: AuthUser; tokens: Tokens }>('/auth/login', { login, password }),
+      api.post<TokenResponse>('/auth/login', { login, password }),
     refresh: (refresh: string) =>
-      api.post<{ tokens: Tokens }>('/auth/refresh', { refresh }),
+      api.post<TokenResponse>('/auth/refresh', { refresh }),
     logout: (refresh: string) =>
       api.post<void>('/auth/logout', { refresh }),
     me: () => api.get<AuthUser>('/auth/me'),

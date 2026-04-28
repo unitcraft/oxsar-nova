@@ -99,10 +99,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  tokens: { $ref: "#/components/schemas/Tokens" }
+              schema: { $ref: "#/components/schemas/AuthResponse" }
 
   /api/planets:
     get:
@@ -2135,12 +2132,18 @@ components:
         email:    { type: string, format: email }
         password: { type: string }
 
-    Tokens:
+    # План 63: формат ответа login/refresh по RFC 6749 §5.1.
+    # Плоская структура: access_token, token_type, expires_in, refresh_token.
+    # Поле user — non-RFC, но widespread practice для SPA login endpoint'ов.
+    AuthResponse:
       type: object
+      required: [access_token, token_type, expires_in, refresh_token]
       properties:
-        access:  { type: string }
-        refresh: { type: string }
-        expires: { type: string, format: date-time }
+        access_token:  { type: string }
+        token_type:    { type: string, enum: [Bearer] }
+        expires_in:    { type: integer, description: "TTL access-токена в секундах" }
+        refresh_token: { type: string }
+        user:          { $ref: "#/components/schemas/User" }
 
     User:
       type: object
@@ -2148,12 +2151,6 @@ components:
         id:       { type: string, format: uuid }
         username: { type: string }
         email:    { type: string, format: email }
-
-    AuthResponse:
-      type: object
-      properties:
-        user:   { $ref: "#/components/schemas/User" }
-        tokens: { $ref: "#/components/schemas/Tokens" }
 
     AdminAuditEntry:
       type: object

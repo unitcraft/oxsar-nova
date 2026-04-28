@@ -1,11 +1,13 @@
 import { create } from 'zustand';
-import type { AuthUser } from '@/api/types';
+import type { AuthUser, TokenResponse } from '@/api/types';
 
 interface AuthState {
   user: AuthUser | null;
   accessToken: string | null;
   refreshToken: string | null;
-  setAuth: (user: AuthUser, tokens: { access: string; refresh: string }) => void;
+  // План 63: setAuth принимает RFC 6749-формат напрямую — user из tokens.user
+  // (если присутствует) либо переданный отдельно (для refresh без user).
+  setAuth: (tokens: TokenResponse, fallbackUser?: AuthUser) => void;
   clearAuth: () => void;
 }
 
@@ -14,10 +16,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   accessToken: localStorage.getItem('access_token'),
   refreshToken: localStorage.getItem('refresh_token'),
 
-  setAuth: (user, tokens) => {
-    localStorage.setItem('access_token', tokens.access);
-    localStorage.setItem('refresh_token', tokens.refresh);
-    set({ user, accessToken: tokens.access, refreshToken: tokens.refresh });
+  setAuth: (tokens, fallbackUser) => {
+    const user = tokens.user ?? fallbackUser ?? null;
+    localStorage.setItem('access_token', tokens.access_token);
+    localStorage.setItem('refresh_token', tokens.refresh_token);
+    set({
+      user,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+    });
   },
 
   clearAuth: () => {
