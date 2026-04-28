@@ -99,6 +99,43 @@
 
 ---
 
+## Пост-запуск v3: Ремастер origin на nova-backend (legacy01)
+
+Реализуется после стабилизации v2. Подробное обоснование и
+декомпозиция — [docs/research/origin-vs-nova/roadmap-report.md](research/origin-vs-nova/roadmap-report.md).
+
+Стратегия зафиксирована планом 62: pixel-perfect клон legacy-UI на
+React/TipTap, backend = game-nova с параметризацией под `legacy01`.
+55 экранов origin → S-NNN, 46 расхождений → D-NNN, 15+22 UI-функций
+и UX-микрологики → U-NNN/X-NNN.
+
+| План | Что | Оценка | Зависит от |
+|---|---|---|---|
+| 63 | legacy.yaml + per-universe balance loading | 2 нед | — |
+| 64 | Расширение event-loop (TELEPORT_PLANET, DESTROY_BUILDING, DELIVERY_ARTEFACTS, Stargate, etc) | 3-4 нед | 63 |
+| 65 | AlienAI до полного паритета (план 15 этап 3) | 3 нед | 63 |
+| 66 | Расширение alliance: 3 описания, передача лидерства, гранулярные ранги, лог | 2-3 нед | — |
+| 67 | Биржа артефактов (player-to-player, с premium) | 3-4 нед | — |
+| 68 | Расширение domain-полей в users (max_points, race, protected_until, etc) | 2 нед | — |
+| 69 | Achievements расширение (~100 legacy ачивок в goal engine) | 1-2 нед | goal engine |
+| 70 | UX-микрологика origin → nova-frontend (X-NNN) | 2-3 нед | — |
+| **71** | **Origin-фронт — pixel-perfect клон (50 экранов)** | **12-16 нед** | **63-70 + 57** |
+| 72 | Screenshot-diff CI (Playwright + visual regression) | 2 нед | 71 |
+| 73 | legacy01 deploy + DNS + config | 1 нед | 71, 72 |
+
+**Итого**: 6-9 месяцев (минимальный путь), 9-10 месяцев с биржей
+и турнирами.
+
+**Предусловия для Ф.71** (origin-фронт): план 57 (mail-service /
+TipTap), аудит лицензий шрифтов и иконок origin, имя legacy-вселенной
+(ADR-0010 — открытый вопрос).
+
+**Что реализуем cross-universe** (значит, получают и uni01/uni02):
+70 (UX-микрологика), 67 (биржа артефактов как фича для всех), 65
+(расширенный AlienAI), 66 (alliance-расширения).
+
+---
+
 ## Предусловия для старта Фазы 1
 
 1. **ADR на балансные отклонения от legacy**. План 18 Фаза 1 — чистый порт legacy
