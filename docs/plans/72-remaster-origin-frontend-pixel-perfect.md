@@ -197,9 +197,9 @@ endpoint'ов. По R15 (без MVP-сокращений / mock'ов «как д
   `max_level`, ...) живут в YAML `projects/game-nova/configs/
   {buildings,units,research}.yml` (читаются через
   `internal/balance/loader.go`, план 64). **Формулы** живут в **Go-
-  коде** в `internal/origin/economy/*.go` и подобных пакетах —
-  они **не сериализуются** в YAML и не отдаются как «формула»
-  через endpoint.
+  коде** — для modern (nova) в `internal/economy/formulas.go`,
+  для origin в `internal/origin/economy/*.go`. Они **не
+  сериализуются** в YAML и не отдаются как «формула» через endpoint.
 
   Что catalog-endpoint отдаёт:
   - **params** из YAML — как есть (для отображения «base_cost: 60»,
@@ -214,6 +214,26 @@ endpoint'ов. По R15 (без MVP-сокращений / mock'ов «как д
 
   Это правильное разделение: формула живёт в Go (как вычисляется),
   endpoint сериализует **результат** для UI.
+
+  **Universe-context — сознательно НЕ реализуется в Ф.4:**
+
+  Backend в плане 64 поддерживает override per-universe (modern vs
+  origin может иметь разные числа). Но catalog-endpoint в Ф.4 Spring 3
+  **НЕ принимает universe-параметр** — отдаёт modern (nova)
+  параметры из `internal/economy/formulas.go` + `configs/{buildings,
+  units,research}.yml`. Origin-вселенная ещё не запущена ни для кого
+  (план 74 — публичный запуск, ещё не сделан), поэтому current-
+  universe-only catalog **корректен** для текущего состояния продукта.
+
+  Universe-aware расширение catalog-endpoint (через `?universe=origin`
+  query-param или per-user JWT-routing к `internal/origin/economy/`) —
+  отдельная архитектурная задача после плана 74. Это **не упрощение**
+  текущей реализации (catalog данные **полные**, real numbers, не
+  mock), а сознательно отложенное расширение области применения.
+
+  Это **не R15-нарушение**: catalog отдаёт реальные данные, frontend
+  получает реальные числа. Universe-aware — это про **routing**,
+  не про **полноту данных**.
 
 - **Records (S-031) — отдельный план 82**, не Ф.4 Spring 3.
   Per-unit record holders (top-1 по типу здания/исследования/корабля)
