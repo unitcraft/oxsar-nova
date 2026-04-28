@@ -80,6 +80,11 @@ R0: не трогаем geymplay nova/origin при настройке CI.
 R5: pixel-perfect — это R5, threshold 0.5% обоснован в плане 73.
 R15: без упрощений — все 50 экранов покрыты, не «10 для проверки».
 
+R15 УТОЧНЕНО (см. roadmap-report.md "Часть I.5 / R15"):
+🚫 «Низкоприоритетные экраны без эталона» — нет, все S-NNN покрыты.
+🚫 Пропуск CI-job — нет, screenshot-diff должен быть в .github/workflows.
+✅ Trade-off: threshold 0.5% обоснован, не «0%». Это разумно.
+
 GIT-ИЗОЛЯЦИЯ:
 - Свои пути: tests/e2e/origin-baseline/, tests/e2e/origin-frontend/,
   .github/workflows/screenshot-diff.yml, docs/plans/73-...

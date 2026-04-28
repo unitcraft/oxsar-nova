@@ -99,6 +99,30 @@ RBAC middleware, transfer-leadership, frontend, финализация.
 - R12: i18n — grep nova-bundle перед новыми ключами.
 - R15: без упрощений.
 
+R15 УТОЧНЕНО (обязательно прочитай — roadmap-report.md
+"Часть I.5 / R15 / Что СЧИТАЕТСЯ упрощением vs ПРОПУСК"):
+
+🚫 НЕ КЛАССИФИЦИРУЙ КАК TRADE-OFF В simplifications.md:
+- R8 Prometheus (counter+histogram) — обязательно для transfer-
+  leadership, для search endpoint, для всех новых.
+- R9 Idempotency-Key — обязательно для PATCH/POST.
+- R12 i18n — все user-facing strings через Tr().
+- DB CHECK для enum-значений.
+- FK constraint + ON DELETE действия для новых ссылок.
+- Index на FK и часто-фильтруемых колонках.
+
+Из Ф.2 (commit 2fd010cd87) уже есть 4 trade-off в simplifications.md —
+3 из них корректные (RBAC guards, audit для disband, односторонние
+дипстатусы), один (7 vs 6 permissions) — даже не упрощение, это
+усиление. Хороший образец того, как фиксировать архитектурные
+решения. Продолжай в этом стиле для Ф.3-Ф.6.
+
+✅ TRADE-OFF (можно с обоснованием):
+- Архитектурные решения, отклоняющиеся от плана/промпта (как RBAC
+  guards в Ф.2).
+- Frontend на Ф.5 — большой объём; если не успеваешь — отдельная
+  сессия с пометкой Приоритет H в simplifications.
+
 GIT-ИЗОЛЯЦИЯ:
 - Свои пути: internal/alliance/, migrations/0078_alliance_search.sql,
   frontend/src/features/alliance/, openapi.yaml, тесты,

@@ -98,6 +98,31 @@ GrabCredit, ChangeMissionAI + Spawner-проводка + pgx Loader
 - R13: typed payload.
 - R15: без упрощений (50+ golden-итераций обязательны).
 
+R15 УТОЧНЕНО (обязательно прочитай — roadmap-report.md
+"Часть I.5 / R15 / Что СЧИТАЕТСЯ упрощением vs ПРОПУСК"):
+
+🚫 НЕ КЛАССИФИЦИРУЙ КАК TRADE-OFF В simplifications.md:
+- R8 Prometheus (counter+histogram) — обязательно, не пропускать.
+  Особенно критично для buyout endpoint (Ф.5) — financial flow
+  должен быть наблюдаемым.
+- R9 Idempotency-Key для buyout — критично, без неё двойное
+  списание оксаров.
+- R12 i18n — все user-facing строки через Tr().
+- R10 universe_id для alien-таблиц.
+- R3 slog с trace_id во всех handler'ах.
+- DB CHECK на enum-значения (например, holding_state).
+
+Smoke-проверка: загляни в commit d6f1785dda (план 65 Ф.2) и
+2fd010cd87 (план 67 Ф.2) — там есть упрощения в simplifications.md,
+которые формально trade-off (CASCADE для disband, RBAC через
+guards вместо middleware). Их не повторяй там, где речь идёт о
+тривиальном пропуске метрик/i18n/idempotency.
+
+✅ TRADE-OFF (можно с обоснованием):
+- 50+ golden-итераций — если не получается за одну сессию, разбей
+  на куски, но R15 требует довести до 50+ суммарно.
+- Архитектурные отклонения с явным «План возврата».
+
 GIT-ИЗОЛЯЦИЯ:
 - Свои пути: internal/origin/alien/ (твой пакет),
   configs/balance/ (если параметр выкупа в config),
