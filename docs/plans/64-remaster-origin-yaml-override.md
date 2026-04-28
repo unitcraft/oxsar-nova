@@ -195,19 +195,12 @@ units:
     fuel_consumption: 20
   # ... остальные
 
-  # Алиен-юниты, отсутствующие в nova (D-027, D-028)
-  alien_unit_1:  # UNIT_A_1
-    cost: { metal: 0, silicon: 0, hydrogen: 0 }  # не строятся игроком
-    attack: 1000
-    shield: 200
-    hull: 50000
-    is_alien: true
-  # ... UNIT_A_2..UNIT_A_4
-
-  # Спец-юниты (D-028)
-  lancer_ship:
-    cost: { metal: ..., silicon: ..., hydrogen: ... }
-    # ...
+  # Алиен-юниты и спец-юниты (D-027, D-028) — **переехали** в
+  # дефолтные configs/units.yml / ships.yml / rapidfire.yml,
+  # потому что AlienAI работает во всех вселенных (R0-исключение
+  # 2026-04-28, план 66). В origin.yaml — только если требуется
+  # override чисел для origin (на старте — не требуется,
+  # числа одинаковые из na_ship_datasheet).
   shadow_ship: { ... }
   ship_transplantator: { ... }
   ship_collector: { ... }
@@ -428,9 +421,18 @@ func SolarPlantProduction(bundle *balance.Bundle, level int) float64 { ... }
 - SELECT из `na_construction`, `na_rapidfire`, `na_ship_datasheet`,
   `na_options` (базовая часть `consts.php` тоже хочется, но это
   PHP-define — копируем руками в YAML `globals:`).
-- Генерация `configs/balance/origin.yaml`.
-- Запуск: должен выдать YAML на ~3000-5000 строк (override —
-  только то, что отличается от дефолта).
+- Генерация:
+  - `configs/balance/origin.yaml` — override чисел, **отличающихся**
+    от nova-дефолта (стоимости зданий, RF-таблица, basic_*).
+  - **Дополнительно** в дефолтные `configs/units.yml` /
+    `configs/ships.yml` / `configs/rapidfire.yml` — добавляются
+    алиен-юниты (alien_unit_1..5) и legacy-спец-юниты (Lancer,
+    Shadow, Transplantator, Collector, Small/Large Planet Shield,
+    Armored Terran). Это R0-исключение 2026-04-28: AlienAI и
+    эти юниты работают во всех вселенных, не только origin.
+    Их числа — из `na_ship_datasheet`, одинаковые везде.
+- Запуск: должен выдать origin.yaml на ~3000-5000 строк override +
+  ~200-400 строк дополнений в default-units.
 - **Verify**: спот-проверка нескольких значений вручную против
   live-origin через `docker exec docker-mysql-1 mysql -e
   "SELECT name, basic_metal FROM na_construction WHERE name='metal_mine';"`.
