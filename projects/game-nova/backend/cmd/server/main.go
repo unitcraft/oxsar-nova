@@ -44,6 +44,7 @@ import (
 	"oxsar/game-nova/internal/moderation"
 	"oxsar/game-nova/internal/notepad"
 	"oxsar/game-nova/internal/officer"
+	originalien "oxsar/game-nova/internal/origin/alien"
 	"oxsar/game-nova/internal/planet"
 	"oxsar/game-nova/internal/profession"
 	"oxsar/game-nova/internal/records"
@@ -328,13 +329,15 @@ func run() error {
 	} else {
 		log.InfoContext(ctx, "billing client configured", slog.String("url", cfg.Billing.URL))
 	}
-	_ = billingC // использование появится в планах 65 Ф.6 / 66 Ф.5.
 
 	// План 77 Ф.2: idempotency-middleware. Производственное TTL 24h.
-	// Пока не подключаем к конкретным роутам — это сделают планы, вводящие
-	// мутирующие платные endpoint'ы (65 Ф.6 KindTeleportPlanet, 66 Ф.5).
 	idemMW := idempotency.NewMiddleware(rdb, 0)
-	_ = idemMW
+
+	// План 66 Ф.5: alien-buyout HTTP-handler (платный выкуп HOLDING
+	// оксарами). Использует default-конфиг origin/alien (BuyoutBaseOxsars
+	// = 100); per-universe override в Ф.5 не реализуется — конфиг
+	// внутрипакетный, как у HoldingAIHandler в Ф.4.
+	alienBuyoutH := originalien.NewBuyoutHandler(db, billingC, originalien.DefaultConfig())
 
 	// План 32 Ф.5: chat.Hub использует Redis pub/sub для multi-instance
 	// fan-out'а. При rdb=nil деградирует до single-instance broadcast.
@@ -478,6 +481,11 @@ func run() error {
 
 		pr.Post("/alien/holding/{event_id}/pay", alienH.Pay)
 		pr.Get("/alien/holdings/me", alienH.MyHoldings)
+
+		// План 66 Ф.5: платный выкуп HOLDING-удержания за оксары.
+		// Idempotency-Key обязателен (R9), middleware дедуплицирует
+		// повторы по ключу + body-hash (план 77 Ф.2).
+		pr.With(idemMW.Wrap).Post("/alien-missions/{mission_id}/buyout", alienBuyoutH.Buyout)
 
 		pr.Get("/galaxy/{g}/{s}", galaxyH.System)
 

@@ -123,6 +123,23 @@ type Config struct {
 	// HoldingAIRecheckChance — 1% запустить checkAlientNeeds
 	// в onHoldingAIEvent (origin:1006-1008).
 	HoldingAIRecheckChance int
+
+	// BuyoutBaseOxsars — фиксированная стоимость платного выкупа
+	// HOLDING (план 66 Ф.5).
+	//
+	// Особенность: это НОВАЯ фича ремастера, в legacy oxsar2
+	// (AlienAI.class.php) платного выкупа не существовало — там был
+	// только paid_credit для продления окна HOLDING на 2h за 50
+	// оксаритов (см. PHP:993, маппится на HoldingPaySecondsPerCredit
+	// выше). Buyout же завершает HOLDING полностью и сразу за оксары
+	// (hard currency, ADR-0009).
+	//
+	// Значение 100 выбрано как заметный, но не запретительный
+	// price-point: средний игрок имеет 0-50 оксаров pre-purchase
+	// (≈ ₽250 пакет), у активных премиум-игроков 200-1000+. Без ADR
+	// «отклонение от legacy» — самой формулы в legacy нет, см.
+	// docs/plans/66-remaster-alien-ai-full-parity.md «Ф.5 — итог».
+	BuyoutBaseOxsars int64
 }
 
 // DefaultConfig возвращает Config с дефолтами 1-в-1 из origin
@@ -168,5 +185,6 @@ func DefaultConfig() Config {
 		FlyUnknownReplanChance:         10,
 		FlyUnknownGrabChance:           10,
 		HoldingAIRecheckChance:         1,
+		BuyoutBaseOxsars:               100,
 	}
 }

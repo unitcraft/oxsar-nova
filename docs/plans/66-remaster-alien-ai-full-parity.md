@@ -1,9 +1,7 @@
 # План 66 (ремастер): AlienAI до полного паритета с oxsar2-classic
 
 **Дата**: 2026-04-28
-**Статус**: Ф.1+Ф.2+Ф.3+Ф.4 ✅, Ф.6+Ф.7 ✅ (2026-04-28). Ф.5 buyout —
-параллельная сессия (slot G в active-sessions.md), завершается
-самостоятельно — после её закрытия план 66 ЗАКРЫТ полностью.
+**Статус**: ✅ ЗАКРЫТ (2026-04-28). Все фазы Ф.1-Ф.7 готовы.
 **Зависимости**: блокируется планом 64 (alien-юниты в `configs/balance/origin.yaml`).
 **Связанные документы**:
 - [15-alien-holding-thursday.md](15-alien-holding-thursday.md) —
@@ -69,7 +67,7 @@
 - **Ф.2. generateFleet + findTarget + shuffleKeyValues (helper-логика).** — ✅ закрыто 2026-04-28
 - **Ф.3. Реализация Kind'ов FlyUnknown, GrabCredit, ChangeMissionAI.** — ✅ закрыто 2026-04-28
 - **Ф.4. Расширение HoldingAI до 8 действий (2 активных + 6 заглушек).** — ✅ закрыто 2026-04-28
-- Ф.5. Платный выкуп удержания через billing (оксары — R1, ADR-0009). 🟡 параллельная сессия (slot G)
+- **Ф.5. Платный выкуп удержания через billing (оксары — R1, ADR-0009).** — ✅ закрыто 2026-04-28
 - **Ф.6. Golden-тесты на 50+ итераций (property-based).** — ✅ закрыто 2026-04-28
 - **Ф.7. Финализация.** — ✅ закрыто 2026-04-28
 
@@ -287,6 +285,136 @@ origin), как и весь пакет origin/alien.
 
 Объём Ф.4: ~530 строк Go (production: payload + handler +
 8 sub-phases) + ~280 строк тестов (5 property + 6 integration).
+
+### Ф.5 — итог (2026-04-28)
+
+R0-исключение: фича работает во ВСЕХ вселенных (uni01/uni02 + origin),
+как и весь пакет origin/alien.
+
+**Особенность относительно legacy**: в `AlienAI.class.php` платного
+выкупа НЕ существует — там есть только `paid_credit` (продление окна
+HOLDING на 2h за каждые 50 оксаритов, см. PHP:993, маппится на
+`internal/alien.PayHolding`). Buyout — НОВАЯ фича ремастера: одной
+транзакцией платим оксары и выходим из HOLDING полностью. Цена
+фиксированная (формулы в legacy нет), параметризована
+`Config.BuyoutBaseOxsars` (default 100 оксаров). Без ADR «отклонение
+от legacy» — отсутствие самой фичи в legacy не подпадает под R0
+(R0 запрещает менять modern-числа nova; новая фича в origin —
+сознательный upgrade ремастера).
+
+Реализовано:
+
+- `configs/balance/origin.yaml` — **в репо отсутствует**, не создаём в
+  Ф.5; параметр `BuyoutBaseOxsars` живёт в
+  `internal/origin/alien/config.go` как часть `Config`/`DefaultConfig()`,
+  как остальные 25+ параметров AlienAI. Это уточнение относительно ТЗ
+  Ф.5 промпта (он говорил «параметризуй в configs/balance/origin.yaml»)
+  — соответствует реальной структуре пакета (Ф.1 уже выбрала путь
+  in-package config). Зафиксировано в `simplifications.md`.
+
+- `projects/game-nova/api/openapi.yaml`:
+  - новый tag `alien`,
+  - `POST /api/alien-missions/{mission_id}/buyout` с обязательным
+    header `Idempotency-Key`, кодами 200/401/402/404/409/503,
+  - `AlienBuyoutResponse {mission_id, cost_oxsars, freed_at}`.
+
+- `internal/origin/alien/buyout_handler.go`:
+  - `Config.BuyoutBaseOxsars` (новое поле, default=100),
+  - `CalcBuyoutCost(cfg, missionID) int64` — pure-функция (для property),
+  - `BuyoutBilling` interface (узкий — только Spend),
+  - `Buyout(ctx, db, billing, cfg, userID, missionID, userToken,
+    idempotencyKey)` — основная функция в 2 транзакциях:
+    1. lock + pre-check (kind=HOLDING / state=wait / owner==userID);
+    2. billing.Spend ВНЕ tx (network вызов);
+    3. close HOLDING + DELETE тиков HOLDING_AI этой миссии.
+  - Sentinel ошибки: `ErrMissionNotFound`, `ErrMissionAlreadyClosed`,
+    `ErrInsufficientOxsars`, `ErrIdempotencyConflict`,
+    `ErrBillingUnavailable`.
+  - Маппинг billing-client errors → buyout sentinel (ErrFrozenWallet
+    тоже идёт в insufficient — UX-эквивалент «нечего тратить»).
+  - R3 slog: user_id, mission_id, idempotency_key, cost_oxsars,
+    freed_at + error-event `alien_buyout_db_after_spend` для
+    операторского следствия (если billing списал, а DB write упал).
+
+- `internal/origin/alien/buyout_http.go`:
+  - `BuyoutHandler` (separate type — не размытие Service, см.
+    рассуждение в файле),
+  - `Buyout(w, r)` маппит sentinel-ошибки в `httpx.Error{Status, Code}`
+    (402/404/409/503).
+  - Forward'ит `Authorization: Bearer <token>` в billing-client
+    как UserToken.
+
+- `pkg/metrics/alien_buyout.go` (R8):
+  - `oxsar_alien_buyout_total{status}` —
+    ok|insufficient|conflict|not_found|billing_unavailable|error;
+  - `oxsar_alien_buyout_oxsars_total` (counter, sum успешных списаний).
+  - Регистрация автоматическая из `metrics.Register()`.
+
+- `cmd/server/main.go`:
+  - import `originalien "oxsar/game-nova/internal/origin/alien"`;
+  - construct `alienBuyoutH := originalien.NewBuyoutHandler(db,
+    billingC, originalien.DefaultConfig())`;
+  - route `pr.With(idemMW.Wrap).Post(
+    "/alien-missions/{mission_id}/buyout", alienBuyoutH.Buyout)`.
+
+- `configs/i18n/{ru,en}.yml`:
+  - **5 новых ключей**, **0 переиспользовано**:
+    `alien.buyoutSubject` / `alien.buyoutBody` (in-game сообщение
+    игроку — placeholder для будущего message-flow), `buyoutSuccess` /
+    `buyoutInsufficientOxsars` / `buyoutNotInHolding` (UI-фронт может
+    использовать как фолбэк-перевод error-кодов).
+  - В Ф.5 backend сам не использует эти ключи (только error-codes
+    в JSON-ответе); они зарезервированы и переведены сразу.
+
+Тесты:
+
+- `buyout_handler_test.go` — **unit/property** без БД:
+  - `TestCalcBuyoutCost_Determinism` (rapid R4): cost не зависит
+    от mission_id для любого base-oxsars > 0;
+  - `TestCalcBuyoutCost_PositiveOnDefault`: дефолт > 0
+    (защита от misconfiguration, R15);
+  - `TestBuyoutBilling_Compatibility`:
+    `*billingclient.Client` ⊆ `BuyoutBilling`.
+
+- `buyout_integration_test.go` — **integration** с TEST_DATABASE_URL
+  (auto-skip без БД, паттерн Ф.3/Ф.4):
+  - `TestBuyout_HappyPath` — 200, mission state='ok',
+    AI-тики удалены, billing.Spend вызван 1 раз с правильными
+    Reason="alien_buyout"/RefID/IdempotencyKey/Amount=100;
+  - `TestBuyout_AlreadyClosed` — mission state='ok' → 409,
+    billing НЕ вызван;
+  - `TestBuyout_ForeignMission` — другой owner → 404 (единый, не
+    раскрываем существование), billing НЕ вызван;
+  - `TestBuyout_MissionNotFound` — несуществующий ID → 404;
+  - `TestBuyout_WrongKind` — KindAlienAttack вместо HOLDING → 404;
+  - `TestBuyout_Insufficient` — billing.ErrInsufficientOxsar →
+    402, mission state='wait' (не тронута);
+  - `TestBuyout_BillingUnavailable` — billing.ErrBillingUnavailable
+    → 503, mission state='wait';
+  - `TestBuyout_IdempotencyConflict` — billing.ErrIdempotencyConflict
+    → 409, mission state='wait';
+  - `TestBuyout_DropsAITicks` — после успеха DELETE затрагивает
+    только тики этой mission, чужие тики целы.
+  - mockBilling реализует `BuyoutBilling` через `returnFn` —
+    позволяет test'у моделировать любой ответ billing-сервера без
+    httptest.
+
+Что **не делалось** в Ф.5 (по ТЗ или явно отложено):
+- `configs/balance/origin.yaml` — файл в репо отсутствует;
+  параметр живёт в `internal/origin/alien/config.go` (см. выше).
+- `UPDATE planets SET locked_by_alien=false` — колонки в схеме нет
+  (миграции 0001-0080 не имеют такой колонки), блокировка планеты
+  моделируется самим присутствием активного HOLDING-event. Закрытие
+  HOLDING (`state='ok'`) = разблокировка. Зафиксировано в
+  `simplifications.md` как корректировка ТЗ Ф.5 относительно реальной
+  схемы.
+- 2PC между Postgres и billing — компромисс: billing идемпотентен
+  по Idempotency-Key, повтор того же запроса от клиента закроет
+  миссию без второго списания. Полный distributed-transaction
+  излишен (план 77 такого паттерна не предполагает).
+
+Объём Ф.5: ~330 строк Go (production: handler + http + metrics +
+config-поле) + ~480 строк тестов (3 unit/property + 9 integration).
 
 ### Ф.6+Ф.7 — итог (2026-04-28)
 
