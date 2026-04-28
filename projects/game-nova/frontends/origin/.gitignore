@@ -1,0 +1,18 @@
+node_modules
+dist
+dist-ssr
+.cache
+*.local
+.vite
+node_modules/.vite
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Сгенерированные типы (генерируются по openapi.yaml через `npm run gen:api`)
+src/api/schema.d.ts
