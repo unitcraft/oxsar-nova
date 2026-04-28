@@ -212,7 +212,7 @@ services:
   uni02-frontend:
     build:
       context: ..
-      dockerfile: projects/game-nova/frontend/Dockerfile
+      dockerfile: projects/game-nova/frontends/nova/Dockerfile
     depends_on:
       uni02-backend:
         condition: service_healthy
@@ -226,13 +226,13 @@ services:
       VITE_BILLING_TARGET: http://billing-service:9100
     ports: ["5175:5173"]
     volumes:
-      - ../projects/game-nova/frontend:/app
+      - ../projects/game-nova/frontends/nova:/app
       - uni02-frontend-node-modules:/app/node_modules
 
   frontend:
     build:
       context: ..
-      dockerfile: projects/game-nova/frontend/Dockerfile
+      dockerfile: projects/game-nova/frontends/nova/Dockerfile
     depends_on:
       backend:
         condition: service_healthy
@@ -246,7 +246,7 @@ services:
       VITE_BILLING_TARGET: http://billing-service:9100
     ports: ["5173:5173"]
     volumes:
-      - ../projects/game-nova/frontend:/app
+      - ../projects/game-nova/frontends/nova:/app
       - frontend-node-modules:/app/node_modules
 
   # ── Auth stack ───────────────────────────────────────────────────────────

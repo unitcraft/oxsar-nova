@@ -32,11 +32,11 @@ nova-frontend (uni01/uni02), чтобы игроки modern-вселенных
 3) Выборочно:
    - projects/game-nova/api/openapi.yaml — endpoints биржи (после
      плана 68).
-   - projects/game-nova/frontend/src/features/ — стиль компонентов.
+   - projects/game-nova/frontends/nova/src/features/ — стиль компонентов.
 
 ЧТО НУЖНО СДЕЛАТЬ:
 
-3 экрана в projects/game-nova/frontend/src/features/exchange/:
+3 экрана в projects/game-nova/frontends/nova/src/features/exchange/:
 
 1. Список лотов (ExchangeListPage):
    - TanStack Query infinite scroll (cursor-pagination, R6).

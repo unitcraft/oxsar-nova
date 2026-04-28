@@ -30,7 +30,7 @@
      origin на :8092.
 
 3) Выборочно:
-   - projects/game-nova/frontend/e2e/ — паттерны Playwright nova.
+   - projects/game-nova/frontends/nova/e2e/ — паттерны Playwright nova.
 
 ЧТО НУЖНО СДЕЛАТЬ:
 

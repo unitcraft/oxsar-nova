@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: projects/game-nova/frontend
+        working-directory: projects/game-nova/frontends/nova
     steps:
       - uses: actions/checkout@v4
 
@@ -60,7 +60,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: projects/game-nova/frontend/package-lock.json
+          cache-dependency-path: projects/game-nova/frontends/nova/package-lock.json
 
       - name: Install
         run: npm ci --no-audit --no-fund
@@ -89,14 +89,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: projects/game-nova/frontend
+        working-directory: projects/game-nova/frontends/nova
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: projects/game-nova/frontend/package-lock.json
+          cache-dependency-path: projects/game-nova/frontends/nova/package-lock.json
       - run: npm ci --no-audit --no-fund
       - run: npm run api:coverage
 
@@ -115,7 +115,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: |
-            projects/game-nova/frontend/package-lock.json
+            projects/game-nova/frontends/nova/package-lock.json
             projects/portal/frontend/package-lock.json
 
       - name: Install go-licenses
@@ -138,11 +138,11 @@ jobs:
         run: go-licenses check ./... --disallowed_types=forbidden,restricted
 
       - name: Install frontend deps (game-nova)
-        working-directory: projects/game-nova/frontend
+        working-directory: projects/game-nova/frontends/nova
         run: npm ci --no-audit --no-fund
 
       - name: Check frontend licenses (game-nova)
-        working-directory: projects/game-nova/frontend
+        working-directory: projects/game-nova/frontends/nova
         run: npx --yes license-checker --production --excludePackages "oxsar-nova-frontend@0.1.0" --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;MPL-2.0;Unlicense;CC0-1.0;Zlib"
 
       - name: Install frontend deps (portal)
@@ -233,7 +233,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: projects/game-nova/frontend/playwright-report
+          path: projects/game-nova/frontends/nova/playwright-report
           retention-days: 14
           if-no-files-found: ignore
 
@@ -242,7 +242,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-test-results
-          path: projects/game-nova/frontend/test-results
+          path: projects/game-nova/frontends/nova/test-results
           retention-days: 14
           if-no-files-found: ignore
 

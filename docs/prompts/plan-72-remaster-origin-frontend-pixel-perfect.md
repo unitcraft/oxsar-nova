@@ -42,7 +42,7 @@ legacy-PHP origin (тема standard) на современном стеке Rea
    - projects/game-origin-php/public/css/ — палитра, layout-системы.
    - projects/game-origin-php/public/images/ — иконки, спрайты
      (с проверкой лицензий).
-   - projects/game-nova/frontend/ — стек/конвенции nova (для
+   - projects/game-nova/frontends/nova/ — стек/конвенции nova (для
      общности подходов, НЕ для переиспользования компонентов).
    - projects/game-nova/configs/i18n/ — **обязательно grep**
      перед созданием каждой новой строки (R12).
