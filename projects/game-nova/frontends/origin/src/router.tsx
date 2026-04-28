@@ -27,10 +27,19 @@
 //
 // Spring 2 ч.2 (Ф.3):
 //   /resource-market           → S-020 Resource exchange
-//   /market                    → S-021 Artefact market
-//   /repair                    → S-022 Repair hangar
-//   /battlestats               → S-023 Battle stats
+//   /market                    → S-015 Artefact market (legacy EXT_MODE)
+//   /repair                    → S-048 Repair hangar
+//   /battlestats               → S-017 Battle stats
 //   /fleet-operations          → S-024 Fleet operations
+//
+// Spring 3 (Ф.4):
+//   /artefacts                 → S-013 Artefacts (мой инвентарь)
+//   /artefact/:id              → S-014 ArtefactInfo (каталог-описание)
+//   /building/:type            → S-018 BuildingInfo
+//   /unit/:type                → S-019 UnitInfo
+//   /techtree                  → S-021 Techtree
+//   /records                   → S-024 Records
+//   /ranking                   → S-023 Ranking + публичная статистика (S-032)
 //
 //   /login                     → placeholder
 //   *                          → redirect на /
@@ -65,6 +74,13 @@ import { MarketScreen } from './features/market/MarketScreen';
 import { RepairScreen } from './features/repair/RepairScreen';
 import { BattleStatsScreen } from './features/battlestats/BattleStatsScreen';
 import { FleetOperationsScreen } from './features/fleet-operations/FleetOperationsScreen';
+import { ArtefactsScreen } from './features/artefacts/ArtefactsScreen';
+import { ArtefactInfoScreen } from './features/artefacts/ArtefactInfoScreen';
+import { BuildingInfoScreen } from './features/info/BuildingInfoScreen';
+import { UnitInfoScreen } from './features/info/UnitInfoScreen';
+import { TechtreeScreen } from './features/techtree/TechtreeScreen';
+import { RecordsScreen } from './features/records/RecordsScreen';
+import { RankingScreen } from './features/ranking/RankingScreen';
 
 export function AppRouter() {
   return (
@@ -119,6 +135,15 @@ export function AppRouter() {
             path="/fleet-operations"
             element={<FleetOperationsScreen />}
           />
+
+          {/* Spring 3 — artefacts / info / techtree / records / ranking */}
+          <Route path="/artefacts" element={<ArtefactsScreen />} />
+          <Route path="/artefact/:id" element={<ArtefactInfoScreen />} />
+          <Route path="/building/:type" element={<BuildingInfoScreen />} />
+          <Route path="/unit/:type" element={<UnitInfoScreen />} />
+          <Route path="/techtree" element={<TechtreeScreen />} />
+          <Route path="/records" element={<RecordsScreen />} />
+          <Route path="/ranking" element={<RankingScreen />} />
 
           <Route path="/login" element={<LoginPlaceholder />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -7,7 +7,13 @@ Shipyard, Galaxy, Mission, Empire — каркас pixel-perfect HTML+CSS,
 2026-04-28), Ф.3 ✅ Spring 2 (12 alliance-экранов S-008..S-019 +
 5 экранов S-020..S-024: resource-market/market/repair/battlestats/
 fleet-operations — коммиты 48ef07cf19 + следующий, 2026-04-28),
-Ф.4-Ф.9 — отдельными сессиями.
+Ф.4 ✅ Spring 3 (7 экранов S-013/S-014/S-018/S-019/S-021/S-024/
+S-023: artefacts + 3 info-страницы + techtree + records + ranking;
+backend пакет `internal/catalog/` с 3 catalog endpoints, real
+`/api/techtree` и `/api/records` подключены — реальные данные, не
+моки; catalog отдаёт current-universe-only данные modern-вселенной,
+см. simplifications P72.S3.A, 2026-04-28),
+Ф.5-Ф.9 — отдельными сессиями.
 **Зависимости** (актуализировано 2026-04-28):
 - ✅ План 64 — закрыт (override-схема балансов).
 - ✅ План 65 — закрыт (Ф.1-Ф.6, включая teleport).

@@ -3,8 +3,10 @@
 // Spring 1: Обзор, Империя, Строения, Исследования, Верфь, Галактика,
 // Миссии.
 // Spring 2 ч.1: Альянс. Spring 2 ч.2: Ресурсы (рынок ресурсов), Ремонт,
-// Флот (операции), Боевая статистика. Чат/Сообщения/Друзья/Статистика/
-// Настройки остаются заглушками до Spring 3-5.
+// Флот (операции), Боевая статистика.
+// Spring 3 (Ф.4): Артефакты (инвентарь), Дерево технологий, Рекорды,
+// Рейтинг (=Статистика). Чат/Сообщения/Друзья/Настройки остаются
+// заглушками до Spring 4-5.
 //
 // Намеренные расхождения с legacy:
 //   - **Achievements**, **Tutorial** — пункты скрыты (см. план 72 §«не
@@ -77,14 +79,19 @@ export function LeftMenu() {
         <RouterLink to="/mission" label="Миссии" />
         <RouterLink to="/fleet-operations" label="Флот" />
         <RouterLink to="/alliance" label="Альянс" />
-        <RouterLink to="/market" label="Артефакты" />
+        <RouterLink to="/artefacts" label="Артефакты" />
+        <RouterLink to="/market" label="Рынок артефактов" />
         <RouterLink to="/battlestats" label="История боёв" />
+
+        <MenuGroup className="menu-info-sub" label="Информация" />
+        <RouterLink to="/techtree" label="Дерево технологий" />
+        <RouterLink to="/records" label="Рекорды" />
+        <RouterLink to="/ranking" label="Рейтинг" />
 
         <MenuGroup className="menu-other" label="Прочее" />
         <AnchorLink href="#chat" label="Чат" />
         <AnchorLink href="#msg" label="Сообщения" />
         <AnchorLink href="#friends" label="Друзья" />
-        <AnchorLink href="#statistics" label="Статистика" />
         <AnchorLink href="#settings" label="Настройки" />
       </ul>
     </div>

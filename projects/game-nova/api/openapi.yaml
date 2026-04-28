@@ -1456,6 +1456,121 @@ paths:
                     type: integer
                     description: Игроки заходившие за последние 24 часа
 
+  /api/techtree:
+    get:
+      tags: [score]
+      security: [{ bearerAuth: [] }]
+      summary: Дерево требований юнитов/зданий/исследований с прогрессом игрока.
+      description: |
+        Возвращает все известные nodes (buildings + research + ships +
+        defense) с их requirements и текущими уровнями игрока.
+        Используется origin-фронтом (план 72 Ф.4 S-021 Techtree) и
+        nova-фронтом (общий wiki/tree view).
+      parameters:
+        - in: query
+          name: planet_id
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Techtree" }
+
+  /api/records:
+    get:
+      tags: [score]
+      security: [{ bearerAuth: [] }]
+      summary: Рекорды сервера — топ-1 по каждой категории.
+      description: |
+        Для каждого здания/исследования/корабля/обороны возвращает
+        держателя рекорда (max level / max count) и значение игрока.
+        Плюс top-1 по очкам. Используется origin-фронтом (план 72
+        Ф.4 S-024).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items: { $ref: "#/components/schemas/RecordEntry" }
+
+  /api/buildings/catalog/{type}:
+    get:
+      tags: [catalog]
+      security: [{ bearerAuth: [] }]
+      summary: Описание здания + pre-computed cost/build_time/production по уровням (план 72 Ф.4 S-018).
+      description: |
+        `type` — числовой `unit_id` ИЛИ строковый `key` из `buildings.yml`
+        (`metal_mine`, `solar_plant`, ...). Возвращает params и
+        preview-таблицу для уровней 1, 5, 10, 20, 30, 40 (отсекаются
+        по `max_level`).
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BuildingCatalogEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/units/catalog/{type}:
+    get:
+      tags: [catalog]
+      security: [{ bearerAuth: [] }]
+      summary: Описание корабля / обороны / исследования (план 72 Ф.4 S-019).
+      description: |
+        `type` — числовой `unit_id` ИЛИ строковый `key` из ships.yml /
+        defense.yml / research.yml. Поле `kind` определяет тип:
+        `ship` | `defense` | `research`. Для research возвращается
+        preview cost-таблица; для ship/defense — статы + rapidfire.
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnitCatalogEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/artefacts/catalog/{type}:
+    get:
+      tags: [catalog]
+      security: [{ bearerAuth: [] }]
+      summary: Описание артефакта из каталога (план 72 Ф.4 S-014).
+      description: |
+        `type` — числовой `unit_id` ИЛИ строковый `key` из
+        `artefacts.yml`. Возвращает effect (тип/op/value),
+        lifetime/delay, stackable.
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArtefactCatalogEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/alliances:
     get:
       tags: [alliances]
@@ -3394,6 +3509,144 @@ components:
         username: { type: string }
         score:    { type: integer, format: int64 }
         rank:     { type: integer }
+
+    # ----- Techtree (план 72 Ф.4 Spring 3) -----
+    Techtree:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items: { $ref: "#/components/schemas/TechtreeNode" }
+
+    TechtreeNode:
+      type: object
+      properties:
+        key:           { type: string }
+        kind:          { type: string, enum: [building, research, ship, defense] }
+        id:            { type: integer }
+        current_level: { type: integer }
+        unlocked:      { type: boolean }
+        requirements:
+          type: array
+          items: { $ref: "#/components/schemas/TechtreeRequirement" }
+
+    TechtreeRequirement:
+      type: object
+      properties:
+        kind:  { type: string, enum: [building, research] }
+        key:   { type: string }
+        level: { type: integer }
+        have:  { type: integer }
+        met:   { type: boolean }
+
+    # ----- Records (план 72 Ф.4 Spring 3) -----
+    RecordEntry:
+      type: object
+      properties:
+        category:    { type: string, enum: [building, research, ship, defense, score] }
+        key:         { type: string }
+        unit_id:     { type: integer }
+        holder_id:   { type: string, format: uuid }
+        holder_name: { type: string }
+        value:       { type: number, format: double }
+        my_value:    { type: number, format: double }
+
+    # ----- Catalog (план 72 Ф.4 Spring 3) -----
+    ResCost:
+      type: object
+      properties:
+        metal:    { type: integer, format: int64 }
+        silicon:  { type: integer, format: int64 }
+        hydrogen: { type: integer, format: int64 }
+
+    BuildingCatalogEntry:
+      type: object
+      properties:
+        id:               { type: integer }
+        key:              { type: string }
+        name:             { type: string }
+        cost_base:        { $ref: "#/components/schemas/ResCost" }
+        cost_factor:      { type: number, format: double }
+        time_base_seconds: { type: integer }
+        base_rate_per_hour:    { type: number, format: double, nullable: true }
+        energy_per_level:      { type: number, format: double, nullable: true }
+        energy_output_per_level: { type: number, format: double, nullable: true }
+        capacity_base:    { type: integer, format: int64, nullable: true }
+        moon_only:        { type: boolean }
+        max_level:        { type: integer }
+        preview:
+          type: array
+          items: { $ref: "#/components/schemas/BuildingPreviewRow" }
+
+    BuildingPreviewRow:
+      type: object
+      properties:
+        level:               { type: integer }
+        cost:                { $ref: "#/components/schemas/ResCost" }
+        build_seconds:       { type: integer }
+        production_per_hour: { type: number, format: double }
+        energy_demand:       { type: number, format: double }
+        energy_output:       { type: number, format: double }
+
+    UnitCatalogEntry:
+      type: object
+      properties:
+        id:          { type: integer }
+        key:         { type: string }
+        name:        { type: string }
+        kind:        { type: string, enum: [ship, defense, research] }
+        cost:        { $ref: "#/components/schemas/ResCost" }
+        cost_factor: { type: number, format: double, nullable: true }
+        attack:      { type: integer, nullable: true }
+        shield:      { type: integer, nullable: true }
+        shell:       { type: integer, nullable: true }
+        cargo:       { type: integer, format: int64, nullable: true }
+        speed:       { type: integer, nullable: true }
+        fuel:        { type: integer, nullable: true }
+        front:       { type: integer, nullable: true }
+        rapidfire:
+          type: array
+          items: { $ref: "#/components/schemas/RapidfireEntry" }
+        preview:
+          type: array
+          items: { $ref: "#/components/schemas/ResearchPreviewRow" }
+
+    RapidfireEntry:
+      type: object
+      properties:
+        target_id:  { type: integer }
+        multiplier: { type: integer }
+
+    ResearchPreviewRow:
+      type: object
+      properties:
+        level: { type: integer }
+        cost:  { $ref: "#/components/schemas/ResCost" }
+
+    ArtefactCatalogEntry:
+      type: object
+      properties:
+        id:               { type: integer }
+        key:              { type: string }
+        name:             { type: string }
+        effect:           { $ref: "#/components/schemas/ArtefactEffect" }
+        stackable:        { type: boolean }
+        max_stacks:       { type: integer }
+        lifetime_seconds: { type: integer }
+        delay_seconds:    { type: integer }
+
+    ArtefactEffect:
+      type: object
+      properties:
+        type:           { type: string }
+        field:          { type: string }
+        op:             { type: string }
+        value:          { type: number, format: double }
+        active_value:   { type: number, format: double }
+        inactive_value: { type: number, format: double }
+        battle_attack:  { type: number, format: double }
+        battle_shield:  { type: number, format: double }
+        battle_shell:   { type: number, format: double }
 
     Alliance:
       type: object

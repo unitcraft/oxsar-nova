@@ -2104,6 +2104,45 @@ unit-тесты на форматтеры/валидаторы/router-маршр
 
 ---
 
+## 2026-04-28 — План 72 Ф.4 Spring 3: artefacts/info/techtree/records
+
+### [P72.S3.A] Catalog-endpoints — current-universe-only
+- **Где**: `internal/catalog/handler.go` — `GET /api/buildings/catalog/{type}`,
+  `/api/units/catalog/{type}`, `/api/artefacts/catalog/{type}`.
+- **Что упрощено**: catalog отдаёт modern (nova) данные из
+  `internal/economy/formulas.go` + `configs/*.yml` без
+  universe-context. Фронтенд не передаёт `?universe=...` и не имеет
+  способа выбрать вселенную.
+- **Почему**: на 2026-04-28 origin-вселенная не запущена (план 74
+  ещё не закрыт). Catalog (params + pre-computed) — read-only общий
+  ресурс; R10 требует `universe_id` для **per-universe данных
+  игроков** (планеты, юниты), а не для каталога. Modern (nova)
+  данные — единственное полезное содержимое сейчас.
+- **Как чинить**: при запуске origin-вселенной (план 74) добавить
+  query-param `?universe=origin|modern` ИЛИ per-user routing на
+  JWT-context (читать `user.current_universe`). Внутри handler —
+  выбор `internal/origin/economy/*.go` vs `internal/economy/*.go`
+  по universe_id. Ожидаемый объём: +1 if-statement в каждом из
+  3 handler'ов + новый field в openapi.
+- **Приоритет**: M (фича понадобится при запуске origin, не блокер
+  плана 72).
+
+### [P72.S3.B] Pixel-perfect доводка Spring 3 отложена на план 73
+- **Где**: все Spring 3 экраны (artefacts / artefact-info /
+  building-info / unit-info / techtree / records / ranking).
+- **Что упрощено**: HTML-структура и CSS-классы (`ntable`, `center`,
+  `idiv`, `false`/`true`, `button`) идентичны legacy-PHP, но
+  попиксельная сверка с legacy-screenshots не выполнена.
+- **Почему**: то же обоснование что у P72.S1.G и P72.S2.F — без
+  screenshot-diff CI ручной pixel-perfect — это бесконечная
+  регрессия.
+- **Как чинить**: план 73 (screenshot-diff CI).
+- **Приоритет**: L.
+
+**Связанный план**: [docs/plans/72-remaster-origin-frontend-pixel-perfect.md](plans/72-remaster-origin-frontend-pixel-perfect.md)
+
+---
+
 ## 2026-04-28 — План 68 Ф.1-Ф.7: биржа артефактов (backend)
 
 ### [P68.A] Currency: users.credit как оксариты (без переименования)
@@ -2198,21 +2237,13 @@ unit-тесты на форматтеры/валидаторы/router-маршр
 - **Приоритет**: L (Ф.3 pixel-diff применяет масок к динамичным
   зонам; статический snapshot достаточен).
 
-### [P73.B] Smoke-набор 7 экранов из 22, остальные 15 не сняты
-- **Где**: `tests/e2e/origin-baseline/screens.ts::SMOKE_SCREEN_IDS`.
-- **Что упрощено**: snapshot-ом покрыты только 7 экранов (Main,
-  Research, Constructions, Alliance overview, Resource, Market,
-  Repair). Остальные 15 (Shipyard, Galaxy, Mission, Empire,
-  11 alliance-actions, Battlestats) перечислены в `SCREENS` но
-  не сняты.
-- **Почему**: Ф.2 — smoke процесса; цель — убедиться что pipeline
-  работает end-to-end. Снятие всех 22 — Ф.2.5, отдельная сессия.
-  Запускается одной командой:
-  `SMOKE=0 bash tests/e2e/origin-baseline/take-screenshots.sh`.
-- **Как чинить**: запустить указанную команду; ожидаемое время
-  ~3-5 минут (1 worker, без параллелизма из-за общей БД).
-- **Приоритет**: M (Ф.3 не запустится без полного набора, но
-  Ф.3 сам отложен до Spring 3+4+5).
+### [P73.B] Smoke-набор 7 экранов из 22 — ЗАКРЫТО (2026-04-28)
+- **Где было**: `tests/e2e/origin-baseline/screens.ts::SMOKE_SCREEN_IDS`.
+- **Закрытие**: Ф.2.5 догнан в той же дате — снято всех 22 экрана
+  через `SMOKE=0 bash tests/e2e/origin-baseline/take-screenshots.sh`.
+  Прогон занял 4.7 минуты, 21 ok с первой попытки, 2 flaky
+  (S-012-diplomacy, S-012-found) прошли с retry=1, 0 failed. Все PNG
+  закоммичены в `tests/e2e/origin-baseline/screenshots/`.
 
 **Связанный план**: [docs/plans/73-remaster-screenshot-diff-ci.md](plans/73-remaster-screenshot-diff-ci.md)
 

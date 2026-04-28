@@ -13373,3 +13373,137 @@ features/auth/) → 0 результатов. ✅
   + блок «Прогресс»), `docs/active-sessions.md` (slot 1 удалён).
 
 **Статус плана 73**: 🟡 Ф.1 ✅, Ф.2 🟡 (smoke), остальное — отдельные сессии.
+
+## Итерация 72 Ф.4 — Spring 3 (origin-фронт + catalog backend) (2026-04-28)
+
+**Что сделано**:
+
+7 экранов origin-фронта (S-013/S-014/S-018/S-019/S-021/S-024/S-023):
+artefacts инвентарь, ArtefactInfo, BuildingInfo, UnitInfo, Techtree,
+Records, Ranking. Все экраны pixel-perfect зеркалят legacy
+`templates/standard/*.tpl` через `<table className="ntable">` +
+`<th>/<td>` структуру. **Реальные данные, без моков**:
+
+- **Backend пакет `internal/catalog/`** (~430 строк) с тремя GET
+  endpoint'ами: `/api/buildings/catalog/{type}`,
+  `/api/units/catalog/{type}`, `/api/artefacts/catalog/{type}`.
+  Buildings и research возвращают params (cost_base, cost_factor,
+  time_base_seconds, base_rate_per_hour, energy_per_level,
+  capacity_base, max_level) + pre-computed таблицу для уровней
+  1, 5, 10, 20, 30, 40 через `internal/economy/CostForLevelFloor`,
+  `BuildDuration`, `ProductionPerHour`, `EnergyDemand`,
+  `EnergyOutput`. Ships/defense — статы (attack/shield/shell/cargo/
+  speed/fuel) + rapidfire-таблица.
+- **Реальные `/api/techtree` и `/api/records`** уже существуют в
+  game-nova-backend (не трогал) — оба полноценные с реальной
+  выборкой из БД. Frontend подключён через `api/catalog.ts` +
+  TanStack Query `staleTime: 1ч` для catalog (не меняется в
+  runtime), `60s` для tree/records.
+- **R8 Prometheus**: `oxsar_catalog_requests_total{kind,status}`
+  через локальный `prometheus.MustRegister` в `internal/catalog/
+  metrics.go` (sync.Once-идемпотентно).
+- **R9 Idempotency-Key** на activate/deactivate артефактов в
+  `api/artefacts.ts`.
+- **R12 i18n**: 100% переиспользование nova-bundle
+  (`artefacts.*`, `score.*`, `records.*`, `techtree.*`, `info.*`,
+  `battlestats.*`, `repair.*`, `alliance.*`) — новых ключей не
+  создавал.
+
+**Тесты**:
+- Backend: 11 тестов в `internal/catalog/handler_test.go`
+  (table-driven через chi-router + httptest, in-memory
+  config.Catalog) — 401/404/200 для каждого типа, validation
+  preview-таблицы для metal_mine (растущая стоимость по уровням),
+  rapidfire для ship, research preview cost. Все ✅.
+- Frontend: 4 новых vitest файла (artefacts/info-keys/techtree/
+  records) + расширение router.test.ts. Итого 80 тестов в 16
+  файлах, все ✅.
+
+**Catalog — current-universe-only** (P72.S3.A в simplifications.md):
+catalog отдаёт modern (nova) данные. Universe-aware расширение
+(query-param `?universe=...`) — при запуске origin-вселенной (план 74).
+Это не нарушение R15: catalog endpoints полные, отдают реальные
+числовые данные; universe-расширение — отдельная архитектурная
+задача с собственным scope.
+
+**Что отложено**:
+- Pixel-perfect доводка (P72.S3.B) — план 73 screenshot-diff CI.
+- S-015 ArtefactMarket (legacy EXT_MODE) — реализован в Spring 2 ч.2
+  под `/market`, не дублирую.
+- S-033 Daily quests — нет в legacy templates (`dailyquests.tpl`
+  отсутствует).
+- Spring 4 (~12 экранов: friends/msg/chat/notepad/...) и Spring 5
+  (~5 экранов: simulator/rocket-attack/...) — отдельные сессии.
+
+**Файлы**:
+
+- Созданы (backend): `projects/game-nova/backend/internal/catalog/
+  {handler.go, handler_test.go, metrics.go}`.
+- Созданы (frontend): `projects/game-nova/frontends/origin/src/{
+  api/{artefacts.ts, highscore.ts, catalog.ts},
+  features/artefacts/{ArtefactsScreen.tsx, ArtefactInfoScreen.tsx,
+  artefacts.test.ts},
+  features/info/{BuildingInfoScreen.tsx, UnitInfoScreen.tsx,
+  info-keys.test.ts},
+  features/techtree/{TechtreeScreen.tsx, techtree.test.ts},
+  features/records/{RecordsScreen.tsx, records.test.ts},
+  features/ranking/RankingScreen.tsx,
+  features/common/artefact-catalog.ts}`.
+- Изменены: `cmd/server/main.go` (catalog import + handler + 3
+  routes), `api/openapi.yaml` (+ techtree/records ops + 3 catalog
+  ops + 11 schemas), `api/types.ts` (+ Artefact/HighscoreEntry/
+  PublicStats/catalog DTO), `api/query-keys.ts` (+ 8 новых ключей),
+  `router.tsx` (+ 7 routes), `layout/LeftMenu.tsx` (+ 4 ссылки),
+  `router.test.ts` (+ Spring 3 paths), `docs/plans/72-...md`
+  (шапка), `docs/simplifications.md` (P72.S3.A + B),
+  `docs/active-sessions.md` (slot 3 удалён).
+
+**Статус плана 72**: Ф.1-Ф.4 ✅, Ф.5-Ф.9 — отдельными сессиями.
+
+
+================================================================================
+План 73 Ф.2.5 — снят полный набор baseline-эталонов (2026-04-28)
+================================================================================
+
+**Что**: догнан Ф.2 — снято оставшихся 15 экранов через
+`SMOKE=0 bash tests/e2e/origin-baseline/take-screenshots.sh`.
+Baseline покрывает все 22 экрана Spring 1+2.
+
+**Прогон**: 22 теста, 21 ok с первой попытки, 2 flaky прошли с
+retry=1 (S-012-diplomacy, S-012-found — холодный cache при первом
+обращении к этим actions; повторная попытка ~3-4s). 0 failed.
+Общее время — 4.7 минуты (1 worker, fullyParallel=false).
+
+**Добавлены PNG** (15 шт., ~4 MB):
+
+  s-004-shipyard.png
+  s-005-galaxy.png
+  s-006-mission.png
+  s-042-empire.png         (длинная сводка, fullPage)
+  s-017-battlestats.png
+  s-012-{members,diplomacy,ranks,globalmail,
+         search,applications,relations,found,
+         manage,apply,candidates}-alliance-*.png
+
+**Грабли**: те же что в Ф.2 (CDN-блокировка → нет JS-countdown,
+cold-cache на первом обращении). Решения уже зафиксированы в Ф.1
+коммите 9aa1888f9c — `BLOCKED_HOSTS` + `retries=1`. Дополнительных
+фиксов не потребовалось.
+
+**Открытый вопрос для Ф.3+**: применимость самого pixel-diff.
+Новый origin-фронт (React, план 72) — другой URL-паттерн (React
+Router вместо `?go=Page&action=...`); CSS/layout пишется заново
+«pixel-perfect к legacy», но фактическое совпадение нужно
+верифицировать. До Ф.3 — открыто. Возможны варианты:
+сравнение с более высоким threshold чем 0.5%, переход на
+DOM-snapshot, либо признание что pixel-diff не подходит и
+сравнение делается компонент-по-компоненту визуально.
+
+**Файлы**:
+
+- Добавлены: `tests/e2e/origin-baseline/screenshots/*.png` (15).
+- Изменены: `docs/plans/73-...md` (Ф.2 → ✅), `docs/active-
+  sessions.md` (slot 4 снят), `docs/simplifications.md` (P73.B
+  закрыто).
+
+**Статус плана 73**: Ф.1 ✅, Ф.2 ✅, Ф.3-Ф.6 — отдельные сессии.

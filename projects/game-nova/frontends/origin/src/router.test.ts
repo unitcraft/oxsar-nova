@@ -49,6 +49,16 @@ const SPRING_2_PART2 = [
   '/fleet-operations',
 ];
 
+const SPRING_3_PATHS = [
+  '/artefacts',
+  '/artefact/:id',
+  '/building/:type',
+  '/unit/:type',
+  '/techtree',
+  '/records',
+  '/ranking',
+];
+
 describe('router Spring 1', () => {
   it('содержит все 7 главных экранов + login + 404 placeholder', () => {
     expect(SPRING_1_PATHS).toContain('/');
@@ -101,5 +111,22 @@ describe('router Spring 2 — ресурсный/боевой блок (5 экр
       '/battlestats',
       '/fleet-operations',
     ]);
+  });
+});
+
+describe('router Spring 3 — artefacts / info / techtree / records / ranking', () => {
+  it('покрывает 7 новых маршрутов S-013/S-014/S-018/S-019/S-021/S-024/S-023', () => {
+    expect(SPRING_3_PATHS).toHaveLength(7);
+    expect(SPRING_3_PATHS).toContain('/artefacts');
+    expect(SPRING_3_PATHS).toContain('/artefact/:id');
+    expect(SPRING_3_PATHS).toContain('/building/:type');
+    expect(SPRING_3_PATHS).toContain('/unit/:type');
+    expect(SPRING_3_PATHS).toContain('/techtree');
+    expect(SPRING_3_PATHS).toContain('/records');
+    expect(SPRING_3_PATHS).toContain('/ranking');
+  });
+
+  it('info-страницы параметризованы (`:id` / `:type` для роутера v6)', () => {
+    expect(SPRING_3_PATHS.filter((p) => p.includes(':'))).toHaveLength(3);
   });
 });

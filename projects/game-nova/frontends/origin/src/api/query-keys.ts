@@ -33,4 +33,16 @@ export const QK = {
   artMarketOffers: () => ['art-market', 'offers'] as const,
   artMarketCredit: () => ['art-market', 'credit'] as const,
   battlestats: () => ['battlestats'] as const,
+  // Spring 3 (Ф.4) — artefacts / records / stats / catalog
+  artefacts: () => ['artefacts'] as const,
+  highscore: () => ['highscore'] as const,
+  highscoreMe: () => ['highscore', 'me'] as const,
+  publicStats: () => ['stats'] as const,
+  buildingCatalog: (type: string | number) =>
+    ['catalog', 'building', type] as const,
+  unitCatalog: (type: string | number) => ['catalog', 'unit', type] as const,
+  artefactCatalog: (type: string | number) =>
+    ['catalog', 'artefact', type] as const,
+  techtree: (planetId?: string) => ['techtree', planetId ?? ''] as const,
+  records: () => ['records'] as const,
 };
