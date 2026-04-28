@@ -549,7 +549,7 @@ type EventRow struct {
     Payload []byte  // что внутри — никто не знает
 }
 
-// ✅ Хорошо — typed payload через sqlc / json.Unmarshal в struct:
+// ✅ Хорошо — typed payload через json.Unmarshal в struct:
 type AlienAttackPayload struct {
     AttackerFleetID string `json:"attacker_fleet_id"`
     TargetPlanetID  string `json:"target_planet_id"`
@@ -618,8 +618,9 @@ INSERT INTO users (id, ...) SELECT na_user.userid, ... FROM na_user;
   колонки, разумный N+1, batch-операции где нужно. Не «оптимизируем
   потом».
 - ✅ **Безопасность**: валидация всех inputs, защита от SQL
-  injection (через sqlc / параметры), CSRF где применимо, JWT-проверка
-  scopes/roles. Не «дыры замажем после запуска».
+  injection (через параметризованные pgx-запросы), CSRF где
+  применимо, JWT-проверка scopes/roles. Не «дыры замажем после
+  запуска».
 
 **Что это НЕ означает** (избегать gold-plating):
 

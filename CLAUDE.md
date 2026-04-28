@@ -74,8 +74,13 @@ make lint          # все линтеры
 - Ошибки заворачиваются через `fmt.Errorf("context: %w", err)`; между слоями —
   типизированные sentinel-ошибки (`battle.ErrInvalidInput`).
 - Логирование: `log/slog` с полями `user_id`, `planet_id`, `event_id`, `trace_id`.
-- БД: только через `sqlc`-сгенерированные методы + сырой SQL в `projects/game-nova/backend/queries/`
-  для сложной агрегации. Транзакции — `repo.InTx(ctx, fn)`.
+- БД: pgx напрямую (`db.Pool().Exec`, `QueryRow`, `Query`) с
+  параметризованными запросами; SQL пишется inline в handler/service,
+  без code-generation. Транзакции — `repo.InTx(ctx, fn)` или
+  `pgx.BeginTx(...)`. (Замечание 2026-04-28: ранее CLAUDE.md упоминал
+  sqlc, но фактически он не используется — `sqlc.yaml`, директории
+  `queries/`, импортов `sqlc` нет в репозитории. Если в будущем
+  введём sqlc — это будет отдельный план миграции.)
 - Запрещено: `init()` с побочными эффектами, глобальные изменяемые переменные
   (кроме конфига, загруженного при старте), `panic` в прод-коде (кроме bootstrap),
   `any`/`interface{}` в публичных API без причины.
