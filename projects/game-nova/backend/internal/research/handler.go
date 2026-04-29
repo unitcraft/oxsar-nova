@@ -76,9 +76,11 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
+	resCosts := h.svc.ResearchCostsMap(levels)
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
 		"queue":            queue,
 		"levels":           levels,
 		"research_seconds": resSecs,
+		"research_costs":   resCosts,
 	})
 }

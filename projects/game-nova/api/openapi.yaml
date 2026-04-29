@@ -445,7 +445,7 @@ paths:
     get:
       tags: [research]
       security: [{ bearerAuth: [] }]
-      summary: List my research (queue + levels)
+      summary: List my research (queue + levels + next-level cost/time)
       responses:
         "200":
           description: ok
@@ -460,6 +460,14 @@ paths:
                   levels:
                     type: object
                     additionalProperties: { type: integer }
+                  research_seconds:
+                    type: object
+                    description: Время следующего уровня каждой технологии (секунды)
+                    additionalProperties: { type: integer }
+                  research_costs:
+                    type: object
+                    description: Стоимость следующего уровня (металл/кремний/водород)
+                    additionalProperties: { $ref: "#/components/schemas/ResCost" }
 
   /api/planets/{id}/shipyard:
     post:

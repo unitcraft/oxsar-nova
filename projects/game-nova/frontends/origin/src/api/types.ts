@@ -69,6 +69,12 @@ export interface ShipyardInventory {
 export interface ResearchOverview {
   queue: QueueItem[];
   levels: Record<string, number>;
+  /** Время следующего уровня каждой технологии (секунды).
+   *  Ключ — unit_id как строка. */
+  research_seconds?: Record<string, number>;
+  /** Стоимость следующего уровня каждой технологии (метал/кремний/водород).
+   *  Ключ — unit_id как строка. */
+  research_costs?: Record<string, { metal: number; silicon: number; hydrogen: number }>;
 }
 
 export interface GalaxyCell {
