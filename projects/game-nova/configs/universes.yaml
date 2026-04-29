@@ -34,3 +34,19 @@ universes:
     num_galaxies: 4
     num_systems: 300
     launched_at: "2026-06-01T00:00:00Z"
+
+  - id: uni03
+    name: "Classic"
+    description: "Классический баланс из legacy oxsar2 (override origin.yaml)."
+    subdomain: "uni03"            # uni03.oxsar-nova.ru
+    dev_url: "http://localhost:5176"
+    status: "active"
+    speed: 0.75                   # как у Nova
+    deathmatch: false
+    max_planets: 0
+    bashing_period: 18000
+    bashing_max_attacks: 4
+    protection_period: 86400
+    num_galaxies: 8
+    num_systems: 600
+    launched_at: "2026-04-29T00:00:00Z"

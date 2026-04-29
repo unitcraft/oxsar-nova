@@ -15,7 +15,7 @@
 #               через GRAFANA_PASSWORD env)
 #
 # Метрики:
-#   backend:  http://backend:8080/metrics
+#   uni01-backend:  http://uni01-backend:8080/metrics
 #   worker:   http://worker:9091/metrics  (WORKER_METRICS_ADDR)
 #   postgres: через postgres-exporter (порт 9187)
 
