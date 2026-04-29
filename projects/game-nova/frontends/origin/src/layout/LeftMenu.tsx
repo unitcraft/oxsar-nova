@@ -2,14 +2,11 @@
 //
 // Pixel-perfect клон legacy game-legacy-php Menu.xml + menuSoH():
 //   - Секция 1 (Планета): плоские ссылки без заголовка
-//   - Секции 2-8: заголовок = иконка menu_open/close.png + текст + toggle
-//   - Пути соответствуют роутам origin-фронта
+//   - Секции 2-8: заголовок с toggle (иконка float:right как в legacy)
+//   - При закрытом: иконка menu_open.png (float:right) + текст названия
+//   - При открытом: только иконка menu_close.png (float:right), без текста
 //
-// Намеренные расхождения с legacy:
-//   - jQuery menuSoH заменён React useState (ADR: без jQuery)
-//   - Форум/Туториал (внешние ссылки) — секция 6 пустая
-//   - /resource → заглушка (экран производства не реализован в Spring 1-4)
-//   - ExchangeOpts/Widgets/ResTransferStats → временно /, до реализации
+// Иконка float:right воспроизводит legacy CSS: .menu_img_close, .menu_img_open { float: right; }
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -37,12 +34,14 @@ function MenuSection({
         onClick={() => setOpen((v) => !v)}
         style={{ cursor: 'pointer' }}
       >
+        {/* Иконка float:right — как в legacy .menu_img_close/.menu_img_open */}
         <img
           src={open ? CLOSE_ICON : OPEN_ICON}
-          alt={open ? '-' : '+'}
-          style={{ verticalAlign: 'middle', marginRight: 3 }}
+          alt={open ? 'Закрыть' : 'Открыть'}
+          style={{ float: 'right', margin: 1 }}
         />
-        {title}
+        {/* При открытом состоянии текст не показывается (как в legacy menuSoH) */}
+        {!open && title}
       </li>
       <li id={`menudiv${id}`} style={{ display: open ? '' : 'none' }}>
         <ul>{children}</ul>
