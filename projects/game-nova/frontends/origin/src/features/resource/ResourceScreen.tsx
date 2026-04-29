@@ -107,8 +107,15 @@ export function ResourceScreen() {
   }
 
   function buildingName(b: ResourceBuilding): string {
-    const key = b.name.replace(/_/g, '');
-    return t('buildings', key) ?? b.name;
+    // snake_case → camelCase: metal_mine→metalmine, silicon_lab→siliconLab
+    const camel = b.name.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+    const val = t('info', camel);
+    if (!val.startsWith('[')) return val;
+    // fallback: убрать _ без смены регистра (metal_mine→metalmine)
+    const flat = b.name.replace(/_/g, '');
+    const val2 = t('info', flat);
+    if (!val2.startsWith('[')) return val2;
+    return b.name;
   }
 
   return (
