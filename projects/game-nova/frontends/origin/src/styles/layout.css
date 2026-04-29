@@ -96,21 +96,16 @@
   margin-top: 1px;
 }
 
-/* Секции меню свёрнуты по умолчанию (как в legacy) */
-#menudiv2, #menudiv3, #menudiv4,
-#menudiv5, #menudiv6, #menudiv7, #menudiv8 {
-  display: none;
-}
-
-/* Заголовок секции: иконка [+] справа */
-li.menu-info.menu2-max::after,
-li.menu-info.menu3-max::after,
-li.menu-info.menu4-max::after,
-li.menu-info.menu5-max::after,
-li.menu-info.menu6-max::after,
-li.menu-info.menu7-max::after,
-li.menu-info.menu8-max::after {
+/* Заголовок секции: иконка [+]/[-] справа через ::after */
+li[class*="menu-min"]::after {
   content: '+';
+  float: right;
+  padding-right: 4px;
+  font-weight: bold;
+  color: var(--c-link);
+}
+li[class*="menu-max"]::after {
+  content: '-';
   float: right;
   padding-right: 4px;
   font-weight: bold;
@@ -133,11 +128,14 @@ li.menu-info.menu8-max::after {
 .menu8-max, .menu8-max:hover { background-color: var(--c-menu8-max); }
 .menu8-min, .menu8-min:hover { background-color: var(--c-menu8-min); }
 
+#contentTopAndBody {
+  margin-left: 155px;
+  margin-right: 180px;
+}
+
 #content {
   width: auto;
   margin: 20px 0;
-  margin-left: 155px;
-  margin-right: 180px;
   text-align: center;
 }
 
