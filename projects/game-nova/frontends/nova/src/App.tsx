@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from './stores/auth';
 import { api } from './api/client';
 import type { Planet } from './api/types';
-import { LoginScreen } from './features/auth/LoginScreen';
 import { HandoffPage } from './features/auth/HandoffPage';
 import { OverviewScreen } from './features/overview/OverviewScreen';
 import { UniverseSwitcher } from './features/universes/UniverseSwitcher';
@@ -93,11 +92,16 @@ function parseHash(): { tab: Tab; infoUnit: InfoUnit | null } {
   return { tab, infoUnit: null };
 }
 
+// План 72.2: nova-фронт не имеет собственного LoginScreen — единственный
+// вход через handoff с портала. Если юзер пришёл без токена — редирект
+// на портал, где он залогинится и кликнет «Играть».
+const PORTAL_URL =
+  (import.meta.env['VITE_PORTAL_URL'] as string) || 'http://localhost:5174';
+
 export function App() {
   const token = useAuthStore((s) => s.accessToken);
-  // План 36 Ф.8: handoff-route /auth/handoff?code=... — обмен one-time
-  // токена от Universe Switcher на новые JWT через identity-service.
-  // Не требует существующей авторизации (после handoff юзер залогинится).
+  // Handoff-route /auth/handoff?code=... — обмен one-time токена на JWT.
+  // Обрабатывается ДО проверки токена (юзер именно сейчас и логинится).
   if (window.location.pathname === '/auth/handoff') {
     return (
       <ToastProvider>
@@ -105,9 +109,29 @@ export function App() {
       </ToastProvider>
     );
   }
+  if (!token) {
+    // Редирект на портал. replace, чтобы game-домен не остался в history.
+    if (typeof window !== 'undefined') {
+      window.location.replace(PORTAL_URL);
+    }
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#888',
+          fontFamily: 'sans-serif',
+        }}
+      >
+        Перенаправление на портал…
+      </div>
+    );
+  }
   return (
     <ToastProvider>
-      {token ? <AuthenticatedApp /> : <LoginScreen />}
+      <AuthenticatedApp />
     </ToastProvider>
   );
 }

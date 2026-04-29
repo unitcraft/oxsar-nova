@@ -43,7 +43,7 @@ export function HandoffPage() {
       const res = await fetch('/auth/token/exchange', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handoff_token: handoffToken }),
+        body: JSON.stringify({ code: handoffToken }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
