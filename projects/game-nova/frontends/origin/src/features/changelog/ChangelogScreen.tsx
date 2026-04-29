@@ -29,8 +29,8 @@ export function ChangelogScreen() {
     <table className="ntable">
       <thead>
         <tr>
-          <th>{t('prefs', 'release') || 'Версия'}</th>
-          <th>{t('prefs', 'changes') || 'Изменения'}</th>
+          <th>{t('main', 'release')}</th>
+          <th>{t('main', 'changes')}</th>
         </tr>
       </thead>
       <tbody>
