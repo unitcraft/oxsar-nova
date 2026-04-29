@@ -85,7 +85,7 @@ export function CreateLotPage({ onBack, onCreated }: Props) {
     onError: (err) => {
       const e = err as ApiError;
       const code = errorMessageKey(e.code);
-      const message = code === 'generic' ? (e.message || t('errors.generic')) : t(`errors.${code}` as never);
+      const message = code === 'generic' ? (e.message || t('errors', 'generic')) : t('errors', code);
       toast.show('danger', t('toastCreateErrTitle'), message);
     },
   });
@@ -176,7 +176,7 @@ export function CreateLotPage({ onBack, onCreated }: Props) {
 
           {validationKey !== null && (
             <div role="alert" style={{ color: 'var(--ox-danger)', fontSize: 14 }}>
-              {t(`validation.${validationKey}` as never)}
+              {t('validation', validationKey)}
             </div>
           )}
 
