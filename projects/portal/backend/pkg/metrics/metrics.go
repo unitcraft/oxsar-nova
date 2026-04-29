@@ -5,14 +5,14 @@
 // регистрируются лениво при первом вызове пакетной функции Register.
 package metrics
 
-// DUPLICATE: этот файл скопирован между Go-модулями oxsar/game-nova,
-// oxsar/identity, oxsar/portal и oxsar/billing. При любом изменении
-// синхронизируйте КОПИИ:
-//   - projects/game-nova/backend/pkg/metrics/metrics.go
+// DUPLICATE: этот файл скопирован между Go-модулями oxsar/identity,
+// oxsar/portal и oxsar/billing. При любом изменении синхронизируйте КОПИИ:
 //   - projects/identity/backend/pkg/metrics/metrics.go
 //   - projects/portal/backend/pkg/metrics/metrics.go
 //   - projects/billing/backend/pkg/metrics/metrics.go
 // Причина дубля: каждый домен — отдельный go.mod, без shared-модуля.
+// game-nova имеет расширенную копию (с game-specific Register*-вызовами) —
+// она вне drift-группы, см. projects/game-nova/backend/pkg/metrics/metrics.go.
 
 import (
 	"net/http"

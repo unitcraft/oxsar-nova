@@ -427,6 +427,33 @@
 
 ## Infrastructure
 
+### [P85.1] check-duplicates — нет unit-тестов на сам инструмент
+- **Где**: `projects/game-nova/backend/cmd/tools/check-duplicates/main.go`.
+- **Что упрощено**: нет тестов парсера шапки / нормализации import-prefix /
+  diff-печати. Утилита проверяется только smoke'ом (план 85 Ф.4) и фактом
+  zero-exit на чистом репо.
+- **Почему**: явное решение в плане 85 §«Trade-offs» — «скрипт простой,
+  тесты на него — overengineering. Если поломается — починим по факту».
+- **Как чинить**: добавить `main_test.go` с фикстурами в `testdata/`
+  (group по списку путей; drift в impl-строке; per-module import-prefix).
+- **Приоритет**: L. Триггер: первый раз когда инструмент пропустит реальный drift.
+
+### [P85.2] metrics.go в game-nova вынесен из drift-группы (не унифицирован)
+- **Где**: `projects/game-nova/backend/pkg/metrics/metrics.go` (DUPLICATE-маркер
+  снят); `projects/{identity,portal,billing}/backend/pkg/metrics/metrics.go`
+  (группа из 3 копий).
+- **Что упрощено**: вместо разделения на общий каркас + game-specific add-on
+  (отдельный файл `metrics_game.go` или модуль `pkg/metricscore`) — оставили
+  game-nova-копию монолитной и вне drift-чека. Инструмент check-duplicates
+  её не сверяет.
+- **Почему**: разделение требует выделения общих типов в shared-локацию,
+  чего у нас нет (план 85 §«Не цель» запрещает shared-модуль). Текущее решение
+  даёт честное отражение реальности: 3 модуля синхронны, 1 — расширен.
+- **Как чинить**: при появлении 2-го game-расширения metrics — выделить
+  `pkg/metricscore/` (базовый каркас) + `pkg/metrics/` (game-extras), 4 раза
+  скопировать metricscore с DUPLICATE-маркером.
+- **Приоритет**: L.
+
 ### [docker] Frontend dev-mode через bind-mount — ЗАКРЫТО
 - Закрыто: `deploy/Dockerfile.frontend-prod` (multi-stage: node builder +
   nginx:1.27-alpine). `deploy/nginx.frontend.conf` — SPA fallback, /api
