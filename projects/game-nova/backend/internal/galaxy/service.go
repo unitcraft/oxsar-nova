@@ -1,11 +1,14 @@
 // Package galaxy отвечает за координаты, выборку системы и свободных
 // позиций.
 //
-// Статус: M3 (пока каркас). Генерация галактики и поиск свободных
-// клеток будут подключены с переносом CronCommand-логики из oxsar2.
+// План 72.1 часть 12: лимиты галактика/система — параметры вселенной
+// (`Config.Game.NumGalaxies` / `NumSystems`), читаются из
+// `configs/universes.yaml`. Раньше были hardcoded 1..16 / 1..999 — это
+// был баг (несоответствие YAML и реального runtime). Position 1..15
+// остаётся фиксированным (общий лимит игрового мира OGame-classic).
 package galaxy
 
-import "errors"
+import "fmt"
 
 // Coords — позиция в галактике.
 type Coords struct {
@@ -15,28 +18,46 @@ type Coords struct {
 	IsMoon   bool `json:"is_moon"`
 }
 
-// Validate проверяет координаты по ограничениям ТЗ (galaxy 1..16,
-// system 1..999, position 1..15).
-func (c Coords) Validate() error {
-	if c.Galaxy < 1 || c.Galaxy > 16 {
-		return errors.New("galaxy out of range 1..16")
+// PositionMax — максимальная позиция в системе (OGame-classic, не зависит
+// от вселенной). Если когда-либо потребуется per-universe — вынести в
+// configs/universes.yaml аналогично NumGalaxies/NumSystems.
+const PositionMax = 15
+
+// Validate проверяет координаты по лимитам вселенной (numGalaxies,
+// numSystems) и фиксированному PositionMax.
+func (c Coords) Validate(numGalaxies, numSystems int) error {
+	if numGalaxies <= 0 || numSystems <= 0 {
+		return fmt.Errorf("galaxy.Validate: invalid limits numGalaxies=%d numSystems=%d", numGalaxies, numSystems)
 	}
-	if c.System < 1 || c.System > 999 {
-		return errors.New("system out of range 1..999")
+	if c.Galaxy < 1 || c.Galaxy > numGalaxies {
+		return fmt.Errorf("galaxy out of range 1..%d", numGalaxies)
 	}
-	if c.Position < 1 || c.Position > 15 {
-		return errors.New("position out of range 1..15")
+	if c.System < 1 || c.System > numSystems {
+		return fmt.Errorf("system out of range 1..%d", numSystems)
+	}
+	if c.Position < 1 || c.Position > PositionMax {
+		return fmt.Errorf("position out of range 1..%d", PositionMax)
 	}
 	return nil
 }
 
-// Distance возвращает полётную «цену» между двумя координатами (OGame classic).
-func Distance(a, b Coords) int {
+// Distance возвращает полётную «цену» между двумя координатами
+// (OGame-classic с кольцевой топологией систем — план 72.1 часть 12).
+//
+// Кольцевая топология: системы образуют замкнутое кольцо, поэтому система 1
+// и система numSystems — соседи. Расстояние между системами:
+// `min(|s1-s2|, numSystems - |s1-s2|)`. Раньше брался `|s1-s2|` (линейный),
+// что давало некорректное время полёта между крайними системами.
+func Distance(a, b Coords, numSystems int) int {
 	switch {
 	case a.Galaxy != b.Galaxy:
 		return 20000 * absInt(a.Galaxy-b.Galaxy)
 	case a.System != b.System:
-		return 2700 + 95*absInt(a.System-b.System)
+		diff := absInt(a.System - b.System)
+		if numSystems > 0 && diff > numSystems/2 {
+			diff = numSystems - diff
+		}
+		return 2700 + 95*diff
 	case a.Position != b.Position:
 		return 1000 + 5*absInt(a.Position-b.Position)
 	default:

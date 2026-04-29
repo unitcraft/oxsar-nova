@@ -17,6 +17,14 @@ universes:
     protection_period: 86400      # 24 часа
     num_galaxies: 8
     num_systems: 600
+    # uni01 — fallback-эталон для остальных вселенных. 6 полей ниже
+    # обязательны здесь; uni02/uni03 при отсутствии берут эти значения.
+    storage_factor: 5.0
+    research_speed_factor: 2.0
+    energy_production_factor: 0.8
+    teleport_cost_oxsars: 50000
+    teleport_cooldown_hours: 24
+    teleport_duration_minutes: 0
     launched_at: "2026-01-01T00:00:00Z"
 
   - id: uni02
