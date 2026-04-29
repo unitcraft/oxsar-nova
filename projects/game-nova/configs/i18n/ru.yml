@@ -888,6 +888,7 @@ overview:
   resMetalLabel: Металл
   resSiliconLabel: Кремний
   resHydrogenLabel: Водород
+  storageLabel: "Склад:"
   diameterKm: км
   levelAbbr: "ур."
   perHourSuffix: /ч
@@ -2451,7 +2452,7 @@ main:
   newPlanetName: Новое название планеты
   planetAnigilation: "Планета {@planet} самоуничтожится гравитационной аномалией."
   planetIsNotFormedYet: Планета еще не сформировалась
-  planetOccupiedFields: "застроенная территория: {@occupiedFields} из {@freeFields} полей"
+  planetOccupiedFields: "застроенная территория: {{used}} из {{max}} полей"
   planetOptions: Опции планеты
   planetdiameter: Диаметр
   planetdiameterKm: км
