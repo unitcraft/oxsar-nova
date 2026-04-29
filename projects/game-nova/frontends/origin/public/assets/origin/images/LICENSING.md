@@ -55,6 +55,34 @@ sidebar-списка планет (`planetMainSelection`-блок).
 oxsar2 (`d:\Sources\oxsar2`), без узнаваемых сторонних элементов
 (космические тела, рендеры). По R4 плана 41 принимаются 1:1.
 
+### Иконки зданий/исследований/артефактов (план 72.1 ч.17)
+
+`buildings/` — 124 файла из legacy
+`projects/game-legacy-php/public/images/buildings/std/` (тема `standard`).
+Включает:
+
+- иконки зданий (metalmine, silicon_lab, hydrogen_lab, solar_plant, ...),
+- иконки исследований (artefacts_tech, ballistics_tech, computer_tech, ...),
+- иконки артефактов (catalyst, atomic_densifier, assembly_module,
+  battle_attack_power, и др. — соответствуют `key:` в configs/artefacts.yml),
+- общие маркеры (usable_artefact, static_artefact, unique_artefact,
+  artefact_packed_building, artefact_packed_research, etc.).
+
+Используются:
+- `src/features/artefacts/ArtefactsScreen.tsx` — мини-картинка 48×48
+  в инвентаре,
+- `src/features/artefacts/ArtefactInfoScreen.tsx` — крупная 96×96
+  на странице артефакта,
+- (планируется) `src/features/empire/`, `src/features/buildings/` —
+  иконки зданий в overview/queue.
+
+Маппинг unit_id → имя файла — в
+[`src/features/common/artefact-catalog.ts`](../../../src/features/common/artefact-catalog.ts)
+поле `image`. Расширение угадывается через JSX-fallback (gif → png →
+usable_artefact.gif).
+
+Лицензия: те же оригинальные битмапы из oxsar2, R4 плана 41.
+
 ## Лицензионный статус
 
 Все указанные ассеты — оригинальные битмапы из исходной игры oxsar2

@@ -9,6 +9,7 @@
 // Дополнительно: GET /api/artefacts (мои) для блока «Местоположение»
 // (показываем сколько копий этого типа у игрока + их state/expire).
 
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchArtefactCatalog } from '@/api/catalog';
@@ -17,6 +18,11 @@ import { QK } from '@/api/query-keys';
 import type { ArtefactState } from '@/api/types';
 import { useTranslation } from '@/i18n/i18n';
 import { formatDuration } from '@/lib/format';
+import {
+  ARTEFACT_FALLBACK_IMAGE,
+  artefactImageUrl,
+  artefactImageUrlFallback,
+} from '../common/artefact-catalog';
 
 function stateLabelKey(state: ArtefactState): string {
   switch (state) {
@@ -93,7 +99,10 @@ export function ArtefactInfoScreen() {
       </thead>
       <tbody>
         <tr>
-          <td colSpan={2}>
+          <td className="center" style={{ width: '120px' }}>
+            <ArtefactInfoImage unitId={entry.id} alt={displayName} />
+          </td>
+          <td>
             {hasFull ? <span>{fullDesc}</span> : hasDesc ? <span>{desc}</span> : <i>—</i>}
             <br />
             {entry.lifetime_seconds > 0 && (
@@ -129,5 +138,30 @@ export function ArtefactInfoScreen() {
         )}
       </tbody>
     </table>
+  );
+}
+
+// Крупная картинка артефакта в S-014 (план 72.1 ч.17). Логика
+// fallback'а та же что в S-013 ArtefactsScreen — gif → png →
+// usable_artefact.gif.
+function ArtefactInfoImage({ unitId, alt }: { unitId: number; alt: string }) {
+  const primary = artefactImageUrl(unitId) ?? ARTEFACT_FALLBACK_IMAGE;
+  const png = artefactImageUrlFallback(unitId);
+  const [src, setSrc] = useState(primary);
+  return (
+    <img
+      src={src}
+      alt={alt}
+      width={96}
+      height={96}
+      style={{ verticalAlign: 'middle' }}
+      onError={() => {
+        if (png && src !== png) {
+          setSrc(png);
+        } else if (src !== ARTEFACT_FALLBACK_IMAGE) {
+          setSrc(ARTEFACT_FALLBACK_IMAGE);
+        }
+      }}
+    />
   );
 }
