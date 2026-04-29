@@ -139,13 +139,20 @@ func run() error {
 	registerRL := identitysvc.NewRateLimiter(rdb, "rl:register", 10, time.Minute).Middleware()
 	refreshRL := identitysvc.NewRateLimiter(rdb, "rl:refresh", 30, time.Minute).Middleware()
 	logoutRL := identitysvc.NewRateLimiter(rdb, "rl:logout", 30, time.Minute).Middleware()
+	// План 72.2: handoff-токен для перехода в game-вселенную. Лимит мягче
+	// чем login (юзер может прыгать между вселенными), жёстче чем refresh
+	// (потенциальный DoS-vector — каждый запрос пишет в Redis).
+	universeTokenRL := identitysvc.NewRateLimiter(rdb, "rl:universe-token", 25, time.Minute).Middleware()
+	tokenExchangeRL := identitysvc.NewRateLimiter(rdb, "rl:token-exchange", 25, time.Minute).Middleware()
 	r.With(registerRL).Post("/auth/register", h.Register)
 	r.With(loginRL).Post("/auth/login", h.Login)
 	r.With(refreshRL).Post("/auth/refresh", h.Refresh)
 	r.With(logoutRL).Post("/auth/logout", h.Logout)
 
 	// Обмен handoff-токена → JWT (вызывается игровым сервером)
-	r.Post("/auth/token/exchange", h.TokenExchange)
+	// План 72.2: rate-limit на public token-exchange (защита от brute-force
+	// перебора handoff-кодов).
+	r.With(tokenExchangeRL).Post("/auth/token/exchange", h.TokenExchange)
 
 	// Внутренние endpoints (между сервисами, закрыты firewall-ом).
 	// План 38 Ф.5: /auth/credits/* удалены — кошельки в billing-service.
@@ -156,7 +163,7 @@ func run() error {
 		pr.Use(identitysvc.Middleware(ver))
 		pr.Get("/auth/me", h.Me)
 		pr.Post("/auth/password", h.ChangePassword)
-		pr.Post("/auth/universe-token", h.UniverseToken)
+		pr.With(universeTokenRL).Post("/auth/universe-token", h.UniverseToken)
 		// План 44 (152-ФЗ ст. 14): право субъекта на удаление ПДн.
 		pr.Delete("/auth/users/me", h.DeleteMe)
 
