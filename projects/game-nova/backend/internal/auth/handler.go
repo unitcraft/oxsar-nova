@@ -91,14 +91,13 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ранг — оконная функция COUNT(*)+1 по `points` среди активных.
-	// Дублирует логику score.PlayerRank, но не зависит от score-модуля
-	// чтобы не плодить циклы импорта (auth → score → auth).
-	var rank int
+	// Ранг и общее число игроков (для отображения "rank из total").
+	var rank, totalUsers int
 	if err := h.db.QueryRow(ctx, `
-		SELECT COUNT(*)+1 FROM users
-		 WHERE points > $1 AND umode = false AND is_observer = false
-	`, points).Scan(&rank); err != nil {
+		SELECT
+			(SELECT COUNT(*)+1 FROM users WHERE points > $1 AND umode = false AND is_observer = false),
+			(SELECT COUNT(*)   FROM users WHERE umode = false AND is_observer = false)
+	`, points).Scan(&rank, &totalUsers); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
@@ -125,6 +124,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		"profession":                   profession,
 		"points":                       points,
 		"rank":                         rank,
+		"total_users":                  totalUsers,
 		"max_points":                   maxPoints,
 		"combat_experience":            ePoints,
 		"accumulated_experience":       bePoints,

@@ -66,6 +66,8 @@ hr {
 
 .ntable, fieldset, .idiv, .topbox, .content_width {
   width: var(--w-table);
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .ntable th, .ttable th, .atable th, .th {

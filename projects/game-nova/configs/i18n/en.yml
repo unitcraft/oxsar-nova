@@ -2459,13 +2459,14 @@ main:
   planetdiameterKm: km
   points: Points
   position: Position
-  rankOfUsers: Player rank
-  # Plan 72.1 part 17 — pixel-perfect MainScreen.
+  rankOfUsers: "{{rank}} of {{total}}"
+  # Plan 72.1 parts 17-18 — pixel-perfect MainScreen.
   rankLabel: Rank
   maxPoints: Max points
   dmPoints: DM points
   minerLevel: "Miner ({{level}})"
   intergalacticResearchLevel: Intergalactic research level
+  noTasks: no tasks
   release: Release
   serverTime: Server time
   setNewHomePlanet: Set new home planet

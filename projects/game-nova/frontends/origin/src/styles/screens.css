@@ -40,9 +40,12 @@ input.center {
   margin: 0;
 }
 
-#planets li.cur-planet.active,
-#planets li.cur-moon.active {
-  background-color: var(--color-row-alt, #1a2438);
+#planets li.cur-planet {
+  background: url('/assets/origin/images/planetbg-act.gif') center center no-repeat;
+}
+
+#planets li.cur-moon {
+  background: url('/assets/origin/images/moonbg-act.gif') center center no-repeat;
 }
 
 /* link-button — кнопка, выглядящая как ссылка (для табличного
@@ -52,7 +55,7 @@ input.center {
   border: none;
   padding: 0;
   margin: 0;
-  color: var(--color-link, #cccccc);
+  color: var(--c-link);
   cursor: pointer;
   text-align: left;
   font: inherit;
@@ -65,12 +68,12 @@ input.center {
 /* legacy Footer — display name «Oxsar Classic» (ADR-0011). */
 .oxsar-footer .universe-name {
   margin-left: 8px;
-  color: var(--color-muted, #888);
+  color: var(--c-text-muted);
   font-size: 0.9em;
 }
 
 /* legacy TopHeader — display name справа от ресурсов. */
 #topHeader li.universe-name {
   font-weight: bold;
-  color: var(--color-accent, #ccc);
+  color: var(--c-text);
 }

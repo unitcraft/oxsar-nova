@@ -3505,6 +3505,7 @@ components:
         - profession
         - points
         - rank
+        - total_users
         - max_points
         - combat_experience
         - accumulated_experience
@@ -3542,6 +3543,12 @@ components:
           description: |
             Позиция в рейтинге по `points`. Игроки в umode/observer
             исключены. Вычисляется на лету (COUNT WHERE points > мои).
+        total_users:
+          type: integer
+          minimum: 0
+          description: |
+            Общее число активных игроков (umode=false, is_observer=false).
+            Используется для отображения "rank из total_users".
         max_points:
           type: number
           format: double

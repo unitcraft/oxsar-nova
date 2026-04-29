@@ -24,15 +24,16 @@
 #topHeader ul {
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
+  overflow: hidden;
 }
 
 #topHeader li {
+  float: left;
   text-align: center;
   vertical-align: middle;
   margin-left: 20px;
   margin-right: 20px;
+  list-style: none;
 }
 
 #topHeader .ressource {
@@ -97,8 +98,9 @@
 #content {
   width: auto;
   margin: 20px 0;
-  margin-left: 180px;
+  margin-left: 170px;
   margin-right: 180px;
+  text-align: center;
 }
 
 #contentHtml {
@@ -119,6 +121,21 @@
   height: 75px;
   text-align: center;
   margin-bottom: 4px;
+  list-style: none;
+}
+
+#planets li.moon-select,
+#planets li.cur-moon {
+  height: 40px;
+}
+
+#planets .link-button {
+  color: var(--c-link);
+  font-weight: bold;
+}
+
+#planets .link-button:hover {
+  text-decoration: underline;
 }
 
 /* ------- Footer (план 50 Ф.5) ------- */
