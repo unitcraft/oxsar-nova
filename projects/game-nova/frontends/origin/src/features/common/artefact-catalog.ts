@@ -19,6 +19,14 @@ export interface ArtefactCatalogEntry {
   i18nFullDesc?: string;
   /** Можно ли активировать (toggle on/off) или только использовать одноразово. */
   activatable?: boolean;
+  /**
+   * Имя файла-картинки в `/assets/origin/images/buildings/<image>` (без
+   * расширения; расширение угадывается через IMAGE_EXTS — legacy кладёт
+   * gif/png рядом). Совпадает с `key:` в configs/artefacts.yml. План 72.1
+   * ч.17: pixel-perfect рендер артефактов (legacy
+   * `templates/standard/artefacts.tpl` показывает картинку для каждого).
+   */
+  image?: string;
 }
 
 // Минимальный набор: соответствия id ↔ i18n взяты из info.* в
@@ -31,6 +39,7 @@ export const ARTEFACT_CATALOG: ArtefactCatalogEntry[] = [
     i18nDesc: 'info.catalystDesc',
     i18nFullDesc: 'info.catalystFullDesc',
     activatable: true,
+    image: 'catalyst',
   },
   {
     id: 3002,
@@ -38,18 +47,21 @@ export const ARTEFACT_CATALOG: ArtefactCatalogEntry[] = [
     i18nDesc: 'info.atomicDensifierDesc',
     i18nFullDesc: 'info.atomicDensifierFullDesc',
     activatable: true,
+    image: 'atomic_densifier',
   },
   {
     id: 3110,
     i18nName: 'info.assemblyModule3110',
     i18nDesc: 'info.assemblyModule3110Desc',
     i18nFullDesc: 'info.assemblyModule3110FullDesc',
+    image: 'assembly_module',
   },
   {
     id: 421,
     i18nName: 'info.assemblyModule421',
     i18nDesc: 'info.assemblyModule421Desc',
     i18nFullDesc: 'info.assemblyModule421FullDesc',
+    image: 'assembly_module',
   },
 ];
 
@@ -58,3 +70,23 @@ export function findArtefactCatalog(
 ): ArtefactCatalogEntry | undefined {
   return ARTEFACT_CATALOG.find((e) => e.id === unitId);
 }
+
+// План 72.1 ч.17: возвращает URL картинки артефакта или null.
+// В legacy картинки лежат в нескольких форматах (gif/png), поэтому
+// проверяем оба расширения через onerror-fallback в JSX.
+export function artefactImageUrl(unitId: number): string | null {
+  const entry = findArtefactCatalog(unitId);
+  if (!entry?.image) return null;
+  return `/assets/origin/images/buildings/${entry.image}.gif`;
+}
+
+// Fallback URL — если основной gif не нашёлся, пробуем png.
+export function artefactImageUrlFallback(unitId: number): string | null {
+  const entry = findArtefactCatalog(unitId);
+  if (!entry?.image) return null;
+  return `/assets/origin/images/buildings/${entry.image}.png`;
+}
+
+// Заглушка-картинка артефакта (legacy `usable_artefact.gif`).
+export const ARTEFACT_FALLBACK_IMAGE =
+  '/assets/origin/images/buildings/usable_artefact.gif';

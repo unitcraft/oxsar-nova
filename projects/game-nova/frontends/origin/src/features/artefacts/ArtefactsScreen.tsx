@@ -25,7 +25,12 @@ import type { ApiError } from '@/api/client';
 import { QK } from '@/api/query-keys';
 import type { Artefact, ArtefactState } from '@/api/types';
 import { useTranslation } from '@/i18n/i18n';
-import { findArtefactCatalog } from '../common/artefact-catalog';
+import {
+  artefactImageUrl,
+  artefactImageUrlFallback,
+  ARTEFACT_FALLBACK_IMAGE,
+  findArtefactCatalog,
+} from '../common/artefact-catalog';
 
 type GroupKey = 'active' | 'held' | 'other';
 
@@ -165,8 +170,10 @@ function ArtefactGroupRow({
             : '';
         return (
           <tr key={a.id}>
-            <td style={{ width: '1%' }}>
-              <Link to={`/artefact/${a.unit_id}`}>#{a.unit_id}</Link>
+            <td className="center" style={{ width: '60px' }}>
+              <Link to={`/artefact/${a.unit_id}`}>
+                <ArtefactImage unitId={a.unit_id} alt={name} />
+              </Link>
             </td>
             <td>
               <div style={{ width: '100%' }}>
@@ -217,5 +224,32 @@ function ArtefactGroupRow({
         );
       })}
     </>
+  );
+}
+
+// Картинка артефакта с двумя fallback'ами:
+//   1. <key>.gif (legacy default),
+//   2. <key>.png (для некоторых новых артефактов вроде battle_neutron_affector),
+//   3. usable_artefact.gif (общая иконка-заглушка).
+// Запоминаем последний неудачный URL чтобы не зацикливать onError.
+function ArtefactImage({ unitId, alt }: { unitId: number; alt: string }) {
+  const primary = artefactImageUrl(unitId) ?? ARTEFACT_FALLBACK_IMAGE;
+  const png = artefactImageUrlFallback(unitId);
+  const [src, setSrc] = useState(primary);
+  return (
+    <img
+      src={src}
+      alt={alt}
+      width={48}
+      height={48}
+      style={{ verticalAlign: 'middle' }}
+      onError={() => {
+        if (png && src !== png) {
+          setSrc(png);
+        } else if (src !== ARTEFACT_FALLBACK_IMAGE) {
+          setSrc(ARTEFACT_FALLBACK_IMAGE);
+        }
+      }}
+    />
   );
 }
