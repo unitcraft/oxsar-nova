@@ -1,4 +1,4 @@
-# E2E-стек для Playwright: полный backend + worker + frontend (dev) +
+# E2E-стек для Playwright: полный backend + worker + uni01-frontend (dev) +
 # testseed (one-shot) + playwright (one-shot). Предназначен для CI, но
 # работает и локально.
 #
@@ -9,8 +9,8 @@
 # Отличия от основного docker-compose.yml:
 #   - backend запущен в PAYMENT_PROVIDER=mock (E2E без живой Робокассы)
 #   - testseed сидит детерминированные данные до старта playwright
-#   - playwright получает BACKEND_URL=http://backend:8080 и
-#     FRONTEND_URL=http://frontend:5173 — internal docker-сеть
+#   - playwright получает BACKEND_URL=http://uni01-backend:8080 и
+#     FRONTEND_URL=http://uni01-frontend:5173 — internal docker-сеть
 #   - порты наружу не пробрасываем (не нужны для CI)
 #
 # Локально: если надо отлаживать в режиме UI — см. make test-e2e
@@ -50,7 +50,7 @@ services:
       DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
     restart: "no"
 
-  backend:
+  uni01-backend:
     build:
       context: ..
       dockerfile: projects/game-nova/backend/Dockerfile
@@ -76,11 +76,11 @@ services:
       # Mock-режим платежей (план 13 Ф.0.1). Webhook и внешние редиректы
       # остаются внутри docker-сети.
       PAYMENT_PROVIDER: mock
-      PAYMENT_MOCK_BASE_URL: http://backend:8080
-      PAYMENT_RETURN_URL: http://frontend:5173/
+      PAYMENT_MOCK_BASE_URL: http://uni01-backend:8080
+      PAYMENT_RETURN_URL: http://uni01-frontend:5173/
     healthcheck:
       # /healthz возвращает 200 — проверяем через wget (есть в alpine).
-      # 127.0.0.1: см. комментарий у frontend healthcheck.
+      # 127.0.0.1: см. комментарий у uni01-frontend healthcheck.
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
       interval: 3s
       timeout: 2s
@@ -92,7 +92,7 @@ services:
       dockerfile: projects/game-nova/backend/Dockerfile
     entrypoint: ["/app/worker"]
     depends_on:
-      backend:
+      uni01-backend:
         condition: service_healthy
     environment:
       DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
@@ -109,22 +109,22 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-      backend:
+      uni01-backend:
         condition: service_healthy
     environment:
       DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
     restart: on-failure:3
     command: ["--reset"]
 
-  frontend:
+  uni01-frontend:
     build:
       context: ..
       dockerfile: projects/game-nova/frontends/nova/Dockerfile
     depends_on:
-      backend:
+      uni01-backend:
         condition: service_healthy
     environment:
-      VITE_PROXY_TARGET: http://backend:8080
+      VITE_PROXY_TARGET: http://uni01-backend:8080
     healthcheck:
       # vite dev server слушает 0.0.0.0 (только IPv4), busybox localhost
       # → IPv6 → connection refused. Явно 127.0.0.1.
@@ -138,13 +138,13 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile.playwright
     depends_on:
-      frontend:
+      uni01-frontend:
         condition: service_healthy
       testseed:
         condition: service_completed_successfully
     environment:
-      BACKEND_URL: http://backend:8080
-      FRONTEND_URL: http://frontend:5173
+      BACKEND_URL: http://uni01-backend:8080
+      FRONTEND_URL: http://uni01-frontend:5173
       CI: "true"
     # Отчёты html-report сохраняем в volume, чтобы CI мог их аттачить.
     volumes:

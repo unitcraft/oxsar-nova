@@ -9,7 +9,7 @@
 #   REDIS_URL    — если используем внешний Redis.
 
 services:
-  frontend:
+  uni01-frontend:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.frontend-prod

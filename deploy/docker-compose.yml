@@ -54,7 +54,7 @@ services:
       MIGRATE_DIR: /migrations/game-nova
     restart: "no"
 
-  backend:
+  uni01-backend:
     build:
       context: ..
       dockerfile: projects/game-nova/backend/Dockerfile
@@ -103,7 +103,7 @@ services:
     # как аргументы к server, а не заменил бинарь.
     entrypoint: ["/app/worker"]
     depends_on:
-      backend:
+      uni01-backend:
         condition: service_started
     environment:
       DB_URL: postgres://oxsar:oxsar@postgres:5432/oxsar?sslmode=disable
@@ -231,25 +231,142 @@ services:
       - ../projects/game-nova/frontends/nova:/app
       - uni02-frontend-node-modules:/app/node_modules
 
-  frontend:
+  # ── Universe 03: Classic (план 72.1) ──────────────────────────────────
+  # Параллельный стек с oxsar2-classic балансом (configs/balance/uni03.yaml,
+  # копия origin.yaml). Скорость как у Nova (×0.75), отдельные БД и Redis
+  # logical-DB (6) — полная изоляция от uni01/uni02.
+
+  uni03-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: oxsar
+      POSTGRES_PASSWORD: oxsar
+      POSTGRES_DB: oxsar
+    ports: ["5438:5432"]
+    volumes:
+      - uni03-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oxsar"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  uni03-migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.migrate
+    depends_on:
+      uni03-db:
+        condition: service_healthy
+    environment:
+      DB_URL: postgres://oxsar:oxsar@uni03-db:5432/oxsar?sslmode=disable
+      MIGRATE_DIR: /migrations/game-nova
+    restart: "no"
+
+  uni03-backend:
+    build:
+      context: ..
+      dockerfile: projects/game-nova/backend/Dockerfile
+    depends_on:
+      uni03-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      uni03-migrate:
+        condition: service_completed_successfully
+      identity-service:
+        condition: service_healthy
+    environment:
+      SERVER_ADDR: ":8080"
+      SERVER_ENV: dev
+      LOG_LEVEL: info
+      DB_URL: postgres://oxsar:oxsar@uni03-db:5432/oxsar?sslmode=disable
+      REDIS_URL: redis://redis:6379/6
+      IDENTITY_JWKS_URL: http://identity-service:9000
+      IDENTITY_SERVICE_URL: http://identity-service:9000
+      UNIVERSE_ID: uni03
+      GAMESPEED: "0.75"
+      NUM_GALAXIES: "8"
+      NUM_SYSTEMS: "600"
+      PROTECTION_PERIOD: "86400"
+      CATALOG_DIR: /app/configs
+      I18N_DIR: /app/configs/i18n
+    ports: ["8083:8080"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/api/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  uni03-worker:
+    build:
+      context: ..
+      dockerfile: projects/game-nova/backend/Dockerfile
+    entrypoint: ["/app/worker"]
+    depends_on:
+      uni03-backend:
+        condition: service_started
+    environment:
+      DB_URL: postgres://oxsar:oxsar@uni03-db:5432/oxsar?sslmode=disable
+      REDIS_URL: redis://redis:6379/6
+      CATALOG_DIR: /app/configs
+      WORKER_METRICS_ADDR: ":9091"
+      IDENTITY_JWKS_URL: http://identity-service:9000
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9091/api/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  uni03-frontend:
+    # Origin-фронт (план 72) — pixel-perfect клон legacy-PHP-темы
+    # standard. Логично использовать его именно с uni03 (legacy-баланс).
+    # Origin вешается на 5174 внутри контейнера (см. vite.config.ts).
     build:
       context: ..
       dockerfile: projects/game-nova/frontends/nova/Dockerfile
     depends_on:
-      backend:
+      uni03-backend:
         condition: service_healthy
       identity-service:
         condition: service_healthy
       billing-service:
         condition: service_healthy
     environment:
-      VITE_PROXY_TARGET: http://backend:8080
+      VITE_PROXY_TARGET: http://uni03-backend:8080
+      VITE_IDENTITY_TARGET: http://identity-service:9000
+      VITE_BILLING_TARGET: http://billing-service:9100
+      VITE_PORTAL_BASE_URL: http://portal-backend:8090
+    # nova/Dockerfile делает npm install под nova-package.json в build-time,
+    # но bind-mount перекрывает /app исходниками origin'а с другим
+    # package.json. Поэтому переустанавливаем зависимости в runtime.
+    command: sh -c "npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0"
+    ports: ["5176:5174"]
+    volumes:
+      - ../projects/game-nova/frontends/origin:/app
+      - uni03-frontend-node-modules:/app/node_modules
+
+  uni01-frontend:
+    build:
+      context: ..
+      dockerfile: projects/game-nova/frontends/nova/Dockerfile
+    depends_on:
+      uni01-backend:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+      billing-service:
+        condition: service_healthy
+    environment:
+      VITE_PROXY_TARGET: http://uni01-backend:8080
       VITE_IDENTITY_TARGET: http://identity-service:9000
       VITE_BILLING_TARGET: http://billing-service:9100
     ports: ["5173:5173"]
     volumes:
       - ../projects/game-nova/frontends/nova:/app
-      - frontend-node-modules:/app/node_modules
+      - uni01-frontend-node-modules:/app/node_modules
 
   # ── Identity stack ───────────────────────────────────────────────────────
   # План 36 Ф.11. RSA-ключ генерируется identity-service-ом сам при первом старте
@@ -474,6 +591,8 @@ volumes:
   auth-rsa-key:
   billing-db-data:
   uni02-db-data:
-  frontend-node-modules:
+  uni03-db-data:
+  uni01-frontend-node-modules:
   uni02-frontend-node-modules:
+  uni03-frontend-node-modules:
   portal-frontend-node-modules:

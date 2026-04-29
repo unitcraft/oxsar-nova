@@ -12,7 +12,7 @@
 #   ADMIN_DOMAIN=admin.oxsar-nova.ru
 #   IDENTITY_URL=http://identity-service:9000
 #   BILLING_URL=http://billing-service:9100
-#   GAME_NOVA_URL=http://backend:8080
+#   GAME_NOVA_URL=http://uni01-backend:8080
 
 services:
   admin-bff:
@@ -23,7 +23,7 @@ services:
       BFF_LISTEN_ADDR: ":9200"
       IDENTITY_URL: ${IDENTITY_URL:-http://identity-service:9000}
       BILLING_URL: ${BILLING_URL:-http://billing-service:9100}
-      GAME_NOVA_URL: ${GAME_NOVA_URL:-http://backend:8080}
+      GAME_NOVA_URL: ${GAME_NOVA_URL:-http://uni01-backend:8080}
       REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
       BFF_IDLE_TIMEOUT: ${BFF_IDLE_TIMEOUT:-30m}
