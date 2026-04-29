@@ -86,7 +86,7 @@ services:
       timeout: 2s
       retries: 20
 
-  worker:
+  uni01-worker:
     build:
       context: ..
       dockerfile: projects/game-nova/backend/Dockerfile
