@@ -58,6 +58,7 @@ type config struct {
 	identityDSN    string
 	gameDSN        string
 	legacyUserID   int
+	legacyUsername string
 	targetUsername string
 	targetPassword string
 	targetUniverse string
@@ -85,9 +86,10 @@ func parseFlags() config {
 	flag.StringVar(&cfg.legacyDSN, "legacy-db", defaultLegacyDSN, "MySQL DSN to legacy oxsar_db (game-legacy-php docker)")
 	flag.StringVar(&cfg.identityDSN, "identity-db", defaultIdentityDSN, "Postgres URL to identity-db")
 	flag.StringVar(&cfg.gameDSN, "game-db", defaultGameDSN, "Postgres URL to game-nova-db")
-	flag.IntVar(&cfg.legacyUserID, "legacy-userid", 1, "userid in legacy na_user to import")
+	flag.IntVar(&cfg.legacyUserID, "legacy-userid", 1, "userid in legacy na_user to import (ignored if --legacy-username is set)")
+	flag.StringVar(&cfg.legacyUsername, "legacy-username", "", "username in legacy na_user (alternative to --legacy-userid; resolves to userid via SELECT)")
 	flag.StringVar(&cfg.targetUsername, "target-username", "test", "username to use in nova (identity + game)")
-	flag.StringVar(&cfg.targetPassword, "target-password", "test1234", "password for the imported user (argon2id-hashed in identity-db)")
+	flag.StringVar(&cfg.targetPassword, "target-password", "DevPass123", "password for the imported user (argon2id-hashed in identity-db); default — общий dev-пароль из docs/ops/dev-test-users.md")
 	flag.StringVar(&cfg.targetUniverse, "target-universe", "uni01", "universe_id (used for identity universe_memberships)")
 	flag.IntVar(&cfg.messageLimit, "message-limit", 50, "limit messages copied per direction (inbox/outbox)")
 	flag.Parse()
@@ -120,6 +122,25 @@ func run(ctx context.Context, cfg config) error {
 	defer gamePool.Close()
 	if err := gamePool.Ping(ctx); err != nil {
 		return fmt.Errorf("ping game-nova-db: %w", err)
+	}
+
+	// Если задан --legacy-username — резолвим его в userid через SELECT.
+	// Имеет приоритет над --legacy-userid.
+	if cfg.legacyUsername != "" {
+		var resolvedID int
+		err := legacy.QueryRowContext(ctx,
+			`SELECT userid FROM na_user WHERE username = ?`, cfg.legacyUsername,
+		).Scan(&resolvedID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("legacy username %q not found in na_user", cfg.legacyUsername)
+			}
+			return fmt.Errorf("resolve legacy username %q: %w", cfg.legacyUsername, err)
+		}
+		cfg.legacyUserID = resolvedID
+		slog.InfoContext(ctx, "resolved legacy username to userid",
+			slog.String("username", cfg.legacyUsername),
+			slog.Int("userid", resolvedID))
 	}
 
 	slog.InfoContext(ctx, "connected to all 3 databases",
