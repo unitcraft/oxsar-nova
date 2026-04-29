@@ -16,9 +16,27 @@ export interface Planet {
   galaxy: number;
   system: number;
   position: number;
+  // План 72.1 ч.16: legacy-эталон Main (planet block) выводит диаметр,
+  // поля, температуру и planet_type (для asset-картинки).
+  diameter: number;
+  used_fields: number;
+  max_fields: number;
+  planet_type: string;
+  temp_min: number;
+  temp_max: number;
   metal: number;
   silicon: number;
   hydrogen: number;
+  // Производство и cap — для legacy-TopHeader (per-hour и хранилища).
+  metal_per_sec: number;
+  silicon_per_sec: number;
+  hydrogen_per_sec: number;
+  metal_cap: number;
+  silicon_cap: number;
+  hydrogen_cap: number;
+  energy_prod: number;
+  energy_cons: number;
+  energy_remaining: number;
   last_res_update: string;
 }
 
