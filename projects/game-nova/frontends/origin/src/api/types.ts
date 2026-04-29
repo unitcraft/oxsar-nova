@@ -64,6 +64,14 @@ export interface ShipyardQueueItem {
 export interface ShipyardInventory {
   ships: Record<string, number>;
   defense: Record<string, number>;
+  /** Per-unit стоимость постройки корабля. Ключ — unit_id как строка. */
+  ship_costs?: Record<string, { metal: number; silicon: number; hydrogen: number }>;
+  /** Per-unit стоимость постройки обороны. */
+  defense_costs?: Record<string, { metal: number; silicon: number; hydrogen: number }>;
+  /** Per-unit время постройки корабля (секунды). */
+  ship_seconds?: Record<string, number>;
+  /** Per-unit время постройки обороны. */
+  defense_seconds?: Record<string, number>;
 }
 
 export interface ResearchOverview {
