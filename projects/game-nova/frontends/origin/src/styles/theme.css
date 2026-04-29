@@ -70,9 +70,18 @@
   --font-size-footer: 11px;
 
   --w-leftmenu: 150px;
-  --w-leftmenu-fixed: 160px;
+  --w-leftmenu-fixed: 150px;
   --w-table: 700px;
   --w-planets: 150px;
+
+  /* Цвета секций меню (menuN-max/min — раскрыто/свёрнуто) */
+  --c-menu2-max: #222; --c-menu2-min: #322;
+  --c-menu3-max: #333; --c-menu3-min: #335;
+  --c-menu4-max: #555; --c-menu4-min: #575;
+  --c-menu5-max: #222; --c-menu5-min: #322;
+  --c-menu6-max: #777; --c-menu6-min: #997;
+  --c-menu7-max: #999; --c-menu7-min: #aaa;
+  --c-menu8-max: #222; --c-menu8-min: #322;
 
   --z-footer: 100;
 }
