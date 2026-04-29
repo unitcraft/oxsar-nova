@@ -204,9 +204,14 @@ func (s *Service) applyTickInTx(ctx context.Context, p *Planet) error {
 		gainM := rates.metalPerSec * elapsed
 		gainS := rates.siliconPerSec * elapsed
 		gainH := rates.hydrogenPerSec * elapsed
+		// План 72.1 ч.17: фактическая добыча (после clamp на cap)
+		// идёт в of_points — система Шахтёр-уровня. Считаем дельту
+		// до перезаписи p.Metal/Silicon/Hydrogen.
+		prevM, prevS, prevH := p.Metal, p.Silicon, p.Hydrogen
 		p.Metal = clampAdd(p.Metal, gainM, caps.metal)
 		p.Silicon = clampAdd(p.Silicon, gainS, caps.silicon)
 		p.Hydrogen = clampAdd(p.Hydrogen, gainH, caps.hydrogen)
+		actualMined := (p.Metal - prevM) + (p.Silicon - prevS) + (p.Hydrogen - prevH)
 		p.LastResUpdate = now
 		p.MetalPerSec = rates.metalPerSec
 		p.SiliconPerSec = rates.siliconPerSec
@@ -225,6 +230,16 @@ func (s *Service) applyTickInTx(ctx context.Context, p *Planet) error {
 		`, p.Metal, p.Silicon, p.Hydrogen, p.LastResUpdate, p.ID)
 		if err != nil {
 			return fmt.Errorf("update planet tick: %w", err)
+		}
+
+		// План 72.1 ч.17: накопление of_points + auto-level-up + кредит-награда
+		// (legacy `Functions.inc.php:1633-1665`). Накопление работает у всех
+		// игроков, не только miner-профессии. Не выполняем для лун (на лунах
+		// нет добычи) и для гостевых-планет без user_id.
+		if !p.IsMoon && p.UserID != "" && actualMined > 0 {
+			if err := applyMinerTick(ctx, tx, p.UserID, int64(actualMined)); err != nil {
+				return fmt.Errorf("miner tick: %w", err)
+			}
 		}
 		return nil
 	})
