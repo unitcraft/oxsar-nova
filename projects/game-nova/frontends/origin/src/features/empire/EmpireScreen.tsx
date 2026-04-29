@@ -66,9 +66,13 @@ export function EmpireScreen() {
                   {formatCoords(p.galaxy, p.system, p.position)}
                 </button>
               </td>
-              <td>—</td>
-              <td>—</td>
-              <td>—</td>
+              <td align="right">{formatNumber(p.diameter)} км</td>
+              <td align="right">
+                {p.used_fields} / {p.max_fields}
+              </td>
+              <td align="right">
+                {p.temp_min}…{p.temp_max} °C
+              </td>
               <td>—</td>
               <td>
                 М <br />К <br />В

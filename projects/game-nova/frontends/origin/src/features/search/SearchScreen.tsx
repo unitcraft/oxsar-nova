@@ -40,7 +40,7 @@ export function SearchScreen() {
         <table className="ntable">
           <thead>
             <tr>
-              <th>{t('prefs', 'browseUniverse') || 'Поиск'}</th>
+              <th>{t('statistics', 'browseUniverse')}</th>
             </tr>
           </thead>
           <tbody>
@@ -51,8 +51,8 @@ export function SearchScreen() {
                   value={type}
                   onChange={(e) => setType(e.target.value as SearchType)}
                 >
-                  <option value="player">{t('prefs', 'players')}</option>
-                  <option value="planet">{t('prefs', 'planets')}</option>
+                  <option value="player">{t('statistics', 'players')}</option>
+                  <option value="planet">{t('statistics', 'planets')}</option>
                   <option value="alliance">{t('alliance', 'alliances')}</option>
                 </select>{' '}
                 <input
@@ -66,7 +66,7 @@ export function SearchScreen() {
                 />{' '}
                 <input
                   type="submit"
-                  value={t('common', 'submit') || 'OK'}
+                  value="OK"
                   className="button"
                 />
               </td>
