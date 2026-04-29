@@ -12,7 +12,6 @@
 
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '@/stores/auth';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { fetchMe } from '@/api/me';
 import { QK } from '@/api/query-keys';
@@ -34,7 +33,6 @@ function atCap(value: number, cap: number): boolean {
 }
 
 export function TopHeader() {
-  const logout = useAuthStore((s) => s.logout);
   const { planet } = useResolvedPlanet();
   const { t } = useTranslation();
   const meQ = useQuery({
@@ -66,7 +64,7 @@ export function TopHeader() {
                 <>
                   <b><Link to="/planet-options">{planet.name}</Link></b>{' '}
                   <Link to={`/galaxy/${planet.galaxy}/${planet.system}`}>
-                    [{formatCoords(planet.galaxy, planet.system, planet.position)}]
+                    {formatCoords(planet.galaxy, planet.system, planet.position)}
                   </Link>
                   <br />
                   <br />
@@ -126,13 +124,11 @@ export function TopHeader() {
               <br />
               <span className="ressource">{t('global', 'energy')}</span>
               <br />
-              <span id="header_layout_energy" className="">
+              <span id="header_layout_energy" className={energyRemaining < 0 ? 'false' : ''}>
                 {planet
                   ? `${formatNumber(Math.floor(energyRemaining))} (${formatNumber(Math.floor(energyProd))})`
                   : '—'}
               </span>
-              <br />
-              {planet ? formatNumber(Math.floor(energyProd)) : ''}
             </td>
 
             {/* Кредиты */}
@@ -146,15 +142,6 @@ export function TopHeader() {
               </span>
               <br />
               <Link to="/payment">{t('global', 'creditPay')}</Link>
-            </td>
-
-            {/* Username + logout */}
-            <td className="header-resource" style={{ whiteSpace: 'nowrap' }}>
-              <span>{meQ.data?.username ?? ''}</span>
-              <br />
-              <button type="button" className="button" onClick={logout} style={{ marginTop: 2 }}>
-                {t('global', 'btnLogout')}
-              </button>
             </td>
           </tr>
         </tbody>
