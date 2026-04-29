@@ -128,22 +128,14 @@ func Load() (Config, error) {
 			AuthServiceURL: envFallback("IDENTITY_SERVICE_URL", "AUTH_SERVICE_URL", ""),
 			UniverseID:     env("UNIVERSE_ID", "uni01"),
 		},
+		// План 72.1 часть 12: per-universe параметры баланса (Speed,
+		// NumGalaxies, NumSystems, MaxPlanets, BashingPeriod,
+		// BashingMaxAttacks, ProtectionPeriod, Deathmatch, StorageFactor,
+		// ResearchSpeedFactor, EnergyProductionFactor, Teleport*)
+		// заполняются из configs/universes.yaml через ApplyUniverse(),
+		// а не из env. Здесь оставляем только глобальные коэффициенты
+		// очков, которые не зависят от вселенной.
 		Game: GameConfig{
-			Speed:                  envFloat("GAMESPEED", 0.75),
-			Universe:               env("UNIVERSE_NAME", "Nova"),
-			Deathmatch:             envBool("DEATHMATCH", false),
-			NumGalaxies:            envInt("NUM_GALAXIES", 8),
-			NumSystems:             envInt("NUM_SYSTEMS", 600),
-			StorageFactor:          envFloat("STORAGE_FACTOR", 5),
-			ResearchSpeedFactor:    envFloat("RESEARCH_SPEED_FACTOR", 2),
-			EnergyProductionFactor: envFloat("ENERGY_PRODUCTION_FACTOR", 0.8),
-			MaxPlanets:             envInt("MAX_PLANETS", 0),
-			BashingPeriod:          envInt("BASHING_PERIOD", 18000),
-			BashingMaxAttacks:      envInt("BASHING_MAX_ATTACKS", 4),
-			ProtectionPeriod:       envInt("PROTECTION_PERIOD", 86400),
-			TeleportCostOxsars:      envInt64("TELEPORT_COST_OXSARS", 50000),
-			TeleportCooldownHours:   envInt("TELEPORT_COOLDOWN_HOURS", 24),
-			TeleportDurationMinutes: envInt("TELEPORT_DURATION_MINUTES", 0),
 			Points: PointsCoefficients{
 				Building: envFloat("POINTS_K_BUILDING", 0.00005),
 				Research: envFloat("POINTS_K_RESEARCH", 0.0005),
@@ -178,6 +170,54 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("IDENTITY_JWKS_URL is required (legacy AUTH_JWKS_URL also accepted)")
 	}
 	return cfg, nil
+}
+
+// UniverseParams — DTO для ApplyUniverse. Дублирует поля
+// universe.Universe, чтобы избежать импорта internal/universe (который
+// зависит от yaml.v3) в config-пакете. main.go (server/worker)
+// конструирует UniverseParams из universe.Universe и передаёт сюда.
+//
+// План 72.1 часть 12: per-universe балансные параметры — единственный
+// источник истины — configs/universes.yaml.
+type UniverseParams struct {
+	Name                   string
+	Speed                  float64
+	Deathmatch             bool
+	NumGalaxies            int
+	NumSystems             int
+	MaxPlanets             int
+	BashingPeriod          int
+	BashingMaxAttacks      int
+	ProtectionPeriod       int
+	StorageFactor          float64
+	ResearchSpeedFactor    float64
+	EnergyProductionFactor float64
+	TeleportCostOxsars     int64
+	TeleportCooldownHours  int
+	TeleportDurationMin    int
+}
+
+// ApplyUniverse заполняет cfg.Game.* параметрами из universes.yaml
+// для текущего UNIVERSE_ID. Вызывается main.go после config.Load() и
+// universe.NewRegistry(). Если в YAML отсутствует обязательное поле —
+// universe-loader сам вернёт ошибку (см. internal/universe/registry.go
+// Load() / buildUniverse()).
+func (c *Config) ApplyUniverse(p UniverseParams) {
+	c.Game.Universe = p.Name
+	c.Game.Speed = p.Speed
+	c.Game.Deathmatch = p.Deathmatch
+	c.Game.NumGalaxies = p.NumGalaxies
+	c.Game.NumSystems = p.NumSystems
+	c.Game.MaxPlanets = p.MaxPlanets
+	c.Game.BashingPeriod = p.BashingPeriod
+	c.Game.BashingMaxAttacks = p.BashingMaxAttacks
+	c.Game.ProtectionPeriod = p.ProtectionPeriod
+	c.Game.StorageFactor = p.StorageFactor
+	c.Game.ResearchSpeedFactor = p.ResearchSpeedFactor
+	c.Game.EnergyProductionFactor = p.EnergyProductionFactor
+	c.Game.TeleportCostOxsars = p.TeleportCostOxsars
+	c.Game.TeleportCooldownHours = p.TeleportCooldownHours
+	c.Game.TeleportDurationMinutes = p.TeleportDurationMin
 }
 
 func env(key, def string) string {
