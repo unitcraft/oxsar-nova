@@ -137,7 +137,7 @@ export function TopHeader() {
 
             {/* Кредиты */}
             <td className="header-resource">
-              <img src="/assets/origin/images/credit.gif" alt={t('global', 'credits')} />
+              <img src="/assets/origin/images/credit.gif" alt="Игровая валюта" />
               <br />
               <span className="ressource">{t('global', 'credits')}</span>
               <br />

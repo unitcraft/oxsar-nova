@@ -31,8 +31,8 @@ export function LeftMenu() {
         <li><Link to="/disassemble">Утилизация</Link></li>
         <li><Link to="/stock">Биржа</Link></li>
 
-        {/* Секция 2: Коммуникации */}
-        <li className="menu-info menu2-max" id="menuli2"></li>
+        {/* Секции 2-8: заголовки — цветные полоски (свёрнуты по умолчанию через CSS) */}
+        <li className="menu-info menu2-max" id="menuli2" title="Коммуникации"></li>
         <li id="menudiv2"><ul>
           <li><Link to="/chat" id="menu_chat">Чат</Link></li>
           <li><Link to="/messages">Сообщения</Link></li>
@@ -42,8 +42,7 @@ export function LeftMenu() {
           <li><Link to="/search">Поиск</Link></li>
         </ul></li>
 
-        {/* Секция 3: Галактика */}
-        <li className="menu-info menu3-max" id="menuli3"></li>
+        <li className="menu-info menu3-max" id="menuli3" title="Галактика"></li>
         <li id="menudiv3"><ul>
           <li><Link to="/galaxy" id="menu_galaxy">Галактика</Link></li>
           <li><Link to="/empire">Империя</Link></li>
@@ -51,8 +50,7 @@ export function LeftMenu() {
           <li><Link to="/profession" id="menu_profession">Профессия</Link></li>
         </ul></li>
 
-        {/* Секция 4: Статистика */}
-        <li className="menu-info menu4-max" id="menuli4"></li>
+        <li className="menu-info menu4-max" id="menuli4" title="Статистика"></li>
         <li id="menudiv4"><ul>
           <li><Link to="/ranking">Статистика</Link></li>
           <li><Link to="/records">Рекорды</Link></li>
@@ -60,29 +58,25 @@ export function LeftMenu() {
           <li><Link to="/simulator" id="menu_simulator">Симулятор боя</Link></li>
         </ul></li>
 
-        {/* Секция 5: Рынок ресурсов */}
-        <li className="menu-info menu5-max" id="menuli5"></li>
+        <li className="menu-info menu5-max" id="menuli5" title="Рынок ресурсов"></li>
         <li id="menudiv5"><ul>
           <li><Link to="/market">Обменник</Link></li>
           <li><Link to="/artefact-market">Магазин артефактов</Link></li>
           <li><Link to="/payment">Пополнить кредиты</Link></li>
         </ul></li>
 
-        {/* Секция 6: (пусто — форумы внешние, не переносим) */}
-        <li className="menu-info menu6-max" id="menuli6"></li>
+        <li className="menu-info menu6-max" id="menuli6" title="Поиск"></li>
         <li id="menudiv6"><ul>
         </ul></li>
 
-        {/* Секция 7: Настройки */}
-        <li className="menu-info menu7-max" id="menuli7"></li>
+        <li className="menu-info menu7-max" id="menuli7" title="Настройки"></li>
         <li id="menudiv7"><ul>
           <li><Link to="/planet-options">Планета</Link></li>
           <li><Link to="/prefs">Настройки</Link></li>
           <li><Link to="/support">Регламент тех. поддержки</Link></li>
         </ul></li>
 
-        {/* Секция 8: Выход */}
-        <li className="menu-info menu8-max" id="menuli8"></li>
+        <li className="menu-info menu8-max" id="menuli8" title="Выход"></li>
         <li id="menudiv8"><ul>
           <li><Link to="/logout">Выход</Link></li>
         </ul></li>
