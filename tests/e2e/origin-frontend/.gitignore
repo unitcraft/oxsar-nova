@@ -1,0 +1,9 @@
+# Скриншоты (артефакты сравнения, не коммитить).
+# Папки именуются по плану: screenshots-{plan-id}/, например screenshots-72.1/
+screenshots-*/*.png
+
+# Playwright artifacts
+playwright-report/
+test-results/
+node_modules/
+auth.json
