@@ -148,6 +148,41 @@ table.table_no_background td {
   border: 0;
 }
 
+table.table_no_background td {
+  padding: 0 16px 0 0;
+}
+table.table_no_background td:first-child {
+  padding: 0 8px 0 0;
+  min-width: 70px;
+}
+
+/* Pixel-perfect клон legacy: кнопка действия в Research/Constructions —
+   двухстрочная ссылка-текст без рамки, цвет от .true (зелёный) или
+   .false (серый/красный). Legacy: <a class="true">Исследовать<br/>уровень N</a>. */
+button.btn-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+  font-weight: bold;
+  line-height: 1.3;
+}
+button.btn-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+button.btn-link:disabled {
+  cursor: default;
+}
+button.btn-link.true {
+  color: var(--c-positive);
+}
+button.btn-link.false {
+  color: var(--c-negative-soft);
+}
+
 .own {
   color: var(--c-own-player);
 }

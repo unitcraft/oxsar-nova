@@ -101,7 +101,7 @@ export function ResearchScreen() {
                 <td style={{ verticalAlign: 'top' }}>
                   <div style={{ width: '100%' }}>
                     <span style={{ float: 'right' }}>
-                      {t('buildings', 'levelAbbr') ?? 'Ур.'} {lvl}
+                      Уровень {lvl}
                     </span>
                     {t(group, key)}
                   </div>
@@ -118,21 +118,21 @@ export function ResearchScreen() {
                     />
                   </div>
                 </td>
-                <td width="100px" align="center" style={{ verticalAlign: 'top' }}>
+                <td width="100px" align="center" style={{ verticalAlign: 'middle' }}>
                   {queue.length > 0 ? (
                     <span className="false">
                       {t('buildings', 'buildingAtWork') ?? 'Занято'}
                     </span>
                   ) : (
-                    <span className={enough ? 'true' : 'false'}>
-                      <input
-                        type="button"
-                        className="button"
-                        value={`${t('buildings', 'researchOfLevel') ?? 'Исследовать'} ${lvl + 1}`}
-                        onClick={() => start.mutate(entry.id)}
-                        disabled={start.isPending || !enough}
-                      />
-                    </span>
+                    <button
+                      type="button"
+                      className={`btn-link ${enough ? 'true' : 'false'}`}
+                      onClick={() => start.mutate(entry.id)}
+                      disabled={start.isPending || !enough}
+                    >
+                      {t('buildings', 'researchOfLevel') ?? 'Исследовать'}<br />
+                      {t('buildings', 'levelAbbr') === 'Ур.' ? 'уровень' : 'уровень'} {lvl + 1}
+                    </button>
                   )}
                 </td>
               </tr>

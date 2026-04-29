@@ -174,7 +174,7 @@ export function ConstructionsScreen() {
                 <td style={{ verticalAlign: 'top' }}>
                   <div style={{ width: '100%' }}>
                     <span style={{ float: 'right' }}>
-                      {t('buildings', 'levelAbbr') ?? 'Ур.'} {level}
+                      Уровень {level}
                     </span>
                     {t(group, key)}
                   </div>
@@ -224,23 +224,21 @@ export function ConstructionsScreen() {
                   style={{ verticalAlign: 'top' }}
                 >
                   {hasRequirements ? (
-                    <span className="false">
-                      {t('buildings', 'requirementsUnmet') ?? '—'}
-                    </span>
+                    <span className="false">—</span>
                   ) : queueBusy ? (
                     <span className="false">
                       {t('buildings', 'buildingAtWork') ?? 'Занято'}
                     </span>
                   ) : (
-                    <span className={enough ? 'true' : 'false'}>
-                      <input
-                        type="button"
-                        className="button"
-                        value={`${t('buildings', 'upgradeToLevel') ?? 'Построить'} ${level + 1}`}
-                        onClick={() => enqueue.mutate(entry.id)}
-                        disabled={enqueue.isPending || !enough}
-                      />
-                    </span>
+                    <button
+                      type="button"
+                      className={`btn-link ${enough ? 'true' : 'false'}`}
+                      onClick={() => enqueue.mutate(entry.id)}
+                      disabled={enqueue.isPending || !enough}
+                    >
+                      {t('buildings', 'upgradeToLevel') ?? 'Построить'}<br />
+                      уровень {level + 1}
+                    </button>
                   )}
                 </td>
               </tr>

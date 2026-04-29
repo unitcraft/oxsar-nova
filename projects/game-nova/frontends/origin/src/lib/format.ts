@@ -1,25 +1,26 @@
-// Форматтеры origin-фронта (план 72 Ф.2 Spring 1).
+// Форматтеры origin-фронта (план 72.1 ч.20).
 //
-// formatNumber: округляет до целого, разделяет тысячи U+00A0 NO-BREAK
-// SPACE (как в legacy: PHP number_format даёт обычный пробел, шаблон
-// затем меняет на &nbsp; — на SPA можно сразу класть NBSP, чтобы число
-// не переносилось при wrap).
+// formatNumber: округляет до целого, разделяет тысячи точкой.
+// Pixel-perfect клон legacy ru-локали: PHP fNumber() →
+// number_format с THOUSANDS_SEPERATOR='.' (Functions.inc.php).
+// На скрине legacy ru видно «409.600», «4.500.000».
 //
-// formatDuration / secondsUntil: для таймеров миссий, очередей строек.
+// formatDuration: формат HH:MM:SS как в legacy (на скрине Время «00:06:23»).
 
-const NBSP = ' ';
+const THOUSANDS_SEP = '.';
 
 export function formatNumber(n: number): string {
   if (!Number.isFinite(n)) return '—';
   const sign = n < 0 ? '-' : '';
   const abs = Math.abs(Math.floor(n));
-  return sign + abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
+  return sign + abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, THOUSANDS_SEP);
 }
 
 export function formatCoords(g: number, s: number, p: number): string {
   return `[${g}:${s}:${p}]`;
 }
 
+// formatDuration в формате HH:MM:SS (как legacy resource.tpl и required_res_table).
 export function formatDuration(totalSeconds: number): string {
   if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return '—';
   const sec = Math.floor(totalSeconds);
@@ -27,12 +28,14 @@ export function formatDuration(totalSeconds: number): string {
   const hours = Math.floor((sec % 86400) / 3600);
   const minutes = Math.floor((sec % 3600) / 60);
   const seconds = sec % 60;
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}д`);
-  if (hours > 0 || days > 0) parts.push(`${hours}ч`);
-  if (minutes > 0 || hours > 0 || days > 0) parts.push(`${minutes}м`);
-  parts.push(`${seconds}с`);
-  return parts.join(' ');
+  if (days > 0) {
+    return `${days}д ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  }
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+}
+
+function pad(n: number): string {
+  return n < 10 ? `0${n}` : String(n);
 }
 
 export function secondsUntil(iso: string): number {
