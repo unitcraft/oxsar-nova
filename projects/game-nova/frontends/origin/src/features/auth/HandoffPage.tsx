@@ -13,14 +13,23 @@
 //
 // /auth/* проксируется vite в identity-service (см. vite.config.ts).
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/stores/auth';
 
 export function HandoffPage() {
   const setTokens = useAuthStore((s) => s.setTokens);
   const [error, setError] = useState<string | null>(null);
+  // React.StrictMode в dev монтирует useEffect дважды для проверки
+  // идемпотентности. Второй вызов exchange'а получит 401 (Redis GETDEL —
+  // код одноразовый) и моргнёт ошибкой перед успешным редиректом.
+  // useRef-флаг гарантирует что fetch отработает ровно один раз на
+  // mount/unmount цикл.
+  const calledRef = useRef(false);
 
   useEffect(() => {
+    if (calledRef.current) return;
+    calledRef.current = true;
+
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     if (!code) {
