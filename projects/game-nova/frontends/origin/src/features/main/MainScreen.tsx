@@ -1,34 +1,59 @@
-// S-001 Main — главный экран после логина (план 72 Ф.2 Spring 1).
+// S-001 Main — главный экран после логина.
 //
-// Pixel-perfect зеркало legacy `main.tpl`:
-//   1) ntable шапка: Главная планета (homeplanet) + universe-name.
-//   2) Серверное время.
-//   3) Блок «События» — текущие миссии в пути (из /api/fleet).
-//   4) Блок «Непрочитанные сообщения» — счётчик из
-//      /api/messages/unread-count.
+// План 72.1 ч.16: pixel-perfect зеркало legacy `main.tpl` —
+// все строки таблицы:
+//   1. Заголовок: <currentPlanet> [coords] (<username>)
+//   2. Главная планета — homeplanet + universe-name
+//   3. Профессия — link на /profession
+//   4. Серверное время — текущий локальный clock
+//   5. (events) — fleet missions
+//   6. Параметры планеты:
+//      - Диаметр: 18.800 км (застроенная территория: X из Y полей)
+//      - Температура: min..max °C
+//      - Координаты: [g:s:p]
+//
+// Военный/накопленный опыт, очки, шахтёр-уровень, межгал.исследования —
+// требуют расширения /api/me на бэке (отдельная задача).
 //
 // Endpoints:
-//   GET /api/planets                    — список планет (используется
-//                                         через useResolvedPlanet).
-//   GET /api/fleet                      — активные флоты.
-//   GET /api/messages/unread-count      — счётчик.
-//
-// Pixel-perfect: имена CSS-классов идентичны legacy (.ntable, .center,
-// шапка <th colSpan>). Декоративные части legacy (BBCODE-юзербар,
-// invite_friend, mini_games) исключены из Spring 1 и Ф.X плана 72.
+//   GET /api/planets        — список планет (через useResolvedPlanet).
+//   GET /api/me             — username, profession, credit (через TopHeader).
+//   GET /api/fleet          — fleet missions (events).
+//   GET /api/messages/unread-count — счётчик непрочитанных.
 
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { fetchFleet } from '@/api/fleet';
 import { fetchUnreadCount } from '@/api/messages';
+import { fetchMe } from '@/api/me';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { useTranslation } from '@/i18n/i18n';
-import { formatCoords, formatNumber, secondsUntil, formatDuration } from '@/lib/format';
+import {
+  formatCoords,
+  formatNumber,
+  secondsUntil,
+  formatDuration,
+} from '@/lib/format';
+
+const PROFESSION_LABEL: Record<string, string> = {
+  none: '—',
+  miner: 'Шахтёр',
+  warrior: 'Воин',
+  scientist: 'Учёный',
+  builder: 'Строитель',
+  trader: 'Торговец',
+};
 
 export function MainScreen() {
   const { planet, planets, isLoading } = useResolvedPlanet();
   const { t } = useTranslation();
+
+  const meQ = useQuery({
+    queryKey: QK.me(),
+    queryFn: fetchMe,
+    staleTime: 30_000,
+  });
 
   const fleetQ = useQuery({
     queryKey: QK.fleet(),
@@ -58,6 +83,11 @@ export function MainScreen() {
   const slotsMax = fleetQ.data?.slots_max ?? 0;
   const unread = unreadQ.data?.count ?? 0;
 
+  const username = meQ.data?.username ?? '';
+  const professionKey = meQ.data?.profession ?? 'none';
+  const professionLabel =
+    PROFESSION_LABEL[professionKey] ?? professionKey;
+
   return (
     <table className="ntable">
       <thead>
@@ -65,6 +95,7 @@ export function MainScreen() {
           <th colSpan={3}>
             <b>{home.name}</b>{' '}
             {formatCoords(home.galaxy, home.system, home.position)}
+            {username && ` (${username})`}
           </th>
         </tr>
       </thead>
@@ -77,22 +108,18 @@ export function MainScreen() {
           </td>
         </tr>
         <tr>
-          <td>{t('main', 'serverTime')}</td>
+          <td>{t('global', 'menuProfession')}</td>
           <td colSpan={2}>
-            <span id="serverwatch">{new Date().toLocaleString('ru-RU')}</span>
+            <Link to="/profession">{professionLabel}</Link>
           </td>
         </tr>
         <tr>
-          <td>{t('overview', 'resMetalLabel')}</td>
-          <td colSpan={2}>{formatNumber(home.metal)}</td>
-        </tr>
-        <tr>
-          <td>{t('overview', 'resSiliconLabel')}</td>
-          <td colSpan={2}>{formatNumber(home.silicon)}</td>
-        </tr>
-        <tr>
-          <td>{t('overview', 'resHydrogenLabel')}</td>
-          <td colSpan={2}>{formatNumber(home.hydrogen)}</td>
+          <td>{t('main', 'serverTime')}</td>
+          <td colSpan={2}>
+            <span id="serverwatch">
+              {new Date().toLocaleString('ru-RU')}
+            </span>
+          </td>
         </tr>
 
         {unread > 0 && (
@@ -134,13 +161,42 @@ export function MainScreen() {
                 {formatCoords(f.dst_galaxy, f.dst_system, f.dst_position)}{' '}
                 {formatDuration(
                   secondsUntil(
-                    f.state === 'returning' ? (f.return_at ?? f.arrive_at) : f.arrive_at,
+                    f.state === 'returning'
+                      ? (f.return_at ?? f.arrive_at)
+                      : f.arrive_at,
                   ),
                 )}
               </td>
             </tr>
           ))
         )}
+
+        {/* План 72.1 ч.16: блок параметров планеты из legacy main.tpl. */}
+        <tr>
+          <td>{t('overview', 'planetDiameter')}</td>
+          <td colSpan={2}>
+            {formatNumber(home.diameter)} {t('overview', 'diameterKm')} (
+            {t('main', 'planetOccupiedFields', {
+              used: String(home.used_fields),
+              max: String(home.max_fields),
+            })}
+            )
+          </td>
+        </tr>
+        <tr>
+          <td>{t('overview', 'planetTemp')}</td>
+          <td colSpan={2}>
+            {home.temp_min} °C … {home.temp_max} °C
+          </td>
+        </tr>
+        <tr>
+          <td>{t('main', 'position')}</td>
+          <td colSpan={2}>
+            <Link to={`/galaxy/${home.galaxy}/${home.system}`}>
+              {formatCoords(home.galaxy, home.system, home.position)}
+            </Link>
+          </td>
+        </tr>
       </tbody>
     </table>
   );
