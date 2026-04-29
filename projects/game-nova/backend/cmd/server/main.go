@@ -109,11 +109,35 @@ func run() error {
 		catalogDir = "../configs"
 	}
 
-	univReg, univRegErr := universe.NewRegistry(filepath.Join(catalogDir, "universes.yaml"))
-	if univRegErr != nil {
-		log.WarnContext(ctx, "universes.yaml not loaded", slog.String("err", univRegErr.Error()))
-		univReg, _ = universe.NewRegistryFromSlice(nil)
+	univReg, err := universe.NewRegistry(filepath.Join(catalogDir, "universes.yaml"))
+	if err != nil {
+		return fmt.Errorf("universes.yaml: %w", err)
 	}
+
+	// План 72.1 часть 12: per-universe параметры (Speed, NumGalaxies, …,
+	// Teleport*) живут в configs/universes.yaml. Подтягиваем их в cfg.Game
+	// сразу после загрузки реестра — fail-fast если UNIVERSE_ID не найден.
+	curUni, ok := univReg.ByID(cfg.Auth.UniverseID)
+	if !ok {
+		return fmt.Errorf("universes.yaml: UNIVERSE_ID=%q not found", cfg.Auth.UniverseID)
+	}
+	cfg.ApplyUniverse(config.UniverseParams{
+		Name:                   curUni.Name,
+		Speed:                  curUni.Speed,
+		Deathmatch:             curUni.Deathmatch,
+		NumGalaxies:            curUni.NumGalaxies,
+		NumSystems:             curUni.NumSystems,
+		MaxPlanets:             curUni.MaxPlanets,
+		BashingPeriod:          curUni.BashingPeriod,
+		BashingMaxAttacks:      curUni.BashingMaxAttacks,
+		ProtectionPeriod:       curUni.ProtectionPeriod,
+		StorageFactor:          curUni.StorageFactor,
+		ResearchSpeedFactor:    curUni.ResearchSpeedFactor,
+		EnergyProductionFactor: curUni.EnergyProductionFactor,
+		TeleportCostOxsars:     curUni.TeleportCostOxsars,
+		TeleportCooldownHours:  curUni.TeleportCooldownHours,
+		TeleportDurationMin:    curUni.TeleportDurationMin,
+	})
 
 	// Per-universe balance (план 64). Для modern-вселенных (uni01, uni02
 	// и любых, у которых нет configs/balance/<id>.yaml) bundle == чистый
@@ -176,7 +200,7 @@ func run() error {
 	planetSvc.SetGalaxyEventReader(galaxyEventSvc)
 
 	planetH := planet.NewHandler(planetSvc)
-	starter := planet.NewStarter(db)
+	starter := planet.NewStarter(db, cfg.Game.NumGalaxies, cfg.Game.NumSystems)
 
 	// i18n bundle — загружаем до сервисов, чтобы automsg мог читать
 	// тексты шаблонов. Если директория не найдена — bundle=nil,
@@ -244,12 +268,12 @@ func run() error {
 	artefactSvc := artefact.NewService(db, cat).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
 	artefactH := artefact.NewHandler(artefactSvc)
 
-	galaxyH := galaxy.NewHandler(galaxy.NewRepository(pool))
+	galaxyH := galaxy.NewHandler(galaxy.NewRepository(pool), cfg.Game.NumGalaxies, cfg.Game.NumSystems)
 
 	dailyQuestSvc := dailyquest.New(pool)
 	dailyQuestH := dailyquest.NewHandler(dailyQuestSvc)
 
-	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod).WithBundle(i18nBundle)
+	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.NumGalaxies, cfg.Game.NumSystems, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod).WithBundle(i18nBundle)
 	transportSvc.SetBashingLimits(cfg.Game.BashingPeriod, cfg.Game.BashingMaxAttacks)
 	transportSvc.SetDailyQuestSvc(dailyQuestSvc)
 	fleetH := fleet.NewHandler(transportSvc, rdb)
@@ -260,7 +284,7 @@ func run() error {
 	marketSvc := market.NewService(db)
 	marketH := market.NewHandler(marketSvc, rdb)
 
-	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed).WithBundle(i18nBundle)
+	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed, cfg.Game.NumGalaxies, cfg.Game.NumSystems).WithBundle(i18nBundle)
 	rocketH := rocket.NewHandler(rocketSvc)
 
 	artMarketSvc := artmarket.NewService(db)
@@ -355,6 +379,8 @@ func run() error {
 		CostOxsars:      cfg.Game.TeleportCostOxsars,
 		CooldownHours:   cfg.Game.TeleportCooldownHours,
 		DurationMinutes: cfg.Game.TeleportDurationMinutes,
+		NumGalaxies:     cfg.Game.NumGalaxies,
+		NumSystems:      cfg.Game.NumSystems,
 	})
 
 	// План 32 Ф.5: chat.Hub использует Redis pub/sub для multi-instance
