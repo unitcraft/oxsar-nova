@@ -1,14 +1,5 @@
-// S-R03 Disassemble — утилизация кораблей (план 72.1).
-//
-// Pixel-perfect клон legacy Repair.class.php (!isRepair mode):
-//   - Список кораблей на планете с количеством.
-//   - Форма: выбрать юнита + количество → утилизировать (90% ресурсов).
-//   - Активная очередь утилизации.
-//
-// Endpoints:
-//   GET  /api/planets/{id}/shipyard/inventory — список кораблей (ships)
-//   GET  /api/planets/{id}/repair/queue       — активная очередь
-//   POST /api/planets/{id}/repair/disassemble — отправить на утилизацию
+// S-R03 Disassemble — утилизация (план 72.1 ч.19).
+// Pixel-perfect клон legacy disassemble.tpl.
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -17,14 +8,16 @@ import { fetchRepairQueue, disassembleUnits } from '@/api/repair';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { catalogByGroup } from '@/features/common/catalog';
+import { useTranslation } from '@/i18n/i18n';
 import { formatNumber, formatDuration, secondsUntil } from '@/lib/format';
 
 export function DisassembleScreen() {
   const { planetId } = useResolvedPlanet();
+  const { t } = useTranslation();
   const qc = useQueryClient();
 
-  const [selectedUnitId, setSelectedUnitId] = useState<number | null>(null);
-  const [count, setCount] = useState('');
+  // counts per unit_id
+  const [counts, setCounts] = useState<Record<number, string>>({});
 
   const invQ = useQuery({
     queryKey: planetId ? QK.shipyardInventory(planetId) : ['noop-dis-inv'],
@@ -42,10 +35,10 @@ export function DisassembleScreen() {
   });
 
   const disassemble = useMutation({
-    mutationFn: () =>
-      disassembleUnits(planetId!, selectedUnitId!, Math.floor(Number(count) || 0)),
+    mutationFn: ({ unitId, count }: { unitId: number; count: number }) =>
+      disassembleUnits(planetId!, unitId, count),
     onSuccess: () => {
-      setCount('');
+      setCounts({});
       if (planetId) {
         void qc.invalidateQueries({ queryKey: QK.shipyardInventory(planetId) });
         void qc.invalidateQueries({ queryKey: QK.repairQueue(planetId) });
@@ -54,44 +47,48 @@ export function DisassembleScreen() {
     },
   });
 
-  if (!planetId) {
-    return <div className="idiv">Нет планет</div>;
-  }
+  if (!planetId) return <div className="idiv">{t('overview', 'noPlanets')}</div>;
 
   const inv: { ships: Record<string, number>; defense: Record<string, number> } =
     invQ.data ?? { ships: {}, defense: {} };
-  const queue = (queueQ.data ?? []).filter((q) => q.mode === 'disassemble');
-  const allShips = catalogByGroup('ship');
 
-  // Только те корабли, которые есть на планете (кол-во > 0)
+  const disassembleQueue = (queueQ.data ?? []).filter(
+    (q) => q.mode === 'disassemble',
+  );
+
+  const allShips = catalogByGroup('ship');
+  const allDefense = catalogByGroup('defense');
+
+  // Только юниты, которые реально есть на планете
   const availableShips = allShips.filter(
     (s) => (inv.ships[String(s.id)] ?? 0) > 0,
   );
-
-  const selectedInStock = selectedUnitId
-    ? (inv.ships[String(selectedUnitId)] ?? 0)
-    : 0;
-  const parsedCount = Math.min(
-    selectedInStock,
-    Math.max(0, Math.floor(Number(count) || 0)),
+  const availableDefense = allDefense.filter(
+    (s) => (inv.defense[String(s.id)] ?? 0) > 0,
   );
-  const canSubmit = selectedUnitId !== null && parsedCount > 0 && !disassemble.isPending;
+
+  function inStockShip(id: number): number {
+    return inv.ships[String(id)] ?? 0;
+  }
+  function inStockDefense(id: number): number {
+    return inv.defense[String(id)] ?? 0;
+  }
 
   return (
     <>
-      {/* Активная очередь утилизации */}
-      {queue.length > 0 && (
+      {/* Очередь */}
+      {disassembleQueue.length > 0 && (
         <table className="ntable">
-          <thead>
+          <tbody>
             <tr>
               <th colSpan={3}>Очередь утилизации</th>
             </tr>
-          </thead>
-          <tbody>
-            {queue.map((task, idx) => (
+            {disassembleQueue.map((task, idx) => (
               <tr key={task.id}>
                 <td width="1px">{idx + 1}.</td>
-                <td>#{task.unit_id} × {formatNumber(task.count)}</td>
+                <td>
+                  #{task.unit_id}&nbsp;{formatNumber(task.count)}
+                </td>
                 <td>{formatDuration(secondsUntil(task.end_at))}</td>
               </tr>
             ))}
@@ -99,86 +96,138 @@ export function DisassembleScreen() {
         </table>
       )}
 
-      {/* Корабли на планете */}
+      {/* Основная таблица */}
       <table className="ntable">
-        <thead>
-          <tr>
-            <th colSpan={3}>Корабли на планете</th>
-          </tr>
-        </thead>
         <tbody>
-          {availableShips.length === 0 && (
+          <tr>
+            <th colSpan={3}>Утилизация</th>
+          </tr>
+          <tr>
+            <th colSpan={2}>&nbsp;</th>
+            <th style={{ textAlign: 'center' }}>Количество</th>
+          </tr>
+
+          {(availableShips.length > 0 || availableDefense.length > 0) && (
+            <>
+              {availableShips.length > 0 && (
+                <tr>
+                  <th colSpan={3}>Флот</th>
+                </tr>
+              )}
+              {availableShips.map((s) => {
+                const stock = inStockShip(s.id);
+                const [group, key] = s.i18n.split('.') as [string, string];
+                const cnt = Math.min(
+                  stock,
+                  Math.max(0, Math.floor(Number(counts[s.id] ?? '') || 0)),
+                );
+                return (
+                  <tr key={s.id}>
+                    <td width="1px">
+                      <img
+                        src={`/assets/origin/images/units/${s.id}.gif`}
+                        alt=""
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </td>
+                    <td valign="top">
+                      <div style={{ width: '100%' }}>
+                        {t(group, key)}
+                      </div>
+                    </td>
+                    <td width="100px" align="center" valign="top">
+                      {formatNumber(stock)}
+                      <br /><br />
+                      <input
+                        type="number"
+                        min={0}
+                        max={stock}
+                        value={counts[s.id] ?? ''}
+                        onChange={(e) =>
+                          setCounts((prev) => ({ ...prev, [s.id]: e.target.value }))
+                        }
+                        style={{ width: 60, textAlign: 'center' }}
+                        aria-label={t(group, key)}
+                      />
+                      <br />
+                      <input
+                        type="button"
+                        className="button"
+                        value="Утилизировать"
+                        disabled={disassemble.isPending || cnt <= 0}
+                        onClick={() =>
+                          cnt > 0 && disassemble.mutate({ unitId: s.id, count: cnt })
+                        }
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {availableDefense.length > 0 && (
+                <tr>
+                  <th colSpan={3}>Оборона</th>
+                </tr>
+              )}
+              {availableDefense.map((s) => {
+                const stock = inStockDefense(s.id);
+                const [group, key] = s.i18n.split('.') as [string, string];
+                const cnt = Math.min(
+                  stock,
+                  Math.max(0, Math.floor(Number(counts[s.id] ?? '') || 0)),
+                );
+                return (
+                  <tr key={s.id}>
+                    <td width="1px">
+                      <img
+                        src={`/assets/origin/images/units/${s.id}.gif`}
+                        alt=""
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </td>
+                    <td valign="top">
+                      <div style={{ width: '100%' }}>
+                        {t(group, key)}
+                      </div>
+                    </td>
+                    <td width="100px" align="center" valign="top">
+                      {formatNumber(stock)}
+                      <br /><br />
+                      <input
+                        type="number"
+                        min={0}
+                        max={stock}
+                        value={counts[s.id] ?? ''}
+                        onChange={(e) =>
+                          setCounts((prev) => ({ ...prev, [s.id]: e.target.value }))
+                        }
+                        style={{ width: 60, textAlign: 'center' }}
+                        aria-label={t(group, key)}
+                      />
+                      <br />
+                      <input
+                        type="button"
+                        className="button"
+                        value="Утилизировать"
+                        disabled={disassemble.isPending || cnt <= 0}
+                        onClick={() =>
+                          cnt > 0 && disassemble.mutate({ unitId: s.id, count: cnt })
+                        }
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </>
+          )}
+
+          {availableShips.length === 0 && availableDefense.length === 0 && (
             <tr>
-              <td colSpan={3} className="center">Нет кораблей для утилизации</td>
+              <td colSpan={3} align="center">Нет юнитов для утилизации</td>
             </tr>
           )}
-          {availableShips.map((s) => {
-            const inStock = inv.ships[String(s.id)] ?? 0;
-            const [group, key] = s.i18n.split('.') as [string, string];
-            return (
-              <tr
-                key={s.id}
-                style={{ cursor: 'pointer' }}
-                onClick={() => setSelectedUnitId(s.id)}
-                className={selectedUnitId === s.id ? 'selected' : ''}
-              >
-                <td width="1px">
-                  <input
-                    type="radio"
-                    name="dis-unit"
-                    checked={selectedUnitId === s.id}
-                    onChange={() => setSelectedUnitId(s.id)}
-                    aria-label={`${group}.${key}`}
-                  />
-                </td>
-                <td>#{s.id} {group}.{key}</td>
-                <td className="center">{formatNumber(inStock)} шт.</td>
-              </tr>
-            );
-          })}
         </tbody>
       </table>
-
-      {/* Форма утилизации */}
-      {availableShips.length > 0 && (
-        <div style={{ marginTop: 8, textAlign: 'center' }}>
-          <label>
-            Количество:{' '}
-            <input
-              type="number"
-              min={1}
-              max={selectedInStock || 1}
-              value={count}
-              onChange={(e) => setCount(e.target.value)}
-              style={{ width: 80 }}
-              disabled={selectedUnitId === null}
-            />
-            {selectedUnitId !== null && (
-              <span style={{ marginLeft: 4 }}>
-                / {formatNumber(selectedInStock)} шт.
-              </span>
-            )}
-          </label>
-          {' '}
-          <button
-            type="button"
-            className="button"
-            onClick={() => canSubmit && disassemble.mutate()}
-            disabled={!canSubmit}
-          >
-            {disassemble.isPending ? 'Утилизация…' : 'Утилизировать'}
-          </button>
-          {disassemble.isSuccess && (
-            <span style={{ marginLeft: 8, color: 'green' }}>Отправлено в очередь</span>
-          )}
-          {disassemble.isError && (
-            <span style={{ marginLeft: 8, color: 'red' }}>Ошибка</span>
-          )}
-          <div style={{ marginTop: 4, fontSize: '0.85em', color: '#aaa' }}>
-            Утилизация возвращает 90% стоимости постройки
-          </div>
-        </div>
-      )}
     </>
   );
 }
