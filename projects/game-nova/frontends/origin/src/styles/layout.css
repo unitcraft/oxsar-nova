@@ -81,10 +81,11 @@
 
 .menu-info, .menu-info:hover {
   height: 14px;
-  font-size: var(--font-size-base);
+  font-size: 9pt;
   padding-bottom: 2px;
   background-color: var(--c-menu-info-bg);
   margin-top: 1px;
+  cursor: n-resize;
 }
 
 .menu-prod, .menu-user, .menu-other,
@@ -95,10 +96,26 @@
   margin-top: 1px;
 }
 
+/* Цвета секций (pixel-perfect из legacy) */
+.menu2-max, .menu2-max:hover { background-color: var(--c-menu2-max); }
+.menu2-min, .menu2-min:hover { background-color: var(--c-menu2-min); }
+.menu3-max, .menu3-max:hover { background-color: var(--c-menu3-max); }
+.menu3-min, .menu3-min:hover { background-color: var(--c-menu3-min); }
+.menu4-max, .menu4-max:hover { background-color: var(--c-menu4-max); }
+.menu4-min, .menu4-min:hover { background-color: var(--c-menu4-min); }
+.menu5-max, .menu5-max:hover { background-color: var(--c-menu5-max); }
+.menu5-min, .menu5-min:hover { background-color: var(--c-menu5-min); }
+.menu6-max, .menu6-max:hover { background-color: var(--c-menu6-max); }
+.menu6-min, .menu6-min:hover { background-color: var(--c-menu6-min); }
+.menu7-max, .menu7-max:hover { background-color: var(--c-menu7-max); }
+.menu7-min, .menu7-min:hover { background-color: var(--c-menu7-min); }
+.menu8-max, .menu8-max:hover { background-color: var(--c-menu8-max); }
+.menu8-min, .menu8-min:hover { background-color: var(--c-menu8-min); }
+
 #content {
   width: auto;
   margin: 20px 0;
-  margin-left: 170px;
+  margin-left: 155px;
   margin-right: 180px;
   text-align: center;
 }
@@ -136,6 +153,26 @@
 
 #planets .link-button:hover {
   text-decoration: underline;
+}
+
+/* ------- TopHeader table (pixel-perfect из legacy) ------- */
+
+table.top_header_res {
+  text-align: center;
+}
+
+table.top_header_res td {
+  padding: 0 20px;
+  vertical-align: top;
+}
+
+table.top_header_res td.header-planet-name {
+  vertical-align: bottom;
+  padding-top: 32px;
+}
+
+table.top_header_res td.header-resource {
+  padding-top: 10px;
 }
 
 /* ------- Footer (план 50 Ф.5) ------- */
