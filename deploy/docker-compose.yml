@@ -110,6 +110,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       CATALOG_DIR: /app/configs
       WORKER_METRICS_ADDR: ":9091"
+      IDENTITY_JWKS_URL: http://identity-service:9000
     # Worker публикует /api/health и /api/ready на metrics-порту :9091
     # (см. cmd/worker/main.go). План 31 Ф.1.
     healthcheck:
@@ -202,6 +203,7 @@ services:
       REDIS_URL: redis://redis:6379/5
       CATALOG_DIR: /app/configs
       WORKER_METRICS_ADDR: ":9091"
+      IDENTITY_JWKS_URL: http://identity-service:9000
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9091/api/ready"]
       interval: 10s
