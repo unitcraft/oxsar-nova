@@ -1,13 +1,5 @@
-// S-R04 Stock — биржа артефактов (план 72.1).
-//
-// Pixel-perfect клон legacy Stock.class.php (exchange/lots):
-//   - Список активных лотов: артефакт, количество, цена, продавец, срок.
-//   - Фильтр по типу артефакта.
-//   - Пагинация через cursor.
-//   - Кнопка «Купить» (POST /api/exchange/lots/{id}/buy).
-//
-// Endpoints:
-//   GET /api/exchange/lots — список лотов
+// S-R04 Stock — биржа артефактов (план 72.1 ч.19).
+// Pixel-perfect клон legacy stock.tpl.
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -22,8 +14,6 @@ function fmtDate(iso: string): string {
       day: '2-digit',
       month: '2-digit',
       year: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
     });
   } catch {
     return iso;
@@ -50,82 +40,137 @@ export function StockScreen() {
   const nextCursor = lotsQ.data?.next_cursor;
 
   return (
-    <>
-      <table className="ntable" style={{ width: '100%' }}>
-        <thead>
-          <tr>
-            <th>Артефакт</th>
-            <th>Кол-во</th>
-            <th>Цена (оксариты)</th>
-            <th>Цена/шт.</th>
-            <th>Продавец</th>
-            <th>Истекает</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {lotsQ.isLoading && (
-            <tr>
-              <td colSpan={7} className="center">Загрузка…</td>
-            </tr>
-          )}
-          {!lotsQ.isLoading && lots.length === 0 && (
-            <tr>
-              <td colSpan={7} className="center">Активных лотов нет</td>
-            </tr>
-          )}
-          {lots.map((lot) => (
-            <tr key={lot.id}>
-              <td>#{lot.artifact_unit_id}</td>
-              <td className="center">{formatNumber(lot.quantity)}</td>
-              <td className="center">{formatNumber(lot.price_oxsarit)}</td>
-              <td className="center">
-                {lot.unit_price_oxsarit != null
-                  ? formatNumber(lot.unit_price_oxsarit)
-                  : lot.quantity > 0
-                  ? formatNumber(Math.round(lot.price_oxsarit / lot.quantity))
-                  : '—'}
-              </td>
-              <td>{lot.seller_username ?? '—'}</td>
-              <td>{fmtDate(lot.expires_at)}</td>
-              <td>
+    <table className="ntable">
+      <colgroup>
+        <col width="1px" />
+        <col />
+        <col width="10%" />
+        <col width="10%" />
+        <col width="10%" />
+        <col width="10%" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th style={{ textAlign: 'center' }} colSpan={6}>
+            <div style={{ float: 'right' }}>
+              {cursor && (
                 <button
                   type="button"
                   className="button"
-                  disabled
-                  title="Покупка в разработке"
+                  style={{ marginRight: 4 }}
+                  onClick={() => setCursor(undefined)}
                 >
-                  Купить
+                  ◀ В начало
                 </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              )}
+              {nextCursor && (
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => setCursor(nextCursor)}
+                  disabled={lotsQ.isFetching}
+                >
+                  Вперёд ▶
+                </button>
+              )}
+            </div>
+            Биржа
+          </th>
+        </tr>
+        <tr className="center">
+          <th colSpan={2}>Лот</th>
+          <th>Количество</th>
+          <th>Цена</th>
+          <th style={{ textAlign: 'right' }}>Продавец</th>
+          <th>&nbsp;</th>
+        </tr>
+      </thead>
 
-      {/* Пагинация */}
-      <div style={{ marginTop: 8, textAlign: 'center' }}>
-        {cursor && (
-          <button
-            type="button"
-            className="button"
-            style={{ marginRight: 8 }}
-            onClick={() => setCursor(undefined)}
-          >
-            ← В начало
-          </button>
+      <tfoot>
+        <tr>
+          <th style={{ textAlign: 'center' }} colSpan={6}>
+            <div style={{ float: 'right' }}>
+              {cursor && (
+                <button
+                  type="button"
+                  className="button"
+                  style={{ marginRight: 4 }}
+                  onClick={() => setCursor(undefined)}
+                >
+                  ◀ В начало
+                </button>
+              )}
+              {nextCursor && (
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => setCursor(nextCursor)}
+                  disabled={lotsQ.isFetching}
+                >
+                  Вперёд ▶
+                </button>
+              )}
+            </div>
+          </th>
+        </tr>
+      </tfoot>
+
+      <tbody>
+        {lotsQ.isLoading && (
+          <tr>
+            <td colSpan={6} className="center">Загрузка…</td>
+          </tr>
         )}
-        {nextCursor && (
-          <button
-            type="button"
-            className="button"
-            onClick={() => setCursor(nextCursor)}
-            disabled={lotsQ.isFetching}
-          >
-            Следующая страница →
-          </button>
+        {!lotsQ.isLoading && lots.length === 0 && (
+          <tr>
+            <td colSpan={6} className="center">Активных лотов нет</td>
+          </tr>
         )}
-      </div>
-    </>
+        {lots.map((lot, i) => (
+          <tr key={lot.id}>
+            <td align="center">{i + 1}.</td>
+            <td>
+              Арт. #{lot.artifact_unit_id}
+            </td>
+            <td align="right">
+              {formatNumber(lot.quantity)}
+              {lot.quantity > 1 && (
+                <>
+                  <br />
+                  <span style={{ fontSize: 'smaller' }}>мин: 1</span>
+                </>
+              )}
+            </td>
+            <td align="right">
+              {formatNumber(lot.price_oxsarit)}
+              {lot.quantity > 1 && (
+                <>
+                  <br />
+                  {formatNumber(
+                    lot.unit_price_oxsarit ??
+                      Math.round(lot.price_oxsarit / lot.quantity),
+                  )}
+                  /шт.
+                </>
+              )}
+            </td>
+            <td align="right">
+              {lot.seller_username ?? '—'}
+              <br />
+              истекает: {fmtDate(lot.expires_at)}
+            </td>
+            <td align="center" valign="middle">
+              <input
+                type="button"
+                className="button"
+                value="Купить"
+                disabled
+                title="Покупка недоступна"
+              />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

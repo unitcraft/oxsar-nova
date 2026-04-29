@@ -1,15 +1,5 @@
-// S-R01 Resource — экран производства ресурсов (план 72.1).
-//
-// Pixel-perfect клон legacy Resource.class.php:
-//   - Таблица зданий: название, уровень, металл/кремний/водород (ч/д/н),
-//     потребление энергии, коэффициент производства (factor %).
-//   - Строки «Базовое производство», «Склад», «Итого».
-//   - Итоговая сводка (в/сут, в/нед) под таблицей.
-//   - Ввод factor для зданий с allow_factor=true + кнопка «Сохранить».
-//
-// Endpoints:
-//   GET  /api/planets/{id}/resource-report
-//   POST /api/planets/{id}/resource-update
+// S-R01 Resource — экран производства ресурсов (план 72.1 ч.19).
+// Pixel-perfect клон legacy resource.tpl.
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,43 +9,62 @@ import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { formatNumber } from '@/lib/format';
 import type { ResourceBuilding } from '@/api/types';
 
-function fmtProd(val: number): string {
+function fmt(val: number): string {
   if (val === 0) return '0';
-  if (val < 0) return formatNumber(Math.round(val));
   return formatNumber(Math.round(val));
 }
 
-interface FactorCellProps {
+function signClass(val: number): string {
+  if (val > 0) return 'true';
+  if (val < 0) return 'false';
+  return '';
+}
+
+interface FactorInputProps {
   building: ResourceBuilding;
-  localFactor: number;
+  value: number;
   onChange: (unitId: number, val: number) => void;
 }
 
-function FactorCell({ building, localFactor, onChange }: FactorCellProps) {
-  if (!building.allow_factor) {
-    return <td className="center">{building.factor}%</td>;
-  }
+function FactorInput({ building, value, onChange }: FactorInputProps) {
+  if (!building.allow_factor) return <>&nbsp;</>;
   return (
-    <td className="center">
+    <>
       <input
-        type="number"
-        min={0}
-        max={100}
-        value={localFactor}
+        type="text"
+        name={String(building.unit_id)}
+        id={`factor_${building.unit_id}`}
+        value={value}
+        maxLength={3}
+        size={3}
         onChange={(e) => {
           const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
           onChange(building.unit_id, v);
         }}
-        style={{ width: 50, textAlign: 'center' }}
       />
-      %
-    </td>
+      %{' '}
+      <select
+        onChange={(e) => {
+          const v = Number(e.target.value);
+          if (!isNaN(v)) onChange(building.unit_id, v);
+        }}
+        defaultValue="none"
+      >
+        <option value="none" className="center">-</option>
+        <option value="0">0%</option>
+        <option value="25">25%</option>
+        <option value="50">50%</option>
+        <option value="75">75%</option>
+        <option value="100">100%</option>
+      </select>
+    </>
   );
 }
 
 export function ResourceScreen() {
-  const { planetId, isLoading: planetLoading } = useResolvedPlanet();
+  const { planetId, planet, isLoading: planetLoading } = useResolvedPlanet();
   const qc = useQueryClient();
+  const [localFactors, setLocalFactors] = useState<Record<number, number>>({});
 
   const reportQ = useQuery({
     queryKey: planetId ? QK.resourceReport(planetId) : ['noop-rr'],
@@ -63,156 +72,220 @@ export function ResourceScreen() {
     enabled: planetId !== null,
   });
 
-  const [factors, setFactors] = useState<Record<number, number>>({});
-
-  const report = reportQ.data;
-
-  // Инициализируем локальный state факторов из данных сервера при первой загрузке
-  const localFactors: Record<number, number> = {};
-  if (report) {
-    for (const b of report.buildings) {
-      localFactors[b.unit_id] = factors[b.unit_id] ?? b.factor;
-    }
-  }
-
   const save = useMutation({
     mutationFn: () => {
       const payload: Record<string, number> = {};
-      for (const [id, val] of Object.entries(localFactors)) {
-        payload[id] = val;
+      const report = reportQ.data;
+      if (!report) return Promise.reject();
+      for (const b of report.buildings) {
+        payload[String(b.unit_id)] = localFactors[b.unit_id] ?? b.factor;
       }
       return updateResourceFactors(planetId!, payload);
     },
     onSuccess: () => {
+      setLocalFactors({});
       if (planetId) {
-        setFactors({});
         void qc.invalidateQueries({ queryKey: QK.resourceReport(planetId) });
         void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
       }
     },
   });
 
-  if (planetLoading || reportQ.isLoading) {
-    return <div className="idiv">…</div>;
-  }
-  if (!planetId || !report) {
-    return <div className="idiv">—</div>;
-  }
+  if (planetLoading || reportQ.isLoading) return <div className="idiv">…</div>;
+  if (!planetId || !reportQ.data) return <div className="idiv">—</div>;
 
-  const hasFactorBuildings = report.buildings.some((b) => b.allow_factor);
+  const report = reportQ.data;
+  const planetName = planet?.name ?? report.planet_name;
+
+  const totalEnergy =
+    (planet?.energy_remaining ?? 0) - (planet?.energy_prod ?? 0);
+
+  function factorVal(b: ResourceBuilding): number {
+    return localFactors[b.unit_id] ?? b.factor;
+  }
 
   return (
-    <>
-      <table className="ntable" style={{ width: '100%' }}>
-        <thead>
-          <tr>
-            <th>Здание</th>
-            <th>Ур.</th>
-            <th>Металл/ч</th>
-            <th>Кремний/ч</th>
-            <th>Водород/ч</th>
-            <th>Энергия</th>
-            <th>Фактор</th>
-          </tr>
-        </thead>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        save.mutate();
+      }}
+    >
+      <table className="ntable">
         <tbody>
-          {/* Здания */}
-          {report.buildings.map((b) => (
-            <tr key={b.unit_id}>
-              <td>{b.name}</td>
-              <td className="center">{b.level}</td>
-              <td className="center">{fmtProd(b.prod_metal)}</td>
-              <td className="center">{fmtProd(b.prod_silicon)}</td>
-              <td className="center">{fmtProd(b.prod_hydrogen)}</td>
-              <td className="center">
-                {b.cons_energy !== 0 ? fmtProd(-Math.abs(b.cons_energy)) : '0'}
-              </td>
-              <FactorCell
-                building={b}
-                localFactor={localFactors[b.unit_id] ?? b.factor}
-                onChange={(id, val) =>
-                  setFactors((prev) => ({ ...prev, [id]: val }))
-                }
-              />
-            </tr>
-          ))}
+          <tr>
+            <th colSpan={6}>ПРОИЗВОДСТВО РЕСУРСОВ НА ПЛАНЕТЕ {planetName}</th>
+          </tr>
+          <tr>
+            <td></td>
+            <td align="right"><b>Металл</b></td>
+            <td align="right"><b>Кремний</b></td>
+            <td align="right"><b>Водород</b></td>
+            <td align="right"><b>Энергия</b></td>
+            <td></td>
+          </tr>
 
           {/* Базовое производство */}
           <tr>
-            <td colSpan={2}><b>Базовое производство</b></td>
-            <td className="center">{fmtProd(report.basic_metal)}</td>
-            <td className="center">{fmtProd(report.basic_silicon)}</td>
-            <td className="center">{fmtProd(report.basic_hydrogen)}</td>
-            <td className="center">—</td>
-            <td className="center">—</td>
+            <td><b>Базовое производство</b></td>
+            <td align="right">
+              <span className={signClass(report.basic_metal)}>{fmt(report.basic_metal)}</span>
+            </td>
+            <td align="right">
+              <span className={signClass(report.basic_silicon)}>{fmt(report.basic_silicon)}</span>
+            </td>
+            <td align="right">0</td>
+            <td align="right">0</td>
+            <td></td>
           </tr>
+
+          {/* Здания */}
+          {report.buildings
+            .filter((b) => b.level > 0)
+            .map((b) => (
+              <tr key={b.unit_id}>
+                <td><b>{b.name} ({b.level})</b></td>
+                <td align="right">
+                  {b.prod_metal > 0
+                    ? <span className="true">{fmt(b.prod_metal)}</span>
+                    : b.prod_metal < 0
+                    ? <span className="false">{fmt(Math.abs(b.prod_metal))}</span>
+                    : '0'}
+                </td>
+                <td align="right">
+                  {b.prod_silicon > 0
+                    ? <span className="true">{fmt(b.prod_silicon)}</span>
+                    : b.prod_silicon < 0
+                    ? <span className="false">{fmt(Math.abs(b.prod_silicon))}</span>
+                    : '0'}
+                </td>
+                <td align="right">
+                  {b.prod_hydrogen > 0
+                    ? <span className="true">{fmt(b.prod_hydrogen)}</span>
+                    : b.prod_hydrogen < 0
+                    ? <span className="false">{fmt(Math.abs(b.prod_hydrogen))}</span>
+                    : '0'}
+                </td>
+                <td align="right">
+                  {b.cons_energy > 0
+                    ? <span className="false">{fmt(b.cons_energy)}</span>
+                    : b.cons_energy < 0
+                    ? <span className="true">{fmt(Math.abs(b.cons_energy))}</span>
+                    : '0'}
+                </td>
+                <td>
+                  <FactorInput
+                    building={b}
+                    value={factorVal(b)}
+                    onChange={(id, val) =>
+                      setLocalFactors((prev) => ({ ...prev, [id]: val }))
+                    }
+                  />
+                </td>
+              </tr>
+            ))}
 
           {/* Склад */}
           <tr>
-            <td colSpan={2}><b>Склад</b></td>
-            <td className="center">{formatNumber(Math.round(report.storage_metal))}</td>
-            <td className="center">{formatNumber(Math.round(report.storage_silicon))}</td>
-            <td className="center">{formatNumber(Math.round(report.storage_hydrogen))}</td>
-            <td className="center">—</td>
-            <td className="center">—</td>
+            <td className="strongBorderTop"><b>Вместимость склада</b></td>
+            <td align="right" className="strongBorderTop">
+              <span className="true">{fmt(report.storage_metal)}</span>
+            </td>
+            <td align="right" className="strongBorderTop">
+              <span className="true">{fmt(report.storage_silicon)}</span>
+            </td>
+            <td align="right" className="strongBorderTop">
+              <span className="true">{fmt(report.storage_hydrogen)}</span>
+            </td>
+            <td align="right" className="strongBorderTop">-</td>
+            <td className="strongBorderTop">
+              <input
+                type="button"
+                className="button"
+                value="Выключить"
+                onClick={() => {
+                  const factors: Record<number, number> = {};
+                  for (const b of report.buildings) {
+                    if (b.allow_factor) factors[b.unit_id] = 0;
+                  }
+                  setLocalFactors(factors);
+                }}
+              />
+            </td>
           </tr>
 
-          {/* Итого */}
+          {/* Итого в час */}
           <tr>
-            <td colSpan={2}><b>Итого в час</b></td>
-            <td className="center"><b>{fmtProd(report.metal_per_hour)}</b></td>
-            <td className="center"><b>{fmtProd(report.silicon_per_hour)}</b></td>
-            <td className="center"><b>{fmtProd(report.hydrogen_per_hour)}</b></td>
-            <td className="center">—</td>
-            <td className="center">—</td>
+            <td><b>Производство в час</b></td>
+            <td align="right">
+              <span className={signClass(report.metal_per_hour)}>{fmt(report.metal_per_hour)}</span>
+            </td>
+            <td align="right">
+              <span className={signClass(report.silicon_per_hour)}>{fmt(report.silicon_per_hour)}</span>
+            </td>
+            <td align="right">
+              <span className={signClass(report.hydrogen_per_hour)}>{fmt(report.hydrogen_per_hour)}</span>
+            </td>
+            <td align="right">
+              <span className={totalEnergy <= 0 ? 'false' : 'true'}>{fmt(totalEnergy)}</span>
+            </td>
+            <td>
+              <input
+                type="button"
+                className="button"
+                value="Включить"
+                onClick={() => {
+                  const factors: Record<number, number> = {};
+                  for (const b of report.buildings) {
+                    if (b.allow_factor) factors[b.unit_id] = 100;
+                  }
+                  setLocalFactors(factors);
+                }}
+              />
+            </td>
+          </tr>
+
+          {/* В сутки */}
+          <tr>
+            <td className="strongBorderTop"><b>Производство в сутки</b></td>
+            <td align="right" className="strongBorderTop">
+              <span className={signClass(report.metal_per_day)}>{fmt(report.metal_per_day)}</span>
+            </td>
+            <td align="right" className="strongBorderTop">
+              <span className={signClass(report.silicon_per_day)}>{fmt(report.silicon_per_day)}</span>
+            </td>
+            <td align="right" className="strongBorderTop">
+              <span className={signClass(report.hydrogen_per_day)}>{fmt(report.hydrogen_per_day)}</span>
+            </td>
+            <td align="right" className="strongBorderTop">-</td>
+            <td className="strongBorderTop">
+              <input
+                type="submit"
+                name="update"
+                value="Применить"
+                className="button"
+                disabled={save.isPending}
+              />
+            </td>
+          </tr>
+
+          {/* В неделю */}
+          <tr>
+            <td><b>Производство в неделю</b></td>
+            <td align="right">
+              <span className={signClass(report.metal_per_week)}>{fmt(report.metal_per_week)}</span>
+            </td>
+            <td align="right">
+              <span className={signClass(report.silicon_per_week)}>{fmt(report.silicon_per_week)}</span>
+            </td>
+            <td align="right">
+              <span className={signClass(report.hydrogen_per_week)}>{fmt(report.hydrogen_per_week)}</span>
+            </td>
+            <td align="right">-</td>
+            <td>&nbsp;</td>
           </tr>
         </tbody>
       </table>
-
-      {/* Сводка: в день и в неделю */}
-      <table className="ntable" style={{ width: '100%', marginTop: 8 }}>
-        <thead>
-          <tr>
-            <th>Период</th>
-            <th>Металл</th>
-            <th>Кремний</th>
-            <th>Водород</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>В сутки</td>
-            <td className="center">{fmtProd(report.metal_per_day)}</td>
-            <td className="center">{fmtProd(report.silicon_per_day)}</td>
-            <td className="center">{fmtProd(report.hydrogen_per_day)}</td>
-          </tr>
-          <tr>
-            <td>В неделю</td>
-            <td className="center">{fmtProd(report.metal_per_week)}</td>
-            <td className="center">{fmtProd(report.silicon_per_week)}</td>
-            <td className="center">{fmtProd(report.hydrogen_per_week)}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      {hasFactorBuildings && (
-        <div style={{ marginTop: 8, textAlign: 'center' }}>
-          <button
-            type="button"
-            className="button"
-            onClick={() => save.mutate()}
-            disabled={save.isPending}
-          >
-            {save.isPending ? 'Сохранение…' : 'Сохранить производство'}
-          </button>
-          {save.isSuccess && (
-            <span style={{ marginLeft: 8, color: 'green' }}>Сохранено</span>
-          )}
-          {save.isError && (
-            <span style={{ marginLeft: 8, color: 'red' }}>Ошибка сохранения</span>
-          )}
-        </div>
-      )}
-    </>
+    </form>
   );
 }

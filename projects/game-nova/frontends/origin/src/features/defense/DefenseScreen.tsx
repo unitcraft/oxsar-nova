@@ -1,13 +1,5 @@
-// S-R02 Defense — оборона планеты (план 72.1).
-//
-// Pixel-perfect клон legacy Defense.class.php:
-//   - Очередь верфи (элементы с is_defense=true) если есть.
-//   - Таблица оборонительных юнитов с полем ввода количества + кнопка.
-//
-// Использует тот же endpoint верфи, что и ShipyardScreen:
-//   GET  /api/planets/{id}/shipyard/queue
-//   GET  /api/planets/{id}/shipyard/inventory
-//   POST /api/planets/{id}/shipyard
+// S-R02 Defense — оборона (план 72.1 ч.19).
+// Pixel-perfect клон legacy shipyard.tpl (раздел оборона).
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,55 +11,54 @@ import {
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { catalogByGroup, type CatalogEntry } from '@/features/common/catalog';
+import { useTranslation } from '@/i18n/i18n';
 import { formatNumber, formatDuration, secondsUntil } from '@/lib/format';
 
-interface BuildRowProps {
+interface ConstructCellProps {
   entry: CatalogEntry;
   inStock: number;
   onBuild: (unitId: number, count: number) => void;
   isPending: boolean;
 }
 
-function BuildRow({ entry, inStock, onBuild, isPending }: BuildRowProps) {
+function ConstructCell({ entry, inStock, onBuild, isPending }: ConstructCellProps) {
   const [count, setCount] = useState('');
-  const parsed = Math.max(0, Math.floor(Number(count) || 0));
+  const { t } = useTranslation();
   const [group, key] = entry.i18n.split('.') as [string, string];
-  // Используем ключ i18n напрямую как label (строковый fallback)
-  const label = `${group}.${key}`;
+  const parsed = Math.max(0, Math.floor(Number(count) || 0));
   return (
-    <tr>
-      <td width="1px">#{entry.id}</td>
-      <td>
-        {label}{' '}
-        <span className="normal">({formatNumber(inStock)} шт.)</span>
-      </td>
-      <td width="120px" style={{ textAlign: 'center' }}>
-        <input
-          type="number"
-          className="center"
-          min={0}
-          value={count}
-          onChange={(e) => setCount(e.target.value)}
-          aria-label={label}
-          style={{ width: '70px' }}
-        />
-      </td>
-      <td width="100px">
-        <button
-          type="button"
-          className="button"
-          onClick={() => parsed > 0 && onBuild(entry.id, parsed)}
-          disabled={isPending || parsed <= 0}
-        >
-          Построить
-        </button>
-      </td>
-    </tr>
+    <>
+      {inStock > 0 && (
+        <>
+          {formatNumber(inStock)}
+          <br />
+        </>
+      )}
+      <br />
+      <input
+        type="number"
+        name={`unit_${entry.id}`}
+        value={count}
+        min={0}
+        onChange={(e) => setCount(e.target.value)}
+        aria-label={t(group, key)}
+        style={{ width: 60, textAlign: 'center' }}
+      />
+      <br />
+      <input
+        type="button"
+        className="button"
+        value={t('shipyard', 'build')}
+        onClick={() => parsed > 0 && onBuild(entry.id, parsed)}
+        disabled={isPending || parsed <= 0}
+      />
+    </>
   );
 }
 
 export function DefenseScreen() {
   const { planetId } = useResolvedPlanet();
+  const { t } = useTranslation();
   const qc = useQueryClient();
 
   const queueQ = useQuery({
@@ -97,14 +88,12 @@ export function DefenseScreen() {
     },
   });
 
-  if (!planetId) {
-    return <div className="idiv">Нет планет</div>;
-  }
+  if (!planetId) return <div className="idiv">{t('overview', 'noPlanets')}</div>;
 
-  const queue = (queueQ.data ?? []);
-  const defense = catalogByGroup('defense');
+  const queue = queueQ.data ?? [];
   const inv: { ships: Record<string, number>; defense: Record<string, number> } =
     invQ.data ?? { ships: {}, defense: {} };
+  const defense = catalogByGroup('defense');
 
   function inStock(id: number): number {
     return inv.defense[String(id)] ?? 0;
@@ -114,16 +103,16 @@ export function DefenseScreen() {
     <>
       {queue.length > 0 && (
         <table className="ntable">
-          <thead>
-            <tr>
-              <th colSpan={4}>Очередь строительства</th>
-            </tr>
-          </thead>
           <tbody>
+            <tr>
+              <th colSpan={4}>{t('shipyard', 'queue')}</th>
+            </tr>
             {queue.map((task, idx) => (
               <tr key={task.id}>
                 <td width="1px">{idx + 1}.</td>
-                <td>#{task.unit_id} × {formatNumber(task.count)}</td>
+                <td>
+                  #{task.unit_id}&nbsp;{formatNumber(task.count)}
+                </td>
                 <td>{formatDuration(secondsUntil(task.end_at))}</td>
               </tr>
             ))}
@@ -132,26 +121,48 @@ export function DefenseScreen() {
       )}
 
       <table className="ntable">
-        <thead>
-          <tr>
-            <th colSpan={4}>Оборона</th>
-          </tr>
-        </thead>
         <tbody>
+          <tr>
+            <th colSpan={3}>{t('shipyard', 'tabDefense')}</th>
+          </tr>
+          <tr>
+            <th colSpan={2}>&nbsp;</th>
+            <th style={{ textAlign: 'center' }}>{t('shipyard', 'quantity') ?? 'Количество'}</th>
+          </tr>
+
+          {defense.map((entry) => {
+            const [group, key] = entry.i18n.split('.') as [string, string];
+            return (
+              <tr key={entry.id}>
+                <td width="1px">
+                  <img
+                    src={`/assets/origin/images/units/${entry.id}.gif`}
+                    alt=""
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </td>
+                <td valign="top">
+                  <div style={{ width: '100%' }}>
+                    {t(group, key)}
+                  </div>
+                </td>
+                <td width="100px" align="center" valign="top">
+                  <ConstructCell
+                    entry={entry}
+                    inStock={inStock(entry.id)}
+                    onBuild={(unitId, count) => build.mutate({ unitId, count })}
+                    isPending={build.isPending}
+                  />
+                </td>
+              </tr>
+            );
+          })}
+
           {defense.length === 0 && (
             <tr>
-              <td colSpan={4} className="center">Нет доступных оборонительных единиц</td>
+              <td colSpan={3} className="center">—</td>
             </tr>
           )}
-          {defense.map((entry) => (
-            <BuildRow
-              key={entry.id}
-              entry={entry}
-              inStock={inStock(entry.id)}
-              onBuild={(unitId, count) => build.mutate({ unitId, count })}
-              isPending={build.isPending}
-            />
-          ))}
         </tbody>
       </table>
     </>
