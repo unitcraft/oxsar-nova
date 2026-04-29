@@ -728,21 +728,35 @@ func finalizeAttack(ctx context.Context, tx pgx.Tx, b *i18n.Bundle,
 
 	// e_points + battles — по формуле Java (Assault.java:819-847).
 	// Пустые бои (rounds=0, нет юнитов) дают 0 опыта.
+	//
+	// План 72.1 ч.17: одновременно с e_points начисляется be_points
+	// (резервуар активных уровней технологий) — legacy
+	// `Participant.java:963` начисляет одно и то же количество в оба
+	// поля. Use-в-бою (трата be_points при отправке атаки) отложен
+	// до плана 73, см. docs/simplifications.md «M4.be_points».
 	atkExp, defExp := calcExperience(atkPower, defPower, rep.Rounds, rep.Winner, false)
 	if atkExp > 0 && attUID != "" {
 		if _, err := tx.Exec(ctx,
-			`UPDATE users SET e_points=e_points+$1, battles=battles+1 WHERE id=$2`,
+			`UPDATE users
+			 SET e_points = e_points + $1,
+			     be_points = be_points + $1,
+			     battles = battles + 1
+			 WHERE id = $2`,
 			atkExp, attUID,
 		); err != nil {
-			return fmt.Errorf("finalize: attacker e_points: %w", err)
+			return fmt.Errorf("finalize: attacker e_points/be_points: %w", err)
 		}
 	}
 	if defExp > 0 && defUID != "" && defUID != attUID {
 		if _, err := tx.Exec(ctx,
-			`UPDATE users SET e_points=e_points+$1, battles=battles+1 WHERE id=$2`,
+			`UPDATE users
+			 SET e_points = e_points + $1,
+			     be_points = be_points + $1,
+			     battles = battles + 1
+			 WHERE id = $2`,
 			defExp, defUID,
 		); err != nil {
-			return fmt.Errorf("finalize: defender e_points: %w", err)
+			return fmt.Errorf("finalize: defender e_points/be_points: %w", err)
 		}
 	}
 

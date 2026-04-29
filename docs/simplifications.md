@@ -146,6 +146,29 @@
   Alien rapidfire (id 200–204, 348, 352, 353) намеренно не портирован —
   AI-баланс планируется отдельно (план 24).
 
+### [M4.be_points] be_points накопление-only, use-в-бою отложено
+- **Где**: `internal/fleet/attack.go` (накопление), `internal/battle/`
+  (отсутствует use).
+- **Что**: legacy-механика `be_points` имеет 3 части — накопление при
+  бое (`be_points += experience`), use при отправке атаки
+  (`attack_lvl_<tech>` от -K до +K, где K = min(20, be_points/100)),
+  возврат при cancel. Реализуем только **накопление** (план 72.1 ч.17).
+  Поле наполняется при каждом бое и видно на MainScreen, но пока **не
+  приносит in-game эффекта** — игрок копит впрок.
+- **Почему**: full-implementation требует UI-формы для выбора уровней
+  при отправке атаки, валидации, интеграции в `internal/battle/`
+  (формула `unit.attack *= (1 + lvl/10)` для GUN-техов, аналогично
+  для SHIELD/SHELL/BALLISTICS/MASKING), тестов battle-sim. Это объём
+  отдельного плана уровня недели работы. В рамках pixel-perfect
+  MainScreen достаточно показывать поле «Накопленный опыт» — оно
+  должно быть ненулевым после первых боев.
+- **Как чинить**: план 73 «be_points use в бою». См. подробное описание
+  в `docs/plans/72.1-post-remaster-stabilization.md` ч.17 раздел про
+  `be_points`. Источники формул: legacy `Mission.class.php:1230,1659,1675`,
+  `EventHandler.class.php:363,1156`, oxsar2-java `Participant.java:524-525,963`.
+- **Приоритет**: M (фича не блокирует игру, но баланс боя без use
+  отличается от legacy — атакующий не может бустить юниты).
+
 ---
 
 ## Fleet missions
