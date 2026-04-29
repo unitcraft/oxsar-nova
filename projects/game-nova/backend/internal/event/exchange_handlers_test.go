@@ -1,6 +1,7 @@
 package event
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 )
@@ -54,7 +55,7 @@ func TestHandleExchangeExpire_RejectsEmptyLotID(t *testing.T) {
 		Kind:    KindExchangeExpire,
 		Payload: json.RawMessage(`{}`),
 	}
-	err := HandleExchangeExpire(t.Context(), nil, e)
+	err := HandleExchangeExpire(context.Background(), nil, e)
 	if err == nil {
 		t.Fatal("expected error for empty lot_id, got nil")
 	}
@@ -66,7 +67,7 @@ func TestHandleExchangeExpire_InvalidJSON(t *testing.T) {
 		Kind:    KindExchangeExpire,
 		Payload: json.RawMessage(`not json`),
 	}
-	err := HandleExchangeExpire(t.Context(), nil, e)
+	err := HandleExchangeExpire(context.Background(), nil, e)
 	if err == nil {
 		t.Fatal("expected error for invalid json, got nil")
 	}
@@ -78,7 +79,7 @@ func TestHandleExchangeBan_RejectsEmptySellerID(t *testing.T) {
 		Kind:    KindExchangeBan,
 		Payload: json.RawMessage(`{"reason":"x"}`),
 	}
-	err := HandleExchangeBan(t.Context(), nil, e)
+	err := HandleExchangeBan(context.Background(), nil, e)
 	if err == nil {
 		t.Fatal("expected error for empty seller_user_id, got nil")
 	}
@@ -90,7 +91,7 @@ func TestHandleExchangeBan_InvalidJSON(t *testing.T) {
 		Kind:    KindExchangeBan,
 		Payload: json.RawMessage(`not json`),
 	}
-	err := HandleExchangeBan(t.Context(), nil, e)
+	err := HandleExchangeBan(context.Background(), nil, e)
 	if err == nil {
 		t.Fatal("expected error for invalid json, got nil")
 	}
