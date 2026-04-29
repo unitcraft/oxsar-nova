@@ -31,7 +31,7 @@ export default defineConfig(({ command }) => ({
       '/api': process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
       '/healthz': process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
       '/auth': {
-        target: process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+        target: process.env.VITE_IDENTITY_TARGET ?? 'http://localhost:9000',
         changeOrigin: true,
         bypass: (req) => {
           if (req.url?.startsWith('/auth/handoff')) {
@@ -41,7 +41,7 @@ export default defineConfig(({ command }) => ({
         },
       },
       '/.well-known/jwks.json':
-        process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+        process.env.VITE_IDENTITY_TARGET ?? 'http://localhost:9000',
       '/billing': process.env.VITE_BILLING_TARGET ?? 'http://localhost:9100',
     },
     warmup: {

@@ -47,7 +47,7 @@ export default defineConfig(({ command }) => ({
       '/api': process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
       '/healthz': process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
       '/auth': {
-        target: process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+        target: process.env.VITE_IDENTITY_TARGET ?? 'http://localhost:9000',
         changeOrigin: true,
         // План 36 Ф.8: /auth/handoff — это frontend-route, не auth-endpoint.
         // bypass возвращает path → vite отдаёт index.html (SPA fallback),
@@ -60,7 +60,7 @@ export default defineConfig(({ command }) => ({
         },
       },
       '/.well-known/jwks.json':
-        process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+        process.env.VITE_IDENTITY_TARGET ?? 'http://localhost:9000',
       // План 38 Ф.7: billing-service для кошельков и платежей.
       '/billing': process.env.VITE_BILLING_TARGET ?? 'http://localhost:9100',
     },
