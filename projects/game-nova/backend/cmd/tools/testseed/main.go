@@ -7,7 +7,7 @@
 //   - eve      (жертва,     UUID 0000…04) — слабая планета рядом с bob для атак
 //   - charlie  (союзник,    UUID 0000…05) — член альянса bob'а
 //
-// Пароль у всех: `test-password-123`.
+// Пароль у всех: `DevPass123`.
 //
 // Использование:
 //   go run ./cmd/tools/testseed            — сидить поверх (INSERT … ON CONFLICT)
@@ -45,7 +45,7 @@ const (
 
 	aidUT = "00000000-0000-0000-0000-0000000000b1" // alliance [UT]
 
-	testPassword = "test-password-123"
+	testPassword = "DevPass123"
 )
 
 func main() {

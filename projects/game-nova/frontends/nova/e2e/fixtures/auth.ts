@@ -5,7 +5,7 @@
 
 import { type APIRequestContext, type Page, expect } from '@playwright/test';
 
-export const TEST_PASSWORD = 'test-password-123';
+export const TEST_PASSWORD = 'DevPass123';
 
 export const TEST_USERS = {
   admin: { username: 'admin', userId: '00000000-0000-0000-0000-000000000001' },
