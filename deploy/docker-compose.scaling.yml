@@ -3,20 +3,20 @@
 # Использование:
 #   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.scaling.yml up
 #
-# На одном VPS масштабируем только worker — там advisory lock делит
+# На одном VPS масштабируем только uni01-worker — там advisory lock делит
 # scheduler-job'ы между инстансами и event-loop делит работу через
-# FOR UPDATE SKIP LOCKED. Backend оставляем replicas=1: на одном VPS
+# FOR UPDATE SKIP LOCKED. uni01-backend оставляем replicas=1: на одном VPS
 # второй инстанс даёт только zero-downtime deploy + crash-recovery,
 # без выигрыша по throughput, при цене двойной RAM/connection pool.
 # Multi-backend нужен на multi-VPS-сетапе.
 
 services:
-  worker:
+  uni01-worker:
     deploy:
       replicas: 2
       restart_policy:
         condition: on-failure
     # Метрики порт 9091 у обоих инстансов. Prometheus берёт оба через
-    # dns_sd_configs (см. deploy/prometheus.yml). Для ручной проверки —
-    # логи: docker compose ... logs worker | grep "scheduler job"
+    # static_configs (см. deploy/prometheus.yml). Для ручной проверки —
+    # логи: docker compose ... logs uni01-worker | grep "scheduler job"
     # Status=ok должен прийти ровно от одного инстанса на каждое окно.

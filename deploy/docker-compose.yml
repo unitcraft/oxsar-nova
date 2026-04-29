@@ -94,7 +94,7 @@ services:
       retries: 3
       start_period: 10s
 
-  worker:
+  uni01-worker:
     build:
       context: ..
       dockerfile: projects/game-nova/backend/Dockerfile

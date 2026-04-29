@@ -16,7 +16,7 @@
 #
 # Метрики:
 #   uni01-backend:  http://uni01-backend:8080/metrics
-#   worker:   http://worker:9091/metrics  (WORKER_METRICS_ADDR)
+#   uni01-worker:   http://uni01-worker:9091/metrics  (WORKER_METRICS_ADDR)
 #   postgres: через postgres-exporter (порт 9187)
 
 services:
