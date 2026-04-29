@@ -17,7 +17,7 @@ export default defineConfig(({ command }) => ({
     proxy: {
       '/api': process.env.VITE_PORTAL_API ?? 'http://localhost:8090',
       '/auth': {
-        target: process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+        target: process.env.VITE_IDENTITY_TARGET ?? 'http://localhost:9000',
         changeOrigin: true,
         // /auth/handoff — frontend-route (план 36 Ф.8). См. game-nova vite.config.ts.
         bypass: (req) => {
@@ -28,7 +28,7 @@ export default defineConfig(({ command }) => ({
         },
       },
       '/.well-known/jwks.json':
-        process.env.VITE_AUTH_TARGET ?? 'http://localhost:9000',
+        process.env.VITE_IDENTITY_TARGET ?? 'http://localhost:9000',
       // План 38 Ф.7: billing-service для кошельков и платежей.
       '/billing': process.env.VITE_BILLING_TARGET ?? 'http://localhost:9100',
     },
