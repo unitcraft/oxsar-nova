@@ -46,6 +46,8 @@ func run() error {
 	jwksURL := envStr("IDENTITY_JWKS_URL", os.Getenv("AUTH_JWKS_URL"))
 	// План 38 Ф.6: portal списывает кредиты через billing-service.
 	billingURL := envStr("BILLING_URL", "")
+	// План 72.2: portal проксирует handoff-токены через identity-service.
+	identityURL := envStr("IDENTITY_SERVICE_URL", "")
 	universesPath := envStr("UNIVERSES_CONFIG", "configs/universes.yaml")
 	allowedOrigins := strings.Split(envStr("ALLOWED_ORIGINS",
 		"http://localhost:5174,http://localhost:3000"), ",")
@@ -79,7 +81,7 @@ func run() error {
 	}
 
 	svc := portalsvc.New(pool)
-	h := portalsvc.NewHandlerWithBilling(svc, reg, billingURL)
+	h := portalsvc.NewHandlerWithBilling(svc, reg, billingURL, identityURL)
 
 	// План 56: пользовательские жалобы (149-ФЗ). Перенесено из game-nova.
 	reportSvc := report.NewService(pool)
@@ -123,6 +125,10 @@ func run() error {
 
 		// План 56: подача жалоб игроком — POST /api/reports.
 		pr.Post("/api/reports", reportH.Create)
+
+		// План 72.2: handoff-токен для перехода в game-вселенную.
+		// Возвращает redirect_url с одноразовым ?code=<X>.
+		pr.Post("/api/universes/{id}/session", h.CreateUniverseSession)
 
 		// Admin-only
 		pr.Group(func(ar chi.Router) {

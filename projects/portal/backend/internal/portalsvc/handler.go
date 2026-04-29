@@ -16,22 +16,33 @@ import (
 
 // Handler — HTTP-адаптер портала.
 type Handler struct {
-	svc     *Service
-	reg     *universe.Registry
-	credits *BillingClient
+	svc      *Service
+	reg      *universe.Registry
+	credits  *BillingClient
+	identity *IdentityClient // план 72.2 — handoff-токены для перехода в game-вселенные
 }
 
-// NewHandler создаёт Handler без billing-клиента (для тестов).
+// NewHandler создаёт Handler без billing/identity-клиентов (для тестов).
 func NewHandler(svc *Service, reg *universe.Registry) *Handler {
-	return &Handler{svc: svc, reg: reg, credits: NewBillingClient("")}
+	return &Handler{
+		svc:      svc,
+		reg:      reg,
+		credits:  NewBillingClient(""),
+		identity: NewIdentityClient(""),
+	}
 }
 
-// NewHandlerWithBilling создаёт Handler с клиентом billing.
+// NewHandlerWithBilling создаёт Handler с клиентами billing и identity.
 //
-// План 38 Ф.6: вместо identity-service используется billing-service
-// (различные bounded context-ы — identity vs money).
-func NewHandlerWithBilling(svc *Service, reg *universe.Registry, billingURL string) *Handler {
-	return &Handler{svc: svc, reg: reg, credits: NewBillingClient(billingURL)}
+// План 38 Ф.6: списания через billing-service.
+// План 72.2: handoff-токены через identity-service.
+func NewHandlerWithBilling(svc *Service, reg *universe.Registry, billingURL, identityURL string) *Handler {
+	return &Handler{
+		svc:      svc,
+		reg:      reg,
+		credits:  NewBillingClient(billingURL),
+		identity: NewIdentityClient(identityURL),
+	}
 }
 
 // --- universes ---
@@ -289,4 +300,70 @@ func decodeJSON(r *http.Request, into any) error {
 	dec := json.NewDecoder(io.LimitReader(r.Body, 1<<20))
 	dec.DisallowUnknownFields()
 	return dec.Decode(into)
+}
+
+// --- universe session (план 72.2 — handoff) ---
+
+// CreateUniverseSession — POST /api/universes/{id}/session
+//
+// Запрашивает у identity-service одноразовый handoff-токен для
+// перехода юзера в указанную вселенную. Возвращает redirect_url с
+// прикреплённым кодом для browser-redirect.
+//
+// Auth: JWT в Authorization (existing portalsvc.Middleware).
+// 401 — токен невалиден.
+// 404 — universe не существует или не active.
+// 503 — identity-service недоступен.
+//
+// Семантика handoff'а:
+//   1. Identity issues одноразовый код (Redis TTL 30s, single-use).
+//   2. Portal формирует redirect_url из universes.yaml (DevURL в dev,
+//      https://<subdomain>.<base> в prod).
+//   3. Browser делает window.location.assign(redirect_url) — game-фронт
+//      получает ?code=<X> и обменивает через POST /auth/token/exchange.
+func (h *Handler) CreateUniverseSession(w http.ResponseWriter, r *http.Request) {
+	if _, ok := userIDFromCtx(r); !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+
+	universeID := chi.URLParam(r, "id")
+	u, ok := h.reg.ByID(universeID)
+	if !ok {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrNotFound, "universe not found"))
+		return
+	}
+	if u.Status != "active" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "universe not active"))
+		return
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	token, err := h.identity.IssueHandoffToken(r.Context(), authHeader, universeID)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrUnauthorized):
+			httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		case errors.Is(err, ErrIdentityUnavailable):
+			httpx.WriteError(w, r, httpx.Wrap(&httpx.Error{
+				Status: http.StatusServiceUnavailable,
+				Code:   "identity_unavailable",
+			}, "identity service unavailable"))
+		default:
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		}
+		return
+	}
+
+	baseURL := u.DevURL
+	if baseURL == "" {
+		baseURL = "https://" + u.Subdomain + ".oxsar-nova.ru"
+	}
+
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+		"redirect_url":  baseURL + "/auth/handoff?code=" + token,
+		"universe_id":   u.ID,
+		"universe_name": u.Name,
+		"expires_in":    30,
+	})
 }
