@@ -10,7 +10,7 @@
 # Переменные (передавать через .env или environment):
 #   SESSION_SECRET=...   обязательно ≥32 байта (openssl rand -hex 32).
 #   ADMIN_DOMAIN=admin.oxsar-nova.ru
-#   IDENTITY_URL=http://identity-service:9001
+#   IDENTITY_URL=http://identity-service:9000
 #   BILLING_URL=http://billing-service:9100
 #   GAME_NOVA_URL=http://backend:8080
 
@@ -21,7 +21,7 @@ services:
       dockerfile: deploy/Dockerfile.admin-bff
     environment:
       BFF_LISTEN_ADDR: ":9200"
-      IDENTITY_URL: ${IDENTITY_URL:-http://identity-service:9001}
+      IDENTITY_URL: ${IDENTITY_URL:-http://identity-service:9000}
       BILLING_URL: ${BILLING_URL:-http://billing-service:9100}
       GAME_NOVA_URL: ${GAME_NOVA_URL:-http://backend:8080}
       REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
@@ -48,7 +48,7 @@ services:
     environment:
       BFF_UPSTREAM: http://admin-bff:9200
     ports:
-      - "${ADMIN_FRONTEND_PORT:-8081}:80"
+      - "${ADMIN_FRONTEND_PORT:-8086}:80"
     volumes:
       # IP-allowlist: либо проектный файл, либо пустой (см. *.example).
       # На продакшене положить admin-ips.conf рядом с docker-compose.
