@@ -1,9 +1,19 @@
 import { api } from './client';
 import type { Universe, NewsItem, FeedbackPost, FeedbackComment, AuthUser, TokenResponse } from './types';
 
+export interface UniverseSession {
+  redirect_url: string;
+  universe_id: string;
+  universe_name: string;
+  expires_in: number;
+}
+
 export const portalApi = {
   universes: {
     list: () => api.get<{ universes: Universe[] }>('/api/universes'),
+    // План 72.2: handoff-токен для перехода в game-фронт.
+    createSession: (universeID: string) =>
+      api.post<UniverseSession>(`/api/universes/${universeID}/session`, {}),
   },
 
   news: {

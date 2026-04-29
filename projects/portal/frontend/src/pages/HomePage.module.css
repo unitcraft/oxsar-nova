@@ -4,6 +4,16 @@
   padding: 0 1.25rem 3rem;
 }
 
+.universeError {
+  margin: 0 0 1rem;
+  padding: 0.65rem 1rem;
+  background: var(--ox-bg-panel);
+  border: 1px solid var(--ox-error-border, #d34);
+  border-radius: var(--ox-r);
+  color: var(--ox-error, #f55);
+  font-size: 0.875rem;
+}
+
 .hero {
   text-align: center;
   padding: 4rem 0 2.5rem;

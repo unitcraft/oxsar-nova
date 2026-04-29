@@ -1,23 +1,10 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@/components/Link';
 import { AgeRating } from '@/components/AgeRating';
 import { portalApi } from '@/api/portal';
+import { useAuthStore } from '@/store/auth';
 import styles from './HomePage.module.css';
-
-// VITE_BASE_DOMAIN — корневой домен (без протокола), например "oxsar-nova.ru".
-// Вселенные открываются по адресу https://{subdomain}.{VITE_BASE_DOMAIN}.
-// Для локальной разработки: VITE_BASE_DOMAIN=localhost, VITE_UNIVERSE_PORT_uni01=5173 и т.д.
-const BASE_DOMAIN = import.meta.env['VITE_BASE_DOMAIN'] as string | undefined;
-
-function universeURL(subdomain: string): string {
-  if (!BASE_DOMAIN) return '#';
-  const portKey = `VITE_UNIVERSE_PORT_${subdomain}` as keyof ImportMeta['env'];
-  const port = import.meta.env[portKey] as string | undefined;
-  if (port) {
-    return `http://${BASE_DOMAIN}:${port}`;
-  }
-  return `https://${subdomain}.${BASE_DOMAIN}`;
-}
 
 export function HomePage() {
   const { data: universesData } = useQuery({
@@ -28,6 +15,32 @@ export function HomePage() {
     queryKey: ['news'],
     queryFn: () => portalApi.news.list(5),
   });
+
+  const user = useAuthStore((s) => s.user);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // План 72.2: handoff-flow вместо прямой ссылки.
+  //   1. POST /api/universes/{id}/session → identity issues code (TTL 30s).
+  //   2. window.location.assign(redirect_url) → game-фронт обменивает code.
+  //   3. Если юзер не залогинен — Login-редирект.
+  //   4. Ошибки: 401 → /login, 503 → toast.
+  const handlePlay = async (universeID: string) => {
+    if (!user) {
+      window.location.assign('/login');
+      return;
+    }
+    setPendingId(universeID);
+    setError(null);
+    try {
+      const res = await portalApi.universes.createSession(universeID);
+      window.location.assign(res.redirect_url);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Не удалось перейти во вселенную';
+      setError(msg);
+      setPendingId(null);
+    }
+  };
 
   return (
     <div className={styles.page}>
@@ -40,6 +53,7 @@ export function HomePage() {
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Вселенные</h2>
+        {error && <div className={styles.universeError}>{error}</div>}
         <div className={styles.universeGrid}>
           {universesData?.universes.map((u) => (
             <div key={u.id} className={`${styles.universeCard} ${styles[`status_${u.status}`]}`}>
@@ -52,13 +66,15 @@ export function HomePage() {
                 )}
               </div>
               {u.status === 'active' && (
-                <a
-                  href={universeURL(u.subdomain)}
+                <button
+                  type="button"
                   className={styles.universePlay}
-                  rel="noopener noreferrer"
+                  onClick={() => void handlePlay(u.id)}
+                  disabled={pendingId === u.id}
+                  title={user ? '' : 'Войдите чтобы играть'}
                 >
-                  Играть
-                </a>
+                  {pendingId === u.id ? 'Открываем…' : user ? 'Играть' : 'Войти и играть'}
+                </button>
               )}
               {u.status === 'upcoming' && (
                 <span className={styles.universeSoon}>Скоро</span>
