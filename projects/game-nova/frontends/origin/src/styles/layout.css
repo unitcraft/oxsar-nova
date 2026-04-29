@@ -14,15 +14,14 @@
  * Источник: projects/game-legacy-php/public/css/layout.css.
  */
 
-/* main_content — фиксированная ширина 1000px, центрируется в #contentHtml.
-   Внутри neё #planets/right:20px позиционируется относительно этой колонки,
-   а не viewport — pixel-perfect клон legacy layout. */
+/* main_content — обёртка как в legacy.
+   #leftMenu (fixed left:5) и #planets (fixed right:5) позиционируются
+   относительно viewport; .main_content получает margin под их ширину. */
 #contentHtml {
   text-align: center;
 }
 
 .main_content {
-  width: 1000px;
   text-align: left;
   margin: 0 auto;
   padding: 0;
@@ -144,9 +143,9 @@
 }
 
 #planets {
-  position: absolute;
-  top: 0;
-  right: 20px;
+  position: fixed;
+  top: 5px;
+  right: 5px;
   width: var(--w-planets);
   font-size: var(--font-size-small);
 }
