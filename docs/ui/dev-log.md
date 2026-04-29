@@ -962,3 +962,25 @@ Spring 4 в одном проходе (R2 закрытие тех-долга). 1
 
 ### Коммит
 `feat(origin/frontend): Ф.5 Spring 4 ч.1 — communication + notes + search + settings + полное openapi-расширение Spring 4 (план 72)`
+
+## 2026-04-29 — Origin-фронт Ф.5 Spring 4 ч.3: pixel-perfect Parts 17-18
+
+Pixel-perfect выравнивание origin-фронта (http://localhost:5176/) с эталоном
+legacy-PHP (http://localhost:8092). Вся работа ведётся в рамках плана 72.1.
+
+**Часть 17** — статистика, картинки, артефакты:
+- Полноценные механики для be_points (накопление), of_level/of_points (шахтёр),
+  dm_points (derived-метрика), IGN-level (research unit_id=113).
+- БД миграция 0082 + miner пакет + mining tick + score.CalcDmPoints.
+- asset-маппинг планет через FNV-1a hash + 121 JPEG + 124 GIF/PNG артефактов.
+- Tri-fallback render картинок: gif → png → usable_artefact.gif.
+
+**Часть 18** — layout, иконки, rank:
+- PlanetsList справа: иконки 60×60/20×20 с bg-спрайтами planetbg-act/moonbg-act.
+- PlanetSidebar (3-я колонка main): itable 89×89 вместо ul.
+- Военный опыт → ссылка на /ranking, очки → «X из N» с total_users.
+- CSS: ntable margin:auto, #topHeader li float:left, #content margin-left 170px.
+- /api/me: добавлено total_users для отображения «rank из N».
+
+### Коммиты
+`feat(origin/frontend): Ф.5 Spring 4 ч.3 — pixel-perfect Part 18 (layout + images + rank)`
