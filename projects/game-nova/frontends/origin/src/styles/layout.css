@@ -136,6 +136,12 @@
   font-size: var(--font-size-small);
 }
 
+#planets ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 #planets li, #planets li:hover {
   cursor: pointer;
   width: 100px;
@@ -145,18 +151,27 @@
   list-style: none;
 }
 
+#planets li:hover {
+  background: url('/assets/origin/images/planetbg.gif') center center no-repeat;
+  color: #9af;
+}
+
+#planets li.cur-planet {
+  background: url('/assets/origin/images/planetbg-act.gif') center center no-repeat;
+}
+
 #planets li.moon-select,
 #planets li.cur-moon {
   height: 40px;
 }
 
-#planets .link-button {
-  color: var(--c-link);
-  font-weight: bold;
+#planets li.cur-moon {
+  background: url('/assets/origin/images/moonbg-act.gif') center center no-repeat;
 }
 
-#planets .link-button:hover {
-  text-decoration: underline;
+#planets li.moon-select:hover,
+#planets li.cur-moon:hover {
+  background: url('/assets/origin/images/moonbg.gif') center center no-repeat;
 }
 
 /* ------- TopHeader table (pixel-perfect из legacy) ------- */
@@ -199,17 +214,44 @@ table.top_header_res td.header-resource {
 
 .oxsar-footer a, .oxsar-footer a:link, .oxsar-footer a:visited {
   color: var(--c-footer-text);
-  font-weight: normal;
+  text-decoration: none;
 }
 
 .oxsar-footer a:hover {
-  color: var(--c-link);
+  color: #ccc;
   text-decoration: underline;
 }
 
 .oxsar-footer .age-rating {
+  display: inline-block;
+  padding: 0 6px;
+  background: #000;
+  color: #fff;
   font-weight: bold;
-  margin-left: 8px;
+  font-size: 11px;
+  border: 1px solid #444;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.oxsar-footer .legal-links {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.oxsar-footer .legal-links a {
+  color: var(--c-footer-text);
+  text-decoration: none;
+}
+
+.oxsar-footer .legal-links a:hover {
+  color: #ccc;
+  text-decoration: underline;
+}
+
+.oxsar-footer .legal-links .sep {
+  color: #555;
+  margin: 0 4px;
 }
 
 .poweredby {

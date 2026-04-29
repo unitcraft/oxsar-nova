@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchResourceReport, updateResourceFactors } from '@/api/resource';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import { useTranslation } from '@/i18n/i18n';
 import { formatNumber } from '@/lib/format';
 import type { ResourceBuilding } from '@/api/types';
 
@@ -63,6 +64,7 @@ function FactorInput({ building, value, onChange }: FactorInputProps) {
 
 export function ResourceScreen() {
   const { planetId, planet, isLoading: planetLoading } = useResolvedPlanet();
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [localFactors, setLocalFactors] = useState<Record<number, number>>({});
 
@@ -104,6 +106,11 @@ export function ResourceScreen() {
     return localFactors[b.unit_id] ?? b.factor;
   }
 
+  function buildingName(b: ResourceBuilding): string {
+    const key = b.name.replace(/_/g, '');
+    return t('buildings', key) ?? b.name;
+  }
+
   return (
     <form
       onSubmit={(e) => {
@@ -114,7 +121,7 @@ export function ResourceScreen() {
       <table className="ntable">
         <tbody>
           <tr>
-            <th colSpan={6}>ПРОИЗВОДСТВО РЕСУРСОВ НА ПЛАНЕТЕ {planetName}</th>
+            <th colSpan={6}>{t('resource', 'resourceProductionForPlanet')} {planetName}</th>
           </tr>
           <tr>
             <td></td>
@@ -127,7 +134,7 @@ export function ResourceScreen() {
 
           {/* Базовое производство */}
           <tr>
-            <td><b>Базовое производство</b></td>
+            <td><b>{t('resource', 'natural')}</b></td>
             <td align="right">
               <span className={signClass(report.basic_metal)}>{fmt(report.basic_metal)}</span>
             </td>
@@ -144,7 +151,7 @@ export function ResourceScreen() {
             .filter((b) => b.level > 0)
             .map((b) => (
               <tr key={b.unit_id}>
-                <td><b>{b.name} ({b.level})</b></td>
+                <td><b>{buildingName(b)} ({b.level})</b></td>
                 <td align="right">
                   {b.prod_metal > 0
                     ? <span className="true">{fmt(b.prod_metal)}</span>
@@ -187,7 +194,7 @@ export function ResourceScreen() {
 
           {/* Склад */}
           <tr>
-            <td className="strongBorderTop"><b>Вместимость склада</b></td>
+            <td className="strongBorderTop"><b>{t('resource', 'storage')}</b></td>
             <td align="right" className="strongBorderTop">
               <span className="true">{fmt(report.storage_metal)}</span>
             </td>
@@ -202,7 +209,7 @@ export function ResourceScreen() {
               <input
                 type="button"
                 className="button"
-                value="Выключить"
+                value={t('resource', 'shutDown') ?? 'Выключить'}
                 onClick={() => {
                   const factors: Record<number, number> = {};
                   for (const b of report.buildings) {
@@ -216,7 +223,7 @@ export function ResourceScreen() {
 
           {/* Итого в час */}
           <tr>
-            <td><b>Производство в час</b></td>
+            <td><b>{t('resource', 'hourlyProduction')}</b></td>
             <td align="right">
               <span className={signClass(report.metal_per_hour)}>{fmt(report.metal_per_hour)}</span>
             </td>
@@ -233,7 +240,7 @@ export function ResourceScreen() {
               <input
                 type="button"
                 className="button"
-                value="Включить"
+                value={t('resource', 'startUp') ?? 'Включить'}
                 onClick={() => {
                   const factors: Record<number, number> = {};
                   for (const b of report.buildings) {
@@ -247,7 +254,7 @@ export function ResourceScreen() {
 
           {/* В сутки */}
           <tr>
-            <td className="strongBorderTop"><b>Производство в сутки</b></td>
+            <td className="strongBorderTop"><b>{t('resource', 'dailyProduction')}</b></td>
             <td align="right" className="strongBorderTop">
               <span className={signClass(report.metal_per_day)}>{fmt(report.metal_per_day)}</span>
             </td>
@@ -271,7 +278,7 @@ export function ResourceScreen() {
 
           {/* В неделю */}
           <tr>
-            <td><b>Производство в неделю</b></td>
+            <td><b>{t('resource', 'weeklyProduction')}</b></td>
             <td align="right">
               <span className={signClass(report.metal_per_week)}>{fmt(report.metal_per_week)}</span>
             </td>
