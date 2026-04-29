@@ -96,6 +96,27 @@
   margin-top: 1px;
 }
 
+/* Секции меню свёрнуты по умолчанию (как в legacy) */
+#menudiv2, #menudiv3, #menudiv4,
+#menudiv5, #menudiv6, #menudiv7, #menudiv8 {
+  display: none;
+}
+
+/* Заголовок секции: иконка [+] справа */
+li.menu-info.menu2-max::after,
+li.menu-info.menu3-max::after,
+li.menu-info.menu4-max::after,
+li.menu-info.menu5-max::after,
+li.menu-info.menu6-max::after,
+li.menu-info.menu7-max::after,
+li.menu-info.menu8-max::after {
+  content: '+';
+  float: right;
+  padding-right: 4px;
+  font-weight: bold;
+  color: var(--c-link);
+}
+
 /* Цвета секций (pixel-perfect из legacy) */
 .menu2-max, .menu2-max:hover { background-color: var(--c-menu2-max); }
 .menu2-min, .menu2-min:hover { background-color: var(--c-menu2-min); }
