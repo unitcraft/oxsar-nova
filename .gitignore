@@ -40,6 +40,10 @@ projects/portal/frontend/dist/
 # Playwright e2e output
 projects/game-nova/frontends/nova/playwright-report/
 projects/game-nova/frontends/nova/test-results/
+tests/e2e/origin-frontend/playwright-report/
+tests/e2e/origin-frontend/test-results/
+tests/e2e/origin-frontend/auth.json
+tests/e2e/origin-frontend/node_modules/
 
 # Одноразовый выхлоп cmd/tools/import-datasheets
 projects/game-nova/configs/*_generated.yml
