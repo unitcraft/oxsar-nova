@@ -56,7 +56,9 @@
 // AppShell оборачивает все маршруты — 3-frame layout остаётся
 // единым на всё SPA, как в legacy-PHP.
 
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuthStore } from './stores/auth';
 import { AppShell } from './layout/AppShell';
 import { AuthGate } from './features/auth/AuthGate';
 import { HandoffPage } from './features/auth/HandoffPage';
@@ -139,6 +141,12 @@ export function AppRouter() {
   );
 }
 
+function LogoutRoute() {
+  const logout = useAuthStore((s) => s.logout);
+  useEffect(() => { logout(); }, [logout]);
+  return null;
+}
+
 function ProtectedRoutes() {
   return (
     <Routes>
@@ -219,6 +227,16 @@ function ProtectedRoutes() {
           <Route path="/support" element={<SupportScreen />} />
           <Route path="/tools/tech-calc" element={<AdvTechCalculatorScreen />} />
           <Route path="/widgets" element={<WidgetsRedirect />} />
+
+          {/* Алиасы и заглушки для пунктов меню */}
+          <Route path="/resource" element={<Navigate to="/resource-market" replace />} />
+          <Route path="/defense" element={<Navigate to="/" replace />} />
+          <Route path="/disassemble" element={<Navigate to="/" replace />} />
+          <Route path="/stock" element={<Navigate to="/" replace />} />
+          <Route path="/payment" element={<Navigate to="/officer" replace />} />
+          <Route path="/prefs" element={<Navigate to="/settings" replace />} />
+          <Route path="/planet-options" element={<Navigate to="/settings" replace />} />
+          <Route path="/logout" element={<LogoutRoute />} />
 
           {/* План 72.2: /login удалён — единственный вход через handoff. */}
           <Route path="*" element={<Navigate to="/" replace />} />
