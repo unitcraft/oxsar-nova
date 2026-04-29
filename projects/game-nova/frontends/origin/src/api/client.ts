@@ -40,9 +40,43 @@ function withMutationHeaders(
   return Object.keys(h).length > 0 ? h : undefined;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = useAuthStore.getState().accessToken;
-  const res = await fetch(path, {
+// План 72.2: refresh-flow с защитой от race.
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function tryRefresh(): Promise<boolean> {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = (async () => {
+    const refresh = useAuthStore.getState().refreshToken;
+    if (!refresh) return false;
+    try {
+      const res = await fetch('/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh }),
+      });
+      if (!res.ok) return false;
+      const data = (await res.json()) as {
+        access_token: string;
+        refresh_token: string;
+      };
+      const userId = useAuthStore.getState().userId ?? '';
+      useAuthStore.getState().setTokens({
+        access: data.access_token,
+        refresh: data.refresh_token,
+        userId,
+      });
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+  return refreshInFlight;
+}
+
+async function doFetch(path: string, init: RequestInit | undefined, token: string | null): Promise<Response> {
+  return fetch(path, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -50,6 +84,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   });
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  let token = useAuthStore.getState().accessToken;
+  let res = await doFetch(path, init, token);
+
+  // На 401 — попытка refresh и один retry. План 72.2.
+  if (res.status === 401 && token) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      token = useAuthStore.getState().accessToken;
+      res = await doFetch(path, init, token);
+    }
+  }
 
   if (!res.ok) {
     let code = 'http_error';
@@ -67,6 +115,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     err.status = res.status;
     err.code = code;
     if (res.status === 401) {
+      // Refresh failed — чистим store. AuthGate увидит null и
+      // редиректит на портал.
       useAuthStore.getState().logout();
     }
     throw err;

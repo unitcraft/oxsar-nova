@@ -58,6 +58,8 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from './layout/AppShell';
+import { AuthGate } from './features/auth/AuthGate';
+import { HandoffPage } from './features/auth/HandoffPage';
 import { MainScreen } from './features/main/MainScreen';
 import { ConstructionsScreen } from './features/constructions/ConstructionsScreen';
 import { ResearchScreen } from './features/research/ResearchScreen';
@@ -65,7 +67,6 @@ import { ShipyardScreen } from './features/shipyard/ShipyardScreen';
 import { GalaxyScreen } from './features/galaxy/GalaxyScreen';
 import { MissionScreen } from './features/mission/MissionScreen';
 import { EmpireScreen } from './features/empire/EmpireScreen';
-import { LoginPlaceholder } from './features/login/LoginPlaceholder';
 import { AllianceOverviewScreen } from './features/alliance/AllianceOverviewScreen';
 import { AllianceListScreen } from './features/alliance/AllianceListScreen';
 import { AllianceCreateScreen } from './features/alliance/AllianceCreateScreen';
@@ -115,9 +116,33 @@ import { WidgetsRedirect } from './features/widgets/WidgetsRedirect';
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <AppShell>
-        <Routes>
-          <Route path="/" element={<MainScreen />} />
+      <Routes>
+        {/*
+         * Handoff обрабатывается ВНЕ AuthGate — на этой точке у юзера
+         * ещё нет токена (он только сейчас приходит через ?code=).
+         * После успешного exchange HandoffPage сохраняет токены и
+         * редиректит на «/», где AuthGate уже видит их.
+         */}
+        <Route path="/auth/handoff" element={<HandoffPage />} />
+        <Route
+          path="/*"
+          element={
+            <AuthGate>
+              <AppShell>
+                <ProtectedRoutes />
+              </AppShell>
+            </AuthGate>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+function ProtectedRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<MainScreen />} />
           <Route path="/constructions" element={<ConstructionsScreen />} />
           <Route
             path="/constructions/:planetId"
@@ -195,10 +220,8 @@ export function AppRouter() {
           <Route path="/tools/tech-calc" element={<AdvTechCalculatorScreen />} />
           <Route path="/widgets" element={<WidgetsRedirect />} />
 
-          <Route path="/login" element={<LoginPlaceholder />} />
+          {/* План 72.2: /login удалён — единственный вход через handoff. */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AppShell>
-    </BrowserRouter>
+    </Routes>
   );
 }
