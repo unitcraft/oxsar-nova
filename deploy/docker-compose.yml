@@ -226,6 +226,8 @@ services:
       VITE_PROXY_TARGET: http://uni02-backend:8080
       VITE_IDENTITY_TARGET: http://identity-service:9000
       VITE_BILLING_TARGET: http://billing-service:9100
+      # План 72.2: куда редиректить юзера если он пришёл без токена.
+      VITE_PORTAL_URL: http://localhost:5174
     ports: ["5175:5173"]
     volumes:
       - ../projects/game-nova/frontends/nova:/app
@@ -338,6 +340,8 @@ services:
       VITE_IDENTITY_TARGET: http://identity-service:9000
       VITE_BILLING_TARGET: http://billing-service:9100
       VITE_PORTAL_BASE_URL: http://portal-backend:8090
+      # План 72.2: куда редиректить юзера если он пришёл без токена.
+      VITE_PORTAL_URL: http://localhost:5174
     # nova/Dockerfile делает npm install под nova-package.json в build-time,
     # но bind-mount перекрывает /app исходниками origin'а с другим
     # package.json. Поэтому переустанавливаем зависимости в runtime.
@@ -362,6 +366,8 @@ services:
       VITE_PROXY_TARGET: http://uni01-backend:8080
       VITE_IDENTITY_TARGET: http://identity-service:9000
       VITE_BILLING_TARGET: http://billing-service:9100
+      # План 72.2: куда редиректить юзера если он пришёл без токена.
+      VITE_PORTAL_URL: http://localhost:5174
     ports: ["5173:5173"]
     volumes:
       - ../projects/game-nova/frontends/nova:/app
@@ -547,6 +553,8 @@ services:
       PORTAL_ADDR: ":8090"
       PORTAL_DB_URL: postgres://portal:portal@portal-db:5432/portal?sslmode=disable
       IDENTITY_JWKS_URL: http://identity-service:9000
+      # План 72.2: handoff-токены для перехода в game-вселенные.
+      IDENTITY_SERVICE_URL: http://identity-service:9000
       # План 38 Ф.6: списание кредитов через billing-service.
       BILLING_URL: http://billing-service:9100
       UNIVERSES_CONFIG: /app/configs/universes.yaml
