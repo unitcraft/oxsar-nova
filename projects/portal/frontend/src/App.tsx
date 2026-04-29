@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
+import { useAuthStore } from '@/store/auth';
 import { HomePage } from '@/pages/HomePage';
 import { NewsListPage, NewsDetailPage } from '@/pages/NewsPage';
 import { FeedbackListPage, FeedbackNewPage, FeedbackDetailPage } from '@/pages/FeedbackPage';
@@ -22,6 +23,8 @@ function usePathname() {
 
 export function App() {
   const path = usePathname();
+  const hydrate = useAuthStore((s) => s.hydrate);
+  useEffect(() => { void hydrate(); }, [hydrate]);
 
   let page: React.ReactNode;
 

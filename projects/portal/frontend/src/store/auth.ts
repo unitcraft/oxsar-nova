@@ -9,6 +9,10 @@ interface AuthState {
   // (если присутствует) либо переданный отдельно (для refresh без user).
   setAuth: (tokens: TokenResponse, fallbackUser?: AuthUser) => void;
   clearAuth: () => void;
+  // После перезагрузки страницы accessToken восстанавливается из localStorage,
+  // но user — нет (он не сериализуется). Layout без user показывает «Войти».
+  // hydrate подтягивает user через /auth/me, если токен есть.
+  hydrate: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -25,6 +29,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
     });
+  },
+
+  hydrate: async () => {
+    if (!get().accessToken || get().user) return;
+    try {
+      const { portalApi } = await import('@/api/portal');
+      const user = await portalApi.auth.me();
+      set({ user });
+    } catch {
+      // Токен невалиден / просрочен — чистим, чтобы шапка не залипала.
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      set({ user: null, accessToken: null, refreshToken: null });
+    }
   },
 
   clearAuth: () => {
