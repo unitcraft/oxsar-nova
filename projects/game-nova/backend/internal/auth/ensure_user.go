@@ -42,9 +42,17 @@ type EnsureUserConfig struct {
 // в game-nova users table. План 36 Ф.12: lazy-create в middleware с ON CONFLICT
 // (защита от гонки одновременных запросов).
 //
-// Тяжёлая инициализация (стартовая планета, welcome-сообщение, регистрация
-// universe_membership в identity-service) делается АСИНХРОННО — fire-and-forget,
-// чтобы не задерживать первый ответ.
+// План 72.1 ч.15: Starter.Assign делается СИНХРОННО при первом создании
+// юзера (если RowsAffected == 1). Иначе в bootstrap была race-condition:
+// фронт делает 4 параллельных запроса (/api/me, /api/planets, etc) → все
+// проходят через middleware → первый видит RowsAffected==1 и асинхронно
+// запускает Starter.Assign в goroutine → остальные видят RowsAffected==0
+// и параллельно дёргают retryBootstrapIfNeeded → второй Starter.Assign
+// падает с UNIQUE violation на координатах планеты. Также фронт получал
+// /api/planets [] (планета не успела создаться) и показывал «Нет планет».
+//
+// Welcome-сообщение и universe_membership в identity делаются
+// АСИНХРОННО — они не блокируют первый рендер UI.
 //
 // План 36 Ф.12.5: обработка username-конфликта. INSERT может упасть
 // по UNIQUE на users_username_key, если в game-db уже есть legacy-юзер
@@ -91,8 +99,20 @@ func EnsureUserMiddleware(cfg EnsureUserConfig) func(http.Handler) http.Handler 
 				return
 			}
 			if tag.RowsAffected() == 1 {
-				// Юзер только что создан — асинхронно бутстрапим.
-				go bootstrapNewUser(claims.Subject, claims.Username, cfg)
+				// Юзер только что создан. План 72.1 ч.15: стартовую планету
+				// создаём СИНХРОННО до возврата управления handler'у —
+				// иначе race на параллельных запросах + /api/planets
+				// успевает ответить пустым списком.
+				if cfg.Starter != nil {
+					if _, err := cfg.Starter.Assign(ctx, claims.Subject); err != nil {
+						slog.WarnContext(ctx, "starter planet assign failed (sync)",
+							slog.String("user_id", claims.Subject),
+							slog.String("err", err.Error()))
+					}
+				}
+				// Welcome-сообщение и universe-membership — не блокируют
+				// первый ответ, делаем асинхронно.
+				go bootstrapAsyncTail(claims.Subject, claims.Username, cfg)
 			} else {
 				// План 36 Critical-8: юзер уже есть, но bootstrap мог упасть
 				// раньше. Если cur_planet_id IS NULL — пробуем повторно
@@ -152,16 +172,12 @@ func retryBootstrapIfNeeded(userID, username string, cfg EnsureUserConfig) {
 	// Welcome повторно не шлём — он уже мог быть отправлен (или не критичен).
 }
 
-func bootstrapNewUser(userID, username string, cfg EnsureUserConfig) {
+// bootstrapAsyncTail — часть bootstrap'а, которая может быть асинхронной:
+// welcome-сообщение и universe-membership. Стартовая планета теперь
+// создаётся СИНХРОННО в EnsureUserMiddleware (план 72.1 ч.15) до того
+// как goroutine с этим хвостом стартует.
+func bootstrapAsyncTail(userID, username string, cfg EnsureUserConfig) {
 	ctx := context.Background()
-	if cfg.Starter != nil {
-		if _, err := cfg.Starter.Assign(ctx, userID); err != nil {
-			slog.WarnContext(ctx, "starter planet assign failed",
-				slog.String("user_id", userID),
-				slog.String("err", err.Error()))
-			// Продолжаем bootstrap — welcome и membership всё ещё имеет смысл.
-		}
-	}
 	if cfg.Automsg != nil {
 		_ = cfg.Automsg.Send(ctx, nil, userID, "welcome", map[string]string{"username": username})
 		_ = cfg.Automsg.Send(ctx, nil, userID, "starterGuide", nil)
