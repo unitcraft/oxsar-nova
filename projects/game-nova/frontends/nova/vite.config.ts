@@ -72,7 +72,7 @@ export default defineConfig(({ command }) => ({
         './src/main.tsx',
         './src/App.tsx',
         './src/i18n/i18n.tsx',
-        './src/features/auth/LoginScreen.tsx',
+        './src/features/auth/HandoffPage.tsx',
         './src/features/overview/OverviewScreen.tsx',
       ],
     },
