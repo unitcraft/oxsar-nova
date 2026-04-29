@@ -50,7 +50,7 @@ docker compose -f deploy/docker-compose.yml up --build
 - Проверка «как в CI»
 
 **Что даёт:**
-- `PAYMENT_PROVIDER=mock` + `PAYMENT_MOCK_BASE_URL=http://backend:8080` →
+- `PAYMENT_PROVIDER=mock` + `PAYMENT_MOCK_BASE_URL=http://uni01-backend:8080` →
   платежи без денег, редирект внутри docker-сети
 - Postgres на **tmpfs** (быстрее холодного старта, полный сброс между запусками)
 - One-shot `testseed --reset` → 5 детерминированных игроков
@@ -59,7 +59,7 @@ docker compose -f deploy/docker-compose.yml up --build
 - Playwright-контейнер по умолчанию сразу запускает тесты
 
 **Порты наружу НЕ проброшены** — всё общается внутри docker-сети по
-service-именам (`http://backend:8080`, `http://frontend:5173`).
+service-именам (`http://uni01-backend:8080`, `http://uni01-frontend:5173`).
 
 **Запуск полного E2E-прогона:**
 

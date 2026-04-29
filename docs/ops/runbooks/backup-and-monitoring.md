@@ -127,7 +127,7 @@ location /metrics {
     allow 10.0.0.0/8;
     allow 172.16.0.0/12;
     deny all;
-    proxy_pass http://backend:8080;
+    proxy_pass http://uni01-backend:8080;
 }
 ```
 

@@ -204,7 +204,7 @@ projects/game-legacy-php/   ← бывший projects/game-origin-php/
 - `make backend-test` — Go-тесты зелёные (golden_test.go
   читают legacy-PHP-tools по новым путям).
 - `make e2e` — Playwright проходит (базовый smoke).
-- `docker compose -f deploy/docker-compose.yml up frontend` собирает
+- `docker compose -f deploy/docker-compose.yml up uni01-frontend` собирает
   и стартует контейнер из новой раскладки.
 - Если есть docker-compose сервис legacy-PHP — стартует с
   context'ом `projects/game-legacy-php`.
