@@ -55,11 +55,11 @@ export function RankingScreen() {
         </thead>
         <tbody>
           <tr>
-            <td>{t('common', 'online') || 'Онлайн сейчас'}</td>
+            <td>{t('score', 'online')}</td>
             <td>
               <b>{formatNumber(statsQ.data?.online_now ?? 0)}</b>
             </td>
-            <td>{t('common', 'online24h') || 'За 24 часа'}</td>
+            <td>{t('score', 'online24h')}</td>
             <td>
               <b>{formatNumber(statsQ.data?.online_24h ?? 0)}</b>
             </td>

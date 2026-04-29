@@ -1223,6 +1223,8 @@ score:
   tabAlliances: "🤝 Альянсы"
   tabVacation: "✈ В отпуске"
   tabTransfers: "📦 Торговля"
+  online: "Онлайн сейчас"
+  online24h: "За 24 часа"
   scoreTypeTotal: Общий
   scoreTypeBuildings: Постройки
   scoreTypeResearch: Исследования

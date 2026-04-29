@@ -1226,6 +1226,8 @@ score:
   tabAlliances: "🤝 Alliances"
   tabVacation: "✈ On vacation"
   tabTransfers: "📦 Trades"
+  online: "Online now"
+  online24h: "Last 24h"
   scoreTypeTotal: Total
   scoreTypeBuildings: Buildings
   scoreTypeResearch: Research
