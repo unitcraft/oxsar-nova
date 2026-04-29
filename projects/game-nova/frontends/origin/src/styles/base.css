@@ -140,6 +140,14 @@ hr {
   color: var(--c-negative-soft);
 }
 
+/* Pixel-perfect клон legacy: вложенная таблица стоимости в required_res_table.tpl. */
+table.table_no_background,
+table.table_no_background tr,
+table.table_no_background td {
+  background: transparent;
+  border: 0;
+}
+
 .own {
   color: var(--c-own-player);
 }

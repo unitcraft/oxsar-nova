@@ -303,6 +303,34 @@ func (s *Service) ResearchSecondsMap(ctx context.Context, userID string, levels 
 	return out, nil
 }
 
+// ResearchCost — стоимость исследования (металл/кремний/водород).
+type ResearchCost struct {
+	Metal    int64 `json:"metal"`
+	Silicon  int64 `json:"silicon"`
+	Hydrogen int64 `json:"hydrogen"`
+}
+
+// ResearchCostsMap возвращает стоимость следующего уровня каждой технологии.
+// Используется фронтендом для preview cost-таблицы (план 72.1 ч.20).
+func (s *Service) ResearchCostsMap(levels map[int]int) map[int]ResearchCost {
+	out := make(map[int]ResearchCost, len(s.catalog.Research.Research))
+	for _, spec := range s.catalog.Research.Research {
+		curLvl := levels[spec.ID]
+		nextLvl := curLvl + 1
+		cost := economy.CostForLevel(economy.Cost{
+			Metal:    spec.CostBase.Metal,
+			Silicon:  spec.CostBase.Silicon,
+			Hydrogen: spec.CostBase.Hydrogen,
+		}, spec.CostFactor, nextLvl)
+		out[spec.ID] = ResearchCost{
+			Metal:    cost.Metal,
+			Silicon:  cost.Silicon,
+			Hydrogen: cost.Hydrogen,
+		}
+	}
+	return out
+}
+
 func (s *Service) lookupResearch(unitID int) (string, config.ResearchSpec, bool) {
 	for key, spec := range s.catalog.Research.Research {
 		if spec.ID == unitID {
