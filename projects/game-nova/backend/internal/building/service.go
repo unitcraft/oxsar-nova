@@ -330,6 +330,34 @@ func (s *Service) BuildSecondsMap(ctx context.Context, planetID string, levels m
 	return out, nil
 }
 
+// BuildingCost — стоимость постройки следующего уровня здания.
+type BuildingCost struct {
+	Metal    int64 `json:"metal"`
+	Silicon  int64 `json:"silicon"`
+	Hydrogen int64 `json:"hydrogen"`
+}
+
+// BuildCostsMap возвращает стоимость следующего уровня каждого здания.
+// Pixel-perfect клон legacy required_res_table (план 72.1 ч.20).
+func (s *Service) BuildCostsMap(levels map[int]int) map[int]BuildingCost {
+	out := make(map[int]BuildingCost, len(s.catalog.Buildings.Buildings))
+	for _, spec := range s.catalog.Buildings.Buildings {
+		curLvl := levels[spec.ID]
+		nextLvl := curLvl + 1
+		cost := economy.CostForLevel(economy.Cost{
+			Metal:    spec.CostBase.Metal,
+			Silicon:  spec.CostBase.Silicon,
+			Hydrogen: spec.CostBase.Hydrogen,
+		}, spec.CostFactor, nextLvl)
+		out[spec.ID] = BuildingCost{
+			Metal:    cost.Metal,
+			Silicon:  cost.Silicon,
+			Hydrogen: cost.Hydrogen,
+		}
+	}
+	return out
+}
+
 // RequirementsUnmet возвращает map unitKey → []UnmetItem для всех зданий
 // у которых не выполнены пререквизиты на данной планете.
 func (s *Service) RequirementsUnmet(ctx context.Context, userID, planetID string) (map[string][]requirements.UnmetItem, error) {

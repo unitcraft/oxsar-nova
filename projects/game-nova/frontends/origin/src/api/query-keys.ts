@@ -8,6 +8,8 @@ export const QK = {
   planets: () => ['planets'] as const,
   planet: (id: string) => ['planet', id] as const,
   buildingQueue: (planetId: string) => ['buildings', 'queue', planetId] as const,
+  buildingsOverview: (planetId: string) =>
+    ['buildings', 'overview', planetId] as const,
   research: () => ['research'] as const,
   shipyardQueue: (planetId: string) => ['shipyard', 'queue', planetId] as const,
   shipyardInventory: (planetId: string) =>

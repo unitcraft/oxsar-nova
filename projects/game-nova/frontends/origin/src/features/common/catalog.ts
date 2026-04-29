@@ -16,6 +16,8 @@ export interface CatalogEntry {
   i18n: string;
   /** Имя файла иконки без расширения */
   icon: string;
+  /** moon_only — здание видно только на лунах */
+  moonOnly?: boolean;
 }
 
 export const CATALOG: CatalogEntry[] = [
@@ -38,9 +40,9 @@ export const CATALOG: CatalogEntry[] = [
   { id: 101,group: 'building', i18n: 'info.defenseFactory',    icon: 'defense_factory' },
   { id: 107,group: 'building', i18n: 'info.exchange',          icon: 'exchange' },
   { id: 108,group: 'building', i18n: 'info.exchOffice',        icon: 'exch_office' },
-  { id: 54, group: 'building', i18n: 'info.moonBase',          icon: 'moon_base' },
-  { id: 56, group: 'building', i18n: 'info.moonRoboticFactory',icon: 'moon_robotic_factory' },
-  { id: 57, group: 'building', i18n: 'info.moonHydrogenLab',   icon: 'moon_hydrogen_lab' },
+  { id: 54, group: 'building', i18n: 'info.moonBase',          icon: 'moon_base',           moonOnly: true },
+  { id: 56, group: 'building', i18n: 'info.moonRoboticFactory',icon: 'moon_robotic_factory',moonOnly: true },
+  { id: 57, group: 'building', i18n: 'info.moonHydrogenLab',   icon: 'moon_hydrogen_lab',   moonOnly: true },
 
   // ────────── Research (configs/research.yml) ──────────
   { id: 13, group: 'research', i18n: 'info.spyware',           icon: 'spyware' },

@@ -1,21 +1,23 @@
-// S-002 Constructions — строительство зданий (план 72 Ф.2 Spring 1 → финализация).
-// Pixel-perfect клон legacy constructions.tpl.
+// S-002 Constructions — строительство зданий (план 72.1 ч.20).
+// Pixel-perfect клон legacy constructions.tpl + required_res_table.tpl.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   cancelBuildingTask,
   enqueueBuilding,
   fetchBuildingQueue,
+  fetchBuildingsOverview,
+  type BuildingsOverview,
 } from '@/api/buildings';
-import { fetchResourceReport } from '@/api/resource';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { catalogByGroup } from '@/features/common/catalog';
+import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { useTranslation } from '@/i18n/i18n';
 import { secondsUntil, formatDuration } from '@/lib/format';
 
 export function ConstructionsScreen() {
-  const { planetId } = useResolvedPlanet();
+  const { planetId, planet } = useResolvedPlanet();
   const { t } = useTranslation();
   const qc = useQueryClient();
 
@@ -25,9 +27,17 @@ export function ConstructionsScreen() {
     enabled: planetId !== null,
   });
 
-  const reportQ = useQuery({
-    queryKey: planetId ? QK.resourceReport(planetId) : ['noop-rr-c'],
-    queryFn: () => (planetId ? fetchResourceReport(planetId) : Promise.reject()),
+  const overviewQ = useQuery<BuildingsOverview>({
+    queryKey: planetId ? QK.buildingsOverview(planetId) : ['noop-bo'],
+    queryFn: () =>
+      planetId
+        ? fetchBuildingsOverview(planetId)
+        : Promise.resolve<BuildingsOverview>({
+            levels: {},
+            build_seconds: {},
+            build_costs: {},
+            requirements_unmet: {},
+          }),
     enabled: planetId !== null,
   });
 
@@ -36,6 +46,7 @@ export function ConstructionsScreen() {
     onSuccess: () => {
       if (planetId) {
         void qc.invalidateQueries({ queryKey: QK.buildingQueue(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.buildingsOverview(planetId) });
         void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
         void qc.invalidateQueries({ queryKey: QK.planets() });
       }
@@ -47,6 +58,7 @@ export function ConstructionsScreen() {
     onSuccess: () => {
       if (planetId) {
         void qc.invalidateQueries({ queryKey: QK.buildingQueue(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.buildingsOverview(planetId) });
       }
     },
   });
@@ -56,12 +68,37 @@ export function ConstructionsScreen() {
   }
 
   const queue = queueQ.data ?? [];
-  const buildings = catalogByGroup('building');
+  const isMoon = planet?.is_moon === true;
 
-  // Уровни из resource-report: unit_id → level
-  const levelMap: Record<number, number> = {};
-  for (const b of reportQ.data?.buildings ?? []) {
-    levelMap[b.unit_id] = b.level;
+  const allBuildings = catalogByGroup('building');
+  const buildings = allBuildings.filter((b) =>
+    isMoon ? b.moonOnly === true || b.id < 54 || b.id >= 100 : b.moonOnly !== true,
+  );
+
+  const levels = overviewQ.data?.levels ?? {};
+  const buildSecs = overviewQ.data?.build_seconds ?? {};
+  const buildCosts = overviewQ.data?.build_costs ?? {};
+  const unmet = overviewQ.data?.requirements_unmet ?? {};
+
+  const available = planet
+    ? {
+        metal: Math.floor(planet.metal),
+        silicon: Math.floor(planet.silicon),
+        hydrogen: Math.floor(planet.hydrogen),
+      }
+    : { metal: 0, silicon: 0, hydrogen: 0 };
+
+  function canBuild(unitId: number): boolean {
+    const c = buildCosts[String(unitId)];
+    if (!c) return false;
+    if (
+      available.metal < c.metal ||
+      available.silicon < c.silicon ||
+      available.hydrogen < c.hydrogen
+    ) {
+      return false;
+    }
+    return true;
   }
 
   return (
@@ -73,8 +110,10 @@ export function ConstructionsScreen() {
               <th colSpan={4}>{t('buildings', 'outstandingMissions')}</th>
             </tr>
             {queue.map((task, idx) => {
-              const cat = buildings.find((b) => b.id === task.unit_id);
-              const [g, k] = cat ? (cat.i18n.split('.') as [string, string]) : ['info', ''];
+              const cat = allBuildings.find((b) => b.id === task.unit_id);
+              const [g, k] = cat
+                ? (cat.i18n.split('.') as [string, string])
+                : ['info', ''];
               const name = cat ? t(g, k) : `#${task.unit_id}`;
               return (
                 <tr key={task.id}>
@@ -106,40 +145,103 @@ export function ConstructionsScreen() {
 
           {buildings.map((entry) => {
             const [group, key] = entry.i18n.split('.') as [string, string];
-            const level = levelMap[entry.id] ?? 0;
+            const level = levels[String(entry.id)] ?? 0;
+            const secs = buildSecs[String(entry.id)] ?? 0;
+            const cost = buildCosts[String(entry.id)] ?? {
+              metal: 0,
+              silicon: 0,
+              hydrogen: 0,
+            };
+            const requirementsUnmet = unmet[String(entry.id)] ?? [];
+            const hasRequirements = requirementsUnmet.length > 0;
             const descKey = `${key}Desc`;
             const desc = t(group, descKey);
             const hasDesc = !desc.startsWith('[');
+            const enough = canBuild(entry.id);
+            const queueBusy = queue.length > 0;
+
             return (
               <tr key={entry.id}>
                 <td width="1px" style={{ verticalAlign: 'top' }}>
                   <img
-                    src={`/assets/origin/images/units/${entry.id}.gif`}
-                    alt=""
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    src={`/assets/origin/images/units/${entry.icon}.gif`}
+                    alt={t(group, key)}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                   />
                 </td>
                 <td style={{ verticalAlign: 'top' }}>
                   <div style={{ width: '100%' }}>
-                    {level > 0 && (
-                      <span style={{ float: 'right' }}>
-                        {t('buildings', 'levelAbbr')} {level}
-                      </span>
-                    )}
+                    <span style={{ float: 'right' }}>
+                      {t('buildings', 'levelAbbr') ?? 'Ур.'} {level}
+                    </span>
                     {t(group, key)}
                   </div>
                   {hasDesc && (
-                    <div style={{ clear: 'both', fontSize: 'smaller' }}>{desc}</div>
+                    <div style={{ clear: 'both', fontSize: 'smaller' }}>
+                      {desc}
+                    </div>
+                  )}
+                  {hasRequirements ? (
+                    <div style={{ marginTop: 6 }}>
+                      <span className="normal">
+                        {t('buildings', 'requirements') ?? 'Требования'}:
+                      </span>
+                      <br />
+                      {requirementsUnmet.map((u) => {
+                        const reqCat = allBuildings.find((b) => b.id === u.unit_id);
+                        const [rg, rk] = reqCat
+                          ? (reqCat.i18n.split('.') as [string, string])
+                          : ['info', ''];
+                        const reqName = reqCat ? t(rg, rk) : `#${u.unit_id}`;
+                        return (
+                          <span
+                            key={u.unit_id}
+                            className="false"
+                            style={{ display: 'inline-block', marginRight: 8 }}
+                          >
+                            {reqName} {u.required_level}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 6 }}>
+                      <RequiredResTable
+                        metal={cost.metal}
+                        silicon={cost.silicon}
+                        hydrogen={cost.hydrogen}
+                        available={available}
+                        seconds={secs}
+                      />
+                    </div>
                   )}
                 </td>
-                <td width="100px" align="center" style={{ verticalAlign: 'top' }}>
-                  <input
-                    type="button"
-                    className="button"
-                    value={t('buildings', 'build')}
-                    onClick={() => enqueue.mutate(entry.id)}
-                    disabled={enqueue.isPending}
-                  />
+                <td
+                  width="100px"
+                  align="center"
+                  style={{ verticalAlign: 'top' }}
+                >
+                  {hasRequirements ? (
+                    <span className="false">
+                      {t('buildings', 'requirementsUnmet') ?? '—'}
+                    </span>
+                  ) : queueBusy ? (
+                    <span className="false">
+                      {t('buildings', 'buildingAtWork') ?? 'Занято'}
+                    </span>
+                  ) : (
+                    <span className={enough ? 'true' : 'false'}>
+                      <input
+                        type="button"
+                        className="button"
+                        value={`${t('buildings', 'upgradeToLevel') ?? 'Построить'} ${level + 1}`}
+                        onClick={() => enqueue.mutate(entry.id)}
+                        disabled={enqueue.isPending || !enough}
+                      />
+                    </span>
+                  )}
                 </td>
               </tr>
             );
