@@ -42,6 +42,7 @@ import (
 	"oxsar/game-nova/internal/scheduler"
 	"oxsar/game-nova/internal/score"
 	"oxsar/game-nova/internal/storage"
+	"oxsar/game-nova/internal/universe"
 	"oxsar/game-nova/pkg/metrics"
 )
 
@@ -76,6 +77,34 @@ func run() error {
 	if catalogDir == "" {
 		catalogDir = "../configs"
 	}
+
+	// План 72.1 часть 12: per-universe параметры — из universes.yaml.
+	univReg, err := universe.NewRegistry(filepath.Join(catalogDir, "universes.yaml"))
+	if err != nil {
+		return fmt.Errorf("universes.yaml: %w", err)
+	}
+	curUni, ok := univReg.ByID(cfg.Auth.UniverseID)
+	if !ok {
+		return fmt.Errorf("universes.yaml: UNIVERSE_ID=%q not found", cfg.Auth.UniverseID)
+	}
+	cfg.ApplyUniverse(config.UniverseParams{
+		Name:                   curUni.Name,
+		Speed:                  curUni.Speed,
+		Deathmatch:             curUni.Deathmatch,
+		NumGalaxies:            curUni.NumGalaxies,
+		NumSystems:             curUni.NumSystems,
+		MaxPlanets:             curUni.MaxPlanets,
+		BashingPeriod:          curUni.BashingPeriod,
+		BashingMaxAttacks:      curUni.BashingMaxAttacks,
+		ProtectionPeriod:       curUni.ProtectionPeriod,
+		StorageFactor:          curUni.StorageFactor,
+		ResearchSpeedFactor:    curUni.ResearchSpeedFactor,
+		EnergyProductionFactor: curUni.EnergyProductionFactor,
+		TeleportCostOxsars:     curUni.TeleportCostOxsars,
+		TeleportCooldownHours:  curUni.TeleportCooldownHours,
+		TeleportDurationMin:    curUni.TeleportDurationMin,
+	})
+
 	// Per-universe balance (план 64). Тот же loader, что и в server,
 	// читает override-файл configs/balance/<id>.yaml для UniverseID.
 	balanceLoader := balance.NewLoader(catalogDir)
@@ -127,7 +156,7 @@ func run() error {
 	}
 
 	artefactSvc := artefact.NewService(db, cat).WithBundle(i18nBundle)
-	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod).WithBundle(i18nBundle)
+	transportSvc := fleet.NewTransportServiceWithConfig(db, cat, cfg.Game.Speed, artefactSvc, cfg.Game.NumGalaxies, cfg.Game.NumSystems, cfg.Game.MaxPlanets, cfg.Game.ProtectionPeriod).WithBundle(i18nBundle)
 
 	// repair.Service нужен только ради DisassembleHandler; сами
 	// enqueue-операции идут через server. Конструктор требует полный
@@ -136,7 +165,7 @@ func run() error {
 	planetSvc := planet.NewServiceWithFactors(db, planetRepo, cat, cfg.Game.StorageFactor, cfg.Game.EnergyProductionFactor)
 	reqs := requirements.New(cat)
 	repairSvc := repair.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
-	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed).WithBundle(i18nBundle)
+	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed, cfg.Game.NumGalaxies, cfg.Game.NumSystems).WithBundle(i18nBundle)
 	officerSvc := officer.NewService(db).WithBundle(i18nBundle)
 
 	scoreSvc := score.NewServiceWithCoeffs(db, cat, cfg.Game.Points)
