@@ -41,6 +41,8 @@ type TransportService struct {
 	db                repo.Exec
 	catalog           *config.Catalog
 	speed             float64 // GAMESPEED
+	numGalaxies       int     // план 72.1 ч.12 — лимит из universes.yaml
+	numSystems        int     // план 72.1 ч.12 — кольцевая топология систем
 	artefact          *artefact.Service
 	bundle            *i18n.Bundle
 	maxPlanets        int // MAX_PLANETS override (0 = computer_tech+1)
@@ -63,15 +65,22 @@ func (s *TransportService) SetDailyQuestSvc(p DailyQuestProgresser) {
 	s.dailyQuests = p
 }
 
-func NewTransportService(db repo.Exec, cat *config.Catalog, gameSpeed float64, artefactSvc *artefact.Service) *TransportService {
+func NewTransportService(db repo.Exec, cat *config.Catalog, gameSpeed float64, artefactSvc *artefact.Service, numGalaxies, numSystems int) *TransportService {
 	if gameSpeed <= 0 {
 		gameSpeed = 1
 	}
-	return &TransportService{db: db, catalog: cat, speed: gameSpeed, artefact: artefactSvc}
+	return &TransportService{
+		db:          db,
+		catalog:     cat,
+		speed:       gameSpeed,
+		numGalaxies: numGalaxies,
+		numSystems:  numSystems,
+		artefact:    artefactSvc,
+	}
 }
 
-func NewTransportServiceWithConfig(db repo.Exec, cat *config.Catalog, gameSpeed float64, artefactSvc *artefact.Service, maxPlanets, protectionPeriod int) *TransportService {
-	svc := NewTransportService(db, cat, gameSpeed, artefactSvc)
+func NewTransportServiceWithConfig(db repo.Exec, cat *config.Catalog, gameSpeed float64, artefactSvc *artefact.Service, numGalaxies, numSystems, maxPlanets, protectionPeriod int) *TransportService {
+	svc := NewTransportService(db, cat, gameSpeed, artefactSvc, numGalaxies, numSystems)
 	svc.maxPlanets = maxPlanets
 	svc.protectionPeriod = protectionPeriod
 	return svc
@@ -163,7 +172,7 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		return Fleet{}, fmt.Errorf("%w: mission %d not supported",
 			ErrInvalidDispatch, in.Mission)
 	}
-	if err := in.Dst.Validate(); err != nil {
+	if err := in.Dst.Validate(s.numGalaxies, s.numSystems); err != nil {
 		return Fleet{}, fmt.Errorf("%w: %v", ErrInvalidDispatch, err)
 	}
 	if in.SpeedPercent < 10 || in.SpeedPercent > 100 {
@@ -294,6 +303,7 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		dist := float64(galaxy.Distance(
 			galaxy.Coords{Galaxy: src.galaxy, System: src.system, Position: src.position},
 			in.Dst,
+			s.numSystems,
 		))
 		duration := transportDuration(dist, minSpeed, in.SpeedPercent, s.speed)
 

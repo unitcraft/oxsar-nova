@@ -157,7 +157,7 @@ func (s *TransportService) ExpeditionHandler() event.Handler {
 		case "artefact":
 			reportData = expArtefact(ctx, tx, r, ownerUserID, s.catalog, s.tr)
 		case "extra_planet":
-			reportData, err = expExtraPlanet(ctx, tx, r, ownerUserID, s.tr)
+			reportData, err = expExtraPlanet(ctx, tx, r, ownerUserID, s.numGalaxies, s.numSystems, s.tr)
 			if err != nil {
 				return err
 			}
@@ -481,8 +481,10 @@ func expArtefact(ctx context.Context, tx pgx.Tx, r *rng.R, userID string,
 	return map[string]any{"artefact_id": artID}
 }
 
-// expExtraPlanet — создаёт временную планету (expires 12–24ч).
-func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string, tr trFn) (map[string]any, error) {
+// expExtraPlanet — создаёт временную планету (expires 12–24ч). План
+// 72.1 ч.12: numGalaxies/numSystems задают диапазон случайной генерации
+// координат (раньше hardcoded 1..8 / 1..500).
+func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string, numGalaxies, numSystems int, tr trFn) (map[string]any, error) {
 	// План 20 Ф.7 + ADR-0005: лимит = max(computer_tech+1, astro/2+1).
 	computerLvl := readComputerLevel(ctx, tx, userID)
 	astroLvl := readResearchLevel(ctx, tx, userID, unitAstroTech)
@@ -506,8 +508,8 @@ func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string, tr 
 	}
 
 	for attempt := 0; attempt < 50; attempt++ {
-		g := r.IntN(8) + 1
-		sys := r.IntN(500) + 1
+		g := r.IntN(numGalaxies) + 1
+		sys := r.IntN(numSystems) + 1
 		pos := r.IntN(13) + 2 // 2..14
 
 		var exists bool

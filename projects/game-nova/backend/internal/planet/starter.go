@@ -72,27 +72,32 @@ var starterFleet = []struct {
 // Выделено в отдельную службу, чтобы auth-пакет не зависел от всей
 // планетарной логики, а только от одной функции.
 type Starter struct {
-	db repo.Exec
+	db          repo.Exec
+	numGalaxies int // план 72.1 ч.12 — лимиты вселенной из universes.yaml
+	numSystems  int
 }
 
-func NewStarter(db repo.Exec) *Starter { return &Starter{db: db} }
+// NewStarter — план 72.1 ч.12: numGalaxies/numSystems задают диапазон
+// случайной генерации стартовой планеты (раньше был hardcoded 1..8 / 1..500).
+func NewStarter(db repo.Exec, numGalaxies, numSystems int) *Starter {
+	return &Starter{db: db, numGalaxies: numGalaxies, numSystems: numSystems}
+}
 
 // Assign создаёт планету на случайной свободной позиции и делает её
 // текущей для пользователя. Возвращает id созданной планеты.
 //
-// Алгоритм: крутим координаты, пока не найдём свободную. Для 1..8
-// галактик × 1..500 систем × 1..15 позиций в начале игры свободных
-// позиций десятки миллионов, гонок практически не бывает.
-// На случай полной вселенной — возвращаем ошибку после 100 попыток.
+// Алгоритм: крутим координаты, пока не найдём свободную. Для каждой
+// вселенной диапазон 1..numGalaxies × 1..numSystems × 1..15. На случай
+// полной вселенной — возвращаем ошибку после 100 попыток.
 func (s *Starter) Assign(ctx context.Context, userID string) (string, error) {
 	r := rng.New(seedFromUserID(userID))
 	var planetID string
 
 	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		for attempt := 0; attempt < 100; attempt++ {
-			g := r.IntN(8) + 1     // 1..8
-			sys := r.IntN(500) + 1 // 1..500
-			pos := r.IntN(13) + 2  // 2..14 (1 и 15 — «крайности», оставим на колонизацию)
+			g := r.IntN(s.numGalaxies) + 1
+			sys := r.IntN(s.numSystems) + 1
+			pos := r.IntN(13) + 2 // 2..14 (1 и 15 — «крайности», оставим на колонизацию)
 
 			taken, err := coordTaken(ctx, tx, g, sys, pos, false)
 			if err != nil {
