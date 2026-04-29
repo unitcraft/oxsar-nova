@@ -50,7 +50,12 @@
 //   /tools/tech-calc           → S-047 AdvTechCalculator (pure client)
 //   /widgets                   → S-046 Widgets — redirect на / (см. simplifications)
 //
-//   /login                     → placeholder
+// план 72.1 — недостающие экраны из legacy-PHP:
+//   /resource                  → ResourceScreen (производство ресурсов)
+//   /defense                   → DefenseScreen (оборона)
+//   /disassemble               → DisassembleScreen (утилизация кораблей)
+//   /stock                     → StockScreen (биржа артефактов)
+//
 //   *                          → redirect на /
 //
 // AppShell оборачивает все маршруты — 3-frame layout остаётся
@@ -106,6 +111,11 @@ import {
 import { NotepadScreen } from './features/notepad/NotepadScreen';
 import { SearchScreen } from './features/search/SearchScreen';
 import { SettingsScreen } from './features/settings/SettingsScreen';
+// Новые экраны (план 72.1): resource / defense / disassemble / stock
+import { ResourceScreen } from './features/resource/ResourceScreen';
+import { DefenseScreen } from './features/defense/DefenseScreen';
+import { DisassembleScreen } from './features/disassemble/DisassembleScreen';
+import { StockScreen } from './features/stock/StockScreen';
 // Spring 4 ч.2 (Ф.5) — premium / static / utilities
 import { OfficerScreen } from './features/officer/OfficerScreen';
 import { ProfessionScreen } from './features/profession/ProfessionScreen';
@@ -228,11 +238,11 @@ function ProtectedRoutes() {
           <Route path="/tools/tech-calc" element={<AdvTechCalculatorScreen />} />
           <Route path="/widgets" element={<WidgetsRedirect />} />
 
-          {/* Алиасы и заглушки для пунктов меню */}
-          <Route path="/resource" element={<Navigate to="/resource-market" replace />} />
-          <Route path="/defense" element={<Navigate to="/" replace />} />
-          <Route path="/disassemble" element={<Navigate to="/" replace />} />
-          <Route path="/stock" element={<Navigate to="/" replace />} />
+          {/* Новые экраны (план 72.1) */}
+          <Route path="/resource" element={<ResourceScreen />} />
+          <Route path="/defense" element={<DefenseScreen />} />
+          <Route path="/disassemble" element={<DisassembleScreen />} />
+          <Route path="/stock" element={<StockScreen />} />
           <Route path="/payment" element={<Navigate to="/officer" replace />} />
           <Route path="/prefs" element={<Navigate to="/settings" replace />} />
           <Route path="/planet-options" element={<Navigate to="/settings" replace />} />

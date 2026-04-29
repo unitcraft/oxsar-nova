@@ -576,6 +576,77 @@ export interface DeletionConfirmRequest {
   code: string;
 }
 
+// ===== Resource report (план 72.1 — /resource экран) =====
+
+export interface ResourceBuilding {
+  unit_id: number;
+  name: string;
+  level: number;
+  prod_metal: number;
+  prod_silicon: number;
+  prod_hydrogen: number;
+  cons_energy: number;
+  factor: number;
+  allow_factor: boolean;
+}
+
+export interface ResourceReport {
+  planet_id: string;
+  planet_name: string;
+  buildings: ResourceBuilding[];
+  basic_metal: number;
+  basic_silicon: number;
+  basic_hydrogen: number;
+  storage_metal: number;
+  storage_silicon: number;
+  storage_hydrogen: number;
+  metal_total: number;
+  silicon_total: number;
+  hydrogen_total: number;
+  metal_per_hour: number;
+  silicon_per_hour: number;
+  hydrogen_per_hour: number;
+  metal_per_day: number;
+  silicon_per_day: number;
+  hydrogen_per_day: number;
+  metal_per_week: number;
+  silicon_per_week: number;
+  hydrogen_per_week: number;
+}
+
+// ===== Repair / Disassemble queue =====
+
+export interface RepairQueueItem {
+  id: string;
+  planet_id: string;
+  unit_id: number;
+  count: number;
+  mode: 'repair' | 'disassemble';
+  start_at: string;
+  end_at: string;
+  status: string;
+}
+
+// ===== Exchange lots (Биржа) =====
+
+export interface ExchangeLot {
+  id: string;
+  seller_user_id: string;
+  seller_username?: string | null;
+  artifact_unit_id: number;
+  quantity: number;
+  price_oxsarit: number;
+  unit_price_oxsarit?: number;
+  status: 'active' | 'sold' | 'cancelled' | 'expired';
+  expires_at: string;
+  created_at: string;
+}
+
+export interface ExchangeLotsResult {
+  lots: ExchangeLot[];
+  next_cursor?: string | null;
+}
+
 // ===== Spring 4 ч.2 (план 72 Ф.5) =====
 
 // S-040 Officer — каталог + state. Backend (internal/officer/service.go)
