@@ -13,10 +13,16 @@ import (
 // Handler — HTTP-адаптер чтения галактики. На текущем этапе только
 // GET /api/galaxy/{g}/{s}.
 type Handler struct {
-	repo *Repository
+	repo        *Repository
+	numGalaxies int
+	numSystems  int
 }
 
-func NewHandler(repo *Repository) *Handler { return &Handler{repo: repo} }
+// NewHandler — план 72.1 часть 12: лимиты вселенной приходят из
+// configs/universes.yaml через cfg.Game.{NumGalaxies,NumSystems}.
+func NewHandler(repo *Repository, numGalaxies, numSystems int) *Handler {
+	return &Handler{repo: repo, numGalaxies: numGalaxies, numSystems: numSystems}
+}
 
 // System GET /api/galaxy/{g}/{s}
 func (h *Handler) System(w http.ResponseWriter, r *http.Request) {
@@ -26,7 +32,7 @@ func (h *Handler) System(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid coords"))
 		return
 	}
-	if err := (Coords{Galaxy: g, System: s, Position: 1}).Validate(); err != nil {
+	if err := (Coords{Galaxy: g, System: s, Position: 1}).Validate(h.numGalaxies, h.numSystems); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 		return
 	}
