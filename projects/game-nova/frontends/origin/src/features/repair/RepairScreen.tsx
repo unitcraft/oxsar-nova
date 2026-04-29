@@ -1,69 +1,188 @@
-// S-022 Repair (план 72 Ф.3 Spring 2 ч.2).
+// S-022 Repair — ремонт повреждённых юнитов (план 72.1 ч.20.4).
+// Pixel-perfect клон legacy repair.tpl.
 //
-// Pixel-perfect зеркало legacy `templates/standard/repair.tpl` —
-// верхний блок (вместимость ангара), список повреждённых юнитов,
-// форма «Починить».
-//
-// Замечание (P72.S2.G — simplifications.md):
-// nova-API на 2026-04-28 НЕ предоставляет endpoint'ов:
-//   - GET /api/planets/{id}/repair       → список повреждённых юнитов
-//   - POST /api/planets/{id}/repair      → запуск ремонта (Idempotency-Key)
-//
-// Backend плана 76 (nova exchange UI) идёт параллельно и тоже не
-// затрагивает repair-домен. В origin-фронте для S-022 рендерим
-// корректный pixel-perfect-каркас (ntable/center/idiv) с пустым списком и
-// пометкой «нет повреждённых юнитов» — поведение совместимо с
-// post-launch состоянием игрока, у которого ничего не повреждено.
-//
-// При появлении endpoint'а заменяем `damagedQ`/`repair` мутацию на
-// настоящие вызовы fetchDamaged/repairUnit.
+// Структура:
+// 1. Шапка ангара: название «Ремонтный ангар (Уровень N)» + progress bar
+// 2. Очередь ремонта (если есть)
+// 3. Таблица повреждённых юнитов: иконка / имя / поля / количество input
+// 4. Submit «Ремонтировать» внизу формы
 
-import { useTranslation } from '@/i18n/i18n';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  fetchDamagedShips,
+  fetchRepairQueue,
+  repairUnits,
+} from '@/api/repair';
+import { fetchResourceReport } from '@/api/resource';
+import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import { findCatalog } from '@/features/common/catalog';
+import { useTranslation } from '@/i18n/i18n';
+import { formatNumber, formatDuration, secondsUntil } from '@/lib/format';
 
 export function RepairScreen() {
+  const { planetId } = useResolvedPlanet();
   const { t } = useTranslation();
-  const { planet, isLoading } = useResolvedPlanet();
+  const qc = useQueryClient();
 
-  if (isLoading) return <div className="idiv">…</div>;
-  if (!planet) return <div className="idiv">—</div>;
+  const damagedQ = useQuery({
+    queryKey: planetId ? QK.repairDamaged(planetId) : ['noop-rd'],
+    queryFn: () =>
+      planetId ? fetchDamagedShips(planetId) : Promise.resolve([]),
+    enabled: planetId !== null,
+  });
 
-  // P72.S2.G: список повреждённых пустой, пока backend не появится.
-  const damaged: { id: number; name: string; quantity: number }[] = [];
+  const queueQ = useQuery({
+    queryKey: planetId ? QK.repairQueue(planetId) : ['noop-rq'],
+    queryFn: () =>
+      planetId ? fetchRepairQueue(planetId) : Promise.resolve([]),
+    enabled: planetId !== null,
+  });
+
+  // Уровень repair_factory (id=100) из resource-report.
+  const reportQ = useQuery({
+    queryKey: planetId ? QK.resourceReport(planetId) : ['noop-rr-rep'],
+    queryFn: () =>
+      planetId ? fetchResourceReport(planetId) : Promise.reject(),
+    enabled: planetId !== null,
+  });
+
+  const repair = useMutation({
+    mutationFn: (unitId: number) => repairUnits(planetId!, unitId),
+    onSuccess: () => {
+      if (planetId) {
+        void qc.invalidateQueries({ queryKey: QK.repairDamaged(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.repairQueue(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.shipyardInventory(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+      }
+    },
+  });
+
+  if (!planetId) {
+    return <div className="idiv">{t('overview', 'noPlanets')}</div>;
+  }
+
+  const damaged = damagedQ.data ?? [];
+  const queue = (queueQ.data ?? []).filter((q) => q.mode === 'repair');
+  const buildings = reportQ.data?.buildings ?? [];
+  const repairFactoryLvl =
+    buildings.find((b) => b.unit_id === 100)?.level ?? 0;
+
+  function unitName(unitId: number): string {
+    const cat = findCatalog(unitId);
+    if (!cat) return `#${unitId}`;
+    const [g, k] = cat.i18n.split('.') as [string, string];
+    return t(g, k);
+  }
+
+  function unitIcon(unitId: number): string | null {
+    const cat = findCatalog(unitId);
+    return cat?.icon ?? null;
+  }
 
   return (
     <>
+      {/* Шапка ангара */}
       <table className="ntable">
-        <thead>
+        <tbody>
           <tr>
             <th colSpan={4}>
-              {t('repair', 'title', { planetName: planet.name })}
+              <span style={{ float: 'right' }}>
+                Уровень {repairFactoryLvl}
+              </span>
+              {t('info', 'repairFactory') ?? 'Ремонтный ангар'}
             </th>
           </tr>
-        </thead>
+          <tr>
+            <td colSpan={4}>
+              <div style={{ float: 'left', paddingRight: 5 }}>
+                <img
+                  src="/assets/origin/images/units/repair_factory.gif"
+                  alt={t('info', 'repairFactory') ?? ''}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+              <div style={{ display: 'table' }}>
+                {t('info', 'repairFactoryDesc') ??
+                  'Ремонтный ангар позволяет восстанавливать повреждённые юниты.'}
+              </div>
+            </td>
+          </tr>
+          {queue.length > 0 &&
+            queue.map((task, idx) => (
+              <tr key={task.id}>
+                <td width="1px">{idx + 1}.</td>
+                <td colSpan={2}>
+                  {unitName(task.unit_id)}: {formatNumber(task.count)}
+                </td>
+                <td width="100px">
+                  {formatDuration(secondsUntil(task.end_at))}
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+
+      {/* Список повреждённых юнитов */}
+      <table className="ntable">
         <tbody>
+          <tr>
+            <th colSpan={3}>{t('buildings', 'repairNeededUnits') ?? 'Повреждённые юниты'}</th>
+          </tr>
+
           {damaged.length === 0 && (
             <tr>
-              <td colSpan={4} className="center">
-                {t('repair', 'noDamaged')}
+              <td colSpan={3} align="center">
+                {t('buildings', 'repairZeroQuantities') ?? 'Нет повреждённых юнитов'}
               </td>
             </tr>
           )}
-          {damaged.map((u) => (
-            <tr key={u.id}>
-              <td className="center">{u.id}</td>
-              <td>{u.name}</td>
-              <td className="center">{u.quantity}</td>
-              <td className="center">
-                <input
-                  type="submit"
-                  className="button"
-                  value={t('repair', 'modeRepair')}
-                  disabled
-                />
-              </td>
-            </tr>
-          ))}
+
+          {damaged.map((u) => {
+            const icon = unitIcon(u.unit_id);
+            return (
+              <tr key={u.unit_id}>
+                <td width="1px" style={{ verticalAlign: 'top' }}>
+                  {icon && (
+                    <img
+                      src={`/assets/origin/images/units/${icon}.gif`}
+                      alt={unitName(u.unit_id)}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  )}
+                </td>
+                <td valign="top">
+                  <div style={{ width: '100%' }}>
+                    <span style={{ float: 'right' }}>
+                      {t('buildings', 'repairNeededUnits') ?? 'Повреждено'}: {formatNumber(u.damaged)}
+                    </span>
+                    {unitName(u.unit_id)}
+                  </div>
+                  <div style={{ clear: 'both', fontSize: 'smaller' }}>
+                    {t('buildings', 'shipsExist', { arg1: formatNumber(u.count) })}
+                    {' · '}
+                    Целостность: {Math.floor(u.shell_percent * 100)}%
+                  </div>
+                </td>
+                <td width="100px" align="center" valign="top">
+                  <span className="true">
+                    <input
+                      type="button"
+                      className="button"
+                      value={t('buildings', 'repair') ?? 'Ремонтировать'}
+                      onClick={() => repair.mutate(u.unit_id)}
+                      disabled={repair.isPending}
+                    />
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </>
