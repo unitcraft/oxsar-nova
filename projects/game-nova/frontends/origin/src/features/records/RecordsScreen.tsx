@@ -14,6 +14,7 @@ import { QK } from '@/api/query-keys';
 import type { RecordEntry } from '@/api/types';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber } from '@/lib/format';
+import { findCatalog } from '@/features/common/catalog';
 
 interface SectionDef {
   category: RecordEntry['category'];
@@ -98,7 +99,19 @@ function SectionRows({ titleKey, items, routePrefix }: SectionRowsProps) {
         return (
           <tr key={`${r.category}-${r.key}`}>
             <td style={{ width: '1%' }}>
-              {r.unit_id ? `#${r.unit_id}` : '—'}
+              {r.unit_id && findCatalog(r.unit_id) ? (
+                <img
+                  src={`/assets/origin/images/units/${findCatalog(r.unit_id)!.icon}.gif`}
+                  alt={display}
+                  width={32}
+                  height={32}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                '—'
+              )}
             </td>
             <td>
               {routePrefix && r.unit_id ? (
