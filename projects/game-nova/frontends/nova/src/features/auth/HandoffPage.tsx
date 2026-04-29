@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/stores/auth';
 
 /**
@@ -19,8 +19,16 @@ import { useAuthStore } from '@/stores/auth';
 export function HandoffPage() {
   const setTokens = useAuthStore((s) => s.setTokens);
   const [error, setError] = useState<string | null>(null);
+  // План 72.2: React.StrictMode в dev монтирует useEffect дважды для
+  // проверки идемпотентности. Второй вызов exchange получит 401 (Redis
+  // GETDEL — код одноразовый), моргнёт ошибкой перед успешным
+  // редиректом. useRef-флаг гарантирует один fetch на mount/unmount.
+  const calledRef = useRef(false);
 
   useEffect(() => {
+    if (calledRef.current) return;
+    calledRef.current = true;
+
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     if (!code) {
