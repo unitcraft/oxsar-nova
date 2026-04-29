@@ -24,30 +24,35 @@ func NewHandler(db *pgxpool.Pool) *Handler {
 	return &Handler{db: db, vacation: NewVacationService(db)}
 }
 
-// Me GET /api/me — возвращает user_id, username, role, credit, profession текущего пользователя.
-// Требует Middleware (Bearer / ?token=).
+// Me GET /api/me — возвращает user_id, username, roles, credit, profession текущего пользователя.
+// Требует Middleware (Bearer / ?token=). План 52: users.role удалён, роли
+// приходят в JWT (claims.Roles) от identity-service.
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	uid, ok := UserID(r.Context())
 	if !ok {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
-	var username, role, profession string
+	var username, profession string
 	var credit float64
 	var vacationSince, vacationLastEnd *time.Time
 	if err := h.db.QueryRow(context.Background(),
-		`SELECT username, COALESCE(role::text, ''), credit, COALESCE(profession, 'none'),
+		`SELECT username, credit, COALESCE(profession, 'none'),
 		        vacation_since, vacation_last_end
 		 FROM users WHERE id=$1`,
 		uid,
-	).Scan(&username, &role, &credit, &profession, &vacationSince, &vacationLastEnd); err != nil {
+	).Scan(&username, &credit, &profession, &vacationSince, &vacationLastEnd); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
+	}
+	var roles []string
+	if claims, ok := RSAClaims(r.Context()); ok && claims != nil {
+		roles = claims.Roles
 	}
 	resp := map[string]any{
 		"user_id":    uid,
 		"username":   username,
-		"role":       role,
+		"roles":      roles,
 		"credit":     credit,
 		"profession": profession,
 	}
