@@ -169,7 +169,7 @@ admin-bff, portal/backend) — должно собираться зелёным.
   по новым путям).
 - make e2e — Playwright проходит базовый smoke (если в env есть
   Docker; если нет — пропусти и зафиксируй в коммите).
-- docker compose -f deploy/docker-compose.yml up frontend собирает
+- docker compose -f deploy/docker-compose.yml up uni01-frontend собирает
   и стартует.
 - Если есть docker-compose сервис legacy-PHP — стартует с context'ом
   projects/game-legacy-php.

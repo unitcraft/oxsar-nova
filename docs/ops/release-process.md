@@ -60,9 +60,9 @@ git push origin v0.3.0
 
 ```yaml
 services:
-  backend:
+  uni01-backend:
     image: ghcr.io/<owner>/oxsar-nova-backend:${VERSION:-latest}
-  frontend:
+  uni01-frontend:
     image: ghcr.io/<owner>/oxsar-nova-frontend:${VERSION:-latest}
 ```
 
