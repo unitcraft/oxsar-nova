@@ -176,11 +176,9 @@ services:
       IDENTITY_JWKS_URL: http://identity-service:9000
       IDENTITY_SERVICE_URL: http://identity-service:9000
       UNIVERSE_ID: uni02
-      # Скорость 4× — agressive timing для тестов (см. universes.yaml).
-      GAMESPEED: "4.0"
-      NUM_GALAXIES: "4"
-      NUM_SYSTEMS: "300"
-      PROTECTION_PERIOD: "43200"
+      # План 72.1 часть 12: GAMESPEED, NUM_GALAXIES, NUM_SYSTEMS,
+      # PROTECTION_PERIOD и др. per-universe параметры читаются из
+      # configs/universes.yaml по UNIVERSE_ID, не из env.
       CATALOG_DIR: /app/configs
       I18N_DIR: /app/configs/i18n
     ports: ["8082:8080"]
@@ -287,10 +285,8 @@ services:
       IDENTITY_JWKS_URL: http://identity-service:9000
       IDENTITY_SERVICE_URL: http://identity-service:9000
       UNIVERSE_ID: uni03
-      GAMESPEED: "0.75"
-      NUM_GALAXIES: "8"
-      NUM_SYSTEMS: "600"
-      PROTECTION_PERIOD: "86400"
+      # План 72.1 часть 12: per-universe параметры читаются из
+      # configs/universes.yaml по UNIVERSE_ID, не из env.
       CATALOG_DIR: /app/configs
       I18N_DIR: /app/configs/i18n
     ports: ["8083:8080"]
