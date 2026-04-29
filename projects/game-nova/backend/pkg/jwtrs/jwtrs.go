@@ -143,6 +143,10 @@ func (iss *Issuer) PublicKey() *rsa.PublicKey { return &iss.privateKey.PublicKey
 // KeyID возвращает kid ключа.
 func (iss *Issuer) KeyID() string { return iss.keyID }
 
+// AccessTTL возвращает TTL access-токена. Используется для поля expires_in
+// в ответе по RFC 6749 §5.1.
+func (iss *Issuer) AccessTTL() time.Duration { return iss.accessTTL }
+
 // Issue создаёт пару токенов.
 func (iss *Issuer) Issue(in IssueInput) (Tokens, error) {
 	now := time.Now().UTC()

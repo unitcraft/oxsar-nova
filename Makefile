@@ -151,7 +151,21 @@ frontend-lint:
 	cd $(FRONTEND) && npm run lint
 
 .PHONY: lint
-lint: backend-lint frontend-lint
+lint: backend-lint frontend-lint check-duplicates
+
+# check-duplicates: сверяет содержимое DUPLICATE-файлов между Go-модулями
+# (game-nova/identity/portal/billing). При drift'е — печатает unified-diff
+# и exit 1. План 85.
+.PHONY: check-duplicates
+check-duplicates:
+	cd $(BACKEND) && go run ./cmd/tools/check-duplicates -root="$(ROOT)"
+
+# sync-duplicates: тиражирует тело эталона (первый путь в DUPLICATE-маркере)
+# по копиям с заменой per-module import-prefix. Использовать вручную после
+# сознательной правки эталона. Не запускать в CI. План 85.
+.PHONY: sync-duplicates
+sync-duplicates:
+	cd $(BACKEND) && go run ./cmd/tools/check-duplicates -fix -root="$(ROOT)"
 
 .PHONY: gen
 gen:
