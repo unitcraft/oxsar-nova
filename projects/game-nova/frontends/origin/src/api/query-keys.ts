@@ -60,6 +60,11 @@ export const QK = {
   officers: () => ['officers'] as const,
   professions: () => ['professions'] as const,
   professionMe: () => ['professions', 'me'] as const,
-  // План 72.1 ч.16: /api/me для TopHeader (credit) и MainScreen (profession).
+  // Plan 72.1: /api/me для TopHeader (credit) и MainScreen (profession).
   me: () => ['me'] as const,
+  // Новые экраны: resource / disassemble / exchange
+  resourceReport: (planetId: string) => ['resource-report', planetId] as const,
+  repairQueue: (planetId: string) => ['repair', 'queue', planetId] as const,
+  repairDamaged: (planetId: string) => ['repair', 'damaged', planetId] as const,
+  exchangeLots: (params: string) => ['exchange', 'lots', params] as const,
 };
