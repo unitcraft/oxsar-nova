@@ -60,4 +60,6 @@ export const QK = {
   officers: () => ['officers'] as const,
   professions: () => ['professions'] as const,
   professionMe: () => ['professions', 'me'] as const,
+  // План 72.1 ч.16: /api/me для TopHeader (credit) и MainScreen (profession).
+  me: () => ['me'] as const,
 };
