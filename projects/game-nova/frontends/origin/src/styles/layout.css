@@ -190,6 +190,7 @@ table.top_header_res td {
 table.top_header_res td.header-planet-name {
   vertical-align: bottom;
   padding-top: 32px;
+  min-width: 120px;
 }
 
 table.top_header_res td.header-resource {
