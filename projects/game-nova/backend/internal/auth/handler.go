@@ -1,11 +1,12 @@
 package auth
 
 import (
-	"context"
 	"errors"
+	"math"
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"oxsar/game-nova/internal/httpx"
@@ -24,37 +25,115 @@ func NewHandler(db *pgxpool.Pool) *Handler {
 	return &Handler{db: db, vacation: NewVacationService(db)}
 }
 
-// Me GET /api/me — возвращает user_id, username, roles, credit, profession текущего пользователя.
-// Требует Middleware (Bearer / ?token=). План 52: users.role удалён, роли
-// приходят в JWT (claims.Roles) от identity-service.
+// IGNUnitID — research-технология «Intergalactic Research Network» (план 20 Ф.8).
+// Уровень считывается из таблицы research; отсутствие записи трактуется как 0.
+// См. configs/units.yml id=113.
+const IGNUnitID = 113
+
+// MinerNeedPoints возвращает порог `of_points` для следующего уровня
+// шахтёра. Формула из legacy `Functions.inc.php:1642`:
+//
+//	level<1 → 100, иначе round(pow(1.5, level-1) * 200).
+//
+// Public функция — переиспользуется в score/recalc и фронт-тестах.
+func MinerNeedPoints(level int) int64 {
+	if level < 1 {
+		return 100
+	}
+	return int64(math.Round(math.Pow(1.5, float64(level-1)) * 200))
+}
+
+// Me GET /api/me — профиль текущего пользователя.
+//
+// План 72.1 ч.17 (pixel-perfect MainScreen): расширен до полного набора
+// stats-полей легаси `main.tpl`:
+//
+//   - points / rank / max_points    — рейтинг и исторический пик,
+//   - combat_experience (e_points)  — тотальный бой-опыт,
+//   - accumulated_experience (be_points) — резервуар активных техов,
+//   - miner_level / miner_points / miner_need_points — система Шахтёра,
+//   - dm_points                      — derived-метрика для альт-рейтинга,
+//   - intergalactic_research_level  — уровень research IGN (id=113),
+//   - battles                        — счётчик сражений.
+//
+// Требует Middleware (Bearer / ?token=). План 52: users.role удалён,
+// роли приходят в JWT (claims.Roles) от identity-service.
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	uid, ok := UserID(r.Context())
 	if !ok {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
-	var username, profession string
-	var credit float64
-	var vacationSince, vacationLastEnd *time.Time
-	if err := h.db.QueryRow(context.Background(),
+	ctx := r.Context()
+
+	var (
+		username, profession                 string
+		credit                               float64
+		points, ePoints, bePoints, maxPoints float64
+		ofPoints, dmPoints                   float64
+		ofLevel, battles                     int
+		vacationSince, vacationLastEnd       *time.Time
+	)
+	if err := h.db.QueryRow(ctx,
 		`SELECT username, credit, COALESCE(profession, 'none'),
+		        points, e_points, be_points, max_points,
+		        of_points, of_level, dm_points, battles,
 		        vacation_since, vacation_last_end
 		 FROM users WHERE id=$1`,
 		uid,
-	).Scan(&username, &credit, &profession, &vacationSince, &vacationLastEnd); err != nil {
+	).Scan(
+		&username, &credit, &profession,
+		&points, &ePoints, &bePoints, &maxPoints,
+		&ofPoints, &ofLevel, &dmPoints, &battles,
+		&vacationSince, &vacationLastEnd,
+	); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
+
+	// Ранг — оконная функция COUNT(*)+1 по `points` среди активных.
+	// Дублирует логику score.PlayerRank, но не зависит от score-модуля
+	// чтобы не плодить циклы импорта (auth → score → auth).
+	var rank int
+	if err := h.db.QueryRow(ctx, `
+		SELECT COUNT(*)+1 FROM users
+		 WHERE points > $1 AND umode = false AND is_observer = false
+	`, points).Scan(&rank); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+
+	// IGN level — research id=113. Отсутствие записи = уровень 0.
+	var ignLevel int
+	if err := h.db.QueryRow(ctx,
+		`SELECT COALESCE(level, 0) FROM research WHERE user_id=$1 AND unit_id=$2`,
+		uid, IGNUnitID,
+	).Scan(&ignLevel); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+
 	var roles []string
 	if claims, ok := RSAClaims(r.Context()); ok && claims != nil {
 		roles = claims.Roles
 	}
 	resp := map[string]any{
-		"user_id":    uid,
-		"username":   username,
-		"roles":      roles,
-		"credit":     credit,
-		"profession": profession,
+		"user_id":                      uid,
+		"username":                     username,
+		"roles":                        roles,
+		"credit":                       credit,
+		"profession":                   profession,
+		"points":                       points,
+		"rank":                         rank,
+		"max_points":                   maxPoints,
+		"combat_experience":            ePoints,
+		"accumulated_experience":       bePoints,
+		"miner_level":                  ofLevel,
+		"miner_points":                 ofPoints,
+		"miner_need_points":            MinerNeedPoints(ofLevel),
+		"dm_points":                    dmPoints,
+		"intergalactic_research_level": ignLevel,
+		"battles":                      battles,
 	}
 	if vacationSince != nil {
 		resp["vacation_since"] = vacationSince.UTC().Format(time.RFC3339)
@@ -66,6 +145,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, resp)
 }
+
 
 // SetVacation POST /api/me/vacation — включить режим отпуска.
 func (h *Handler) SetVacation(w http.ResponseWriter, r *http.Request) {

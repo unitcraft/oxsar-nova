@@ -1341,7 +1341,6 @@ paths:
           name: key
           required: true
           schema: { type: string }
-      parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: false
@@ -3352,6 +3351,23 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
 
   /api/me:
+    get:
+      tags: [me]
+      security: [{ bearerAuth: [] }]
+      summary: Профиль текущего пользователя (stats для MainScreen).
+      description: |
+        Возвращает полный набор stats, отображаемый на главном экране:
+        очки, ранг, опыт, шахтёр-уровень, межгалактические исследования,
+        режим отпуска. Источник правды по полю `roles` — JWT (claims),
+        остальное — таблица `users` + computed (rank, miner_need_points,
+        intergalactic_research_level).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MeInfo" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
     delete:
       tags: [settings]
       security: [{ bearerAuth: [] }]
@@ -3473,6 +3489,124 @@ components:
         id:       { type: string, format: uuid }
         username: { type: string }
         email:    { type: string, format: email }
+
+    # MeInfo — ответ GET /api/me (план 72.1 ч.17 pixel-perfect MainScreen).
+    # Поля legacy `Main.class.php:200-290` приведены к semantic naming
+    # (e_points → combat_experience, be_points → accumulated_experience,
+    # of_level → miner_level и т.д.). См. ADR-0009 currency-rebranding
+    # для прецедента переименования (credit → oxsarit будет в отдельном PR).
+    MeInfo:
+      type: object
+      required:
+        - user_id
+        - username
+        - roles
+        - credit
+        - profession
+        - points
+        - rank
+        - max_points
+        - combat_experience
+        - accumulated_experience
+        - miner_level
+        - miner_points
+        - miner_need_points
+        - dm_points
+        - intergalactic_research_level
+        - battles
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        roles:
+          type: array
+          items: { type: string }
+          description: Роли из JWT-claims identity-сервиса (план 52).
+        credit:
+          type: number
+          format: double
+          description: Баланс оксаритов (легаси `credit`, ADR-0009).
+        profession:
+          type: string
+          enum: [none, miner, attacker, defender, tank]
+          description: Ключ профессии. `none` — нет профессии.
+        points:
+          type: number
+          format: double
+          description: Текущие очки (b+r+u). Считаются воркером `score.RecalcUser`.
+        rank:
+          type: integer
+          minimum: 1
+          description: |
+            Позиция в рейтинге по `points`. Игроки в umode/observer
+            исключены. Вычисляется на лету (COUNT WHERE points > мои).
+        max_points:
+          type: number
+          format: double
+          description: Исторический пик `points` (план 69 D-001).
+        combat_experience:
+          type: number
+          format: double
+          description: |
+            Тотальный бой-опыт (легаси `e_points`). Обновляется в
+            `internal/fleet/attack.go` после боя по формуле
+            Java Assault.java:819-847.
+        accumulated_experience:
+          type: number
+          format: double
+          description: |
+            Резервуар активных уровней технологий (легаси `be_points`).
+            Тратится при отправке атаки, возвращается при завершении
+            события (план 72.1 ч.17).
+        miner_level:
+          type: integer
+          minimum: 0
+          description: Уровень профессии Шахтёр (легаси `of_level`).
+        miner_points:
+          type: number
+          format: double
+          description: |
+            Очки Шахтёра (легаси `of_points`). Накапливаются при
+            добыче ресурсов; повышение уровня — при достижении
+            `miner_need_points`.
+        miner_need_points:
+          type: integer
+          description: |
+            Порог для следующего miner_level. Формула:
+            `level<1 ? 100 : round(pow(1.5, level-1) * 200)`
+            (легаси `Functions.inc.php:1642`).
+        dm_points:
+          type: number
+          format: double
+          description: |
+            Derived-метрика для альтернативного рейтинга (план 72.1 ч.17).
+            Считается воркером по формуле
+            `Functions.inc.php:1432-1434` из `points`/`e_points`/`max_points`.
+        intergalactic_research_level:
+          type: integer
+          minimum: 0
+          description: |
+            Уровень research «Intergalactic Research Network» (id=113).
+            См. configs/units.yml.
+        battles:
+          type: integer
+          minimum: 0
+          description: Счётчик сражений (увеличивается при каждом бое).
+        vacation_since:
+          type: string
+          format: date-time
+          description: Когда был включён режим отпуска (если активен).
+        vacation_unlock_at:
+          type: string
+          format: date-time
+          description: |
+            Когда станет возможен выход из отпуска (vacation_since + 48h).
+        vacation_last_end:
+          type: string
+          format: date-time
+          description: Когда был последний выход из режима отпуска.
 
     AlienBuyoutResponse:
       type: object

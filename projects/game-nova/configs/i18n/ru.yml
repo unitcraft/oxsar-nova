@@ -2459,6 +2459,12 @@ main:
   points: Очки
   position: Координаты
   rankOfUsers: "{@rank} из {@totalUsers}"
+  # План 72.1 ч.17 — pixel-perfect MainScreen.
+  rankLabel: Ранг
+  maxPoints: Макс. очки
+  dmPoints: DM-очки
+  minerLevel: "Шахтёр ({{level}})"
+  intergalacticResearchLevel: Уровень межгалактических исследований
   release: Релиз
   serverTime: Серверное время
   setNewHomePlanet: Установить главную планету

@@ -2460,6 +2460,12 @@ main:
   points: Points
   position: Position
   rankOfUsers: Player rank
+  # Plan 72.1 part 17 — pixel-perfect MainScreen.
+  rankLabel: Rank
+  maxPoints: Max points
+  dmPoints: DM points
+  minerLevel: "Miner ({{level}})"
+  intergalacticResearchLevel: Intergalactic research level
   release: Release
   serverTime: Server time
   setNewHomePlanet: Set new home planet
