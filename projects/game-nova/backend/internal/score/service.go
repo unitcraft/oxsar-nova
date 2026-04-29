@@ -88,18 +88,65 @@ func (s *Service) RecalcUser(ctx context.Context, userID string) error {
 		return fmt.Errorf("score.achievements: %w", err)
 	}
 	total := bPoints + rPoints + uPoints
-	// max_points (план 69 D-001) — исторический пик, никогда не убывает.
+	// План 69 D-001 / 72.1 ч.17: max_points — исторический пик (никогда
+	// не убывает); dm_points — derived-метрика, считается отсюда чтобы
+	// зависела от только что пересчитанных points/max_points.
+	// Читаем e_points отдельно, считаем dm_points в Go (тестируемо).
+	var ePoints, maxPointsCur float64
+	if err := s.db.Pool().QueryRow(ctx,
+		`SELECT e_points, max_points FROM users WHERE id=$1`, userID,
+	).Scan(&ePoints, &maxPointsCur); err != nil {
+		return fmt.Errorf("score.read_extra: %w", err)
+	}
+	newMaxPoints := maxPointsCur
+	if total > newMaxPoints {
+		newMaxPoints = total
+	}
+	dmPts := CalcDmPoints(total, ePoints, newMaxPoints)
+
 	_, err = s.db.Pool().Exec(ctx, `
 		UPDATE users
 		SET b_points=$2, r_points=$3, u_points=$4, a_points=$5, points=$6,
-		    max_points=GREATEST(max_points, $6)
+		    max_points=GREATEST(max_points, $6),
+		    dm_points=$7
 		WHERE id=$1
 	`, userID, roundPts(bPoints), roundPts(rPoints),
-		roundPts(uPoints), roundPts(aPoints), roundPts(total))
+		roundPts(uPoints), roundPts(aPoints), roundPts(total),
+		roundPts(dmPts))
 	if err != nil {
 		return fmt.Errorf("score.update: %w", err)
 	}
 	return nil
+}
+
+// CalcDmPoints — формула derived-метрики dm_points (план 72.1 ч.17).
+// Источник: legacy `Functions.inc.php:1432-1434`.
+//
+//	dm = pow(
+//	    max(min(e, 100), min(e, pow(p/4000, 1.1) + e/100))
+//	    * p / pow(max(1, max_p), 0.9),
+//	    0.5
+//	) * 100
+//
+// При p<=0 возвращает 0 (избегаем NaN от 0^0 и отрицательных степеней).
+// Public функция — тестируется отдельно от score.RecalcUser.
+func CalcDmPoints(points, ePoints, maxPoints float64) float64 {
+	if points <= 0 {
+		return 0
+	}
+	maxP := maxPoints
+	if maxP < 1 {
+		maxP = 1
+	}
+	// Внутренний множитель: max(min(e, 100), min(e, pow(p/4000, 1.1) + e/100))
+	cap1 := math.Min(ePoints, 100)
+	cap2 := math.Min(ePoints, math.Pow(points/4000.0, 1.1)+ePoints/100.0)
+	mul := math.Max(cap1, cap2)
+	base := mul * points / math.Pow(maxP, 0.9)
+	if base <= 0 {
+		return 0
+	}
+	return math.Pow(base, 0.5) * 100
 }
 
 // Top возвращает топ-N для лидерборда. scoreType: "total"|"b"|"r"|"u"|"a".
