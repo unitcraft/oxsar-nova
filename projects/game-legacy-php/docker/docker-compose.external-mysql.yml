@@ -1,0 +1,76 @@
+# Override для docker-compose.yml: подключение legacy-php к существующей
+# legacy MySQL (контейнер oxsar2-mysql-1 из проекта d:/Sources/oxsar2,
+# network oxsar2_default).
+#
+# План 72.1 ч.16 (предварительный шаг): эталонный legacy-php стенд для
+# pixel-perfect сравнения с origin-фронтом. Используем готовые данные
+# юзера test (userid=1, 7 планет, 36М очков), которые также являются
+# источником для import-legacy-user → uni03 (план 72.3).
+#
+# Запуск:
+#   docker compose -f deploy/docker-compose.yml \
+#     -f deploy/docker-compose.external-mysql.yml \
+#     -p legacy-php up -d php nginx memcached
+#
+#   (mysql из основного compose НЕ запускаем — ходим в oxsar2-mysql-1.)
+#
+# Открыть: http://localhost:8092 (HTTP_PORT по умолчанию).
+
+services:
+  # MySQL из основного compose не нужен — используем external oxsar2-mysql-1.
+  # scale=0 не работает в depends_on. Решение: переопределяем mysql на
+  # noop-image, который сразу exit 0 (чтобы depends_on условие выполнилось).
+  mysql:
+    image: alpine:3.19
+    command: ["true"]
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 1s
+      retries: 1
+      start_period: 1s
+    restart: "no"
+    ports: !reset []
+    volumes: !reset []
+
+  php:
+    depends_on: !reset
+      memcached:
+        condition: service_started
+    environment:
+      DB_HOST: oxsar2-mysql-1
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PWD: root
+      DB_NAME: oxsar_db
+    networks:
+      - default
+      - oxsar2
+
+  nginx:
+    networks:
+      - default
+      - oxsar2
+
+  memcached:
+    networks:
+      - default
+
+  event-monitor:
+    depends_on: !reset
+      memcached:
+        condition: service_started
+    environment:
+      DB_HOST: oxsar2-mysql-1
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PWD: root
+      DB_NAME: oxsar_db
+    networks:
+      - default
+      - oxsar2
+
+networks:
+  default:
+  oxsar2:
+    external: true
+    name: oxsar2_default
