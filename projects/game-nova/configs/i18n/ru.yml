@@ -2903,6 +2903,9 @@ userAgreement:
   userAgreementNewPreText: "<span class='true'>Чтобы продолжить игру, подтвердите Соглашение (кнопочка в конце этой страницы).</span>"
   userAgreementPostText: ""
   userAgreementPreText: ""
+  title: Пользовательское соглашение
+  body: "Полный текст пользовательского соглашения размещён на портале oxsar-nova.ru. Откройте ссылку ниже в новой вкладке."
+  open: Открыть соглашение
 feedback:
   fleetSlots: "Слоты флота:"
   fleetSlotsFull: "нет свободных"

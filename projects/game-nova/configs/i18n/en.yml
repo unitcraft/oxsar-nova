@@ -2904,6 +2904,9 @@ userAgreement:
   userAgreementNewPreText: ""
   userAgreementPostText: ""
   userAgreementPreText: ""
+  title: User Agreement
+  body: "Full user agreement text is hosted on oxsar-nova.ru portal. Open the link below in a new tab."
+  open: Open agreement
 feedback:
   fleetSlots: "Fleet slots:"
   fleetSlotsFull: "no free slots"

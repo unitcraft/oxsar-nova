@@ -25,15 +25,12 @@ export function UserAgreementScreen() {
     <table className="ntable">
       <thead>
         <tr>
-          <th>{t('prefs', 'userAgreement') || 'Пользовательское соглашение'}</th>
+          <th>{t('userAgreement', 'title')}</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td style={{ textAlign: 'justify' }}>
-            {t('prefs', 'userAgreementBody') ||
-              'Полный текст пользовательского соглашения размещён на портале oxsar-nova.ru. Откройте ссылку ниже в новой вкладке.'}
-          </td>
+          <td style={{ textAlign: 'justify' }}>{t('userAgreement', 'body')}</td>
         </tr>
         <tr>
           <td className="center">
@@ -44,7 +41,7 @@ export function UserAgreementScreen() {
               className="button"
               data-testid="user-agreement-link"
             >
-              {t('prefs', 'userAgreementOpen') || 'Открыть соглашение'}
+              {t('userAgreement', 'open')}
             </a>
           </td>
         </tr>
