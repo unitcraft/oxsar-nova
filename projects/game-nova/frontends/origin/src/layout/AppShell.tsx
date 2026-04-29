@@ -24,16 +24,16 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <>
-      <LeftMenu />
-      <PlanetsList />
-      <div id="contentTopAndBody">
-        <TopHeader />
-        <div id="content">
-          <div id="contentHtml">{children}</div>
+    <div id="contentHtml">
+      <div className="main_content">
+        <LeftMenu />
+        <PlanetsList />
+        <div id="contentTopAndBody">
+          <TopHeader />
+          <div id="content">{children}</div>
         </div>
+        <Footer />
       </div>
-      <Footer />
-    </>
+    </div>
   );
 }
