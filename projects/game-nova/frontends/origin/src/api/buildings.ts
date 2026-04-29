@@ -1,18 +1,37 @@
-// API-модуль buildings origin-фронта (план 72 Ф.2 Spring 1).
+// API-модуль buildings origin-фронта (план 72.1 ч.20).
 //
 // Endpoints (openapi.yaml):
+//   GET    /api/planets/{id}/buildings            — levels + cost + time + unmet
 //   POST   /api/planets/{id}/buildings            — поставить апгрейд
 //   GET    /api/planets/{id}/buildings/queue      — текущая очередь
 //   DELETE /api/planets/{id}/buildings/queue/{taskId} — отмена
-//
-// Список доступных зданий с уровнями (информационная таблица для
-// рендера экрана) в openapi.yaml сейчас отсутствует — есть только
-// очередь. На MVP экран рендерит список юнитов из локального справочника
-// (см. configs/units там, где это уместно), либо из mock'а с TODO.
 
 import { api } from './client';
 import { newIdempotencyKey } from './idempotency';
 import type { QueueItem } from './types';
+
+export interface BuildingCost {
+  metal: number;
+  silicon: number;
+  hydrogen: number;
+}
+
+export interface RequirementUnmet {
+  unit_id: number;
+  required_level: number;
+  actual_level: number;
+}
+
+export interface BuildingsOverview {
+  levels: Record<string, number>;
+  build_seconds: Record<string, number>;
+  build_costs: Record<string, BuildingCost>;
+  requirements_unmet: Record<string, RequirementUnmet[]>;
+}
+
+export function fetchBuildingsOverview(planetId: string): Promise<BuildingsOverview> {
+  return api.get<BuildingsOverview>(`/api/planets/${planetId}/buildings`);
+}
 
 export async function fetchBuildingQueue(planetId: string): Promise<QueueItem[]> {
   const res = await api.get<{ queue: QueueItem[] }>(

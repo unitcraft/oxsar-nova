@@ -119,13 +119,21 @@ export function ResearchScreen() {
                   </div>
                 </td>
                 <td width="100px" align="center" style={{ verticalAlign: 'top' }}>
-                  <input
-                    type="button"
-                    className="button"
-                    value={t('research', 'study') ?? 'Изучить'}
-                    onClick={() => start.mutate(entry.id)}
-                    disabled={start.isPending || queue.length > 0 || !enough}
-                  />
+                  {queue.length > 0 ? (
+                    <span className="false">
+                      {t('buildings', 'buildingAtWork') ?? 'Занято'}
+                    </span>
+                  ) : (
+                    <span className={enough ? 'true' : 'false'}>
+                      <input
+                        type="button"
+                        className="button"
+                        value={`${t('buildings', 'researchOfLevel') ?? 'Исследовать'} ${lvl + 1}`}
+                        onClick={() => start.mutate(entry.id)}
+                        disabled={start.isPending || !enough}
+                      />
+                    </span>
+                  )}
                 </td>
               </tr>
             );

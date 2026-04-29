@@ -342,6 +342,44 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
 
   /api/planets/{id}/buildings:
+    get:
+      tags: [buildings]
+      security: [{ bearerAuth: [] }]
+      summary: Levels + next-level cost/time + unmet requirements per planet
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  levels:
+                    type: object
+                    additionalProperties: { type: integer }
+                  build_seconds:
+                    type: object
+                    additionalProperties: { type: integer }
+                  build_costs:
+                    type: object
+                    additionalProperties: { $ref: "#/components/schemas/ResCost" }
+                  requirements_unmet:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          unit_id:        { type: integer }
+                          required_level: { type: integer }
+                          actual_level:   { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [buildings]
       security: [{ bearerAuth: [] }]

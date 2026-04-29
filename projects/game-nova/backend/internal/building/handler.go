@@ -83,10 +83,12 @@ func (h *Handler) Levels(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
+	buildCosts := h.svc.BuildCostsMap(levels)
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
-		"levels":               levels,
-		"build_seconds":        buildSecs,
-		"requirements_unmet":   unmet,
+		"levels":             levels,
+		"build_seconds":      buildSecs,
+		"build_costs":        buildCosts,
+		"requirements_unmet": unmet,
 	})
 }
 
