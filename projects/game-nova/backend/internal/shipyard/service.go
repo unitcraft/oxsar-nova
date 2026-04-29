@@ -286,6 +286,67 @@ func (s *Service) Cancel(ctx context.Context, userID, planetID, queueID string) 
 	})
 }
 
+// UnitCost — стоимость постройки одного корабля/обороны.
+type UnitCost struct {
+	Metal    int64 `json:"metal"`
+	Silicon  int64 `json:"silicon"`
+	Hydrogen int64 `json:"hydrogen"`
+}
+
+// CostsMap возвращает per-unit стоимость для всех ships и defense.
+// Pixel-perfect клон legacy (план 72.1 ч.20.3).
+func (s *Service) CostsMap() (ships, defense map[int]UnitCost) {
+	ships = make(map[int]UnitCost, len(s.catalog.Ships.Ships))
+	for _, spec := range s.catalog.Ships.Ships {
+		ships[spec.ID] = UnitCost{
+			Metal: spec.Cost.Metal, Silicon: spec.Cost.Silicon, Hydrogen: spec.Cost.Hydrogen,
+		}
+	}
+	defense = make(map[int]UnitCost, len(s.catalog.Defense.Defense))
+	for _, spec := range s.catalog.Defense.Defense {
+		defense[spec.ID] = UnitCost{
+			Metal: spec.Cost.Metal, Silicon: spec.Cost.Silicon, Hydrogen: spec.Cost.Hydrogen,
+		}
+	}
+	return ships, defense
+}
+
+// SecondsMap возвращает per-unit время постройки для всех ships и defense
+// на данной планете (с учётом shipyard / nano_factory уровней).
+func (s *Service) SecondsMap(ctx context.Context, planetID string) (ships, defense map[int]int, err error) {
+	var shipyardLvl int
+	if shSpec, ok := s.catalog.Buildings.Buildings["shipyard"]; ok {
+		_ = s.db.Pool().QueryRow(ctx,
+			`SELECT level FROM buildings WHERE planet_id=$1 AND unit_id=$2`,
+			planetID, shSpec.ID,
+		).Scan(&shipyardLvl)
+	}
+	var nanoLvl int
+	if nanoSpec, ok := s.catalog.Buildings.Buildings["nano_factory"]; ok {
+		_ = s.db.Pool().QueryRow(ctx,
+			`SELECT level FROM buildings WHERE planet_id=$1 AND unit_id=$2`,
+			planetID, nanoSpec.ID,
+		).Scan(&nanoLvl)
+	}
+	ships = make(map[int]int, len(s.catalog.Ships.Ships))
+	for _, spec := range s.catalog.Ships.Ships {
+		dur := economy.BuildDuration(1, economy.Cost{
+			Metal: spec.Cost.Metal, Silicon: spec.Cost.Silicon, Hydrogen: spec.Cost.Hydrogen,
+		}, shipyardLvl, nanoLvl, s.gameSpd)
+		secs := int(math.Max(1, math.Round(dur.Seconds())))
+		ships[spec.ID] = secs
+	}
+	defense = make(map[int]int, len(s.catalog.Defense.Defense))
+	for _, spec := range s.catalog.Defense.Defense {
+		dur := economy.BuildDuration(1, economy.Cost{
+			Metal: spec.Cost.Metal, Silicon: spec.Cost.Silicon, Hydrogen: spec.Cost.Hydrogen,
+		}, shipyardLvl, nanoLvl, s.gameSpd)
+		secs := int(math.Max(1, math.Round(dur.Seconds())))
+		defense[spec.ID] = secs
+	}
+	return ships, defense, nil
+}
+
 func (s *Service) lookupShipOrDefense(unitID int) (key string, cost config.ResCost, isDefense bool, ok bool) {
 	for k, spec := range s.catalog.Ships.Ships {
 		if spec.ID == unitID {

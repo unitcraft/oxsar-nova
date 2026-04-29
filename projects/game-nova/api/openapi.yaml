@@ -563,7 +563,7 @@ paths:
     get:
       tags: [shipyard]
       security: [{ bearerAuth: [] }]
-      summary: Ships & defense on a planet
+      summary: Ships & defense inventory + per-unit cost & build time
       parameters:
         - in: path
           name: id
@@ -579,6 +579,22 @@ paths:
                 properties:
                   ships:   { type: object, additionalProperties: { type: integer, format: int64 } }
                   defense: { type: object, additionalProperties: { type: integer, format: int64 } }
+                  ship_costs:
+                    type: object
+                    description: Per-unit стоимость кораблей (металл/кремний/водород)
+                    additionalProperties: { $ref: "#/components/schemas/ResCost" }
+                  defense_costs:
+                    type: object
+                    description: Per-unit стоимость обороны
+                    additionalProperties: { $ref: "#/components/schemas/ResCost" }
+                  ship_seconds:
+                    type: object
+                    description: Per-unit время постройки корабля (секунды)
+                    additionalProperties: { type: integer }
+                  defense_seconds:
+                    type: object
+                    description: Per-unit время постройки обороны
+                    additionalProperties: { type: integer }
 
   /api/planets/{id}/repair/disassemble:
     post:

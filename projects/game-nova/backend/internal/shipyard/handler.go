@@ -95,6 +95,8 @@ func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
 }
 
 // Inventory GET /api/planets/{id}/shipyard/inventory
+// Возвращает inventory + costs (per-unit) + seconds (per-unit с учётом
+// shipyard/nano уровней). Pixel-perfect клон legacy (план 72.1 ч.20.3).
 func (h *Handler) Inventory(w http.ResponseWriter, r *http.Request) {
 	if _, ok := auth.UserID(r.Context()); !ok {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
@@ -106,8 +108,18 @@ func (h *Handler) Inventory(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
+	shipCosts, defCosts := h.svc.CostsMap()
+	shipSecs, defSecs, err := h.svc.SecondsMap(r.Context(), planetID)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
-		"ships":   ships,
-		"defense": defense,
+		"ships":         ships,
+		"defense":       defense,
+		"ship_costs":    shipCosts,
+		"defense_costs": defCosts,
+		"ship_seconds":  shipSecs,
+		"defense_seconds": defSecs,
 	})
 }
