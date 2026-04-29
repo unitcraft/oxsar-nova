@@ -21,6 +21,7 @@ export interface MeInfo {
   // Pixel-perfect MainScreen (план 72.1 ч.17):
   points: number;
   rank: number;
+  total_users: number;
   max_points: number;
   combat_experience: number;
   accumulated_experience: number;

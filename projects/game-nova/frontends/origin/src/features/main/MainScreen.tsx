@@ -34,7 +34,6 @@ import {
   planetImageUrl,
   planetImageSmallUrl,
   moonImageUrl,
-  moonImageSmallUrl,
 } from '@/lib/planet-image';
 
 export function MainScreen() {
@@ -194,7 +193,8 @@ export function MainScreen() {
                 <img
                   src={moonImageUrl()}
                   alt={t('global', 'moon')}
-                  style={{ maxWidth: 200 }}
+                  width={50}
+                  height={50}
                 />
               </>
             ) : (
@@ -205,8 +205,11 @@ export function MainScreen() {
             <img
               src={planetImg}
               alt={home.name}
-              style={{ maxWidth: 200 }}
+              width={200}
+              height={200}
             />
+            <br />
+            <Link to="/constructions">{t('main', 'noTasks')}</Link>
           </td>
           <td className="center" style={{ width: '34%' }}>
             <PlanetSidebar
@@ -251,7 +254,11 @@ export function MainScreen() {
           <>
             <tr>
               <td>{t('main', 'battleExperience')}</td>
-              <td colSpan={2}>{formatNumber(me.combat_experience)}</td>
+              <td colSpan={2}>
+                <Link to="/ranking?sort=e_points">
+                  {formatNumber(me.combat_experience)}
+                </Link>
+              </td>
             </tr>
             <tr>
               <td>{t('main', 'battleActiveExperience')}</td>
@@ -260,7 +267,12 @@ export function MainScreen() {
             <tr>
               <td>{t('main', 'points')}</td>
               <td colSpan={2}>
-                {formatNumber(me.points)} ({t('main', 'rankLabel')}: {me.rank})
+                <Link to="/ranking">{formatNumber(me.points)}</Link>
+                {' '}
+                ({t('main', 'rankOfUsers', {
+                  rank: String(me.rank),
+                  total: String(me.total_users),
+                })})
               </td>
             </tr>
             {me.max_points > me.points && (
@@ -298,8 +310,8 @@ export function MainScreen() {
 }
 
 // Sidebar других планет (legacy `planetMainSelection`-include).
-// Список малых иконок-планет с подписью имени + координат, кликабельных
-// для смены текущей планеты через ?planet_id=...
+// Pixel-perfect: таблица itable с иконками 89×89, имя + "нет заданий",
+// по 2 столбца. Луны не показываем (они отдельно слева).
 function PlanetSidebar({
   currentPlanetId,
   planets,
@@ -315,47 +327,42 @@ function PlanetSidebar({
     is_moon?: boolean;
   }>;
 }) {
+  const { t } = useTranslation();
   const others = planets.filter(
     (p) => p.id !== currentPlanetId && !p.is_moon,
   );
   if (others.length === 0) {
     return <small style={{ color: '#888' }}>—</small>;
   }
+  // Разбиваем на пары для рядов таблицы
+  const rows: typeof others[] = [];
+  for (let i = 0; i < others.length; i += 2) {
+    rows.push(others.slice(i, i + 2));
+  }
   return (
-    <ul
-      style={{
-        listStyle: 'none',
-        padding: 0,
-        margin: 0,
-        fontSize: '0.85em',
-      }}
-    >
-      {others.map((p) => (
-        <li key={p.id} style={{ marginBottom: 4 }}>
-          <Link
-            to={`?planet_id=${encodeURIComponent(p.id)}`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <img
-              src={
-                p.is_moon
-                  ? moonImageSmallUrl()
-                  : planetImageSmallUrl(p.planet_type ?? null, p.id)
-              }
-              alt={p.name}
-              width={24}
-              height={24}
-            />
-            <span>
-              {p.name} [{p.galaxy}:{p.system}:{p.position}]
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <table className="itable">
+      <tbody>
+        {rows.map((row, ri) => (
+          <tr key={ri}>
+            {row.map((p) => (
+              <td key={p.id}>
+                {p.name}
+                <br />
+                <Link to={`/?planet_id=${encodeURIComponent(p.id)}`}>
+                  <img
+                    src={planetImageSmallUrl(p.planet_type ?? null, p.id)}
+                    alt={p.name}
+                    width={89}
+                    height={89}
+                  />
+                </Link>
+                <br />
+                {t('main', 'noTasks')}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
