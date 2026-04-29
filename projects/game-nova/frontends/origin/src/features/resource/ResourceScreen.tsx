@@ -153,9 +153,9 @@ export function ResourceScreen() {
             <td></td>
           </tr>
 
-          {/* Здания */}
+          {/* Здания: только умеющие производить/потреблять (legacy WHERE-фильтр) и с level>0 */}
           {report.buildings
-            .filter((b) => b.level > 0)
+            .filter((b) => b.level > 0 && b.allow_factor)
             .map((b) => (
               <tr key={b.unit_id}>
                 <td><b>{buildingName(b)} ({b.level})</b></td>
