@@ -85,7 +85,7 @@
   padding-bottom: 2px;
   background-color: var(--c-menu-info-bg);
   margin-top: 1px;
-  cursor: n-resize;
+  cursor: pointer;
 }
 
 .menu-prod, .menu-user, .menu-other,
