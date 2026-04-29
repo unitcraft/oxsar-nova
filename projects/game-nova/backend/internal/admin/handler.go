@@ -197,33 +197,6 @@ func (h *Handler) SetRole(w http.ResponseWriter, r *http.Request) {
 		Code:    "moved",
 		Message: "role management moved to identity-service (POST/DELETE /api/admin/users/{id}/roles)",
 	})
-	return
-	// dead code preserved to keep imports healthy until full removal
-	uid := chi.URLParam(r, "id")
-	var body struct {
-		Role string `json:"role"`
-	}
-	if err := decodeJSON(r, &body); err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
-		return
-	}
-	validRoles := map[string]bool{"player": true, "support": true, "admin": true, "superadmin": true}
-	if !validRoles[body.Role] {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest,
-			fmt.Sprintf("invalid role %q", body.Role)))
-		return
-	}
-	tag, err := h.db.Pool().Exec(r.Context(),
-		`UPDATE users SET role = $1 WHERE id = $2`, body.Role, uid)
-	if err != nil {
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
-		return
-	}
-	if tag.RowsAffected() == 0 {
-		httpx.WriteError(w, r, httpx.ErrNotFound)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 
