@@ -10,21 +10,44 @@
 
 Admin-консоль защищена permission-чек'ами: чтобы кто-то мог управлять
 ролями (`roles:grant` / `roles:revoke`), у него уже должна быть роль
-`superadmin`. Замкнутый круг разрывается через CLI на сервере (план
-53 §Bootstrap):
+`superadmin`. Замкнутый круг разрывается вручную через SQL в БД identity
+(план 53 §Bootstrap, CLI `identity-cli grant-role` пока не реализован —
+sub-план 53e-identity-cli).
 
-```bash
-# На VPS, где запущен identity-service:
-identity-cli grant-role superadmin <user-uuid> --reason "bootstrap superadmin"
-```
+**До выполнения этого шага admin-консоль недоступна для всех** —
+никто не имеет permission `roles:grant`, чтобы выдать роль кому ещё.
+Это by design.
 
-**До выполнения этой команды admin-консоль недоступна для всех** —
-никто не имеет permission `roles:grant`, чтобы выдать роль кому
-ещё. Это by design.
+### Процедура
 
-(Команда `identity-cli` будет реализована в sub-плане
-53e-identity-cli — пока вручную через SQL миграцию seed-роли в
-БД identity.)
+1. Юзер регистрируется через публичный портал (или `POST /auth/register`)
+   и получает дефолтную роль `player`.
+2. Достаём его `id` из `users` и выдаём роль `superadmin`:
+
+   ```bash
+   # На сервере, где запущен identity-db (для dev — deploy-identity-db-1):
+   docker exec -i deploy-identity-db-1 psql -U identitysvc -d identitysvc <<'SQL'
+   INSERT INTO user_roles (user_id, role_id, granted_at)
+   SELECT u.id, r.id, now()
+   FROM users u, roles r
+   WHERE u.username = '<USERNAME>' AND r.name = 'superadmin'
+   ON CONFLICT (user_id, role_id) DO NOTHING;
+   SQL
+   ```
+
+   На проде имя контейнера БД и креды отличаются — см. `docker-compose.prod.yml`.
+
+3. Юзер должен **перелогиниться** — его старый JWT содержит только `player`,
+   новый возьмёт актуальные роли из `user_roles`.
+
+После этого superadmin может выдавать остальные роли (`admin`, `support`,
+`moderator`, `billing_admin`) штатно через UI админки (`/users/<uuid>` →
+trash/grant icon) — этот же SQL не нужен для последующих ролей, только
+для первого разрыва круга.
+
+Для **локального dev** уже готов набор тестовых юзеров со всеми ролями —
+см. [dev-test-users.md](dev-test-users.md). Запускать SQL вручную там не
+нужно, юзеры созданы.
 
 ## IP-allowlist
 
@@ -131,6 +154,82 @@ docker compose \
 Healthchecks:
 - admin-bff: `wget http://admin-bff:9200/healthz`.
 - admin-frontend: `wget http://admin-frontend:80/healthz`.
+
+## Локальный dev-доступ
+
+Админка не имеет ссылок из публичного портала (by design — отдельный
+поддомен в проде, IP-allowlist, отдельная сессия). Доступ — только по
+прямому URL.
+
+**URL:** http://localhost:8086
+
+Запуск поверх dev-стека:
+
+```bash
+SESSION_SECRET=$(openssl rand -hex 32) \
+BFF_COOKIE_SECURE=false \
+IDENTITY_URL=http://identity-service:9000 \
+docker compose \
+  -f deploy/docker-compose.yml \
+  -f deploy/docker-compose.admin.yml \
+  -p deploy up -d --build admin-bff admin-frontend
+```
+
+- `BFF_COOKIE_SECURE=false` обязательно — без него cookie с `Secure`-флагом
+  не доедет по `http://localhost`, юзер не залогинится.
+- `IDENTITY_URL` явно — в compose дефолт указывает на `:9000`, переопределение
+  не требуется, но явное значение страхует от расхождения если в env что-то
+  залипло.
+
+Допуск по ролям (login form принимает username или email, см.
+[dev-test-users.md](dev-test-users.md), пароль у всех `DevPass123`):
+
+| Юзер | Роль | Что увидит |
+|------|------|-----------|
+| `super1` | superadmin | всё — управление ролями + игровая админка + биллинг + модерация + саппорт |
+| `admin1` | admin | игровая админка (planet ops, fleet recall, грант ресурсов, баны) |
+| `billing1` | billing_admin | биллинг (отчёты, возвраты, audit) |
+| `mod1` | moderator | модерация UGC, баны |
+| `support1` | support | чтение тикетов / аудита / профилей |
+
+IP-allowlist в dev открыт настежь — [deploy/admin-ips.conf](../../deploy/admin-ips.conf)
+содержит `0.0.0.0/0 1;`. Файл в `.gitignore`, в репо лежит только `.example`.
+
+## Закладка в браузере
+
+Чтобы не светить URL админки в публичном UI и не запоминать его руками,
+админ кладёт ссылку себе в bookmark bar. Это работает за всех условных
+«Перейти в админку» в шапке сразу: один раз, один клик, без любого
+вмешательства в код портала.
+
+**Prod**
+
+| Поле | Значение |
+|------|----------|
+| Name | `oxsar admin` |
+| URL  | `https://admin.oxsar-nova.ru` |
+
+**Dev**
+
+| Поле | Значение |
+|------|----------|
+| Name | `oxsar admin (dev)` |
+| URL  | `http://localhost:8086` |
+
+Если хочется попасть сразу на конкретную страницу — добавляется путь:
+`https://admin.oxsar-nova.ru/users` и т.п. Полезно админам с одной
+ролью: `support` → `/tickets`, `billing_admin` → `/billing/refunds`,
+`moderator` → `/ugc`.
+
+Альтернативные браузерные варианты:
+- **Chrome / Edge / Brave** — `Ctrl+D` на открытой странице админки →
+  ввести имя → выбрать `Bookmarks bar` как папку.
+- **Firefox** — то же `Ctrl+D`.
+- **Safari** — `Cmd+D` → `Add this Page to → Favorites`.
+
+Это **не** добавляется автоматически: каждый админ делает это руками
+один раз. Намеренно — bookmark live в личном профиле браузера, не в
+shared-конфиге, и не утекает с компрометацией одного устройства.
 
 ## Развалилось — что смотреть в логах
 

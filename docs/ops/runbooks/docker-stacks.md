@@ -54,7 +54,7 @@ docker compose -f deploy/docker-compose.yml up --build
   платежи без денег, редирект внутри docker-сети
 - Postgres на **tmpfs** (быстрее холодного старта, полный сброс между запусками)
 - One-shot `testseed --reset` → 5 детерминированных игроков
-  (admin/alice/bob/eve/charlie, пароль `test-password-123`)
+  (admin/alice/bob/eve/charlie, пароль `DevPass123`)
 - Healthcheck'и на всех сервисах, retry-логика для backend
 - Playwright-контейнер по умолчанию сразу запускает тесты
 
@@ -98,7 +98,7 @@ postgres redis migrate backend worker testseed frontend`. Playwright
 не стартует — он бы сразу прогнал тесты и вышел.)
 
 После запуска открой <http://localhost:5173>, логин любого тестового
-игрока (пароль `test-password-123`):
+игрока (пароль `DevPass123`):
 - **bob** — superadmin с прокачанной планетой и флотом
 - **alice** — новичок, пустые состояния
 - **admin** — superadmin со средней планетой

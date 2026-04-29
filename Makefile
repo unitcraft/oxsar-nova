@@ -103,7 +103,7 @@ test-e2e-docker-down:
 # ui-preview — ручной осмотр UI на e2e-стеке с пробросом портов.
 # Поднимает всё (kroмe playwright) с mock-платежами и детерминированными
 # seed-данными, UI доступен на http://localhost:5173, API на :8081.
-# Тестовые логины: admin/alice/bob/eve/charlie, пароль test-password-123.
+# Тестовые логины: admin/alice/bob/eve/charlie, пароль DevPass123.
 .PHONY: ui-preview
 ui-preview:
 	docker compose \
@@ -115,7 +115,7 @@ ui-preview:
 	@echo "  UI:      http://localhost:5173"
 	@echo "  API:     http://localhost:8081"
 	@echo "  логины:  admin / alice / bob / eve / charlie"
-	@echo "  пароль:  test-password-123"
+	@echo "  пароль:  DevPass123"
 	@echo ""
 	@echo "  Остановить: make ui-preview-down"
 
