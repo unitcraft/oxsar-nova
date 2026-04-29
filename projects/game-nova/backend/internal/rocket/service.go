@@ -43,17 +43,19 @@ const kindRocketAttack = 16
 const missileDamage = 12000
 
 type Service struct {
-	db      repo.Exec
-	catalog *config.Catalog
-	speed   float64 // GAMESPEED
-	bundle  *i18n.Bundle
+	db          repo.Exec
+	catalog     *config.Catalog
+	speed       float64 // GAMESPEED
+	numGalaxies int     // план 72.1 ч.12 — лимит из universes.yaml
+	numSystems  int     // план 72.1 ч.12 — кольцевая топология систем
+	bundle      *i18n.Bundle
 }
 
-func NewService(db repo.Exec, cat *config.Catalog, gameSpeed float64) *Service {
+func NewService(db repo.Exec, cat *config.Catalog, gameSpeed float64, numGalaxies, numSystems int) *Service {
 	if gameSpeed <= 0 {
 		gameSpeed = 1
 	}
-	return &Service{db: db, catalog: cat, speed: gameSpeed}
+	return &Service{db: db, catalog: cat, speed: gameSpeed, numGalaxies: numGalaxies, numSystems: numSystems}
 }
 
 func (s *Service) WithBundle(b *i18n.Bundle) *Service {
@@ -93,7 +95,7 @@ func (s *Service) Launch(ctx context.Context, userID, srcPlanetID string,
 	if count <= 0 {
 		return LaunchResult{}, ErrInvalidInput
 	}
-	if err := dst.Validate(); err != nil {
+	if err := dst.Validate(s.numGalaxies, s.numSystems); err != nil {
 		return LaunchResult{}, fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
 
@@ -186,7 +188,7 @@ func (s *Service) Launch(ctx context.Context, userID, srcPlanetID string,
 
 		// Время полёта (ogame-like, упрощённо: 30 + 60*sqrt(dist/100)).
 		dist := float64(galaxy.Distance(
-			galaxy.Coords{Galaxy: srcG, System: srcS, Position: srcP}, dst))
+			galaxy.Coords{Galaxy: srcG, System: srcS, Position: srcP}, dst, s.numSystems))
 		secs := 30.0 + 60.0*math.Sqrt(dist/100.0)
 		if s.speed > 0 {
 			secs /= s.speed

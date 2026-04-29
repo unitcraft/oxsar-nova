@@ -63,15 +63,15 @@ var (
 	errBillingNotConfiguredLocal  = errors.New("teleport: billing client not configured")
 )
 
-// Координатные лимиты (зеркалят CHECK planets.coords_range из миграции
-// 0002_planets_galaxy.sql). Хардкод оправдан тем, что эти числа жёстко
-// прибиты к схеме БД — изменить их нельзя без миграции, поэтому
-// дублирование в env/config'е добавило бы только риск рассинхрона.
+// Координатные лимиты position и нижние границы — из БД-CHECK
+// (миграция 0002_planets_galaxy.sql, planets.coords_range). Верхние
+// границы galaxy/system приходят теперь из universes.yaml (план 72.1
+// ч.12) — миграция CHECK BETWEEN 1 AND 16 / 1 AND 999 остаётся как
+// «жёсткий потолок» БД-уровня, приложение режет раньше по
+// `cfg.Game.NumGalaxies` / `NumSystems`.
 const (
 	coordGalaxyMin   = 1
-	coordGalaxyMax   = 16
 	coordSystemMin   = 1
-	coordSystemMax   = 999
 	coordPositionMin = 1
 	coordPositionMax = 15
 )
@@ -89,10 +89,15 @@ var errBillingUnavailable = &httpx.Error{
 // TeleportConfig — параметры из game-nova config.GameConfig, передаются в
 // конструктор. Обособлены в отдельную структуру, чтобы не таскать весь
 // GameConfig сквозь tests.
+//
+// План 72.1 ч.12: NumGalaxies/NumSystems — верхние границы координат
+// из universes.yaml (раньше было hardcoded 1..16/1..999).
 type TeleportConfig struct {
 	CostOxsars      int64
 	CooldownHours   int
 	DurationMinutes int
+	NumGalaxies     int
+	NumSystems      int
 }
 
 // TeleportHandler — HTTP-handler POST /api/planets/{id}/teleport.
@@ -186,8 +191,8 @@ func (h *TeleportHandler) Teleport(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json body"))
 		return
 	}
-	if !validCoord(req.TargetGalaxy, coordGalaxyMin, coordGalaxyMax) ||
-		!validCoord(req.TargetSystem, coordSystemMin, coordSystemMax) ||
+	if !validCoord(req.TargetGalaxy, coordGalaxyMin, h.cfg.NumGalaxies) ||
+		!validCoord(req.TargetSystem, coordSystemMin, h.cfg.NumSystems) ||
 		!validCoord(req.TargetPosition, coordPositionMin, coordPositionMax) {
 		incTeleportStatus("invalid_coords")
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "coordinates out of range"))
