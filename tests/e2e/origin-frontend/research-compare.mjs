@@ -4,7 +4,9 @@ import { execSync } from 'child_process';
 const ORIGIN_URL = 'http://localhost:5176';
 const LEGACY_URL = 'http://localhost:8092';
 const IDENTITY_URL = 'http://localhost:9000';
-const OUT = 'C:/Users/Евгений/OneDrive/Рабочий стол';
+// Скриншоты сохраняются в папку с именем плана, по которому идёт работа.
+// Текущий план: docs/plans/72.1-post-remaster-stabilization.md
+const OUT = new URL('./screenshots-72.1', import.meta.url).pathname.replace(/^\//, '');
 
 const browser = await chromium.launch({ headless: true });
 
