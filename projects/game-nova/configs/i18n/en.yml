@@ -3000,29 +3000,24 @@ exchange:
   cancelForm: "Cancel"
   creating: "Creating…"
   noHeldArtefacts: "You have no artefacts available for sale."
-  validation:
-    pickArtefact: "Pick an artefact."
-    qtyMin: "Quantity must be at least 1."
-    qtyMax: "Maximum 100 items per lot."
-    qtyOverAvailable: "You don't have that many."
-    priceMin: "Price must be positive."
-    expiresInvalid: "Invalid expiry."
-  errors:
-    insufficientArtefacts: "Not enough artefacts of the required type in your inventory."
-    insufficientOxsarits: "Not enough oxsarits to complete the purchase."
-    priceCapExceeded: "Price exceeds the anti-fraud cap. Lower the price."
-    permitRequired: "Trading on the exchange requires the Merchant's Mark."
-    lotNotActive: "Lot has already been sold, cancelled, or expired."
-    notASeller: "Only the seller can cancel their lot."
-    cannotBuyOwnLot: "You cannot buy your own lot."
-    maxActiveLots: "Maximum number of active lots per player exceeded."
-    maxQuantity: "Maximum number of artefacts per lot exceeded (100)."
-    invalidExpiry: "Lot expiry must be between 1 hour and 7 days."
-    generic: "Operation failed."
 
-event:
-  exchange:
-    expire:
-      subject: "Exchange lot expired"
-    ban:
-      subject: "Your exchange lots have been cancelled"
+validation:
+  pickArtefact: "Pick an artefact."
+  qtyMin: "Quantity must be at least 1."
+  qtyMax: "Maximum 100 items per lot."
+  qtyOverAvailable: "You don't have that many."
+  priceMin: "Price must be positive."
+  expiresInvalid: "Invalid expiry."
+
+errors:
+  insufficientArtefacts: "Not enough artefacts of the required type in your inventory."
+  insufficientOxsarits: "Not enough oxsarits to complete the purchase."
+  priceCapExceeded: "Price exceeds the anti-fraud cap. Lower the price."
+  permitRequired: "Trading on the exchange requires the Merchant's Mark."
+  lotNotActive: "Lot has already been sold, cancelled, or expired."
+  notASeller: "Only the seller can cancel their lot."
+  cannotBuyOwnLot: "You cannot buy your own lot."
+  maxActiveLots: "Maximum number of active lots per player exceeded."
+  maxQuantity: "Maximum number of artefacts per lot exceeded (100)."
+  invalidExpiry: "Lot expiry must be between 1 hour and 7 days."
+  generic: "Operation failed."
