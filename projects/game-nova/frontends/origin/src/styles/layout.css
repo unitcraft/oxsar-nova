@@ -96,21 +96,6 @@
   margin-top: 1px;
 }
 
-/* Заголовок секции: иконка [+]/[-] справа через ::after */
-li[class*="menu-min"]::after {
-  content: '+';
-  float: right;
-  padding-right: 4px;
-  font-weight: bold;
-  color: var(--c-link);
-}
-li[class*="menu-max"]::after {
-  content: '-';
-  float: right;
-  padding-right: 4px;
-  font-weight: bold;
-  color: var(--c-link);
-}
 
 /* Цвета секций (pixel-perfect из legacy) */
 .menu2-max, .menu2-max:hover { background-color: var(--c-menu2-max); }

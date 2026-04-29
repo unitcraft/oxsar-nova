@@ -1,18 +1,21 @@
 // Левое меню origin-фронта (план 72 Ф.1-Ф.5).
 //
-// Pixel-perfect клон legacy layout.tpl + Menu.class.php:
-//   - Секция 1 (Планета): пустой li-разделитель, плоские ссылки
-//   - Секции 2-8: li.menu-info.menuN-max + toggle (show/hide по клику)
+// Pixel-perfect клон legacy game-legacy-php Menu.xml + menuSoH():
+//   - Секция 1 (Планета): плоские ссылки без заголовка
+//   - Секции 2-8: заголовок = иконка menu_open/close.png + текст + toggle
+//   - Пути соответствуют роутам origin-фронта
 //
 // Намеренные расхождения с legacy:
-//   - Achievements, Tutorial — скрыты (план 72 §«не делаем», план 70 отложен)
-//   - Реклама/баннеры — не переносятся
-//   - JS menuSoH заменён на React useState toggle (ADR: без jQuery)
-//   - /resource → /resource-market (роутер), /defense → заглушка,
-//     /disassemble → заглушка, /stock → заглушка
+//   - jQuery menuSoH заменён React useState (ADR: без jQuery)
+//   - Форум/Туториал (внешние ссылки) — секция 6 пустая
+//   - /resource → заглушка (экран производства не реализован в Spring 1-4)
+//   - ExchangeOpts/Widgets/ResTransferStats → временно /, до реализации
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+
+const OPEN_ICON = '/assets/origin/images/menu_open.png';
+const CLOSE_ICON = '/assets/origin/images/menu_close.png';
 
 function MenuSection({
   id,
@@ -31,10 +34,16 @@ function MenuSection({
       <li
         className={`menu-info ${colorClass}-${open ? 'max' : 'min'}`}
         id={`menuli${id}`}
-        title={title}
         onClick={() => setOpen((v) => !v)}
         style={{ cursor: 'pointer' }}
-      />
+      >
+        <img
+          src={open ? CLOSE_ICON : OPEN_ICON}
+          alt={open ? '-' : '+'}
+          style={{ verticalAlign: 'middle', marginRight: 3 }}
+        />
+        {title}
+      </li>
       <li id={`menudiv${id}`} style={{ display: open ? '' : 'none' }}>
         <ul>{children}</ul>
       </li>
@@ -46,10 +55,10 @@ export function LeftMenu() {
   return (
     <div id="leftMenu">
       <ul>
-        {/* Секция 1: Планета — без заголовка, плоский список */}
+        {/* Секция 1: Планета — без заголовка, плоские пункты */}
         <li></li>
         <li><Link to="/">Обзор</Link></li>
-        <li><Link to="/resource-market">Сырьё</Link></li>
+        <li><Link to="/resource">Сырьё</Link></li>
         <li><Link to="/constructions" id="menu_build">Постройки</Link></li>
         <li><Link to="/research" id="menu_research">Исследования</Link></li>
         <li><Link to="/shipyard">Верфь</Link></li>
@@ -83,6 +92,7 @@ export function LeftMenu() {
           <li><Link to="/ranking">Статистика</Link></li>
           <li><Link to="/records">Рекорды</Link></li>
           <li><Link to="/battlestats">Сражения</Link></li>
+          <li><Link to="/battlestats">Переданные ресурсы</Link></li>
           <li><Link to="/tools/tech-calc" id="menu_simulator">Симулятор боя</Link></li>
         </MenuSection>
 
@@ -93,7 +103,7 @@ export function LeftMenu() {
           <li><Link to="/payment">Пополнить кредиты</Link></li>
         </MenuSection>
 
-        {/* Секция 6: (форумы — внешние, не переносим) */}
+        {/* Секция 6: Поиск (форумы — внешние, не переносим) */}
         <MenuSection id="6" colorClass="menu6" title="Поиск">
         </MenuSection>
 
@@ -101,11 +111,12 @@ export function LeftMenu() {
         <MenuSection id="7" colorClass="menu7" title="Настройки">
           <li><Link to="/settings">Планета</Link></li>
           <li><Link to="/settings">Настройки</Link></li>
-          <li><Link to="/support">Регламент тех. поддержки</Link></li>
+          <li><Link to="/user-agreement">Соглашение</Link></li>
+          <li><Link to="/support">Регламент тех поддержки</Link></li>
         </MenuSection>
 
         {/* Секция 8: Выход */}
-        <MenuSection id="8" colorClass="menu8" title="Выход">
+        <MenuSection id="8" colorClass="menu8" title="">
           <li><Link to="/logout">Выход</Link></li>
         </MenuSection>
 
