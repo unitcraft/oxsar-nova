@@ -126,6 +126,7 @@ import { AdvTechCalculatorScreen } from './features/tech-calc/AdvTechCalculatorS
 import { WidgetsRedirect } from './features/widgets/WidgetsRedirect';
 import { RocketAttackScreen } from './features/rocket-attack/RocketAttackScreen';
 import { MonitorPlanetScreen } from './features/monitor-planet/MonitorPlanetScreen';
+import { SimulatorScreen } from './features/simulator/SimulatorScreen';
 
 export function AppRouter() {
   return (
@@ -241,6 +242,7 @@ function ProtectedRoutes() {
           <Route path="/widgets" element={<WidgetsRedirect />} />
           <Route path="/rocket-attack" element={<RocketAttackScreen />} />
           <Route path="/monitor-planet" element={<MonitorPlanetScreen />} />
+          <Route path="/simulator" element={<SimulatorScreen />} />
 
           {/* Новые экраны (план 72.1) */}
           <Route path="/resource" element={<ResourceScreen />} />
