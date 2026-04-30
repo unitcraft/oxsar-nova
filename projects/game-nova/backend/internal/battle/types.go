@@ -63,12 +63,37 @@ type UnitCost struct {
 	Hydrogen int64 `json:"hydrogen,omitempty"`
 }
 
-// SimStats — агрегат по num_sim прогонам (возвращается вместо Report если NumSim ≥ 2).
+// SimStats — агрегат по num_sim прогонам (план 72.1 ч.20.11.7).
+// Pixel-perfect клон сводки legacy simulator.tpl: победа атакующего/
+// обороняющегося/ничья в %, среднее число раундов, средний шанс луны,
+// средние потери металла/кремния/водорода и опыта обеих сторон,
+// средние обломки на орбите, время симуляции (общее и одной итерации).
 type SimStats struct {
-	NumSim    int     `json:"num_sim"`
-	WinRate   float64 `json:"win_rate"`   // доля побед атакующих
-	DrawRate  float64 `json:"draw_rate"`  // ничьи (оба выжили или оба уничтожены)
-	AvgRounds float64 `json:"avg_rounds"` // среднее число раундов
+	NumSim   int `json:"num_sim"`
+
+	// Доли исходов в %.
+	AttackerWinPct float64 `json:"attacker_win_pct"`
+	DefenderWinPct float64 `json:"defender_win_pct"`
+	DrawPct        float64 `json:"draw_pct"`
+
+	AvgRounds     float64 `json:"avg_rounds"`
+	AvgMoonChance float64 `json:"avg_moon_chance"` // %
+
+	AttackerLostMetal    float64 `json:"attacker_lost_metal"`
+	AttackerLostSilicon  float64 `json:"attacker_lost_silicon"`
+	AttackerLostHydrogen float64 `json:"attacker_lost_hydrogen"`
+	DefenderLostMetal    float64 `json:"defender_lost_metal"`
+	DefenderLostSilicon  float64 `json:"defender_lost_silicon"`
+	DefenderLostHydrogen float64 `json:"defender_lost_hydrogen"`
+
+	DebrisMetal   float64 `json:"debris_metal"`
+	DebrisSilicon float64 `json:"debris_silicon"`
+
+	AttackerExp float64 `json:"attacker_exp"`
+	DefenderExp float64 `json:"defender_exp"`
+
+	GenTimeAll float64 `json:"gen_time_all"` // секунды всего
+	GenTime    float64 `json:"gen_time"`     // секунды на одну симуляцию
 }
 
 // Report — результат боя.

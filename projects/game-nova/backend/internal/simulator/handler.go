@@ -1,12 +1,13 @@
 // Package simulator — HTTP handler для боевого симулятора.
 //
-// План 72.1 ч.20.11: симуляция сохраняется в battle_reports
-// (is_simulation=true), endpoint возвращает {id, report}. Юзер
-// (или анонимный гость) перенаправляется на /battle-report/{id}
-// который доступен публично без auth.
+// План 72.1 ч.20.11.7: симулятор прогоняет num_sim итераций,
+// возвращает агрегированную сводку (SimStats) + сохраняет последний
+// бой в battle_reports (is_simulation=true). Фронт показывает сводку
+// в стиле legacy simulator.tpl и ссылку «Отчёт о сражении» на
+// /battle-report/{id} (анонимный публичный просмотр).
 //
-// ADR-0002: симулятор — порт legacy oxsar2-java/Assault.java
-// (rendering отчёта на frontend, не в backend).
+// ADR-0002: rendering на frontend, backend возвращает структурированный
+// JSON.
 package simulator
 
 import (
@@ -28,8 +29,14 @@ func NewHandler(db repo.Exec) *Handler {
 	return &Handler{db: db}
 }
 
-// Run POST /api/simulator/run — запускает бой и сохраняет в БД.
-// Возвращает {id, report}; frontend редиректит на /battle-report/{id}.
+// RunResponse — ответ POST /api/simulator/run.
+type RunResponse struct {
+	ID     string         `json:"id"`     // UUID последнего боя в battle_reports
+	Stats  battle.SimStats `json:"stats"` // агрегат по num_sim итераций
+	Report battle.Report  `json:"report"` // последний бой целиком (для round-by-round, опционально)
+}
+
+// Run POST /api/simulator/run — N прогонов, агрегат + сохранение последнего.
 func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 	if _, ok := auth.UserID(r.Context()); !ok {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
@@ -44,18 +51,22 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "attackers and defenders required"))
 		return
 	}
-	if in.NumSim > 100 {
-		in.NumSim = 100
+	n := in.NumSim
+	if n < 1 {
+		n = 1
 	}
-	report, err := battle.Calculate(in)
+	if n > 100 {
+		n = 100
+	}
+
+	stats, last, err := battle.MultiRun(in, n)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 		return
 	}
 
-	// Сохраняем симуляцию в battle_reports (is_simulation=true).
 	id := ids.New()
-	reportJSON, _ := json.Marshal(report)
+	reportJSON, _ := json.Marshal(last)
 	_, err = h.db.Pool().Exec(r.Context(), `
 		INSERT INTO battle_reports (
 			id, attacker_user_id, defender_user_id, planet_id,
@@ -64,8 +75,8 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 			loot_metal, loot_silicon, loot_hydrogen,
 			report, is_simulation
 		) VALUES ($1, NULL, NULL, NULL, $2, $3, $4, $5, $6, 0, 0, 0, $7, true)
-	`, id, int64(report.Seed), report.Winner, report.Rounds,
-		report.DebrisMetal, report.DebrisSilicon,
+	`, id, int64(last.Seed), last.Winner, last.Rounds,
+		last.DebrisMetal, last.DebrisSilicon,
 		reportJSON,
 	)
 	if err != nil {
@@ -73,8 +84,9 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
-		"id":     id,
-		"report": report,
+	httpx.WriteJSON(w, r, http.StatusOK, RunResponse{
+		ID:     id,
+		Stats:  stats,
+		Report: last,
 	})
 }

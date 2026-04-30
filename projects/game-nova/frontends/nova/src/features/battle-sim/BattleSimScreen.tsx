@@ -33,9 +33,23 @@ interface SimReport {
 
 interface SimStats {
   num_sim: number;
-  win_rate: number;
-  draw_rate: number;
+  attacker_win_pct: number;
+  defender_win_pct: number;
+  draw_pct: number;
   avg_rounds: number;
+  avg_moon_chance: number;
+  attacker_lost_metal: number;
+  attacker_lost_silicon: number;
+  attacker_lost_hydrogen: number;
+  defender_lost_metal: number;
+  defender_lost_silicon: number;
+  defender_lost_hydrogen: number;
+  debris_metal: number;
+  debris_silicon: number;
+  attacker_exp: number;
+  defender_exp: number;
+  gen_time_all: number;
+  gen_time: number;
 }
 
 // COMBAT_UNITS — корабли + оборона с боевыми характеристиками.
@@ -167,10 +181,10 @@ export function BattleSimScreen() {
             <b>{t('main', 'battleSimRuns')}:</b> {(r as SimStats).num_sim}
             {' · '}
             <b>{t('main', 'battleWinRate')}:</b>{' '}
-            {((r as SimStats).win_rate * 100).toFixed(1)}%
+            {(r as SimStats).attacker_win_pct.toFixed(1)}%
             {' · '}
             <b>{t('main', 'battleDrawRate')}:</b>{' '}
-            {((r as SimStats).draw_rate * 100).toFixed(1)}%
+            {(r as SimStats).draw_pct.toFixed(1)}%
             {' · '}
             <b>{t('main', 'battleAvgRounds')}:</b>{' '}
             {(r as SimStats).avg_rounds.toFixed(1)}
