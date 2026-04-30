@@ -483,6 +483,7 @@ assaultReport:
   shellPower: ""
   shieldPower: ""
   shields: ""
+  shells: ""
   showBattleMatrix: ""
   startReportTargetBuilding: ""
   startReportTargetMoon: ""

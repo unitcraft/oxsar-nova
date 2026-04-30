@@ -483,6 +483,7 @@ assaultReport:
   shellPower: Броня
   shieldPower: Щиты
   shields: Щиты
+  shells: Броня
   showBattleMatrix: Показать матрицу боя.
   startReportTargetBuilding: "Атакующий собирается разрушить:"
   startReportTargetMoon: Атакующий собирается уничтожить Луну.

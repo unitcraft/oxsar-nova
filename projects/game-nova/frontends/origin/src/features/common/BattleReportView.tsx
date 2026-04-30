@@ -128,8 +128,8 @@ function RoundView({ index, attacker, defender }: RoundProps) {
         <b>{t('mission', 'round') ?? 'Раунд'}: {index + 1}</b>
       </p>
 
-      <SideBlock side={attacker} role="attacker" />
-      <SideBlock side={defender} role="defender" />
+      <SideBlock side={attacker} kind="attacker" />
+      <SideBlock side={defender} kind="defender" />
 
       {/* Fight таблица */}
       <p>
@@ -148,18 +148,18 @@ function RoundView({ index, attacker, defender }: RoundProps) {
           </tr>
         </thead>
         <tbody>
-          <FightRow side={attacker} oppShield={defender.shield_absorbed} oppShell={defender.shell_destroyed} role="attacker" />
-          <FightRow side={defender} oppShield={attacker.shield_absorbed} oppShell={attacker.shell_destroyed} role="defender" />
+          <FightRow side={attacker} oppShield={defender.shield_absorbed} oppShell={defender.shell_destroyed} kind="attacker" />
+          <FightRow side={defender} oppShield={attacker.shield_absorbed} oppShell={attacker.shell_destroyed} kind="defender" />
         </tbody>
       </table>
     </div>
   );
 }
 
-function SideBlock({ side, role }: { side: SimRoundSide; role: 'attacker' | 'defender' }) {
+function SideBlock({ side, kind }: { side: SimRoundSide; kind: 'attacker' | 'defender' }) {
   const { t } = useTranslation();
   const label =
-    role === 'attacker'
+    kind === 'attacker'
       ? (t('mission', 'attacker') ?? 'Атакующий')
       : (t('mission', 'defender') ?? 'Защитник');
   return (
@@ -295,17 +295,17 @@ interface FightRowProps {
   side: SimRoundSide;
   oppShield: number;
   oppShell: number;
-  role: 'attacker' | 'defender';
+  kind: 'attacker' | 'defender';
 }
 
 // Java: миссы = power - shieldAbsorb - shellDestroyed.
 // FightRow для атакующего: shieldAbsorb/shellDestroyed — defender's
 // (т.е. сколько защитник поглотил/потерял = side.shield_absorbed,
 // side.shell_destroyed — это уже те значения).
-function FightRow({ side, role }: FightRowProps) {
+function FightRow({ side, kind }: FightRowProps) {
   const { t } = useTranslation();
   const label =
-    role === 'attacker'
+    kind === 'attacker'
       ? (t('assaultReport', 'fightAttacker') ?? 'Атакующий')
       : (t('assaultReport', 'fightDefender') ?? 'Защитник');
   const miss = Math.max(0, side.power - side.shield_absorbed - side.shell_destroyed);
