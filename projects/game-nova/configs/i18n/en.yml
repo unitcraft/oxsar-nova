@@ -2565,6 +2565,11 @@ mission:
   primaryTarget: "Primary target"
   attack: "Attack"
   all: "All"
+  numSim: "Number of simulations"
+  resetFleet: "Reset fleet"
+  setFleet: "Set fleet"
+  resetDefense: "Reset defense"
+  setDefense: "Set defense"
 
   allResources: ""
   allShips: ""
