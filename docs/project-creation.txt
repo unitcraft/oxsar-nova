@@ -13957,3 +13957,59 @@ config.inc.php cleanup; статус «на удаление» отозван.
 
   **Коммит**:
   feat(legacy-php): port AssaultReport.php с Yii на Core/Template (отчёт о бое из симулятора).
+
+---
+
+2026-05-01 — итерация: legacy-PHP — починка симулятора (отчёт боя был
+пустой из-за необсаженного na_sim_planet).
+
+  **Контекст**: после порта AssaultReport.php отчёт открывался, но
+  всегда был «нулевой»: «Атакующий выиграл бой. 0 потерь. 0 обломков».
+  Java отрабатывала, но получала assaultid без участников боя →
+  сразу записывала пустой результат.
+
+  **Диагностика**: добавил error_log в `simulate()` и `addParticipant()`,
+  посмотрел `docker logs legacy-php-php-1`. Лог показал цепочку
+  FK-нарушений:
+  1. `INSERT INTO na_sim_assaultparticipant (...) VALUES ('6','11','1','1','0','0')` →
+     `FK ibfk_3 (planetid) REFERENCES na_sim_planet (planetid)` fail.
+  2. `Core::getDB()->insert_id()` после неудачного INSERT остался от
+     предыдущей успешной операции (= insert sim_assault, который дал
+     `assaultid=6`).
+  3. `INSERT INTO na_sim_fleet2assault VALUES ('6','6',...)` → `FK ibfk_2
+     (participantid)` fail (participantid=6 не существует в sim_assaultparticipant).
+  4. Симулятор тихо проглатывает (try/catch без логов), Java запускается,
+     не находит участников → пишет пустой отчёт.
+
+  **Корневая причина**: таблица `na_sim_planet` пуста. Симулятор использует
+  фиксированный `SIM_PLANET_ID = 1` ([Simulator.class.php:11](../projects/game-legacy-php/src/game/page/Simulator.class.php#L11)),
+  но соответствующей записи в БД нет. В [migrations/001_schema.sql:3149](../projects/game-legacy-php/migrations/001_schema.sql#L3149)
+  таблица создана с `AUTO_INCREMENT=2` (то есть в исходном legacy-dump'е была
+  одна запись с planetid=1), но **INSERT данных не перенесён** в наши миграции.
+  Сид нашёлся в [oxsar2/sql/new-for-dm/data.sql:9838](d:/Sources/oxsar2/sql/new-for-dm/data.sql).
+
+  **Что сделано**:
+  - Создал [migrations/006_seed_sim_planet.sql](../projects/game-legacy-php/migrations/006_seed_sim_planet.sql):
+    INSERT с planetid=1, минимально-валидными полями. ON DUPLICATE KEY UPDATE
+    делает её идемпотентной.
+  - Применил вручную в работающую БД (`mysql < 006_*.sql`).
+
+  **Решения**:
+  - Скопировал не точные значения из legacy dump (там были аномальные
+    `metal=17142327098605570.0` и т.п.), а минимальные: `metal=500,
+    silicon=500, hydrogen=0, solar_satellite_prod=100`. Запись служебная,
+    реальной планетой не является; симулятор не читает её ресурсы.
+  - **Не правил** код Simulator.class.php (хотя там есть архитектурный
+    bug — `addParticipant` не проверяет результат INSERT и идёт к insert_id
+    дальше; legacy-as-is). Может стать отдельной задачей: добавить
+    проверку `if($rc === false) { ... }` после `Core::getQuery()->insert(...)`.
+
+  **Smoke**: новая симуляция → assaultid создан → addParticipant прошёл →
+  fleet2assault заполнен → Java посчитала реальный бой → отчёт с
+  ненулевыми потерями. (Тестируется пользователем после применения миграции.)
+
+  **Файлы**:
+  - projects/game-legacy-php/migrations/006_seed_sim_planet.sql (новый, +21 строка).
+
+  **Коммит**:
+  fix(legacy-php): seed na_sim_planet (planetid=1) — без него отчёт боя пустой.
