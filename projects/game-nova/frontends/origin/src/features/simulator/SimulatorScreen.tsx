@@ -260,7 +260,7 @@ export function SimulatorScreen() {
       <table className="ntable">
         <tbody>
           <tr>
-            <th colSpan={2}>{t('main', 'preferences') ?? 'Установки'}</th>
+            <th colSpan={2}>{t('info', 'options')}</th>
           </tr>
           <tr>
             <td>
@@ -268,13 +268,13 @@ export function SimulatorScreen() {
                 <tbody>
                   <tr>
                     <td>&nbsp;</td>
-                    <td>{t('info', 'gunTech') ?? 'Оружие'}</td>
-                    <td>{t('info', 'shieldTech') ?? 'Щиты'}</td>
-                    <td>{t('info', 'shellTech') ?? 'Броня'}</td>
-                    <td>{t('info', 'ballisticsTech') ?? 'Баллистика'}</td>
-                    <td>{t('info', 'maskingTech') ?? 'Маскировка'}</td>
-                    <td>{t('info', 'shipyard') ?? 'Верфь'}</td>
-                    <td>{t('info', 'defenseFactory') ?? 'Обор. завод'}</td>
+                    <td>{t('assaultReport', 'gunPower')}</td>
+                    <td>{t('assaultReport', 'shieldPower')}</td>
+                    <td>{t('assaultReport', 'armoring')}</td>
+                    <td>{t('assaultReport', 'ballisticsPower')}</td>
+                    <td>{t('assaultReport', 'maskingPower')}</td>
+                    <td>{t('assaultReport', 'shipyardPower')}</td>
+                    <td>{t('assaultReport', 'defenseFactoryPower')}</td>
                   </tr>
                   <tr>
                     <td>{t('mission', 'attacker') ?? 'Атакующий'}</td>

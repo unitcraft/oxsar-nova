@@ -387,6 +387,8 @@ assaultReport:
   advShieldPower: ""
   and: ""
   armor: ""
+  shipyardPower: "Shipyard"
+  defenseFactoryPower: "Def. Factory"
   armoring: ""
   assault: ""
   assaultTime: ""

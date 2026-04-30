@@ -387,6 +387,8 @@ assaultReport:
   advShieldPower: Специализация щитов
   and: и
   armor: Броня
+  shipyardPower: Верфь
+  defenseFactoryPower: Обор. завод
   armoring: Броня
   assault: Отчет о сражении
   assaultTime: "Флоты соперников встрелись в {{time}} часов:"
