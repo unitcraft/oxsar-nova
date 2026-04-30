@@ -2564,6 +2564,11 @@ mission:
   primaryTarget: "Первичная цель"
   attack: "Атаковать"
   all: "Все"
+  numSim: "Количество симуляций"
+  resetFleet: "Обнулить флот"
+  setFleet: "Установить флот"
+  resetDefense: "Обнулить оборону"
+  setDefense: "Установить оборону"
 
   allResources: Все ресурсы
   allShips: Все корабли

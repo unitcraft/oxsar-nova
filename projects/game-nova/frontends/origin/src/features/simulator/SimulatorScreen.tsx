@@ -2,16 +2,19 @@
 // Pixel-perfect клон legacy simulator.tpl + ADR-0002 порт
 // oxsar2-java/Assault.java (rendering на frontend).
 //
-// Структура (legacy):
-// 1. Технологии атакующего/защитника (tech-уровни 4 шт.).
-// 2. Таблица юнитов: ship-name / attacker quantity / defender quantity.
-// 3. Кнопка «Симулировать».
-// 4. Результат: победитель + потери + раунды.
-//
-// Используется backend POST /api/simulator/run (порт battle.Calculate).
+// Структура (legacy 1:1):
+// 1. «Установки» — tech-уровни (gun/shield/shell/ballistics/masking/
+//    shipyard для атакующего, defense_factory для защитника) + поле
+//    «Количество симуляций».
+// 2. Таблица юнитов: колонки Тип корабля / Атакующий / Защитник.
+//    Каждая ячейка: <+> / <quantity> [<damaged> - <shell_%>%] / <->
+//    Bulk-кнопки в шапке: «Установить флот», «100%», «90%», «80%», «70%», «60%».
+// 3. Селект «Уничтожить» здание + поле «Уровень» (для гравитона).
+// 4. Submit «Симулировать».
+// 5. Report — раунды, потери, обломки.
 
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   runSimulation,
   type SimInput,
@@ -19,107 +22,233 @@ import {
   type SimSide,
   type SimUnit,
 } from '@/api/simulator';
-import { catalogByGroup } from '@/features/common/catalog';
+import { fetchShipyardInventory } from '@/api/shipyard';
+import { QK } from '@/api/query-keys';
+import { catalogByGroup, findCatalog } from '@/features/common/catalog';
+import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber } from '@/lib/format';
 
+// Базовые статы юнитов из configs/{ships,defense}.yml.
+// Backend Calculate сам применит tech-модификаторы.
 interface UnitStats {
   attack: number;
   shield: number;
   shell: number;
 }
 
-// Минимальные дефолтные статы для тестового симулятора.
-// В legacy эти значения берутся из БД construction (с tech-модификаторами).
-// Здесь — упрощённо для UI; backend Calculate сам применит tech.
 const UNIT_STATS: Record<number, UnitStats> = {
-  // ships
-  29: { attack: 5, shield: 10, shell: 4000 },        // small_transporter
-  30: { attack: 5, shield: 25, shell: 12000 },       // large_transporter
-  31: { attack: 50, shield: 10, shell: 4000 },       // light_fighter
-  32: { attack: 150, shield: 25, shell: 10000 },     // strong_fighter
-  33: { attack: 400, shield: 50, shell: 27000 },     // cruiser
-  34: { attack: 1000, shield: 200, shell: 60000 },   // battle_ship
-  35: { attack: 700, shield: 400, shell: 70000 },    // frigate
-  36: { attack: 50, shield: 100, shell: 30000 },     // colony_ship
-  37: { attack: 1, shield: 10, shell: 16000 },       // recycler
-  38: { attack: 0, shield: 0.01, shell: 1000 },      // espionage_sensor
-  39: { attack: 1, shield: 1, shell: 2000 },         // solar_satellite
-  40: { attack: 1000, shield: 500, shell: 75000 },   // bomber
-  41: { attack: 2000, shield: 500, shell: 110000 },  // star_destroyer
-  42: { attack: 200000, shield: 50000, shell: 9000000 }, // death_star
-  // defense
-  43: { attack: 80, shield: 20, shell: 2000 },       // rocket_launcher
-  44: { attack: 100, shield: 25, shell: 2000 },      // light_laser
-  45: { attack: 250, shield: 100, shell: 8000 },     // strong_laser
-  46: { attack: 150, shield: 500, shell: 8000 },     // ion_gun
-  47: { attack: 1100, shield: 200, shell: 35000 },   // gauss_gun
-  48: { attack: 3000, shield: 300, shell: 100000 },  // plasma_gun
-  49: { attack: 1, shield: 2000, shell: 20000 },     // small_shield
-  50: { attack: 1, shield: 10000, shell: 100000 },   // large_shield
+  // ships (id из ships.yml)
+  29: { attack: 5,    shield: 10,    shell: 4000 },
+  30: { attack: 5,    shield: 25,    shell: 12000 },
+  31: { attack: 50,   shield: 10,    shell: 4000 },
+  32: { attack: 150,  shield: 25,    shell: 10000 },
+  33: { attack: 400,  shield: 50,    shell: 27000 },
+  34: { attack: 1000, shield: 200,   shell: 60000 },
+  35: { attack: 700,  shield: 400,   shell: 70000 },
+  36: { attack: 50,   shield: 100,   shell: 30000 },
+  37: { attack: 1,    shield: 10,    shell: 16000 },
+  38: { attack: 0,    shield: 0.01,  shell: 1000 },
+  39: { attack: 1,    shield: 1,     shell: 2000 },
+  40: { attack: 1000, shield: 500,   shell: 75000 },
+  41: { attack: 2000, shield: 500,   shell: 110000 },
+  42: { attack: 200000, shield: 50000, shell: 9000000 },
+  // defense (id из defense.yml)
+  43: { attack: 80,   shield: 20,    shell: 2000 },
+  44: { attack: 100,  shield: 25,    shell: 2000 },
+  45: { attack: 250,  shield: 100,   shell: 8000 },
+  46: { attack: 150,  shield: 500,   shell: 8000 },
+  47: { attack: 1100, shield: 200,   shell: 35000 },
+  48: { attack: 3000, shield: 300,   shell: 100000 },
+  49: { attack: 1,    shield: 2000,  shell: 20000 },
+  50: { attack: 1,    shield: 10000, shell: 100000 },
 };
 
 interface TechSet {
   gun: number;
   shield: number;
   shell: number;
-  laser: number;
-  ion: number;
-  plasma: number;
+  ballistics: number;
+  masking: number;
+  shipyard: number;     // только для атакующего (не используется в bой)
+  defenseFactory: number; // только для защитника
 }
 
-const ZERO_TECH: TechSet = { gun: 0, shield: 0, shell: 0, laser: 0, ion: 0, plasma: 0 };
+const ZERO_TECH: TechSet = {
+  gun: 0, shield: 0, shell: 0, ballistics: 0, masking: 0,
+  shipyard: 0, defenseFactory: 0,
+};
+
+interface UnitForm {
+  qty: string;
+  damaged: string;
+  percent: string;
+}
+
+const ZERO_UNIT: UnitForm = { qty: '0', damaged: '0', percent: '100' };
 
 export function SimulatorScreen() {
   const { t } = useTranslation();
+  const { planetId } = useResolvedPlanet();
   const ships = catalogByGroup('ship');
   const defense = catalogByGroup('defense');
 
   const [aTech, setATech] = useState<TechSet>({ ...ZERO_TECH });
   const [dTech, setDTech] = useState<TechSet>({ ...ZERO_TECH });
-  const [aQuantities, setAQuantities] = useState<Record<number, string>>({});
-  const [dQuantities, setDQuantities] = useState<Record<number, string>>({});
+  const [numSim, setNumSim] = useState('1');
+  const [aUnits, setAUnits] = useState<Record<number, UnitForm>>({});
+  const [dUnits, setDUnits] = useState<Record<number, UnitForm>>({});
+
+  // Inventory для bulk-кнопки «Установить флот».
+  const invQ = useQuery({
+    queryKey: planetId ? QK.shipyardInventory(planetId) : ['noop-sim-inv'],
+    queryFn: () =>
+      planetId
+        ? fetchShipyardInventory(planetId)
+        : Promise.resolve({ ships: {}, defense: {} }),
+    enabled: planetId !== null,
+  });
+  const inv = invQ.data ?? { ships: {}, defense: {} };
 
   const sim = useMutation<SimReport, Error, SimInput>({
     mutationFn: runSimulation,
   });
 
-  function buildUnits(quantities: Record<number, string>): SimUnit[] {
+  function setUnitField(
+    target: 'a' | 'd',
+    id: number,
+    field: keyof UnitForm,
+    value: string,
+  ) {
+    const map = target === 'a' ? aUnits : dUnits;
+    const setter = target === 'a' ? setAUnits : setDUnits;
+    setter({ ...map, [id]: { ...(map[id] ?? ZERO_UNIT), [field]: value } });
+  }
+
+  function applyAutoIncFromInventory(
+    target: 'a' | 'd',
+    id: number,
+    group: 'ships' | 'defense',
+  ) {
+    const stock = Number(
+      (inv as Record<string, Record<string, number>>)[group]?.[String(id)] ?? 0,
+    );
+    setUnitField(target, id, 'qty', String(stock));
+  }
+
+  function setAllUnits(target: 'a' | 'd', group: 'ship' | 'defense') {
+    const updates: Record<number, UnitForm> = {};
+    const list = group === 'ship' ? ships : defense;
+    const invMap =
+      group === 'ship'
+        ? ((inv.ships ?? {}) as Record<string, number>)
+        : ((inv.defense ?? {}) as Record<string, number>);
+    for (const entry of list) {
+      updates[entry.id] = {
+        qty: String(Number(invMap[String(entry.id)] ?? 0)),
+        damaged: '0',
+        percent: '100',
+      };
+    }
+    const map = target === 'a' ? aUnits : dUnits;
+    const setter = target === 'a' ? setAUnits : setDUnits;
+    setter({ ...map, ...updates });
+  }
+
+  function setAllShellPercent(
+    target: 'a' | 'd',
+    group: 'ship' | 'defense',
+    pct: number,
+  ) {
+    const map = target === 'a' ? aUnits : dUnits;
+    const setter = target === 'a' ? setAUnits : setDUnits;
+    const next: Record<number, UnitForm> = { ...map };
+    const list = group === 'ship' ? ships : defense;
+    for (const entry of list) {
+      const cur = next[entry.id] ?? ZERO_UNIT;
+      next[entry.id] = { ...cur, percent: String(pct) };
+    }
+    setter(next);
+  }
+
+  function resetAll(target: 'a' | 'd', group: 'ship' | 'defense') {
+    const map = target === 'a' ? aUnits : dUnits;
+    const setter = target === 'a' ? setAUnits : setDUnits;
+    const next: Record<number, UnitForm> = { ...map };
+    const list = group === 'ship' ? ships : defense;
+    for (const entry of list) {
+      next[entry.id] = { ...ZERO_UNIT };
+    }
+    setter(next);
+  }
+
+  function buildSide(units: Record<number, UnitForm>, tech: TechSet): SimUnit[] {
     const out: SimUnit[] = [];
-    for (const idStr of Object.keys(quantities)) {
+    for (const idStr of Object.keys(units)) {
       const id = Number(idStr);
-      const qty = Math.max(0, Math.floor(Number(quantities[id]) || 0));
+      const f = units[id];
+      if (!f) continue;
+      const qty = Math.max(0, Math.floor(Number(f.qty) || 0));
       if (qty <= 0) continue;
       const stats = UNIT_STATS[id];
       if (!stats) continue;
+      const damaged = Math.max(0, Math.floor(Number(f.damaged) || 0));
+      const percent = Math.max(0, Math.min(100, Math.floor(Number(f.percent) || 100)));
       out.push({
         unit_id: id,
         quantity: qty,
+        damaged,
+        shell_percent: percent / 100,
         attack: stats.attack,
         shield: stats.shield,
         shell: stats.shell,
       });
     }
+    void tech;
     return out;
   }
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const attackerUnits = buildUnits(aQuantities);
-    const defenderUnits = buildUnits(dQuantities);
+    const attackerUnits = buildSide(aUnits, aTech);
+    const defenderUnits = buildSide(dUnits, dTech);
     if (attackerUnits.length === 0 || defenderUnits.length === 0) return;
-
     const attackers: SimSide[] = [
-      { user_id: 'sim-attacker', tech: aTech, units: attackerUnits },
+      {
+        user_id: 'sim-attacker',
+        tech: {
+          gun: aTech.gun,
+          shield: aTech.shield,
+          shell: aTech.shell,
+          ballistics: aTech.ballistics,
+          masking: aTech.masking,
+        },
+        units: attackerUnits,
+      },
     ];
     const defenders: SimSide[] = [
-      { user_id: 'sim-defender', tech: dTech, units: defenderUnits },
+      {
+        user_id: 'sim-defender',
+        tech: {
+          gun: dTech.gun,
+          shield: dTech.shield,
+          shell: dTech.shell,
+          ballistics: dTech.ballistics,
+          masking: dTech.masking,
+        },
+        units: defenderUnits,
+      },
     ];
-    sim.mutate({ attackers, defenders, rounds: 6 });
+    sim.mutate({
+      attackers,
+      defenders,
+      rounds: 6,
+      num_sim: Math.max(1, Math.min(100, Number(numSim) || 1)),
+    });
   }
 
-  function entryName(id: number, group: 'ship' | 'defense'): string {
-    const cat = catalogByGroup(group).find((c) => c.id === id);
+  function entryName(id: number): string {
+    const cat = findCatalog(id);
     if (!cat) return `#${id}`;
     const [g, k] = cat.i18n.split('.') as [string, string];
     return t(g, k);
@@ -127,122 +256,87 @@ export function SimulatorScreen() {
 
   return (
     <form onSubmit={onSubmit}>
-      {/* Tech levels */}
+      {/* Заголовок «Установки» */}
       <table className="ntable">
-        <thead>
-          <tr>
-            <th colSpan={7}>{t('mission', 'simulator') ?? 'Симулятор боя'}</th>
-          </tr>
-          <tr>
-            <th>&nbsp;</th>
-            <th>{t('info', 'gunTech') ?? 'Оружейная'}</th>
-            <th>{t('info', 'shieldTech') ?? 'Щитовая'}</th>
-            <th>{t('info', 'shellTech') ?? 'Броневая'}</th>
-            <th>{t('info', 'laserTech') ?? 'Лазерная'}</th>
-            <th>{t('info', 'ionTech') ?? 'Ионная'}</th>
-            <th>{t('info', 'plasmaTech') ?? 'Плазменная'}</th>
-          </tr>
-        </thead>
         <tbody>
           <tr>
-            <td>{t('mission', 'attacker') ?? 'Атакующий'}</td>
-            {(['gun', 'shield', 'shell', 'laser', 'ion', 'plasma'] as const).map((k) => (
-              <td key={`a-${k}`}>
-                <input
-                  type="text"
-                  size={2}
-                  maxLength={2}
-                  value={aTech[k]}
-                  onChange={(e) =>
-                    setATech({ ...aTech, [k]: Math.max(0, Number(e.target.value) || 0) })
-                  }
-                />
-              </td>
-            ))}
+            <th colSpan={2}>{t('main', 'preferences') ?? 'Установки'}</th>
           </tr>
           <tr>
-            <td>{t('mission', 'defender') ?? 'Защитник'}</td>
-            {(['gun', 'shield', 'shell', 'laser', 'ion', 'plasma'] as const).map((k) => (
-              <td key={`d-${k}`}>
-                <input
-                  type="text"
-                  size={2}
-                  maxLength={2}
-                  value={dTech[k]}
-                  onChange={(e) =>
-                    setDTech({ ...dTech, [k]: Math.max(0, Number(e.target.value) || 0) })
-                  }
-                />
-              </td>
-            ))}
+            <td>
+              <table className="table_no_background" cellSpacing={0} cellPadding={0}>
+                <tbody>
+                  <tr>
+                    <td>&nbsp;</td>
+                    <td>{t('info', 'gunTech') ?? 'Оружие'}</td>
+                    <td>{t('info', 'shieldTech') ?? 'Щиты'}</td>
+                    <td>{t('info', 'shellTech') ?? 'Броня'}</td>
+                    <td>{t('info', 'ballisticsTech') ?? 'Баллистика'}</td>
+                    <td>{t('info', 'maskingTech') ?? 'Маскировка'}</td>
+                    <td>{t('info', 'shipyard') ?? 'Верфь'}</td>
+                    <td>{t('info', 'defenseFactory') ?? 'Обор. завод'}</td>
+                  </tr>
+                  <tr>
+                    <td>{t('mission', 'attacker') ?? 'Атакующий'}</td>
+                    <td><TechInput v={aTech.gun} on={(v) => setATech({ ...aTech, gun: v })} /></td>
+                    <td><TechInput v={aTech.shield} on={(v) => setATech({ ...aTech, shield: v })} /></td>
+                    <td><TechInput v={aTech.shell} on={(v) => setATech({ ...aTech, shell: v })} /></td>
+                    <td><TechInput v={aTech.ballistics} on={(v) => setATech({ ...aTech, ballistics: v })} /></td>
+                    <td><TechInput v={aTech.masking} on={(v) => setATech({ ...aTech, masking: v })} /></td>
+                    <td><TechInput v={aTech.shipyard} on={(v) => setATech({ ...aTech, shipyard: v })} /></td>
+                    <td>&nbsp;</td>
+                  </tr>
+                  <tr>
+                    <td>{t('mission', 'defender') ?? 'Защитник'}</td>
+                    <td><TechInput v={dTech.gun} on={(v) => setDTech({ ...dTech, gun: v })} /></td>
+                    <td><TechInput v={dTech.shield} on={(v) => setDTech({ ...dTech, shield: v })} /></td>
+                    <td><TechInput v={dTech.shell} on={(v) => setDTech({ ...dTech, shell: v })} /></td>
+                    <td><TechInput v={dTech.ballistics} on={(v) => setDTech({ ...dTech, ballistics: v })} /></td>
+                    <td><TechInput v={dTech.masking} on={(v) => setDTech({ ...dTech, masking: v })} /></td>
+                    <td>&nbsp;</td>
+                    <td><TechInput v={dTech.defenseFactory} on={(v) => setDTech({ ...dTech, defenseFactory: v })} /></td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+            <td valign="top">
+              <table className="table_no_background" cellSpacing={0} cellPadding={0}>
+                <tbody>
+                  <tr><td>{t('mission', 'numSim') ?? 'Количество симуляций'}</td></tr>
+                  <tr>
+                    <td>
+                      <input
+                        type="text"
+                        size={2}
+                        maxLength={2}
+                        value={numSim}
+                        onChange={(e) => setNumSim(e.target.value)}
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
           </tr>
         </tbody>
       </table>
 
-      {/* Units table */}
+      {/* Юниты */}
       <table className="ntable">
         <thead>
           <tr>
-            <th>{t('mission', 'shipName') ?? 'Юнит'}</th>
+            <th>{t('mission', 'shipName') ?? 'Тип корабля'}</th>
             <th>{t('mission', 'attacker') ?? 'Атакующий'}</th>
             <th>{t('mission', 'defender') ?? 'Защитник'}</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <th colSpan={3} className="center">{t('shipyard', 'tabShips') ?? 'Флот'}</th>
-          </tr>
-          {ships.map((entry) => (
-            <tr key={`ship-${entry.id}`}>
-              <td>{entryName(entry.id, 'ship')}</td>
-              <td className="center">
-                <input
-                  type="text"
-                  size={8}
-                  value={aQuantities[entry.id] ?? ''}
-                  onChange={(e) =>
-                    setAQuantities({ ...aQuantities, [entry.id]: e.target.value })
-                  }
-                />
-              </td>
-              <td className="center">
-                <input
-                  type="text"
-                  size={8}
-                  value={dQuantities[entry.id] ?? ''}
-                  onChange={(e) =>
-                    setDQuantities({ ...dQuantities, [entry.id]: e.target.value })
-                  }
-                />
-              </td>
-            </tr>
-          ))}
-
-          <tr>
-            <th colSpan={3} className="center">{t('shipyard', 'tabDefense') ?? 'Оборона'}</th>
-          </tr>
-          {defense.map((entry) => (
-            <tr key={`def-${entry.id}`}>
-              <td>{entryName(entry.id, 'defense')}</td>
-              <td className="center">—</td>
-              <td className="center">
-                <input
-                  type="text"
-                  size={8}
-                  value={dQuantities[entry.id] ?? ''}
-                  onChange={(e) =>
-                    setDQuantities({ ...dQuantities, [entry.id]: e.target.value })
-                  }
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
         <tfoot>
           <tr>
             <td colSpan={3} className="center">
               <input
                 type="submit"
+                id="sim"
+                name="simulate"
                 className="button"
                 value={t('mission', 'simulate') ?? 'Симулировать'}
                 disabled={sim.isPending}
@@ -250,11 +344,197 @@ export function SimulatorScreen() {
             </td>
           </tr>
         </tfoot>
+        <tbody>
+          {/* Bulk-row для флота */}
+          <tr>
+            <th className="center">
+              <a href="#" onClick={(e) => { e.preventDefault(); resetAll('a', 'ship'); resetAll('d', 'ship'); }}>
+                {t('mission', 'resetFleet') ?? 'Обнулить флот'}
+              </a>
+            </th>
+            <th className="center">
+              <a href="#" onClick={(e) => { e.preventDefault(); setAllUnits('a', 'ship'); }}>
+                {t('mission', 'setFleet') ?? 'Установить флот'}
+              </a>
+              <br />
+              {[100, 90, 80, 70, 60].map((p) => (
+                <span key={p}>
+                  <a href="#" onClick={(e) => { e.preventDefault(); setAllShellPercent('a', 'ship', p); }}>
+                    {p}%
+                  </a>{' '}
+                </span>
+              ))}
+            </th>
+            <th className="center">
+              <a href="#" onClick={(e) => { e.preventDefault(); setAllUnits('d', 'ship'); }}>
+                {t('mission', 'setFleet') ?? 'Установить флот'}
+              </a>
+              <br />
+              {[100, 90, 80, 70, 60].map((p) => (
+                <span key={p}>
+                  <a href="#" onClick={(e) => { e.preventDefault(); setAllShellPercent('d', 'ship', p); }}>
+                    {p}%
+                  </a>{' '}
+                </span>
+              ))}
+            </th>
+          </tr>
+
+          {ships.map((entry) => (
+            <UnitRow
+              key={`ship-${entry.id}`}
+              id={entry.id}
+              name={entryName(entry.id)}
+              aUnit={aUnits[entry.id] ?? ZERO_UNIT}
+              dUnit={dUnits[entry.id] ?? ZERO_UNIT}
+              onA={(field, v) => setUnitField('a', entry.id, field, v)}
+              onD={(field, v) => setUnitField('d', entry.id, field, v)}
+              onAInc={() => applyAutoIncFromInventory('a', entry.id, 'ships')}
+              onDInc={() => applyAutoIncFromInventory('d', entry.id, 'ships')}
+              onAReset={() => setUnitField('a', entry.id, 'qty', '0')}
+              onDReset={() => setUnitField('d', entry.id, 'qty', '0')}
+            />
+          ))}
+
+          {/* Bulk-row для обороны */}
+          <tr>
+            <th className="center">
+              <a href="#" onClick={(e) => { e.preventDefault(); resetAll('d', 'defense'); }}>
+                {t('mission', 'resetDefense') ?? 'Обнулить оборону'}
+              </a>
+            </th>
+            <th className="center">&nbsp;</th>
+            <th className="center">
+              <a href="#" onClick={(e) => { e.preventDefault(); setAllUnits('d', 'defense'); }}>
+                {t('mission', 'setDefense') ?? 'Установить оборону'}
+              </a>
+              <br />
+              {[100, 90, 80, 70, 60].map((p) => (
+                <span key={p}>
+                  <a href="#" onClick={(e) => { e.preventDefault(); setAllShellPercent('d', 'defense', p); }}>
+                    {p}%
+                  </a>{' '}
+                </span>
+              ))}
+            </th>
+          </tr>
+
+          {defense.map((entry) => (
+            <UnitRow
+              key={`def-${entry.id}`}
+              id={entry.id}
+              name={entryName(entry.id)}
+              aUnit={null}
+              dUnit={dUnits[entry.id] ?? ZERO_UNIT}
+              onA={() => {}}
+              onD={(field, v) => setUnitField('d', entry.id, field, v)}
+              onAInc={() => {}}
+              onDInc={() => applyAutoIncFromInventory('d', entry.id, 'defense')}
+              onAReset={() => {}}
+              onDReset={() => setUnitField('d', entry.id, 'qty', '0')}
+            />
+          ))}
+        </tbody>
       </table>
 
       {/* Report */}
       {sim.data && <SimReportView report={sim.data} />}
     </form>
+  );
+}
+
+function TechInput({ v, on }: { v: number; on: (n: number) => void }) {
+  return (
+    <input
+      type="text"
+      size={2}
+      maxLength={2}
+      value={v}
+      onChange={(e) => on(Math.max(0, Math.min(99, Number(e.target.value) || 0)))}
+    />
+  );
+}
+
+interface UnitRowProps {
+  id: number;
+  name: string;
+  aUnit: UnitForm | null;
+  dUnit: UnitForm;
+  onA: (field: keyof UnitForm, v: string) => void;
+  onD: (field: keyof UnitForm, v: string) => void;
+  onAInc: () => void;
+  onDInc: () => void;
+  onAReset: () => void;
+  onDReset: () => void;
+}
+
+function UnitRow({
+  name, aUnit, dUnit, onA, onD, onAInc, onDInc, onAReset, onDReset,
+}: UnitRowProps) {
+  return (
+    <tr>
+      <td>{name}</td>
+      <td className="center" valign="top">
+        {aUnit ? (
+          <UnitCell unit={aUnit} on={onA} onInc={onAInc} onReset={onAReset} />
+        ) : (
+          '—'
+        )}
+      </td>
+      <td className="center" valign="top">
+        <UnitCell unit={dUnit} on={onD} onInc={onDInc} onReset={onDReset} />
+      </td>
+    </tr>
+  );
+}
+
+function UnitCell({
+  unit, on, onInc, onReset,
+}: {
+  unit: UnitForm;
+  on: (field: keyof UnitForm, v: string) => void;
+  onInc: () => void;
+  onReset: () => void;
+}) {
+  return (
+    <table className="table_no_background" cellSpacing={0} cellPadding={0}>
+      <tbody>
+        <tr>
+          <td>
+            <a href="#" onClick={(e) => { e.preventDefault(); onInc(); }}>+</a>
+          </td>
+          <td rowSpan={2} style={{ whiteSpace: 'nowrap' }}>
+            <input
+              type="text"
+              size={6}
+              value={unit.qty}
+              onChange={(e) => on('qty', e.target.value)}
+            />
+            {' ['}
+            <input
+              type="text"
+              size={4}
+              value={unit.damaged}
+              onChange={(e) => on('damaged', e.target.value)}
+            />
+            {' - '}
+            <input
+              type="text"
+              size={2}
+              maxLength={3}
+              value={unit.percent}
+              onChange={(e) => on('percent', e.target.value)}
+            />
+            {'%]'}
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <a href="#" onClick={(e) => { e.preventDefault(); onReset(); }}>−</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   );
 }
 
@@ -266,37 +546,37 @@ function SimReportView({ report }: { report: SimReport }) {
       : report.winner === 'defenders'
         ? t('mission', 'defenderWins') ?? 'Защитник победил'
         : t('mission', 'draw') ?? 'Ничья';
+  const winnerClass =
+    report.winner === 'attackers'
+      ? 'true'
+      : report.winner === 'defenders'
+        ? 'false'
+        : '';
   return (
     <table className="ntable" style={{ marginTop: 16 }}>
       <thead>
         <tr>
           <th colSpan={4}>
             {t('mission', 'simulationResult') ?? 'Результат симуляции'} —{' '}
-            <span className={report.winner === 'attackers' ? 'true' : 'false'}>
-              {winnerLabel}
-            </span>
+            <span className={winnerClass}>{winnerLabel}</span>
+            {' · '}
+            {t('mission', 'roundCount') ?? 'Раундов'}: {report.rounds}
           </th>
-        </tr>
-        <tr>
-          <th>{t('mission', 'roundCount') ?? 'Раундов'}: {report.rounds}</th>
-          <th colSpan={3}>&nbsp;</th>
         </tr>
       </thead>
       <tbody>
-        {/* Round-by-round */}
         {(report.rounds_trace ?? []).map((rt) => (
           <tr key={rt.index}>
             <td>{t('mission', 'round') ?? 'Раунд'} {rt.index + 1}</td>
             <td colSpan={3}>
               {t('mission', 'attackersAlive') ?? 'Атакующие'}:{' '}
-              <b>{formatNumber(rt.attackers_alive)}</b>{' '}·{' '}
+              <b>{formatNumber(rt.attackers_alive)}</b>{' · '}
               {t('mission', 'defendersAlive') ?? 'Защитники'}:{' '}
               <b>{formatNumber(rt.defenders_alive)}</b>
             </td>
           </tr>
         ))}
 
-        {/* Losses */}
         <tr>
           <th colSpan={4}>{t('mission', 'losses') ?? 'Потери'}</th>
         </tr>
@@ -317,7 +597,6 @@ function SimReportView({ report }: { report: SimReport }) {
           </tr>
         ))}
 
-        {/* Debris */}
         {(report.debris_metal ?? 0) > 0 && (
           <>
             <tr>
@@ -330,7 +609,6 @@ function SimReportView({ report }: { report: SimReport }) {
           </>
         )}
 
-        {/* Moon chance */}
         {(report.moon_chance ?? 0) > 0 && (
           <tr>
             <td colSpan={4}>
