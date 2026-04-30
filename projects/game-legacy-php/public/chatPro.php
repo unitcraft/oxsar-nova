@@ -13,7 +13,6 @@ define("FORCE_REQUEST_CLEAR", false);
 
 require_once(dirname(__FILE__) . "/global.inc.php");
 require_once(APP_ROOT_DIR."game/Functions.inc.php");
-require_once(APP_ROOT_DIR."config.inc.php");
 
 if(1) // !isset($_GET['ajax']))
 {

@@ -55,7 +55,7 @@ make lint          # все линтеры
 - `projects/game-nova/frontends/nova/src/api`     — сгенерированный клиент из OpenAPI (фронт nova-стиля для uni01/uni02)
 - `projects/game-nova/frontends/nova/src/features/<domain>` — вертикальные срезы UI
 - `projects/game-nova/frontends/origin/` (план 72) — зарезервировано под новый React-фронт origin (ремастер, planы 72-74)
-- `projects/game-legacy-php/`          — legacy PHP реализация oxsar2 (clean-room rewrite, на удаление после готовности нового origin-фронта; план 75)
+- `projects/game-legacy-php/`          — clean-room PHP-rewrite oxsar2; остаётся в проекте как параллельная реализация и pixel-perfect референс для нового origin-фронта (решение 2026-04-30 отзывает «на удаление по плану 75»)
 - `projects/portal/frontend/`          — портал oxsar-nova.ru (Vite/React)
 - `projects/portal/backend/` (plan 36) — portal API (новости, предложения)
 - `projects/identity/backend/` (plan 36, переименован в плане 51) — identity-service (JWT/JWKS, OAuth, users, global credits)

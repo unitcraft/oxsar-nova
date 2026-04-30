@@ -3330,18 +3330,19 @@ class EventHandler
 
 	protected function runSimAssault($row, $data)
 	{
-		$database = array();
-		require(APP_ROOT_DIR."config.inc.php");
-
+		// DB access for external Java sim — берём из констант
+		// (см. src/bd_connect_info.php).
 		$temp_array = array(
-			$database["host"],
-			$database["user"],
-			$database["userpw"],
-			$database["databasename"],
-			$database["tableprefix"]."sim_",
+			DB_HOST,
+			DB_USER,
+			DB_PWD,
+			DB_NAME,
+			DB_PREFIX."sim_",
 			$data["assaultid"],
 		);
-		$s = '/usr/bin/java -cp '.APP_ROOT_DIR.'game/'.SIMULATOR_ASSAULT_JAR.' assault.Assault "' . implode('" "', $temp_array) . '"';
+		// Classpath = Assault.jar + mysql-connector (см. bd_connect_info.php).
+		$classpath = APP_ROOT_DIR.'game/'.SIMULATOR_ASSAULT_JAR.':'.MYSQL_CONNECTOR_JAR;
+		$s = '/usr/bin/java -cp '.escapeshellarg($classpath).' assault.Assault "' . implode('" "', $temp_array) . '"';
 		exec( $s );
 
 		// Update By Pk

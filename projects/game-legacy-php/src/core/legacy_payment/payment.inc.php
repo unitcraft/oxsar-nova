@@ -6,9 +6,21 @@
 */
 
 require_once(dirname(__FILE__) . "/../global.inc.php");
-require_once(dirname(__FILE__) . "/../config.inc.php");
 
 if(!defined("APP_ROOT_DIR")) { die("Hacking attempt detected."); }
+
+// Legacy payment: $database-массив для PS_mysqlConnect()/mysql_*-функций.
+// Конфиг берём из констант (src/bd_connect_info.php). Сам платёжный код
+// использует устаревшие mysql_*-функции и не работает в PHP 7+ (отключён
+// до плана 37.6+); массив оставлен для совместимости сигнатур.
+$database = array(
+	"host"          => DB_HOST,
+	"user"          => DB_USER,
+	"userpw"        => DB_PWD,
+	"databasename"  => DB_NAME,
+	"tableprefix"   => DB_PREFIX,
+	"charset"       => DB_CHAR,
+);
 
 define("PS_GAME_DOMAIN_PARAM_NAME", "shp_zgame");
 

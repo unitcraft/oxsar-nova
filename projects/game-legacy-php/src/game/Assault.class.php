@@ -546,25 +546,26 @@ class Assault
 		}
 
 
-		// Include database access
-		$database = array();
-		require(APP_ROOT_DIR."config.inc.php");
-
+		// DB access for external Java assault — берём из констант,
+		// определённых в src/bd_connect_info.php (загружается через
+		// config/consts.php → global.inc.php).
 		// Start assault
 		$start_time = time();
 		try
 		{
-			$exec_params = array(
-				APP_ROOT_DIR.'game/Assault.jar',
+			// Classpath = Assault.jar + mysql-connector (см. bd_connect_info.php
+			// и docker/Dockerfile.php). Assault.jar собран без вшитого JDBC.
+			$classpath = APP_ROOT_DIR.'game/Assault.jar:'.MYSQL_CONNECTOR_JAR;
+			$exec_args = array(
 				'assault.Assault',
-				$database["host"],
-				$database["user"],
-				$database["userpw"],
-				$database["databasename"],
-				$database["tableprefix"],
+				DB_HOST,
+				DB_USER,
+				DB_PWD,
+				DB_NAME,
+				DB_PREFIX,
 				$this->assaultid
 			);
-			$s = "java -cp '".implode('\' \'', $exec_params).'\'';
+			$s = "java -cp '".$classpath."' '".implode('\' \'', $exec_args).'\'';
 			exec($s);
 		}
 		catch(Exception $e)
