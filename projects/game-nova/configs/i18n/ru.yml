@@ -2571,6 +2571,7 @@ mission:
   setFleet: "Установить флот"
   resetDefense: "Обнулить оборону"
   setDefense: "Установить оборону"
+  toBegin: "В начало"
 
   allResources: Все ресурсы
   allShips: Все корабли

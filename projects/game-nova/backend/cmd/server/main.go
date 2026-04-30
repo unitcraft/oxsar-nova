@@ -59,6 +59,7 @@ import (
 	"oxsar/game-nova/internal/score"
 	"oxsar/game-nova/internal/search"
 	"oxsar/game-nova/internal/settings"
+	"oxsar/game-nova/internal/battlereport"
 	"oxsar/game-nova/internal/shipyard"
 	"oxsar/game-nova/internal/simulator"
 	"oxsar/game-nova/internal/techtree"
@@ -264,6 +265,7 @@ func run() error {
 	shipyardH := shipyard.NewHandler(shipyardSvc)
 
 	simulatorH := simulator.NewHandler()
+	battleReportH := battlereport.NewHandler(db)
 
 	repairSvc := repair.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
 	repairH := repair.NewHandler(repairSvc)
@@ -496,6 +498,9 @@ func run() error {
 		pr.Delete("/planets/{id}/shipyard/{queueId}", shipyardH.Cancel)
 
 		pr.Post("/simulator/run", simulatorH.Run)
+
+		pr.Get("/users/me/battles", battleReportH.ListMine)
+		pr.Get("/battle-reports/{id}", battleReportH.GetByID)
 
 		pr.Post("/planets/{id}/repair/disassemble", repairH.EnqueueDisassemble)
 		pr.Post("/planets/{id}/repair/repair", repairH.EnqueueRepair)

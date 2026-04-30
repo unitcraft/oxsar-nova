@@ -1,0 +1,53 @@
+// S-024 BattleReport — детальный просмотр боя (план 72.1 ч.20.8).
+//
+// Использует общий компонент BattleReportView (из features/common),
+// тот же который рендерит результат симулятора. Pixel-perfect клон
+// legacy oxsar2-java/Assault.java HTML rendering.
+
+import { useParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { fetchBattleReport } from '@/api/battles';
+import { QK } from '@/api/query-keys';
+import { BattleReportView } from '@/features/common/BattleReportView';
+import { useTranslation } from '@/i18n/i18n';
+
+export function BattleReportScreen() {
+  const { id = '' } = useParams<{ id?: string }>();
+  const { t } = useTranslation();
+
+  const q = useQuery({
+    queryKey: QK.battleReport(id),
+    queryFn: () => fetchBattleReport(id),
+    enabled: id.length > 0,
+    staleTime: 60 * 60 * 1000,
+  });
+
+  if (q.isLoading) return <div className="idiv">…</div>;
+  if (q.isError || !q.data) {
+    return (
+      <table className="ntable">
+        <tbody>
+          <tr>
+            <td className="center">
+              <i>{t('alliance', 'nothing') ?? 'Нет доступа или отчёт не найден'}</i>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    );
+  }
+
+  return (
+    <>
+      <BattleReportView
+        report={q.data.report}
+        title={t('battlestats', 'colResult') ?? 'Боевой отчёт'}
+      />
+      <div style={{ marginTop: 12, textAlign: 'center' }}>
+        <Link to="/battlestats" className="button">
+          ← {t('battlestats', 'title') ?? 'К списку боёв'}
+        </Link>
+      </div>
+    </>
+  );
+}

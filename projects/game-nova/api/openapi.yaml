@@ -479,6 +479,72 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /api/users/me/battles:
+    get:
+      tags: [battle]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Список боёв текущего юзера (план 72.1 ч.20.8 — battle viewer).
+        Cursor-paginated по полю `at` (timestamp последнего боя).
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - in: query
+          name: cursor
+          schema: { type: string, format: date-time, description: "RFC3339 timestamp последнего боя" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  battles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:                { type: string, format: uuid }
+                        attacker_user_id:  { type: string, format: uuid, nullable: true }
+                        defender_user_id:  { type: string, format: uuid, nullable: true }
+                        winner:            { type: string, enum: [attackers, defenders, draw] }
+                        rounds:            { type: integer }
+                        debris_metal:      { type: integer, format: int64 }
+                        debris_silicon:    { type: integer, format: int64 }
+                        loot_metal:        { type: integer, format: int64 }
+                        loot_silicon:      { type: integer, format: int64 }
+                        loot_hydrogen:     { type: integer, format: int64 }
+                        is_attacker:       { type: boolean }
+                        at:                { type: string, format: date-time }
+                  next_cursor: { type: string, format: date-time, nullable: true }
+
+  /api/battle-reports/{id}:
+    get:
+      tags: [battle]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Детали боевого отчёта. Доступно только участникам боя
+        (attacker, defender, ACS-participant).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  report: { type: object, description: "battle.Report JSON" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/simulator/run:
     post:
       tags: [simulator]
