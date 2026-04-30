@@ -69,4 +69,6 @@ export const QK = {
   repairQueue: (planetId: string) => ['repair', 'queue', planetId] as const,
   repairDamaged: (planetId: string) => ['repair', 'damaged', planetId] as const,
   exchangeLots: (params: string) => ['exchange', 'lots', params] as const,
+  myBattles: (cursor?: string) => ['battles', 'me', cursor ?? ''] as const,
+  battleReport: (id: string) => ['battle-report', id] as const,
 };

@@ -2572,6 +2572,7 @@ mission:
   setFleet: "Set fleet"
   resetDefense: "Reset defense"
   setDefense: "Set defense"
+  toBegin: "To beginning"
 
   allResources: ""
   allShips: ""
@@ -2598,7 +2599,7 @@ mission:
   min: ""
   mission: ""
   newMission: ""
-  next: ""
+  next: "Next"
   noFreeExpoSlots: ""
   noFreeFleetSlots: ""
   noMissionsAvailable: ""
