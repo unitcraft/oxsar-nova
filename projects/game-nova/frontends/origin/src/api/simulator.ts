@@ -87,6 +87,11 @@ export interface SimReport {
   moon_created?: boolean;
 }
 
-export function runSimulation(input: SimInput): Promise<SimReport> {
-  return api.post<SimReport>('/api/simulator/run', input);
+export interface SimRunResponse {
+  id: string;
+  report: SimReport;
+}
+
+export function runSimulation(input: SimInput): Promise<SimRunResponse> {
+  return api.post<SimRunResponse>('/api/simulator/run', input);
 }

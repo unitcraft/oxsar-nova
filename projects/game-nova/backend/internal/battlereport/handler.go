@@ -78,6 +78,7 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 		       at
 		FROM battle_reports
 		WHERE (attacker_user_id = $1 OR defender_user_id = $1)
+		  AND is_simulation = false
 		  AND at < $2
 		ORDER BY at DESC
 		LIMIT $3
@@ -117,22 +118,19 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, r, http.StatusOK, resp)
 }
 
-// GetByID GET /api/battle-reports/{id} — полный JSON-отчёт с правами.
+// GetByID GET /api/battle-reports/{id} — публичный анонимный endpoint
+// (план 72.1 ч.20.11). Любой пользователь по ссылке может посмотреть
+// результат боя или симуляции. Permission check снят — отчёты
+// идентифицируются непредсказуемым UUID v7.
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
-	if !ok {
-		httpx.WriteError(w, r, httpx.ErrUnauthorized)
-		return
-	}
 	id := chi.URLParam(r, "id")
 
-	var attackerID, defenderID *string
 	var reportRaw []byte
 	err := h.db.Pool().QueryRow(r.Context(), `
-		SELECT attacker_user_id, defender_user_id, report
+		SELECT report
 		FROM battle_reports
 		WHERE id = $1
-	`, id).Scan(&attackerID, &defenderID, &reportRaw)
+	`, id).Scan(&reportRaw)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			httpx.WriteError(w, r, httpx.ErrNotFound)
@@ -142,24 +140,6 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Permission check: юзер должен быть атакующим/защитником,
-	// либо ACS-участником (план 0025_battle_reports_acs).
-	allowed := (attackerID != nil && *attackerID == uid) ||
-		(defenderID != nil && *defenderID == uid)
-	if !allowed {
-		// Проверяем acs_participants для ACS-боёв.
-		var n int
-		_ = h.db.Pool().QueryRow(r.Context(), `
-			SELECT COUNT(*) FROM acs_participants
-			WHERE battle_report_id = $1 AND user_id = $2
-		`, id, uid).Scan(&n)
-		if n == 0 {
-			httpx.WriteError(w, r, httpx.ErrForbidden)
-			return
-		}
-	}
-
-	// Возвращаем raw JSON отчёта.
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = writeRaw(w, reportRaw)
 }
