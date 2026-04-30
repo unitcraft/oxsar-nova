@@ -91,8 +91,8 @@ export function LeftMenu() {
           <li><Link to="/ranking">Статистика</Link></li>
           <li><Link to="/records">Рекорды</Link></li>
           <li><Link to="/battlestats">Сражения</Link></li>
-          <li><Link to="/battlestats">Переданные ресурсы</Link></li>
-          <li><Link to="/tools/tech-calc" id="menu_simulator">Симулятор боя</Link></li>
+          {/* Переданные ресурсы — blocked (admin tool, нет endpoint) */}
+          <li><Link to="/simulator" id="menu_simulator">Симулятор боя</Link></li>
         </MenuSection>
 
         {/* Секция 5: Рынок ресурсов */}
