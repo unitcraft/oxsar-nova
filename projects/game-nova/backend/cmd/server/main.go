@@ -264,7 +264,7 @@ func run() error {
 	shipyardSvc := shipyard.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
 	shipyardH := shipyard.NewHandler(shipyardSvc)
 
-	simulatorH := simulator.NewHandler(db)
+	simulatorH := simulator.NewHandler(db, cat)
 	battleReportH := battlereport.NewHandler(db)
 
 	repairSvc := repair.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)

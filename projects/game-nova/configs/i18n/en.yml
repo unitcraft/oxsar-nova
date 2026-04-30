@@ -2581,6 +2581,7 @@ mission:
   numSim: "Number of simulations"
   simTime: "Time"
   oneSimTime: "one simulation"
+  experience: "Experience"
   resetFleet: "Reset fleet"
   setFleet: "Set fleet"
   resetDefense: "Reset defense"

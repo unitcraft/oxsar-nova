@@ -260,9 +260,6 @@ export function SimulatorScreen() {
 
   return (
     <form onSubmit={onSubmit}>
-      {/* Блок «Результаты» — pixel-perfect клон legacy simulator.tpl */}
-      {sim.data && <SimResultsView resp={sim.data} t={t} />}
-
       {/* Заголовок «Установки» */}
       <table className="ntable">
         <tbody>
@@ -444,12 +441,17 @@ export function SimulatorScreen() {
         </tbody>
       </table>
 
-      {/* Report */}
+      {/* Ошибки симуляции */}
       {sim.isError && (
         <div style={{ marginTop: 12, textAlign: 'center' }}>
           <span className="false">{(sim.error as Error)?.message ?? 'error'}</span>
         </div>
       )}
+
+      {/* Блок «Результаты» — таблица сводки по N итераций (план 72.1
+          ч.20.11.7+8). Выводится ПОСЛЕ кнопки «Симулировать», чтобы
+          юзер видел результат под формой и мог запускать ещё. */}
+      {sim.data && <SimResultsView resp={sim.data} t={t} />}
     </form>
   );
 }
@@ -566,121 +568,120 @@ function SimResultsView({
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
     });
+  // Время: до 1 с показываем в миллисекундах с округлением, иначе в
+  // секундах с двумя знаками — иначе при быстром расчёте (<5 мс)
+  // сводка уходила в «0,00 с».
+  const fmtTime = (sec: number): string =>
+    sec < 1
+      ? `${fmt(sec * 1000, sec * 1000 < 10 ? 1 : 0)} мс`
+      : `${fmt(sec, 2)} с`;
+
+  const atkLossTotal =
+    s.attacker_lost_metal + s.attacker_lost_silicon + s.attacker_lost_hydrogen;
+  const defLossTotal =
+    s.defender_lost_metal + s.defender_lost_silicon + s.defender_lost_hydrogen;
+
   return (
-    <table className="ntable">
+    <table className="ntable" style={{ marginTop: 12 }}>
       <thead>
         <tr>
-          <th>{t('assaultReport', 'summary') ?? 'Результаты'}</th>
+          <th colSpan={3}>{t('assaultReport', 'summary') ?? 'Итоговый результат'}</th>
+        </tr>
+        <tr>
+          <th style={{ width: '40%' }}>&nbsp;</th>
+          <th style={{ width: '30%' }}>{t('mission', 'attacker') ?? 'Атакующий'}</th>
+          <th style={{ width: '30%' }}>{t('mission', 'defender') ?? 'Защитник'}</th>
         </tr>
       </thead>
       <tbody>
+        {/* Победы — в одной строке два значения */}
         <tr>
+          <th>{t('assaultReport', 'attackerWon') ?? 'Победа'}</th>
+          <td className={s.attacker_win_pct >= s.defender_win_pct ? 'true' : 'false'}>
+            {fmt(s.attacker_win_pct, 1)}%
+          </td>
+          <td className={s.defender_win_pct > s.attacker_win_pct ? 'true' : 'false'}>
+            {fmt(s.defender_win_pct, 1)}%
+          </td>
+        </tr>
+        <tr>
+          <th>{t('assaultReport', 'battleDraw') ?? 'Ничья'}</th>
+          <td colSpan={2}>{fmt(s.draw_pct, 1)}%</td>
+        </tr>
+        <tr>
+          <th>{t('mission', 'roundCount') ?? 'Раундов'}</th>
+          <td colSpan={2}>{fmt(s.avg_rounds, 1)}</td>
+        </tr>
+        <tr>
+          <th>{t('mission', 'moonChance') ?? 'Шанс луны'}</th>
+          <td colSpan={2}>{fmt(s.avg_moon_chance, 1)}%</td>
+        </tr>
+
+        {/* Потери — две колонки */}
+        <tr>
+          <th>{t('mission', 'losses') ?? 'Потери'}</th>
           <td>
-            <table className="table_no_background" cellSpacing={0} cellPadding={0}>
-              <tbody>
-                <tr>
-                  <td>
-                    <b>{t('assaultReport', 'attackerWon') ?? 'Победа атакующего'}:</b>{' '}
-                    {fmt(s.attacker_win_pct, 0)}%
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <b>{t('assaultReport', 'defenderWon') ?? 'Победа обороняющегося'}:</b>{' '}
-                    {fmt(s.defender_win_pct, 0)}%
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <b>{t('assaultReport', 'battleDraw') ?? 'Ничья'}:</b>{' '}
-                    {fmt(s.draw_pct, 0)}%
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <b>{t('mission', 'roundCount') ?? 'Раундов'}:</b>{' '}
-                    {fmt(s.avg_rounds, 1)}
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <b>{t('mission', 'moonChance') ?? 'Шанс появления луны'}:</b>{' '}
-                    {fmt(s.avg_moon_chance, 1)}%
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <b>{t('assaultReport', 'attackerLosses') ?? 'Потери атаки'}:</b>{' '}
-                    {fmt(
-                      s.attacker_lost_metal +
-                        s.attacker_lost_silicon +
-                        s.attacker_lost_hydrogen,
-                    )}
-                    {' ('}
-                    {fmt(s.attacker_lost_metal)} мет,{' '}
-                    {fmt(s.attacker_lost_silicon)} крем,{' '}
-                    {fmt(s.attacker_lost_hydrogen)} вод
-                    {')'}
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <b>{t('assaultReport', 'defenderLosses') ?? 'Потери обороны'}:</b>{' '}
-                    {fmt(
-                      s.defender_lost_metal +
-                        s.defender_lost_silicon +
-                        s.defender_lost_hydrogen,
-                    )}
-                    {' ('}
-                    {fmt(s.defender_lost_metal)} мет,{' '}
-                    {fmt(s.defender_lost_silicon)} крем,{' '}
-                    {fmt(s.defender_lost_hydrogen)} вод
-                    {')'}
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <b>Обломков на орбите:</b>{' '}
-                    {fmt(s.debris_metal)} металла{' '}
-                    {t('assaultReport', 'and') ?? 'и'}{' '}
-                    {fmt(s.debris_silicon)} кремния
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <b>{t('assaultReport', 'attackerExp') ?? 'Опыт атакующего'}:</b>{' '}
-                    {fmt(s.attacker_exp, 1)}
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <b>{t('assaultReport', 'defenderExp') ?? 'Опыт обороняющегося'}:</b>{' '}
-                    {fmt(s.defender_exp, 1)}
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <b>{t('mission', 'simTime') ?? 'Время'}:</b>{' '}
-                    {fmt(s.gen_time_all, 2)} с,{' '}
-                    {t('mission', 'oneSimTime') ?? 'одна симуляция'}:{' '}
-                    {fmt(s.gen_time, 2)} с
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <Link
-                      id="sim_report"
-                      className="false2"
-                      to={`/battle-report/${resp.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {t('assaultReport', 'assault') ?? 'Отчёт о сражении'}
-                    </Link>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <b>{fmt(atkLossTotal)}</b>
+            <br />
+            <small>
+              {fmt(s.attacker_lost_metal)} мет /{' '}
+              {fmt(s.attacker_lost_silicon)} крем /{' '}
+              {fmt(s.attacker_lost_hydrogen)} вод
+            </small>
+          </td>
+          <td>
+            <b>{fmt(defLossTotal)}</b>
+            <br />
+            <small>
+              {fmt(s.defender_lost_metal)} мет /{' '}
+              {fmt(s.defender_lost_silicon)} крем /{' '}
+              {fmt(s.defender_lost_hydrogen)} вод
+            </small>
+          </td>
+        </tr>
+
+        {/* Опыт */}
+        <tr>
+          <th>{t('mission', 'experience') ?? 'Опыт'}</th>
+          <td>{fmt(s.attacker_exp, 1)}</td>
+          <td>{fmt(s.defender_exp, 1)}</td>
+        </tr>
+
+        {/* Обломки на орбите — общая строка */}
+        <tr>
+          <th>{t('mission', 'debris') ?? 'Обломки на орбите'}</th>
+          <td colSpan={2}>
+            {fmt(s.debris_metal)} {t('assaultReport', 'and') ?? 'и'}{' '}
+            {fmt(s.debris_silicon)}
+            <small> (мет / крем)</small>
+          </td>
+        </tr>
+
+        {/* Время */}
+        <tr>
+          <th>{t('mission', 'simTime') ?? 'Время'}</th>
+          <td colSpan={2}>
+            {fmtTime(s.gen_time_all)}{' · '}
+            <small>
+              {t('mission', 'oneSimTime') ?? 'одна симуляция'}:{' '}
+              {fmtTime(s.gen_time)} ({fmt(s.num_sim)}×)
+            </small>
+          </td>
+        </tr>
+
+        {/* Ссылка на просмотрщик последнего боя */}
+        <tr>
+          <th>&nbsp;</th>
+          <td colSpan={2}>
+            <Link
+              id="sim_report"
+              className="false2"
+              to={`/battle-report/${resp.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t('assaultReport', 'assault') ?? 'Отчёт о сражении'}
+            </Link>
           </td>
         </tr>
       </tbody>

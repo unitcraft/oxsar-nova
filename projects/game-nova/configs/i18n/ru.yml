@@ -2580,6 +2580,7 @@ mission:
   numSim: "Количество симуляций"
   simTime: "Время"
   oneSimTime: "одна симуляция"
+  experience: "Опыт"
   resetFleet: "Обнулить флот"
   setFleet: "Установить флот"
   resetDefense: "Обнулить оборону"
