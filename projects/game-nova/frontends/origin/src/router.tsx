@@ -124,6 +124,8 @@ import { ChangelogScreen } from './features/changelog/ChangelogScreen';
 import { SupportScreen } from './features/support/SupportScreen';
 import { AdvTechCalculatorScreen } from './features/tech-calc/AdvTechCalculatorScreen';
 import { WidgetsRedirect } from './features/widgets/WidgetsRedirect';
+import { RocketAttackScreen } from './features/rocket-attack/RocketAttackScreen';
+import { MonitorPlanetScreen } from './features/monitor-planet/MonitorPlanetScreen';
 
 export function AppRouter() {
   return (
@@ -237,6 +239,8 @@ function ProtectedRoutes() {
           <Route path="/support" element={<SupportScreen />} />
           <Route path="/tools/tech-calc" element={<AdvTechCalculatorScreen />} />
           <Route path="/widgets" element={<WidgetsRedirect />} />
+          <Route path="/rocket-attack" element={<RocketAttackScreen />} />
+          <Route path="/monitor-planet" element={<MonitorPlanetScreen />} />
 
           {/* Новые экраны (план 72.1) */}
           <Route path="/resource" element={<ResourceScreen />} />
