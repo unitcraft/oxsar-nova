@@ -2542,6 +2542,29 @@ message:
   subject: Тема
   unreaded: Есть непрочитанные сообщения
 mission:
+  # Boevoy симулятор (план 72.1 ч.20.7) — shipName/max ниже в группе
+  simulator: "Симулятор боя"
+  attacker: "Атакующий"
+  defender: "Защитник"
+  simulate: "Симулировать"
+  simulationResult: "Результат симуляции"
+  attackerWins: "Атакующий победил"
+  defenderWins: "Защитник победил"
+  draw: "Ничья"
+  round: "Раунд"
+  roundCount: "Раундов"
+  attackersAlive: "Атакующие"
+  defendersAlive: "Защитники"
+  losses: "Потери"
+  debris: "Поле обломков"
+  moonChance: "Шанс луны"
+  fleetActivities: "Активности флота"
+  noMatches: "Нет активных миссий"
+  modeRocketAttack: "Ракетная атака"
+  primaryTarget: "Первичная цель"
+  attack: "Атаковать"
+  all: "Все"
+
   allResources: Все ресурсы
   allShips: Все корабли
   arrival: Прибытие
