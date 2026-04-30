@@ -26,8 +26,11 @@ import { fetchShipyardInventory } from '@/api/shipyard';
 import { QK } from '@/api/query-keys';
 import { catalogByGroup, findCatalog } from '@/features/common/catalog';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import { Link } from 'react-router-dom';
 import { useTranslation } from '@/i18n/i18n';
 import { BattleReportView } from '@/features/common/BattleReportView';
+
+const LAST_SIM_KEY = 'oxsar-origin-last-sim';
 
 // Базовые статы юнитов из configs/{ships,defense}.yml.
 // Backend Calculate сам применит tech-модификаторы.
@@ -112,6 +115,13 @@ export function SimulatorScreen() {
 
   const sim = useMutation<SimReport, Error, SimInput>({
     mutationFn: runSimulation,
+    onSuccess: (report) => {
+      try {
+        localStorage.setItem(LAST_SIM_KEY, JSON.stringify(report));
+      } catch {
+        // localStorage may be disabled — silently ignore.
+      }
+    },
   });
 
   function setUnitField(
@@ -438,7 +448,16 @@ export function SimulatorScreen() {
       </table>
 
       {/* Report */}
-      {sim.data && <BattleReportView report={sim.data} />}
+      {sim.data && (
+        <>
+          <BattleReportView report={sim.data} />
+          <div style={{ marginTop: 12, textAlign: 'center' }}>
+            <Link to="/battle-report/last-sim" className="button">
+              {t('mission', 'openInViewer') ?? 'Открыть в просмотрщике'}
+            </Link>
+          </div>
+        </>
+      )}
     </form>
   );
 }
