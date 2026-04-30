@@ -385,9 +385,7 @@ class Simulator extends Page
 			"advanced_system"		=> (($ships['new_ass'] == 1) ? 1: 0),
 			));
 
-		$database = array();
-		require(APP_ROOT_DIR."config.inc.php");
-
+		// DB access for external Java sim — константы из bd_connect_info.php.
 		//Simulation
 		$win = array(0 => 0, 1 => 0, 2 => 0);
 		$this->prepare($building_destroy_chance);
@@ -455,14 +453,17 @@ class Simulator extends Page
 					try
 					{
 						$temp_array = array(
-							$database["host"],
-							$database["user"],
-							$database["userpw"],
-							$database["databasename"],
-							$database["tableprefix"]."sim_",
+							DB_HOST,
+							DB_USER,
+							DB_PWD,
+							DB_NAME,
+							DB_PREFIX."sim_",
 							$assaultid
 						);
-						$s = '/usr/bin/java -jar '.APP_ROOT_DIR.'game/'.SIMULATOR_ASSAULT_JAR.' "' . implode('" "', $temp_array) . '"';
+						// -cp вместо -jar: нужен Assault.jar + mysql-connector
+						// в classpath (см. bd_connect_info.php).
+						$classpath = APP_ROOT_DIR.'game/'.SIMULATOR_ASSAULT_JAR.':'.MYSQL_CONNECTOR_JAR;
+						$s = '/usr/bin/java -cp '.escapeshellarg($classpath).' assault.Assault "' . implode('" "', $temp_array) . '"';
 						exec( $s );
 					}
 					catch(Exception $e)

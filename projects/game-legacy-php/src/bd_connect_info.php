@@ -15,6 +15,11 @@ define('DB_CHAR',   'utf8mb4');
 
 defined('TIMEZONE') or define('TIMEZONE', getenv('TIMEZONE') ?: 'Europe/Moscow');
 
+// Путь к mysql-connector-j для exec'ов java -cp Assault.jar:... — Assault.jar
+// собран без вшитого JDBC (см. docker/Dockerfile.php). В docker connector
+// устанавливается в /opt/mysql-connector.jar; вне docker — через env.
+defined('MYSQL_CONNECTOR_JAR') or define('MYSQL_CONNECTOR_JAR', getenv('MYSQL_CONNECTOR_JAR') ?: '/opt/mysql-connector.jar');
+
 // Universe name shown in UI (Main.class.php)
 defined('UNIVERSE_NAME_FULL') or define('UNIVERSE_NAME_FULL', getenv('UNIVERSE_NAME_FULL') ?: 'Origin');
 

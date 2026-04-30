@@ -24,6 +24,24 @@ RUN apk add --no-cache --virtual .build-deps-gd $PHPIZE_DEPS libpng-dev freetype
 RUN apk add --no-cache git unzip \
     && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
+# OpenJDK для запуска src/game/Assault.jar (порт oxsar2-java/Assault.java).
+# Используется и реальными битвами (Assault.class.php), и страницей
+# симулятора (Simulator.class.php), и event-loop (EventHandler.class.php).
+# headless — без AWT/Swing, экономит ~50 МБ. Java 17 LTS, обратно
+# совместима с bytecode major=50 (Java 6) у Assault.jar.
+RUN apk add --no-cache openjdk17-jre-headless
+
+# MySQL JDBC connector (mysql-connector-j 8.0.33) для Assault.jar.
+# Сам Assault.jar собран без вшитого JDBC (Class-Path: пустой), а код зовёт
+# `Class.forName("com.mysql.jdbc.Driver")` — старый legacy-класс. В
+# connector/J 8.0.33 он сохранён как deprecated shim → выдаёт warning, но
+# работает. PHP-вызовы exec'ат `java -cp Assault.jar:$MYSQL_CONNECTOR_JAR`.
+# В Alpine community JDBC-драйверов под Java нет, поэтому качаем с Maven
+# Central. Версия зафиксирована для воспроизводимости.
+RUN curl -sSLo /opt/mysql-connector.jar \
+    'https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.0.33/mysql-connector-j-8.0.33.jar' \
+    && echo "e2a3b2fc726a1ac64e998585db86b30fa8bf3f706195b78bb77c5f99bf877bd9  /opt/mysql-connector.jar" | sha256sum -c -
+
 WORKDIR /var/www
 
 COPY --chown=www-data:www-data . .
