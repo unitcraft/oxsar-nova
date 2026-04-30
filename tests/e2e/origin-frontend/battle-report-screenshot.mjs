@@ -11,7 +11,7 @@ if (!REPORT_ID) {
 }
 
 const browser = await chromium.launch({ headless: true });
-const ctx = await browser.newContext({ viewport: { width: 1920, height: 1600 } });
+const ctx = await browser.newContext({ viewport: { width: 1280, height: 1200 }, deviceScaleFactor: 1 });
 const page = await ctx.newPage();
 await page.goto(`${ORIGIN_URL}/battle-report/${REPORT_ID}`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(2000);

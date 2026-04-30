@@ -62,6 +62,11 @@ export interface SimRoundTrace {
 }
 
 export interface SimRoundSide {
+  username?: string;
+  galaxy?: number;
+  system?: number;
+  position?: number;
+  is_moon?: boolean;
   gun_power_pct: number;
   shield_power_pct: number;
   armoring_pct: number;

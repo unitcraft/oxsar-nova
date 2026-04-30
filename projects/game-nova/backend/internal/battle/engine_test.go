@@ -381,22 +381,21 @@ func TestBallistics_OffsetsMasking(t *testing.T) {
 
 // --- M4.3 ablation tests ---
 
-// TestAblation_PartialHitLeavesDamagedUnit: частичный урон (меньше
-// unit.Shell) оставляет один damaged-юнит, остальные здоровы.
-func TestAblation_PartialHitLeavesDamagedUnit(t *testing.T) {
+// TestAblation_PartialHitLeavesDamagedUnits: частичный урон оставляет
+// несколько damaged-юнитов с распределённым shellPercent (порт Java
+// Units.finishTurn — план 72.1 ч.20.11.9). Конкретные числа зафиксированы
+// при seed=1 как baseline; rng детерминирован, поэтому повторяемо.
+func TestAblation_PartialHitLeavesDamagedUnits(t *testing.T) {
 	t.Parallel()
-	// 10 × attack=100 → pool=1000. 10 защитников с shell=1000,
-	// totalShell=10000. После удара turnShell=9000 →
-	// fullRem=9, remainder=0 → точная граница, kills=1, без damaged.
-	// Проверим с non-aligned числами.
+	// 10 × attack=50 → pool=500. 10 защитников с shell=1000.
+	// turnShellDestroyed=500. По Java diapazone minDamaged/maxDamaged
+	// и rng.New(1).Float64() выходит damaged=3, shellPct≈83.3%.
 	in := Input{
 		Seed:      1,
 		Rounds:    1,
 		Attackers: []Side{simpleAttacker(10, 50, 1000000)},
 		Defenders: []Side{simpleDefender(10, 0, 1000)},
 	}
-	// pool = 500. totalShell 10000 → 9500. fullRem=9, remainder=500.
-	// → quantity=10, damaged=1, shellPercent=50.
 	rep, err := Calculate(in)
 	if err != nil {
 		t.Fatalf("unexpected: %v", err)
@@ -405,26 +404,27 @@ func TestAblation_PartialHitLeavesDamagedUnit(t *testing.T) {
 	if u.QuantityEnd != 10 {
 		t.Fatalf("quantity: got %d, want 10 (none fully dead)", u.QuantityEnd)
 	}
-	if u.DamagedEnd != 1 {
-		t.Fatalf("damaged: got %d, want 1", u.DamagedEnd)
+	if u.DamagedEnd <= 0 || u.DamagedEnd >= u.QuantityEnd {
+		t.Fatalf("damaged: got %d, want in (0, %d)", u.DamagedEnd, u.QuantityEnd)
 	}
 	if u.ShellPercentEnd <= 0 || u.ShellPercentEnd >= 100 {
 		t.Fatalf("shellPercent: got %v, want in (0, 100)", u.ShellPercentEnd)
 	}
-	if math.Abs(u.ShellPercentEnd-50) > 1e-6 {
-		t.Fatalf("shellPercent: got %v, want 50", u.ShellPercentEnd)
+	// Baseline: с этим seed=1 ожидаем damaged=3, shellPct≈83.33.
+	if u.DamagedEnd != 3 {
+		t.Fatalf("baseline: damaged got %d, want 3", u.DamagedEnd)
+	}
+	if math.Abs(u.ShellPercentEnd-83.3333) > 1e-3 {
+		t.Fatalf("baseline: shellPercent got %v, want ≈83.3333", u.ShellPercentEnd)
 	}
 }
 
-// TestAblation_DamagedCarriesOverAndDies: damaged юнит переносит
-// пониженный shell на следующий раунд. Небольшой pool, который ранее
-// только ранил, во втором раунде уже добивает.
+// TestAblation_DamagedCarriesOverAndDies: damaged юниты «добиваются» в
+// дальнейшем урон-проходе того же раунда (Java exploding, < 65%) или
+// в следующем раунде. Тест проверяет что после устойчивого урона
+// атакующий побеждает.
 func TestAblation_DamagedCarriesOverAndDies(t *testing.T) {
 	t.Parallel()
-	// 1 защитник, shell=1000. pool=500/раунд.
-	// Round 1: turnShell 1000 → 500 → quantity=1, damaged=1, pct=50.
-	// Round 2 regen не влияет на shell (regen только у щитов),
-	//          turnShell=500 → -500 = 0 → defender dead.
 	in := Input{
 		Seed:      1,
 		Rounds:    2,
@@ -437,14 +437,14 @@ func TestAblation_DamagedCarriesOverAndDies(t *testing.T) {
 	}
 	u := rep.Defenders[0].Units[0]
 	if u.QuantityEnd != 0 {
-		t.Fatalf("defender should be dead after 2 rounds of 50%% damage: got quantity=%d, damaged=%d, shellPct=%v",
+		t.Fatalf("defender should be dead: got quantity=%d, damaged=%d, shellPct=%v",
 			u.QuantityEnd, u.DamagedEnd, u.ShellPercentEnd)
 	}
 	if rep.Winner != "attackers" {
 		t.Fatalf("expected attackers win, got %q", rep.Winner)
 	}
-	if rep.Rounds != 2 {
-		t.Fatalf("expected 2 rounds, got %d", rep.Rounds)
+	if rep.Rounds < 1 || rep.Rounds > 2 {
+		t.Fatalf("expected 1..2 rounds, got %d", rep.Rounds)
 	}
 }
 
