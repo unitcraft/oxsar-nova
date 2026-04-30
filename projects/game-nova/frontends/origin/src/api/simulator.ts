@@ -51,10 +51,45 @@ export interface SimInput {
   is_moon?: boolean;
 }
 
+// Расширенная статистика раунда (план 72.1 ч.20.11.4) — порт
+// oxsar2-java/Assault.java rendering.
 export interface SimRoundTrace {
   index: number;
   attackers_alive: number;
   defenders_alive: number;
+  attacker_side: SimRoundSide;
+  defender_side: SimRoundSide;
+}
+
+export interface SimRoundSide {
+  gun_power_pct: number;
+  shield_power_pct: number;
+  armoring_pct: number;
+  ballistics_lvl: number;
+  masking_lvl: number;
+  shots: number;
+  power: number;
+  shield_absorbed: number;
+  shell_destroyed: number;
+  units_destroyed: number;
+  units: SimRoundUnit[];
+}
+
+export interface SimRoundUnit {
+  unit_id: number;
+  name?: string;
+  start_turn_quantity: number;
+  start_turn_quantity_diff: number;
+  start_turn_damaged: number;
+  damaged_shell_percent: number;
+  attack: number;
+  shield: number;
+  shell: number;
+  front: number;
+  ballistics_level?: number;
+  masking_level?: number;
+  start_battle_quantity: number;
+  alive_percent: number;
 }
 
 export interface SimUnitResult {

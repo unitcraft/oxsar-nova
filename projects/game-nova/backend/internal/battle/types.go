@@ -85,10 +85,56 @@ type Report struct {
 	MoonCreated   bool         `json:"moon_created,omitempty"`
 }
 
+// RoundTrace — полная статистика раунда боя, пixel-perfect клон
+// oxsar2-java/Assault.java rendering (план 72.1 ч.20.11.4).
 type RoundTrace struct {
-	Index          int   `json:"index"`
-	AttackersAlive int64 `json:"attackers_alive"`
-	DefendersAlive int64 `json:"defenders_alive"`
+	Index          int       `json:"index"`
+	AttackersAlive int64     `json:"attackers_alive"`
+	DefendersAlive int64     `json:"defenders_alive"`
+	AttackerSide   RoundSide `json:"attacker_side"`
+	DefenderSide   RoundSide `json:"defender_side"`
+}
+
+// RoundSide — статистика одной стороны (атакующих или защитников)
+// в одном раунде.
+type RoundSide struct {
+	// Tech-power процентами (для отображения в стиле Java
+	// "GUN_POWER: 50%": привязано к gun_level * 10).
+	GunPowerPct    float64 `json:"gun_power_pct"`
+	ShieldPowerPct float64 `json:"shield_power_pct"`
+	ArmoringPct    float64 `json:"armoring_pct"`
+	BallisticsLvl  int     `json:"ballistics_lvl"`
+	MaskingLvl     int     `json:"masking_lvl"`
+
+	// Агрегаты «Fight» таблицы (Java: attackerShots / attackerPower).
+	Shots          int64   `json:"shots"`
+	Power          float64 `json:"power"`
+	ShieldAbsorbed float64 `json:"shield_absorbed"`
+	ShellDestroyed float64 `json:"shell_destroyed"`
+	UnitsDestroyed int64   `json:"units_destroyed"`
+
+	// Per-unit snapshot до commitDamage этого раунда.
+	Units []RoundUnit `json:"units"`
+}
+
+// RoundUnit — статус юнита на начало раунда (после регенерации
+// предыдущего раунда). Это «Type / Quantity / Guns / Shields / Shells
+// / Front / Ballistics / Masking / Survival%» из Java printParticipant.
+type RoundUnit struct {
+	UnitID                int     `json:"unit_id"`
+	Name                  string  `json:"name,omitempty"`
+	StartTurnQuantity     int64   `json:"start_turn_quantity"`
+	StartTurnQuantityDiff int64   `json:"start_turn_quantity_diff"` // отрицательное = потери прошлого раунда
+	StartTurnDamaged      int64   `json:"start_turn_damaged"`
+	DamagedShellPercent   int     `json:"damaged_shell_percent"`
+	Attack                float64 `json:"attack"`
+	Shield                float64 `json:"shield"`
+	Shell                 float64 `json:"shell"`
+	Front                 int     `json:"front"`
+	BallisticsLevel       int     `json:"ballistics_level,omitempty"`
+	MaskingLevel          int     `json:"masking_level,omitempty"`
+	StartBattleQuantity   int64   `json:"start_battle_quantity"`
+	AlivePercent          int     `json:"alive_percent"`
 }
 
 type SideResult struct {

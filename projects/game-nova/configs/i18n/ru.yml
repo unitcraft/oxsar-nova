@@ -389,6 +389,12 @@ assaultReport:
   armor: Броня
   shipyardPower: Верфь
   defenseFactoryPower: Обор. завод
+  shotsNumber: Выстрелов
+  shotsPower: Мощность
+  shotsMiss: Промахи
+  shieldAbsorb: Поглощено щитами
+  shellDestroyedCol: Уничтожено брони
+  unitsDestroyed: Уничтожено юнитов
   armoring: Броня
   assault: Отчет о сражении
   assaultTime: "Флоты соперников встрелись в {{time}} часов:"

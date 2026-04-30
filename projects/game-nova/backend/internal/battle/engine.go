@@ -13,14 +13,9 @@ var ErrInvalidInput = errors.New("battle: invalid input")
 // Calculate — единственная публичная функция пакета. Чистая,
 // детерминированная при фиксированном seed.
 //
-// СТАТУС: M4.1 (шиты + multi-channel, без rapidfire/ballistics/masking).
-// Модель:
-//   * каждый раунд: обе стороны стреляют по снимку начала раунда;
-//   * unitState.turnShield восстанавливается до Shield × Quantity
-//     в начале раунда (100% regen — Java default);
-//   * урон сначала съедает turnShield, остаток — turnShell;
-//   * при turnShell <= 0 юниты погибают целиком.
-//
+// План 72.1 ч.20.11.4: возвращает полный RoundTrace с tech-power,
+// per-unit snapshot и Fight-stats (shots/power/shield_absorb/
+// shell_destroyed/units_destroyed) — порт legacy oxsar2-java/Assault.java.
 func Calculate(in Input) (Report, error) {
 	if err := validate(in); err != nil {
 		return Report{}, err
@@ -37,32 +32,76 @@ func Calculate(in Input) (Report, error) {
 	report := Report{Seed: in.Seed}
 
 	for round := 0; round < in.Rounds; round++ {
-		// regen перед раундом (кроме первого — там значения и так
-		// инициализированы в newState).
 		if round > 0 {
 			atk.regen()
 			def.regen()
 		}
 
-		// Снимок «кто стреляет» — нужен, чтобы обе стороны имели шанс
-		// выстрелить в этом раунде, даже если противник их убьёт
-		// первым. Java хранит отдельное поле startTurnQuantity;
-		// у нас — целиком клон.
+		// Снимок «кто и сколько имел в начале раунда». До commitDamage
+		// у нас sufficient state для printParticipant (Java startTurnQuantity).
+		// Мы фиксируем snapshot уже здесь.
+		atkUnits := snapshotRoundUnits(atk)
+		defUnits := snapshotRoundUnits(def)
+
 		atkSnap := atk.snapshot()
 		defSnap := def.snapshot()
-		shootAtSides(r, atkSnap, def)
-		shootAtSides(r, defSnap, atk)
 
-		// Пересчёт quantity из turnShell (юнит жив, пока
-		// turnShell > 0; точное целое вычисляется по Unit.Shell
-		// × Quantity = totalShell).
+		// Stats накапливаются для каждой стороны.
+		atkStats := shootAtSides(r, atkSnap, def)
+		defStats := shootAtSides(r, defSnap, atk)
+
+		// Подсчёт уничтоженных юнитов до commitDamage.
+		atkBeforeCount := totalUnits(atk)
+		defBeforeCount := totalUnits(def)
+
 		atk.commitDamage()
 		def.commitDamage()
+
+		atkUnitsDestroyed := atkBeforeCount - totalUnits(atk)
+		defUnitsDestroyed := defBeforeCount - totalUnits(def)
+
+		// Tech-power: gunPower = level × 10%, ballistics/masking — int.
+		atkSide := atk.firstSide()
+		defSide := def.firstSide()
+
+		// Fight-stats:
+		//   - attackerSide.Shots/Power = атакующий стрелял в защитника = atkStats
+		//   - attackerSide.UnitsDestroyed = убито у защитника от атак атакующего
+		// Маппинг в Java одинаковый: attackerShots — выстрелы атакующего,
+		// defenderShipsDestroyed — потери защитника (от атак атакующего).
+		attackerSide := RoundSide{
+			GunPowerPct:    techToPct(atkSide.tech.Gun),
+			ShieldPowerPct: techToPct(atkSide.tech.Shield),
+			ArmoringPct:    techToPct(atkSide.tech.Shell),
+			BallisticsLvl:  atkSide.tech.Ballistics,
+			MaskingLvl:     atkSide.tech.Masking,
+			Shots:          atkStats.shots,
+			Power:          atkStats.power,
+			ShieldAbsorbed: atkStats.shieldAbsorbed,
+			ShellDestroyed: atkStats.shellDestroyed,
+			UnitsDestroyed: defUnitsDestroyed,
+			Units:          atkUnits,
+		}
+		defenderSide := RoundSide{
+			GunPowerPct:    techToPct(defSide.tech.Gun),
+			ShieldPowerPct: techToPct(defSide.tech.Shield),
+			ArmoringPct:    techToPct(defSide.tech.Shell),
+			BallisticsLvl:  defSide.tech.Ballistics,
+			MaskingLvl:     defSide.tech.Masking,
+			Shots:          defStats.shots,
+			Power:          defStats.power,
+			ShieldAbsorbed: defStats.shieldAbsorbed,
+			ShellDestroyed: defStats.shellDestroyed,
+			UnitsDestroyed: atkUnitsDestroyed,
+			Units:          defUnits,
+		}
 
 		trace := RoundTrace{
 			Index:          round,
 			AttackersAlive: atk.totalAlive(),
 			DefendersAlive: def.totalAlive(),
+			AttackerSide:   attackerSide,
+			DefenderSide:   defenderSide,
 		}
 		report.RoundsTrace = append(report.RoundsTrace, trace)
 		report.Rounds = round + 1
@@ -77,6 +116,69 @@ func Calculate(in Input) (Report, error) {
 	return report, nil
 }
 
+// techToPct — gun_level × 10% (Java: attackLevel * 10.0).
+func techToPct(level int) float64 {
+	return float64(level) * 10.0
+}
+
+// totalUnits — сумма quantity всех юнитов всех сторон battleState.
+func totalUnits(b *battleState) int64 {
+	var n int64
+	for _, s := range b.sides {
+		for _, u := range s.units {
+			if u.quantity > 0 {
+				n += u.quantity
+			}
+		}
+	}
+	return n
+}
+
+// snapshotRoundUnits — фиксирует состояние юнитов на начало раунда
+// для отображения в Java printParticipant. Объединяет все стороны в
+// один список (для симулятора одна сторона; ACS объединяется).
+func snapshotRoundUnits(b *battleState) []RoundUnit {
+	var out []RoundUnit
+	for _, s := range b.sides {
+		for _, u := range s.units {
+			if u.quantity <= 0 && u.startBattleQuantity == 0 {
+				continue
+			}
+			ru := RoundUnit{
+				UnitID:                u.tmpl.UnitID,
+				Name:                  u.tmpl.Name,
+				StartTurnQuantity:     u.quantity,
+				StartTurnDamaged:      u.damaged,
+				DamagedShellPercent:   int(math.Round(u.shellPercent)),
+				Attack:                u.effectiveAttack,
+				Shield:                u.tmpl.Shield,
+				Shell:                 u.effectiveShell,
+				Front:                 u.tmpl.Front,
+				BallisticsLevel:       s.tech.Ballistics,
+				MaskingLevel:          s.tech.Masking,
+				StartBattleQuantity:   u.startBattleQuantity,
+			}
+			if u.startBattleQuantity > 0 {
+				ru.AlivePercent = int(u.quantity * 100 / u.startBattleQuantity)
+				if ru.AlivePercent > 100 {
+					ru.AlivePercent = 100
+				}
+			}
+			out = append(out, ru)
+		}
+	}
+	return out
+}
+
+// firstSide — для simulator scenario (одна сторона на стороне).
+// При ACS Java берёт «общую» tech, но для симулятора это первая сторона.
+func (b *battleState) firstSide() *sideState {
+	if len(b.sides) == 0 {
+		return &sideState{}
+	}
+	return b.sides[0]
+}
+
 // --- runtime-состояние боя ---
 //
 // sideState и unitState — мутабельные версии Side/Unit на время
@@ -89,6 +191,9 @@ type unitState struct {
 	tmpl Unit
 	// Индекс в исходном Side.Units — чтобы summarize читал по нему.
 	idx int
+	// startBattleQuantity — количество в самом начале боя (для % alive
+	// в Java printParticipant: alivePercent = qty * 100 / startBattleQuantity).
+	startBattleQuantity int64
 	// turnShell = totalShell (учитывает damaged), уменьшается выстрелами.
 	turnShell float64
 	// turnShield = Shield × Quantity, восстанавливается regen.
@@ -139,13 +244,14 @@ func newState(input []Side, rf map[int]map[int]int) *battleState {
 		shellFactor := 1.0 + float64(s.Tech.Shell)*0.10
 		for ui, u := range s.Units {
 			us := &unitState{
-				tmpl:            u,
-				idx:             ui,
-				quantity:        u.Quantity,
-				damaged:         clampDamaged(u.Damaged, u.Quantity),
-				shellPercent:    clampPercent(u.ShellPercent),
-				effectiveAttack: u.Attack * gunFactor,
-				effectiveShell:  u.Shell * shellFactor,
+				tmpl:                u,
+				idx:                 ui,
+				quantity:            u.Quantity,
+				startBattleQuantity: u.Quantity,
+				damaged:             clampDamaged(u.Damaged, u.Quantity),
+				shellPercent:        clampPercent(u.ShellPercent),
+				effectiveAttack:     u.Attack * gunFactor,
+				effectiveShell:      u.Shell * shellFactor,
 			}
 			// effectiveShield хранится прямо в turnShield/regen через
 			// scaledShield — считаем один раз.
@@ -330,13 +436,21 @@ func (b *battleState) toSides() []Side {
 //        missed = floor(shots * factor)
 //     где masking берётся со стороны ЦЕЛИ, ballistics — со СТОРОНЫ-
 //     стрелка. Семантика: «я прячу свой флот, враг ищет сквозь помехи».
-func shootAtSides(r *rng.R, shooters, targets *battleState) {
+// roundSideStats — агрегаты Java Fight таблицы для одной стороны
+// в одном раунде (план 72.1 ч.20.11.4).
+type roundSideStats struct {
+	shots          int64   // Java attackerShots
+	power          float64 // Java attackerPower (сумма attack × shots до cap)
+	shieldAbsorbed float64 // Java defenderShield (поглощено щитом цели)
+	shellDestroyed float64 // Java defenderShellDestroyed (вырвано из брони цели)
+}
+
+func shootAtSides(r *rng.R, shooters, targets *battleState) roundSideStats {
 	_ = r
+	stats := roundSideStats{}
 
 	// Собираем активные цели.
 	var actives []*unitState
-	// sideTechOf — по unitState'у находим Tech стороны-владельца,
-	// чтобы взять masking при расчёте ballistics/masking-эффекта.
 	sideTechOf := make(map[*unitState]Tech)
 	var totalWeight float64
 	for _, s := range targets.sides {
@@ -354,7 +468,7 @@ func shootAtSides(r *rng.R, shooters, targets *battleState) {
 		}
 	}
 	if len(actives) == 0 || totalWeight == 0 {
-		return
+		return stats
 	}
 
 	for _, s := range shooters.sides {
@@ -373,28 +487,26 @@ func shootAtSides(r *rng.R, shooters, targets *battleState) {
 				}
 				w := unitWeight(*tgt)
 				portion := w / totalWeight
-				// shots (до rapidfire/masking) — доля от quantity стрелка,
-				// распределяемая по данной цели.
 				rawShots := int64(math.Round(float64(shooter.quantity) * portion))
 				if rawShots <= 0 {
 					rawShots = 1
 				}
-				// rapidfire: shooter×target — legacy таблица. Если
-				// пары нет, считаем rf=1. Значение <1 не легально
-				// (Java: Math.max(1, rf)) — принудительно 1.
 				rf := rapidfireMult(shooters.rapidfire, shooter.tmpl.UnitID, tgt.tmpl.UnitID)
 				shots := rawShots * int64(rf)
-
-				// ballistics vs masking.
 				tgtMasking := sideTechOf[tgt].Masking
 				shots = applyMasking(shots, shooterBallistics, tgtMasking)
 				if shots <= 0 {
 					continue
 				}
-				applyShots(shooter, tgt, attack, shots)
+				stats.shots += shots
+				stats.power += attack * float64(shots)
+				absorbed, destroyed := applyShots(shooter, tgt, attack, shots)
+				stats.shieldAbsorbed += absorbed
+				stats.shellDestroyed += destroyed
 			}
 		}
 	}
+	return stats
 }
 
 // rapidfireMult — вернуть множитель, min = 1.
@@ -457,11 +569,17 @@ func applyMasking(shots int64, ballistics, masking int) int64 {
 //
 //  5. Shots дошедшие до shell: cap power per shot ≤ shell,
 //     cap total ≤ turnShell. Вычитаем из turnShell.
-func applyShots(shooter, target *unitState, attack float64, shots int64) {
+// applyShots возвращает (shieldAbsorbed, shellDestroyed) — для
+// агрегации в roundSideStats (Java attackerShield / defenderShield
+// и attackerShellDestroyed / defenderShellDestroyed).
+func applyShots(shooter, target *unitState, attack float64, shots int64) (float64, float64) {
 	if shots <= 0 || target.quantity <= 0 {
-		return
+		return 0, 0
 	}
 	_ = shooter
+
+	shieldBefore := target.turnShield
+	shellBefore := target.turnShell
 
 	unitShield := target.tmpl.Shield
 	// ignoreAttack вычисляется по базовому (до tech) щиту — BA-005.
@@ -479,7 +597,7 @@ func applyShots(shooter, target *unitState, attack float64, shots int64) {
 			pool = target.turnShield
 		}
 		target.turnShield -= pool
-		return
+		return shieldBefore - target.turnShield, 0
 	}
 
 	shotsF := float64(shots)
@@ -498,13 +616,10 @@ func applyShots(shooter, target *unitState, attack float64, shots int64) {
 		if target.turnShell < 0 {
 			target.turnShell = 0
 		}
-		return
+		return 0, shellBefore - target.turnShell
 	}
 
 	// Портировано из Java Units.processAttack строки 358-420.
-	//
-	// fullTurnShield = startTurnQuantity × shield (Java строка 358).
-	// В Go startTurnShield уже хранит это значение.
 	fullTurnShield := target.startTurnShield
 	var shieldDamageFactor float64
 	if fullTurnShield > 0 {
@@ -546,7 +661,6 @@ func applyShots(shooter, target *unitState, attack float64, shots int64) {
 				shieldShotsPower = shieldExist
 			}
 			target.turnShield -= shieldShotsPower
-			// Пересчёт фактического числа shots потраченных на щит (Java строка 389).
 			shieldShotsNumber = math.Round(shieldShotsPower / attack)
 		}
 		remainingShots -= shieldShotsNumber
@@ -567,6 +681,8 @@ func applyShots(shooter, target *unitState, attack float64, shots int64) {
 			target.turnShell = 0
 		}
 	}
+
+	return shieldBefore - target.turnShield, shellBefore - target.turnShell
 }
 
 // unitWeight — 2^Front × Quantity. Java: getStartTurnWeight.
