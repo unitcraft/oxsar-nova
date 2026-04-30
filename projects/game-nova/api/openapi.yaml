@@ -550,10 +550,11 @@ paths:
       tags: [simulator]
       security: [{ bearerAuth: [] }]
       summary: |
-        Боевой симулятор (план 72.1 ч.20.7+20.11). Сохраняет результат
-        в battle_reports (is_simulation=true) и возвращает {id, report}.
-        Frontend перенаправляет на /battle-report/{id} (публичный URL,
-        можно отправить кому угодно).
+        Боевой симулятор (план 72.1 ч.20.7+20.11). Прогоняет num_sim
+        итераций (1..100) с инкрементом seed, сохраняет ПОСЛЕДНИЙ бой в
+        battle_reports (is_simulation=true) и возвращает {id, stats,
+        report}. Фронт показывает сводку (legacy simulator.tpl) и ссылку
+        «Отчёт о сражении» → /battle-report/{id} (публичный URL).
       requestBody:
         required: true
         content:
@@ -564,7 +565,7 @@ paths:
               properties:
                 seed:      { type: integer, format: int64, description: "PRNG seed (0 = random)" }
                 rounds:    { type: integer, description: "Max rounds (default 6)" }
-                num_sim:   { type: integer, description: "Multi-run statistics (2..100)" }
+                num_sim:   { type: integer, description: "Multi-run statistics (1..100)" }
                 is_moon:   { type: boolean }
                 attackers: { type: array, items: { type: object } }
                 defenders: { type: array, items: { type: object } }
@@ -576,9 +577,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [id, stats, report]
                 properties:
-                  id:     { type: string, format: uuid, description: "UUID для /battle-report/{id}" }
-                  report: { type: object, description: "battle.Report JSON" }
+                  id:     { type: string, format: uuid, description: "UUID последнего боя для /battle-report/{id}" }
+                  stats:  { $ref: "#/components/schemas/SimStats" }
+                  report: { type: object, description: "battle.Report JSON последнего боя" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
@@ -1385,25 +1388,6 @@ paths:
         "204": { description: saved }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
-
-  /api/battle-reports/{id}:
-    get:
-      tags: [messages]
-      security: [{ bearerAuth: [] }]
-      summary: Полный battle report. Доступен attacker'у и defender'у.
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/BattleReportFull" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/espionage-reports/{id}:
     get:
@@ -4166,11 +4150,28 @@ components:
 
     SimStats:
       type: object
+      description: |
+        Агрегат по num_sim прогонам battle.Calculate (план 72.1 ч.20.11.7).
+        Pixel-perfect соответствие сводке legacy simulator.tpl.
       properties:
-        num_sim:    { type: integer }
-        win_rate:   { type: number, description: "доля побед атакующих 0..1" }
-        draw_rate:  { type: number }
-        avg_rounds: { type: number }
+        num_sim:                { type: integer }
+        attacker_win_pct:       { type: number, description: "%" }
+        defender_win_pct:       { type: number, description: "%" }
+        draw_pct:               { type: number, description: "%" }
+        avg_rounds:             { type: number }
+        avg_moon_chance:        { type: number, description: "% (среднее по итерациям)" }
+        attacker_lost_metal:    { type: number }
+        attacker_lost_silicon:  { type: number }
+        attacker_lost_hydrogen: { type: number }
+        defender_lost_metal:    { type: number }
+        defender_lost_silicon:  { type: number }
+        defender_lost_hydrogen: { type: number }
+        debris_metal:           { type: number }
+        debris_silicon:         { type: number }
+        attacker_exp:           { type: number }
+        defender_exp:           { type: number }
+        gen_time_all:           { type: number, description: "Общее время N симуляций (с)" }
+        gen_time:               { type: number, description: "Среднее на одну (с)" }
 
     AchievementEntry:
       type: object

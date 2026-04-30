@@ -395,6 +395,10 @@ assaultReport:
   shieldAbsorb: Поглощено щитами
   shellDestroyedCol: Уничтожено брони
   unitsDestroyed: Уничтожено юнитов
+  attackerLosses: Потери атаки
+  defenderLosses: Потери обороны
+  attackerExp: Опыт атакующего
+  defenderExp: Опыт обороняющегося
   armoring: Броня
   assault: Отчет о сражении
   assaultTime: "Флоты соперников встрелись в {{time}} часов:"
@@ -2574,6 +2578,8 @@ mission:
   attack: "Атаковать"
   all: "Все"
   numSim: "Количество симуляций"
+  simTime: "Время"
+  oneSimTime: "одна симуляция"
   resetFleet: "Обнулить флот"
   setFleet: "Установить флот"
   resetDefense: "Обнулить оборону"

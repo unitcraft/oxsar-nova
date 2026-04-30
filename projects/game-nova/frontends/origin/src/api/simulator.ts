@@ -122,8 +122,32 @@ export interface SimReport {
   moon_created?: boolean;
 }
 
+// Сводка по num_sim итераций (план 72.1 ч.20.11.7) — pixel-perfect клон
+// блока «Результаты» legacy simulator.tpl.
+export interface SimStats {
+  num_sim: number;
+  attacker_win_pct: number;
+  defender_win_pct: number;
+  draw_pct: number;
+  avg_rounds: number;
+  avg_moon_chance: number;
+  attacker_lost_metal: number;
+  attacker_lost_silicon: number;
+  attacker_lost_hydrogen: number;
+  defender_lost_metal: number;
+  defender_lost_silicon: number;
+  defender_lost_hydrogen: number;
+  debris_metal: number;
+  debris_silicon: number;
+  attacker_exp: number;
+  defender_exp: number;
+  gen_time_all: number;
+  gen_time: number;
+}
+
 export interface SimRunResponse {
   id: string;
+  stats: SimStats;
   report: SimReport;
 }
 

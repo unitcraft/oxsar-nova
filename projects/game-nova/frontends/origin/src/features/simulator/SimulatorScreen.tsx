@@ -20,13 +20,14 @@ import {
   type SimInput,
   type SimRunResponse,
   type SimSide,
+  type SimStats,
   type SimUnit,
 } from '@/api/simulator';
 import { fetchShipyardInventory } from '@/api/shipyard';
 import { QK } from '@/api/query-keys';
 import { catalogByGroup, findCatalog } from '@/features/common/catalog';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from '@/i18n/i18n';
 
 // Базовые статы юнитов из configs/{ships,defense}.yml.
@@ -110,13 +111,11 @@ export function SimulatorScreen() {
   });
   const inv = invQ.data ?? { ships: {}, defense: {} };
 
-  const navigate = useNavigate();
+  // План 72.1 ч.20.11.7: НЕ редиректим на /battle-report. Показываем
+  // сводку (Stats) + ссылку «Отчёт о сражении» — юзер запускает
+  // симулятор много раз и сравнивает агрегаты.
   const sim = useMutation<SimRunResponse, Error, SimInput>({
     mutationFn: runSimulation,
-    onSuccess: (resp) => {
-      // План 72.1 ч.20.11: редирект на публичный /battle-report/{uuid}.
-      navigate(`/battle-report/${resp.id}`);
-    },
   });
 
   function setUnitField(
@@ -261,6 +260,9 @@ export function SimulatorScreen() {
 
   return (
     <form onSubmit={onSubmit}>
+      {/* Блок «Результаты» — pixel-perfect клон legacy simulator.tpl */}
+      {sim.data && <SimResultsView resp={sim.data} t={t} />}
+
       {/* Заголовок «Установки» */}
       <table className="ntable">
         <tbody>
@@ -540,6 +542,145 @@ function UnitCell({
         <tr>
           <td>
             <a href="#" onClick={(e) => { e.preventDefault(); onReset(); }}>−</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+// SimResultsView — блок «Результаты» (pixel-perfect клон legacy
+// simulator.tpl, lines 101-160). Показывается после прогона
+// num_sim симуляций, до формы — юзер видит агрегат и решает
+// стоит ли менять параметры/переоткатить.
+function SimResultsView({
+  resp,
+  t,
+}: {
+  resp: SimRunResponse;
+  t: (g: string, k: string) => string | null;
+}) {
+  const s: SimStats = resp.stats;
+  const fmt = (v: number, digits = 0) =>
+    v.toLocaleString('ru-RU', {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+  return (
+    <table className="ntable">
+      <thead>
+        <tr>
+          <th>{t('assaultReport', 'summary') ?? 'Результаты'}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <table className="table_no_background" cellSpacing={0} cellPadding={0}>
+              <tbody>
+                <tr>
+                  <td>
+                    <b>{t('assaultReport', 'attackerWon') ?? 'Победа атакующего'}:</b>{' '}
+                    {fmt(s.attacker_win_pct, 0)}%
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>{t('assaultReport', 'defenderWon') ?? 'Победа обороняющегося'}:</b>{' '}
+                    {fmt(s.defender_win_pct, 0)}%
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>{t('assaultReport', 'battleDraw') ?? 'Ничья'}:</b>{' '}
+                    {fmt(s.draw_pct, 0)}%
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>{t('mission', 'roundCount') ?? 'Раундов'}:</b>{' '}
+                    {fmt(s.avg_rounds, 1)}
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>{t('mission', 'moonChance') ?? 'Шанс появления луны'}:</b>{' '}
+                    {fmt(s.avg_moon_chance, 1)}%
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>{t('assaultReport', 'attackerLosses') ?? 'Потери атаки'}:</b>{' '}
+                    {fmt(
+                      s.attacker_lost_metal +
+                        s.attacker_lost_silicon +
+                        s.attacker_lost_hydrogen,
+                    )}
+                    {' ('}
+                    {fmt(s.attacker_lost_metal)} мет,{' '}
+                    {fmt(s.attacker_lost_silicon)} крем,{' '}
+                    {fmt(s.attacker_lost_hydrogen)} вод
+                    {')'}
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>{t('assaultReport', 'defenderLosses') ?? 'Потери обороны'}:</b>{' '}
+                    {fmt(
+                      s.defender_lost_metal +
+                        s.defender_lost_silicon +
+                        s.defender_lost_hydrogen,
+                    )}
+                    {' ('}
+                    {fmt(s.defender_lost_metal)} мет,{' '}
+                    {fmt(s.defender_lost_silicon)} крем,{' '}
+                    {fmt(s.defender_lost_hydrogen)} вод
+                    {')'}
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>Обломков на орбите:</b>{' '}
+                    {fmt(s.debris_metal)} металла{' '}
+                    {t('assaultReport', 'and') ?? 'и'}{' '}
+                    {fmt(s.debris_silicon)} кремния
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>{t('assaultReport', 'attackerExp') ?? 'Опыт атакующего'}:</b>{' '}
+                    {fmt(s.attacker_exp, 1)}
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>{t('assaultReport', 'defenderExp') ?? 'Опыт обороняющегося'}:</b>{' '}
+                    {fmt(s.defender_exp, 1)}
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>{t('mission', 'simTime') ?? 'Время'}:</b>{' '}
+                    {fmt(s.gen_time_all, 2)} с,{' '}
+                    {t('mission', 'oneSimTime') ?? 'одна симуляция'}:{' '}
+                    {fmt(s.gen_time, 2)} с
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <Link
+                      id="sim_report"
+                      className="false2"
+                      to={`/battle-report/${resp.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t('assaultReport', 'assault') ?? 'Отчёт о сражении'}
+                    </Link>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </td>
         </tr>
       </tbody>
