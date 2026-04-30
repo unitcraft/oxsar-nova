@@ -28,6 +28,16 @@ type Side struct {
 	Tech          Tech   `json:"tech,omitempty"`
 	Units         []Unit `json:"units"`
 	PrimaryTarget int    `json:"primary_target,omitempty"`
+
+	// Позиция планеты атакующего/защитника. Используется в заголовке
+	// каждого раунда: «Атакующий <username> [g:s:p] (луна)» — порт Java
+	// Participant.getGalaxy/getSystem/getPosition/getIsMoon (план 72.1
+	// ч.20.11.9). Для симулятора фронт может не передавать — рендерится
+	// «[0:0:0]».
+	Galaxy   int  `json:"galaxy,omitempty"`
+	System   int  `json:"system,omitempty"`
+	Position int  `json:"position,omitempty"`
+	IsMoon   bool `json:"is_moon,omitempty"`
 }
 
 // Tech — уровни технологий игрока, влияющие на юнитов этой стороны.
@@ -123,6 +133,14 @@ type RoundTrace struct {
 // RoundSide — статистика одной стороны (атакующих или защитников)
 // в одном раунде.
 type RoundSide struct {
+	// Username + позиция планеты для заголовка раунда (Java:
+	// «{ATTACKER} <user> [g:s:p] (луна)»).
+	Username string `json:"username,omitempty"`
+	Galaxy   int    `json:"galaxy,omitempty"`
+	System   int    `json:"system,omitempty"`
+	Position int    `json:"position,omitempty"`
+	IsMoon   bool   `json:"is_moon,omitempty"`
+
 	// Tech-power процентами (для отображения в стиле Java
 	// "GUN_POWER: 50%": привязано к gun_level * 10).
 	GunPowerPct    float64 `json:"gun_power_pct"`
@@ -138,7 +156,7 @@ type RoundSide struct {
 	ShellDestroyed float64 `json:"shell_destroyed"`
 	UnitsDestroyed int64   `json:"units_destroyed"`
 
-	// Per-unit snapshot до commitDamage этого раунда.
+	// Per-unit snapshot после finishTurn этого раунда (Java startTurn*).
 	Units []RoundUnit `json:"units"`
 }
 

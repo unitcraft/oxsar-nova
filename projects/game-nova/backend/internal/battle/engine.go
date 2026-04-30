@@ -37,11 +37,11 @@ func Calculate(in Input) (Report, error) {
 			def.regen()
 		}
 
-		// Снимок «кто и сколько имел в начале раунда». До commitDamage
-		// у нас sufficient state для printParticipant (Java startTurnQuantity).
-		// Мы фиксируем snapshot уже здесь.
-		atkUnits := snapshotRoundUnits(atk)
-		defUnits := snapshotRoundUnits(def)
+		// startTurn — фиксируем startTurnQuantity/Damaged/ShellPercent/Shell
+		// до выстрелов (Java: Units.startTurn). После shootAtSides у юнита
+		// turnShell уменьшится, finishTurn рассчитает потери из дельты.
+		atk.startTurn()
+		def.startTurn()
 
 		atkSnap := atk.snapshot()
 		defSnap := def.snapshot()
@@ -50,15 +50,21 @@ func Calculate(in Input) (Report, error) {
 		atkStats := shootAtSides(r, atkSnap, def)
 		defStats := shootAtSides(r, defSnap, atk)
 
-		// Подсчёт уничтоженных юнитов до commitDamage.
+		// Подсчёт уничтоженных юнитов до finishTurn.
 		atkBeforeCount := totalUnits(atk)
 		defBeforeCount := totalUnits(def)
 
-		atk.commitDamage()
-		def.commitDamage()
+		atk.finishTurn(r)
+		def.finishTurn(r)
 
 		atkUnitsDestroyed := atkBeforeCount - totalUnits(atk)
 		defUnitsDestroyed := defBeforeCount - totalUnits(def)
+
+		// Снимок «кто и сколько имел в начале раунда» — после finishTurn,
+		// чтобы startTurnQuantityDiff содержал реальные потери раунда.
+		// printParticipant в Java вызывается ПОСЛЕ finishTurn.
+		atkUnits := snapshotRoundUnits(atk)
+		defUnits := snapshotRoundUnits(def)
 
 		// Tech-power: gunPower = level × 10%, ballistics/masking — int.
 		atkSide := atk.firstSide()
@@ -70,6 +76,11 @@ func Calculate(in Input) (Report, error) {
 		// Маппинг в Java одинаковый: attackerShots — выстрелы атакующего,
 		// defenderShipsDestroyed — потери защитника (от атак атакующего).
 		attackerSide := RoundSide{
+			Username:       atkSide.username,
+			Galaxy:         atkSide.galaxy,
+			System:         atkSide.system,
+			Position:       atkSide.position,
+			IsMoon:         atkSide.isMoon,
 			GunPowerPct:    techToPct(atkSide.tech.Gun),
 			ShieldPowerPct: techToPct(atkSide.tech.Shield),
 			ArmoringPct:    techToPct(atkSide.tech.Shell),
@@ -83,6 +94,11 @@ func Calculate(in Input) (Report, error) {
 			Units:          atkUnits,
 		}
 		defenderSide := RoundSide{
+			Username:       defSide.username,
+			Galaxy:         defSide.galaxy,
+			System:         defSide.system,
+			Position:       defSide.position,
+			IsMoon:         defSide.isMoon,
 			GunPowerPct:    techToPct(defSide.tech.Gun),
 			ShieldPowerPct: techToPct(defSide.tech.Shield),
 			ArmoringPct:    techToPct(defSide.tech.Shell),
@@ -134,9 +150,13 @@ func totalUnits(b *battleState) int64 {
 	return n
 }
 
-// snapshotRoundUnits — фиксирует состояние юнитов на начало раунда
-// для отображения в Java printParticipant. Объединяет все стороны в
-// один список (для симулятора одна сторона; ACS объединяется).
+// snapshotRoundUnits — снимок состояния юнитов на конец раунда (=
+// «начало раунда» в Java printParticipant, т.к. Java рисует таблицу
+// после finishTurn). Java: Units.getStartTurnQuantity, getStartTurnDamaged,
+// getStartTurnDamagedShellPercent, getStartTurnQuantityDiff.
+//
+// При quantity=0, но startBattleQuantity>0 — юнит уничтожен в этом раунде,
+// показываем строку с diff (Java делает то же).
 func snapshotRoundUnits(b *battleState) []RoundUnit {
 	var out []RoundUnit
 	for _, s := range b.sides {
@@ -144,10 +164,17 @@ func snapshotRoundUnits(b *battleState) []RoundUnit {
 			if u.quantity <= 0 && u.startBattleQuantity == 0 {
 				continue
 			}
+			// Скрываем юниты, которые уже уничтожены и не понесли
+			// потерь в этом раунде (Java condition в printParticipant:
+			// startTurnQuantity > 0 || startTurnQuantityDiff < 0).
+			if u.quantity <= 0 && u.startTurnQuantityDiff >= 0 {
+				continue
+			}
 			ru := RoundUnit{
 				UnitID:                u.tmpl.UnitID,
 				Name:                  u.tmpl.Name,
 				StartTurnQuantity:     u.quantity,
+				StartTurnQuantityDiff: u.startTurnQuantityDiff,
 				StartTurnDamaged:      u.damaged,
 				DamagedShellPercent:   int(math.Round(u.shellPercent)),
 				Attack:                u.effectiveAttack,
@@ -217,11 +244,30 @@ type unitState struct {
 	// ignoreAttack-порога: tech повышает абсорбцию, но не делает щит
 	// абсолютным (BA-005).
 	baseShield float64
+
+	// Снимок «начало раунда» — порт Java Units.startTurn* полей
+	// (план 72.1 ч.20.11.9). Заполняется в startTurn() в начале каждого
+	// раунда, читается finishTurn(). Также используется в snapshotRoundUnits
+	// для отрисовки таблиц printParticipant.
+	startTurnQuantity            int64   // quantity на начало раунда
+	startTurnDamaged             int64   // damaged на начало раунда
+	startTurnDamagedShellPercent float64 // shellPercent damaged-юнитов на начало раунда
+	startTurnShell               float64 // turnShell на начало раунда (до атак)
+	startTurnQuantityDiff        int64   // (quantity_after_finishTurn - startTurnQuantity), отрицателен при потерях
+	// turnFiredQuantity — сколько юнитов умерло «по абсолютному ablation»
+	// (turnShell упал ниже уровня, при котором даже здоровые гарантированно
+	// уничтожены). Java увеличивает это в applyShots, finishTurn использует
+	// для вычисления minDamaged/maxDamaged. Сбрасывается в startTurn().
+	turnFiredQuantity int64
 }
 
 type sideState struct {
 	userID   string
 	username string
+	galaxy   int
+	system   int
+	position int
+	isMoon   bool
 	// tech — для ballistics/masking. Значение Participant-уровня:
 	// ballistics + masking одинаковы для всех unit-ов одной стороны.
 	tech  Tech
@@ -238,7 +284,15 @@ type battleState struct {
 func newState(input []Side, rf map[int]map[int]int) *battleState {
 	bs := &battleState{sides: make([]*sideState, len(input)), rapidfire: rf}
 	for si, s := range input {
-		ss := &sideState{userID: s.UserID, username: s.Username, tech: s.Tech}
+		ss := &sideState{
+			userID:   s.UserID,
+			username: s.Username,
+			galaxy:   s.Galaxy,
+			system:   s.System,
+			position: s.Position,
+			isMoon:   s.IsMoon,
+			tech:     s.Tech,
+		}
 		gunFactor := 1.0 + float64(s.Tech.Gun)*0.10
 		shieldFactor := 1.0 + float64(s.Tech.Shield)*0.10
 		shellFactor := 1.0 + float64(s.Tech.Shell)*0.10
@@ -323,6 +377,23 @@ func (b *battleState) regen() {
 	}
 }
 
+// startTurn — снапшот «начало раунда» (план 72.1 ч.20.11.9). Java
+// Units перед каждым раундом запоминает startTurnQuantity / Damaged
+// / DamagedShellPercent / Shell и обнуляет turnFiredQuantity. Эти
+// значения читает finishTurn() и snapshotRoundUnits().
+func (b *battleState) startTurn() {
+	for _, s := range b.sides {
+		for _, u := range s.units {
+			u.startTurnQuantity = u.quantity
+			u.startTurnDamaged = u.damaged
+			u.startTurnDamagedShellPercent = u.shellPercent
+			u.startTurnShell = u.turnShell
+			u.startTurnQuantityDiff = 0
+			u.turnFiredQuantity = 0
+		}
+	}
+}
+
 // snapshot возвращает копию состояния — используется как стрелок,
 // чтобы мутация целей в shootAtSides не влияла на количество выстрелов.
 func (b *battleState) snapshot() *battleState {
@@ -341,61 +412,178 @@ func (b *battleState) snapshot() *battleState {
 	return out
 }
 
-// commitDamage пересчитывает quantity/damaged/shellPercent по
-// оставшемуся turnShell. Модель M4.3 (ablation) совпадает с Java:
+// finishTurn — порт Java oxsar2-java/Units.finishTurn (план 72.1
+// ч.20.11.9). Модель ablation:
 //
-//   - fullRem = floor(turnShell / shell) — сколько осталось «полных»;
-//   - если fullRem >= quantity: никто не умер, частичного damaged нет
-//     (turnShell ровно на всех);
-//   - иначе квантити = fullRem + 1 (если есть дробный остаток) или
-//     fullRem (если точная граница). Один damaged-юнит с
-//     shellPercent = (turnShell mod shell) / shell × 100.
-//   - turnShell нормализуется к новому состоянию, чтобы в следующий
-//     раунд не «таскать хвост».
-func (b *battleState) commitDamage() {
+//  1. turnShellDestroyed = startTurnShell - turnShell (urон, нанесённый
+//     за раунд).
+//  2. Если есть startTurnDamaged > 0 — сначала «добиваем» уже подбитые
+//     юниты (Java строки 509-518). damagedUnitShell = shell × DPP / 100.
+//     damagedUnitsDestroyed = ceil(min(turnDamaged,
+//     floor(turnShellDestroyed / damagedUnitShell)) × 0.85).
+//  3. Затем уничтожаем здоровых: maxUnitsDestroyed = floor(turnShellDestroyed
+//     / shell), unitsDestroyed = ceil(maxUnitsDestroyed × 0.85).
+//  4. minDamaged/maxDamaged — диапазон для «частично подбитых» по остатку
+//     shell, выбираем случайно через rng.
+//  5. turnShellPercent = (turnShell - (turnQuantity - turnDamaged) × shell)
+//     × 100 / (turnDamaged × shell).
+//  6. Дополнительный «exploding» проход (turnShellPercent < 20|65|99):
+//     юниты с критически малым shell гибнут с шансом, оставшиеся остаются
+//     damaged. >99 → damaged=0 (округление в полные).
+//
+// rng детерминированный (rng.New(seed)), поэтому результат полностью
+// повторяем для тех же входов.
+func (b *battleState) finishTurn(r *rng.R) {
 	for _, s := range b.sides {
 		for _, u := range s.units {
-			if u.quantity <= 0 {
-				continue
-			}
-			if u.tmpl.Shell <= 0 {
-				continue
-			}
-			if u.turnShell <= 0 {
-				u.quantity = 0
-				u.damaged = 0
-				u.shellPercent = 0
-				continue
-			}
-			fullRem := int64(math.Floor(u.turnShell / u.tmpl.Shell))
-			remainder := u.turnShell - float64(fullRem)*u.tmpl.Shell
-			if remainder < 0 {
-				remainder = 0
-			}
-
-			switch {
-			case fullRem >= u.quantity:
-				// Pool не перебил даже damaged-остаток начала раунда —
-				// всё по-прежнему. damaged/shellPercent остаются как
-				// были (если раунд не нанёс урон — инварианты живут).
-				// turnShell нормализуется к текущему состоянию.
-				u.turnShell = totalShell(u.tmpl.Shell, u.quantity, u.damaged, u.shellPercent)
-			case remainder > 0:
-				// Один damaged + fullRem здоровых. damaged не может
-				// быть больше quantity.
-				u.quantity = fullRem + 1
-				u.damaged = 1
-				u.shellPercent = (remainder / u.tmpl.Shell) * 100.0
-				u.turnShell = totalShell(u.tmpl.Shell, u.quantity, u.damaged, u.shellPercent)
-			default:
-				// Точная граница — ровно fullRem полных юнитов, damaged нет.
-				u.quantity = fullRem
-				u.damaged = 0
-				u.shellPercent = 0
-				u.turnShell = float64(fullRem) * u.tmpl.Shell
-			}
+			u.applyFinishTurn(r)
 		}
 	}
+}
+
+// applyFinishTurn — порт Java Units.finishTurn() per-unit. Все имена
+// переменных сохранены из Java для удобства сверки.
+func (u *unitState) applyFinishTurn(r *rng.R) {
+	if u.startTurnQuantity <= 0 {
+		u.startTurnQuantityDiff = 0
+		return
+	}
+	shell := u.tmpl.Shell
+	if shell <= 0 {
+		// Юнит без shell (защ. зона?) — ablation не применим, состояние
+		// не меняется. Diff = 0.
+		u.startTurnQuantityDiff = 0
+		return
+	}
+
+	startTurnQuantity := u.startTurnQuantity
+	startTurnShell := u.startTurnShell
+	turnShell := u.turnShell
+
+	// turnFiredQuantity = 0 (см. unitState.turnFiredQuantity комментарий) —
+	// у нас applyShots не «убивает целиком», всё в turnShell.
+	turnQuantity := float64(startTurnQuantity - u.turnFiredQuantity)
+	turnDamaged := float64(u.startTurnDamaged)
+	turnShellPercent := u.startTurnDamagedShellPercent
+
+	if turnShell < startTurnShell {
+		turnShellDestroyed := startTurnShell - turnShell
+
+		// 1. Добиваем уже подбитых (Java 509-518).
+		if turnDamaged > 0 && u.startTurnDamagedShellPercent > 0 {
+			damagedUnitShell := shell * u.startTurnDamagedShellPercent / 100
+			if damagedUnitShell > 0 {
+				maxDamagedUnitsDestroyed := math.Min(turnDamaged, math.Floor(turnShellDestroyed/damagedUnitShell))
+				damagedUnitsDestroyed := math.Ceil(maxDamagedUnitsDestroyed * 0.85)
+				if damagedUnitsDestroyed < 0 {
+					damagedUnitsDestroyed = 0
+				}
+				turnQuantity -= damagedUnitsDestroyed
+				turnDamaged -= damagedUnitsDestroyed
+				turnShellDestroyed -= damagedUnitsDestroyed * damagedUnitShell
+				if turnShellDestroyed < 0 {
+					turnShellDestroyed = 0
+				}
+			}
+		}
+
+		// 2. Уничтожаем здоровых (Java 519-521).
+		maxUnitsDestroyed := math.Min(turnQuantity, math.Floor(turnShellDestroyed/shell))
+		unitsDestroyed := math.Ceil(maxUnitsDestroyed * 0.85)
+		if unitsDestroyed < 0 {
+			unitsDestroyed = 0
+		}
+		turnQuantity -= unitsDestroyed
+
+		// 3. Диапазон damaged по остатку (Java 523-535).
+		residualShell := turnShellDestroyed - unitsDestroyed*shell
+		var minDamaged, maxDamaged float64
+		if residualShell > 0 {
+			minDamaged = residualShell / (shell * 0.99)
+			maxDamaged = residualShell / (shell * 0.1)
+		}
+		minDamaged = clampVal(minDamaged, turnDamaged, turnQuantity)
+		maxDamaged = clampVal(maxDamaged, minDamaged, turnQuantity)
+		deltaDamaged := (maxDamaged - minDamaged) * 0.5
+		minDamaged += deltaDamaged * 0.49
+		maxDamaged -= deltaDamaged * 0.49
+		turnDamaged = math.Round(randDouble(r, minDamaged, maxDamaged))
+		if turnDamaged == 0 && turnShellDestroyed > 0 && turnQuantity > 0 {
+			turnDamaged = 1
+		}
+
+		// 4. shellPercent (Java 536).
+		if turnDamaged > 0 {
+			turnShellPercent = (turnShell - (turnQuantity-turnDamaged)*shell) * 100 / (turnDamaged * shell)
+		} else {
+			turnShellPercent = 0
+		}
+
+		// 5. Exploding (Java 538-565).
+		remainTurnShellDestroyed := turnShellDestroyed - (maxUnitsDestroyed-unitsDestroyed)*shell
+		if remainTurnShellDestroyed < 0 {
+			remainTurnShellDestroyed = 0
+		}
+		// accurateExploding = true в Java.
+		var maxExplode float64
+		spClamped := clampVal(turnShellPercent, 1, 99)
+		if spClamped > 0 {
+			maxExplode = math.Ceil(remainTurnShellDestroyed / (shell * spClamped / 100))
+		}
+		if maxExplode > turnDamaged {
+			maxExplode = turnDamaged
+		}
+
+		switch {
+		case turnShellPercent < 20:
+			turnQuantity -= maxExplode
+			turnDamaged -= maxExplode
+		case turnShellPercent < 65:
+			explodingChance := 1 - turnShellPercent/100
+			explodingUnits := math.Ceil(maxExplode * explodingChance)
+			turnQuantity -= explodingUnits
+			turnDamaged -= explodingUnits
+		case turnShellPercent > 99:
+			turnDamaged = 0
+		}
+	} else if turnShell < 1 {
+		turnQuantity = 0
+		turnDamaged = 0
+		turnShellPercent = 0
+	}
+
+	turnQuantity = clampVal(turnQuantity, 0, float64(startTurnQuantity))
+	turnDamaged = clampVal(turnDamaged, 0, turnQuantity)
+	turnShellPercent = clampVal(turnShellPercent, 0, 100)
+
+	newQty := int64(turnQuantity)
+	u.startTurnQuantityDiff = newQty - startTurnQuantity
+	u.quantity = newQty
+	u.damaged = int64(turnDamaged)
+	u.shellPercent = turnShellPercent
+	// turnShell нормализуем к новому состоянию, чтобы regen+следующий раунд
+	// видел правильное startTurnShell.
+	u.turnShell = totalShell(shell, u.quantity, u.damaged, u.shellPercent)
+}
+
+// clampVal — порт Java Assault.clampVal(v, min, max).
+func clampVal(v, lo, hi float64) float64 {
+	if v < lo {
+		return lo
+	}
+	if v > hi {
+		return hi
+	}
+	return v
+}
+
+// randDouble — равномерное случайное в [min, max], детерминированно
+// через rng.R. Java: Assault.randDouble(double min, double max).
+func randDouble(r *rng.R, lo, hi float64) float64 {
+	if hi <= lo {
+		return lo
+	}
+	return lo + r.Float64()*(hi-lo)
 }
 
 func (b *battleState) totalAlive() int64 {
