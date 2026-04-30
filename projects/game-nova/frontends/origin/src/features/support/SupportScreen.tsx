@@ -66,15 +66,14 @@ export function SupportScreen() {
       <table className="ntable">
         <thead>
           <tr>
-            <th>{t('prefs', 'support') || 'Техническая поддержка'}</th>
+            <th>Техническая поддержка</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td className="center">
               <span className="true">
-                {t('prefs', 'supportSent') ||
-                  'Спасибо. Заявка принята и будет рассмотрена в течение 3 рабочих дней.'}
+                Спасибо. Заявка принята и будет рассмотрена в течение 3 рабочих дней.
               </span>
             </td>
           </tr>
@@ -85,7 +84,7 @@ export function SupportScreen() {
                 className="button"
                 onClick={() => setSent(false)}
               >
-                {t('alliance', 'cancelBtn') || 'Закрыть'}
+                Закрыть
               </button>
             </td>
           </tr>
@@ -99,9 +98,7 @@ export function SupportScreen() {
       <table className="ntable">
         <thead>
           <tr>
-            <th colSpan={2}>
-              {t('prefs', 'support') || 'Техническая поддержка'}
-            </th>
+            <th colSpan={2}>Техническая поддержка</th>
           </tr>
         </thead>
         <tfoot>
@@ -110,11 +107,7 @@ export function SupportScreen() {
               <input
                 type="submit"
                 className="button"
-                value={
-                  mut.isPending
-                    ? '…'
-                    : t('messages', 'composeSend') || 'Отправить'
-                }
+                value={mut.isPending ? '…' : 'Отправить'}
                 disabled={mut.isPending || !fields.description.trim()}
               />
               {mut.isError && (
@@ -130,9 +123,8 @@ export function SupportScreen() {
         <tbody>
           <tr>
             <td colSpan={2} className="false2">
-              {t('prefs', 'supportRules') ||
-                'Перед отправкой убедитесь что в заявке указан логин, вселенная, ' +
-                  'страница где возникла ошибка, и пошаговое описание для воспроизведения.'}
+              Перед отправкой убедитесь что в заявке указан логин, вселенная,
+              страница где возникла ошибка, и пошаговое описание для воспроизведения.
             </td>
           </tr>
           <tr>
