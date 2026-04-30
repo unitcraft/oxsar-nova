@@ -6,6 +6,10 @@
 // в стиле legacy simulator.tpl и ссылку «Отчёт о сражении» на
 // /battle-report/{id} (анонимный публичный просмотр).
 //
+// План 72.1 ч.20.11.8: cost юнитов backend подгружает из configs
+// (ships.yml + defense.yml) и проставляет в Side.Units перед расчётом —
+// фронт не обязан знать стоимости (они — backend balance).
+//
 // ADR-0002: rendering на frontend, backend возвращает структурированный
 // JSON.
 package simulator
@@ -16,24 +20,26 @@ import (
 
 	"oxsar/game-nova/internal/auth"
 	"oxsar/game-nova/internal/battle"
+	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/httpx"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/pkg/ids"
 )
 
 type Handler struct {
-	db repo.Exec
+	db  repo.Exec
+	cat *config.Catalog
 }
 
-func NewHandler(db repo.Exec) *Handler {
-	return &Handler{db: db}
+func NewHandler(db repo.Exec, cat *config.Catalog) *Handler {
+	return &Handler{db: db, cat: cat}
 }
 
 // RunResponse — ответ POST /api/simulator/run.
 type RunResponse struct {
-	ID     string         `json:"id"`     // UUID последнего боя в battle_reports
-	Stats  battle.SimStats `json:"stats"` // агрегат по num_sim итераций
-	Report battle.Report  `json:"report"` // последний бой целиком (для round-by-round, опционально)
+	ID     string          `json:"id"`     // UUID последнего боя в battle_reports
+	Stats  battle.SimStats `json:"stats"`  // агрегат по num_sim итераций
+	Report battle.Report   `json:"report"` // последний бой целиком (для round-by-round)
 }
 
 // Run POST /api/simulator/run — N прогонов, агрегат + сохранение последнего.
@@ -57,6 +63,16 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 	}
 	if n > 100 {
 		n = 100
+	}
+
+	// Заполняем cost из catalog (фронт его не передаёт — он не должен
+	// знать backend-баланс). Без этого SimStats.AttackerLost* / Exp = 0.
+	costByID := h.unitCosts()
+	for si := range in.Attackers {
+		fillCosts(in.Attackers[si].Units, costByID)
+	}
+	for si := range in.Defenders {
+		fillCosts(in.Defenders[si].Units, costByID)
 	}
 
 	stats, last, err := battle.MultiRun(in, n)
@@ -89,4 +105,28 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 		Stats:  stats,
 		Report: last,
 	})
+}
+
+// unitCosts — индекс id → cost по объединённому catalog (ships+defense).
+func (h *Handler) unitCosts() map[int]battle.UnitCost {
+	out := make(map[int]battle.UnitCost, len(h.cat.Ships.Ships)+len(h.cat.Defense.Defense))
+	for _, s := range h.cat.Ships.Ships {
+		out[s.ID] = battle.UnitCost{
+			Metal: s.Cost.Metal, Silicon: s.Cost.Silicon, Hydrogen: s.Cost.Hydrogen,
+		}
+	}
+	for _, d := range h.cat.Defense.Defense {
+		out[d.ID] = battle.UnitCost{
+			Metal: d.Cost.Metal, Silicon: d.Cost.Silicon, Hydrogen: d.Cost.Hydrogen,
+		}
+	}
+	return out
+}
+
+func fillCosts(units []battle.Unit, costs map[int]battle.UnitCost) {
+	for i := range units {
+		if c, ok := costs[units[i].UnitID]; ok {
+			units[i].Cost = c
+		}
+	}
 }
