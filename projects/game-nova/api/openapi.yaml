@@ -479,6 +479,43 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /api/simulator/run:
+    post:
+      tags: [simulator]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Боевой симулятор (план 72.1 ч.20.7). Чистая функция —
+        принимает атакующих/защитников, возвращает Report без
+        обращения к БД. Порт legacy oxsar2-java/Assault.java.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [attackers, defenders]
+              properties:
+                seed:      { type: integer, format: int64, description: "PRNG seed (0 = random)" }
+                rounds:    { type: integer, description: "Max rounds (default 6)" }
+                num_sim:   { type: integer, description: "Multi-run statistics (2..100)" }
+                is_moon:   { type: boolean }
+                attackers:
+                  type: array
+                  items: { type: object }
+                defenders:
+                  type: array
+                  items: { type: object }
+                rapidfire:
+                  type: object
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { type: object, description: "battle.Report or battle.SimStats" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /api/research:
     get:
       tags: [research]
