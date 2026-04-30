@@ -13917,3 +13917,43 @@ config.inc.php cleanup; статус «на удаление» отозван.
 
   **Коммит**:
   refactor(legacy-php): починить Assault.jar — openjdk17 + mysql-connector-j 8.0.33 в classpath; убрать require config.inc.php; отзыв «на удаление».
+
+---
+
+2026-05-01 — итерация: legacy-PHP — public/AssaultReport.php порт с Yii
+на текущий движок (Core/Template/Language). Закрытие use-case «открыть
+отчёт о бое после симуляции».
+
+  **Контекст**: после починки Assault.jar (предыдущая итерация) ссылка
+  со страницы симулятора `AssaultReport.php?id=N&key=XXXX&simulation=1`
+  падала с `Failed opening required '/var/www/public/bd_connect_info.php'`.
+  Файл `public/AssaultReport.php` остался от Yii-эпохи (oxsar2 →
+  legacy-PHP clean-room rewrite); Yii выпилен в плане 37.5d.9, файл
+  стал dead code и просто не работал. У него есть прототип в
+  `d:\Sources\oxsar2\www\new_game\protected\controllers\MainController.php`
+  (`actionAssaultReport()`) — на нём порт.
+
+  **Что сделано**: переписан [public/AssaultReport.php](../projects/game-legacy-php/public/AssaultReport.php) (~240 строк):
+  - Bootstrap по паттерну `public/artefact-image.php` (без Yii, без HTTP-роутинга/JWT).
+  - SELECT report,planetid FROM `(sim_)assault` WHERE assaultid AND key/key2.
+  - Cепочка `preg_replace_callback` для placeholder'ов, генерируемых самим Assault.jar:
+    `{lang}…{/lang}`, `{img}…{/img}`, `{embedded[…]}…{/embedded}`,
+    `{embedded2/3/4[…]}(…){/embedded…}`, `{user[…]}…{/user}`,
+    `{hide_text}…{/hide_text}`, `{defender_info_turn_1}…{/defender_info_turn_1}`,
+    `{defender_result_turn_1}…{/defender_result_turn_1}`, `{battle_matrix_turn_N}…`.
+  - 7 helper'ов с префиксом `_ar_*` (без класса, чисто функции): `_ar_renderReport`,
+    `_ar_getReportLangItem`, `_ar_getReportImageItem`, `_ar_getHideText`,
+    `_ar_getReportUserName`, `_ar_replaceBattleMatrix`, `_ar_getBattleMatrixTurn`.
+  - Рендер шаблона `assault_report.tpl` через `Core::getTPL()->display('assault_report', true)`.
+
+  **Отличие от Yii-оригинала** (намеренные упрощения):
+  - Регекс-модификатор `/siU` → `/si`. **Why**: PCRE-флаг `U` инвертирует жадность, делая `(.*?)` ЖАДНЫМ. На отчётах Assault.jar с несколькими `{lang}` в одном блоке регекс под `/siU` съедал всё между первым `{lang}` и последним `{/lang}`. Локально проверено на `id=5&key=b182&simulation=1`: с `/siU` оставались сырые `{lang}` и `{embedded4[`, с `/si` всё схлопывается. В Yii-оригинале была та же ошибка, но видимо проявлялась реже из-за форматирования отчётов (по одному тегу на строку). Исправлено в port'е.
+  - Нет send-to-friend формы, user_bg/table styles, music player, memcache. Каркас в `assault_report.tpl` остаётся (`{if[$display_send]}` ветки), просто `display_send=false`. Добавить — отдельной итерацией, основной use-case (видеть отчёт о бое из симулятора) уже закрыт.
+
+  **Smoke**: `curl http://localhost:8092/AssaultReport.php?id=5&key=b182&simulation=1` → HTTP 200, 2.4 КБ HTML, шаблон отрендерён, тело отчёта читаемое («Атакующий выиграл бой», «Потери атакующего: 0 (0 металла, ...)» итд), нет нерезолвленных placeholder'ов.
+
+  **Файлы**:
+  - projects/game-legacy-php/public/AssaultReport.php (полный rewrite, 36 → ~240 строк).
+
+  **Коммит**:
+  feat(legacy-php): port AssaultReport.php с Yii на Core/Template (отчёт о бое из симулятора).
