@@ -2572,8 +2572,6 @@ mission:
   resetDefense: "Обнулить оборону"
   setDefense: "Установить оборону"
   toBegin: "В начало"
-  openInViewer: "Открыть в просмотрщике"
-  noLastSim: "Нет сохранённой симуляции. Запустите бой в симуляторе."
 
   allResources: Все ресурсы
   allShips: Все корабли

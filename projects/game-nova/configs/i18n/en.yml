@@ -2573,8 +2573,6 @@ mission:
   resetDefense: "Reset defense"
   setDefense: "Set defense"
   toBegin: "To beginning"
-  openInViewer: "Open in viewer"
-  noLastSim: "No saved simulation. Run a simulation first."
 
   allResources: ""
   allShips: ""

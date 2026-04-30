@@ -140,6 +140,12 @@ export function AppRouter() {
          * редиректит на «/», где AuthGate уже видит их.
          */}
         <Route path="/auth/handoff" element={<HandoffPage />} />
+        {/*
+         * План 72.1 ч.20.11: публичный анонимный просмотр боевых
+         * отчётов и симуляций. Доступен без auth — отчёты идентифицируются
+         * непредсказуемым UUID, можно отправить ссылку кому угодно.
+         */}
+        <Route path="/battle-report/:id" element={<BattleReportScreen />} />
         <Route
           path="/*"
           element={

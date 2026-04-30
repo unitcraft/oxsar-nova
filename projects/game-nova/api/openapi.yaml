@@ -523,10 +523,12 @@ paths:
   /api/battle-reports/{id}:
     get:
       tags: [battle]
-      security: [{ bearerAuth: [] }]
+      security: []
       summary: |
-        Детали боевого отчёта. Доступно только участникам боя
-        (attacker, defender, ACS-participant).
+        Публичный анонимный endpoint для просмотра отчёта по uuid
+        (план 72.1 ч.20.11). Любой пользователь по ссылке может
+        посмотреть результат боя или симуляции — permission check
+        снят, отчёты идентифицируются непредсказуемым UUID v7.
       parameters:
         - in: path
           name: id
@@ -541,8 +543,6 @@ paths:
                 type: object
                 properties:
                   report: { type: object, description: "battle.Report JSON" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
   /api/simulator/run:
@@ -550,9 +550,10 @@ paths:
       tags: [simulator]
       security: [{ bearerAuth: [] }]
       summary: |
-        Боевой симулятор (план 72.1 ч.20.7). Чистая функция —
-        принимает атакующих/защитников, возвращает Report без
-        обращения к БД. Порт legacy oxsar2-java/Assault.java.
+        Боевой симулятор (план 72.1 ч.20.7+20.11). Сохраняет результат
+        в battle_reports (is_simulation=true) и возвращает {id, report}.
+        Frontend перенаправляет на /battle-report/{id} (публичный URL,
+        можно отправить кому угодно).
       requestBody:
         required: true
         content:
@@ -565,20 +566,19 @@ paths:
                 rounds:    { type: integer, description: "Max rounds (default 6)" }
                 num_sim:   { type: integer, description: "Multi-run statistics (2..100)" }
                 is_moon:   { type: boolean }
-                attackers:
-                  type: array
-                  items: { type: object }
-                defenders:
-                  type: array
-                  items: { type: object }
-                rapidfire:
-                  type: object
+                attackers: { type: array, items: { type: object } }
+                defenders: { type: array, items: { type: object } }
+                rapidfire: { type: object }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { type: object, description: "battle.Report or battle.SimStats" }
+              schema:
+                type: object
+                properties:
+                  id:     { type: string, format: uuid, description: "UUID для /battle-report/{id}" }
+                  report: { type: object, description: "battle.Report JSON" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 

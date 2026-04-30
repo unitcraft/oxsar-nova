@@ -1,11 +1,12 @@
-// S-024 BattleReport — детальный просмотр боя (план 72.1 ч.20.8).
+// S-024 BattleReport — публичный анонимный просмотр боевого отчёта
+// (план 72.1 ч.20.11).
 //
-// Использует общий компонент BattleReportView (из features/common),
-// тот же который рендерит результат симулятора. Pixel-perfect клон
+// URL: /battle-report/{uuid}. Доступен без авторизации — любой
+// пользователь по ссылке может посмотреть бой или симуляцию.
+// Отчёты идентифицируются непредсказуемым UUID v7.
+//
+// Использует общий компонент BattleReportView. Pixel-perfect клон
 // legacy oxsar2-java/Assault.java HTML rendering.
-//
-// Спец-id `last-sim` — читает результат последней симуляции из
-// localStorage (key 'oxsar-origin-last-sim'), не делает запрос к API.
 
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -13,63 +14,11 @@ import { fetchBattleReport } from '@/api/battles';
 import { QK } from '@/api/query-keys';
 import { BattleReportView } from '@/features/common/BattleReportView';
 import { useTranslation } from '@/i18n/i18n';
-import type { SimReport } from '@/api/simulator';
-
-const LAST_SIM_KEY = 'oxsar-origin-last-sim';
-
-function readLastSim(): SimReport | null {
-  try {
-    const raw = localStorage.getItem(LAST_SIM_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as SimReport;
-  } catch {
-    return null;
-  }
-}
 
 export function BattleReportScreen() {
   const { id = '' } = useParams<{ id?: string }>();
   const { t } = useTranslation();
 
-  // Спец-режим: показываем последнюю симуляцию из localStorage.
-  if (id === 'last-sim') {
-    const sim = readLastSim();
-    if (!sim) {
-      return (
-        <table className="ntable">
-          <tbody>
-            <tr>
-              <td className="center">
-                <i>
-                  {t('mission', 'noLastSim') ??
-                    'Нет сохранённой симуляции. Запустите бой в симуляторе.'}
-                </i>
-                <br />
-                <Link to="/simulator" className="button" style={{ marginTop: 8 }}>
-                  → {t('mission', 'simulator') ?? 'Симулятор боя'}
-                </Link>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      );
-    }
-    return (
-      <>
-        <BattleReportView
-          report={sim}
-          title={t('mission', 'simulationResult') ?? 'Результат симуляции'}
-        />
-        <div style={{ marginTop: 12, textAlign: 'center' }}>
-          <Link to="/simulator" className="button">
-            ← {t('mission', 'simulator') ?? 'Симулятор боя'}
-          </Link>
-        </div>
-      </>
-    );
-  }
-
-  // Обычный режим: читаем настоящий бой по UUID.
   const q = useQuery({
     queryKey: QK.battleReport(id),
     queryFn: () => fetchBattleReport(id),
@@ -84,7 +33,7 @@ export function BattleReportScreen() {
         <tbody>
           <tr>
             <td className="center">
-              <i>{t('alliance', 'nothing') ?? 'Нет доступа или отчёт не найден'}</i>
+              <i>{t('alliance', 'nothing') ?? 'Отчёт не найден'}</i>
             </td>
           </tr>
         </tbody>
@@ -101,6 +50,10 @@ export function BattleReportScreen() {
       <div style={{ marginTop: 12, textAlign: 'center' }}>
         <Link to="/battlestats" className="button">
           ← {t('battlestats', 'title') ?? 'К списку боёв'}
+        </Link>
+        {' '}
+        <Link to="/simulator" className="button">
+          {t('mission', 'simulator') ?? 'Симулятор боя'} →
         </Link>
       </div>
     </>

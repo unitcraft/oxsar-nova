@@ -264,7 +264,7 @@ func run() error {
 	shipyardSvc := shipyard.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
 	shipyardH := shipyard.NewHandler(shipyardSvc)
 
-	simulatorH := simulator.NewHandler()
+	simulatorH := simulator.NewHandler(db)
 	battleReportH := battlereport.NewHandler(db)
 
 	repairSvc := repair.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
@@ -451,6 +451,10 @@ func run() error {
 	// Переключение вселенной — требует аутентификации.
 	r.With(authMiddlewareFn).Get("/api/universes/switch", switcherH.SwitchUniverse)
 
+	// План 72.1 ч.20.11: публичный анонимный endpoint для просмотра
+	// боевого отчёта по uuid (для отправки ссылок куда угодно).
+	r.Get("/api/battle-reports/{id}", battleReportH.GetByID)
+
 	r.Route("/api", func(pr chi.Router) {
 		pr.Use(authMiddlewareFn)
 		pr.Use(auth.LastSeenMiddleware(pool))
@@ -500,7 +504,8 @@ func run() error {
 		pr.Post("/simulator/run", simulatorH.Run)
 
 		pr.Get("/users/me/battles", battleReportH.ListMine)
-		pr.Get("/battle-reports/{id}", battleReportH.GetByID)
+		// /battle-reports/{id} зарегистрирован публично ниже —
+		// анонимный просмотр по ссылке (план 72.1 ч.20.11).
 
 		pr.Post("/planets/{id}/repair/disassemble", repairH.EnqueueDisassemble)
 		pr.Post("/planets/{id}/repair/repair", repairH.EnqueueRepair)
@@ -626,7 +631,7 @@ func run() error {
 		pr.Delete("/messages/{id}", messageH.Delete)
 		pr.Get("/messages/unread-count", messageH.UnreadCount)
 		pr.Post("/messages/{id}/read", messageH.MarkRead)
-		pr.Get("/battle-reports/{id}", messageH.GetReport)
+		// /battle-reports/{id} перенесён в публичный router (план 72.1 ч.20.11).
 		pr.Get("/espionage-reports/{id}", messageH.GetEspionageReport)
 		pr.Get("/expedition-reports/{id}", messageH.GetExpeditionReport)
 
