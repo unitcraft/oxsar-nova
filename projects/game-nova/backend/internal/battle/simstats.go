@@ -18,14 +18,19 @@ func MultiRun(in Input, n int) (SimStats, Report, error) {
 	}
 	t0 := time.Now()
 	var (
-		attWins, defWins, draws       int
-		totalRounds                   int
-		totalMoonChance               float64
-		atkLostM, atkLostS, atkLostH  int64
-		defLostM, defLostS, defLostH  int64
-		debrisM, debrisS              int64
-		atkExp, defExp                int64
-		last                          Report
+		attWins, defWins, draws      int
+		totalRounds                  int
+		totalMoonChance              float64
+		atkLostM, atkLostS, atkLostH int64
+		defLostM, defLostS, defLostH int64
+		debrisM, debrisS             int64
+		// План 72.1.3 / BA-012: суммируем РЕАЛЬНЫЙ опыт из rep.AttackerExp/
+		// DefenderExp (atan-based formula в computeExperience). До фикса
+		// здесь была proxy-сумма потерь ресурсов противника (defLostM+S+H),
+		// что давало в SimStats.AttackerExp значения порядка 10^6 вместо
+		// реальных 5-10 очков опыта — UI симулятора показывал бессмыслицу.
+		atkExp, defExp int64
+		last           Report
 	)
 	seed0 := in.Seed
 	for i := 0; i < n; i++ {
@@ -57,12 +62,8 @@ func MultiRun(in Input, n int) (SimStats, Report, error) {
 			defLostS += s.LostSilicon
 			defLostH += s.LostHydrogen
 		}
-		// Опыт = sqrt(потери_противника_в_ресурсах) — приближённо как в legacy.
-		// Приближение допустимо: точная формула в Worker'е mission resolution,
-		// здесь у нас off-line симулятор без реальных юнит-стоимостей.
-		// Берём суммарные потери ресурсов противника как прокси.
-		atkExp += defLostM + defLostS + defLostH
-		defExp += atkLostM + atkLostS + atkLostH
+		atkExp += int64(rep.AttackerExp)
+		defExp += int64(rep.DefenderExp)
 	}
 	elapsed := time.Since(t0).Seconds()
 	fn := float64(n)

@@ -1091,3 +1091,69 @@ func TestValidate_CalculateRejectsMaliciousInput(t *testing.T) {
 		t.Fatalf("Calculate должен отвергнуть malicious Rapidfire через validate: %v", err)
 	}
 }
+
+// --- BA-012: MultiRun усредняет настоящий опыт ----------------------
+// План 72.1.3. До фикса SimStats.AttackerExp заполнялся суммой потерь
+// ресурсов противника (proxy ~10^6 вместо реального опыта 5-10) — UI
+// симулятора показывал бессмыслицу. Теперь усредняем `Report.AttackerExp`,
+// который уже считается atan-based formula в computeExperience.
+
+// TestMultiRun_AvgExp_MatchesSingleRunForN1 — для n=1 SimStats.AvgExp
+// должен совпадать с Report.AttackerExp единственного прогона. Раньше
+// SimStats.AttackerExp = lostM+lostS+lostH (огромное число), не совпадал.
+func TestMultiRun_AvgExp_MatchesSingleRunForN1(t *testing.T) {
+	t.Parallel()
+	in := Input{
+		Seed:      42,
+		Rounds:    6,
+		NumSim:    1,
+		Attackers: []Side{simpleAttacker(100, 100, 1000)},
+		Defenders: []Side{simpleDefender(100, 50, 1000)},
+		HasPlanet: true,
+	}
+	stats, last, err := MultiRun(in, 1)
+	if err != nil {
+		t.Fatalf("unexpected: %v", err)
+	}
+	// Опыт уже знакомого порядка — не суммы потерь (10^6+).
+	if stats.AttackerExp > 1000 {
+		t.Fatalf("BA-012: SimStats.AttackerExp слишком большое (%v) — выглядит как сумма потерь, а не опыт", stats.AttackerExp)
+	}
+	// n=1: avg = exp единственного боя.
+	if stats.AttackerExp != float64(last.AttackerExp) {
+		t.Fatalf("n=1: SimStats.AttackerExp (%v) должен совпадать с Report.AttackerExp (%d)",
+			stats.AttackerExp, last.AttackerExp)
+	}
+	if stats.DefenderExp != float64(last.DefenderExp) {
+		t.Fatalf("n=1: SimStats.DefenderExp (%v) должен совпадать с Report.DefenderExp (%d)",
+			stats.DefenderExp, last.DefenderExp)
+	}
+}
+
+// TestMultiRun_AvgExp_StaysOrderOfMagnitude — для n=10 avg всё ещё в
+// том же порядке что Report.AttackerExp одиночного боя (5-15 очков),
+// не 10^6+.
+func TestMultiRun_AvgExp_StaysOrderOfMagnitude(t *testing.T) {
+	t.Parallel()
+	in := Input{
+		Seed:      100,
+		Rounds:    6,
+		NumSim:    10,
+		Attackers: []Side{simpleAttacker(50, 100, 1000)},
+		Defenders: []Side{simpleDefender(50, 50, 1000)},
+		HasPlanet: true,
+	}
+	stats, _, err := MultiRun(in, 10)
+	if err != nil {
+		t.Fatalf("unexpected: %v", err)
+	}
+	if stats.NumSim != 10 {
+		t.Fatalf("NumSim должен быть 10, получили %d", stats.NumSim)
+	}
+	// Защита от регрессии BA-012: опыт в очках (atan-based formula
+	// даёт обычно 1-30 при паритетных силах + bpc).
+	if stats.AttackerExp > 1000 || stats.DefenderExp > 1000 {
+		t.Fatalf("BA-012 регрессия: SimStats показывает потери ресурсов вместо опыта (atk=%v def=%v)",
+			stats.AttackerExp, stats.DefenderExp)
+	}
+}

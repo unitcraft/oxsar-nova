@@ -423,7 +423,7 @@ trivial-задача на будущее.
 
 - **Дата находки**: 2026-05-01
 - **Серьёзность**: P1 (критичный мисдизайн UI симулятора)
-- **Статус**: **open**
+- **Статус**: **patched** 2026-05-01 (план 72.1.3, commit того же дня)
 - **Категория**: данные UI расходятся с реальностью
 
 **Файлы**: [simstats.go:60-65](../../projects/game-nova/backend/internal/battle/simstats.go#L60), [types.go:102-103](../../projects/game-nova/backend/internal/battle/types.go#L102).
@@ -441,10 +441,27 @@ defExp += atkLostM + atkLostS + atkLostH
 `AttackerExp/DefenderExp`. UI покажет «опыт атакующего: 1 234 567»
 вместо реальных 5-10 очков — т.е. в 100 000× больше.
 
-**Фикс**: либо переименовать поля в `SimStats` на `EstimatedAtkExp`
-(понятная семантика), либо **вызывать в multi-run`computeExperience`**
-для каждой итерации (правильно), либо собирать `Report.AttackerExp` через
-`avg(reps[i].AttackerExp)` (тоже правильно — он уже считается).
+**Фикс** (применён 2026-05-01): в [simstats.go](../../projects/game-nova/backend/internal/battle/simstats.go)
+заменена proxy-сумма потерь ресурсов на усреднение реального
+`Report.AttackerExp/DefenderExp` (atan-based formula уже считается
+в каждой итерации `Calculate`):
+
+```go
+// Было:
+atkExp += defLostM + defLostS + defLostH
+defExp += atkLostM + atkLostS + atkLostH
+
+// Стало:
+atkExp += int64(rep.AttackerExp)
+defExp += int64(rep.DefenderExp)
+```
+
+**Тесты**:
+- `TestMultiRun_AvgExp_MatchesSingleRunForN1` — для `n=1`
+  `SimStats.AttackerExp == Report.AttackerExp` единственного прогона
+  + sanity-check `AttackerExp ≤ 1000` (раньше было ~10^6).
+- `TestMultiRun_AvgExp_StaysOrderOfMagnitude` — для `n=10`
+  `SimStats.AttackerExp ≤ 1000` (защита от регрессии).
 
 ---
 
