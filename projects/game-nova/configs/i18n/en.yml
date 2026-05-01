@@ -1873,6 +1873,8 @@ galaxy:
   watchRemove: Remove from watchlist
   watchAdded: System added to watchlist
   watchRemoved: System removed from watchlist
+  # План 72.1.32: rocket icon action (impulse_engine range).
+  rocketAttack: Rocket attack
   watchLabel: "Watching:"
   colPos: "#"
   colPlanet: Planet
