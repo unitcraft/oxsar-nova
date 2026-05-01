@@ -33,7 +33,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
@@ -41,6 +40,7 @@ import (
 	"oxsar/game-nova/internal/alien"
 	"oxsar/game-nova/internal/artefact"
 	"oxsar/game-nova/internal/battle"
+	"oxsar/game-nova/internal/battlestats"
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/economy"
 	"oxsar/game-nova/internal/event"
@@ -686,38 +686,13 @@ func sidePower(units []battle.Unit) float64 {
 	return total
 }
 
-// calcExperience — порт формулы Java Assault.java:819-847.
-// Возвращает (atkExp, defExp) — очков боевого опыта за бой.
-func calcExperience(atkPower, defPower float64, rounds int, winner string, isMoon bool) (int, int) {
-	if atkPower <= 0 || defPower <= 0 || rounds == 0 {
-		return 0, 0
-	}
-	const maxRounds = 6
-	turnsCoeff := math.Pow(float64(rounds), 1.1) / maxRounds
-
-	atkExp := (math.Atan(defPower/atkPower*1.5-1.5)+1)*0.4*3*turnsCoeff + 1
-	defExp := (math.Atan(atkPower/defPower*1.5-1.5)+1)*0.4*3*turnsCoeff + 1
-
-	switch winner {
-	case "attackers":
-		atkExp *= 3
-	case "defenders":
-		defExp *= 3
-	default: // draw
-		atkExp *= 1.5
-		defExp *= 1.7
-	}
-
-	battlePower := math.Sqrt(atkPower*defPower) / 1_000_000
-	powerCoeff := (math.Atan(battlePower*10*0.2-1.6)+1)*0.4*19 + 1
-	if isMoon {
-		powerCoeff *= 0.5
-	}
-	atkExp *= powerCoeff
-	defExp *= powerCoeff
-
-	return int(math.Round(atkExp)), int(math.Round(defExp))
-}
+// calcExperience — удалён в плане 72.1.1 ч.2: формула опыта теперь
+// внутри battle.Calculate (battle.computeExperience), результат —
+// в Report.AttackerExp/DefenderExp. Зачисление в users — через
+// battlestats.ApplyBattleResult, который читает поля Report.
+//
+// Старый порт здесь имел тонкую расходящую семантику (isMoon vs
+// hasPlanet); единый источник истины устранил риск рассинхрона.
 
 func finalizeAttack(ctx context.Context, tx pgx.Tx, b *i18n.Bundle,
 	fleetID, attUID, defUID, planetID string,
@@ -726,39 +701,10 @@ func finalizeAttack(ctx context.Context, tx pgx.Tx, b *i18n.Bundle,
 	prevM, prevS, prevH int64,
 	atkPower, defPower float64) error {
 
-	// e_points + battles — по формуле Java (Assault.java:819-847).
-	// Пустые бои (rounds=0, нет юнитов) дают 0 опыта.
-	//
-	// План 72.1 ч.17: одновременно с e_points начисляется be_points
-	// (резервуар активных уровней технологий) — legacy
-	// `Participant.java:963` начисляет одно и то же количество в оба
-	// поля. Use-в-бою (трата be_points при отправке атаки) отложен
-	// до плана 73, см. docs/simplifications.md «M4.be_points».
-	atkExp, defExp := calcExperience(atkPower, defPower, rep.Rounds, rep.Winner, false)
-	if atkExp > 0 && attUID != "" {
-		if _, err := tx.Exec(ctx,
-			`UPDATE users
-			 SET e_points = e_points + $1,
-			     be_points = be_points + $1,
-			     battles = battles + 1
-			 WHERE id = $2`,
-			atkExp, attUID,
-		); err != nil {
-			return fmt.Errorf("finalize: attacker e_points/be_points: %w", err)
-		}
-	}
-	if defExp > 0 && defUID != "" && defUID != attUID {
-		if _, err := tx.Exec(ctx,
-			`UPDATE users
-			 SET e_points = e_points + $1,
-			     be_points = be_points + $1,
-			     battles = battles + 1
-			 WHERE id = $2`,
-			defExp, defUID,
-		); err != nil {
-			return fmt.Errorf("finalize: defender e_points/be_points: %w", err)
-		}
-	}
+	// План 72.1.1: e_points/be_points/battles + списание points/u_points/
+	// u_count + лог user_experience — теперь делает battlestats.ApplyBattleResult,
+	// вызывается ниже после INSERT в battle_reports (нужен reportID для
+	// UNIQUE-ключа idempotency).
 
 	// Начисление кредитов победителю пропорционально мощи противника.
 	if rep.Winner == "attackers" && attUID != "" {
@@ -801,6 +747,16 @@ func finalizeAttack(ctx context.Context, tx pgx.Tx, b *i18n.Bundle,
 		reportJSON,
 	); err != nil {
 		return fmt.Errorf("finalize: insert report: %w", err)
+	}
+
+	// План 72.1.1: зачислить опыт/потери юзерам (e_points/be_points/
+	// battles +, points/u_points/u_count -). Idempotent через UNIQUE
+	// (battle_id, user_id, is_atter) в user_experience — повторный
+	// вызов вернёт ErrAlreadyApplied, что мы трактуем как ОК
+	// (event re-process).
+	if err := battlestats.ApplyBattleResult(ctx, tx, rep, reportID); err != nil &&
+		!errors.Is(err, battlestats.ErrAlreadyApplied) {
+		return fmt.Errorf("finalize: apply battle result: %w", err)
 	}
 
 	// Списываем loot с цели, добавляем к carry флота.

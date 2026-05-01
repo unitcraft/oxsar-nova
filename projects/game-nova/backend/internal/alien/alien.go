@@ -10,6 +10,7 @@ package alien
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand/v2"
@@ -18,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"oxsar/game-nova/internal/battle"
+	"oxsar/game-nova/internal/battlestats"
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/event"
 	"oxsar/game-nova/internal/i18n"
@@ -268,6 +270,15 @@ func (s *Service) AttackHandler() event.Handler {
 				defShips, defDefense, report.Defenders[0].Units); err != nil {
 				return fmt.Errorf("alien attack: apply defender losses: %w", err)
 			}
+		}
+
+		// План 72.1.1: зачислить опыт/потери защитнику-юзеру. atkSide
+		// помечена IsAliens=true → ApplyBattleResult её скипнет.
+		// battleID="" — alien-рейды не пишут battle_reports (отдельный
+		// flow через messages); idempotency event-loop'ом.
+		if err := battlestats.ApplyBattleResult(ctx, tx, report, ""); err != nil &&
+			!errors.Is(err, battlestats.ErrAlreadyApplied) {
+			return fmt.Errorf("alien attack: apply battle result: %w", err)
 		}
 
 		// Лут: при победе инопланетян — 30% ресурсов планеты.

@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"oxsar/game-nova/internal/battle"
+	"oxsar/game-nova/internal/battlestats"
 	"oxsar/game-nova/internal/event"
 	"oxsar/game-nova/pkg/ids"
 )
@@ -395,6 +396,15 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 			debrisM, debrisS, int64(0), int64(0), int64(0),
 			reportJSON, participantsJSON); err != nil {
 			return fmt.Errorf("acs attack: insert report: %w", err)
+		}
+
+		// План 72.1.1: зачислить опыт/потери всем участникам ACS-боя.
+		// В Attackers — несколько SideResult'ов (по одному на ACS-флот);
+		// useridReported map в ApplyBattleResult гарантирует, что юзер
+		// получит опыт ровно один раз даже если он в нескольких сторонах.
+		if err := battlestats.ApplyBattleResult(ctx, tx, report, reportID); err != nil &&
+			!errors.Is(err, battlestats.ErrAlreadyApplied) {
+			return fmt.Errorf("acs attack: apply battle result: %w", err)
 		}
 
 		// Сообщения всем атакующим + защитнику.
