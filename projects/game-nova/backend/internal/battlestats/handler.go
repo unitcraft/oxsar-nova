@@ -32,6 +32,10 @@ type battleRow struct {
 	LootMetal      float64 `json:"loot_metal"`
 	LootSilicon    float64 `json:"loot_silicon"`
 	LootHydrogen   float64 `json:"loot_hydrogen"`
+	// План 72.1.31: маркеры из миграции 0085.
+	HasAliens    bool `json:"has_aliens"`
+	MoonCreated  bool `json:"moon_created"`
+	IsMoon       bool `json:"is_moon"`
 }
 
 type response struct {
@@ -54,6 +58,13 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	result := r.URL.Query().Get("result")
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
+	// План 72.1.31: фильтры из миграции 0085 (legacy Battlestats.tpl
+	// `has_aliens`, `moon_created`, `is_moon` чекбоксы). Каждый
+	// фильтр trinary: "" = все, "1"/"true" = только true,
+	// "0"/"false" = только false.
+	hasAliens := r.URL.Query().Get("has_aliens")
+	moonCreated := r.URL.Query().Get("moon_created")
+	isMoon := r.URL.Query().Get("is_moon")
 
 	var where []string
 	args := []any{uid}
@@ -77,6 +88,17 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 			where = append(where, "at < $"+itoa(len(args)))
 		}
 	}
+	addBoolFilter := func(col, val string) {
+		switch val {
+		case "1", "true":
+			where = append(where, col+" = true")
+		case "0", "false":
+			where = append(where, col+" = false")
+		}
+	}
+	addBoolFilter("has_aliens", hasAliens)
+	addBoolFilter("moon_created", moonCreated)
+	addBoolFilter("is_moon", isMoon)
 
 	query := `
 		SELECT br.id, br.at, br.winner, br.rounds,
@@ -84,7 +106,8 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(a.username::text, ''), COALESCE(d.username::text, ''),
 		       p.name,
 		       br.debris_metal, br.debris_silicon,
-		       br.loot_metal, br.loot_silicon, br.loot_hydrogen
+		       br.loot_metal, br.loot_silicon, br.loot_hydrogen,
+		       br.has_aliens, br.moon_created, br.is_moon
 		FROM battle_reports br
 		LEFT JOIN users a ON a.id = br.attacker_user_id
 		LEFT JOIN users d ON d.id = br.defender_user_id
@@ -114,6 +137,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 			&attackerName, &defenderName, &planetName,
 			&br.DebrisMetal, &br.DebrisSilicon,
 			&br.LootMetal, &br.LootSilicon, &br.LootHydrogen,
+			&br.HasAliens, &br.MoonCreated, &br.IsMoon,
 		); err != nil {
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 			return

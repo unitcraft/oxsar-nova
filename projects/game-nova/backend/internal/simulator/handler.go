@@ -86,14 +86,19 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 
 	id := ids.New()
 	reportJSON, _ := json.Marshal(last)
+	// План 72.1.31: симуляции явно не имеют moon/alien-флагов (там
+	// нет реальной планеты-цели). DEFAULT false в схеме покрывает,
+	// но для будущей консистентности INSERT задаёт явные значения.
 	_, err = h.db.Pool().Exec(r.Context(), `
 		INSERT INTO battle_reports (
 			id, attacker_user_id, defender_user_id, planet_id,
 			seed, winner, rounds,
 			debris_metal, debris_silicon,
 			loot_metal, loot_silicon, loot_hydrogen,
-			report, is_simulation
-		) VALUES ($1, NULL, NULL, NULL, $2, $3, $4, $5, $6, 0, 0, 0, $7, true)
+			report, is_simulation,
+			has_aliens, moon_created, is_moon
+		) VALUES ($1, NULL, NULL, NULL, $2, $3, $4, $5, $6, 0, 0, 0, $7, true,
+		          false, false, false)
 	`, id, int64(last.Seed), last.Winner, last.Rounds,
 		last.DebrisMetal, last.DebrisSilicon,
 		reportJSON,

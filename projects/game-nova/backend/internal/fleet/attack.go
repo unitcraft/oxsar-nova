@@ -217,7 +217,8 @@ func (s *TransportService) AttackHandler() event.Handler {
 			loot := grabLoot(defMetal, defSil, defHydro, attackerShips, s.catalog, cm, csil, ch)
 			rep := battle.Report{Winner: "attackers", Rounds: 0, Seed: deriveSeed(pl.FleetID)}
 			return finalizeAttack(ctx, tx, s.bundle, pl.FleetID, attackerUserID, defenderUserID, planetID,
-				rep, loot, 0, 0, cm, csil, ch, 0, 0)
+				rep, loot, 0, 0, cm, csil, ch, 0, 0,
+				isMoon, false, false) // hasAliens=false, moonCreated=false (без боя)
 		}
 
 		atkPower := sidePower(atkSide.Units)
@@ -267,6 +268,9 @@ func (s *TransportService) AttackHandler() event.Handler {
 		for _, d := range defenderDefense {
 			defenseIDs[d.UnitID] = true
 		}
+		// План 72.1.31: moonCreated проставится ниже, если tryCreateMoon
+		// действительно создал луну (для INSERT battle_reports.moon_created).
+		moonCreated := false
 		debrisM, debrisS := calcDebris(report, defenseIDs, s.catalog)
 		if debrisM > 0 || debrisS > 0 {
 			if _, err := tx.Exec(ctx, `
@@ -281,10 +285,12 @@ func (s *TransportService) AttackHandler() event.Handler {
 			}
 			// Moon-chance: min(20, total_debris/100000)%.
 			if !isMoon {
-				if err := tryCreateMoon(ctx, tx, s.bundle, g, sys, pos, debrisM+debrisS,
-					report.Seed, defenderUserID, attackerUserID); err != nil {
+				created, err := tryCreateMoon(ctx, tx, s.bundle, g, sys, pos, debrisM+debrisS,
+					report.Seed, defenderUserID, attackerUserID)
+				if err != nil {
 					return fmt.Errorf("attack: moon: %w", err)
 				}
+				moonCreated = created
 			}
 		}
 
@@ -319,35 +325,70 @@ func (s *TransportService) AttackHandler() event.Handler {
 			}
 		}
 		return finalizeAttack(ctx, tx, s.bundle, pl.FleetID, attackerUserID, defenderUserID, planetID,
-			report, loot, debrisM, debrisS, cm, csil, ch, atkPower, defPower)
+			report, loot, debrisM, debrisS, cm, csil, ch, atkPower, defPower,
+			isMoon, holdingDef != nil, moonCreated)
 	}
 }
 
-// calcDebris — 30% (metal+silicon) от стоимости ships, погибших в
-// бою. defenseIDs — идентификаторы defensive-юнитов (чтобы исключить
-// их из debris). Cost per-unit берём из каталога по UnitResult.UnitID.
+// debrisShipsFactor / debrisDefenseFactor — bulkFactor от стоимости
+// уничтоженных юнитов, идущий в обломки. Порт Java getBulkIntoDebris
+// (oxsar2-java/Assault.java:246-255).
+//
+// Legacy:
+//   - флот: 50% от (metal + silicon) → bulkFactor 0.5.
+//   - оборона: 1% (часть стандарта OGame, в legacy:
+//     Assault.getBulkIntoDebris(UNIT_TYPE_DEFENSE) = 0.01).
+//
+// План 72.1.3 / BA-008: до фикса было 30% флот + 0% defense (defense
+// исключался полностью). Возврат к legacy 50/1: больше обломков от
+// крупных боёв, маленький налог за разрушение обороны.
+const (
+	debrisShipsFactor   = 50 // ‰ → / 100 = 0.5
+	debrisDefenseFactor = 1  // ‰ → / 100 = 0.01
+)
+
+// calcDebris — обломки = bulkFactor × (Cost.Metal+Cost.Silicon) ×
+// quantity_lost. Ships → 50%, Defense → 1% (порт Java). Hydrogen в
+// обломки не идёт (Java аналогично).
 func calcDebris(rep battle.Report, defenseIDs map[int]bool, cat *config.Catalog) (int64, int64) {
 	var m, s int64
 	sides := append([]battle.SideResult{}, rep.Attackers...)
 	sides = append(sides, rep.Defenders...)
 	for _, side := range sides {
 		for _, u := range side.Units {
-			if defenseIDs[u.UnitID] {
-				continue
-			}
 			lost := u.QuantityStart - u.QuantityEnd
 			if lost <= 0 {
 				continue
 			}
-			// ищем cost в Ships (все атакующие — ships, defenders без
-			// defense тоже ships).
+			factor := debrisShipsFactor
+			if defenseIDs[u.UnitID] {
+				factor = debrisDefenseFactor
+			}
+			// Cost подбираем сначала в Ships, потом в Defense.
+			var costMetal, costSilicon int64
+			found := false
 			for _, spec := range cat.Ships.Ships {
 				if spec.ID == u.UnitID {
-					m += lost * spec.Cost.Metal * 30 / 100
-					s += lost * spec.Cost.Silicon * 30 / 100
+					costMetal, costSilicon = spec.Cost.Metal, spec.Cost.Silicon
+					found = true
 					break
 				}
 			}
+			if !found {
+				// Defense — map[string]DefenseSpec, ищем по ID.
+				for _, spec := range cat.Defense.Defense {
+					if spec.ID == u.UnitID {
+						costMetal, costSilicon = spec.Cost.Metal, spec.Cost.Silicon
+						found = true
+						break
+					}
+				}
+			}
+			if !found {
+				continue
+			}
+			m += lost * costMetal * int64(factor) / 100
+			s += lost * costSilicon * int64(factor) / 100
 		}
 	}
 	return m, s
@@ -695,12 +736,16 @@ func sidePower(units []battle.Unit) float64 {
 // Старый порт здесь имел тонкую расходящую семантику (isMoon vs
 // hasPlanet); единый источник истины устранил риск рассинхрона.
 
+// План 72.1.31: finalizeAttack принимает 3 флага для /battlestats:
+// isMoon=цель луна; hasAliens=в защитниках был alien holding;
+// moonCreated=tryCreateMoon реально создал новую луну в этом бою.
 func finalizeAttack(ctx context.Context, tx pgx.Tx, b *i18n.Bundle,
 	fleetID, attUID, defUID, planetID string,
 	rep battle.Report, loot lootAmount,
 	debrisM, debrisS int64,
 	prevM, prevS, prevH int64,
-	atkPower, defPower float64) error {
+	atkPower, defPower float64,
+	isMoon, hasAliens, moonCreated bool) error {
 
 	// План 72.1.1: e_points/be_points/battles + списание points/u_points/
 	// u_count + лог user_experience — теперь делает battlestats.ApplyBattleResult,
@@ -734,18 +779,21 @@ func finalizeAttack(ctx context.Context, tx pgx.Tx, b *i18n.Bundle,
 		return fmt.Errorf("finalize: marshal report: %w", err)
 	}
 	reportID := ids.New()
+	// План 72.1.31: 3 флага для фильтров /battlestats (миграция 0085).
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO battle_reports (id, attacker_user_id, defender_user_id, planet_id,
 		                            seed, winner, rounds,
 		                            debris_metal, debris_silicon,
 		                            loot_metal, loot_silicon, loot_hydrogen,
-		                            report)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		                            report,
+		                            has_aliens, moon_created, is_moon)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 	`, reportID, attUID, defUID, planetID,
 		int64(rep.Seed), rep.Winner, rep.Rounds,
 		debrisM, debrisS,
 		loot.Metal, loot.Silicon, loot.Hydrogen,
 		reportJSON,
+		hasAliens, moonCreated, isMoon,
 	); err != nil {
 		return fmt.Errorf("finalize: insert report: %w", err)
 	}
@@ -821,18 +869,21 @@ func finalizeAttack(ctx context.Context, tx pgx.Tx, b *i18n.Bundle,
 // tryCreateMoon проверяет шанс создания луны по формуле OGame:
 // chance = min(20, debrisTotal/100000)%. Если луна уже есть — пропуск.
 // seed берётся из battle.Report.Seed для детерминированности.
+//
+// План 72.1.31: возвращает created=true если луна была реально создана
+// (нужно для INSERT battle_reports.moon_created — фильтр /battlestats).
 func tryCreateMoon(ctx context.Context, tx pgx.Tx, b *i18n.Bundle, g, sys, pos int,
-	debrisTotal int64, battleSeed uint64, defUserID, attUserID string) error {
+	debrisTotal int64, battleSeed uint64, defUserID, attUserID string) (bool, error) {
 	chance := int(debrisTotal / 100000)
 	if chance > 20 {
 		chance = 20
 	}
 	if chance <= 0 {
-		return nil
+		return false, nil
 	}
 	r := rng.New(battleSeed ^ uint64(g)<<32 ^ uint64(sys)<<16 ^ uint64(pos))
 	if r.IntN(100) >= chance {
-		return nil // не повезло
+		return false, nil // не повезло
 	}
 	// Луна уже есть?
 	var exists bool
@@ -842,10 +893,10 @@ func tryCreateMoon(ctx context.Context, tx pgx.Tx, b *i18n.Bundle, g, sys, pos i
 			WHERE galaxy=$1 AND system=$2 AND position=$3 AND is_moon=true AND destroyed_at IS NULL
 		)
 	`, g, sys, pos).Scan(&exists); err != nil {
-		return err
+		return false, err
 	}
 	if exists {
-		return nil
+		return false, nil
 	}
 	// Размер луны — 2000..6800 (OGame-диапазон для мун).
 	diameter := 2000 + r.IntN(4800)
@@ -856,7 +907,7 @@ func tryCreateMoon(ctx context.Context, tx pgx.Tx, b *i18n.Bundle, g, sys, pos i
 		                     metal, silicon, hydrogen)
 		VALUES ($1, $2, true, 'Moon', $3, $4, $5, $6, 0, 'moon', -100, -60, 0, 0, 0)
 	`, moonID, defUserID, g, sys, pos, diameter); err != nil {
-		return fmt.Errorf("insert moon: %w", err)
+		return false, fmt.Errorf("insert moon: %w", err)
 	}
 	// Сообщения обеим сторонам.
 	btr := bundleTr(b)
@@ -871,8 +922,8 @@ func tryCreateMoon(ctx context.Context, tx pgx.Tx, b *i18n.Bundle, g, sys, pos i
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 			VALUES ($1, $2, NULL, 2, $3, $4)
 		`, ids.New(), uid, subj, body); err != nil {
-			return fmt.Errorf("moon message: %w", err)
+			return false, fmt.Errorf("moon message: %w", err)
 		}
 	}
-	return nil
+	return true, nil
 }
