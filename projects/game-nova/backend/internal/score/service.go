@@ -65,6 +65,21 @@ type Entry struct {
 	HomeGalaxy   *int `json:"home_galaxy,omitempty"`
 	HomeSystem   *int `json:"home_system,omitempty"`
 	HomePosition *int `json:"home_position,omitempty"`
+	// План 72.1.29: legacy `Ranking::playerRanking` дополнительные колонки.
+	BCount      int     `json:"b_count,omitempty"`      // COUNT(*) buildings
+	RCount      int     `json:"r_count,omitempty"`      // COUNT(*) research
+	UCount      int64   `json:"u_count,omitempty"`      // SUM(count) ships+defense
+	Battles     int     `json:"battles,omitempty"`      // users.battles
+	ScoreAvg    float64 `json:"score_avg,omitempty"`    // points / days_since_reg
+}
+
+// TopFilters — параметры расширенного запроса (план 72.1.29).
+type TopFilters struct {
+	ScoreType string // total|b|r|u|a|e|dm|max|b_count|r_count|u_count|battles
+	Mode      string // player|alliance|player_observer|player_old_vacation (alliance отдельно через TopAlliances)
+	Avg       bool   // если true — ORDER BY score / days_since_reg
+	Page      int    // 1-indexed; 0/1 = первая страница
+	PerPage   int    // legacy USER_PER_PAGE=25
 }
 
 // RecalcUser пересчитывает все компоненты очков userID и атомарно
@@ -190,6 +205,132 @@ func (s *Service) Top(ctx context.Context, scoreType string, limit int) ([]Entry
 		out = append(out, e)
 	}
 	return out, rows.Err()
+}
+
+// TopExtended — расширенный Top с mode/avg/pagination (план 72.1.29).
+// Legacy `Ranking.class.php::playerRanking` 1:1.
+//
+// Возвращает (entries, totalCount).
+func (s *Service) TopExtended(ctx context.Context, f TopFilters) ([]Entry, int, error) {
+	if f.PerPage <= 0 || f.PerPage > 200 {
+		f.PerPage = 25 // legacy USER_PER_PAGE
+	}
+	if f.Page <= 0 {
+		f.Page = 1
+	}
+	offset := (f.Page - 1) * f.PerPage
+
+	// WHERE по mode (legacy `add_where`).
+	var whereClause string
+	switch f.Mode {
+	case "player_observer":
+		whereClause = `u.is_observer = true AND u.banned_at IS NULL`
+	case "player_old_vacation":
+		// legacy: VACATION_DISABLE_TIME - 3 days = 11 days
+		whereClause = `u.is_observer = false AND u.umode = true
+		    AND u.last_seen < now() - interval '11 days'
+		    AND u.banned_at IS NULL`
+	default: // "player"
+		whereClause = `u.umode = false AND u.is_observer = false AND u.banned_at IS NULL`
+	}
+
+	// ORDER BY column. Для _count и battles используем суб-запросы.
+	orderExpr := orderExprFor(f.ScoreType)
+	if f.Avg {
+		// avg = score / max(1, days_since_reg)
+		orderExpr = fmt.Sprintf(`(%s / GREATEST(1, EXTRACT(EPOCH FROM (now() - u.regtime)) / 86400.0))`, orderExpr)
+	}
+
+	// Total count (для UI пагинатора).
+	var totalCount int
+	if err := s.db.Pool().QueryRow(ctx, fmt.Sprintf(`
+		SELECT COUNT(*) FROM users u WHERE %s
+	`, whereClause)).Scan(&totalCount); err != nil {
+		return nil, 0, fmt.Errorf("score.top_ext: count: %w", err)
+	}
+
+	// Полный запрос с агрегатами.
+	query := fmt.Sprintf(`
+		SELECT u.id, u.username, a.tag,
+		       u.points, u.b_points, u.r_points, u.u_points, u.a_points, u.e_points,
+		       hp.galaxy, hp.system, hp.position,
+		       COALESCE((SELECT COUNT(*) FROM buildings b
+		                 JOIN planets p ON p.id = b.planet_id
+		                 WHERE p.user_id = u.id AND p.destroyed_at IS NULL), 0) AS b_count,
+		       COALESCE((SELECT COUNT(*) FROM research r WHERE r.user_id = u.id), 0) AS r_count,
+		       COALESCE((SELECT SUM(count) FROM (
+		           SELECT s.count FROM ships s
+		           JOIN planets p ON p.id = s.planet_id
+		           WHERE p.user_id = u.id AND p.destroyed_at IS NULL
+		           UNION ALL
+		           SELECT d.count FROM defense d
+		           JOIN planets p ON p.id = d.planet_id
+		           WHERE p.user_id = u.id AND p.destroyed_at IS NULL
+		       ) ud), 0) AS u_count,
+		       u.battles,
+		       (u.points / GREATEST(1, EXTRACT(EPOCH FROM (now() - u.regtime)) / 86400.0)) AS score_avg
+		FROM users u
+		LEFT JOIN alliances a ON a.id = u.alliance_id
+		LEFT JOIN LATERAL (
+			SELECT galaxy, system, position FROM planets
+			WHERE user_id = u.id AND destroyed_at IS NULL AND is_moon = false
+			ORDER BY created_at ASC LIMIT 1
+		) hp ON true
+		WHERE %s
+		ORDER BY %s DESC
+		LIMIT $1 OFFSET $2
+	`, whereClause, orderExpr)
+
+	rows, err := s.db.Pool().Query(ctx, query, f.PerPage, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("score.top_ext: query: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Entry
+	rank := offset + 1
+	for rows.Next() {
+		var e Entry
+		var uCountSum *int64
+		if err := rows.Scan(&e.UserID, &e.Username, &e.AllianceTag,
+			&e.Points, &e.BPoints, &e.RPoints, &e.UPoints, &e.APoints, &e.EPoints,
+			&e.HomeGalaxy, &e.HomeSystem, &e.HomePosition,
+			&e.BCount, &e.RCount, &uCountSum, &e.Battles, &e.ScoreAvg); err != nil {
+			return nil, 0, fmt.Errorf("score.top_ext: scan: %w", err)
+		}
+		if uCountSum != nil {
+			e.UCount = *uCountSum
+		}
+		e.Rank = rank
+		rank++
+		out = append(out, e)
+	}
+	return out, totalCount, rows.Err()
+}
+
+// orderExprFor — маппинг score type → ORDER BY expression. Для агрегатных
+// типов (_count) возвращает суб-запрос; для users-полей — `u.<col>`.
+func orderExprFor(scoreType string) string {
+	switch scoreType {
+	case "b_count":
+		return `(SELECT COUNT(*) FROM buildings b
+		         JOIN planets p ON p.id = b.planet_id
+		         WHERE p.user_id = u.id AND p.destroyed_at IS NULL)`
+	case "r_count":
+		return `(SELECT COUNT(*) FROM research r WHERE r.user_id = u.id)`
+	case "u_count":
+		return `(SELECT COALESCE(SUM(count), 0) FROM (
+		             SELECT s.count FROM ships s JOIN planets p ON p.id = s.planet_id
+		             WHERE p.user_id = u.id AND p.destroyed_at IS NULL
+		             UNION ALL
+		             SELECT d.count FROM defense d JOIN planets p ON p.id = d.planet_id
+		             WHERE p.user_id = u.id AND p.destroyed_at IS NULL
+		         ) ud)`
+	case "battles":
+		return `u.battles`
+	default:
+		return `u.` + columnFor(scoreType)
+	}
 }
 
 // AllianceEntry — строка рейтинга альянсов.

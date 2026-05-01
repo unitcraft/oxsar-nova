@@ -2,6 +2,7 @@ package score
 
 import (
 	"net/http"
+	"strconv"
 
 	"oxsar/game-nova/internal/auth"
 	"oxsar/game-nova/internal/httpx"
@@ -22,25 +23,54 @@ func NewHandlerWithDB(s *Service, db repo.Exec) *Handler {
 	return &Handler{svc: s, db: db}
 }
 
-// Highscore GET /api/highscore?type=total|b|r|u|a&limit=N
+// Highscore GET /api/highscore?type=...&mode=...&avg=true&page=N
 //
-// Возвращает топ игроков. type по умолчанию = "total", limit = 100 (max 200).
+// Возвращает топ игроков с пагинацией (legacy `Ranking::playerRanking`,
+// план 72.1.29).
+//
+//	type:  total|b|r|u|a|e|dm|max|b_count|r_count|u_count|battles
+//	mode:  player|player_observer|player_old_vacation
+//	avg:   true → ORDER BY (score/days_since_reg)
+//	page:  1-indexed (default 1, perPage=25 как legacy USER_PER_PAGE)
 func (h *Handler) Highscore(w http.ResponseWriter, r *http.Request) {
 	if _, ok := auth.UserID(r.Context()); !ok {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
-	scoreType := r.URL.Query().Get("type")
+	q := r.URL.Query()
+	scoreType := q.Get("type")
 	if scoreType == "" {
 		scoreType = "total"
 	}
-	limit := 100
-	entries, err := h.svc.Top(r.Context(), scoreType, limit)
+	mode := q.Get("mode")
+	if mode == "" {
+		mode = "player"
+	}
+	avg := q.Get("avg") == "true"
+	page := 1
+	if v := q.Get("page"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			page = n
+		}
+	}
+
+	entries, totalCount, err := h.svc.TopExtended(r.Context(), TopFilters{
+		ScoreType: scoreType,
+		Mode:      mode,
+		Avg:       avg,
+		Page:      page,
+		PerPage:   25,
+	})
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"entries": entries})
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+		"entries":     entries,
+		"total_count": totalCount,
+		"page":        page,
+		"per_page":    25,
+	})
 }
 
 // MyRank GET /api/highscore/me?type=total|b|r|u|a|e|dm|max
