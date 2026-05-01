@@ -53,3 +53,24 @@ export function stargateJump(input: StargateJumpInput): Promise<StargateJumpResu
     idempotencyKey: newIdempotencyKey(),
   });
 }
+
+// План 72.1.47: load/unload ресурсов для HOLDING-флотов (legacy
+// `Mission.class.php::loadResourcesToFleet/unloadResourcesFromFleet`).
+export interface LoadUnloadInput {
+  current_planet_id: string;
+  metal: number;
+  silicon: number;
+  hydrogen: number;
+}
+
+export function loadFleet(fleetId: string, input: LoadUnloadInput): Promise<void> {
+  return api.post<void>(`/api/fleet/${fleetId}/load`, input, {
+    idempotencyKey: newIdempotencyKey(),
+  });
+}
+
+export function unloadFleet(fleetId: string, input: LoadUnloadInput): Promise<void> {
+  return api.post<void>(`/api/fleet/${fleetId}/unload`, input, {
+    idempotencyKey: newIdempotencyKey(),
+  });
+}

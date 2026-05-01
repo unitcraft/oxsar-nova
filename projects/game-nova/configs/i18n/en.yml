@@ -1033,6 +1033,11 @@ fleet:
   stateOutbound: "→ Outbound"
   stateReturning: "← Returning"
   stateArrived: "✓ Arrived"
+  # План 72.1.47: HOLDING state + load/unload UI.
+  stateHold: "🛡 On target"
+  controlBtn: "⚙ Control"
+  loadOpt: "Load from planet"
+  unloadOpt: "Unload from fleet"
   missionRebase: Rebase
   missionTransport: Transport
   missionColonize: Colonize
@@ -1040,6 +1045,8 @@ fleet:
   missionAttack: Attack
   missionSpy: Espionage
   missionExpedition: Expedition
+  # План 72.1.47: HOLDING (legacy mode=17).
+  missionHolding: 🛡 Holding
 
 battlestats:
   title: ⚔ Battle history
@@ -2742,6 +2749,7 @@ mission:
   recallFleetsLink: "← Active fleets / recall"
   stargateTitle: "🌀 StarGate (moon-to-moon jump)"
   stargateBtn: "Jump"
+  holdingHours: "Hold (hours, 0..99)"
   # Battle simulator (plan 72.1 ч.20.7)
   simulator: "Battle Simulator"
   attacker: "Attacker"
