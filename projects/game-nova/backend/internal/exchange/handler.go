@@ -36,6 +36,9 @@ func (h *Handler) Routes(r chi.Router) {
 	// План 72.1 §20.12 P2P-биржа /p2p-exchange — статистика лотов
 	// текущего юзера за период (legacy `Exchange.class.php::showStatistics`).
 	r.Get("/api/exchange/broker-stats", h.BrokerStats)
+	// План 72.1.45 §9: ExchangeOpts admin страница (legacy ?go=ExchangeOpts).
+	r.Get("/api/exchange/opts", h.ExchangeOpts)
+	r.Patch("/api/exchange/opts", h.ExchangeOptsUpdate)
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
@@ -350,11 +353,59 @@ func (h *Handler) BrokerStats(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
+	// План 72.1.45 §8: per-broker fee из exchange_settings.
+	bs, err := h.svc.GetBrokerSettings(r.Context(), uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
 		"rows":    rows,
 		"summary": summary,
 		"pages":   pages,
 		"page":    parseIntDefault(q.Get("page"), 1),
-		"fee":     BrokerFee,
+		"fee":     bs.FeePercent,
+		"title":   bs.Title,
 	})
+}
+
+// ExchangeOpts GET /api/exchange/opts — план 72.1.45 §9.
+// Legacy `?go=ExchangeOpts` admin-страница: брокер видит свои настройки
+// (title, fee) и текущую статистику (через /broker-stats).
+func (h *Handler) ExchangeOpts(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	bs, err := h.svc.GetBrokerSettings(r.Context(), uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, bs)
+}
+
+// ExchangeOptsUpdate PATCH /api/exchange/opts — план 72.1.45 §9.
+// Обновление title и fee_percent брокером.
+func (h *Handler) ExchangeOptsUpdate(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	var in struct {
+		Title      string  `json:"title"`
+		FeePercent float64 `json:"fee_percent"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid body"))
+		return
+	}
+	bs, err := h.svc.UpdateBrokerSettings(r.Context(), uid, in.Title, in.FeePercent)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, bs)
 }
