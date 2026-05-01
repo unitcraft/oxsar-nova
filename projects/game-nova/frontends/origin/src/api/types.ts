@@ -578,12 +578,19 @@ export interface NotepadContent {
   updated_at: string;
 }
 
-// S-039 Search
+// S-039 Search (план 72.1.16: расширены под legacy-паритет).
 export interface SearchPlayer {
   user_id: string;
   username: string;
   alliance_tag?: string;
   points: number;
+  // План 72.1.16: legacy выводит активность, главную планету и ban.
+  last_seen?: string;
+  home_planet?: string;
+  home_galaxy?: number;
+  home_system?: number;
+  home_position?: number;
+  banned?: boolean;
 }
 
 export interface SearchAlliance {
@@ -600,6 +607,9 @@ export interface SearchPlanet {
   system: number;
   position: number;
   owner: string;
+  // План 72.1.16: legacy показывает суффикс (HP) или (MOON) к имени.
+  is_moon?: boolean;
+  is_home?: boolean;
 }
 
 export interface SearchResults {

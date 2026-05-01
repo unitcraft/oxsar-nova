@@ -1493,6 +1493,10 @@ search:
   sectionAlliances: Alliances
   sectionPlanets: Planets
   membersCount: "{{n}} members"
+  # Plan 72.1.16: legacy suffixes for result names.
+  markerHomePlanet: "(HP)"
+  markerMoon: "(Moon)"
+  markerBanned: "(banned)"
 
 wiki:
   sidebarTitle: Wiki

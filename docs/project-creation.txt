@@ -14655,3 +14655,46 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(profession): план 72.1.15 — паритет с legacy (umode + same-check + AutoMsg + description).
 
+
+---
+
+2026-05-01 — итерация 72.1.16: Search — паритет с legacy.
+
+  По чек-листу §20.12 для /search обнаружены 3 расхождения с legacy
+  Search.class.php — все закрыты 1:1.
+
+  **Сделано**:
+  - playerResult расширен: last_seen, home_planet (LATERAL JOIN на
+    planets, первая по created_at, не moon), home_galaxy/system/
+    position, banned (через users.banned_at IS NOT NULL).
+  - planetResult расширен: is_moon, is_home (через LATERAL JOIN
+    self-planets — главная планета владельца).
+  - ORDER BY переписан под legacy-семантику:
+    `(LENGTH(name) - $queryLen) ASC, name ASC` для всех трёх типов
+    (приоритет совпадениям с близкой длиной — оригинал ставил топ
+    «маминэр» выше «маминэр_убийца» при запросе «маминэр»). Раньше
+    у нас players сортировались по points DESC.
+  - LIMIT 25 для всех типов (было 20) — паритет с legacy `"25"`.
+  - Frontend SearchScreen.tsx: 6 колонок для player (+last_seen,
+    home_planet, coords-link); planet суффиксы (HP)/(Moon)
+    через i18n; banned-игроки рендерятся с line-through.
+  - i18n (ru/en): markerHomePlanet, markerMoon, markerBanned.
+
+  **Прогон**: `go test ./internal/search/...` зелёное (handler
+  401/empty-q). Round-trip с реальной БД требует TEST_DATABASE_URL.
+  TS clean, eslint clean.
+
+  **Файлы**:
+  - docs/plans/72.1.16-search-parity.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#34 → ✅).
+  - projects/game-nova/backend/internal/search/handler.go (полная переработка).
+  - projects/game-nova/backend/internal/search/handler_test.go (новый).
+  - projects/game-nova/frontends/origin/src/api/types.ts
+    (SearchPlayer/SearchPlanet расширены).
+  - projects/game-nova/frontends/origin/src/features/search/SearchScreen.tsx
+    (formatLastSeen + markers + 6 колонок).
+  - projects/game-nova/configs/i18n/{ru,en}.yml (3 ключа).
+
+  **Коммит**:
+  feat(search): план 72.1.16 — паритет с legacy (last_seen + home + markers + ORDER BY).
+
