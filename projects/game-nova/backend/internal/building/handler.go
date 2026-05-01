@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -90,6 +91,43 @@ func (h *Handler) Levels(w http.ResponseWriter, r *http.Request) {
 		"build_costs":        buildCosts,
 		"requirements_unmet": unmet,
 	})
+}
+
+// Demolish POST /api/planets/{id}/buildings/{unitId}/demolish (план 72.1.33).
+//
+// Legacy `BuildingInfo::DEMOLISH_NOW` ставит снос здания на 1 уровень
+// в очередь стройки с event Kind=2. Стоимость = (1/spec.demolish) ×
+// cost_at_current_level.
+func (h *Handler) Demolish(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	unitID, err := strconv.Atoi(chi.URLParam(r, "unitId"))
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid unit_id"))
+		return
+	}
+
+	item, err := h.svc.EnqueueDemolish(r.Context(), uid, planetID, unitID)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusCreated, item)
+	case errors.Is(err, ErrQueueBusy):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "queue busy"))
+	case errors.Is(err, ErrNotEnoughRes):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "not enough resources"))
+	case errors.Is(err, ErrUnknownUnit):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "unknown unit or no demolish factor"))
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrLevelZero):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "level is zero"))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
 }
 
 // List GET /api/planets/{id}/buildings/queue

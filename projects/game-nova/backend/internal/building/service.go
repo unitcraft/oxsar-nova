@@ -31,6 +31,8 @@ var (
 	ErrPlanetOnly        = errors.New("building: this building is not available on moons")
 	ErrMaxLevelReached   = errors.New("building: max level reached")
 	ErrFieldsExhausted   = errors.New("building: no free fields on planet")
+	// План 72.1.33: попытка demolish здания на уровне 0.
+	ErrLevelZero         = errors.New("building: level is zero, nothing to demolish")
 )
 
 type Service struct {
@@ -178,6 +180,132 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
 			VALUES ($1, $2, $3, 1, 'wait', $4, $5)
+		`, ids.New(), userID, p.ID, end,
+			fmt.Sprintf(`{"queue_id":"%s","unit_id":%d,"target_level":%d}`, id, unitID, targetLevel)); err != nil {
+			return fmt.Errorf("insert event: %w", err)
+		}
+
+		item = QueueItem{
+			ID: id, PlanetID: p.ID, UnitID: unitID, TargetLevel: targetLevel,
+			StartAt: start, EndAt: end, Status: "running",
+		}
+		return nil
+	})
+	return item, err
+}
+
+// EnqueueDemolish ставит здание в очередь на снос (план 72.1.33,
+// legacy `BuildingInfo::DEMOLISH_NOW` + `EventHandler::demolish`).
+//
+// Семантика:
+//   - target_level = curLevel - 1 (только на 1 уровень за раз).
+//   - cost = (1 / spec.Demolish) × cost_at_current_level.
+//   - duration = build duration уровня curLevel × 0.5 (стандарт OGame).
+//   - event Kind=2 (KindDemolishConstruction).
+//
+// Ошибки:
+//   - ErrQueueBusy — уже есть активная стройка/снос.
+//   - ErrNotEnoughRes — не хватает ресурсов на cost demolish.
+//   - ErrUnknownUnit — id не существует или demolish не задан.
+//   - ErrLevelZero — здание уже на 0.
+func (s *Service) EnqueueDemolish(ctx context.Context, userID, planetID string, unitID int) (QueueItem, error) {
+	_, spec, ok := s.lookupBuilding(unitID)
+	if !ok {
+		return QueueItem{}, ErrUnknownUnit
+	}
+	if spec.Demolish <= 0 {
+		return QueueItem{}, ErrUnknownUnit
+	}
+
+	p, err := s.planets.Get(ctx, planetID)
+	if err != nil {
+		return QueueItem{}, err
+	}
+	if p.UserID != userID {
+		return QueueItem{}, ErrPlanetOwnership
+	}
+
+	var item QueueItem
+	err = s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// Только одна задача на планету.
+		var busy int
+		if err := tx.QueryRow(ctx, `
+			SELECT COUNT(*) FROM construction_queue
+			WHERE planet_id = $1 AND status IN ('queued','running') AND end_at > NOW()
+		`, p.ID).Scan(&busy); err != nil {
+			return fmt.Errorf("check queue: %w", err)
+		}
+		if busy > 0 {
+			return ErrQueueBusy
+		}
+
+		curLevel, err := currentLevel(ctx, tx, p.ID, unitID)
+		if err != nil {
+			return err
+		}
+		if curLevel <= 0 {
+			return ErrLevelZero
+		}
+		targetLevel := curLevel - 1
+
+		// Cost demolish = (1/factor) × cost_at_current_level. Legacy
+		// `parseChargeFormula` возвращает basic × factor^(level-1) — у нас
+		// economy.CostForLevel делает то же самое.
+		baseCost := economy.CostForLevel(economy.Cost{
+			Metal:    spec.CostBase.Metal,
+			Silicon:  spec.CostBase.Silicon,
+			Hydrogen: spec.CostBase.Hydrogen,
+		}, spec.CostFactor, curLevel)
+		inv := 1.0 / spec.Demolish
+		demoCost := economy.Cost{
+			Metal:    int64(float64(baseCost.Metal) * inv),
+			Silicon:  int64(float64(baseCost.Silicon) * inv),
+			Hydrogen: int64(float64(baseCost.Hydrogen) * inv),
+		}
+
+		if int64(p.Metal) < demoCost.Metal || int64(p.Silicon) < demoCost.Silicon || int64(p.Hydrogen) < demoCost.Hydrogen {
+			return ErrNotEnoughRes
+		}
+
+		// Списываем ресурсы.
+		if _, err := tx.Exec(ctx, `
+			UPDATE planets
+			SET metal = metal - $1, silicon = silicon - $2, hydrogen = hydrogen - $3
+			WHERE id = $4
+		`, demoCost.Metal, demoCost.Silicon, demoCost.Hydrogen, p.ID); err != nil {
+			return fmt.Errorf("charge resources: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO res_log (user_id, planet_id, reason, delta_metal, delta_silicon, delta_hydrogen)
+			VALUES ($1, $2, 'demolish', $3, $4, $5)
+		`, userID, p.ID, -demoCost.Metal, -demoCost.Silicon, -demoCost.Hydrogen); err != nil {
+			return fmt.Errorf("res_log: %w", err)
+		}
+
+		// Длительность demolish = build_duration × 0.5 (стандарт OGame).
+		robo, _ := currentLevel(ctx, tx, p.ID, s.catalog.Buildings.Buildings["robotic_factory"].ID)
+		var nano int
+		if nanoSpec, ok := s.catalog.Buildings.Buildings["nano_factory"]; ok {
+			nano, _ = currentLevel(ctx, tx, p.ID, nanoSpec.ID)
+		}
+		start := time.Now().UTC()
+		buildDur := economy.BuildDuration(spec.TimeBaseSeconds, demoCost, robo, nano, s.gameSpd)
+		dur := buildDur / 2
+		end := start.Add(dur)
+
+		id := ids.New()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO construction_queue (id, planet_id, unit_id, unit_type, target_level,
+			                                start_at, end_at, cost_metal, cost_silicon, cost_hydrogen, status)
+			VALUES ($1, $2, $3, 'building', $4, $5, $6, $7, $8, $9, 'running')
+		`, id, p.ID, unitID, targetLevel, start, end, demoCost.Metal, demoCost.Silicon, demoCost.Hydrogen); err != nil {
+			return fmt.Errorf("insert queue: %w", err)
+		}
+
+		// Event Kind=2 = KindDemolishConstruction.
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
+			VALUES ($1, $2, $3, 2, 'wait', $4, $5)
 		`, ids.New(), userID, p.ID, end,
 			fmt.Sprintf(`{"queue_id":"%s","unit_id":%d,"target_level":%d}`, id, unitID, targetLevel)); err != nil {
 			return fmt.Errorf("insert event: %w", err)
