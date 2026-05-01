@@ -16,6 +16,19 @@ import { QK } from '@/api/query-keys';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber } from '@/lib/format';
 import { useCurrentPlanetStore } from '@/stores/currentPlanet';
+import type { GalaxyCell } from '@/api/types';
+
+// План 72.1.32: legacy `Galaxy.class.php` строки 230-240 — маркер
+// активности. (*) если <15 минут, (N min) если <1ч, '' иначе. Скрыт
+// если canMonitorActivity=false или это сам игрок.
+function activityLabel(lastSeen: string | null | undefined): string {
+  if (!lastSeen) return '';
+  const ms = Date.now() - new Date(lastSeen).getTime();
+  if (ms < 0) return '';
+  if (ms < 15 * 60_000) return '(*)';
+  if (ms < 60 * 60_000) return `(${Math.floor(ms / 60_000)} min)`;
+  return '';
+}
 
 const GALAXY_MIN = 1;
 const GALAXY_MAX = 16;
@@ -157,40 +170,118 @@ export function GalaxyScreen() {
               <td colSpan={6}>{(q.error as Error).message}</td>
             </tr>
           )}
-          {q.data?.cells.map((cell) => (
-            <tr key={cell.position}>
-              <td>{cell.position}</td>
-              <td>
-                {cell.has_planet ? (cell.planet_name ?? '—') : ''}
-                {cell.has_moon && (
-                  <>
-                    <br />
-                    🌙 {cell.moon_name ?? t('galaxy', 'moonFallback')}
-                  </>
-                )}
-              </td>
-              <td>{cell.owner_username ?? ''}</td>
-              <td>—</td>
-              <td>
-                {cell.debris_metal > 0 || cell.debris_silicon > 0
-                  ? `${formatNumber(cell.debris_metal)} / ${formatNumber(cell.debris_silicon)}`
-                  : ''}
-              </td>
-              <td>
-                {cell.has_planet && (
-                  <button
-                    type="button"
-                    className="button"
-                    onClick={() =>
-                      navigate(`/mission?g=${galaxy}&s=${system}&p=${cell.position}`)
-                    }
-                  >
-                    {t('galaxy', 'attackTitle')}
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
+          {q.data?.cells.map((cell: GalaxyCell) => {
+            // План 72.1.32: метка активности видна только если viewer
+            // имеет star_surveillance и target в радиусе.
+            const showActivity =
+              q.data?.can_monitor_activity === true &&
+              cell.owner_id != null;
+            const actLabel = showActivity
+              ? activityLabel(cell.owner_last_seen)
+              : '';
+            // In-missile range: показываем «🚀» action для атаки ракетой.
+            const canRocket =
+              q.data?.in_missile_range === true &&
+              cell.has_planet &&
+              cell.owner_id != null;
+            return (
+              <tr key={cell.position}>
+                <td>{cell.position}</td>
+                <td>
+                  {cell.has_planet ? (cell.planet_name ?? '—') : ''}
+                  {cell.has_moon && (
+                    <>
+                      <br />
+                      🌙 {cell.moon_name ?? t('galaxy', 'moonFallback')}
+                    </>
+                  )}
+                </td>
+                <td>
+                  {cell.owner_username ?? ''}
+                  {cell.owner_username && (cell.owner_rank != null || cell.owner_e_points != null) && (
+                    <>
+                      <br />
+                      <small>
+                        {cell.owner_rank != null && <>#{cell.owner_rank}</>}
+                        {cell.owner_e_points != null && (
+                          <>
+                            {cell.owner_rank != null && ' · '}
+                            E:{formatNumber(cell.owner_e_points)}
+                          </>
+                        )}
+                        {actLabel && <> · <span className="true">{actLabel}</span></>}
+                        {cell.owner_vacation && <> · 💤</>}
+                        {cell.owner_banned && <> · 🚫</>}
+                        {cell.is_friend && <> · ⭐</>}
+                      </small>
+                    </>
+                  )}
+                </td>
+                <td>
+                  {cell.alliance_tag ? (
+                    <>
+                      [{cell.alliance_tag}]
+                      {cell.owner_alliance_rank != null && (
+                        <>
+                          <br />
+                          <small>#{cell.owner_alliance_rank}</small>
+                        </>
+                      )}
+                      {cell.relation && (
+                        <>
+                          <br />
+                          <small className={cell.relation === 'war' ? 'false' : 'true'}>
+                            {cell.relation}
+                          </small>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td>
+                  {cell.debris_metal > 0 || cell.debris_silicon > 0
+                    ? `${formatNumber(cell.debris_metal)} / ${formatNumber(cell.debris_silicon)}`
+                    : ''}
+                </td>
+                <td>
+                  {cell.has_planet && (
+                    <>
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() =>
+                          navigate(`/mission?g=${galaxy}&s=${system}&p=${cell.position}`)
+                        }
+                      >
+                        {t('galaxy', 'attackTitle')}
+                      </button>
+                      {canRocket && (
+                        <>
+                          {' '}
+                          <button
+                            type="button"
+                            className="button"
+                            title={t('galaxy', 'rocketAttack') || 'Rocket attack'}
+                            onClick={() =>
+                              cell.planet_id != null
+                                ? navigate(`/rocket-attack/${cell.planet_id}`)
+                                : navigate(
+                                    `/rocket-attack?g=${galaxy}&s=${system}&p=${cell.position}`,
+                                  )
+                            }
+                          >
+                            🚀
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

@@ -88,11 +88,22 @@ export interface ResearchOverview {
 export interface GalaxyCell {
   position: number;
   has_planet: boolean;
+  planet_id?: string | null;
   planet_name: string | null;
   has_moon: boolean;
   moon_name: string | null;
   owner_id: string | null;
   owner_username: string | null;
+  // План 72.1.32: расширения 1:1 с legacy galaxy.tpl.
+  owner_rank?: number | null;
+  owner_e_points?: number | null;
+  owner_alliance_rank?: number | null;
+  owner_last_seen?: string | null; // ISO-8601
+  owner_vacation?: boolean;
+  owner_banned?: boolean;
+  alliance_tag?: string | null;
+  relation?: 'nap' | 'war' | 'ally' | null;
+  is_friend?: boolean;
   debris_metal: number;
   debris_silicon: number;
 }
@@ -101,6 +112,9 @@ export interface SystemView {
   galaxy: number;
   system: number;
   cells: GalaxyCell[];
+  // План 72.1.32: meta-флаги (whether we can see activity / send rockets).
+  can_monitor_activity?: boolean;
+  in_missile_range?: boolean;
 }
 
 export interface Coords {

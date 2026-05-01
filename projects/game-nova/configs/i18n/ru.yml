@@ -1868,6 +1868,9 @@ galaxy:
   moonFallback: Луна
   watchAdd: Добавить в наблюдение
   watchRemove: Убрать из наблюдения
+  # План 72.1.32: legacy `galaxy.tpl` actions с иконкой ракеты
+  # (виден когда impulse_engine ≥ 1 даёт радиус ≥ |Δsystem|).
+  rocketAttack: Ракетная атака
   watchAdded: Система добавлена в наблюдение
   watchRemoved: Система удалена из наблюдения
   watchLabel: "Наблюдение:"
