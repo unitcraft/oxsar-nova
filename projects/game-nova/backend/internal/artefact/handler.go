@@ -3,6 +3,7 @@ package artefact
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -55,6 +56,74 @@ func (h *Handler) Activate(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "artefact requires planet"))
 	case errors.Is(err, ErrUnknownArtefact):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "unknown artefact"))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// PackBuilding POST /api/planets/{id}/buildings/{unitId}/pack (план 72.1.33 ч.2).
+//
+// Legacy `BuildingInfo::packCurrentConstruction`: если у игрока на этой
+// планете есть held packing-building артефакт (unit_id=323), упаковывает
+// здание (level - 1) в packed-building артефакт (unit_id=321) с
+// payload {construction_id, level=1}.
+func (h *Handler) PackBuilding(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	unitID, err := strconv.Atoi(chi.URLParam(r, "unitId"))
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid unit_id"))
+		return
+	}
+	rec, err := h.svc.PackBuilding(r.Context(), uid, planetID, unitID)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusCreated, rec)
+	case errors.Is(err, ErrPackingArtefactNotFound):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "no held packing-building artefact on this planet"))
+	case errors.Is(err, ErrNothingToPack):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "building level=0, nothing to pack"))
+	case errors.Is(err, ErrNotOwner):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// PackResearch POST /api/planets/{id}/research/{unitId}/pack.
+//
+// Аналог PackBuilding для исследований (legacy `packCurrentResearch`).
+// planetID нужен для контекста активации (legacy берёт NS::getPlanet()).
+func (h *Handler) PackResearch(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	unitID, err := strconv.Atoi(chi.URLParam(r, "unitId"))
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid unit_id"))
+		return
+	}
+	rec, err := h.svc.PackResearch(r.Context(), uid, planetID, unitID)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusCreated, rec)
+	case errors.Is(err, ErrPackingArtefactNotFound):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "no held packing-research artefact on this planet"))
+	case errors.Is(err, ErrNothingToPack):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "research level=0, nothing to pack"))
+	case errors.Is(err, ErrNotOwner):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}

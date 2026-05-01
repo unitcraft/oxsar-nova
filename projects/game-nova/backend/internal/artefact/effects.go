@@ -101,6 +101,16 @@ func computeChanges(spec config.ArtefactSpec, dir direction) (*FactorChange, err
 		return nil, nil
 	case "one_shot":
 		return nil, ErrUnsupported
+	// План 72.1.33 часть 2: pack/packed-артефакты — special-case
+	// эффекты, которые материализуются как
+	//   - pack_*: marker, активация = вызов Service.PackBuilding/Research
+	//     (НЕ через обычный Activate flow).
+	//   - packed_*: marker, активация = вызов Service.ActivatePacked
+	//     (добавляет уровень здания/исследования из payload).
+	// computeChanges для них возвращает nil — обычный applyChange не
+	// нужен, специальная ветка в Activate сама обработает.
+	case "pack_building", "pack_research", "packed_building", "packed_research":
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("artefact: unknown effect type %q", e.Type)
 	}

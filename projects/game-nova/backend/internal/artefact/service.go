@@ -111,7 +111,30 @@ func (s *Service) Grant(ctx context.Context, userID string, unitID int, planetID
 //   3) Для factor_planet нужен planet_id у записи.
 //   4) Применяем FactorChange через applyChange(), обновляем state,
 //      выставляем expire_at и вставляем event EVENT_ARTEFACT_EXPIRE.
+//
+// План 72.1.33 часть 2: для packed_building / packed_research артефактов
+// делегирует в ActivatePackedBuilding / ActivatePackedResearch (special-case
+// flow с обновлением building/research level из payload).
 func (s *Service) Activate(ctx context.Context, userID, artefactID string) (Record, error) {
+	// Спец-ветка для packed-артефактов — особая семантика активации.
+	var preUnitID int
+	_ = s.db.Pool().QueryRow(ctx,
+		`SELECT unit_id FROM artefacts_user WHERE id = $1`, artefactID,
+	).Scan(&preUnitID)
+	switch preUnitID {
+	case UnitPackedBuilding:
+		// Целевая планета берётся из артефакта (planet_id), активация
+		// на «другой планете» — отдельный endpoint /pack/.../activate
+		// если потребуется.
+		return s.ActivatePackedBuilding(ctx, userID, artefactID, "")
+	case UnitPackedResearch:
+		return s.ActivatePackedResearch(ctx, userID, artefactID)
+	case UnitPackingBuilding, UnitPackingResearch:
+		// Packing-артефакты не активируются напрямую — только через
+		// PackBuilding/Research endpoint с указанием цели (building_id).
+		return Record{}, fmt.Errorf("artefact: packing artefact must be used via /api/planets/.../buildings/.../pack endpoint")
+	}
+
 	var rec Record
 	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		r, spec, err := s.loadOwned(ctx, tx, userID, artefactID)

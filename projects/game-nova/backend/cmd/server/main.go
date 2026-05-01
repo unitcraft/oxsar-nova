@@ -505,6 +505,10 @@ func run() error {
 		pr.Delete("/planets/{id}/buildings/queue/{taskId}", buildingH.Cancel)
 		// План 72.1.33: legacy BuildingInfo::DEMOLISH_NOW.
 		pr.Post("/planets/{id}/buildings/{unitId}/demolish", buildingH.Demolish)
+		// План 72.1.33 ч.2: legacy BuildingInfo::PackConstruction +
+		// PackResearch — упаковка здания/исследования в packed-артефакт.
+		pr.Post("/planets/{id}/buildings/{unitId}/pack", artefactH.PackBuilding)
+		pr.Post("/planets/{id}/research/{unitId}/pack", artefactH.PackResearch)
 
 		pr.Post("/planets/{id}/research", researchH.Enqueue)
 		pr.Get("/research", researchH.List)
