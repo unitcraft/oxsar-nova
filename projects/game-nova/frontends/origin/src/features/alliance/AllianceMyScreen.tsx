@@ -236,10 +236,13 @@ function ApplicationsTable({ allianceID }: { allianceID: string }) {
     <table className="ntable">
       <thead>
         <tr>
-          <th colSpan={4}>{t('alliance', 'applications')}</th>
+          <th colSpan={6}>{t('alliance', 'applications')}</th>
         </tr>
         <tr>
           <th>{t('alliance', 'candidate')}</th>
+          {/* План 72.1.45 §3: координаты home-планеты + очки. */}
+          <th>{t('alliance', 'candidateCoords') || 'Координаты'}</th>
+          <th>{t('alliance', 'memberPoints') || 'Очки'}</th>
           <th>{t('alliance', 'applicationContent')}</th>
           <th>{t('alliance', 'applicationTime')}</th>
           <th>{t('alliance', 'operations')}</th>
@@ -248,7 +251,7 @@ function ApplicationsTable({ allianceID }: { allianceID: string }) {
       <tbody>
         {list.length === 0 && (
           <tr>
-            <td colSpan={4} className="center">
+            <td colSpan={6} className="center">
               {t('alliance', 'nothing')}
             </td>
           </tr>
@@ -256,6 +259,12 @@ function ApplicationsTable({ allianceID }: { allianceID: string }) {
         {list.map((ap) => (
           <tr key={ap.id}>
             <td className="center">{ap.username}</td>
+            <td className="center">
+              {ap.home_galaxy > 0
+                ? `[${ap.home_galaxy}:${ap.home_system}:${ap.home_position}]`
+                : '—'}
+            </td>
+            <td className="center">{ap.points.toLocaleString('ru-RU')}</td>
             <td>{ap.message}</td>
             <td className="center">
               {new Date(ap.created_at).toLocaleString('ru-RU')}

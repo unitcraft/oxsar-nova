@@ -193,6 +193,9 @@ export interface AllianceMember {
   rank: string;
   rank_name: string;
   joined_at: string;
+  // План 72.1.45 §3: online-индикатор + очки (legacy memberlist).
+  last_seen?: string;
+  points?: number;
 }
 
 export interface AllianceDetail {
@@ -222,6 +225,11 @@ export interface AllianceApplication {
   username: string;
   message: string;
   created_at: string;
+  // План 72.1.45 §3: координаты home-планеты + очки кандидата (legacy candidates).
+  home_galaxy: number;
+  home_system: number;
+  home_position: number;
+  points: number;
 }
 
 export type AllianceViewer = 'member' | 'applicant' | 'outsider';

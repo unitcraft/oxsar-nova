@@ -76,6 +76,10 @@ administrator:
 alliance:
   abandonAlliance: Распустить альянс
   accept: Принять
+  # План 72.1.45 §3: online-индикатор и очки в memberlist + координаты в candidates.
+  memberOnline: Активность
+  memberPoints: Очки
+  candidateCoords: Координаты
   # План 72.1.43: tag/name edit + broadcast.
   saveBtn: Сохранить
   globalMail: "Общая рассылка"

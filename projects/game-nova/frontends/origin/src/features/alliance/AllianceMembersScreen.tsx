@@ -36,7 +36,8 @@ export function AllianceMembersScreen() {
   const al = my.data.alliance;
   const members = my.data.members;
   const canKick = !!userId && userId === al.owner_id;
-  const colspan = canKick ? 5 : 4;
+  // План 72.1.45 §3: online + points → 6 колонок (5/6 без kick/с).
+  const colspan = canKick ? 6 : 5;
 
   // Сортировка: owner — первый, остальные по очкам (нет данных) →
   // по дате вступления.
@@ -63,19 +64,36 @@ export function AllianceMembersScreen() {
             <td>{t('alliance', 'newbie')}</td>
             <td>{t('alliance', 'rank')}</td>
             <td>{t('alliance', 'joinDate')}</td>
-            <td>{t('alliance', 'position')}</td>
+            <td>{t('alliance', 'memberPoints') || 'Очки'}</td>
+            <td>{t('alliance', 'memberOnline') || 'Активность'}</td>
             {canKick && <td />}
           </tr>
         </thead>
         <tbody>
-          {sorted.map((m) => (
+          {sorted.map((m) => {
+            // План 72.1.45 §3: online (5 минут) / недавно (1 ч) / давно.
+            const lastSeenMs = m.last_seen ? new Date(m.last_seen).getTime() : 0;
+            const ageMs = lastSeenMs ? Date.now() - lastSeenMs : Infinity;
+            const onlineDot =
+              ageMs < 5 * 60_000
+                ? '🟢'
+                : ageMs < 60 * 60_000
+                  ? '🟡'
+                  : '⚫';
+            const lastSeenLabel = lastSeenMs
+              ? new Date(m.last_seen!).toLocaleString('ru-RU')
+              : '—';
+            return (
             <tr key={m.user_id}>
               <td>{m.username}</td>
               <td>{m.rank_name || m.rank}</td>
               <td className="center">
                 {new Date(m.joined_at).toLocaleDateString('ru-RU')}
               </td>
-              <td className="center">—</td>
+              <td className="center">{(m.points ?? 0).toLocaleString('ru-RU')}</td>
+              <td className="center" title={lastSeenLabel}>
+                {onlineDot}
+              </td>
               {canKick && (
                 <td className="center">
                   {m.user_id !== al.owner_id && (
@@ -100,7 +118,8 @@ export function AllianceMembersScreen() {
                 </td>
               )}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
       {errMsg && (
