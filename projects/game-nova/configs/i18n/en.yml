@@ -2725,6 +2725,13 @@ prefs:
   usernameChanged: ""
   vacationMode: ""
   vacationWarning: ""
+  # Plan 72.1.5 A — vacation toggle UI.
+  vacationTitle: "Vacation mode"
+  vacationOffStatus: "You are not on vacation."
+  vacationOnStatus: "On vacation since {{since}}."
+  vacationCannotEndYet: "Minimum 48 hours. You can exit after {{unlock}}."
+  vacationEnableBtn: "Enable vacation"
+  vacationDisableBtn: "Exit vacation"
   weeks: ""
   years: ""
 registration:

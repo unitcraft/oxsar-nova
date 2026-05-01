@@ -5,6 +5,8 @@
 //   PUT  /api/settings                 — обновить email/language/timezone
 //   POST /api/me/deletion/code         — запросить код удаления (на email)
 //   DELETE /api/me                     — подтвердить удаление по коду
+//   POST   /api/me/vacation            — включить отпуск (план 72.1.5 A)
+//   DELETE /api/me/vacation            — выключить отпуск
 //
 // Смена пароля живёт в identity-service (POST /auth/password); в origin-
 // фронте реализуется отдельным вызовом через тот же fetch на /auth-prefix.
@@ -54,4 +56,21 @@ export function changePassword(payload: ChangePasswordPayload): Promise<void> {
   return api.post<void>('/auth/password', payload, {
     idempotencyKey: newIdempotencyKey(),
   });
+}
+
+// План 72.1.5 A: vacation toggle. Backend готов (auth/vacation.go).
+// Возможные ошибки см. handler.go::SetVacation / UnsetVacation:
+//   POST 409 vacation already active
+//   POST 409 vacation blocked by pending events
+//   POST 400 vacation interval not met (20 days)
+//   DELETE 400 vacation not active
+//   DELETE 409 vacation must last at least 48h before you can exit
+export function enableVacation(): Promise<void> {
+  return api.post<void>('/api/me/vacation', undefined, {
+    idempotencyKey: newIdempotencyKey(),
+  });
+}
+
+export function disableVacation(): Promise<void> {
+  return api.delete<void>('/api/me/vacation');
 }
