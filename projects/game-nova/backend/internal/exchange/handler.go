@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -32,6 +33,9 @@ func (h *Handler) Routes(r chi.Router) {
 	r.Post("/api/exchange/lots/{id}/premium", h.Promote)
 	r.Post("/api/exchange/lots/{id}/ban", h.Ban)
 	r.Get("/api/exchange/stats", h.Stats)
+	// План 72.1 §20.12 P2P-биржа /p2p-exchange — статистика лотов
+	// текущего юзера за период (legacy `Exchange.class.php::showStatistics`).
+	r.Get("/api/exchange/broker-stats", h.BrokerStats)
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
@@ -300,4 +304,57 @@ func parseIntDefault(s string, def int) int {
 		return def
 	}
 	return n
+}
+
+// BrokerStats GET /api/exchange/broker-stats — статистика лотов
+// текущего юзера за период (legacy `Exchange.class.php::showStatistics`).
+//
+// Query: ?date_min=YYYY-MM-DD&date_max=YYYY-MM-DD
+//        &sort_field=date|lot|lot_price|lot_amount|lot_profit
+//        &sort_order=asc|desc&page=N
+//
+// Default date_min = now - 30d, date_max = now.
+func (h *Handler) BrokerStats(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	q := r.URL.Query()
+
+	now := time.Now().UTC()
+	dateMin := now.Add(-30 * 24 * time.Hour)
+	dateMax := now
+	if v := q.Get("date_min"); v != "" {
+		if t, err := time.Parse("2006-01-02", v); err == nil {
+			dateMin = t
+		}
+	}
+	if v := q.Get("date_max"); v != "" {
+		if t, err := time.Parse("2006-01-02", v); err == nil {
+			// Включительно по концу дня.
+			dateMax = t.Add(24*time.Hour - time.Second)
+		}
+	}
+
+	rows, summary, pages, err := h.svc.BrokerStats(r.Context(), BrokerStatsFilters{
+		UserID:    uid,
+		DateMin:   dateMin,
+		DateMax:   dateMax,
+		SortField: q.Get("sort_field"),
+		SortOrder: q.Get("sort_order"),
+		Page:      parseIntDefault(q.Get("page"), 1),
+		PerPage:   25,
+	})
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+		"rows":    rows,
+		"summary": summary,
+		"pages":   pages,
+		"page":    parseIntDefault(q.Get("page"), 1),
+		"fee":     BrokerFee,
+	})
 }
