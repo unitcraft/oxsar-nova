@@ -15778,3 +15778,40 @@ not-a-fix + BA-019 mitigated.
   - feat(simulator): план 72.1.34 ч.B+C — target_building + battle artefacts (416fb0360a).
   - feat(origin/frontend): план 72.1.34 ч.B+C+D — simulator UI extras (f2bbb2d623).
   - docs(plan-72.1.34): ✅ Завершён + audit /simulator ⚠ → ✅.
+
+2026-05-01 — итерация 72.1.35: /rocket-attack подключён к backend.
+
+  Закрывает /rocket-attack (audit #5). Backend
+  `internal/rocket/Service.Launch` + handler уже были (план 17/F),
+  origin показывал форму с disabled submit «Backend pending».
+  Подключаем фронт к реальному endpoint'у.
+
+  Реализация:
+  - api/rocket.ts (новый): fetchRocketStock(planetId),
+    launchRocket(planetId, {dst, count, target_unit_id}).
+  - RocketAttackScreen переписан:
+    * Источник: useResolvedPlanet().
+    * Цель — приоритет URL params `:id` > query `?g=&s=&p=&moon=`.
+      Если задан id — fetchPlanet подгружает координаты.
+    * useQuery rocket-stock → maxRockets; submit disabled если 0.
+    * useMutation launchRocket с clamp count и target_unit_id
+      (0='all'). Селект фильтрует interceptor (51) и IPM (52).
+    * Успех → invalidate rocket-stock + planets, navigate('/').
+    * Ошибки backend (400/409/403) показываются красным.
+
+  Все legacy-валидации (newbie/umode/observer/banned/bashing/
+  protection_time/missile range) backend проверяет и возвращает
+  message в ошибке.
+
+  /rocket-attack ❓ → ✅.
+
+  Изменённые файлы:
+  - projects/game-nova/frontends/origin/src/api/rocket.ts (новый).
+  - projects/game-nova/frontends/origin/src/features/rocket-attack/RocketAttackScreen.tsx
+    (полный rewrite).
+  - docs/plans/72.1.35-rocket-attack-cont.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#5 ❓ → ✅).
+
+  **Коммиты**:
+  - feat(origin/frontend): план 72.1.35 — /rocket-attack подключён к backend (b642ef8bce).
+  - docs(plan-72.1.35): ✅ + audit /rocket-attack ❓ → ✅.
