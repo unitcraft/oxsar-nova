@@ -13,23 +13,53 @@
 // энергия (если применимо).
 
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchBuildingCatalog } from '@/api/catalog';
+import { fetchBuildingsOverview, demolishBuilding } from '@/api/buildings';
 import { QK } from '@/api/query-keys';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber, formatDuration } from '@/lib/format';
 import { findCatalog } from '@/features/common/catalog';
+import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import type { ApiError } from '@/api/client';
+import { useState } from 'react';
 
 export function BuildingInfoScreen() {
   const params = useParams<{ type?: string }>();
   const type = params.type ?? '';
   const { t } = useTranslation();
+  const qc = useQueryClient();
+  const { planetId } = useResolvedPlanet();
+  const [demolishErr, setDemolishErr] = useState<string | null>(null);
 
   const q = useQuery({
     queryKey: QK.buildingCatalog(type),
     queryFn: () => fetchBuildingCatalog(type),
     enabled: type.length > 0,
     staleTime: 60 * 60 * 1000,
+  });
+
+  // План 72.1.33: текущий уровень здания нужен для demolish-button.
+  const overviewQ = useQuery({
+    queryKey: planetId ? QK.buildingsOverview(planetId) : ['noop-bo'],
+    queryFn: () =>
+      planetId ? fetchBuildingsOverview(planetId) : Promise.reject(),
+    enabled: planetId !== null,
+  });
+
+  const demolishMut = useMutation({
+    mutationFn: () => {
+      if (!planetId || !q.data) return Promise.reject(new Error('no planet'));
+      return demolishBuilding(planetId, q.data.id);
+    },
+    onSuccess: () => {
+      setDemolishErr(null);
+      if (planetId) {
+        void qc.invalidateQueries({ queryKey: QK.buildingsOverview(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+      }
+    },
+    onError: (e) => setDemolishErr((e as ApiError).message),
   });
 
   if (q.isLoading) return <div className="idiv">…</div>;
@@ -50,6 +80,12 @@ export function BuildingInfoScreen() {
   const entry = q.data;
   const nameKey = entry.key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
   const name = t('info', nameKey);
+  // План 72.1.33: текущий уровень здания на planetId.
+  const curLevel = overviewQ.data?.levels[String(entry.id)] ?? 0;
+  // Demolish factor: catalog не отдаёт его в catalog endpoint, поэтому
+  // показываем кнопку всегда если curLevel>0; backend проверит `spec.demolish > 0`
+  // и вернёт ErrUnknownUnit если фактор не задан.
+  const canDemolish = curLevel > 0;
   const fullDescKey = `${nameKey}FullDesc`;
   const descKey = `${nameKey}Desc`;
   const fullDesc = t('info', fullDescKey);
@@ -88,6 +124,53 @@ export function BuildingInfoScreen() {
           </tr>
         </tbody>
       </table>
+
+      {/* План 72.1.33: demolish secton (legacy BuildingInfo::DEMOLISH_NOW). */}
+      {canDemolish && planetId && (
+        <table className="ntable">
+          <thead>
+            <tr>
+              <th>{t('buildinginfo', 'demolish') || 'Снос здания'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="center">
+                <p>
+                  {t('buildinginfo', 'currentLevel') || 'Текущий уровень'}:{' '}
+                  <b>{curLevel}</b>{' '}
+                  →{' '}
+                  <b>{curLevel - 1}</b>
+                </p>
+                <button
+                  type="button"
+                  className="button"
+                  disabled={demolishMut.isPending}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        (t('buildinginfo', 'demolishConfirm') as string) ||
+                          `Снести ${name} до уровня ${curLevel - 1}?`,
+                      )
+                    ) {
+                      demolishMut.mutate();
+                    }
+                  }}
+                >
+                  {demolishMut.isPending
+                    ? '…'
+                    : t('buildinginfo', 'demolishNow') || 'Снести сейчас'}
+                </button>
+                {demolishErr && (
+                  <div>
+                    <span className="false">{demolishErr}</span>
+                  </div>
+                )}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      )}
 
       <table className="ntable">
         <thead>
