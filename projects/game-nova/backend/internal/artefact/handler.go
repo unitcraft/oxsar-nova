@@ -142,6 +142,30 @@ func (h *Handler) PackResearch(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// History GET /api/artefacts/info/{unitId}/history — план 72.1.45 §2.
+//
+// Legacy `ArtefactInfo::showInfo` (L.66) SELECT artefact_history JOIN user
+// JOIN assault — кому/когда достался артефакт + ссылка на отчёт боя.
+func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
+	if _, ok := auth.UserID(r.Context()); !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	unitID, err := strconv.Atoi(chi.URLParam(r, "unitId"))
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid unit_id"))
+		return
+	}
+	entries, err := h.svc.History(r.Context(), unitID, 50)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+		"entries": entries,
+	})
+}
+
 // Deactivate POST /api/artefacts/{id}/deactivate
 func (h *Handler) Deactivate(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())

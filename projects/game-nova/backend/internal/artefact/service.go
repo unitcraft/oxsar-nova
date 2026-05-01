@@ -100,7 +100,68 @@ func (s *Service) Grant(ctx context.Context, userID string, unitID int, planetID
 	if err != nil {
 		return Record{}, fmt.Errorf("insert artefact: %w", err)
 	}
+	// План 72.1.45 §2: artefact_history запись (legacy `Artefact.class.php` L.296).
+	// Источник без battle-context — пометим 'admin'/'quest' через GrantWithSource.
+	_, _ = s.db.Pool().Exec(ctx, `
+		INSERT INTO artefact_history (unit_id, user_id, source, acquired_at)
+		VALUES ($1, $2, 'admin', $3)
+	`, rec.UnitID, rec.UserID, rec.AcquiredAt)
 	return rec, nil
+}
+
+// GrantWithBattle — вариант Grant для случая, когда артефакт получен в бою.
+// Используется fleet/battle-flow при `award` после боя (план 72.1.45 §2).
+func (s *Service) GrantWithBattle(ctx context.Context, userID string, unitID int, planetID *string, battleReportID string) (Record, error) {
+	rec, err := s.Grant(ctx, userID, unitID, planetID)
+	if err != nil {
+		return Record{}, err
+	}
+	_, _ = s.db.Pool().Exec(ctx, `
+		UPDATE artefact_history
+		   SET battle_report_id = $1, source = 'battle'
+		 WHERE unit_id = $2 AND user_id = $3
+		   AND acquired_at = $4
+	`, battleReportID, unitID, userID, rec.AcquiredAt)
+	return rec, nil
+}
+
+// HistoryEntry — строка истории артефакта для UI (план 72.1.45 §2).
+type HistoryEntry struct {
+	AcquiredAt     time.Time `json:"acquired_at"`
+	UserID         string    `json:"user_id"`
+	Username       string    `json:"username"`
+	BattleReportID *string   `json:"battle_report_id,omitempty"`
+	OpponentName   *string   `json:"opponent_name,omitempty"`
+	Source         string    `json:"source"`
+}
+
+// History — история приобретений артефакта определённого типа.
+// Зеркало legacy `ArtefactInfo::showInfo` SELECT (L.66).
+func (s *Service) History(ctx context.Context, unitID int, limit int) ([]HistoryEntry, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT h.acquired_at, h.user_id, u.username, h.battle_report_id, h.source
+		  FROM artefact_history h
+		  JOIN users u ON u.id = h.user_id
+		 WHERE h.unit_id = $1
+		 ORDER BY h.acquired_at DESC
+		 LIMIT $2
+	`, unitID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("history select: %w", err)
+	}
+	defer rows.Close()
+	out := make([]HistoryEntry, 0, limit)
+	for rows.Next() {
+		var e HistoryEntry
+		if err := rows.Scan(&e.AcquiredAt, &e.UserID, &e.Username, &e.BattleReportID, &e.Source); err != nil {
+			return nil, fmt.Errorf("history scan: %w", err)
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
 }
 
 // Activate активирует артефакт игрока.
