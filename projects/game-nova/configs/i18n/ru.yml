@@ -539,8 +539,8 @@ autoMessages:
   espProbesDestroyed1: Шпионские зонды были сбиты.
   espioangeCommitted: "Чужой флот {{arg1}} с {{arg2}} {{arg3}} был замечен около {{arg4}} {{arg5}}.<br />Защита от шпионажа: {{num6}}&#37;<br />[b][color=#0f0]{{arg7}}[/color][/b]"
   espioangeCommittedSubject: Шпионаж
-  expeditionArtefact: "Ваша экспедиция нашла загадочный артефакт: {@art_name}"
-  expeditionAsteroidDiscovery1: "Ваши исследователи нашли астероидное поле обломков: {@debrismetal} металла и {@debrissilicon} кремния. Переработчики добыли: {@metal} металла и {@silicon} кремния."
+  expeditionArtefact: "Среди дрейфующих обломков ваша экспедиция обнаружила загадочный артефакт: {@art_name}"
+  expeditionAsteroidDiscovery1: "Сенсоры экспедиции вывели флот к рою астероидных обломков: {@debrismetal} металла и {@debrissilicon} кремния. Переработчики собрали: {@metal} металла и {@silicon} кремния."
   expeditionAsteroidDiscovery2: "Ваши исследователи нашли давно отгремевшее поле битвы. От разрушенных кораблей остались обломки, которые можно собрать: {@debrismetal} металла и {@debrissilicon} кремния. Переработчики добыли: {@metal} металла и {@silicon} кремния."
   expeditionAsteroidDiscoveryNoCargo: "Ваши исследователи нашли астероидное поле обломков: {@debrismetal} металла и {@debrissilicon} кремния. К сожалению в экспедиции не было переработчиков, чтобы собрать ресурсы из открытого космоса."
   expeditionBattlefieldDiscovery: "Ваши исследователи обнаружили следы давно отгремевшей битвы. Среди тон покореженного металла удалось найти корабли, пригодные для дальнейшего использования: {@new_ships}"
@@ -2858,6 +2858,14 @@ statistics:
   bsShowDrawn: показывать ничьи
   bsShowNoDestroyed: показывать бои без потерь (грабежи ресурсов)
   bsShowUfoBattles: показывать бои в экспедициях (с инопланетянами)
+  bsMoonBattle: только бои на луне
+  bsSortBy: Сортировка
+  bsSortDate: по дате
+  bsSortRounds: по раундам
+  bsSortDebris: по обломкам
+  bsSortLoot: по добыче
+  bsSortAsc: по возрастанию
+  bsSortDesc: по убыванию
   bsUserFilter: Имя игрока
   bsUserFilterInfo: ""
   date: Дата
