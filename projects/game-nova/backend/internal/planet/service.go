@@ -802,66 +802,132 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 		})
 	}
 
-	// Virt-fleet / defense / stock_fleet — потребление водорода большими
-	// группами. Legacy `unitGroupConsumptionPerHour`.
+	// План 72.1.26 ч.C: cascade-payback. Legacy `Planet.class.php`
+	// строки 481-555: virt-rows потребляют водород, но если его не
+	// хватает — overflow переключается на silicon, потом на metal
+	// через MARKET_BASE_CURS_*. После исчерпания всех 3 ресурсов
+	// идёт ratio-распределение по запасам планеты.
+	//
+	// Порядок: VIRT_FLEET, VIRT_STOCK_FLEET, VIRT_DEFENSE, halting[0..n].
+	halts, err := s.haltingFleets(ctx, &p)
+	if err != nil {
+		return nil, err
+	}
+
+	// Существующее потребление зданий по 3 ресурсам (накапливаем,
+	// чтобы корректно применить cascade — он сравнивает с prod-cons).
+	consM, consSi, consH := 0.0, 0.0, 0.0
+	for _, b := range report.Buildings {
+		consM += b.ConsMetal
+		consSi += b.ConsSilicon
+		consH += b.ConsHydrogen
+	}
+	prodM, prodSi, prodH := totalMetal+report.BasicMetal,
+		totalSilicon+report.BasicSilicon,
+		totalHydrogen+report.BasicHydrogen
+
+	// applyCascade — порт legacy (Planet.class.php:494-555).
+	// Возвращает (cons_m, cons_si, cons_h, energyOnly bool).
+	applyCascade := func(unitID int, count int64) (m, si, h float64) {
+		h = unitGroupConsumptionPerHour(unitID, count)
+		if h <= 0 {
+			return 0, 0, 0
+		}
+		// Шаг 1: H → Si.
+		if consH+h > prodH {
+			over := consH + h - prodH
+			if over > h {
+				over = h
+			}
+			h -= over
+			si = over * marketBaseCursSilicon / marketBaseCursHydrogen
+			// Шаг 2: Si → M.
+			if consSi+si > prodSi {
+				over2 := consSi + si - prodSi
+				if over2 > si {
+					over2 = si
+				}
+				si -= over2
+				m = over2 * marketBaseCursMetal / marketBaseCursSilicon
+				// Шаг 3: M → ratio по запасам планеты.
+				if consM+m > prodM {
+					over3 := consM + m - prodM
+					if over3 > m {
+						over3 = m
+					}
+					m -= over3
+					mEff := float64(p.Metal)
+					siEff := float64(p.Silicon) * marketBaseCursMetal / marketBaseCursSilicon
+					hEff := float64(p.Hydrogen) * marketBaseCursMetal / marketBaseCursHydrogen
+					sumEff := mEff + siEff + hEff
+					var rM, rSi, rH float64
+					if sumEff > 0 {
+						rM = mEff / sumEff
+						rSi = siEff / sumEff
+						rH = hEff / sumEff
+					} else {
+						rM, rSi, rH = 1.0/3.0, 1.0/3.0, 1.0/3.0
+					}
+					m += over3 * rM * 1
+					si += over3 * rSi * marketBaseCursSilicon / marketBaseCursMetal
+					h += over3 * rH * marketBaseCursHydrogen / marketBaseCursMetal
+				}
+			}
+		}
+		consM += m
+		consSi += si
+		consH += h
+		return
+	}
+
 	addVirtRow := func(unitID int, count int64, name, kind string) {
 		if count <= 0 {
 			return
 		}
-		consH := unitGroupConsumptionPerHour(unitID, count)
-		if consH <= 0 {
+		m, si, h := applyCascade(unitID, count)
+		if m == 0 && si == 0 && h == 0 {
 			return
 		}
 		report.Buildings = append(report.Buildings, ResourceBuildingDTO{
 			UnitID:       unitID,
 			Name:         name,
 			Level:        int(count),
-			ConsHydrogen: consH,
+			ConsMetal:    m,
+			ConsSilicon:  si,
+			ConsHydrogen: h,
 			AllowFactor:  false,
 			Kind:         kind,
 			Helptip: fmt.Sprintf("perUnitH=%.4f",
-				consH/math.Max(1, float64(count))),
+				(m+si+h)/math.Max(1, float64(count))),
 		})
 	}
 	addVirtRow(unitVirtFleet, virtFleet, "fleet_consumption", "fleet")
 	addVirtRow(unitVirtStockFleet, virtStock, "fleet_stock_consumption", "stock_fleet")
 	addVirtRow(unitVirtDefense, virtDefense, "defense_consumption", "defense")
-
-	// Halting fleets — отдельный ряд на каждый удерживающий флот.
-	halts, err := s.haltingFleets(ctx, &p)
-	if err != nil {
-		return nil, err
-	}
-	for i, h := range halts {
-		consH := unitGroupConsumptionPerHour(unitVirtHaltingStart+i, h.TotalShips)
-		if consH <= 0 {
+	for i, hf := range halts {
+		m, si, h := applyCascade(unitVirtHaltingStart+i, hf.TotalShips)
+		if m == 0 && si == 0 && h == 0 {
 			continue
 		}
 		report.Buildings = append(report.Buildings, ResourceBuildingDTO{
 			UnitID:           unitVirtHaltingStart + i,
 			Name:             "halting_consumption",
-			Level:            int(h.TotalShips),
-			ConsHydrogen:     consH,
+			Level:            int(hf.TotalShips),
+			ConsMetal:        m,
+			ConsSilicon:      si,
+			ConsHydrogen:     h,
 			AllowFactor:      false,
 			Kind:             "halting",
-			HaltingFromCoord: h.SrcCoord,
-			HaltingShips:     h.ShipsBy,
-			Helptip:          fmt.Sprintf("from=%s ships=%d", h.SrcCoord, h.TotalShips),
+			HaltingFromCoord: hf.SrcCoord,
+			HaltingShips:     hf.ShipsBy,
+			Helptip:          fmt.Sprintf("from=%s ships=%d", hf.SrcCoord, hf.TotalShips),
 		})
 	}
 
-	// Почасовое производство.
-	report.MetalPerHour = totalMetal
-	report.SiliconPerHour = totalSilicon
-	// Halting/virt-fleet/defense/stock_fleet потребляют водород —
-	// вычитаем их из общего hourly.
-	totalHydrogenCons := 0.0
-	for _, b := range report.Buildings {
-		if b.ConsHydrogen > 0 {
-			totalHydrogenCons += b.ConsHydrogen
-		}
-	}
-	report.HydrogenPerHour = totalHydrogen - totalHydrogenCons
+	// Почасовое производство = total prod − cumulative cons по 3 ресурсам.
+	report.MetalPerHour = totalMetal - consM
+	report.SiliconPerHour = totalSilicon - consSi
+	report.HydrogenPerHour = totalHydrogen - consH
 
 	// Сводные значения (текущий запас).
 	report.MetalTotal = float64(p.Metal)
