@@ -36,6 +36,11 @@ type Input struct {
 	// идёт отдельным путём в `internal/rocket/`, не использует
 	// battle.Calculate).
 	IsRocketAttack bool `json:"is_rocket_attack,omitempty"`
+	// План 72.1.34 ч.B: legacy `Simulator::target_buildingid` —
+	// симуляция атаки с DS на конкретное здание-цель. Если задано —
+	// рассчитывается шанс уничтожения здания и выводится в SimReport.
+	TargetBuildingID    int `json:"target_building_id,omitempty"`
+	TargetBuildingLevel int `json:"target_building_level,omitempty"`
 }
 
 // Side — одна сторона боя (один игрок или ACS-участник).
@@ -46,6 +51,14 @@ type Side struct {
 	Tech          Tech   `json:"tech,omitempty"`
 	Units         []Unit `json:"units"`
 	PrimaryTarget int    `json:"primary_target,omitempty"`
+	// План 72.1.34 ч.C: legacy `Simulator` показывает 6 боевых
+	// артефактов как обычные юниты (id 316-318, 359-361). Их
+	// quantity суммируется в bonus к Tech при подготовке боя.
+	// На фронте они вводятся в одной сетке с ships/defense; при
+	// submit-е попадают сюда (suffixes BATTLE_*_POWER apply ×1.1
+	// per stack, max 3 stacks per type = ×1.331). Backend
+	// агрегирует через ComputeBattleModifier и применяет к Tech.
+	BattleArtefactIDs []int `json:"battle_artefact_ids,omitempty"`
 
 	// Позиция планеты атакующего/защитника. Используется в заголовке
 	// каждого раунда: «Атакующий <username> [g:s:p] (луна)» — порт Java
@@ -143,6 +156,11 @@ type Report struct {
 	DebrisSilicon int64        `json:"debris_silicon,omitempty"`
 	MoonChance    float64      `json:"moon_chance,omitempty"`
 	MoonCreated   bool         `json:"moon_created,omitempty"`
+	// План 72.1.34 ч.B: шанс уничтожения здания-цели (если в Input
+	// задан TargetBuildingID/Level и атакующий выжил с ≥ 1 DS).
+	// Формула: simplified OGame — `min(100, ds_count × 100 / level)`.
+	BuildingDestroyChance float64 `json:"building_destroy_chance,omitempty"`
+	TargetDestroyed       bool    `json:"target_destroyed,omitempty"`
 
 	// AttackerExp / DefenderExp — очки опыта (Java attackerExperience /
 	// defenderExperience). atan-based формула, см. computeExperience в
