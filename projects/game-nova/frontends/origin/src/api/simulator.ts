@@ -125,6 +125,11 @@ export interface SimReport {
   debris_silicon?: number;
   moon_chance?: number;
   moon_created?: boolean;
+  attacker_exp?: number;
+  defender_exp?: number;
+  haul_metal?: number;
+  haul_silicon?: number;
+  haul_hydrogen?: number;
 }
 
 // Сводка по num_sim итераций (план 72.1 ч.20.11.7) — pixel-perfect клон

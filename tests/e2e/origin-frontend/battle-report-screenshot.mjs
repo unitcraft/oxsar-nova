@@ -15,10 +15,10 @@ const ctx = await browser.newContext({ viewport: { width: 1280, height: 1400 }, 
 const page = await ctx.newPage();
 await page.goto(`${ORIGIN_URL}/battle-report/${REPORT_ID}`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(2000);
-// Скриншот центральной колонки в нормальном масштабе (для проверки Fight-иконок).
+// Полный скриншот страницы — раунды + итоговый блок.
 await page.screenshot({
   path: `${OUT}/origin_battle-report_full.png`,
-  clip: { x: 220, y: 0, width: 900, height: 1200 },
+  fullPage: true,
 });
 console.log('saved');
 await browser.close();

@@ -129,7 +129,35 @@ func Calculate(in Input) (Report, error) {
 	report.Attackers = summarize(in.Attackers, atk.toSides())
 	report.Defenders = summarize(in.Defenders, def.toSides())
 	report.Winner = decideWinner(report)
+
+	// Опыт сторон — порт Java Assault.java:811-816:
+	//   atterExperience  = min(20, max(0.1, defStartPower/atkStartPower)) × rounds
+	//   defenderExperience = min(20, max(0.1, atkStartPower/defStartPower)) × rounds
+	// startBattlePower считаем как сумма attack × startBattleQuantity по
+	// всем юнитам стороны (соответствие Java startBattleAtterPower).
+	atkPower := startBattlePower(atk)
+	defPower := startBattlePower(def)
+	if report.Rounds > 0 && atkPower > 0 && defPower > 0 {
+		atkRatio := math.Max(0.1, math.Min(20, defPower/atkPower))
+		defRatio := math.Max(0.1, math.Min(20, atkPower/defPower))
+		report.AttackerExp = int(math.Round(atkRatio * float64(report.Rounds)))
+		report.DefenderExp = int(math.Round(defRatio * float64(report.Rounds)))
+	}
+
 	return report, nil
+}
+
+// startBattlePower — суммарная начальная огневая мощность стороны
+// (Σ effectiveAttack × startBattleQuantity по всем юнитам). Используется
+// в формуле опыта (Java Assault.startBattleAtterPower / startBattleDefenderPower).
+func startBattlePower(b *battleState) float64 {
+	var p float64
+	for _, s := range b.sides {
+		for _, u := range s.units {
+			p += u.effectiveAttack * float64(u.startBattleQuantity)
+		}
+	}
+	return p
 }
 
 // techToPct — gun_level × 10% (Java: attackLevel * 10.0).

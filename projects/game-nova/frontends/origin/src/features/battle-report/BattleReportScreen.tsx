@@ -36,7 +36,7 @@ export function BattleReportScreen() {
         <tbody>
           <tr>
             <td className="center">
-              <i>{t('alliance', 'nothing') ?? 'Отчёт не найден'}</i>
+              <i>{t('alliance', 'nothing')}</i>
             </td>
           </tr>
         </tbody>
@@ -48,6 +48,7 @@ export function BattleReportScreen() {
     <BattleReportView
       report={q.data.report}
       startedAt={q.data.started_at}
+      reportId={id}
       compact
     />
   );

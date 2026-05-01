@@ -29,6 +29,9 @@ interface Props {
   // как фраза «Флоты соперников встрелись в <datetime> часов:» —
   // legacy assaultReport.assaultTime (план 72.1 ч.20.11.12).
   startedAt?: string;
+  // reportId: UUID отчёта. Используется для friend-link «Покажи это
+  // сражение друзьям» в финальном SUMMARY (Java assaultReport.friendLink).
+  reportId?: string;
 }
 
 // formatBattleTime — формат «Thu, 30 Apr 2026, 21:31:57» через
@@ -54,6 +57,7 @@ export function BattleReportView({
   title,
   compact = false,
   startedAt,
+  reportId,
 }: Props) {
   const { t, lang } = useTranslation();
   const winnerLabel =
@@ -69,11 +73,6 @@ export function BattleReportView({
         ? 'false'
         : '';
   const headerTitle = title ?? t('mission', 'simulationResult');
-  // Короткое обозначение ресурсов (М/К/В). Берём первый символ из
-  // полных названий global.metal/silicon/hydrogen чтобы не хардкодить.
-  const shortMetal = t('global', 'metal').slice(0, 1);
-  const shortSilicon = t('global', 'silicon').slice(0, 1);
-  const shortHydrogen = t('global', 'hydrogen').slice(0, 1);
   return (
     <>
       {!compact && (
@@ -110,55 +109,152 @@ export function BattleReportView({
         />
       ))}
 
-      {/* Сводные потери */}
-      <table className="ntable" style={{ marginTop: 16 }}>
-        <tbody>
-          <tr>
-            <th colSpan={4}>{t('mission', 'losses')}</th>
-          </tr>
-          {(report.attackers ?? []).map((s) => (
-            <tr key={`a-loss-${s.user_id}`}>
-              <td>{t('mission', 'attacker')}</td>
-              <td>{shortMetal}: {formatNumber(s.lost_metal)}</td>
-              <td>{shortSilicon}: {formatNumber(s.lost_silicon)}</td>
-              <td>{shortHydrogen}: {formatNumber(s.lost_hydrogen)}</td>
-            </tr>
-          ))}
-          {(report.defenders ?? []).map((s) => (
-            <tr key={`d-loss-${s.user_id}`}>
-              <td>{t('mission', 'defender')}</td>
-              <td>{shortMetal}: {formatNumber(s.lost_metal)}</td>
-              <td>{shortSilicon}: {formatNumber(s.lost_silicon)}</td>
-              <td>{shortHydrogen}: {formatNumber(s.lost_hydrogen)}</td>
-            </tr>
-          ))}
+      <SummaryBlock
+        report={report}
+        reportId={reportId}
+        winnerLabel={winnerLabel}
+        winnerClass={winnerClass}
+      />
+    </>
+  );
+}
 
-          {(report.debris_metal ?? 0) > 0 && (
+// SummaryBlock — финальный блок отчёта, pixel-perfect клон Java SUMMARY
+// (Assault.java:1066-1170, план 72.1 ч.20.11.13). Структура:
+//   - Заголовок «Итоговый результат».
+//   - Финальные таблицы юнитов по сторонам (последний RoundSide).
+//   - Текст победителя или «Сражение закончилось в ничью.».
+//   - При победе атакующего — «Он получает: …» с трофеями.
+//   - Потери атакующего/обороняющегося (text, не таблица).
+//   - «На орбите находится: …» (если есть debris).
+//   - Опыт обеих сторон.
+//   - Friend-link на /battle-report/{id}.
+function SummaryBlock({
+  report,
+  reportId,
+  winnerLabel,
+  winnerClass,
+}: {
+  report: SimReport;
+  reportId: string | undefined;
+  winnerLabel: string;
+  winnerClass: string;
+}) {
+  const { t } = useTranslation();
+  const last = (report.rounds_trace ?? [])[
+    (report.rounds_trace ?? []).length - 1
+  ];
+  const atkLoss = (report.attackers ?? []).reduce(
+    (acc, s) => ({
+      m: acc.m + s.lost_metal,
+      s: acc.s + s.lost_silicon,
+      h: acc.h + s.lost_hydrogen,
+    }),
+    { m: 0, s: 0, h: 0 },
+  );
+  const defLoss = (report.defenders ?? []).reduce(
+    (acc, s) => ({
+      m: acc.m + s.lost_metal,
+      s: acc.s + s.lost_silicon,
+      h: acc.h + s.lost_hydrogen,
+    }),
+    { m: 0, s: 0, h: 0 },
+  );
+  const atkTotalLoss = atkLoss.m + atkLoss.s + atkLoss.h;
+  const defTotalLoss = defLoss.m + defLoss.s + defLoss.h;
+  const friendLink =
+    typeof window !== 'undefined' && reportId
+      ? `${window.location.origin}/battle-report/${reportId}`
+      : '';
+
+  return (
+    <div style={{ marginTop: 16, textAlign: 'center' }}>
+      <p>
+        <b>{t('assaultReport', 'summary')}</b>
+      </p>
+
+      {last && <SideBlock side={last.attacker_side} kind="attacker" />}
+      {last && <SideBlock side={last.defender_side} kind="defender" />}
+
+      <p style={{ marginTop: 12 }}>
+        <b className={winnerClass}>
+          {report.winner === 'attackers'
+            ? t('assaultReport', 'attackerWon')
+            : report.winner === 'defenders'
+              ? t('assaultReport', 'defenderWon')
+              : winnerLabel}
+        </b>
+      </p>
+
+      {report.winner === 'attackers'
+        && ((report.haul_metal ?? 0) + (report.haul_silicon ?? 0) + (report.haul_hydrogen ?? 0) > 0) && (
+        <p>
+          {t('assaultReport', 'attackerHaul')}
+          <br />
+          {formatNumber(report.haul_metal ?? 0)} {t('global', 'metal')},{' '}
+          {formatNumber(report.haul_silicon ?? 0)} {t('global', 'silicon')}{' '}
+          {t('assaultReport', 'and')}{' '}
+          {formatNumber(report.haul_hydrogen ?? 0)} {t('global', 'hydrogen')}.
+        </p>
+      )}
+
+      <p>
+        {t('assaultReport', 'attackerLostRes4', {
+          total: formatNumber(atkTotalLoss),
+          metal: formatNumber(atkLoss.m),
+          silicon: formatNumber(atkLoss.s),
+          hydrogen: formatNumber(atkLoss.h),
+        })}
+        <br />
+        {t('assaultReport', 'defenderLostRes4', {
+          total: formatNumber(defTotalLoss),
+          metal: formatNumber(defLoss.m),
+          silicon: formatNumber(defLoss.s),
+          hydrogen: formatNumber(defLoss.h),
+        })}
+      </p>
+
+      {((report.debris_metal ?? 0) > 0 || (report.debris_silicon ?? 0) > 0) && (
+        <p>
+          {t('assaultReport', 'debrisMetalAndSilicon', {
+            metal: formatNumber(report.debris_metal ?? 0),
+            silicon: formatNumber(report.debris_silicon ?? 0),
+          })}
+        </p>
+      )}
+
+      <p>
+        {t('assaultReport', 'attackerExperience', {
+          count: formatNumber(report.attacker_exp ?? 0),
+        })}
+        <br />
+        {t('assaultReport', 'defenderExperience', {
+          count: formatNumber(report.defender_exp ?? 0),
+        })}
+      </p>
+
+      {(report.moon_chance ?? 0) > 0 && (
+        <p>
+          {t('assaultReport', 'moonChance', {
+            percent: String(Math.floor((report.moon_chance ?? 0) * 100)),
+          })}
+          {report.moon_created && (
             <>
-              <tr>
-                <th colSpan={4}>{t('mission', 'debris')}</th>
-              </tr>
-              <tr>
-                <td colSpan={2}>{shortMetal}: {formatNumber(report.debris_metal ?? 0)}</td>
-                <td colSpan={2}>{shortSilicon}: {formatNumber(report.debris_silicon ?? 0)}</td>
-              </tr>
+              <br />
+              <b className="true">{t('assaultReport', 'moon')}</b>
             </>
           )}
+        </p>
+      )}
 
-          {(report.moon_chance ?? 0) > 0 && (
-            <tr>
-              <td colSpan={4}>
-                {t('mission', 'moonChance')}:{' '}
-                <span className={report.moon_created ? 'true' : ''}>
-                  {Math.floor((report.moon_chance ?? 0) * 100)}%
-                </span>
-                {report.moon_created && ' ✓'}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </>
+      {friendLink && (
+        <p>
+          {t('assaultReport', 'friendLink')}
+          <br />
+          <a href={friendLink} className="false2">{friendLink}</a>
+        </p>
+      )}
+    </div>
   );
 }
 

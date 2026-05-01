@@ -118,6 +118,20 @@ type Report struct {
 	DebrisSilicon int64        `json:"debris_silicon,omitempty"`
 	MoonChance    float64      `json:"moon_chance,omitempty"`
 	MoonCreated   bool         `json:"moon_created,omitempty"`
+
+	// AttackerExp / DefenderExp — очки опыта (Java attackerExperience /
+	// defenderExperience). Считаются как min(20, max(0.1, oppPower /
+	// myPower)) × battleTurnsNumber (Java Assault.java:811-816).
+	AttackerExp int `json:"attacker_exp,omitempty"`
+	DefenderExp int `json:"defender_exp,omitempty"`
+
+	// HaulMetal / HaulSilicon / HaulHydrogen — трофеи атакующего при
+	// победе (Java haulMetal/Silicon/Hydrogen). Для симулятора всегда 0
+	// (нет реальной планеты-цели), для реального боя через миссию —
+	// заполняется fleet/attack handler'ом после Calculate.
+	HaulMetal    int64 `json:"haul_metal,omitempty"`
+	HaulSilicon  int64 `json:"haul_silicon,omitempty"`
+	HaulHydrogen int64 `json:"haul_hydrogen,omitempty"`
 }
 
 // RoundTrace — полная статистика раунда боя, пixel-perfect клон
