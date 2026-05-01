@@ -32,8 +32,29 @@ var KnownKeys = []string{
 	"inactivityReminder",
 }
 
-// Folder — inbox-папка для автомесседжей (legacy consts.php).
-const Folder = 2
+// Folder constants — соответствуют legacy `config/consts.php:508-518`
+// (MSG_FOLDER_*) + наша SYSTEM=12 для welcome/inactivity/firstAttack
+// которых в legacy нет.
+const (
+	FolderInbox        = 1  // личные от других игроков
+	FolderSent         = 2  // мои отправленные
+	FolderFleet        = 3  // отчёты флота
+	FolderSpy          = 4  // шпионаж
+	FolderBattle       = 5  // боевые отчёты
+	FolderAlliance     = 6  // альянс
+	FolderArtefacts    = 7  // артефакты
+	FolderCredit       = 8  // кредитные транзакции
+	FolderExpedition   = 9  // экспедиции
+	FolderRecycler     = 10 // мусорщики
+	FolderSurveillance = 11 // surveillance detected
+	FolderSystem       = 12 // welcome/inactivity (расширение oxsar-nova)
+)
+
+// Folder — папка для шаблонных автомесседжей (welcome, starter,
+// inactivity, firstAttackReceived). Раньше была =2 (что в legacy =
+// MSG_FOLDER_SENT — семантический баг); план 72.1.17 переводит на
+// FolderSystem=12.
+const Folder = FolderSystem
 
 type Service struct {
 	db     repo.Exec

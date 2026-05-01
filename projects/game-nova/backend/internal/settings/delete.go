@@ -93,14 +93,15 @@ func (h *Handler) RequestDeletionCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Отправить код системным сообщением (folder=13 SYSTEM).
+	// Отправить код системным сообщением (folder=12 = automsg.FolderSystem,
+	// расширение oxsar-nova; в legacy const folder=13 не существовал).
 	if h.automsg != nil {
 		title := h.tr("settings", "deletionCode.title", nil)
 		body := h.tr("settings", "deletionCode.body", map[string]string{
 			"code":      code,
 			"expiresAt": expiresAt.Format("15:04 02.01.2006"),
 		})
-		_ = h.automsg.SendDirect(r.Context(), nil, uid, 13, title, body)
+		_ = h.automsg.SendDirect(r.Context(), nil, uid, 12, title, body)
 	}
 
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{

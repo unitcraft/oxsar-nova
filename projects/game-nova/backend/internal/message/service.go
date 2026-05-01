@@ -42,20 +42,41 @@ type Message struct {
 // Inbox возвращает последние N сообщений, новые сверху. Без пагинации
 // — для M4.4b достаточно (обычно у игрока максимум несколько десятков
 // отчётов в первую неделю; реальная пагинация придёт с alliance-chat).
-func (s *Service) Inbox(ctx context.Context, userID string, limit int) ([]Message, error) {
+//
+// План 72.1.17: если folder>0 — фильтруем по папке (legacy паритет
+// `?go=MSG&id=ReadFolder&folder=N`). folder=0 — все папки (старая
+// семантика inbox-таба, остаётся для backwards-compat фронта).
+func (s *Service) Inbox(ctx context.Context, userID string, limit int, folder int) ([]Message, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
-	rows, err := s.db.Pool().Query(ctx, `
-		SELECT m.id, m.from_user_id, COALESCE(u.username, ''),
-		       m.subject, m.body, m.folder, m.created_at, m.read_at,
-		       m.battle_report_id, m.espionage_report_id, m.expedition_report_id
-		FROM messages m
-		LEFT JOIN users u ON u.id = m.from_user_id
-		WHERE m.to_user_id = $1 AND m.deleted_at IS NULL
-		ORDER BY m.created_at DESC
-		LIMIT $2
-	`, userID, limit)
+	var (
+		rows pgx.Rows
+		err  error
+	)
+	if folder > 0 {
+		rows, err = s.db.Pool().Query(ctx, `
+			SELECT m.id, m.from_user_id, COALESCE(u.username, ''),
+			       m.subject, m.body, m.folder, m.created_at, m.read_at,
+			       m.battle_report_id, m.espionage_report_id, m.expedition_report_id
+			FROM messages m
+			LEFT JOIN users u ON u.id = m.from_user_id
+			WHERE m.to_user_id = $1 AND m.folder = $2 AND m.deleted_at IS NULL
+			ORDER BY m.created_at DESC
+			LIMIT $3
+		`, userID, folder, limit)
+	} else {
+		rows, err = s.db.Pool().Query(ctx, `
+			SELECT m.id, m.from_user_id, COALESCE(u.username, ''),
+			       m.subject, m.body, m.folder, m.created_at, m.read_at,
+			       m.battle_report_id, m.espionage_report_id, m.expedition_report_id
+			FROM messages m
+			LEFT JOIN users u ON u.id = m.from_user_id
+			WHERE m.to_user_id = $1 AND m.deleted_at IS NULL
+			ORDER BY m.created_at DESC
+			LIMIT $2
+		`, userID, limit)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("inbox query: %w", err)
 	}
@@ -75,6 +96,14 @@ func (s *Service) Inbox(ctx context.Context, userID string, limit int) ([]Messag
 }
 
 // Sent возвращает последние N отправленных сообщений текущего пользователя.
+//
+// План 72.1.17: до миграции 0087 «отправленные» вычислялись через
+// `from_user_id=me`. После миграции Compose дублирует в folder=2 (SENT)
+// для отправителя. Чтобы покрыть старые и новые — UNION:
+//   - старые (до 0087): from_user_id=me AND to_user_id != me (exclude
+//     self-loops от sent-копий новой схемы)
+//   - новые (после 0087): to_user_id=me AND folder=2.
+// from_username в результате — имя получателя.
 func (s *Service) Sent(ctx context.Context, userID string, limit int) ([]Message, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 100
@@ -85,7 +114,14 @@ func (s *Service) Sent(ctx context.Context, userID string, limit int) ([]Message
 		       m.battle_report_id, m.espionage_report_id, m.expedition_report_id
 		FROM messages m
 		LEFT JOIN users u ON u.id = m.to_user_id
-		WHERE m.from_user_id = $1 AND m.deleted_at IS NULL
+		WHERE (
+		    -- новая схема: sent-копия у самого юзера
+		    (m.to_user_id = $1 AND m.folder = 2)
+		    OR
+		    -- старая схема (до 0087): from_user_id=me, to_user_id != me
+		    (m.from_user_id = $1 AND m.to_user_id != $1 AND m.folder != 2)
+		)
+		AND m.deleted_at IS NULL
 		ORDER BY m.created_at DESC
 		LIMIT $2
 	`, userID, limit)
@@ -166,9 +202,75 @@ var (
 // FolderInbox — папка личных сообщений (MSG_FOLDER_INBOX из legacy consts.php).
 const FolderInbox = 1
 
+// FolderInfo — одна папка для UI: метаданные из message_folders плюс
+// счётчики сообщений текущего юзера. План 72.1.17 (legacy MSG::index).
+type FolderInfo struct {
+	FolderID    int    `json:"folder_id"`
+	LabelKey    string `json:"label_key"`     // i18n: msgFolder.<key>
+	IsStandard  bool   `json:"is_standard"`
+	DisplayOrder int   `json:"display_order"`
+	Total       int    `json:"total"`
+	Unread      int    `json:"unread"`
+}
+
+// Folders возвращает список системных папок с счётчиками для userID.
+// LEFT JOIN с messages, чтобы пустые папки тоже показывались (UI рисует
+// все стандартные папки как в legacy).
+//
+// Sent (folder=2) считается по from_user_id=me, остальные — по
+// to_user_id=me (legacy `m.receiver = sqlUser()` для всех кроме SENT).
+func (s *Service) Folders(ctx context.Context, userID string) ([]FolderInfo, error) {
+	// Вернём по одной строке на каждую папку из справочника.
+	// Counters считаются подзапросом внутри SELECT для избегания GROUP BY
+	// со всеми полями справочника.
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT
+		    f.folder_id, f.label_key, f.is_standard, f.display_order,
+		    COALESCE((
+		        SELECT COUNT(*) FROM messages m
+		        WHERE m.folder = f.folder_id
+		          AND m.deleted_at IS NULL
+		          AND CASE WHEN f.folder_id = 2 THEN m.from_user_id = $1
+		                                       ELSE m.to_user_id   = $1 END
+		    ), 0) AS total,
+		    COALESCE((
+		        SELECT COUNT(*) FROM messages m
+		        WHERE m.folder = f.folder_id
+		          AND m.deleted_at IS NULL
+		          AND m.read_at IS NULL
+		          AND CASE WHEN f.folder_id = 2 THEN m.from_user_id = $1
+		                                       ELSE m.to_user_id   = $1 END
+		    ), 0) AS unread
+		FROM message_folders f
+		WHERE f.is_standard = true
+		ORDER BY f.display_order, f.folder_id
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("folders query: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]FolderInfo, 0, 12)
+	for rows.Next() {
+		var fi FolderInfo
+		if err := rows.Scan(&fi.FolderID, &fi.LabelKey, &fi.IsStandard,
+			&fi.DisplayOrder, &fi.Total, &fi.Unread); err != nil {
+			return nil, err
+		}
+		out = append(out, fi)
+	}
+	return out, rows.Err()
+}
+
+// FolderSent — папка отправленных (MSG_FOLDER_SENT, legacy mode=2).
+const FolderSent = 2
+
 // Compose отправляет личное сообщение от fromUserID к получателю по username.
-// Сообщение кладётся в папку FolderInbox получателя. Лимит subject 200 символов,
-// body 10 000 символов.
+// Создаёт ДВЕ записи (план 72.1.17 паритет с legacy `sendMessage`):
+//   1. folder=FolderInbox=1 для receiver — это его inbox.
+//   2. folder=FolderSent=2 для sender — копия в его «отправленные».
+// Лимит subject 200 символов, body 10 000 символов. Транзакция, чтобы
+// обе записи появлялись атомарно (или ни одной).
 func (s *Service) Compose(ctx context.Context, fromUserID, toUsername, subject, body string) error {
 	if fromUserID == "" || toUsername == "" {
 		return ErrRecipientNotFound
@@ -189,14 +291,24 @@ func (s *Service) Compose(ctx context.Context, fromUserID, toUsername, subject, 
 		return ErrSelfMessage
 	}
 
-	_, err = s.db.Pool().Exec(ctx, `
-		INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
-		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
-	`, toUserID, fromUserID, FolderInbox, subject, body)
-	if err != nil {
-		return fmt.Errorf("compose insert: %w", err)
-	}
-	return nil
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// 1. Inbox-копия получателю.
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
+			VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
+		`, toUserID, fromUserID, FolderInbox, subject, body); err != nil {
+			return fmt.Errorf("compose inbox insert: %w", err)
+		}
+		// 2. Sent-копия отправителю (legacy mode=2). read_at = now() —
+		// для отправителя письмо уже «прочитано».
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body, read_at)
+			VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, now())
+		`, fromUserID, fromUserID, FolderSent, subject, body); err != nil {
+			return fmt.Errorf("compose sent insert: %w", err)
+		}
+		return nil
+	})
 }
 
 // DeleteAll soft-удаляет все сообщения пользователя (опционально фильтр по folder).

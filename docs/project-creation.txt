@@ -14698,3 +14698,82 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(search): план 72.1.16 — паритет с legacy (last_seen + home + markers + ORDER BY).
 
+
+---
+
+2026-05-01 — итерация 72.1.17: Messages — folder routing.
+
+  По §20.12 закрытие /msg ⚠ → ✅. Legacy MSG.class.php имеет
+  многопапочную систему сообщений (12 папок: 11 legacy const +
+  наша SYSTEM=12 для welcome/inactivity), origin использовал
+  только inbox/sent с упрощёнными табами.
+
+  **Сделано**:
+  - migration 0087: таблица message_folders (12 строк seed) +
+    backfill folder=2 (наши system) → folder=12 (SYSTEM); FK +
+    partial-index ix_messages_folder.
+  - automsg/service.go: 12 константных Folder* (legacy const +
+    SYSTEM=12); default Folder = FolderSystem (раньше был =2 что
+    в legacy = SENT — семантический баг).
+  - alliance/transfer.go и settings/delete.go: folder=13 → 12.
+  - alliance/service.go: уточнил комментарий (folder=6 уже
+    корректное MSG_FOLDER_ALLIANCE).
+  - message/service.go::Inbox: добавлен параметр folder int
+    (0 = все папки backwards-compat, >0 = filter).
+  - message/service.go::Compose: транзакционно создаёт ДВЕ записи
+    (legacy mode=1 для receiver + mode=2 для sender), sent-copy
+    с read_at=now().
+  - message/service.go::Sent: UNION старая (from_user_id=me) +
+    новая (to_user_id=me AND folder=2) семантика.
+  - message/service.go::Folders (новый): возвращает 12 системных
+    папок с counts (total/unread); SQL CASE для folder=2 считает
+    отправленные по from_user_id, остальные — по to_user_id.
+  - handler.Inbox: ?folder=N параметр.
+  - handler.Folders (новый): GET /api/messages/folders.
+  - api/messages.ts: 12 FOLDER_* констант, fetchMessageFolders,
+    fetchMessages принимает number | 'inbox' | 'sent'.
+  - types.ts: MessageFolderInfo, MessageFoldersList.
+  - query-keys.ts: messages принимает number, messageFolders().
+  - MessageFoldersScreen.tsx (новый): список папок с counters,
+    legacy-like иконка ✉ для unread.
+  - MessagesScreen.tsx: поддержка numeric folderId через URL
+    /msg/folder/:folderId; ссылка «← к папкам».
+  - router.tsx: /msg → MessageFoldersScreen, /msg/folder/:folderId
+    → MessagesScreen, legacy /msg/:folder сохранены.
+  - i18n (ru/en): 13 msgFolder.<key> + folders/total/unread в
+    группе message.
+
+  **Прогон**: `go build ./...` zero issues, тесты `alliance`
+  и `settings` зелёные. TS clean. Pre-existing eslint
+  jsx-a11y error (line 214 anchor-as-button) был и до моих
+  правок — не трогаю.
+
+  **Файлы**:
+  - docs/plans/72.1.17-messages-folders.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#19 ⚠ → ✅).
+  - projects/game-nova/migrations/0087_message_folders.sql (новый).
+  - projects/game-nova/backend/internal/automsg/service.go
+    (12 const + Folder=12).
+  - projects/game-nova/backend/internal/alliance/service.go (комментарий).
+  - projects/game-nova/backend/internal/alliance/transfer.go (13→12).
+  - projects/game-nova/backend/internal/settings/delete.go (13→12).
+  - projects/game-nova/backend/internal/message/service.go
+    (Inbox folder param + Folders + Compose dual-insert + Sent UNION).
+  - projects/game-nova/backend/internal/message/handler.go
+    (Folders + ?folder=).
+  - projects/game-nova/backend/cmd/server/main.go (route /messages/folders).
+  - projects/game-nova/frontends/origin/src/api/messages.ts
+    (12 FOLDER_*, fetchMessageFolders, fetchMessages с number).
+  - projects/game-nova/frontends/origin/src/api/types.ts
+    (MessageFolderInfo, MessageFoldersList).
+  - projects/game-nova/frontends/origin/src/api/query-keys.ts
+    (messages с number, messageFolders).
+  - projects/game-nova/frontends/origin/src/features/messages/MessageFoldersScreen.tsx (новый).
+  - projects/game-nova/frontends/origin/src/features/messages/MessagesScreen.tsx
+    (numericFolderId + ссылка ← к папкам).
+  - projects/game-nova/frontends/origin/src/router.tsx (новый route).
+  - projects/game-nova/configs/i18n/{ru,en}.yml (msgFolder + 3 ключа).
+
+  **Коммит**:
+  feat(messages): план 72.1.17 — folder routing (12 папок legacy + SYSTEM=12).
+

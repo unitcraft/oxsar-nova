@@ -52,7 +52,9 @@ export const QK = {
   // Spring 4 (Ф.5) — communication / notes / search / settings
   friends: (filter: 'mutual' | 'incoming' | 'outgoing' | 'all' = 'mutual') =>
     ['friends', filter] as const,
-  messages: (folder: 'inbox' | 'sent') => ['messages', folder] as const,
+  messages: (folder: 'inbox' | 'sent' | number) =>
+    ['messages', folder] as const,
+  messageFolders: () => ['messages', 'folders'] as const,
   message: (id: string) => ['messages', 'detail', id] as const,
   chatHistory: (kind: 'global' | 'alliance') =>
     ['chat', kind, 'history'] as const,

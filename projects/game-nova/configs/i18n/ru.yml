@@ -2577,6 +2577,10 @@ message:
   fleetCommand: Командование флота
   fleetReports: Сообщения флота
   folder: Категории
+  # План 72.1.17: legacy MSG.class.php index (список папок).
+  folders: Папки
+  total: Всего
+  unread: Новые
   from: От
   globalMail: Общее сообщение
   message: Сообщение
@@ -3136,3 +3140,18 @@ errors:
   maxQuantity: "Превышено максимальное количество артефактов в одном лоте (100)."
   invalidExpiry: "Срок действия лота должен быть от 1 часа до 7 дней."
   generic: "Операция не выполнена."
+
+# План 72.1.17: метки legacy папок сообщений.
+msgFolder:
+  inbox: 📥 Входящие
+  sent: 📤 Отправленные
+  fleet: 🚀 Флот
+  spy: 🕵 Шпионаж
+  battleReports: ⚔ Боевые отчёты
+  alliance: 🤝 Альянс
+  artefacts: ✨ Артефакты
+  credit: 💳 Кредиты
+  expedition: 🌌 Экспедиции
+  recycler: ♻ Мусорщики
+  surveillance: 🛰 Сканирования
+  system: 🔔 Системные

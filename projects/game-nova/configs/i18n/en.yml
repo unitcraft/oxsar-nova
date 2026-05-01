@@ -2578,6 +2578,10 @@ message:
   fleetCommand: ""
   fleetReports: ""
   folder: ""
+  # Plan 72.1.17: legacy MSG index (folders list).
+  folders: Folders
+  total: Total
+  unread: Unread
   from: ""
   globalMail: ""
   message: ""
@@ -3137,3 +3141,18 @@ errors:
   maxQuantity: "Maximum number of artefacts per lot exceeded (100)."
   invalidExpiry: "Lot expiry must be between 1 hour and 7 days."
   generic: "Operation failed."
+
+# Plan 72.1.17: legacy message folder labels.
+msgFolder:
+  inbox: 📥 Inbox
+  sent: 📤 Sent
+  fleet: 🚀 Fleet
+  spy: 🕵 Spy
+  battleReports: ⚔ Battle reports
+  alliance: 🤝 Alliance
+  artefacts: ✨ Artefacts
+  credit: 💳 Credits
+  expedition: 🌌 Expeditions
+  recycler: ♻ Recycler
+  surveillance: 🛰 Surveillance
+  system: 🔔 System
