@@ -1038,6 +1038,18 @@ fleet:
   controlBtn: "⚙ Control"
   loadOpt: "Load from planet"
   unloadOpt: "Unload from fleet"
+  # План 72.1.48: formation.
+  formationBtn: "📋 Formation"
+  formationName: "Group name"
+  formationCreateBtn: "Create ACS"
+  invitee: "Invite"
+  inviteBtn: "Invite"
+  usernamePh: "username"
+  acsInvitationsTitle: "📥 ACS invitations"
+  acsGroupName: "Group"
+  acsLeader: "Leader"
+  acsInvitedAt: "Sent at"
+  acsAccept: "Accept"
   missionRebase: Rebase
   missionTransport: Transport
   missionColonize: Colonize

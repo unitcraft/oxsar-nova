@@ -1035,6 +1035,18 @@ fleet:
   controlBtn: "⚙ Управление"
   loadOpt: "Загрузить с планеты"
   unloadOpt: "Выгрузить с флота"
+  # План 72.1.48: formation (legacy `Mission.class.php::formation`).
+  formationBtn: "📋 Formation"
+  formationName: "Имя группы"
+  formationCreateBtn: "Создать ACS"
+  invitee: "Пригласить"
+  inviteBtn: "Пригласить"
+  usernamePh: "username"
+  acsInvitationsTitle: "📥 Приглашения в ACS"
+  acsGroupName: "Группа"
+  acsLeader: "Лидер"
+  acsInvitedAt: "Когда"
+  acsAccept: "Принять"
   missionRebase: Перебазирование
   missionTransport: Транспорт
   missionColonize: Колонизация

@@ -74,3 +74,44 @@ export function unloadFleet(fleetId: string, input: LoadUnloadInput): Promise<vo
     idempotencyKey: newIdempotencyKey(),
   });
 }
+
+// План 72.1.48: formation — конверсия single-атаки в ACS-группу с
+// именем, invite по username с проверкой Relation.
+export interface ACSGroup {
+  id: string;
+  name: string;
+  leader_user_id: string;
+  leader_fleet_id: string;
+  created_at: string;
+}
+
+export interface ACSInvitation {
+  acs_group_id: string;
+  group_name: string;
+  leader_name: string;
+  invited_by: string;
+  invited_at: string;
+  accepted_at?: string;
+}
+
+export function promoteFleetToACS(fleetId: string, name: string): Promise<ACSGroup> {
+  return api.post<ACSGroup>(`/api/fleet/${fleetId}/promote-to-acs`, { name }, {
+    idempotencyKey: newIdempotencyKey(),
+  });
+}
+
+export function inviteToACS(groupId: string, username: string): Promise<void> {
+  return api.post<void>(`/api/acs/${groupId}/invite`, { username }, {
+    idempotencyKey: newIdempotencyKey(),
+  });
+}
+
+export function listACSInvitations(): Promise<{ invitations: ACSInvitation[] }> {
+  return api.get<{ invitations: ACSInvitation[] }>('/api/acs/invitations');
+}
+
+export function acceptACSInvitation(groupId: string): Promise<void> {
+  return api.post<void>(`/api/acs/invitations/${groupId}/accept`, undefined, {
+    idempotencyKey: newIdempotencyKey(),
+  });
+}
