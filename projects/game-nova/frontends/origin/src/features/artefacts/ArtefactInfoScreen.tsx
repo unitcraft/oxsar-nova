@@ -17,6 +17,8 @@ import {
   fetchArtefacts,
   activateArtefact,
   deactivateArtefact,
+  fetchArtefactHistory,
+  type ArtefactHistoryEntry,
 } from '@/api/artefacts';
 import { QK } from '@/api/query-keys';
 import type { ApiError } from '@/api/client';
@@ -105,6 +107,14 @@ export function ArtefactInfoScreen() {
     queryKey: QK.artefacts(),
     queryFn: fetchArtefacts,
     staleTime: 30_000,
+  });
+
+  // План 72.1.45 §2: история приобретений артефакта (legacy ArtefactInfo).
+  const histQ = useQuery({
+    queryKey: QK.artefactHistory(Number(type) || 0),
+    queryFn: () => fetchArtefactHistory(Number(type) || 0),
+    enabled: type.length > 0,
+    staleTime: 60_000,
   });
 
   if (catQ.isLoading) return <div className="idiv">…</div>;
@@ -217,8 +227,65 @@ export function ArtefactInfoScreen() {
             )}
           </>
         )}
+        {/* План 72.1.45 §2: история приобретений (legacy ArtefactInfo L.66-93). */}
+        <HistorySection entries={histQ.data?.entries ?? []} t={t} />
       </tbody>
     </table>
+  );
+}
+
+function HistorySection({
+  entries,
+  t,
+}: {
+  entries: ArtefactHistoryEntry[];
+  t: TFunc;
+}) {
+  if (entries.length === 0) return null;
+  return (
+    <>
+      <tr>
+        <th colSpan={2}>{t('artefacts', 'historyTitle')}</th>
+      </tr>
+      <tr>
+        <td colSpan={2}>
+          <table
+            className="table_no_background"
+            cellSpacing={0}
+            cellPadding={0}
+            border={0}
+            style={{ width: '100%' }}
+          >
+            <thead>
+              <tr>
+                <th>{t('artefacts', 'historyTime')}</th>
+                <th>{t('artefacts', 'historyOwner')}</th>
+                <th>{t('artefacts', 'historySource')}</th>
+                <th>{t('artefacts', 'historyReport')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((e, i) => (
+                <tr key={`${e.user_id}-${e.acquired_at}-${i}`}>
+                  <td>{new Date(e.acquired_at).toLocaleString('ru-RU')}</td>
+                  <td>{e.username}</td>
+                  <td>{t('artefacts', `historySource_${e.source}`)}</td>
+                  <td>
+                    {e.battle_report_id ? (
+                      <Link to={`/battle-report/${e.battle_report_id}`}>
+                        {t('artefacts', 'historyReportLink')}
+                      </Link>
+                    ) : (
+                      <span style={{ color: '#888' }}>—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </>
   );
 }
 

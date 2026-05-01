@@ -47,6 +47,8 @@ export const QK = {
   unitCatalog: (type: string | number) => ['catalog', 'unit', type] as const,
   artefactCatalog: (type: string | number) =>
     ['catalog', 'artefact', type] as const,
+  // План 72.1.45 §2: история приобретений артефакта.
+  artefactHistory: (unitId: number) => ['artefacts', 'history', unitId] as const,
   techtree: (planetId?: string) => ['techtree', planetId ?? ''] as const,
   records: () => ['records'] as const,
   // Spring 4 (Ф.5) — communication / notes / search / settings

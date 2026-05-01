@@ -41,3 +41,21 @@ export function deactivateArtefact(id: string): Promise<void> {
     { idempotencyKey: newIdempotencyKey() },
   );
 }
+
+// План 72.1.45 §2: история приобретений артефакта (legacy ArtefactInfo).
+export interface ArtefactHistoryEntry {
+  acquired_at: string;
+  user_id: string;
+  username: string;
+  battle_report_id?: string;
+  opponent_name?: string;
+  source: 'battle' | 'expedition' | 'quest' | 'admin' | 'market';
+}
+
+export function fetchArtefactHistory(
+  unitId: number,
+): Promise<{ entries: ArtefactHistoryEntry[] }> {
+  return api.get<{ entries: ArtefactHistoryEntry[] }>(
+    `/api/artefacts/info/${unitId}/history`,
+  );
+}
