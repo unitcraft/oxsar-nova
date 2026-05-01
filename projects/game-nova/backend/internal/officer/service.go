@@ -10,9 +10,15 @@
 //   ENGINEER  (planets.build_factor +0.25) — +25% скорости построек.
 //   MERCHANT  (user.exchange_rate -0.2)   — честный паритет market.
 //
-// Идемпотентность: повторная активация того же officer'а, пока
-// прошлая не истекла — ошибка ErrAlreadyActive (legacy тоже не
-// даёт «продлить за credit», только купить снова после expire).
+// Renewal: повторная активация активного officer'а (план 72.1.18) —
+// продлевает подписку (legacy `Officer.class.php::hireOfficer`:
+// of_time = existing_of_time + 7d). Списывает credit, factor НЕ
+// меняется (он уже применён). Старый KindOfficerExpire event
+// помечается state='cancelled', создаётся новый на новое expires_at.
+//
+// ErrAlreadyActive больше не возвращается из Activate (но константа
+// сохранена для совместимости с callers, использующими её для
+// других путей — например artefact-flow).
 package officer
 
 import (
@@ -130,9 +136,19 @@ func allowedField(f string) bool {
 	return false
 }
 
-// Activate покупает officer'а за credit и применяет эффект.
-// При успехе создаёт event KindOfficerExpire=62 на expires_at.
-// autoRenew=true — при истечении срока автоматически продлевает подписку,
+// Activate покупает officer'а за credit и применяет эффект; если уже
+// активен — продлевает подписку (legacy `hireOfficer`: of_time =
+// existing_of_time + 7d). Списывает credit в обоих случаях.
+//
+// План 72.1.18: renewal-семантика. Раньше Activate возвращал
+// ErrAlreadyActive что противоречило legacy.
+//
+// При успехе создаёт event KindOfficerExpire=62 на новое expires_at.
+// При продлении старый event помечается отменённым (state='cancelled')
+// и создаётся новый — иначе worker сработает на оригинальный expires_at
+// и снимет factor раньше времени.
+//
+// autoRenew=true — при истечении срока автоматически продлевает,
 // если у игрока хватает credit.
 func (s *Service) Activate(ctx context.Context, userID, key string, autoRenew bool) (Entry, error) {
 	var out Entry
@@ -161,19 +177,28 @@ func (s *Service) Activate(ctx context.Context, userID, key string, autoRenew bo
 		if eff.Op != "add" {
 			return fmt.Errorf("unsupported op %q (officer: only add)", eff.Op)
 		}
-		// Not already active.
-		var exists bool
-		if err := tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM officer_active WHERE user_id=$1 AND officer_key=$2)`,
-			userID, key).Scan(&exists); err != nil {
+
+		// Текущая активная подписка (если есть).
+		var (
+			existingActivated time.Time
+			existingExpires   time.Time
+			isRenewal         bool
+		)
+		err = tx.QueryRow(ctx,
+			`SELECT activated_at, expires_at FROM officer_active WHERE user_id=$1 AND officer_key=$2`,
+			userID, key).Scan(&existingActivated, &existingExpires)
+		switch {
+		case err == nil:
+			isRenewal = true
+		case errors.Is(err, pgx.ErrNoRows):
+			isRenewal = false
+		default:
 			return fmt.Errorf("check active: %w", err)
 		}
-		if exists {
-			return ErrAlreadyActive
-		}
-		// Group exclusivity: если у офицера group_key, проверяем нет ли другого
-		// активного офицера из той же группы.
-		if def.GroupKey != nil && *def.GroupKey != "" {
+
+		// Group exclusivity: если у офицера group_key, проверяем нет ли
+		// ДРУГОГО активного офицера из той же группы (self-renewal допустим).
+		if def.GroupKey != nil && *def.GroupKey != "" && !isRenewal {
 			var groupActive bool
 			if err := tx.QueryRow(ctx, `
 				SELECT EXISTS (
@@ -202,38 +227,68 @@ func (s *Service) Activate(ctx context.Context, userID, key string, autoRenew bo
 			def.CostCredit, userID); err != nil {
 			return fmt.Errorf("debit credit: %w", err)
 		}
-		// Применяем factor.
-		if err := applyFactor(ctx, tx, userID, eff, +eff.Delta); err != nil {
-			return err
-		}
-		// INSERT active.
+
 		now := time.Now().UTC()
-		exp := now.Add(time.Duration(def.DurationDays) * 24 * time.Hour)
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO officer_active (user_id, officer_key, activated_at, expires_at, auto_renew)
-			VALUES ($1, $2, $3, $4, $5)
-		`, userID, key, now, exp, autoRenew); err != nil {
-			return fmt.Errorf("insert active: %w", err)
+		duration := time.Duration(def.DurationDays) * 24 * time.Hour
+		var newExpires time.Time
+		var activatedAt time.Time
+
+		if isRenewal {
+			// Legacy: of_{id} + 7d (продление от текущего expire).
+			// factor НЕ меняем (он уже применён при первой активации).
+			newExpires = existingExpires.Add(duration)
+			activatedAt = existingActivated // храним оригинальное время покупки
+			if _, err := tx.Exec(ctx, `
+				UPDATE officer_active
+				SET expires_at = $1, auto_renew = $2
+				WHERE user_id = $3 AND officer_key = $4
+			`, newExpires, autoRenew, userID, key); err != nil {
+				return fmt.Errorf("update active: %w", err)
+			}
+			// Старый event на expire больше не актуален — отменяем.
+			// state='cancelled' принят в нашей event-системе как стоп-маркер
+			// (workflow воркера: только state='wait' → 'fired').
+			if _, err := tx.Exec(ctx, `
+				UPDATE events SET state = 'cancelled'
+				WHERE user_id = $1 AND kind = $2 AND state = 'wait'
+				  AND payload->>'officer_key' = $3
+			`, userID, event.KindOfficerExpire, key); err != nil {
+				return fmt.Errorf("cancel old expire event: %w", err)
+			}
+		} else {
+			// Новый найм: применяем factor и INSERT active.
+			if err := applyFactor(ctx, tx, userID, eff, +eff.Delta); err != nil {
+				return err
+			}
+			activatedAt = now
+			newExpires = now.Add(duration)
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO officer_active (user_id, officer_key, activated_at, expires_at, auto_renew)
+				VALUES ($1, $2, $3, $4, $5)
+			`, userID, key, now, newExpires, autoRenew); err != nil {
+				return fmt.Errorf("insert active: %w", err)
+			}
 		}
-		// Event на expire.
+
+		// Event на expire (новый, на newExpires).
 		payload, _ := json.Marshal(map[string]any{
-			"user_id":      userID,
-			"officer_key":  key,
-			"effect":       def.Effect,
-			"cost_credit":  def.CostCredit,
+			"user_id":       userID,
+			"officer_key":   key,
+			"effect":        def.Effect,
+			"cost_credit":   def.CostCredit,
 			"duration_days": def.DurationDays,
-			"auto_renew":   autoRenew,
+			"auto_renew":    autoRenew,
 		})
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
 			VALUES ($1, $2, $3, 'wait', $4, $5)
-		`, ids.New(), userID, event.KindOfficerExpire, exp, payload); err != nil {
+		`, ids.New(), userID, event.KindOfficerExpire, newExpires, payload); err != nil {
 			return fmt.Errorf("insert event: %w", err)
 		}
 		out = Entry{
 			Key: def.Key, Title: def.Title, Description: def.Description,
 			DurationDays: def.DurationDays, CostCredit: def.CostCredit,
-			ActivatedAt: &now, ExpiresAt: &exp,
+			ActivatedAt: &activatedAt, ExpiresAt: &newExpires,
 		}
 		return nil
 	})
@@ -331,7 +386,7 @@ func (s *Service) ExpireHandler() event.Handler {
 				// factor не меняется (был активен → остаётся активен).
 				if _, err := tx.Exec(ctx, `
 					INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
-					VALUES ($1, $2, NULL, 13, $3, $4)
+					VALUES ($1, $2, NULL, 12, $3, $4)
 				`, ids.New(), pl.UserID,
 					s.tr("officer", "renewedSubject", map[string]string{"key": pl.OfficerKey}),
 					s.tr("officer", "renewedBody", map[string]string{"credits": strconv.FormatInt(pl.CostCredit, 10)}),
@@ -352,9 +407,12 @@ func (s *Service) ExpireHandler() event.Handler {
 		if pl.AutoRenew {
 			body = s.tr("officer", "expiredBodyNoCredits", nil)
 		}
+		// План 72.1.17: folder=12 (SYSTEM) — уведомление о завершении
+		// подписки. Раньше использовался folder=13 (отсутствует в legacy
+		// const и в message_folders справочнике после 0087).
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
-			VALUES ($1, $2, NULL, 13, $3, $4)
+			VALUES ($1, $2, NULL, 12, $3, $4)
 		`, ids.New(), pl.UserID, subject, body); err != nil {
 			return fmt.Errorf("notify: %w", err)
 		}
