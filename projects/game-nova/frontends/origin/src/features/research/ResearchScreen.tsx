@@ -1,14 +1,17 @@
 // S-003 Research — исследования (план 72.1 ч.20).
 // Pixel-perfect клон legacy research.tpl + required_res_table.tpl.
 
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchResearch, startResearch } from '@/api/research';
+import { packResearch } from '@/api/buildings';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { catalogByGroup } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { useTranslation } from '@/i18n/i18n';
 import { secondsUntil, formatDuration } from '@/lib/format';
+import type { ApiError } from '@/api/client';
 
 export function ResearchScreen() {
   const { planetId, planet } = useResolvedPlanet();
@@ -26,6 +29,18 @@ export function ResearchScreen() {
       void qc.invalidateQueries({ queryKey: QK.research() });
       if (planetId) void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
     },
+  });
+
+  // План 72.1.33 ч.2: pack research через packing-research артефакт.
+  const [packErr, setPackErr] = useState<string | null>(null);
+  const packMut = useMutation({
+    mutationFn: (unitId: number) => packResearch(planetId!, unitId),
+    onSuccess: () => {
+      setPackErr(null);
+      void qc.invalidateQueries({ queryKey: QK.research() });
+      void qc.invalidateQueries({ queryKey: QK.artefacts() });
+    },
+    onError: (e) => setPackErr((e as ApiError).message),
   });
 
   if (!planetId) {
@@ -50,6 +65,11 @@ export function ResearchScreen() {
 
   return (
     <>
+      {packErr && (
+        <div className="false" style={{ padding: 4, marginBottom: 4 }}>
+          {packErr}
+        </div>
+      )}
       {queue.length > 0 && (
         <table className="ntable">
           <tbody>
@@ -133,6 +153,29 @@ export function ResearchScreen() {
                       {t('buildings', 'researchOfLevel') ?? 'Исследовать'}<br />
                       {t('buildings', 'levelAbbr') === 'Ур.' ? 'уровень' : 'уровень'} {lvl + 1}
                     </button>
+                  )}
+                  {/* План 72.1.33 ч.2: pack research если уровень>0. */}
+                  {lvl > 0 && (
+                    <div style={{ marginTop: 4 }}>
+                      <button
+                        type="button"
+                        className="button"
+                        disabled={packMut.isPending}
+                        title={t('buildinginfo', 'packResearch') || 'Упаковать в артефакт'}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              (t('buildinginfo', 'packConfirm') as string) ||
+                                'Упаковать?',
+                            )
+                          ) {
+                            packMut.mutate(entry.id);
+                          }
+                        }}
+                      >
+                        📦
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
