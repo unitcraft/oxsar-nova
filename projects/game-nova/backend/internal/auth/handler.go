@@ -73,19 +73,20 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		ofPoints, dmPoints                   float64
 		ofLevel, battles                     int
 		vacationSince, vacationLastEnd       *time.Time
+		deleteAt                             *time.Time // план 72.1.30: pending удаление
 	)
 	if err := h.db.QueryRow(ctx,
 		`SELECT username, credit, COALESCE(profession, 'none'),
 		        points, e_points, be_points, max_points,
 		        of_points, of_level, dm_points, battles,
-		        vacation_since, vacation_last_end
+		        vacation_since, vacation_last_end, delete_at
 		 FROM users WHERE id=$1`,
 		uid,
 	).Scan(
 		&username, &credit, &profession,
 		&points, &ePoints, &bePoints, &maxPoints,
 		&ofPoints, &ofLevel, &dmPoints, &battles,
-		&vacationSince, &vacationLastEnd,
+		&vacationSince, &vacationLastEnd, &deleteAt,
 	); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
@@ -142,6 +143,10 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 	if vacationLastEnd != nil {
 		resp["vacation_last_end"] = vacationLastEnd.UTC().Format(time.RFC3339)
+	}
+	// План 72.1.30: pending account deletion (grace 7 дней).
+	if deleteAt != nil {
+		resp["delete_at"] = deleteAt.UTC().Format(time.RFC3339)
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, resp)
 }
