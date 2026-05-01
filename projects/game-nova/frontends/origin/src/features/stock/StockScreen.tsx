@@ -10,12 +10,16 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  banLot,
   buyLot,
   cancelLot,
   createLot,
   fetchExchangeLots,
+  premiumCost,
+  promoteLot,
 } from '@/api/exchange';
 import { fetchArtefacts } from '@/api/artefacts';
+import { fetchMe } from '@/api/me';
 import { QK } from '@/api/query-keys';
 import type { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
@@ -75,6 +79,43 @@ export function StockScreen() {
     mutationFn: (lotID: string) => cancelLot(lotID),
     onSuccess: () => {
       setActionMsg(t('stock', 'cancelSuccess'));
+      setActionErr(null);
+      void qc.invalidateQueries({ queryKey: QK.exchangeLots(paramKey) });
+      setTimeout(() => setActionMsg(null), 3000);
+    },
+    onError: (e) => {
+      setActionErr((e as ApiError).message);
+      setActionMsg(null);
+    },
+  });
+
+  // План 72.1.27: me-query для admin-роли (показ Ban-кнопки) + Premium/Ban mutations.
+  const meQ = useQuery({
+    queryKey: QK.me(),
+    queryFn: fetchMe,
+    staleTime: 5 * 60_000,
+  });
+  const isAdmin = (meQ.data?.roles ?? []).includes('admin');
+
+  const promoteMut = useMutation({
+    mutationFn: (lotID: string) => promoteLot(lotID),
+    onSuccess: (res) => {
+      setActionMsg(t('stock', 'premiumSuccess', { credits: res.credit_debit }));
+      setActionErr(null);
+      void qc.invalidateQueries({ queryKey: QK.exchangeLots(paramKey) });
+      void qc.invalidateQueries({ queryKey: QK.me() });
+      setTimeout(() => setActionMsg(null), 3000);
+    },
+    onError: (e) => {
+      setActionErr((e as ApiError).message);
+      setActionMsg(null);
+    },
+  });
+
+  const banMut = useMutation({
+    mutationFn: (lotID: string) => banLot(lotID),
+    onSuccess: () => {
+      setActionMsg(t('stock', 'banSuccess'));
       setActionErr(null);
       void qc.invalidateQueries({ queryKey: QK.exchangeLots(paramKey) });
       setTimeout(() => setActionMsg(null), 3000);
@@ -309,60 +350,122 @@ export function StockScreen() {
             <td colSpan={6} className="center">Активных лотов нет</td>
           </tr>
         )}
-        {lots.map((lot, i) => (
-          <tr key={lot.id}>
-            <td align="center">{i + 1}.</td>
-            <td>
-              Арт. #{lot.artifact_unit_id}
-            </td>
-            <td align="right">
-              {formatNumber(lot.quantity)}
-              {lot.quantity > 1 && (
-                <>
-                  <br />
-                  <span style={{ fontSize: 'smaller' }}>мин: 1</span>
-                </>
-              )}
-            </td>
-            <td align="right">
-              {formatNumber(lot.price_oxsarit)}
-              {lot.quantity > 1 && (
-                <>
-                  <br />
-                  {formatNumber(
-                    lot.unit_price_oxsarit ??
-                      Math.round(lot.price_oxsarit / lot.quantity),
-                  )}
-                  /шт.
-                </>
-              )}
-            </td>
-            <td align="right">
-              {lot.seller_username ?? '—'}
-              <br />
-              истекает: {fmtDate(lot.expires_at)}
-            </td>
-            <td align="center" valign="middle">
-              {lot.seller_user_id === myUserId ? (
-                <input
-                  type="button"
-                  className="button"
-                  value={t('stock', 'cancelBtn')}
-                  disabled={cancelMut.isPending}
-                  onClick={() => cancelMut.mutate(lot.id)}
-                />
-              ) : (
-                <input
-                  type="button"
-                  className="button"
-                  value={t('stock', 'buyBtn')}
-                  disabled={buyMut.isPending}
-                  onClick={() => buyMut.mutate(lot.id)}
-                />
-              )}
-            </td>
-          </tr>
-        ))}
+        {lots.map((lot, i) => {
+          // План 72.1.27: featured-лот в окне 2ч.
+          const isFeatured =
+            lot.featured_at != null &&
+            new Date(lot.featured_at).getTime() > Date.now() - 2 * 3600 * 1000;
+          const cost = premiumCost(lot.price_oxsarit);
+          return (
+            <tr
+              key={lot.id}
+              style={
+                isFeatured
+                  ? { boxShadow: 'inset 0 0 0 2px gold' }
+                  : undefined
+              }
+            >
+              <td align="center">
+                {isFeatured ? '⭐ ' : ''}
+                {i + 1}.
+              </td>
+              <td>
+                Арт. #{lot.artifact_unit_id}
+              </td>
+              <td align="right">
+                {formatNumber(lot.quantity)}
+                {lot.quantity > 1 && (
+                  <>
+                    <br />
+                    <span style={{ fontSize: 'smaller' }}>мин: 1</span>
+                  </>
+                )}
+              </td>
+              <td align="right">
+                {formatNumber(lot.price_oxsarit)}
+                {lot.quantity > 1 && (
+                  <>
+                    <br />
+                    {formatNumber(
+                      lot.unit_price_oxsarit ??
+                        Math.round(lot.price_oxsarit / lot.quantity),
+                    )}
+                    /шт.
+                  </>
+                )}
+              </td>
+              <td align="right">
+                {lot.seller_username ?? '—'}
+                <br />
+                истекает: {fmtDate(lot.expires_at)}
+              </td>
+              <td align="center" valign="middle">
+                {lot.seller_user_id === myUserId ? (
+                  <input
+                    type="button"
+                    className="button"
+                    value={t('stock', 'cancelBtn')}
+                    disabled={cancelMut.isPending}
+                    onClick={() => cancelMut.mutate(lot.id)}
+                  />
+                ) : (
+                  <input
+                    type="button"
+                    className="button"
+                    value={t('stock', 'buyBtn')}
+                    disabled={buyMut.isPending}
+                    onClick={() => buyMut.mutate(lot.id)}
+                  />
+                )}
+                {/* Premium-кнопка доступна всем (legacy `premiumLot`),
+                    кроме случая когда лот уже featured в окне 2ч. */}
+                {!isFeatured && (
+                  <>
+                    <br />
+                    <button
+                      type="button"
+                      className="button"
+                      style={{ marginTop: 4 }}
+                      disabled={promoteMut.isPending}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            t('stock', 'premiumConfirm', { credits: cost }),
+                          )
+                        ) {
+                          promoteMut.mutate(lot.id);
+                        }
+                      }}
+                      title={t('stock', 'premiumBtn', { credits: cost })}
+                    >
+                      ⭐ {cost}
+                    </button>
+                  </>
+                )}
+                {/* Ban — admin-only (legacy `if(isAdmin())`). */}
+                {isAdmin && (
+                  <>
+                    <br />
+                    <button
+                      type="button"
+                      className="button"
+                      style={{ marginTop: 4 }}
+                      disabled={banMut.isPending}
+                      onClick={() => {
+                        if (window.confirm(t('stock', 'banConfirm'))) {
+                          banMut.mutate(lot.id);
+                        }
+                      }}
+                      title={t('stock', 'banBtn')}
+                    >
+                      🚫
+                    </button>
+                  </>
+                )}
+              </td>
+            </tr>
+          );
+        })}
         {(actionMsg || actionErr) && (
           <tr>
             <td colSpan={6} className="center">

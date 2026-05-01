@@ -64,3 +64,38 @@ export function createLot(payload: CreateLotPayload): Promise<{ lot: ExchangeLot
     idempotencyKey: newIdempotencyKey(),
   });
 }
+
+// План 72.1.27: Premium + Ban (legacy `Stock.class.php`).
+
+export interface PromoteResult {
+  lot_id: string;
+  credit_debit: number;
+}
+
+// promoteLot — featured-promotion лота за credit (legacy `premiumLot`).
+// Cost = max(10, lot.price × 0.5%). Backend ошибки:
+// 404 not_found / 409 lot_not_active|lot_banned|lot_already_featured
+// / 429 premium_list_full / 402 insufficient_credit.
+export function promoteLot(lotID: string): Promise<PromoteResult> {
+  return api.post<PromoteResult>(
+    `/api/exchange/lots/${encodeURIComponent(lotID)}/premium`,
+    undefined,
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}
+
+// banLot — admin-only ban (legacy `Stock::ban`).
+// Backend: 403 admin_required / 404 not_found / 409 lot_not_active.
+export function banLot(lotID: string): Promise<void> {
+  return api.post<void>(
+    `/api/exchange/lots/${encodeURIComponent(lotID)}/ban`,
+    undefined,
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}
+
+// vipPremiumCost — клиент-side preview cost (legacy formula).
+export function premiumCost(priceOxsarit: number): number {
+  const v = Math.floor(priceOxsarit * 0.005);
+  return v < 10 ? 10 : v;
+}

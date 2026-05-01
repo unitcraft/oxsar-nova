@@ -50,4 +50,22 @@ var (
 	// ErrUserHasNoPlanet — у buyer'а нет ни одной планеты, артефакты
 	// некуда поселить. Теоретически невозможно, защита от corner-case. → 409.
 	ErrUserHasNoPlanet = errors.New("exchange: buyer has no planet")
+
+	// План 72.1.27: Premium + Ban.
+
+	// ErrPremiumLimit — превышен EXCH_PREMIUM_LIST_MAX_SIZE=5 одновременных
+	// featured-лотов. → 429.
+	ErrPremiumLimit = errors.New("exchange: premium list is full")
+
+	// ErrInsufficientCreditPremium — у юзера меньше credit на premium-cost. → 402.
+	ErrInsufficientCreditPremium = errors.New("exchange: not enough credit for premium")
+
+	// ErrAdminRequired — действие (Ban) доступно только админам. → 403.
+	ErrAdminRequired = errors.New("exchange: admin role required")
+
+	// ErrLotAlreadyFeatured — лот уже featured (внутри окна 2ч). → 409.
+	ErrLotAlreadyFeatured = errors.New("exchange: lot already featured within window")
+
+	// ErrLotBanned — попытка работать с забаненным лотом. → 410.
+	ErrLotBanned = errors.New("exchange: lot is banned")
 )

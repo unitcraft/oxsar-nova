@@ -90,15 +90,20 @@ func (r *PgRepo) ListLots(ctx context.Context, f ListFilters) ([]Lot, string, er
 		idx += 2
 	}
 	args = append(args, f.Limit+1) // +1 для определения next_cursor
+	// План 72.1.27: featured-лоты сверху списка (legacy
+	// EXCH_PREMIUM_LOT_EXPIRY_TIME=2ч); banned_at IS NULL фильтр.
 	q := fmt.Sprintf(`
 		SELECT l.id, l.seller_user_id, COALESCE(u.username, ''),
 		       l.artifact_unit_id, l.quantity, l.price_oxsarit,
 		       l.status, l.created_at, l.expires_at,
-		       l.buyer_user_id, l.sold_at, l.expire_event_id
+		       l.buyer_user_id, l.sold_at, l.expire_event_id,
+		       l.featured_at, l.banned_at
 		FROM exchange_lots l
 		LEFT JOIN users u ON u.id = l.seller_user_id
-		WHERE %s
-		ORDER BY l.created_at DESC, l.id DESC
+		WHERE %s AND l.banned_at IS NULL
+		ORDER BY (l.featured_at IS NOT NULL AND l.featured_at > now() - interval '2 hours') DESC,
+		         l.featured_at DESC NULLS LAST,
+		         l.created_at DESC, l.id DESC
 		LIMIT $%d
 	`, strings.Join(conds, " AND "), idx)
 	rows, err := r.db.Pool().Query(ctx, q, args...)
@@ -112,7 +117,8 @@ func (r *PgRepo) ListLots(ctx context.Context, f ListFilters) ([]Lot, string, er
 		if err := rows.Scan(&l.ID, &l.SellerUserID, &l.SellerUsername,
 			&l.ArtifactUnitID, &l.Quantity, &l.PriceOxsarit,
 			&l.Status, &l.CreatedAt, &l.ExpiresAt,
-			&l.BuyerUserID, &l.SoldAt, &l.ExpireEventID); err != nil {
+			&l.BuyerUserID, &l.SoldAt, &l.ExpireEventID,
+			&l.FeaturedAt, &l.BannedAt); err != nil {
 			return nil, "", err
 		}
 		l.UnitPriceOxsarit = l.PriceOxsarit / int64(l.Quantity)
@@ -135,14 +141,16 @@ func (r *PgRepo) GetLot(ctx context.Context, id string) (Lot, error) {
 		SELECT l.id, l.seller_user_id, COALESCE(u.username, ''),
 		       l.artifact_unit_id, l.quantity, l.price_oxsarit,
 		       l.status, l.created_at, l.expires_at,
-		       l.buyer_user_id, l.sold_at, l.expire_event_id
+		       l.buyer_user_id, l.sold_at, l.expire_event_id,
+		       l.featured_at, l.banned_at
 		FROM exchange_lots l
 		LEFT JOIN users u ON u.id = l.seller_user_id
 		WHERE l.id = $1
 	`, id).Scan(&l.ID, &l.SellerUserID, &l.SellerUsername,
 		&l.ArtifactUnitID, &l.Quantity, &l.PriceOxsarit,
 		&l.Status, &l.CreatedAt, &l.ExpiresAt,
-		&l.BuyerUserID, &l.SoldAt, &l.ExpireEventID)
+		&l.BuyerUserID, &l.SoldAt, &l.ExpireEventID,
+		&l.FeaturedAt, &l.BannedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Lot{}, ErrLotNotFound
@@ -344,11 +352,13 @@ func (r *PgRepo) LockLotForUpdate(ctx context.Context, tx pgx.Tx, id string) (Lo
 	err := tx.QueryRow(ctx, `
 		SELECT id, seller_user_id, artifact_unit_id, quantity, price_oxsarit,
 		       status, created_at, expires_at,
-		       buyer_user_id, sold_at, expire_event_id
+		       buyer_user_id, sold_at, expire_event_id,
+		       featured_at, banned_at
 		FROM exchange_lots WHERE id = $1 FOR UPDATE
 	`, id).Scan(&l.ID, &l.SellerUserID, &l.ArtifactUnitID, &l.Quantity,
 		&l.PriceOxsarit, &l.Status, &l.CreatedAt, &l.ExpiresAt,
-		&l.BuyerUserID, &l.SoldAt, &l.ExpireEventID)
+		&l.BuyerUserID, &l.SoldAt, &l.ExpireEventID,
+		&l.FeaturedAt, &l.BannedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Lot{}, ErrLotNotFound
@@ -469,7 +479,8 @@ func (r *PgRepo) SelectActiveLotsBySeller(ctx context.Context, tx pgx.Tx, seller
 	rows, err := tx.Query(ctx, `
 		SELECT id, seller_user_id, artifact_unit_id, quantity, price_oxsarit,
 		       status, created_at, expires_at,
-		       buyer_user_id, sold_at, expire_event_id
+		       buyer_user_id, sold_at, expire_event_id,
+		       featured_at, banned_at
 		FROM exchange_lots
 		WHERE seller_user_id = $1 AND status = 'active'
 		ORDER BY id
@@ -484,7 +495,8 @@ func (r *PgRepo) SelectActiveLotsBySeller(ctx context.Context, tx pgx.Tx, seller
 		var l Lot
 		if err := rows.Scan(&l.ID, &l.SellerUserID, &l.ArtifactUnitID, &l.Quantity,
 			&l.PriceOxsarit, &l.Status, &l.CreatedAt, &l.ExpiresAt,
-			&l.BuyerUserID, &l.SoldAt, &l.ExpireEventID); err != nil {
+			&l.BuyerUserID, &l.SoldAt, &l.ExpireEventID,
+			&l.FeaturedAt, &l.BannedAt); err != nil {
 			return nil, err
 		}
 		l.UnitPriceOxsarit = l.PriceOxsarit / int64(l.Quantity)
@@ -538,4 +550,70 @@ func (r *PgRepo) Stats(ctx context.Context, window time.Duration) ([]StatsRow, e
 		out = append(out, s)
 	}
 	return out, rows.Err()
+}
+
+// План 72.1.27: Premium + Ban (legacy `Stock.class.php`).
+
+// CountActiveFeaturedLots — кол-во active-лотов с featured_at >
+// now()-window. Used для проверки лимита EXCH_PREMIUM_LIST_MAX_SIZE=5.
+func (r *PgRepo) CountActiveFeaturedLots(ctx context.Context, tx pgx.Tx, window time.Duration) (int, error) {
+	var n int
+	err := tx.QueryRow(ctx, `
+		SELECT COUNT(*) FROM exchange_lots
+		WHERE status = 'active'
+		  AND banned_at IS NULL
+		  AND featured_at IS NOT NULL
+		  AND featured_at > now() - $1::interval
+	`, window.String()).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count featured lots: %w", err)
+	}
+	return n, nil
+}
+
+// MarkLotFeatured — UPDATE featured_at = $at WHERE active.
+func (r *PgRepo) MarkLotFeatured(ctx context.Context, tx pgx.Tx, lotID string, at time.Time) error {
+	tag, err := tx.Exec(ctx, `
+		UPDATE exchange_lots
+		SET featured_at = $2
+		WHERE id = $1 AND status = 'active' AND banned_at IS NULL
+	`, lotID, at)
+	if err != nil {
+		return fmt.Errorf("mark lot featured: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrLotNotActive
+	}
+	return nil
+}
+
+// MarkLotBanned — status='banned' + banned_at=$at.
+// Не проверяет admin-права (ответственность вызывающего).
+func (r *PgRepo) MarkLotBanned(ctx context.Context, tx pgx.Tx, lotID string, at time.Time) error {
+	tag, err := tx.Exec(ctx, `
+		UPDATE exchange_lots
+		SET status = 'banned', banned_at = $2
+		WHERE id = $1 AND status = 'active'
+	`, lotID, at)
+	if err != nil {
+		return fmt.Errorf("mark lot banned: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrLotNotActive
+	}
+	return nil
+}
+
+// CheckIsAdmin — users.role = 'admin'. Используется для Ban-доступа.
+func (r *PgRepo) CheckIsAdmin(ctx context.Context, tx pgx.Tx, userID string) (bool, error) {
+	var role string
+	err := tx.QueryRow(ctx,
+		`SELECT COALESCE(role, '') FROM users WHERE id = $1`, userID).Scan(&role)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("check admin: %w", err)
+	}
+	return role == "admin", nil
 }

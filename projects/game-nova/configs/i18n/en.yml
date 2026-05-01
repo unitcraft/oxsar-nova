@@ -649,6 +649,9 @@ autoMessages:
   # Plan 72.1.25: legacy `MSG_CREDIT_FOR_REPAIR_VIP` / `..._FOR_DISASSEMBLE_VIP`.
   creditRepairVIP.title: "Credit charge"
   creditRepairVIP.body: "{{credits}} credits charged for instant {{mode}} start ({{quantity}} units)."
+  # Plan 72.1.27: legacy `MSG_CREDIT_EXCHANGE_PREMIUM_LOT`.
+  creditExchangePremium.title: "Credit charge"
+  creditExchangePremium.body: "{{credits}} credits charged for premium promotion of lot #{{lotId}} (2h on top)."
 buddylist:
   accept: ""
   buddylist: ""
@@ -1280,6 +1283,13 @@ stock:
   createExpiryLabel: Expires (h)
   createSubmit: List
   createSuccess: Lot listed
+  # Plan 72.1.27: Premium + Ban (legacy `Stock::premiumLot/ban`).
+  premiumBtn: "⭐ Premium for {{credits}} cr"
+  premiumConfirm: "Promote this lot for {{credits}} cr? (2h on top)"
+  premiumSuccess: "Lot promoted for 2h ({{credits}} cr charged)"
+  banBtn: "🚫 Ban (admin)"
+  banConfirm: "Ban this lot? Artefacts return to seller."
+  banSuccess: "Lot banned"
 
 score:
   title: "🏆 Leaderboard"

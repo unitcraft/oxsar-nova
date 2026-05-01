@@ -720,9 +720,13 @@ export interface ExchangeLot {
   quantity: number;
   price_oxsarit: number;
   unit_price_oxsarit?: number;
-  status: 'active' | 'sold' | 'cancelled' | 'expired';
+  // План 72.1.27: добавлен 'banned' статус.
+  status: 'active' | 'sold' | 'cancelled' | 'expired' | 'banned';
   expires_at: string;
   created_at: string;
+  // План 72.1.27: featured/banned поля.
+  featured_at?: string | null;
+  banned_at?: string | null;
 }
 
 export interface ExchangeLotsResult {
