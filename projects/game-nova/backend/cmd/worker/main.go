@@ -260,6 +260,9 @@ func run() error {
 	w.Register(event.KindTransport, transportSvc.ArriveHandler())
 	w.Register(event.KindPosition, transportSvc.PositionArriveHandler())
 	w.Register(event.KindReturn, transportSvc.ReturnHandler())
+	// План 72.1.47: HOLDING (legacy mode=17). Прибытие → state='hold',
+	// груз остаётся с флотом до KindReturn.
+	w.Register(event.KindHolding, transportSvc.HoldingArriveHandler())
 	w.Register(event.KindAttackSingle, withAchievement(transportSvc.AttackHandler()))
 	w.Register(event.KindAttackAlliance, withAchievement(transportSvc.ACSAttackHandler()))
 	// План 20 Ф.6: moon destruction — те же handlers с веткой rip-roll.

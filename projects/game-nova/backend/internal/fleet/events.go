@@ -27,6 +27,7 @@ type transportPayload struct {
 	ReturnEventID    string           `json:"return_event_id,omitempty"`    // для delay/fast
 	FlightSeconds    int64            `json:"flight_seconds,omitempty"`     // одно плечо
 	TargetBuildingID int              `json:"target_building_id,omitempty"` // план 65 Ф.3: цель для KindAttackDestroyBuilding
+	HoldingHours     int              `json:"holding_hours,omitempty"`      // план 72.1.47: KindHolding
 }
 
 // ArriveHandler — event.Handler для KindTransport. В точке прибытия:
@@ -403,6 +404,43 @@ func (s *TransportService) ReturnHandler() event.Handler {
 			`UPDATE fleets SET state='done', carried_metal=0, carried_silicon=0, carried_hydrogen=0
 			 WHERE id = $1`, pl.FleetID); err != nil {
 			return fmt.Errorf("update fleet done: %w", err)
+		}
+		return nil
+	}
+}
+
+// HoldingArriveHandler — план 72.1.47: legacy `Mission.class.php` mode=17
+// (HOLDING). При прибытии флота на dst:
+//   - НЕ передаём ресурсы (в отличие от TRANSPORT) — груз остаётся
+//     с флотом для load/unload через ControlFleet endpoint.
+//   - state='hold' — флот на цели до ReturnEvent (= arrive + duration).
+//     Согласовано с `planet/resource_extras.go::haltingFleets`, который
+//     читает 'hold' для расчёта потребления у dst-планеты.
+//   - возврат через стандартный ReturnHandler (KindReturn=20), который
+//     поднимет state с 'hold' → 'returning'/'done'.
+// Идемпотентно: если state уже != 'outbound' — no-op.
+func (s *TransportService) HoldingArriveHandler() event.Handler {
+	return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
+		var pl transportPayload
+		if err := json.Unmarshal(e.Payload, &pl); err != nil {
+			return fmt.Errorf("holding arrive: parse payload: %w", err)
+		}
+		var state string
+		err := tx.QueryRow(ctx,
+			`SELECT state FROM fleets WHERE id=$1 FOR UPDATE`, pl.FleetID,
+		).Scan(&state)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil
+			}
+			return fmt.Errorf("holding arrive: select fleet: %w", err)
+		}
+		if state != "outbound" {
+			return nil
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE fleets SET state='hold' WHERE id=$1`, pl.FleetID); err != nil {
+			return fmt.Errorf("holding arrive: update fleet: %w", err)
 		}
 		return nil
 	}

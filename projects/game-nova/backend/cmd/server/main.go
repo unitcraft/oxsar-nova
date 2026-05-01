@@ -601,6 +601,10 @@ func run() error {
 		pr.Get("/monitor-planet", monitorH.Monitor)
 		pr.Post("/stargate", fleetH.Stargate)
 		pr.Post("/fleet/{id}/recall", fleetH.Recall)
+		// План 72.1.47: load/unload для HOLDING-флотов (legacy
+		// `Mission.class.php::loadResourcesToFleet/unloadResourcesFromFleet`).
+		pr.Post("/fleet/{id}/load", fleetH.Load)
+		pr.Post("/fleet/{id}/unload", fleetH.Unload)
 
 		pr.Get("/market/rates", marketH.Rates)
 		pr.Post("/planets/{id}/market/exchange", marketH.Exchange)

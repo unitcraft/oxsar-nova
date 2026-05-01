@@ -39,9 +39,10 @@ type sendRequest struct {
 	CarrySilicon int64         `json:"carry_silicon"`
 	CarryHydro   int64         `json:"carry_hydrogen"`
 	SpeedPercent int           `json:"speed_percent"`
-	Mission      int           `json:"mission"`      // 7=TRANSPORT, 10=ATTACK, 12=ACS, …
+	Mission      int           `json:"mission"`      // 7=TRANSPORT, 10=ATTACK, 12=ACS, 17=HOLDING …
 	ACSGroupID   string        `json:"acs_group_id"` // только для mission=12; пусто → создать группу
 	ColonyName   string        `json:"colony_name"`  // только для mission=8; пусто → «Colony»
+	HoldingHours int           `json:"holding_hours"` // только для mission=17; clamp 0..99
 }
 
 // Send POST /api/fleet
@@ -63,9 +64,10 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Mission != 0 && req.Mission != 7 && req.Mission != 8 && req.Mission != 9 &&
-		req.Mission != 10 && req.Mission != 11 && req.Mission != 12 && req.Mission != 15 {
+		req.Mission != 10 && req.Mission != 11 && req.Mission != 12 && req.Mission != 15 &&
+		req.Mission != 17 {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest,
-			"supported missions: 7=TRANSPORT, 8=COLONIZE, 9=RECYCLING, 10=ATTACK_SINGLE, 11=SPY, 12=ACS, 15=EXPEDITION"))
+			"supported missions: 7=TRANSPORT, 8=COLONIZE, 9=RECYCLING, 10=ATTACK_SINGLE, 11=SPY, 12=ACS, 15=EXPEDITION, 17=HOLDING"))
 		return
 	}
 	in := TransportInput{
@@ -80,6 +82,7 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		CarrySilicon: req.CarrySilicon,
 		CarryHydro:   req.CarryHydro,
 		SpeedPercent: req.SpeedPercent,
+		HoldingHours: req.HoldingHours,
 	}
 	f, err := h.transport.Send(r.Context(), in)
 	switch {
@@ -213,6 +216,97 @@ func (h *Handler) Phalanx(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrPhalanxOutOfRange),
 		errors.Is(err, ErrPhalanxNoHydrogen):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// Load POST /api/fleet/{id}/load — загрузить ресурсы с current_planet во флот.
+// План 72.1.47: legacy `Mission.class.php::loadResourcesToFleet`.
+// Body: { "current_planet_id": "...", "metal": N, "silicon": N, "hydrogen": N }
+func (h *Handler) Load(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	fleetID := chi.URLParam(r, "id")
+	if fleetID == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing fleet id"))
+		return
+	}
+	var body struct {
+		CurrentPlanetID string `json:"current_planet_id"`
+		Metal           int64  `json:"metal"`
+		Silicon         int64  `json:"silicon"`
+		Hydrogen        int64  `json:"hydrogen"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	err := h.transport.LoadResources(r.Context(), LoadUnloadInput{
+		UserID: uid, FleetID: fleetID, CurrentPlanetID: body.CurrentPlanetID,
+		Metal: body.Metal, Silicon: body.Silicon, Hydrogen: body.Hydrogen,
+	})
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrFleetNotFound), errors.Is(err, ErrTargetNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrFleetNotHolding),
+		errors.Is(err, ErrPlanetNotDst),
+		errors.Is(err, ErrLoadFromOwnSrc),
+		errors.Is(err, ErrLoadCapacity):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	case errors.Is(err, ErrInvalidDispatch):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// Unload POST /api/fleet/{id}/unload — выгрузить ресурсы с флота на current_planet.
+// План 72.1.47: legacy `Mission.class.php::unloadResourcesFromFleet`.
+func (h *Handler) Unload(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	fleetID := chi.URLParam(r, "id")
+	if fleetID == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing fleet id"))
+		return
+	}
+	var body struct {
+		CurrentPlanetID string `json:"current_planet_id"`
+		Metal           int64  `json:"metal"`
+		Silicon         int64  `json:"silicon"`
+		Hydrogen        int64  `json:"hydrogen"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	err := h.transport.UnloadResources(r.Context(), LoadUnloadInput{
+		UserID: uid, FleetID: fleetID, CurrentPlanetID: body.CurrentPlanetID,
+		Metal: body.Metal, Silicon: body.Silicon, Hydrogen: body.Hydrogen,
+	})
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrFleetNotFound), errors.Is(err, ErrTargetNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrFleetNotHolding),
+		errors.Is(err, ErrPlanetNotDst):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	case errors.Is(err, ErrInvalidDispatch):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}

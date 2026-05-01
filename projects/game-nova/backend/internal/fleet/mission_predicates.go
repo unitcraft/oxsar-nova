@@ -23,7 +23,8 @@ func isValidMission(m int) bool {
 		event.KindAttackAlliance,
 		event.KindExpedition,
 		event.KindAttackDestroyMoon,
-		event.KindAttackAllianceDestroyMoon:
+		event.KindAttackAllianceDestroyMoon,
+		event.KindHolding:
 		return true
 	}
 	return false
@@ -85,10 +86,10 @@ func requiresExistingTarget(m int) bool {
 }
 
 // allowsCarryResources — миссия может везти груз.
-// POSITION, TRANSPORT, COLONIZE — да; остальные — нет.
+// POSITION, TRANSPORT, COLONIZE, HOLDING — да; остальные — нет.
 func allowsCarryResources(m int) bool {
 	switch event.Kind(m) {
-	case event.KindPosition, event.KindTransport, event.KindColonize:
+	case event.KindPosition, event.KindTransport, event.KindColonize, event.KindHolding:
 		return true
 	}
 	return false
