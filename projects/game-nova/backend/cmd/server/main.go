@@ -503,6 +503,8 @@ func run() error {
 		pr.Post("/planets/{id}/buildings", buildingH.Enqueue)
 		pr.Get("/planets/{id}/buildings/queue", buildingH.List)
 		pr.Delete("/planets/{id}/buildings/queue/{taskId}", buildingH.Cancel)
+		// План 72.1.33: legacy BuildingInfo::DEMOLISH_NOW.
+		pr.Post("/planets/{id}/buildings/{unitId}/demolish", buildingH.Demolish)
 
 		pr.Post("/planets/{id}/research", researchH.Enqueue)
 		pr.Get("/research", researchH.List)
