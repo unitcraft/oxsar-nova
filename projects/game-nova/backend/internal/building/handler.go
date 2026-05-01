@@ -95,6 +95,34 @@ func (h *Handler) Levels(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// StartVIP POST /api/planets/{id}/buildings/queue/{taskId}/vip (план 72.1.44).
+//
+// Legacy `EventHandler::startConstructionEventVIP` для UNIT_TYPE_CONSTRUCTION:
+// мгновенный старт уже поставленной в очередь задачи за credits.
+func (h *Handler) StartVIP(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	taskID := chi.URLParam(r, "taskId")
+	item, err := h.svc.StartVIP(r.Context(), uid, taskID)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, item)
+	case errors.Is(err, ErrQueueItemNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrNotEnoughCredit):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "not enough credit"))
+	case errors.Is(err, ErrVIPAlreadyStarted):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "task already started"))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 // Demolish POST /api/planets/{id}/buildings/{unitId}/demolish (план 72.1.33).
 //
 // Legacy `BuildingInfo::DEMOLISH_NOW` ставит снос здания на 1 уровень

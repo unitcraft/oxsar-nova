@@ -505,6 +505,8 @@ func run() error {
 		pr.Post("/planets/{id}/buildings", buildingH.Enqueue)
 		pr.Get("/planets/{id}/buildings/queue", buildingH.List)
 		pr.Delete("/planets/{id}/buildings/queue/{taskId}", buildingH.Cancel)
+		// План 72.1.44 cross-cut: VIP-instant старт стройки.
+		pr.Post("/planets/{id}/buildings/queue/{taskId}/vip", buildingH.StartVIP)
 		// План 72.1.33: legacy BuildingInfo::DEMOLISH_NOW.
 		pr.Post("/planets/{id}/buildings/{unitId}/demolish", buildingH.Demolish)
 		// План 72.1.33 ч.2: legacy BuildingInfo::PackConstruction +
@@ -516,6 +518,8 @@ func run() error {
 		pr.Get("/research", researchH.List)
 		// План 72.1.39: legacy `Research::abort` — отмена с refund.
 		pr.Delete("/research/{queueId}", researchH.Cancel)
+		// План 72.1.44 cross-cut: VIP-instant старт исследования.
+		pr.Post("/research/{queueId}/vip", researchH.StartVIP)
 
 		pr.Post("/planets/{id}/shipyard", shipyardH.Enqueue)
 		pr.Get("/planets/{id}/shipyard/queue", shipyardH.List)
@@ -523,6 +527,8 @@ func run() error {
 		// План 72.1.41: legacy `Shipyard` capacity-info (freeShield/Rocket).
 		pr.Get("/planets/{id}/shipyard/capacity", shipyardH.Capacity)
 		pr.Delete("/planets/{id}/shipyard/{queueId}", shipyardH.Cancel)
+		// План 72.1.44 cross-cut: VIP-instant старт shipyard-задачи.
+		pr.Post("/planets/{id}/shipyard/{queueId}/vip", shipyardH.StartVIP)
 
 		pr.Post("/simulator/run", simulatorH.Run)
 

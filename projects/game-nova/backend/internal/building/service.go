@@ -37,6 +37,9 @@ var (
 	// при umode; строки 64-66, 386 — при observer.
 	ErrUmodeBlocked      = errors.New("building: blocked in vacation mode")
 	ErrObserverBlocked   = errors.New("building: blocked in observer mode")
+	// План 72.1.44: VIP-instant errors.
+	ErrNotEnoughCredit   = errors.New("building: not enough credit for VIP start")
+	ErrVIPAlreadyStarted = errors.New("building: task already started, VIP not applicable")
 )
 
 type Service struct {
@@ -211,6 +214,99 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		return nil
 	})
 	return item, err
+}
+
+// StartVIP — план 72.1.44 cross-cut. Legacy
+// `EventHandler::startConstructionEventVIP`: мгновенный старт уже
+// поставленной в очередь задачи за credits.
+//
+// Действия:
+//  1. Найти queue.id, status='running'/'queued', start_at > now+5s.
+//  2. cost = economy.VIPCostConstruction(target_level).
+//  3. SELECT users.credit FOR UPDATE; if credit < cost → ErrNotEnoughCredit.
+//  4. UPDATE users.credit -= cost.
+//  5. UPDATE construction_queue.start_at = now, end_at = now + (end-start).
+//  6. UPDATE events.fire_at = end_at; pending дальние задачи в очереди
+//     планеты сдвигаются (legacy строки 1973-2010).
+//
+// Возвращает обновлённый QueueItem.
+func (s *Service) StartVIP(ctx context.Context, userID, queueID string) (QueueItem, error) {
+	var out QueueItem
+	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var (
+			planetID    string
+			targetLevel int
+			startAt     time.Time
+			endAt       time.Time
+			ownerID     string
+			status      string
+		)
+		err := tx.QueryRow(ctx, `
+			SELECT cq.planet_id, cq.target_level, cq.start_at, cq.end_at, p.user_id, cq.status
+			FROM construction_queue cq
+			JOIN planets p ON p.id = cq.planet_id
+			WHERE cq.id = $1 AND cq.unit_type = 'building'
+			  AND cq.status IN ('queued','running')
+			FOR UPDATE
+		`, queueID).Scan(&planetID, &targetLevel, &startAt, &endAt, &ownerID, &status)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrQueueItemNotFound
+			}
+			return fmt.Errorf("select queue: %w", err)
+		}
+		if ownerID != userID {
+			return ErrPlanetOwnership
+		}
+		// VIP применяется только к ещё не стартовавшим заданиям
+		// (legacy: `start > time()+5`).
+		if !startAt.After(time.Now().UTC().Add(5 * time.Second)) {
+			return ErrVIPAlreadyStarted
+		}
+
+		cost := economy.VIPCostConstruction(targetLevel)
+
+		var credit int64
+		if err := tx.QueryRow(ctx,
+			`SELECT credit FROM users WHERE id=$1 FOR UPDATE`, userID,
+		).Scan(&credit); err != nil {
+			return fmt.Errorf("select credit: %w", err)
+		}
+		if credit < cost {
+			return ErrNotEnoughCredit
+		}
+
+		now := time.Now().UTC()
+		duration := endAt.Sub(startAt)
+		newEnd := now.Add(duration)
+
+		if _, err := tx.Exec(ctx,
+			`UPDATE users SET credit = credit - $1 WHERE id = $2`,
+			cost, userID,
+		); err != nil {
+			return fmt.Errorf("debit credit: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE construction_queue SET start_at=$1, end_at=$2, status='running'
+			WHERE id=$3
+		`, now, newEnd, queueID); err != nil {
+			return fmt.Errorf("update queue: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE events SET fire_at=$1
+			WHERE kind=1 AND state='wait' AND user_id=$2
+			  AND payload @> jsonb_build_object('queue_id', $3::text)
+		`, newEnd, userID, queueID); err != nil {
+			return fmt.Errorf("update event: %w", err)
+		}
+
+		out = QueueItem{
+			ID: queueID, PlanetID: planetID, UnitID: 0, TargetLevel: targetLevel,
+			StartAt: now, EndAt: newEnd, Status: "running",
+		}
+		return nil
+	})
+	return out, err
 }
 
 // EnqueueDemolish ставит здание в очередь на снос (план 72.1.33,

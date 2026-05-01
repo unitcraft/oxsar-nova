@@ -105,3 +105,16 @@ export function packResearch(
     { idempotencyKey: newIdempotencyKey() },
   );
 }
+
+// План 72.1.44: VIP-instant старт стройки за credits (legacy
+// `EventHandler::startConstructionEventVIP` для UNIT_TYPE_CONSTRUCTION).
+export function startBuildingVIP(
+  planetId: string,
+  taskId: string,
+): Promise<QueueItem> {
+  return api.post<QueueItem>(
+    `/api/planets/${planetId}/buildings/queue/${taskId}/vip`,
+    {},
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}

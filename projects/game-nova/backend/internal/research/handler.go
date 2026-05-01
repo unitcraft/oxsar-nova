@@ -60,6 +60,32 @@ func (h *Handler) Enqueue(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// StartVIP POST /api/research/{queueId}/vip — VIP-instant старт
+// исследования за credits (план 72.1.44 cross-cut).
+func (h *Handler) StartVIP(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	queueID := chi.URLParam(r, "queueId")
+	item, err := h.svc.StartVIP(r.Context(), uid, queueID)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, item)
+	case errors.Is(err, ErrQueueItemNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrNotEnoughCredit):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "not enough credit"))
+	case errors.Is(err, ErrVIPAlreadyStarted):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "task already started"))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 // Cancel DELETE /api/research/{queueId} — отмена исследования с
 // возвратом ресурсов. План 72.1.39 / правило 1:1 (legacy
 // Research::abort).

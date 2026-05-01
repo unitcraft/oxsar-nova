@@ -13,6 +13,7 @@ import {
   fetchShipyardCapacity,
   fetchShipyardInventory,
   fetchShipyardQueue,
+  startShipyardVIP,
 } from '@/api/shipyard';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
@@ -70,6 +71,17 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
         void qc.invalidateQueries({ queryKey: QK.shipyardQueue(planetId) });
         void qc.invalidateQueries({ queryKey: QK.shipyardInventory(planetId) });
         void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+      }
+    },
+  });
+
+  // План 72.1.44: VIP-instant старт shipyard-задачи за credits.
+  const vip = useMutation({
+    mutationFn: (queueId: string) => startShipyardVIP(planetId!, queueId),
+    onSuccess: () => {
+      if (planetId) {
+        void qc.invalidateQueries({ queryKey: QK.shipyardQueue(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.me() });
       }
     },
   });
@@ -145,7 +157,7 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
         <table className="ntable">
           <tbody>
             <tr>
-              <th colSpan={5}>{t('buildings', 'outstandingMissions')}</th>
+              <th colSpan={6}>{t('buildings', 'outstandingMissions')}</th>
             </tr>
             {queue.map((task, idx) => {
               const cat = catalog.find((c) => c.id === task.unit_id);
@@ -178,6 +190,27 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
                       }}
                     >
                       ✕
+                    </button>
+                  </td>
+                  {/* План 72.1.44: VIP-instant старт за credits. */}
+                  <td width="60px" align="center">
+                    <button
+                      type="button"
+                      className="button"
+                      disabled={vip.isPending}
+                      title={t('buildings', 'vipHint') || 'Мгновенный старт за кредиты'}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            (t('buildings', 'vipConfirm') as string) ||
+                              'Мгновенный старт за кредиты?',
+                          )
+                        ) {
+                          vip.mutate(task.id);
+                        }
+                      }}
+                    >
+                      ⚡
                     </button>
                   </td>
                 </tr>

@@ -36,7 +36,7 @@ Milestones из §16 [oxsar-spec.txt](oxsar-spec.txt).
 | Alliance / chat / message   | ✅     | M6 | messages: inbox + mark-read + compose + delete ✅. Alliance MVP ✅ (create/join/leave/disband, relations NAP/WAR/ALLY с mutual acknowledge, кастомные ранги). Chat WebSocket ✅. |
 | Market (exchange)           | ✅     | M6 | Быстрый обменник (M↔Si↔H по курсам) ✅ + ордерная книга (CreateLot/ListLots/CancelLot/AcceptLot, migration 0022) ✅. |
 | Officers                    | ✅     | M7 | 4 officer (ADMIRAL/GEOLOGIST/ENGINEER/MERCHANT), Activate→Expire через event kind=62, factor-поля. Group exclusivity: ADMIRAL+ENGINEER взаимоисключают (group_key 'build', migration 0033). |
-| Achievements                | ✅     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), lazy-check. |
+| Achievements                | ✅     | M7 | MVP: 5 достижений (FIRST_METAL/SILICON/ARTEFACT/WIN/COLONY), lazy-check. План 72.1 §20.12 Задача 2: origin Achievements UI — отдельная задача в будущем плане (не порт legacy). |
 | Tutorial                    | ✅     | M7 | 6 шагов (mine→solar→lab→computer_tech→ship→expedition), +10 кредитов за шаг, lazy-check. |
 | Simulator UI                | ✅     | M7.1 | BattleSimScreen с реальными боевыми характеристиками из каталога + таблица потерь + multi-run (num_sim 2–20). |
 | Admin panel                 | ✅     | M8 | GET /admin/stats + users list/ban/unban/credit/role. AutoMsg CMS (GET/PUT /admin/automsgs). AdminOnly middleware. |
