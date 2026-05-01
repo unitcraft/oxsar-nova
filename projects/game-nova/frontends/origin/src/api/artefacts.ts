@@ -12,8 +12,18 @@ import { api } from './client';
 import { newIdempotencyKey } from './idempotency';
 import type { Artefact } from './types';
 
-export function fetchArtefacts(): Promise<{ artefacts: Artefact[] | null }> {
-  return api.get<{ artefacts: Artefact[] | null }>('/api/artefacts');
+export interface ArtefactsResponse {
+  artefacts: Artefact[] | null;
+  // План 72.1.45: legacy `Artefacts.class.php` показывает в шапке
+  // tech_level (research UNIT_ARTEFACTS_TECH=111), storage_slots (=tech_level),
+  // used_slots (count active artefacts).
+  tech_level: number;
+  storage_slots: number;
+  used_slots: number;
+}
+
+export function fetchArtefacts(): Promise<ArtefactsResponse> {
+  return api.get<ArtefactsResponse>('/api/artefacts');
 }
 
 export function activateArtefact(id: string): Promise<Artefact> {

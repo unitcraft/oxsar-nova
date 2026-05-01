@@ -1086,6 +1086,12 @@ artefacts:
   toastActivateErr: Activation error
   toastSellErr: Sale error
   toastError: Error
+  # План 72.1.45: header with artefact-tech info (legacy artefacts.tpl §1).
+  techName: Artefact technology
+  techLevelLabel: "Level"
+  techStorage: "Storage:"
+  techUsed: "Used:"
+  techFree: "Free:"
 
 repair:
   title: "Repair Hangar — {{planetName}}"
@@ -1391,6 +1397,8 @@ empire:
   totalResources: "Total resources:"
   colParam: Parameter
   groupPlanet: Planet
+  # План 72.1.45: УМИ — virtual research lab level.
+  umi: "Virt.Lab"
   # План 72.1.37: 5 tabs (legacy empire.tpl).
   tab_overview: "📊 Overview"
   tab_buildings: "🏛 Buildings"

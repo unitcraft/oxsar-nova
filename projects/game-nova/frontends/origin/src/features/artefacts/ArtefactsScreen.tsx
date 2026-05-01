@@ -101,9 +101,104 @@ export function ArtefactsScreen() {
 
   const items = listQ.data?.artefacts ?? [];
   const groups = useMemo(() => groupArtefacts(items), [items]);
+  const techLevel = listQ.data?.tech_level ?? 0;
+  const storageSlots = listQ.data?.storage_slots ?? 0;
+  const usedSlots = listQ.data?.used_slots ?? 0;
+  const freeSlots = storageSlots - usedSlots;
+  const freePercent =
+    storageSlots > 0
+      ? Math.min(100, Math.round((freeSlots * 100) / storageSlots))
+      : 100;
 
   if (listQ.isLoading) return <div className="idiv">…</div>;
 
+  return (
+    <>
+      {/* План 72.1.45: шапка legacy artefacts.tpl §1 — info about UNIT_ARTEFACTS_TECH=111. */}
+      <table className="ntable">
+        <thead>
+          <tr>
+            <th colSpan={4}>
+              <span style={{ float: 'right' }}>
+                {t('artefacts', 'techLevelLabel')} {techLevel}
+              </span>
+              <Link to="/research/info/111">{t('artefacts', 'techName')}</Link>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colSpan={4}>
+              <div style={{ padding: '5px 0' }}>
+                <div
+                  className="rep_destroyed_back_div"
+                  style={{ clear: 'both' }}
+                >
+                  <div
+                    className="rep_alive_over_div"
+                    style={{ width: `${freePercent}%` }}
+                  />
+                </div>
+              </div>
+              <table
+                className="table_no_background"
+                cellSpacing={0}
+                cellPadding={0}
+                border={0}
+              >
+                <tbody>
+                  <tr>
+                    <td>{t('artefacts', 'techStorage')}</td>
+                    <td>{storageSlots}</td>
+                  </tr>
+                  <tr>
+                    <td>{t('artefacts', 'techUsed')}</td>
+                    <td>{usedSlots}</td>
+                  </tr>
+                  <tr>
+                    <td className={freeSlots <= 0 ? 'false' : undefined}>
+                      {t('artefacts', 'techFree')}
+                    </td>
+                    <td className={freeSlots <= 0 ? 'false' : undefined}>
+                      {freeSlots}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ArtefactsTable
+        items={items}
+        groups={groups}
+        activate={(id: string) => activate.mutate(id)}
+        deactivate={(id: string) => deactivate.mutate(id)}
+        disabled={activate.isPending || deactivate.isPending}
+        errMsg={errMsg}
+        t={t}
+      />
+    </>
+  );
+}
+
+function ArtefactsTable({
+  items,
+  groups,
+  activate,
+  deactivate,
+  disabled,
+  errMsg,
+  t,
+}: {
+  items: Artefact[];
+  groups: Group[];
+  activate: (id: string) => void;
+  deactivate: (id: string) => void;
+  disabled: boolean;
+  errMsg: string | null;
+  t: ReturnType<typeof useTranslation>['t'];
+}) {
   return (
     <table className="ntable">
       <thead>
@@ -123,9 +218,9 @@ export function ArtefactsScreen() {
           <ArtefactGroupRow
             key={group.key}
             group={group}
-            onActivate={(id) => activate.mutate(id)}
-            onDeactivate={(id) => deactivate.mutate(id)}
-            disabled={activate.isPending || deactivate.isPending}
+            onActivate={activate}
+            onDeactivate={deactivate}
+            disabled={disabled}
           />
         ))}
         {errMsg && (
