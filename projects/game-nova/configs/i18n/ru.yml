@@ -1230,12 +1230,21 @@ market:
   fleetNoLots: Нет открытых лотов флота
   fleetLotCreated: Лот флота выставлен
 
-# Stock — биржа артефактов (план 72.1.8 ч.A).
+# Stock — биржа артефактов (план 72.1.8 ч.A + ч.B).
 stock:
   buyBtn: Купить
   cancelBtn: Отозвать
   buySuccess: Лот куплен
   cancelSuccess: Лот отозван
+  createBtn: Выставить лот
+  createCancel: Отмена
+  createArtLabel: Артефакт
+  createArtPlaceholder: выберите
+  createQtyLabel: Кол-во
+  createPriceLabel: Цена (oxsarits)
+  createExpiryLabel: Истекает (ч.)
+  createSubmit: Выставить
+  createSuccess: Лот выставлен
 
 score:
   title: "🏆 Рейтинг"

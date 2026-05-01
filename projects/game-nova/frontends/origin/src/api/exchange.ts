@@ -47,10 +47,16 @@ export function cancelLot(lotID: string): Promise<void> {
 }
 
 // План 72.1.8 ч.B: создание лота (выставить артефакт на продажу).
+// Backend (handler.go::Create): требует Idempotency-Key. Возможные
+// ошибки: invalid_quantity / invalid_price / invalid_expiry,
+// insufficient_artefacts (нет столько артефактов в инвентаре),
+// price_cap_exceeded (антифрод), permit_required (нет
+// merchant-permit), max_active_lots, max_quantity.
 export interface CreateLotPayload {
   artifact_unit_id: number;
   quantity: number;
   price_oxsarit: number;
+  expires_in_hours: number;
 }
 
 export function createLot(payload: CreateLotPayload): Promise<{ lot: ExchangeLot }> {
