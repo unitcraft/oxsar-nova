@@ -18,10 +18,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   changePassword,
   confirmDeletion,
+  disableVacation,
+  enableVacation,
   fetchSettings,
   requestDeletionCode,
   updateSettings,
 } from '@/api/settings';
+import { fetchMe } from '@/api/me';
 import { QK } from '@/api/query-keys';
 import type { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
@@ -70,6 +73,34 @@ export function SettingsScreen() {
   const [codeExpires, setCodeExpires] = useState<string>('');
   const [deletionCode, setDeletionCode] = useState('');
   const [deleteErr, setDeleteErr] = useState<string | null>(null);
+
+  const [vacationErr, setVacationErr] = useState<string | null>(null);
+
+  // Подплан 72.1.5 A: vacation toggle. /api/me содержит vacation_since
+  // (при null — не в отпуске), vacation_unlock_at (NOW+48h после
+  // включения), vacation_last_end (для проверки 20-дневного окна
+  // на бэке).
+  const meQ = useQuery({
+    queryKey: QK.me(),
+    queryFn: fetchMe,
+  });
+
+  const vacationOnMut = useMutation({
+    mutationFn: enableVacation,
+    onSuccess: () => {
+      setVacationErr(null);
+      void qc.invalidateQueries({ queryKey: QK.me() });
+    },
+    onError: (e) => setVacationErr((e as ApiError).message),
+  });
+  const vacationOffMut = useMutation({
+    mutationFn: disableVacation,
+    onSuccess: () => {
+      setVacationErr(null);
+      void qc.invalidateQueries({ queryKey: QK.me() });
+    },
+    onError: (e) => setVacationErr((e as ApiError).message),
+  });
 
   useEffect(() => {
     if (settingsQ.data) {
@@ -316,6 +347,77 @@ export function SettingsScreen() {
           </tfoot>
         </table>
       </form>
+
+      {/* Vacation toggle (план 72.1.5 A). Backend готов через
+          POST/DELETE /api/me/vacation. Состояние юзера — из /api/me. */}
+      <table className="ntable">
+        <thead>
+          <tr>
+            <th colSpan={2}>{t('prefs', 'vacationTitle')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {meQ.isLoading ? (
+            <tr><td colSpan={2}>…</td></tr>
+          ) : (() => {
+            const me = meQ.data;
+            if (!me) return null;
+            const isOnVacation = me.vacation_since != null;
+            if (!isOnVacation) {
+              return (
+                <tr>
+                  <td>{t('prefs', 'vacationOffStatus')}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="button"
+                      disabled={vacationOnMut.isPending}
+                      onClick={() => vacationOnMut.mutate()}
+                    >
+                      {t('prefs', 'vacationEnableBtn')}
+                    </button>{' '}
+                    {vacationErr && <span className="false">{vacationErr}</span>}
+                  </td>
+                </tr>
+              );
+            }
+            const unlock = me.vacation_unlock_at
+              ? new Date(me.vacation_unlock_at)
+              : null;
+            const tooEarly = unlock != null && unlock.getTime() > Date.now();
+            return (
+              <tr>
+                <td>
+                  {t('prefs', 'vacationOnStatus', {
+                    since: new Date(me.vacation_since!).toLocaleString(),
+                  })}
+                  {tooEarly && unlock && (
+                    <>
+                      <br />
+                      <small>
+                        {t('prefs', 'vacationCannotEndYet', {
+                          unlock: unlock.toLocaleString(),
+                        })}
+                      </small>
+                    </>
+                  )}
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={vacationOffMut.isPending || tooEarly}
+                    onClick={() => vacationOffMut.mutate()}
+                  >
+                    {t('prefs', 'vacationDisableBtn')}
+                  </button>{' '}
+                  {vacationErr && <span className="false">{vacationErr}</span>}
+                </td>
+              </tr>
+            );
+          })()}
+        </tbody>
+      </table>
 
       <table className="ntable">
         <thead>
