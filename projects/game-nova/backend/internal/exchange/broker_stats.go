@@ -51,15 +51,82 @@ type BrokerStatsFilters struct {
 	PerPage   int    // default 25 (USER_PER_PAGE)
 }
 
-// BrokerFee — fee брокера в % (MVP: фиксированный 5%, legacy
-// читает из exchange-таблицы). При появлении brokers-таблицы
-// заменим на per-user fee.
-const BrokerFee = 5.0
+// DefaultBrokerFee — дефолтный fee % для брокеров без custom-настроек.
+// Legacy `exchange.comission` создаётся со значением 5.0 при первом
+// обращении (Exchange.class.php).
+const DefaultBrokerFee = 5.0
+
+// BrokerSettings — план 72.1.45 §8: настройки брокера (legacy `exchange`
+// таблица). user_id = брокер, fee_percent = его комиссия.
+type BrokerSettings struct {
+	UserID     string  `json:"user_id"`
+	Title      string  `json:"title"`
+	FeePercent float64 `json:"fee_percent"`
+}
+
+// GetBrokerSettings возвращает настройки брокера. Если строки нет —
+// создаёт со значениями по умолчанию (legacy-поведение).
+func (s *Service) GetBrokerSettings(ctx context.Context, userID string) (BrokerSettings, error) {
+	var bs BrokerSettings
+	bs.UserID = userID
+	err := s.db.Pool().QueryRow(ctx, `
+		SELECT title, fee_percent
+		  FROM exchange_settings
+		 WHERE user_id = $1
+	`, userID).Scan(&bs.Title, &bs.FeePercent)
+	if err == nil {
+		return bs, nil
+	}
+	// Не нашли — вставляем дефолт и возвращаем.
+	bs.Title = "My exchange"
+	bs.FeePercent = DefaultBrokerFee
+	_, err = s.db.Pool().Exec(ctx, `
+		INSERT INTO exchange_settings (user_id, title, fee_percent)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_id) DO NOTHING
+	`, userID, bs.Title, bs.FeePercent)
+	if err != nil {
+		return BrokerSettings{}, fmt.Errorf("init broker settings: %w", err)
+	}
+	return bs, nil
+}
+
+// UpdateBrokerSettings — план 72.1.45 §9: ExchangeOpts admin страница.
+// Брокер обновляет свой title и fee_percent (clamp 0..50).
+func (s *Service) UpdateBrokerSettings(ctx context.Context, userID, title string, feePercent float64) (BrokerSettings, error) {
+	if feePercent < 0 {
+		feePercent = 0
+	}
+	if feePercent > 50 {
+		feePercent = 50
+	}
+	if title == "" {
+		title = "My exchange"
+	}
+	if len(title) > 100 {
+		title = title[:100]
+	}
+	_, err := s.db.Pool().Exec(ctx, `
+		INSERT INTO exchange_settings (user_id, title, fee_percent, updated_at)
+		VALUES ($1, $2, $3, now())
+		ON CONFLICT (user_id) DO UPDATE SET
+		    title = EXCLUDED.title,
+		    fee_percent = EXCLUDED.fee_percent,
+		    updated_at = now()
+	`, userID, title, feePercent)
+	if err != nil {
+		return BrokerSettings{}, fmt.Errorf("update broker settings: %w", err)
+	}
+	return BrokerSettings{UserID: userID, Title: title, FeePercent: feePercent}, nil
+}
 
 // BrokerStats возвращает статистику лотов брокера за период.
 //
 // SortField: date|lot|lot_price|lot_amount|lot_profit (legacy mapping).
 // Page начинается с 1.
+//
+// План 72.1.45 §8: fee теперь per-broker — читаем GetBrokerSettings и
+// используем `fee_percent` для Profit вместо хардкода 5%.
 func (s *Service) BrokerStats(ctx context.Context, f BrokerStatsFilters) ([]BrokerStatsRow, BrokerStatsSummary, int, error) {
 	if f.PerPage <= 0 {
 		f.PerPage = 25
@@ -67,6 +134,12 @@ func (s *Service) BrokerStats(ctx context.Context, f BrokerStatsFilters) ([]Brok
 	if f.Page <= 0 {
 		f.Page = 1
 	}
+
+	bs, err := s.GetBrokerSettings(ctx, f.UserID)
+	if err != nil {
+		return nil, BrokerStatsSummary{}, 0, err
+	}
+	feePercent := bs.FeePercent
 
 	// Whitelist sort_field → SQL column.
 	sortCol := "sold_at"
@@ -87,7 +160,7 @@ func (s *Service) BrokerStats(ctx context.Context, f BrokerStatsFilters) ([]Brok
 
 	// Summary aggregates (без пагинации).
 	var summary BrokerStatsSummary
-	err := s.db.Pool().QueryRow(ctx, `
+	err = s.db.Pool().QueryRow(ctx, `
 		SELECT
 			COUNT(*),
 			COUNT(*) FILTER (WHERE status = 'sold'),
@@ -102,7 +175,7 @@ func (s *Service) BrokerStats(ctx context.Context, f BrokerStatsFilters) ([]Brok
 	if err != nil {
 		return nil, BrokerStatsSummary{}, 0, fmt.Errorf("broker stats summary: %w", err)
 	}
-	summary.Profit = float64(summary.Turnover) * BrokerFee / 100.0
+	summary.Profit = float64(summary.Turnover) * feePercent / 100.0
 
 	// Pages.
 	pages := summary.Total / f.PerPage
@@ -139,7 +212,7 @@ func (s *Service) BrokerStats(ctx context.Context, f BrokerStatsFilters) ([]Brok
 			return nil, summary, pages, err
 		}
 		if r.Status == "sold" {
-			r.Profit = float64(r.Price) * BrokerFee / 100.0
+			r.Profit = float64(r.Price) * feePercent / 100.0
 		}
 		out = append(out, r)
 	}
