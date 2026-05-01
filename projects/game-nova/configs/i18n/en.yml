@@ -1313,6 +1313,18 @@ score:
   scoreTypeBattle: Battle
   scoreTypeDm: "DM metric"
   scoreTypeMax: "Peak points"
+  # Plan 72.1.29: additional score-types.
+  scoreTypeBCount: "Buildings (#)"
+  scoreTypeRCount: "Research (#)"
+  scoreTypeUCount: "Units (#)"
+  scoreTypeBattles: "Battles"
+  # Plan 72.1.29: new mode tabs.
+  tabPlayerObserver: "👁 Observers"
+  tabPlayerOldVacation: "💤 Long vacation"
+  # Plan 72.1.29: avg + pagination.
+  avgCheckbox: "Average per day"
+  colScoreAvg: "Score/day"
+  pageLabel: "{{page}} / {{total}}"
   sortByLabel: "Sort by:"
   colMembers: Members
   myRankLabel: "Your rank in «{{typeLabel}}»"

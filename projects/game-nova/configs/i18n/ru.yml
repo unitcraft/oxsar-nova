@@ -1310,6 +1310,18 @@ score:
   scoreTypeBattle: Боевой
   scoreTypeDm: "DM-метрика"
   scoreTypeMax: "Пик очков"
+  # План 72.1.29: дополнительные score-types.
+  scoreTypeBCount: "Постройки (#)"
+  scoreTypeRCount: "Исследования (#)"
+  scoreTypeUCount: "Юниты (#)"
+  scoreTypeBattles: "Боёв"
+  # План 72.1.29: новые mode-табы.
+  tabPlayerObserver: "👁 Наблюдатели"
+  tabPlayerOldVacation: "💤 Долго в отпуске"
+  # План 72.1.29: avg + pagination.
+  avgCheckbox: "Среднее за день"
+  colScoreAvg: "Очки/день"
+  pageLabel: "{{page}} / {{total}}"
   sortByLabel: "Сортировка:"
   colMembers: Участников
   myRankLabel: "Ваше место в рейтинге «{{typeLabel}}»"
