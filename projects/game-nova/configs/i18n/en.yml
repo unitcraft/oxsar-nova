@@ -1263,7 +1263,6 @@ market:
   toastDeal: Deal completed
   creditHint: "Buy resources for credits. 1 credit = {{rate}} metal units. Rate accounts for your personal rate ({{userRate}})."
   creditResLabel: Resource
-  creditAmountLabel: Credits amount
   creditYouGet: "You will get:"
   creditBuy: Buy
   creditToast: "{{amount}} cr → {{delta}} {{res}}"
@@ -2952,7 +2951,6 @@ statistics:
   bsShowDrawn: ""
   bsShowNoDestroyed: ""
   bsShowUfoBattles: ""
-  bsMoonBattle: ""
   bsSortBy: ""
   bsSortDate: ""
   bsSortRounds: ""
