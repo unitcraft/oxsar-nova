@@ -3,6 +3,7 @@ package planet
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -662,8 +663,20 @@ type ResourceBuildingDTO struct {
 	ProdSilicon  float64 `json:"prod_silicon"`
 	ProdHydrogen float64 `json:"prod_hydrogen"`
 	ConsEnergy   float64 `json:"cons_energy"`
+	// План 72.1.26 ч.B: legacy показывает потребление по 3 ресурсам
+	// (cascade-payback в ч.C может перенаправить hydrogen → silicon → metal).
+	ConsMetal    float64 `json:"cons_metal,omitempty"`
+	ConsSilicon  float64 `json:"cons_silicon,omitempty"`
+	ConsHydrogen float64 `json:"cons_hydrogen,omitempty"`
 	Factor       int     `json:"factor"`
 	AllowFactor  bool    `json:"allow_factor"`
+	// Kind: "building" | "solar" | "fleet" | "defense" | "stock_fleet" | "halting".
+	Kind         string  `json:"kind,omitempty"`
+	// Helptip — тултип legacy (ONE_UNIT_CONSUMPTION / PROD_ONE_SOLAR_SATELLITE).
+	Helptip      string  `json:"helptip,omitempty"`
+	// Только для kind="halting": исходная планета и состав флота.
+	HaltingFromCoord string         `json:"halting_from_coord,omitempty"` // "1:23:4"
+	HaltingShips     map[int]int64  `json:"halting_ships,omitempty"`       // unit_id → count
 }
 
 // ResourceReport возвращает отчёт о производстве ресурсов для планеты.
@@ -750,13 +763,105 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 			ConsEnergy:   netEnergy,
 			Factor:       b.Factor,
 			AllowFactor:  allowFactor,
+			Kind:         "building",
+		})
+	}
+
+	// План 72.1.26 ч.B: дополнительные ряды (solar, halting, virt-fleet/
+	// defense/stock_fleet) — legacy `Resource.class.php::loadBuildingData`
+	// + `Planet.class.php::getProduction`.
+	virtFleet, virtDefense, virtStock, solarSatCount, err := s.shipyardCounts(ctx, p.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Solar satellite — отдельная строка с энергопроизводством.
+	if solarSatCount > 0 {
+		techE := tech[unitEnergyTech]
+		// Per-sat = formula × energy_factor (legacy round к 0.01).
+		perSat := economy.SolarSatelliteProdEnergy(tempC, techE) * float64(p.EnergyFactor)
+		perSat = math.Round(perSat*100) / 100
+		solarTotal := perSat * float64(solarSatCount)
+		// Legacy degradation для огромных колоний (> 16.5M спутников).
+		if solarSatCount > 16_500_000 {
+			solarTotal *= float64(solarSatCount-16_500_000) / 140_000.0
+		}
+		// solar_satellite_prod хранится как процент 0-100 (factor).
+		factor := float64(p.SolarSatelliteProd) / 100.0
+		solarEnergy := solarTotal * factor
+		totalEnergy += solarEnergy
+		report.Buildings = append(report.Buildings, ResourceBuildingDTO{
+			UnitID:      unitSolarSatellite,
+			Name:        "solar_satellite",
+			Level:       int(solarSatCount), // legacy показывает count как "level"
+			ConsEnergy:  -solarEnergy,        // отрицательный = производство (legacy: prod=-cons)
+			Factor:      p.SolarSatelliteProd,
+			AllowFactor: true,
+			Kind:        "solar",
+			Helptip:     fmt.Sprintf("perSat=%.2f", perSat),
+		})
+	}
+
+	// Virt-fleet / defense / stock_fleet — потребление водорода большими
+	// группами. Legacy `unitGroupConsumptionPerHour`.
+	addVirtRow := func(unitID int, count int64, name, kind string) {
+		if count <= 0 {
+			return
+		}
+		consH := unitGroupConsumptionPerHour(unitID, count)
+		if consH <= 0 {
+			return
+		}
+		report.Buildings = append(report.Buildings, ResourceBuildingDTO{
+			UnitID:       unitID,
+			Name:         name,
+			Level:        int(count),
+			ConsHydrogen: consH,
+			AllowFactor:  false,
+			Kind:         kind,
+			Helptip: fmt.Sprintf("perUnitH=%.4f",
+				consH/math.Max(1, float64(count))),
+		})
+	}
+	addVirtRow(unitVirtFleet, virtFleet, "fleet_consumption", "fleet")
+	addVirtRow(unitVirtStockFleet, virtStock, "fleet_stock_consumption", "stock_fleet")
+	addVirtRow(unitVirtDefense, virtDefense, "defense_consumption", "defense")
+
+	// Halting fleets — отдельный ряд на каждый удерживающий флот.
+	halts, err := s.haltingFleets(ctx, &p)
+	if err != nil {
+		return nil, err
+	}
+	for i, h := range halts {
+		consH := unitGroupConsumptionPerHour(unitVirtHaltingStart+i, h.TotalShips)
+		if consH <= 0 {
+			continue
+		}
+		report.Buildings = append(report.Buildings, ResourceBuildingDTO{
+			UnitID:           unitVirtHaltingStart + i,
+			Name:             "halting_consumption",
+			Level:            int(h.TotalShips),
+			ConsHydrogen:     consH,
+			AllowFactor:      false,
+			Kind:             "halting",
+			HaltingFromCoord: h.SrcCoord,
+			HaltingShips:     h.ShipsBy,
+			Helptip:          fmt.Sprintf("from=%s ships=%d", h.SrcCoord, h.TotalShips),
 		})
 	}
 
 	// Почасовое производство.
 	report.MetalPerHour = totalMetal
 	report.SiliconPerHour = totalSilicon
-	report.HydrogenPerHour = totalHydrogen
+	// Halting/virt-fleet/defense/stock_fleet потребляют водород —
+	// вычитаем их из общего hourly.
+	totalHydrogenCons := 0.0
+	for _, b := range report.Buildings {
+		if b.ConsHydrogen > 0 {
+			totalHydrogenCons += b.ConsHydrogen
+		}
+	}
+	report.HydrogenPerHour = totalHydrogen - totalHydrogenCons
 
 	// Сводные значения (текущий запас).
 	report.MetalTotal = float64(p.Metal)
@@ -806,6 +911,7 @@ func (s *Service) UpdateResourceFactors(ctx context.Context, userID, planetID st
 
 	// Парсинг и валидация факторов (0-100%).
 	intFactors := make(map[int]int)
+	solarFactor := -1 // -1 = не обновлять
 	for unitIDStr, factor := range factors {
 		if factor < 0 || factor > 100 {
 			return fmt.Errorf("invalid factor: %d: %w", factor, ErrInvalidInput)
@@ -814,12 +920,29 @@ func (s *Service) UpdateResourceFactors(ctx context.Context, userID, planetID st
 		if _, err := fmt.Sscanf(unitIDStr, "%d", &unitID); err != nil {
 			return fmt.Errorf("invalid unit_id: %s: %w", unitIDStr, ErrInvalidInput)
 		}
+		// План 72.1.26 ч.B: solar satellite (id=39) хранится отдельно
+		// в planets.solar_satellite_prod, не в buildings.production_factor
+		// (legacy Resource.class.php:227-238).
+		if unitID == unitSolarSatellite {
+			solarFactor = factor
+			continue
+		}
 		intFactors[unitID] = factor
 	}
 
 	// Обновить все факторы в одном батч-запросе.
 	if err := s.repo.UpdateBuildingFactors(ctx, planetID, intFactors); err != nil {
 		return fmt.Errorf("update building factors: %w", err)
+	}
+
+	// План 72.1.26 ч.B: обновить solar_satellite_prod на planets.
+	if solarFactor >= 0 {
+		if _, err := s.db.Pool().Exec(ctx,
+			`UPDATE planets SET solar_satellite_prod = $1 WHERE id = $2`,
+			solarFactor, planetID,
+		); err != nil {
+			return fmt.Errorf("update solar_satellite_prod: %w", err)
+		}
 	}
 
 	return nil
