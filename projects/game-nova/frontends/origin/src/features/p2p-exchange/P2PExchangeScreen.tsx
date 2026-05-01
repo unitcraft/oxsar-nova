@@ -7,6 +7,7 @@
 //  - Pagination: ◀ N/M ▶ (USER_PER_PAGE=25).
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchBrokerStats } from '@/api/p2pExchange';
 import type { BrokerStatsFilters } from '@/api/p2pExchange';
@@ -54,11 +55,17 @@ export function P2PExchangeScreen() {
 
   return (
     <>
+      <div className="idiv" style={{ textAlign: 'right' }}>
+        {/* План 72.1.45 §9: ссылка на admin-страницу настроек брокера. */}
+        <Link to="/p2p-exchange/opts">
+          ⚙ {t('exchangeOpts', 'title') || 'Настройки биржи'}
+        </Link>
+      </div>
       <table className="ntable">
         <thead>
           <tr>
             <th colSpan={4}>
-              {t('p2pExchange', 'title') || 'Биржа: статистика лотов'}
+              {data?.title || t('p2pExchange', 'title') || 'Биржа: статистика лотов'}
             </th>
           </tr>
         </thead>

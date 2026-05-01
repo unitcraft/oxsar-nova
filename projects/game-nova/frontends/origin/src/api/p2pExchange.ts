@@ -28,6 +28,8 @@ export interface BrokerStatsResponse {
   pages: number;
   page: number;
   fee: number;
+  // План 72.1.45 §9: title из exchange_settings (легаси показывает в шапке).
+  title?: string;
 }
 
 export interface BrokerStatsFilters {
