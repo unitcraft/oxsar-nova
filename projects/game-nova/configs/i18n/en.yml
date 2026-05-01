@@ -943,6 +943,13 @@ overview:
   resMetalLabel: Metal
   resSiliconLabel: Silicon
   resHydrogenLabel: Hydrogen
+  # План 72.1.45 §4: used by RequiredResTable (legacy required_res_table.tpl).
+  metal: Metal
+  silicon: Silicon
+  hydrogen: Hydrogen
+  energy: Energy
+  credits: Credits
+  points: Points
   storageLabel: "Storage:"
   diameterKm: km
   levelAbbr: "lv."
