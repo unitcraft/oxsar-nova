@@ -40,7 +40,13 @@ type Handler struct {
 
 func NewHandler(pool *pgxpool.Pool) *Handler { return &Handler{pool: pool} }
 
-// GetAll GET /api/empire — все планеты игрока с зданиями, флотом, обороной.
+// GetAll GET /api/empire — все планеты игрока с зданиями, флотом,
+// обороной + общие исследования (research per-user).
+//
+// План 72.1.37: legacy `Empire.class.php` показывает 5 вкладок —
+// constructions, shipyard, defense, moon, research. Все данные
+// уже агрегируются в loadPlanets (buildings/ships/defense per-planet)
+// и добавляется `research` (single block для user, не per-planet).
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
 	if !ok {
@@ -53,7 +59,36 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"planets": planets})
+	research, err := h.loadResearch(r.Context(), uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+		"planets":  planets,
+		"research": research,
+	})
+}
+
+// loadResearch возвращает map unit_id → level для всех исследований
+// игрока (legacy: общая для всех планет колонка в empire-таблице).
+func (h *Handler) loadResearch(ctx context.Context, userID string) (map[int]int, error) {
+	out := make(map[int]int)
+	rows, err := h.pool.Query(ctx,
+		`SELECT unit_id, level FROM research WHERE user_id=$1 AND level > 0`,
+		userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var uid, lvl int
+		if err := rows.Scan(&uid, &lvl); err != nil {
+			return nil, err
+		}
+		out[uid] = lvl
+	}
+	return out, rows.Err()
 }
 
 func (h *Handler) loadPlanets(ctx context.Context, userID string) ([]PlanetRow, error) {
