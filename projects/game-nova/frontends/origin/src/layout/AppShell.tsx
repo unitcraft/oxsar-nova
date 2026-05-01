@@ -6,11 +6,14 @@
 //   #topHeader + #content (центральная колонка)
 //   .oxsar-footer (fixed bottom)
 //
-// Для анонимных гостей (без токена, на публичных route типа
-// /battle-report/:id) скрываем sidebar/planets/topheader — рисуем
-// только #content + footer (план 72.1 ч.20.11).
+// «Bare»-режим (без обвязки) включается для:
+//   - анонимных гостей (нет accessToken) — план 72.1 ч.20.11.6;
+//   - просмотра боевого отчёта /battle-report/:id даже у
+//     авторизованных юзеров (план 72.1 ч.20.11.12) — legacy
+//     показывает страницу отчёта без меню/ресурсов/планет.
 
 import type { ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { TopHeader } from './TopHeader';
 import { LeftMenu } from './LeftMenu';
 import { PlanetsList } from './PlanetsList';
@@ -21,12 +24,23 @@ interface AppShellProps {
   children: ReactNode;
 }
 
+// BARE_ROUTES — pathname'ы, на которых обвязка скрывается всегда.
+const BARE_ROUTES: RegExp[] = [
+  /^\/battle-report\/[0-9a-f-]+$/,
+];
+
+function isBareRoute(pathname: string): boolean {
+  return BARE_ROUTES.some((re) => re.test(pathname));
+}
+
 export function AppShell({ children }: AppShellProps) {
   const accessToken = useAuthStore((s) => s.accessToken);
+  const { pathname } = useLocation();
   const isAuth = accessToken !== null;
+  const bare = !isAuth || isBareRoute(pathname);
 
-  if (!isAuth) {
-    // Анонимный режим: только контент + footer.
+  if (bare) {
+    // Bare-режим: только контент + footer.
     return (
       <>
         <div id="content">

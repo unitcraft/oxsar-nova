@@ -44,5 +44,11 @@ export function BattleReportScreen() {
     );
   }
 
-  return <BattleReportView report={q.data.report} compact />;
+  return (
+    <BattleReportView
+      report={q.data.report}
+      startedAt={q.data.started_at}
+      compact
+    />
+  );
 }

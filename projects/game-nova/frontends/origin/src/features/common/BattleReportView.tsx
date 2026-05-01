@@ -25,23 +25,55 @@ interface Props {
   // используется на публичном /battle-report/:id, где показываем
   // «только сам бой» (план 72.1 ч.20.11.11).
   compact?: boolean;
+  // startedAt: ISO timestamp начала боя. В compact-режиме рендерится
+  // как фраза «Флоты соперников встрелись в <datetime> часов:» —
+  // legacy assaultReport.assaultTime (план 72.1 ч.20.11.12).
+  startedAt?: string;
 }
 
-export function BattleReportView({ report, title, compact = false }: Props) {
-  const { t } = useTranslation();
+// formatBattleTime — формат «Thu, 30 Apr 2026, 21:31:57» через
+// Intl.DateTimeFormat. Локаль зависит от current i18n lang (ru/en) —
+// не хардкодим месяцы/дни недели.
+function formatBattleTime(iso: string, lang: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(d);
+}
+
+export function BattleReportView({
+  report,
+  title,
+  compact = false,
+  startedAt,
+}: Props) {
+  const { t, lang } = useTranslation();
   const winnerLabel =
     report.winner === 'attackers'
-      ? t('mission', 'attackerWins') ?? 'Атакующий победил'
+      ? t('mission', 'attackerWins')
       : report.winner === 'defenders'
-        ? t('mission', 'defenderWins') ?? 'Защитник победил'
-        : t('mission', 'draw') ?? 'Ничья';
+        ? t('mission', 'defenderWins')
+        : t('mission', 'draw');
   const winnerClass =
     report.winner === 'attackers'
       ? 'true'
       : report.winner === 'defenders'
         ? 'false'
         : '';
-  const headerTitle = title ?? (t('mission', 'simulationResult') ?? 'Результат симуляции');
+  const headerTitle = title ?? t('mission', 'simulationResult');
+  // Короткое обозначение ресурсов (М/К/В). Берём первый символ из
+  // полных названий global.metal/silicon/hydrogen чтобы не хардкодить.
+  const shortMetal = t('global', 'metal').slice(0, 1);
+  const shortSilicon = t('global', 'silicon').slice(0, 1);
+  const shortHydrogen = t('global', 'hydrogen').slice(0, 1);
   return (
     <>
       {!compact && (
@@ -52,11 +84,21 @@ export function BattleReportView({ report, title, compact = false }: Props) {
                 {headerTitle} —{' '}
                 <span className={winnerClass}>{winnerLabel}</span>
                 {' · '}
-                {t('mission', 'roundCount') ?? 'Раундов'}: {report.rounds}
+                {t('mission', 'roundCount')}: {report.rounds}
               </th>
             </tr>
           </thead>
         </table>
+      )}
+
+      {/* «Флоты соперников встрелись в <datetime> часов:» —
+          legacy assaultReport.assaultTime (план 72.1 ч.20.11.12). */}
+      {startedAt && (
+        <p style={{ textAlign: 'center', marginTop: 8 }}>
+          <b>
+            {t('assaultReport', 'assaultTime', { time: formatBattleTime(startedAt, lang) })}
+          </b>
+        </p>
       )}
 
       {(report.rounds_trace ?? []).map((rt) => (
@@ -72,33 +114,33 @@ export function BattleReportView({ report, title, compact = false }: Props) {
       <table className="ntable" style={{ marginTop: 16 }}>
         <tbody>
           <tr>
-            <th colSpan={4}>{t('mission', 'losses') ?? 'Потери'}</th>
+            <th colSpan={4}>{t('mission', 'losses')}</th>
           </tr>
           {(report.attackers ?? []).map((s) => (
             <tr key={`a-loss-${s.user_id}`}>
-              <td>{t('mission', 'attacker') ?? 'Атакующий'}</td>
-              <td>М: {formatNumber(s.lost_metal)}</td>
-              <td>К: {formatNumber(s.lost_silicon)}</td>
-              <td>В: {formatNumber(s.lost_hydrogen)}</td>
+              <td>{t('mission', 'attacker')}</td>
+              <td>{shortMetal}: {formatNumber(s.lost_metal)}</td>
+              <td>{shortSilicon}: {formatNumber(s.lost_silicon)}</td>
+              <td>{shortHydrogen}: {formatNumber(s.lost_hydrogen)}</td>
             </tr>
           ))}
           {(report.defenders ?? []).map((s) => (
             <tr key={`d-loss-${s.user_id}`}>
-              <td>{t('mission', 'defender') ?? 'Защитник'}</td>
-              <td>М: {formatNumber(s.lost_metal)}</td>
-              <td>К: {formatNumber(s.lost_silicon)}</td>
-              <td>В: {formatNumber(s.lost_hydrogen)}</td>
+              <td>{t('mission', 'defender')}</td>
+              <td>{shortMetal}: {formatNumber(s.lost_metal)}</td>
+              <td>{shortSilicon}: {formatNumber(s.lost_silicon)}</td>
+              <td>{shortHydrogen}: {formatNumber(s.lost_hydrogen)}</td>
             </tr>
           ))}
 
           {(report.debris_metal ?? 0) > 0 && (
             <>
               <tr>
-                <th colSpan={4}>{t('mission', 'debris') ?? 'Поле обломков'}</th>
+                <th colSpan={4}>{t('mission', 'debris')}</th>
               </tr>
               <tr>
-                <td colSpan={2}>М: {formatNumber(report.debris_metal ?? 0)}</td>
-                <td colSpan={2}>К: {formatNumber(report.debris_silicon ?? 0)}</td>
+                <td colSpan={2}>{shortMetal}: {formatNumber(report.debris_metal ?? 0)}</td>
+                <td colSpan={2}>{shortSilicon}: {formatNumber(report.debris_silicon ?? 0)}</td>
               </tr>
             </>
           )}
@@ -106,7 +148,7 @@ export function BattleReportView({ report, title, compact = false }: Props) {
           {(report.moon_chance ?? 0) > 0 && (
             <tr>
               <td colSpan={4}>
-                {t('mission', 'moonChance') ?? 'Шанс луны'}:{' '}
+                {t('mission', 'moonChance')}:{' '}
                 <span className={report.moon_created ? 'true' : ''}>
                   {Math.floor((report.moon_chance ?? 0) * 100)}%
                 </span>
@@ -131,7 +173,7 @@ function RoundView({ index, attacker, defender }: RoundProps) {
   return (
     <div style={{ marginTop: 16 }}>
       <p style={{ textAlign: 'center' }}>
-        <b>{t('mission', 'round') ?? 'Раунд'}: {index + 1}</b>
+        <b>{t('mission', 'round')}: {index + 1}</b>
       </p>
 
       <SideBlock side={attacker} kind="attacker" />
@@ -139,30 +181,18 @@ function RoundView({ index, attacker, defender }: RoundProps) {
 
       {/* Fight таблица */}
       <p style={{ textAlign: 'center' }}>
-        <b>{t('assaultReport', 'fight') ?? 'Бой'}</b>
+        <b>{t('assaultReport', 'fight')}</b>
       </p>
       <table className="atable">
         <thead>
           <tr>
             <th>&nbsp;</th>
-            <th>
-              <FightIcon name="shots_number" title={t('assaultReport', 'fightShotsNumber') ?? 'Делает выстрелов'} />
-            </th>
-            <th>
-              <FightIcon name="shots_power" title={t('assaultReport', 'fightShotsPower') ?? 'Мощность огня'} />
-            </th>
-            <th>
-              <FightIcon name="shots_miss" title={t('assaultReport', 'fightShotsMiss') ?? 'Промахи, попадания в уничтоженные.'} />
-            </th>
-            <th>
-              <FightIcon name="shield_absorb" title={t('assaultReport', 'fightShieldAbsorb') ?? 'Щиты противника поглотили'} />
-            </th>
-            <th>
-              <FightIcon name="shell_destroyed" title={t('assaultReport', 'fightShellDestroyed') ?? 'Разрушено брони противника'} />
-            </th>
-            <th>
-              <FightIcon name="units_destroyed" title={t('assaultReport', 'fightUnitsDestroyed') ?? 'Уничтожено юнитов противника'} />
-            </th>
+            <th><FightIcon name="shots_number" title={t('assaultReport', 'fightShotsNumber')} /></th>
+            <th><FightIcon name="shots_power" title={t('assaultReport', 'fightShotsPower')} /></th>
+            <th><FightIcon name="shots_miss" title={t('assaultReport', 'fightShotsMiss')} /></th>
+            <th><FightIcon name="shield_absorb" title={t('assaultReport', 'fightShieldAbsorb')} /></th>
+            <th><FightIcon name="shell_destroyed" title={t('assaultReport', 'fightShellDestroyed')} /></th>
+            <th><FightIcon name="units_destroyed" title={t('assaultReport', 'fightUnitsDestroyed')} /></th>
           </tr>
         </thead>
         <tbody>
@@ -176,51 +206,30 @@ function RoundView({ index, attacker, defender }: RoundProps) {
           содержат «Атакующий…» / «Щиты обороняющегося…», поэтому
           лейблы стороны не дублируем. */}
       <p style={{ textAlign: 'center', marginTop: 8 }}>
-        {(t('assaultReport', 'attackerShots') ?? 'Атакующий делает {{count}} выстрелов.').replace(
-          '{{count}}',
-          formatNumber(attacker.shots),
-        )}{' '}
-        {(t('assaultReport', 'attackerPower') ?? 'общей мощностью {{power}}.').replace(
-          '{{power}}',
-          formatNumber(Math.round(attacker.power)),
-        )}{' '}
-        {(t('assaultReport', 'defenderShield') ?? 'Щиты обороняющегося поглощают {{shield}}.').replace(
-          '{{shield}}',
-          formatNumber(Math.round(attacker.shield_absorbed)),
-        )}
+        {t('assaultReport', 'attackerShots', { count: formatNumber(attacker.shots) })}{' '}
+        {t('assaultReport', 'attackerPower', { power: formatNumber(Math.round(attacker.power)) })}{' '}
+        {t('assaultReport', 'defenderShield', { shield: formatNumber(Math.round(attacker.shield_absorbed)) })}
         <br />
-        {(t('assaultReport', 'defenderShots') ?? 'Обороняющийся делает {{count}} выстрелов.').replace(
-          '{{count}}',
-          formatNumber(defender.shots),
-        )}{' '}
-        {(t('assaultReport', 'defenderPower') ?? 'общей мощностью {{power}}.').replace(
-          '{{power}}',
-          formatNumber(Math.round(defender.power)),
-        )}{' '}
-        {(t('assaultReport', 'attackerShield') ?? 'Щиты атакующего поглощают {{shield}}.').replace(
-          '{{shield}}',
-          formatNumber(Math.round(defender.shield_absorbed)),
-        )}
+        {t('assaultReport', 'defenderShots', { count: formatNumber(defender.shots) })}{' '}
+        {t('assaultReport', 'defenderPower', { power: formatNumber(Math.round(defender.power)) })}{' '}
+        {t('assaultReport', 'attackerShield', { shield: formatNumber(Math.round(defender.shield_absorbed)) })}
       </p>
     </div>
   );
 }
 
 // formatPosition — «[g:s:p]» с возможным «(луна)».
-function formatPosition(side: SimRoundSide, t: (g: string, k: string) => string | null): string {
+function formatPosition(side: SimRoundSide, t: TFunc): string {
   const g = side.galaxy ?? 0;
   const s = side.system ?? 0;
   const p = side.position ?? 0;
-  const moon = side.is_moon ? ` (${t('global', 'moon') ?? 'луна'})` : '';
+  const moon = side.is_moon ? ` (${t('global', 'moon')})` : '';
   return `[${g}:${s}:${p}]${moon}`;
 }
 
 function SideBlock({ side, kind }: { side: SimRoundSide; kind: 'attacker' | 'defender' }) {
   const { t } = useTranslation();
-  const label =
-    kind === 'attacker'
-      ? (t('mission', 'attacker') ?? 'Атакующий')
-      : (t('mission', 'defender') ?? 'Защитник');
+  const label = kind === 'attacker' ? t('mission', 'attacker') : t('mission', 'defender');
   const position = formatPosition(side, t);
   return (
     <>
@@ -234,21 +243,24 @@ function SideBlock({ side, kind }: { side: SimRoundSide; kind: 'attacker' | 'def
       </p>
       <p style={{ textAlign: 'center', marginTop: 0, marginBottom: 8 }}>
         <small>
-          {t('assaultReport', 'gunPower') ?? 'Оружие'}: {Math.round(side.gun_power_pct)}%
+          {t('assaultReport', 'gunPower')}: {Math.round(side.gun_power_pct)}%
           {'   '}
-          {t('assaultReport', 'shieldPower') ?? 'Щиты'}: {Math.round(side.shield_power_pct)}%
+          {t('assaultReport', 'shieldPower')}: {Math.round(side.shield_power_pct)}%
           {'   '}
-          {t('assaultReport', 'armoring') ?? 'Броня'}: {Math.round(side.armoring_pct)}%
+          {t('assaultReport', 'armoring')}: {Math.round(side.armoring_pct)}%
           {'   '}
-          {t('assaultReport', 'ballisticsPower') ?? 'Баллистика'}: {side.ballistics_lvl}
+          {t('assaultReport', 'ballisticsPower')}: {side.ballistics_lvl}
           {'   '}
-          {t('assaultReport', 'maskingPower') ?? 'Маскировка'}: {side.masking_lvl}
+          {t('assaultReport', 'maskingPower')}: {side.masking_lvl}
         </small>
       </p>
       <UnitTable units={side.units} />
     </>
   );
 }
+
+// TFunc — сигнатура t (group, key, vars?).
+type TFunc = (g: string, k: string, vars?: Record<string, string | number>) => string;
 
 function UnitTable({ units }: { units: SimRoundUnit[] }) {
   const { t } = useTranslation();
@@ -272,7 +284,7 @@ function UnitTable({ units }: { units: SimRoundUnit[] }) {
       </thead>
       <tbody>
         <tr>
-          <th>{t('assaultReport', 'quantity') ?? 'Количество'}</th>
+          <th>{t('assaultReport', 'quantity')}</th>
           {units.map((u) => {
             // Класс damaged-строки: shellPercent <= 70% — оранжевый
             // (rep_quantity_damage), > 70 — бледный (rep_quantity_damage_low).
@@ -309,32 +321,32 @@ function UnitTable({ units }: { units: SimRoundUnit[] }) {
           })}
         </tr>
         <tr>
-          <th>{t('assaultReport', 'guns') ?? 'Атака'}</th>
+          <th>{t('assaultReport', 'guns')}</th>
           {units.map((u) => (
             <td key={`g-${u.unit_id}`}>{formatNumber(Math.round(u.attack))}</td>
           ))}
         </tr>
         <tr>
-          <th>{t('assaultReport', 'shields') ?? 'Щит'}</th>
+          <th>{t('assaultReport', 'shields')}</th>
           {units.map((u) => (
             <td key={`s-${u.unit_id}`}>{formatNumber(Math.round(u.shield))}</td>
           ))}
         </tr>
         <tr>
-          <th>{t('assaultReport', 'shells') ?? 'Броня'}</th>
+          <th>{t('assaultReport', 'shells')}</th>
           {units.map((u) => (
             <td key={`sh-${u.unit_id}`}>{formatNumber(Math.round(u.shell))}</td>
           ))}
         </tr>
         <tr>
-          <th>{t('assaultReport', 'front') ?? 'Фронт'}</th>
+          <th>{t('assaultReport', 'front')}</th>
           {units.map((u) => (
             <td key={`f-${u.unit_id}`}>{u.front}</td>
           ))}
         </tr>
         {showBallistics && (
           <tr>
-            <th>{t('assaultReport', 'ballisticsPower') ?? 'Баллистика'}</th>
+            <th>{t('assaultReport', 'ballisticsPower')}</th>
             {units.map((u) => (
               <td key={`b-${u.unit_id}`}>{u.ballistics_level ?? 0}</td>
             ))}
@@ -342,7 +354,7 @@ function UnitTable({ units }: { units: SimRoundUnit[] }) {
         )}
         {showMasking && (
           <tr>
-            <th>{t('assaultReport', 'maskingPower') ?? 'Маскировка'}</th>
+            <th>{t('assaultReport', 'maskingPower')}</th>
             {units.map((u) => (
               <td key={`m-${u.unit_id}`}>{u.masking_level ?? 0}</td>
             ))}
@@ -380,7 +392,7 @@ function UnitTable({ units }: { units: SimRoundUnit[] }) {
   );
 }
 
-function unitName(u: SimRoundUnit, t: (g: string, k: string) => string): string {
+function unitName(u: SimRoundUnit, t: TFunc): string {
   // Catalog — источник истины для имён юнитов (i18n ключ привязан к
   // unit_id). Backend `name` — это raw key (типа «small_transporter»),
   // не годится для отображения. Fallback на name только если catalog
@@ -388,8 +400,7 @@ function unitName(u: SimRoundUnit, t: (g: string, k: string) => string): string 
   const cat = findCatalog(u.unit_id);
   if (cat) {
     const [g, k] = cat.i18n.split('.') as [string, string];
-    const tr = t(g, k);
-    if (tr) return tr;
+    return t(g, k);
   }
   if (u.name) return u.name;
   return `#${u.unit_id}`;
@@ -410,8 +421,8 @@ function FightRow({ side, kind }: FightRowProps) {
   const { t } = useTranslation();
   const label =
     kind === 'attacker'
-      ? (t('assaultReport', 'fightAttacker') ?? 'Атакующий')
-      : (t('assaultReport', 'fightDefender') ?? 'Защитник');
+      ? t('assaultReport', 'fightAttacker')
+      : t('assaultReport', 'fightDefender');
   const miss = Math.max(0, side.power - side.shield_absorbed - side.shell_destroyed);
   return (
     <tr>

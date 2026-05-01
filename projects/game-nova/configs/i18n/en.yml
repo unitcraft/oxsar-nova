@@ -1873,6 +1873,8 @@ global:
   email: E-Mail
   energy: Energy
   error: Error
+  unitMs: ms
+  unitSec: s
   errorousParam: Invalid parameter
   exchBan: You have been banned by the exchange owner
   exchCanntRetreatTransport: You cannot cancel the transaction and recall the transport.

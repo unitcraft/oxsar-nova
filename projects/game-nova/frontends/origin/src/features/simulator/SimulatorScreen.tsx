@@ -89,7 +89,7 @@ interface UnitForm {
 const ZERO_UNIT: UnitForm = { qty: '0', damaged: '0', percent: '100' };
 
 export function SimulatorScreen() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const { planetId } = useResolvedPlanet();
   const ships = catalogByGroup('ship');
   const defense = catalogByGroup('defense');
@@ -281,7 +281,7 @@ export function SimulatorScreen() {
                     <td>{t('assaultReport', 'defenseFactoryPower')}</td>
                   </tr>
                   <tr>
-                    <td>{t('mission', 'attacker') ?? 'Атакующий'}</td>
+                    <td>{t('mission', 'attacker')}</td>
                     <td><TechInput v={aTech.gun} on={(v) => setATech({ ...aTech, gun: v })} /></td>
                     <td><TechInput v={aTech.shield} on={(v) => setATech({ ...aTech, shield: v })} /></td>
                     <td><TechInput v={aTech.shell} on={(v) => setATech({ ...aTech, shell: v })} /></td>
@@ -291,7 +291,7 @@ export function SimulatorScreen() {
                     <td>&nbsp;</td>
                   </tr>
                   <tr>
-                    <td>{t('mission', 'defender') ?? 'Защитник'}</td>
+                    <td>{t('mission', 'defender')}</td>
                     <td><TechInput v={dTech.gun} on={(v) => setDTech({ ...dTech, gun: v })} /></td>
                     <td><TechInput v={dTech.shield} on={(v) => setDTech({ ...dTech, shield: v })} /></td>
                     <td><TechInput v={dTech.shell} on={(v) => setDTech({ ...dTech, shell: v })} /></td>
@@ -306,7 +306,7 @@ export function SimulatorScreen() {
             <td valign="top">
               <table className="table_no_background" cellSpacing={0} cellPadding={0}>
                 <tbody>
-                  <tr><td>{t('mission', 'numSim') ?? 'Количество симуляций'}</td></tr>
+                  <tr><td>{t('mission', 'numSim')}</td></tr>
                   <tr>
                     <td>
                       <input
@@ -329,9 +329,9 @@ export function SimulatorScreen() {
       <table className="ntable">
         <thead>
           <tr>
-            <th>{t('mission', 'shipName') ?? 'Тип корабля'}</th>
-            <th>{t('mission', 'attacker') ?? 'Атакующий'}</th>
-            <th>{t('mission', 'defender') ?? 'Защитник'}</th>
+            <th>{t('mission', 'shipName')}</th>
+            <th>{t('mission', 'attacker')}</th>
+            <th>{t('mission', 'defender')}</th>
           </tr>
         </thead>
         <tfoot>
@@ -342,7 +342,7 @@ export function SimulatorScreen() {
                 id="sim"
                 name="simulate"
                 className="button"
-                value={t('mission', 'simulate') ?? 'Симулировать'}
+                value={t('mission', 'simulate')}
                 disabled={sim.isPending}
               />
             </td>
@@ -353,12 +353,12 @@ export function SimulatorScreen() {
           <tr>
             <th className="center">
               <a href="#" onClick={(e) => { e.preventDefault(); resetAll('a', 'ship'); resetAll('d', 'ship'); }}>
-                {t('mission', 'resetFleet') ?? 'Обнулить флот'}
+                {t('mission', 'resetFleet')}
               </a>
             </th>
             <th className="center">
               <a href="#" onClick={(e) => { e.preventDefault(); setAllUnits('a', 'ship'); }}>
-                {t('mission', 'setFleet') ?? 'Установить флот'}
+                {t('mission', 'setFleet')}
               </a>
               <br />
               {[100, 90, 80, 70, 60].map((p) => (
@@ -371,7 +371,7 @@ export function SimulatorScreen() {
             </th>
             <th className="center">
               <a href="#" onClick={(e) => { e.preventDefault(); setAllUnits('d', 'ship'); }}>
-                {t('mission', 'setFleet') ?? 'Установить флот'}
+                {t('mission', 'setFleet')}
               </a>
               <br />
               {[100, 90, 80, 70, 60].map((p) => (
@@ -404,13 +404,13 @@ export function SimulatorScreen() {
           <tr>
             <th className="center">
               <a href="#" onClick={(e) => { e.preventDefault(); resetAll('d', 'defense'); }}>
-                {t('mission', 'resetDefense') ?? 'Обнулить оборону'}
+                {t('mission', 'resetDefense')}
               </a>
             </th>
             <th className="center">&nbsp;</th>
             <th className="center">
               <a href="#" onClick={(e) => { e.preventDefault(); setAllUnits('d', 'defense'); }}>
-                {t('mission', 'setDefense') ?? 'Установить оборону'}
+                {t('mission', 'setDefense')}
               </a>
               <br />
               {[100, 90, 80, 70, 60].map((p) => (
@@ -444,14 +444,14 @@ export function SimulatorScreen() {
       {/* Ошибки симуляции */}
       {sim.isError && (
         <div style={{ marginTop: 12, textAlign: 'center' }}>
-          <span className="false">{(sim.error as Error)?.message ?? 'error'}</span>
+          <span className="false">{(sim.error as Error)?.message ?? t('global', 'error')}</span>
         </div>
       )}
 
       {/* Блок «Результаты» — таблица сводки по N итераций (план 72.1
           ч.20.11.7+8). Выводится ПОСЛЕ кнопки «Симулировать», чтобы
           юзер видел результат под формой и мог запускать ещё. */}
-      {sim.data && <SimResultsView resp={sim.data} t={t} />}
+      {sim.data && <SimResultsView resp={sim.data} t={t} lang={lang} />}
     </form>
   );
 }
@@ -555,26 +555,37 @@ function UnitCell({
 // simulator.tpl, lines 101-160). Показывается после прогона
 // num_sim симуляций, до формы — юзер видит агрегат и решает
 // стоит ли менять параметры/переоткатить.
+type TFunc = (g: string, k: string, vars?: Record<string, string | number>) => string;
+
 function SimResultsView({
   resp,
   t,
+  lang,
 }: {
   resp: SimRunResponse;
-  t: (g: string, k: string) => string | null;
+  t: TFunc;
+  lang: string;
 }) {
   const s: SimStats = resp.stats;
+  const numLocale = lang === 'ru' ? 'ru-RU' : 'en-GB';
   const fmt = (v: number, digits = 0) =>
-    v.toLocaleString('ru-RU', {
+    v.toLocaleString(numLocale, {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
     });
-  // Время: до 1 с показываем в миллисекундах с округлением, иначе в
-  // секундах с двумя знаками — иначе при быстром расчёте (<5 мс)
-  // сводка уходила в «0,00 с».
+  // Единицы времени из i18n: global.unitMs / global.unitSec.
+  const unitMs = t('global', 'unitMs');
+  const unitSec = t('global', 'unitSec');
   const fmtTime = (sec: number): string =>
     sec < 1
-      ? `${fmt(sec * 1000, sec * 1000 < 10 ? 1 : 0)} мс`
-      : `${fmt(sec, 2)} с`;
+      ? `${fmt(sec * 1000, sec * 1000 < 10 ? 1 : 0)} ${unitMs}`
+      : `${fmt(sec, 2)} ${unitSec}`;
+
+  // Короткие обозначения ресурсов — первая буква локализованного
+  // названия (М/К/В для ru, M/S/H для en).
+  const shortMetal = t('global', 'metal').slice(0, 1);
+  const shortSilicon = t('global', 'silicon').slice(0, 1);
+  const shortHydrogen = t('global', 'hydrogen').slice(0, 1);
 
   const atkLossTotal =
     s.attacker_lost_metal + s.attacker_lost_silicon + s.attacker_lost_hydrogen;
@@ -585,18 +596,18 @@ function SimResultsView({
     <table className="ntable" style={{ marginTop: 12 }}>
       <thead>
         <tr>
-          <th colSpan={3}>{t('assaultReport', 'summary') ?? 'Итоговый результат'}</th>
+          <th colSpan={3}>{t('assaultReport', 'summary')}</th>
         </tr>
         <tr>
           <th style={{ width: '40%' }}>&nbsp;</th>
-          <th style={{ width: '30%' }}>{t('mission', 'attacker') ?? 'Атакующий'}</th>
-          <th style={{ width: '30%' }}>{t('mission', 'defender') ?? 'Защитник'}</th>
+          <th style={{ width: '30%' }}>{t('mission', 'attacker')}</th>
+          <th style={{ width: '30%' }}>{t('mission', 'defender')}</th>
         </tr>
       </thead>
       <tbody>
         {/* Победы — в одной строке два значения */}
         <tr>
-          <th>{t('assaultReport', 'attackerWon') ?? 'Победа'}</th>
+          <th>{t('assaultReport', 'attackerWon')}</th>
           <td className={s.attacker_win_pct >= s.defender_win_pct ? 'true' : 'false'}>
             {fmt(s.attacker_win_pct, 1)}%
           </td>
@@ -605,65 +616,65 @@ function SimResultsView({
           </td>
         </tr>
         <tr>
-          <th>{t('assaultReport', 'battleDraw') ?? 'Ничья'}</th>
+          <th>{t('assaultReport', 'battleDraw')}</th>
           <td colSpan={2}>{fmt(s.draw_pct, 1)}%</td>
         </tr>
         <tr>
-          <th>{t('mission', 'roundCount') ?? 'Раундов'}</th>
+          <th>{t('mission', 'roundCount')}</th>
           <td colSpan={2}>{fmt(s.avg_rounds, 1)}</td>
         </tr>
         <tr>
-          <th>{t('mission', 'moonChance') ?? 'Шанс луны'}</th>
+          <th>{t('mission', 'moonChance')}</th>
           <td colSpan={2}>{fmt(s.avg_moon_chance, 1)}%</td>
         </tr>
 
         {/* Потери — две колонки */}
         <tr>
-          <th>{t('mission', 'losses') ?? 'Потери'}</th>
+          <th>{t('mission', 'losses')}</th>
           <td>
             <b>{fmt(atkLossTotal)}</b>
             <br />
             <small>
-              {fmt(s.attacker_lost_metal)} мет /{' '}
-              {fmt(s.attacker_lost_silicon)} крем /{' '}
-              {fmt(s.attacker_lost_hydrogen)} вод
+              {fmt(s.attacker_lost_metal)} {shortMetal} /{' '}
+              {fmt(s.attacker_lost_silicon)} {shortSilicon} /{' '}
+              {fmt(s.attacker_lost_hydrogen)} {shortHydrogen}
             </small>
           </td>
           <td>
             <b>{fmt(defLossTotal)}</b>
             <br />
             <small>
-              {fmt(s.defender_lost_metal)} мет /{' '}
-              {fmt(s.defender_lost_silicon)} крем /{' '}
-              {fmt(s.defender_lost_hydrogen)} вод
+              {fmt(s.defender_lost_metal)} {shortMetal} /{' '}
+              {fmt(s.defender_lost_silicon)} {shortSilicon} /{' '}
+              {fmt(s.defender_lost_hydrogen)} {shortHydrogen}
             </small>
           </td>
         </tr>
 
         {/* Опыт */}
         <tr>
-          <th>{t('mission', 'experience') ?? 'Опыт'}</th>
+          <th>{t('mission', 'experience')}</th>
           <td>{fmt(s.attacker_exp, 1)}</td>
           <td>{fmt(s.defender_exp, 1)}</td>
         </tr>
 
         {/* Обломки на орбите — общая строка */}
         <tr>
-          <th>{t('mission', 'debris') ?? 'Обломки на орбите'}</th>
+          <th>{t('mission', 'debris')}</th>
           <td colSpan={2}>
-            {fmt(s.debris_metal)} {t('assaultReport', 'and') ?? 'и'}{' '}
+            {fmt(s.debris_metal)} {t('assaultReport', 'and')}{' '}
             {fmt(s.debris_silicon)}
-            <small> (мет / крем)</small>
+            <small>{' '}({shortMetal} / {shortSilicon})</small>
           </td>
         </tr>
 
         {/* Время */}
         <tr>
-          <th>{t('mission', 'simTime') ?? 'Время'}</th>
+          <th>{t('mission', 'simTime')}</th>
           <td colSpan={2}>
             {fmtTime(s.gen_time_all)}{' · '}
             <small>
-              {t('mission', 'oneSimTime') ?? 'одна симуляция'}:{' '}
+              {t('mission', 'oneSimTime')}:{' '}
               {fmtTime(s.gen_time)} ({fmt(s.num_sim)}×)
             </small>
           </td>
@@ -680,7 +691,7 @@ function SimResultsView({
               target="_blank"
               rel="noopener noreferrer"
             >
-              {t('assaultReport', 'assault') ?? 'Отчёт о сражении'}
+              {t('assaultReport', 'assault')}
             </Link>
           </td>
         </tr>
