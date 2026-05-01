@@ -168,6 +168,8 @@ export interface Fleet {
   carry: { metal: number; silicon: number; hydrogen: number };
   speed_percent: number;
   ships: Record<string, number>;
+  // План 72.1.48: ACS-formation. У ACS-флотов привязано к acs_groups.
+  acs_group_id?: string;
 }
 
 export interface FleetList {

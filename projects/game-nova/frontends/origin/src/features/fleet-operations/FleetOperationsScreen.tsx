@@ -14,7 +14,16 @@
 // Если код не известен — fallback на `fleet.missionFallback`.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchFleet, loadFleet, recallFleet, unloadFleet } from '@/api/fleet';
+import {
+  acceptACSInvitation,
+  fetchFleet,
+  inviteToACS,
+  listACSInvitations,
+  loadFleet,
+  promoteFleetToACS,
+  recallFleet,
+  unloadFleet,
+} from '@/api/fleet';
 import type { ApiError } from '@/api/client';
 import { QK } from '@/api/query-keys';
 import type { Fleet } from '@/api/types';
@@ -84,13 +93,77 @@ export function FleetOperationsScreen() {
     onError: (e) => setErrMsg((e as ApiError).message),
   });
 
+  // План 72.1.48: invitations в ACS-formation для текущего юзера.
+  const invQ = useQuery({
+    queryKey: ['acs-invitations'],
+    queryFn: listACSInvitations,
+    refetchInterval: 30_000,
+  });
+  const promote = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      promoteFleetToACS(id, name),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: QK.fleet() }),
+    onError: (e) => setErrMsg((e as ApiError).message),
+  });
+  const invite = useMutation({
+    mutationFn: ({ groupId, username }: { groupId: string; username: string }) =>
+      inviteToACS(groupId, username),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['acs-invitations'] }),
+    onError: (e) => setErrMsg((e as ApiError).message),
+  });
+  const accept = useMutation({
+    mutationFn: (groupId: string) => acceptACSInvitation(groupId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['acs-invitations'] }),
+    onError: (e) => setErrMsg((e as ApiError).message),
+  });
+
   if (fleetQ.isLoading) return <div className="idiv">…</div>;
 
   const fleets = fleetQ.data?.fleets ?? [];
   const slotsUsed = fleetQ.data?.slots_used ?? 0;
   const slotsMax = fleetQ.data?.slots_max ?? 0;
+  const invitations = invQ.data?.invitations ?? [];
+  const pendingInvitations = invitations.filter((i) => !i.accepted_at);
 
   return (
+    <>
+    {/* План 72.1.48: pending ACS-invitations (legacy formation_invitation). */}
+    {pendingInvitations.length > 0 && (
+      <table className="ntable">
+        <thead>
+          <tr>
+            <th colSpan={4}>{t('fleet', 'acsInvitationsTitle') || 'Приглашения в ACS'}</th>
+          </tr>
+          <tr>
+            <th>{t('fleet', 'acsGroupName') || 'Группа'}</th>
+            <th>{t('fleet', 'acsLeader') || 'Лидер'}</th>
+            <th>{t('fleet', 'acsInvitedAt') || 'Приглашение'}</th>
+            <th>{t('alliance', 'operations')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pendingInvitations.map((inv) => (
+            <tr key={inv.acs_group_id}>
+              <td>{inv.group_name}</td>
+              <td>{inv.leader_name}</td>
+              <td>{new Date(inv.invited_at).toLocaleString('ru-RU')}</td>
+              <td className="center">
+                <input
+                  type="button"
+                  className="button"
+                  value={t('fleet', 'acsAccept') || 'Принять'}
+                  disabled={accept.isPending}
+                  onClick={() => accept.mutate(inv.acs_group_id)}
+                />
+                <div style={{ fontSize: 'smaller', marginTop: 4 }}>
+                  ID: <code>{inv.acs_group_id}</code>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
     <table className="ntable">
       <thead>
         <tr>
@@ -124,7 +197,15 @@ export function FleetOperationsScreen() {
             onRecall={() => recall.mutate(f.id)}
             onLoad={(m, s, h) => load.mutate({ id: f.id, m, s, h })}
             onUnload={(m, s, h) => unload.mutate({ id: f.id, m, s, h })}
-            disabled={recall.isPending || load.isPending || unload.isPending}
+            onPromote={(name) => promote.mutate({ id: f.id, name })}
+            onInvite={(groupId, username) => invite.mutate({ groupId, username })}
+            promotedGroupId={
+              f.acs_group_id && f.mission === 12 ? f.acs_group_id : null
+            }
+            disabled={
+              recall.isPending || load.isPending || unload.isPending ||
+              promote.isPending || invite.isPending
+            }
           />
         ))}
         {errMsg && (
@@ -136,6 +217,7 @@ export function FleetOperationsScreen() {
         )}
       </tbody>
     </table>
+    </>
   );
 }
 
@@ -144,12 +226,18 @@ function FleetRow({
   onRecall,
   onLoad,
   onUnload,
+  onPromote,
+  onInvite,
+  promotedGroupId,
   disabled,
 }: {
   fleet: Fleet;
   onRecall: () => void;
   onLoad: (m: number, s: number, h: number) => void;
   onUnload: (m: number, s: number, h: number) => void;
+  onPromote: (name: string) => void;
+  onInvite: (groupId: string, username: string) => void;
+  promotedGroupId: string | null;
   disabled: boolean;
 }) {
   const { t } = useTranslation();
@@ -176,6 +264,17 @@ function FleetRow({
   const [m, setM] = useState('0');
   const [s, setS] = useState('0');
   const [h, setH] = useState('0');
+
+  // План 72.1.48: formation form для ATTACK_SINGLE.
+  const isAttackSingle =
+    fleet.mission === 10 || fleet.mission === 25 || fleet.mission === 26;
+  const isACS =
+    fleet.mission === 12 || fleet.mission === 27 || fleet.mission === 29;
+  const canPromote = isAttackSingle && fleet.state === 'outbound' && !promotedGroupId;
+  const canInvite = (isACS || promotedGroupId) && fleet.state === 'outbound' && fleet.acs_group_id;
+  const [showFormationForm, setShowFormationForm] = useState(false);
+  const [formationName, setFormationName] = useState('');
+  const [inviteUsername, setInviteUsername] = useState('');
 
   function submit() {
     const mm = Math.max(0, Math.floor(Number(m) || 0));
@@ -223,9 +322,77 @@ function FleetRow({
               onClick={() => setShowLoadForm((v) => !v)}
             />
           )}
+          {/* План 72.1.48: formation для single-атаки или invite для ACS. */}
+          {(canPromote || canInvite) && (
+            <input
+              type="button"
+              className="button"
+              value={t('fleet', 'formationBtn') || '📋 Formation'}
+              disabled={disabled}
+              onClick={() => setShowFormationForm((v) => !v)}
+              style={{ marginLeft: 4 }}
+            />
+          )}
           {!isHold && fleet.state !== 'outbound' && '—'}
         </td>
       </tr>
+      {showFormationForm && (canPromote || canInvite) && (
+        <tr>
+          <td colSpan={5}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              {canPromote && (
+                <>
+                  <span>{t('fleet', 'formationName') || 'Имя группы'}:</span>
+                  <input
+                    type="text"
+                    value={formationName}
+                    maxLength={128}
+                    onChange={(e) => setFormationName(e.target.value)}
+                    style={{ width: 200 }}
+                  />
+                  <input
+                    type="button"
+                    className="button"
+                    value={t('fleet', 'formationCreateBtn') || 'Создать ACS'}
+                    disabled={disabled || !formationName.trim()}
+                    onClick={() => {
+                      onPromote(formationName.trim());
+                      setShowFormationForm(false);
+                      setFormationName('');
+                    }}
+                  />
+                </>
+              )}
+              {canInvite && fleet.acs_group_id && (
+                <>
+                  <span>{t('fleet', 'invitee') || 'Пригласить'}:</span>
+                  <input
+                    type="text"
+                    value={inviteUsername}
+                    maxLength={64}
+                    onChange={(e) => setInviteUsername(e.target.value)}
+                    placeholder={t('fleet', 'usernamePh') || 'username'}
+                    style={{ width: 200 }}
+                  />
+                  <input
+                    type="button"
+                    className="button"
+                    value={t('fleet', 'inviteBtn') || 'Пригласить'}
+                    disabled={disabled || !inviteUsername.trim() || !fleet.acs_group_id}
+                    onClick={() => {
+                      onInvite(fleet.acs_group_id!, inviteUsername.trim());
+                      setInviteUsername('');
+                    }}
+                  />
+                  <span style={{ fontSize: 'smaller', color: '#888' }}>
+                    ID: <code>{fleet.acs_group_id}</code>
+                  </span>
+                </>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
       {isHold && showLoadForm && (
         <tr>
           <td colSpan={5}>
