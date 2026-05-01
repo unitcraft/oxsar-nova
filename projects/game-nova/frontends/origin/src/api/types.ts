@@ -360,6 +360,12 @@ export interface HighscoreEntry {
   home_galaxy?: number | null;
   home_system?: number | null;
   home_position?: number | null;
+  // План 72.1.29: legacy `Ranking::playerRanking` дополнительные колонки.
+  b_count?: number;
+  r_count?: number;
+  u_count?: number;
+  battles?: number;
+  score_avg?: number;
 }
 
 // План 72.1.12: рейтинг альянсов.
