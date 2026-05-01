@@ -164,6 +164,12 @@ func (h *Handler) Inventory(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
+	// План 72.1.45 §5: damaged/shell_percent для UI inventory (legacy shipyard.tpl).
+	shipsDmg, defenseDmg, err := h.svc.DamagedInventory(r.Context(), planetID)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
 		"ships":         ships,
 		"defense":       defense,
@@ -171,5 +177,7 @@ func (h *Handler) Inventory(w http.ResponseWriter, r *http.Request) {
 		"defense_costs": defCosts,
 		"ship_seconds":  shipSecs,
 		"defense_seconds": defSecs,
+		"ships_damaged":   shipsDmg,
+		"defense_damaged": defenseDmg,
 	})
 }

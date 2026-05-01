@@ -72,8 +72,17 @@ type QueueItem struct {
 
 // Enqueue ставит задачу «построить count юнитов". Unit может быть как
 // корабль, так и оборона — разделяем по наличию в каталоге.
+// MaxBuildOrderUnits — план 72.1.45 §5: legacy MAX_BUILDING_ORDER_UNITS=1_000_000
+// (oxsar2 `consts.php` L.369), используется в `getMaxCountOrderShipyard/Defense`
+// (Functions.inc.php L.941, L.952). Защита от переполнения времени стройки и
+// ресурсов: одна заявка не может содержать более 1M юнитов.
+const MaxBuildOrderUnits int64 = 1_000_000
+
 func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID int, count int64) (QueueItem, error) {
 	if count <= 0 {
+		return QueueItem{}, ErrInvalidCount
+	}
+	if count > MaxBuildOrderUnits {
 		return QueueItem{}, ErrInvalidCount
 	}
 	key, costPerUnit, isDefense, ok := s.lookupShipOrDefense(unitID)
@@ -249,6 +258,54 @@ func (s *Service) Inventory(ctx context.Context, planetID string) (ships, defens
 			return nil, nil, err
 		}
 		defense[id] = c
+	}
+	return ships, defense, rows.Err()
+}
+
+// DamagedRow — план 72.1.45 §5: damaged_count + shell_percent для UI inventory.
+// Legacy `shipyard.tpl` показывает рядом с count в табличке inventory.
+type DamagedRow struct {
+	DamagedCount int64   `json:"damaged_count"`
+	ShellPercent float64 `json:"shell_percent"`
+}
+
+// DamagedInventory — damaged inventory сгруппированный по unit_id.
+// Возвращает rows с DamagedCount > 0 (для UI индикатора).
+func (s *Service) DamagedInventory(ctx context.Context, planetID string) (ships, defense map[int]DamagedRow, err error) {
+	ships = map[int]DamagedRow{}
+	defense = map[int]DamagedRow{}
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT unit_id, damaged_count, shell_percent
+		  FROM ships
+		 WHERE planet_id = $1 AND damaged_count > 0`, planetID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("ships damaged: %w", err)
+	}
+	for rows.Next() {
+		var id int
+		var d DamagedRow
+		if err := rows.Scan(&id, &d.DamagedCount, &d.ShellPercent); err != nil {
+			rows.Close()
+			return nil, nil, err
+		}
+		ships[id] = d
+	}
+	rows.Close()
+	rows, err = s.db.Pool().Query(ctx, `
+		SELECT unit_id, damaged_count, shell_percent
+		  FROM defense
+		 WHERE planet_id = $1 AND damaged_count > 0`, planetID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("defense damaged: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id int
+		var d DamagedRow
+		if err := rows.Scan(&id, &d.DamagedCount, &d.ShellPercent); err != nil {
+			return nil, nil, err
+		}
+		defense[id] = d
 	}
 	return ships, defense, rows.Err()
 }
