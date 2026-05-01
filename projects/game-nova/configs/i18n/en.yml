@@ -1375,6 +1375,13 @@ empire:
   totalResources: "Total resources:"
   colParam: Parameter
   groupPlanet: Planet
+  # План 72.1.37: 5 tabs (legacy empire.tpl).
+  tab_overview: "📊 Overview"
+  tab_buildings: "🏛 Buildings"
+  tab_ships: "🚀 Fleet"
+  tab_defense: "🛡 Defense"
+  tab_research: "🔬 Research"
+  tab_moon: "🌙 Moons"
   rowDiameter: "📐 Diameter"
   rowFields: "🔲 Fields"
   rowTemp: "🌡️ Temperature"
