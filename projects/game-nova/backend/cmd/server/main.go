@@ -548,6 +548,8 @@ func run() error {
 		pr.Post("/artefacts/{id}/activate", artefactH.Activate)
 		pr.Post("/artefacts/{id}/deactivate", artefactH.Deactivate)
 		pr.Post("/artefacts/{id}/sell", artMarketH.ListForSale)
+		// План 72.1.45 §2: история приобретений артефакта (legacy ArtefactInfo).
+		pr.Get("/artefacts/info/{unitId}/history", artefactH.History)
 
 		pr.Get("/artefact-market/offers", artMarketH.Offers)
 		pr.Get("/artefact-market/credit", artMarketH.Credit)
