@@ -15659,3 +15659,68 @@ not-a-fix + BA-019 mitigated.
   **Коммиты** (по типам задач):
   - feat(simulator): план 72.1.34 — laser/ion/plasma + lost_points/units в SimStats (135fd5e1f5).
   - docs(plan-72.1.34): часть A ✅; B/C/D — TBD (§20.12).
+
+2026-05-01 — итерация 72.1.33 ч.2: pack-artefacts (FINAL для /building/:type).
+
+  Закрывает часть 2 подплана 72.1.33 / правило 1:1 §20.12. Legacy
+  `Artefact::canPackBuilding` + `BuildingInfo::packCurrentConstruction`
+  + `usePackedBuilding` (+ research-аналоги). После этого
+  /building/:type закрыт полностью.
+
+  Реализация:
+
+  Catalog (configs/artefacts.yml):
+  - 4 новых артефакта (legacy ID 321-324): packing_building (323),
+    packing_research (324), packed_building (321), packed_research (322).
+    Effect.Type = pack_building/pack_research/packed_building/
+    packed_research — special-case marker, computeChanges → nil.
+
+  Backend (internal/artefact/pack.go):
+  - PackBuilding(planetID, unitID): SELECT held packing-arт →
+    UPDATE buildings.level -= 1 (если 0 → DEC used_fields) →
+    consume packing → INSERT packed-арт с payload
+    {construction_id, level}.
+  - PackResearch(planetID, researchID): аналог для research-таблицы.
+
+  Backend (activate_packed.go):
+  - ActivatePackedBuilding(artID, planetID): UPSERT buildings —
+    если строки нет, INSERT + INC used_fields; иначе UPDATE
+    level += pl.Level. Артефакт consumed.
+  - ActivatePackedResearch: аналог для research, без used_fields.
+
+  Backend service.go::Activate расширен: pre-check unit_id.
+  Для packed_* делегирует в Activate*Packed*. Для packing_* —
+  ошибка (должны через /pack endpoint).
+
+  HTTP routes (server/main.go):
+  - POST /api/planets/{id}/buildings/{unitId}/pack → PackBuilding.
+  - POST /api/planets/{id}/research/{unitId}/pack → PackResearch.
+  - POST /api/artefacts/{id}/activate (расширен на packed-types).
+
+  Frontend:
+  - api/buildings.ts: packBuilding/packResearch функции.
+  - BuildingInfoScreen: 📦-кнопка в demolish-блоке при curLevel>0.
+  - ResearchScreen: 📦-кнопка для каждого research с lvl>0.
+  - i18n ru/en: buildinginfo.packBuilding, packResearch, packConfirm.
+
+  /building/:type ⚠ → ✅ — правило 1:1 закрыто полностью.
+
+  Изменённые файлы:
+  - projects/game-nova/configs/artefacts.yml (+4 артефакта).
+  - projects/game-nova/backend/internal/artefact/pack.go (новый).
+  - projects/game-nova/backend/internal/artefact/activate_packed.go (новый).
+  - projects/game-nova/backend/internal/artefact/effects.go.
+  - projects/game-nova/backend/internal/artefact/service.go.
+  - projects/game-nova/backend/internal/artefact/handler.go.
+  - projects/game-nova/backend/cmd/server/main.go (routes).
+  - projects/game-nova/frontends/origin/src/api/buildings.ts.
+  - projects/game-nova/frontends/origin/src/features/info/BuildingInfoScreen.tsx.
+  - projects/game-nova/frontends/origin/src/features/research/ResearchScreen.tsx.
+  - projects/game-nova/configs/i18n/{ru,en}.yml (3 ключа).
+  - docs/plans/72.1.33-building-info-cont.md (✅ Завершён).
+  - docs/plans/72.1.2-screen-audit.md (#35 ⚠ → ✅).
+
+  **Коммиты** (по типам задач):
+  - feat(artefact): план 72.1.33 ч.2 — pack/packed building+research артефакты (3f810ed87c).
+  - feat(origin/frontend): план 72.1.33 ч.2 — pack-artefacts UI (c6fe210f1e).
+  - docs(plan-72.1.33): ч.2 ✅ + audit /building/:type ⚠ → ✅.
