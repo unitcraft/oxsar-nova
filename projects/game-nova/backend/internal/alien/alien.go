@@ -424,10 +424,11 @@ func grantRandomArtefact(ctx context.Context, tx pgx.Tx, userID string, cat *con
 		artIDs = append(artIDs, spec.ID)
 	}
 	artID := artIDs[rand.IntN(len(artIDs))]
+	// План 72.1.46 P1#2: source='quest' (alien — мини-квест с pirates).
 	_, err := tx.Exec(ctx, `
-		INSERT INTO artefacts_user (id, user_id, planet_id, unit_id, state, acquired_at)
-		VALUES ($1, $2, NULL, $3, 'held', now())
-	`, ids.New(), userID, artID)
+		INSERT INTO artefacts_user (id, user_id, planet_id, unit_id, state, acquired_at, payload)
+		VALUES ($1, $2, NULL, $3, 'held', now(), $4)
+	`, ids.New(), userID, artID, []byte(`{"acquisition_source":"quest"}`))
 	return err
 }
 
