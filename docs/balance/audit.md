@@ -266,7 +266,7 @@ moon chance, building destroy, ракетная атака). Самый боле
 
 - **Дата находки**: 2026-05-01
 - **Серьёзность**: **P0** (затрагивает каждую атаку планеты — большинство боёв)
-- **Статус**: **open**
+- **Статус**: **patched** 2026-05-01 (commit того же дня)
 - **Категория**: расхождение семантики с legacy
 
 **Файлы**: [engine.go:140](../../projects/game-nova/backend/internal/battle/engine.go#L140), [engine.go:191-193](../../projects/game-nova/backend/internal/battle/engine.go#L191).
@@ -297,9 +297,16 @@ battlePowerCoefficient *= 0.5`. То есть «×0.5 опыта **только*
 потому что вызывает `computeExperience` напрямую с заранее заданным
 `hasPlanet`, минуя Calculate.
 
-**Фикс**: завести в `Input` отдельный флаг `HasPlanet bool` (по
-умолчанию `true`, ставится `false` явно для боя в полёте) и передавать
-его, а не `IsMoon`.
+**Фикс** (применён 2026-05-01): добавлено поле `Input.HasPlanet bool`,
+`Calculate` использует его, не `IsMoon`. Все 5 call sites обновлены:
+`attack.go`, `acs_attack.go`, `alien.go` ставят `HasPlanet=true`;
+`expedition.go` (×2) оставляют `HasPlanet=false` с явным
+комментарием — это бой в открытом космосе. `simulator/handler.go`
+выставляет `HasPlanet=true` после декодинга JSON. Регрессионный тест
+`TestExperience_HasPlanet_NotIsMoon` проверяет:
+- planet vs moon → одинаковый exp;
+- planet vs flight → ratio ~2 через `computeExperience` напрямую;
+- end-to-end через `Calculate` с двумя комбинациями HasPlanet/IsMoon.
 
 ---
 

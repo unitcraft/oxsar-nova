@@ -591,6 +591,8 @@ func expPirates(ctx context.Context, tx pgx.Tx, fleetID, ownerUserID string,
 		Rounds:    6,
 		Attackers: []battle.Side{{UserID: ownerUserID, Units: atkUnits}},
 		Defenders: []battle.Side{pirateSide},
+		// HasPlanet=false — экспедиция, бой в открытом космосе.
+		// Java: bpc *= 0.5 (planetid==0). См. BA-007.
 	}
 	report, err := battle.Calculate(input)
 	if err != nil {
@@ -646,6 +648,7 @@ func expBattlefield(ctx context.Context, tx pgx.Tx, fleetID, ownerUserID string,
 			IsAliens: true, // NPC: ApplyBattleResult её скипнет.
 			Units:    []battle.Unit{enemyUnit},
 		}},
+		// HasPlanet=false — battlefield в открытом космосе. См. BA-007.
 	}
 	report, err := battle.Calculate(input)
 	if err != nil {

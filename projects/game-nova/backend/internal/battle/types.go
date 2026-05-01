@@ -11,13 +11,22 @@ package battle
 // Input — полный вход в боевой расчёт. Всё, что нужно движку, идёт
 // сюда; никаких скрытых зависимостей.
 type Input struct {
-	Seed      uint64                `json:"seed"`
-	Rounds    int                   `json:"rounds,omitempty"`
-	NumSim    int                   `json:"num_sim,omitempty"` // 0/1 = один бой; 2..20 = multi-run статистика
-	Attackers []Side                `json:"attackers"`
-	Defenders []Side                `json:"defenders"`
-	Rapidfire map[int]map[int]int   `json:"rapidfire,omitempty"`
-	IsMoon    bool                  `json:"is_moon,omitempty"`
+	Seed      uint64              `json:"seed"`
+	Rounds    int                 `json:"rounds,omitempty"`
+	NumSim    int                 `json:"num_sim,omitempty"` // 0/1 = один бой; 2..20 = multi-run статистика
+	Attackers []Side              `json:"attackers"`
+	Defenders []Side              `json:"defenders"`
+	Rapidfire map[int]map[int]int `json:"rapidfire,omitempty"`
+	// IsMoon — цель боя — луна (для UI-рендера заголовка раунда).
+	// Не путать с HasPlanet — это отдельный флаг для опыта.
+	IsMoon bool `json:"is_moon,omitempty"`
+	// HasPlanet — есть ли у боя планетарная цель (= в legacy planetid != 0).
+	// true — атака на планету или луну (Java: bpc *= 1).
+	// false — бой в открытом космосе без planet'а (Java: bpc *= 0.5).
+	// План 87 / BA-007: до фикса использовался IsMoon как proxy, но
+	// семантика противоположна и обычные атаки планет получали ×0.5
+	// опыта.
+	HasPlanet bool `json:"has_planet,omitempty"`
 }
 
 // Side — одна сторона боя (один игрок или ACS-участник).
@@ -120,8 +129,8 @@ type Report struct {
 	MoonCreated   bool         `json:"moon_created,omitempty"`
 
 	// AttackerExp / DefenderExp — очки опыта (Java attackerExperience /
-	// defenderExperience). Считаются как min(20, max(0.1, oppPower /
-	// myPower)) × battleTurnsNumber (Java Assault.java:811-816).
+	// defenderExperience). atan-based формула, см. computeExperience в
+	// engine.go (порт Java Assault.java:817-847).
 	AttackerExp int `json:"attacker_exp,omitempty"`
 	DefenderExp int `json:"defender_exp,omitempty"`
 

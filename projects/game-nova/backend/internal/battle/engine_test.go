@@ -766,3 +766,55 @@ func TestExperience_DeterministicSeed(t *testing.T) {
 			r1.AttackerExp, r1.DefenderExp, r2.AttackerExp, r2.DefenderExp)
 	}
 }
+
+// TestExperience_HasPlanet_NotIsMoon — регрессия BA-007: до фикса
+// hasPlanet брался из IsMoon, что переворачивало семантику. Бой
+// на обычной планете (HasPlanet=true, IsMoon=false) должен давать
+// тот же опыт, что бой на луне (HasPlanet=true, IsMoon=true), и
+// ВДВОЕ больше, чем бой в полёте (HasPlanet=false).
+func TestExperience_HasPlanet_NotIsMoon(t *testing.T) {
+	// Прямой вызов computeExperience — точная проверка ratio (через
+	// Calculate +1 const + round() искажают на маленьких боях).
+	atkPower, defPower := 1_000_000.0, 1_000_000.0
+
+	planetAtt, planetDef := computeExperience("attackers", 6, atkPower, defPower, true)
+	flightAtt, flightDef := computeExperience("attackers", 6, atkPower, defPower, false)
+
+	if flightAtt >= planetAtt || flightDef >= planetDef {
+		t.Fatalf("flight battle should give less exp than planet: flight=%d/%d planet=%d/%d",
+			flightAtt, flightDef, planetAtt, planetDef)
+	}
+	// Ratio через bpc *= 0.5: planet/flight ≈ 2 (с поправкой на +1
+	// константу и round()).
+	ratio := float64(planetAtt) / float64(flightAtt)
+	if ratio < 1.7 || ratio > 2.1 {
+		t.Fatalf("planet/flight ratio expected ≈2, got %.2f (planet=%d, flight=%d)",
+			ratio, planetAtt, flightAtt)
+	}
+
+	// End-to-end через Calculate: убедиться что in.HasPlanet, не IsMoon,
+	// влияет на опыт. Ожидаем: planet (HasPlanet=true) > flight (HasPlanet=false),
+	// IsMoon при этом не влияет.
+	makeIn := func(hasPlanet, isMoon bool) Input {
+		return Input{
+			Seed:      777,
+			Rounds:    6,
+			Attackers: []Side{simpleAttacker(1000, 100, 10000)},
+			Defenders: []Side{simpleDefender(1000, 100, 10000)},
+			HasPlanet: hasPlanet,
+			IsMoon:    isMoon,
+		}
+	}
+	repPlanet, _ := Calculate(makeIn(true, false))
+	repMoon, _ := Calculate(makeIn(true, true))
+	repFlight, _ := Calculate(makeIn(false, false))
+
+	if repPlanet.AttackerExp != repMoon.AttackerExp {
+		t.Fatalf("BA-007 регрессия: planet vs moon (оба HasPlanet=true) должны быть равны: planet=%d moon=%d",
+			repPlanet.AttackerExp, repMoon.AttackerExp)
+	}
+	if repFlight.AttackerExp >= repPlanet.AttackerExp {
+		t.Fatalf("BA-007 регрессия: flight (HasPlanet=false) должен быть < planet (HasPlanet=true): flight=%d planet=%d",
+			repFlight.AttackerExp, repPlanet.AttackerExp)
+	}
+}

@@ -233,6 +233,7 @@ func (s *TransportService) AttackHandler() event.Handler {
 			Defenders: defenders,
 			Rapidfire: rapidfireToMap(s.catalog),
 			IsMoon:    isMoon,
+			HasPlanet: true, // атака на планету или луну → опыт без штрафа (BA-007).
 		}
 		report, err := battle.Calculate(input)
 		if err != nil {

@@ -203,6 +203,7 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 				Defenders: []battle.Side{defSide},
 				Rapidfire: rapidfireToMap(s.catalog),
 				IsMoon:    isMoon,
+				HasPlanet: true, // ACS-атака на планету/луну → опыт без штрафа (BA-007).
 			}
 			report, err = battle.Calculate(inp)
 			if err != nil {
