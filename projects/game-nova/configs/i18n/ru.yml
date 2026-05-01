@@ -1089,6 +1089,18 @@ artefacts:
   techStorage: "Хранилище:"
   techUsed: "Используется:"
   techFree: "Свободно:"
+  # План 72.1.45 §2: история приобретений артефакта (legacy ArtefactInfo).
+  historyTitle: История применения
+  historyTime: Время
+  historyOwner: Игрок
+  historySource: Источник
+  historyReport: Отчёт
+  historyReportLink: Открыть
+  historySource_battle: Бой
+  historySource_expedition: Экспедиция
+  historySource_quest: Квест
+  historySource_admin: Админ
+  historySource_market: Биржа
 
 repair:
   title: "Ремонтный ангар — {{planetName}}"

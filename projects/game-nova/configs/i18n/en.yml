@@ -1092,6 +1092,18 @@ artefacts:
   techStorage: "Storage:"
   techUsed: "Used:"
   techFree: "Free:"
+  # План 72.1.45 §2: artefact acquisition history (legacy ArtefactInfo).
+  historyTitle: History of use
+  historyTime: Time
+  historyOwner: Player
+  historySource: Source
+  historyReport: Report
+  historyReportLink: Open
+  historySource_battle: Battle
+  historySource_expedition: Expedition
+  historySource_quest: Quest
+  historySource_admin: Admin
+  historySource_market: Market
 
 repair:
   title: "Repair Hangar — {{planetName}}"
