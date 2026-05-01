@@ -18,6 +18,7 @@ import { fetchBuildingCatalog } from '@/api/catalog';
 import { QK } from '@/api/query-keys';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber, formatDuration } from '@/lib/format';
+import { findCatalog } from '@/features/common/catalog';
 
 export function BuildingInfoScreen() {
   const params = useParams<{ type?: string }>();
@@ -55,6 +56,9 @@ export function BuildingInfoScreen() {
   const desc = t('info', descKey);
   const hasFull = fullDesc !== `[info.${fullDescKey}]`;
   const hasDesc = desc !== `[info.${descKey}]`;
+  // План 72.1.23: legacy `BuildingInfo::index` ставит `building_image`
+  // через Image::getImage(getUnitImage(name)). Origin не показывал.
+  const catalog = findCatalog(entry.id);
 
   return (
     <>
@@ -67,6 +71,18 @@ export function BuildingInfoScreen() {
         <tbody>
           <tr>
             <td>
+              {catalog && (
+                <img
+                  src={`/assets/origin/images/units/${catalog.icon}.gif`}
+                  alt={name}
+                  width={120}
+                  height={120}
+                  style={{ float: 'left', marginRight: 8 }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              )}
               {hasFull ? <span>{fullDesc}</span> : hasDesc ? <span>{desc}</span> : <i>—</i>}
             </td>
           </tr>

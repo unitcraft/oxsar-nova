@@ -15,6 +15,7 @@ import { fetchUnitCatalog } from '@/api/catalog';
 import { QK } from '@/api/query-keys';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber } from '@/lib/format';
+import { findCatalog } from '@/features/common/catalog';
 
 export function UnitInfoScreen() {
   const params = useParams<{ type?: string }>();
@@ -52,6 +53,9 @@ export function UnitInfoScreen() {
   const desc = t('info', descKey);
   const hasFull = fullDesc !== `[info.${fullDescKey}]`;
   const hasDesc = desc !== `[info.${descKey}]`;
+  // План 72.1.23: legacy `UnitInfo::index` ставит unit_image через
+  // Image::getImage(getUnitImage(name)).
+  const catalog = findCatalog(entry.id);
 
   return (
     <>
@@ -64,6 +68,18 @@ export function UnitInfoScreen() {
         <tbody>
           <tr>
             <td colSpan={3}>
+              {catalog && (
+                <img
+                  src={`/assets/origin/images/units/${catalog.icon}.gif`}
+                  alt={name}
+                  width={120}
+                  height={120}
+                  style={{ float: 'left', marginRight: 8 }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              )}
               {hasFull ? <span>{fullDesc}</span> : hasDesc ? <span>{desc}</span> : <i>—</i>}
             </td>
           </tr>
