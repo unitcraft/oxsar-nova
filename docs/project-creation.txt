@@ -14815,3 +14815,51 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(officer): план 72.1.18 — renewal + folder fixup (legacy hireOfficer паритет).
 
+
+---
+
+2026-05-01 — итерация 72.1.19: Chat — паритет с legacy.
+
+  Закрытие /chat ❓ → ✅ по §20.12. Найдено 4 расхождения с legacy
+  Chat.class.php — 3 закрыты, 1 объяснён design-decision'ом.
+
+  **Сделано (1:1 с legacy)**:
+  - Send: добавлены проверки umode/is_observer → 400. legacy
+    `Chat::checkRO` блокирует с UMODE_ENABLED/OBSERVER_MODE_ENABLED.
+  - Send: anti-flood — silent drop если последнее сообщение автора
+    в этом канале совпадает с body (legacy `if($message != $mes
+    ["message"])`). Возвращает 200 {deduplicated:true} вместо 201.
+  - historyLimit 50 → 75 (legacy `Chat.class.php:47` `LIMIT "75"`).
+  - Frontend BBCode parser (новый bbcode.tsx, 175 строк): поддержка
+    [b][i][u][s], [color=...], [url], [url=...], [img], [:emoji:].
+    Whitelist-теги, без dangerouslySetInnerHTML. Recursive parse
+    inner-content. SafeColor (red / #abc / #aabbcc) и SafeUrl
+    (http/https only). 11 unit-тестов.
+  - ChatScreen: `{m.body}` → `{renderBBCode(m.body)}`.
+
+  **НЕ сделано (объяснено)**:
+  - UI-disabled input для umode/observer: /api/me не отдаёт эти
+    поля (только admin-fields). Backend ловит и возвращает 400
+    с error.message → UI показывает через `errMsg`. Это семантически
+    равно legacy `eROreason` (тоже текстовое сообщение об
+    ограничении). Pre-emptive UI-блок — отдельный план,
+    требует расширения /api/me.
+
+  **Прогон**: `go build ./...` zero issues. `npx vitest run
+  src/features/chat` 16/16 passed (chat.test.ts 5 + bbcode.test.tsx 11).
+  Pre-existing eslint anchor-as-button errors на edit/delete (line
+  258, 270) не моя правка — не трогаю.
+
+  **Файлы**:
+  - docs/plans/72.1.19-chat-parity.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#18 → ✅).
+  - projects/game-nova/backend/internal/chat/handler.go
+    (umode/observer + anti-flood + historyLimit=75).
+  - projects/game-nova/frontends/origin/src/features/chat/bbcode.tsx (новый).
+  - projects/game-nova/frontends/origin/src/features/chat/bbcode.test.tsx (новый).
+  - projects/game-nova/frontends/origin/src/features/chat/ChatScreen.tsx
+    (renderBBCode integration).
+
+  **Коммит**:
+  feat(chat): план 72.1.19 — паритет с legacy (umode-RO + anti-flood + BBCode + history=75).
+

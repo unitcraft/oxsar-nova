@@ -28,6 +28,7 @@ import type { ApiError } from '@/api/client';
 import type { ChatChannelKind, ChatMessage } from '@/api/types';
 import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/i18n/i18n';
+import { renderBBCode } from './bbcode';
 
 const EDIT_WINDOW_MS = 5 * 60 * 1000;
 
@@ -243,7 +244,7 @@ export function ChatScreen({ kind }: ChatProps) {
                       ) : (
                         <>
                           <span style={{ whiteSpace: 'pre-wrap' }}>
-                            {m.body}
+                            {renderBBCode(m.body)}
                           </span>
                           {m.edited_at && (
                             <span className="small">
