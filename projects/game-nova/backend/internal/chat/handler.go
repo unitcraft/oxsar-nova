@@ -23,7 +23,9 @@ import (
 
 const (
 	maxBodyLen   = 500
-	historyLimit = 50
+	// План 72.1.19: legacy `Chat::index` SELECT 75 сообщений
+	// (`projects/game-legacy-php/src/game/page/Chat.class.php:47`).
+	historyLimit = 75
 	writeBuf     = 32
 
 	// План 46 Ф.4: rate-limit на отправку сообщений в чат.
@@ -308,8 +310,44 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var username string
-	_ = h.db.Pool().QueryRow(r.Context(), `SELECT username FROM users WHERE id=$1`, uid).Scan(&username)
+	// План 72.1.19: legacy `Chat::checkRO` — блок отправки в umode/observer.
+	var (
+		umode      bool
+		isObserver bool
+		username   string
+	)
+	if err := h.db.Pool().QueryRow(r.Context(),
+		`SELECT umode, is_observer, username FROM users WHERE id=$1`, uid,
+	).Scan(&umode, &isObserver, &username); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	if umode {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "chat: read-only in vacation mode"))
+		return
+	}
+	if isObserver {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "chat: read-only in observer mode"))
+		return
+	}
+
+	// План 72.1.19: legacy anti-flood — silent drop если последнее
+	// сообщение этого автора в этом канале совпадает с body.
+	// Возвращаем 201 + сам msg, не вставляя в БД и не broadcast (как
+	// будто всё прошло, но без дубля).
+	var lastBody string
+	_ = h.db.Pool().QueryRow(r.Context(), `
+		SELECT body FROM chat_messages
+		WHERE channel = $1 AND author_id = $2
+		ORDER BY created_at DESC LIMIT 1
+	`, channel, uid).Scan(&lastBody)
+	if lastBody == body {
+		// silent drop — не пишем в БД, но и не возвращаем ошибку.
+		httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+			"deduplicated": true,
+		})
+		return
+	}
 
 	msgID := ids.New()
 	now := time.Now().UTC()
