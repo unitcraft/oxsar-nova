@@ -15,6 +15,7 @@ import { fetchSystem } from '@/api/galaxy';
 import { QK } from '@/api/query-keys';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber } from '@/lib/format';
+import { useCurrentPlanetStore } from '@/stores/currentPlanet';
 
 const GALAXY_MIN = 1;
 const GALAXY_MAX = 16;
@@ -30,6 +31,8 @@ export function GalaxyScreen() {
   const { galaxy: gParam, system: sParam } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  // План 72.1.24: пробрасываем current planet id для legacy-cost 10H.
+  const currentPlanetId = useCurrentPlanetStore((s) => s.planetId);
   const [galaxy, setGalaxy] = useState(() =>
     clamp(Number(gParam ?? 1), GALAXY_MIN, GALAXY_MAX),
   );
@@ -39,7 +42,8 @@ export function GalaxyScreen() {
 
   const q = useQuery({
     queryKey: QK.galaxy(galaxy, system),
-    queryFn: () => fetchSystem(galaxy, system),
+    queryFn: () =>
+      fetchSystem(galaxy, system, currentPlanetId ?? undefined),
   });
 
   function go(g: number, s: number) {
