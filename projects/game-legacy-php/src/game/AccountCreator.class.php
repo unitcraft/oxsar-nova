@@ -243,6 +243,13 @@ class AccountCreator extends AjaxRequestHelper
                 "protection_time" => !NEW_USER_OBSERVER && PROTECTION_PERIOD > 0 ? time() + PROTECTION_PERIOD : 0,
 			)
 		);
+		// План 86 audit (security-critical): без guard userid=false → 0
+		// → password.userid=0 → next user-create написал бы свой
+		// password поверх старого; либо message.receiver=0 → потеря.
+		// Срываем регистрацию с явной ошибкой, не маскируем.
+		if ($userid === false) {
+			throw new Exception('Failed to create user account');
+		}
 		sqlInsert("password", array("userid" => $userid, "password" => md5($this->password), "time" => time()));
 
 		if( 1 ) // IPADDRESS == "95.221.100.214")

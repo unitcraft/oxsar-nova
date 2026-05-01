@@ -257,6 +257,12 @@ class Artefact
                 "bought" => empty($params["bought"]) ? 0 : 1,
                 // "artid" => $art_id,
 			));
+			// План 86 audit: $art_id идёт FK в addEvent (lifetime/delay
+			// triggered удаление) и sqlUpdate(artefact2user). Без guard'а
+			// событие удаления повесилось бы на чужой артефакт.
+			if ($art_id === false) {
+				return null;
+			}
 
 			$delay_eventid = 0;
 			$lifetime_eventid = 0;

@@ -14080,3 +14080,62 @@ config.inc.php cleanup; статус «на удаление» отозван.
 
   **Коммит**:
   fix(legacy-php): sqlInsert() и 9 прямых insert_id-вызовов проверяют rc (план 86).
+
+---
+
+2026-05-01 — итерация 86 (доп.): legacy-PHP — audit оставшихся
+sqlInsert() call sites + точечная защита 14 критичных точек.
+
+  **Контекст**: после первой итерации плана 86 (центральный фикс
+  sqlInsert + 9 прямых insert_id) пользователь попросил провести
+  полный audit оставшихся 54 call sites sqlInsert в кодовой базе,
+  чтобы точно понять, какие из них могут породить порчу данных при
+  `false→0` возврате.
+
+  **Методология**: `grep -rEn '(^|[^a-zA-Z_])sqlInsert\(' src/ public/ worker/`
+  → 54 совпадения. По каждому смотрел, используется ли возврат как
+  FK / параметр последующего запроса.
+
+  **Категоризация**:
+  - Группа A (~30): возврат игнорируется, безопасно автоматически.
+  - Группа B (~10): используется как маркер не-FK, false→0 безвредно.
+  - Группа C (14): FK chain → точечный guard.
+
+  **Группа C — все 14 точек получили guard'ы**:
+  - 2× Simulator.class.php (sim_user, sim_assault) — Logger::dieMessage.
+  - Participant.class.php:160 — early-return (продакшн-аналог симуляторного бага).
+  - Expedition.class.php:290 — throw.
+  - ExpedPlanetCreator.class.php (×2) — throw.
+  - Artefact.class.php:246 — return null (без guard события удаления повисли бы на чужом артефакте).
+  - **AccountCreator.class.php:232** — throw (SECURITY: password мог записаться поверх чужого).
+  - **Assault.class.php (×2)** — throw + early-return (продакшн-аналог симулятора, assaultid идёт во ВСЕ downstream и в Java exec).
+  - PlanetCreator.class.php:156 — throw (placeholder planet).
+  - EventHandler.class.php (×2) — return false (артефакты получили бы потерянные event_id).
+  - StockNew.class.php:768 — Logger::dieMessage (биржа: артефакт связали бы с чужим лотом).
+  - **Payment.class.php:491** — Logger::dieMessage (BILLING: pay_id в URL 2pay → callback мог начислить кредиты на чужую запись).
+
+  **Smoke**: имитация Simulator flow с откатом миграции 006 →
+  подтверждение что lastInsertId после провалившегося participant
+  INSERT всё ещё показывает PK от sim_assault. Поведение центрального
+  механизма не изменилось; новое — что 14 точек теперь явно прерывают
+  flow вместо тихого продолжения с фейковым 0.
+
+  **Решения**:
+  - Стратегия для каждого типа site: throw — для регистрации/auth/
+    важных создающих сущностей (вызывающий код в try/catch); dieMessage —
+    для UI-flow с пользовательской ошибкой; early-return — для
+    методов внутри контейнерных классов (Participant::setDBEntry,
+    Assault::loadDefenders), которые продолжают цепочку через возврат
+    `$this`.
+  - Группу A не трогаем (return ignored, false теряется).
+  - Группу B (NS::sumUpdate :1690, logMessage) тоже не трогаем —
+    `false→0` некритично, исправление потребовало бы изменения
+    семантики, не пропорционально.
+
+  **Файлы**:
+  - 11 PHP-файлов отредактированы (см. список в плане 86 «Audit»).
+  - docs/plans/86-legacy-php-sqlinsert-failure-detection.md — добавлен
+    раздел «Audit оставшихся call sites» (~80 строк).
+
+  **Коммит**:
+  fix(legacy-php): audit оставшихся sqlInsert + защита 14 критичных точек (план 86 расширение).

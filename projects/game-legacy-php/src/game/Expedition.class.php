@@ -301,6 +301,13 @@ class Expedition
 				"event_id"	=> $this->event["eventid"],
 			)
 		);
+		// План 86 audit: $this->statid идёт FK в expedition_id у
+		// expedition_found_units (см. Participant.class.php:320 и
+		// Expedition.class.php:391/984). При провале INSERT нельзя
+		// продолжать — иначе записи found_units лягут на чужой stat.
+		if ($this->statid === false) {
+			throw new Exception('Failed to create expedition_stats record');
+		}
 
 		if ( isset($this->ships[UNIT_ESPIONAGE_SENSOR]) )
 		{

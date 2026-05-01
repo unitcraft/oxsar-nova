@@ -496,6 +496,14 @@ class Payment extends Page
 				"pay_credit" => $credit,
 				"pay_date" => date("Y-m-d H:i:s"),
 				"pay_status" => 0));
+			// План 86 audit (billing-critical): $pay_id уходит в URL
+			// 2pay-сервиса, и при коллбэке кредиты начисляются по
+			// этому id. false → 0 → 2pay вернётся с pay_id=0, и
+			// callback handler начислит кредиты на чужую запись или
+			// проигнорирует. Не маскируем — рвём явно.
+			if ($pay_id === false) {
+				Logger::dieMessage('DB_ERROR_PAYMENT');
+			}
 
 			Header("Location: https://2pay.ru/oplata/?id=".PAY_2_ID."&v1=".PAY_2_GAME_ID.$pay_id."&v2=".Core::getUser()->get("userid")."&v3=".PAY_2_GAME_ID."&amount=".$to_pay);
 

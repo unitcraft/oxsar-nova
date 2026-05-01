@@ -177,6 +177,13 @@ class Participant
 				"add_plasma_tech"		=> intval($this->data["add_tech_".UNIT_PLASMA_TECH]),
 			)
 		);
+		// План 86 audit: продакшн-аналог Simulator-бага. participantid
+		// идёт FK в fleet2assault.participantid (foreach ниже). При
+		// провале INSERT (FK на assault/user/planet) early-return,
+		// чтобы не создать каскадный мусор в fleet2assault.
+		if ($this->participantid === false) {
+			return $this;
+		}
 
 		foreach($this->ships as $ship)
 		{

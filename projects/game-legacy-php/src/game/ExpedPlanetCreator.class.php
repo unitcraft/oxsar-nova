@@ -106,6 +106,12 @@ class ExpedPlanetCreator extends PlanetCreator
 					'solar_satellite_prod'	=> 100,
 				)
 			);
+			// План 86 audit: planetid идёт FK в galaxy.planetid (ниже).
+			// Без guard'а REPLACE INTO galaxy перепишет координаты
+			// чужой планеты.
+			if ($this->planetid === false) {
+				throw new Exception('Failed to create expedition planet');
+			}
 			sqlInsert(
 				'galaxy',
 				array(
@@ -134,6 +140,10 @@ class ExpedPlanetCreator extends PlanetCreator
 					'silicon'		=> 0,
 				)
 			);
+			// План 86 audit: см. комментарий в createPlanet (выше).
+			if ($this->planetid === false) {
+				throw new Exception('Failed to create expedition moon');
+			}
 			sqlQuery(
 				'UPDATE ' . PREFIX . 'galaxy SET '.
 					'(moonid = ' . $this->planetid .
