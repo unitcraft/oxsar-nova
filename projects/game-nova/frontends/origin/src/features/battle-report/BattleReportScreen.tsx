@@ -5,10 +5,13 @@
 // пользователь по ссылке может посмотреть бой или симуляцию.
 // Отчёты идентифицируются непредсказуемым UUID v7.
 //
-// Использует общий компонент BattleReportView. Pixel-perfect клон
-// legacy oxsar2-java/Assault.java HTML rendering.
+// План 72.1 ч.20.11.11: показываем «только сам бой» — без
+// header'а «Результат — победитель …» и без кнопок навигации
+// «К списку боёв / Симулятор боя» (last сейчас могут вести на
+// закрытые роуты для гостя). Это совпадает с legacy 8092 страницей
+// «Отчёт о сражении».
 
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchBattleReport } from '@/api/battles';
 import { QK } from '@/api/query-keys';
@@ -41,21 +44,5 @@ export function BattleReportScreen() {
     );
   }
 
-  return (
-    <>
-      <BattleReportView
-        report={q.data.report}
-        title={t('battlestats', 'colResult') ?? 'Боевой отчёт'}
-      />
-      <div style={{ marginTop: 12, textAlign: 'center' }}>
-        <Link to="/battlestats" className="button">
-          ← {t('battlestats', 'title') ?? 'К списку боёв'}
-        </Link>
-        {' '}
-        <Link to="/simulator" className="button">
-          {t('mission', 'simulator') ?? 'Симулятор боя'} →
-        </Link>
-      </div>
-    </>
-  );
+  return <BattleReportView report={q.data.report} compact />;
 }

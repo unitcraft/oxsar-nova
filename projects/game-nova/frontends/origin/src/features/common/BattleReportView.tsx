@@ -21,9 +21,13 @@ import { findCatalog } from '@/features/common/catalog';
 interface Props {
   report: SimReport;
   title?: string;
+  // compact: убрать header «Результат — Победитель · Раундов» —
+  // используется на публичном /battle-report/:id, где показываем
+  // «только сам бой» (план 72.1 ч.20.11.11).
+  compact?: boolean;
 }
 
-export function BattleReportView({ report, title }: Props) {
+export function BattleReportView({ report, title, compact = false }: Props) {
   const { t } = useTranslation();
   const winnerLabel =
     report.winner === 'attackers'
@@ -40,18 +44,20 @@ export function BattleReportView({ report, title }: Props) {
   const headerTitle = title ?? (t('mission', 'simulationResult') ?? 'Результат симуляции');
   return (
     <>
-      <table className="ntable" style={{ marginTop: 16 }}>
-        <thead>
-          <tr>
-            <th>
-              {headerTitle} —{' '}
-              <span className={winnerClass}>{winnerLabel}</span>
-              {' · '}
-              {t('mission', 'roundCount') ?? 'Раундов'}: {report.rounds}
-            </th>
-          </tr>
-        </thead>
-      </table>
+      {!compact && (
+        <table className="ntable" style={{ marginTop: 16 }}>
+          <thead>
+            <tr>
+              <th>
+                {headerTitle} —{' '}
+                <span className={winnerClass}>{winnerLabel}</span>
+                {' · '}
+                {t('mission', 'roundCount') ?? 'Раундов'}: {report.rounds}
+              </th>
+            </tr>
+          </thead>
+        </table>
+      )}
 
       {(report.rounds_trace ?? []).map((rt) => (
         <RoundView
@@ -345,23 +351,24 @@ function UnitTable({ units }: { units: SimRoundUnit[] }) {
         <tr>
           <th>%</th>
           {units.map((u) => {
-            // Полоска alive%: зелёный = живые здоровые, красный
-            // справа = убитые с начала боя. damaged-юниты включены в
-            // зелёное (их «недо-shell» отдельной шкалой не показываем).
+            // Полоска alive% (legacy: красный фон-«потери», зелёный
+            // overlay-«живые» поверх). 1:1 с oxsar2 Battlestats CSS:
+            // .rep_destroyed_back_div = background rgb(252,50,50);
+            // .rep_alive_over_div = width: alive%; зелёный overlay.
             const alive = Math.max(0, Math.min(100, u.alive_percent));
             return (
               <td key={`a-${u.unit_id}`}>
                 <div
                   className="rep_destroyed_back_div"
-                  style={{ width: 50, height: 6, display: 'flex', background: 'transparent' }}
+                  style={{ height: 5, background: 'rgb(252, 50, 50)' }}
                 >
                   <div
                     className="rep_alive_over_div"
-                    style={{ width: `${alive}%`, height: '100%', background: '#5cd0c8' }}
-                  />
-                  <div
-                    className="rep_destroyed_over_div"
-                    style={{ width: `${100 - alive}%`, height: '100%', background: '#d54' }}
+                    style={{
+                      width: `${alive}%`,
+                      height: '100%',
+                      background: 'rgb(92, 208, 200)',
+                    }}
                   />
                 </div>
               </td>
