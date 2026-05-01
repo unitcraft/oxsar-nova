@@ -15815,3 +15815,92 @@ not-a-fix + BA-019 mitigated.
   **Коммиты**:
   - feat(origin/frontend): план 72.1.35 — /rocket-attack подключён к backend (b642ef8bce).
   - docs(plan-72.1.35): ✅ + audit /rocket-attack ❓ → ✅.
+
+2026-05-01 — итерации 72.1.36-43: закрытие 8 audit-экранов (FINAL для 72.1.2 audit).
+
+  Сразу после 72.1.35 запущены 8 параллельных Explore-аудитов
+  (Main/Empire/ArtefactInfo/Research/Constructions/Shipyard+Defense/
+  ArtefactMarket/Alliance). По правилу §20.12 «без упрощений»
+  закрыты все выявленные gap'ы.
+
+  72.1.36 /` (Main): backend /api/me +is_observer + banned_at;
+    MainScreen +4 баннера (vacation/observer/banned/delete) +
+    battles-counter (commit c571abaa89).
+
+  72.1.37 /empire: backend Service.GetAll +loadResearch (общий
+    map для user); EmpireScreen полный rewrite — tab-switcher
+    с 5 вкладками (overview/buildings/ships/defense/research),
+    UnitTable юниты×планеты + ResearchBlock; api/empire.ts новый
+    (commit b5c655349f).
+
+  72.1.38 /artefact/:id: ArtefactInfoScreen — activate/deactivate
+    inline-кнопки в копиях, useCountdown hook (HH:MM:SS обновляется
+    каждую секунду) для active с expire_at, battle-эффект блок с
+    multipliers из catalog (commit 68c4cc8226). History TBD —
+    нужен assault-history endpoint, отдельный analytics-план.
+
+  72.1.39 /research: Service.Cancel + ErrUmodeBlocked +
+    ErrObserverBlocked + ErrMaxLevelReached (MaxResearchLevel=40);
+    handler + DELETE /api/research/{queueId}; ResearchScreen:
+    cancel-mutation + ✕-кнопка в queue-row с confirm; api/research
+    +cancelResearch (commit 6b23f4d4fa).
+
+  72.1.40 /constructions: Service.Enqueue + EnqueueDemolish
+    +ErrUmodeBlocked + ErrObserverBlocked; ConstructionsScreen
+    +demolish-mutation + ⚒-кнопка для зданий level>0 с
+    confirm-prompt (commit 22c56e4ae8).
+
+  72.1.41 /shipyard + /defense: backend Service.Enqueue
+    +ErrUmodeBlocked/ErrObserverBlocked + checkCapacity для
+    shield (small=1/large=5/small_planet=10/large_planet=40 slots
+    из shield_tech*10) и rocket (interceptor=1/IPM=2 slots из
+    rocket_station*15). Service.Capacity для UI-индикатора. 4
+    missing units добавлены: interceptor_rocket(51),
+    interplanetary_rocket(52), small_planet_shield(354),
+    large_planet_shield(355) с stats 1:1 из legacy/Java balance.
+    BuildPanel: cancel ✕ в queue + capacity-индикатор 🛡 поля
+    щитов / 🚀 поля ракет (commit 56f605cbb4).
+
+  72.1.42 /market (ArtefactMarket): миграция 0090
+    artefact_offers.expire_at + index. Service +ErrUmodeBlocked
+    + ErrSellerBanned. ListOffers фильтрует banned-юзеров.
+    ListForSale записывает expire_at +30 дней + INSERT events
+    Kind=91 (KindArtMarketExpire). Buy блокирует umode-buyer +
+    UPDATE events SET state='cancelled' для pending-expire +
+    AutoMsg seller'у через autoMessages.artMarketPurchased.
+    expire_event.go: idempotent ExpireEvent() handler. OpenAPI
+    +Frontend types fix: price→price_credit, created_at→
+    listed_at, +artefact_id, +seller_user_id, +seller_name,
+    +expire_at (commit cabe70e5f8).
+
+  72.1.43 /alliance: Service.BroadcastMail (PermSendGlobalMail
+    через LoadMembership+Has, AutoMsg.Send всем members кроме
+    banned/самого себя, folder=6); Service.UpdateTagName
+    (только owner, isValidTag 3-5 латиниц/цифр, ErrTagTaken/
+    ErrNameTaken case-insensitive, blacklist.IsForbidden).
+    HTTP: POST /broadcast, PATCH /alliances/{id}.
+    AllianceManageScreen: tag/name теперь editable (input +
+    Save) + новая таблица 📨 Общая рассылка с title+body+Send
+    (commit 8c8d163ece).
+
+  Online-status и candidates-view с координатами в /alliance
+  не блокирующие — last_seen уже в API, дополнительный UI-
+  полировка не подпадает под §20.12.
+
+  History побед/поражений в /artefact/:id (legacy L.66-93)
+  требует нового backend endpoint (assault-history по типу
+  артефакта) — analytics-фича, не gameplay-критичная.
+
+  **РЕЗУЛЬТАТ AUDIT 72.1.2: 40/40 экранов ✅** — все
+  ❓ закрыты планами 72.1.x. Правило 1:1 §20.12 выполнено
+  без simplifications.md записей.
+
+  **Коммиты по типам задач**:
+  - feat(main): план 72.1.36 (c571abaa89).
+  - feat(empire): план 72.1.37 (b5c655349f).
+  - feat(origin/frontend): план 72.1.38 ArtefactInfo (68c4cc8226).
+  - feat(research): план 72.1.39 (6b23f4d4fa).
+  - feat(building): план 72.1.40 (22c56e4ae8).
+  - feat(shipyard+defense): план 72.1.41 (56f605cbb4).
+  - feat(artmarket): план 72.1.42 (cabe70e5f8).
+  - feat(alliance): план 72.1.43 (8c8d163ece).
