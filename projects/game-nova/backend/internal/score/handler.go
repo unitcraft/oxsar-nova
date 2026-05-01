@@ -40,12 +40,14 @@ func (h *Handler) Highscore(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"highscore": entries})
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"entries": entries})
 }
 
-// MyRank GET /api/highscore/me?type=total|b|r|u|a
+// MyRank GET /api/highscore/me?type=total|b|r|u|a|e|dm|max
 //
 // Возвращает позицию текущего игрока в рейтинге.
+// Поле `score` — значение по выбранному типу (для UI); `points` — total
+// (legacy-compat); `e_points` — отдельная метрика опытных боёв.
 func (h *Handler) MyRank(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
 	if !ok {
@@ -61,7 +63,12 @@ func (h *Handler) MyRank(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	pts, err := h.svc.PlayerScore(r.Context(), uid, scoreType)
+	score, err := h.svc.PlayerScore(r.Context(), uid, scoreType)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	totalPts, err := h.svc.PlayerScore(r.Context(), uid, "total")
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
@@ -72,7 +79,11 @@ func (h *Handler) MyRank(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
-		"rank": rank, "type": scoreType, "points": pts, "e_points": ePts,
+		"rank":     rank,
+		"type":     scoreType,
+		"score":    score,
+		"points":   totalPts,
+		"e_points": ePts,
 	})
 }
 

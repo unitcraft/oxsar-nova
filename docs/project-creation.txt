@@ -14439,3 +14439,65 @@ not-a-fix + BA-019 mitigated.
 
   **Коммит**:
   fix(battle): BA-021 patched + BA-014 not-a-fix + BA-019 mitigated (план 72.1.3).
+
+---
+
+2026-05-01 — итерация 72.1.12: /ranking — типы очков + табы.
+
+  Legacy `Ranking.class.php` поддерживает 3 mode'а (player/alliance/
+  vacation, плюс observer/old_vacation как нишевые) и 11 типов очков
+  (dm/max/total/b/r/u + b_count/r_count/u_count + e/battles). Origin
+  `RankingScreen` показывал только топ-100 по `points` без выбора.
+
+  **Сделано**:
+  - backend `score.columnFor`: добавлены кейсы `dm` → dm_points,
+    `max` → max_points (поля уже в БД с миграции 0082).
+  - backend `MyRank`: возвращает поле `score` (по выбранному `?type=`),
+    плюс `points` (total) — соответствие фронт-DTO HighscoreEntry.
+  - backend `Highscore` отдавал `{"highscore": ...}`, openapi требует
+    `entries` — фикс. Был неработающий контракт, попутно исправил.
+  - origin `RankingScreen`: 3 таба mode (player/alliance/vacation)
+    через `useSearchParams`, селект type из 8 значений
+    (total/b/r/u/a/e/dm/max), 3 таблицы (PlayerTable/AllianceTable/
+    VacationTable) с правильными колонками.
+  - openapi `HighscoreEntry`: расширен (b_points/r_points/u_points/
+    a_points/e_points/dm_points/max_points/alliance_tag/home_*).
+  - i18n (ru/en): scoreTypeDm, scoreTypeMax, sortByLabel, colMembers
+    (остальные ключи tabPlayers/tabAlliances/tabVacation +
+    scoreType<Total/Buildings/Research/Fleet/Achievements/Battle> уже
+    были).
+
+  **Не сделано** (вне scope, оставлено в подплане):
+  - avg-режим (legacy `Ranking::average`) — отдельный JOIN на regtime.
+  - b_count/r_count/u_count — нет агрегатных колонок.
+  - player_observer / player_old_vacation — нишевые режимы.
+  - battles — нужна отдельная колонка в users.
+  - Пагинация по 25 — топ-100 без пагинации (для MVP).
+
+  **Прогон**: `go test ./internal/score/...` зелёное.
+  `npx tsc --noEmit` zero errors. `npx eslint src/features/ranking
+  src/api/highscore.ts src/api/types.ts src/api/query-keys.ts`
+  zero errors.
+
+  **Файлы**:
+  - docs/plans/72.1.12-ranking-types-modes.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (/ranking → ✅, пункт 10 closed).
+  - projects/game-nova/backend/internal/score/service.go
+    (+2 кейса в columnFor).
+  - projects/game-nova/backend/internal/score/handler.go
+    (entries-key + score field в MyRank).
+  - projects/game-nova/api/openapi.yaml
+    (HighscoreEntry расширен, ?type= параметр).
+  - projects/game-nova/frontends/origin/src/api/highscore.ts
+    (ScoreType, fetchHighscoreAlliances/Vacation, withType).
+  - projects/game-nova/frontends/origin/src/api/types.ts
+    (HighscoreEntry расширен, HighscoreAlliance, HighscoreVacation).
+  - projects/game-nova/frontends/origin/src/api/query-keys.ts
+    (highscore с type, highscoreAlliances, highscoreVacation).
+  - projects/game-nova/frontends/origin/src/features/ranking/RankingScreen.tsx
+    (полное переписывание: tabs + type-select + 3 таблицы).
+  - projects/game-nova/configs/i18n/ru.yml + en.yml (4 ключа).
+
+  **Коммит**:
+  feat(ranking): план 72.1.12 — type-select + tabs (player/alliance/vacation).
+

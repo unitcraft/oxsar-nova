@@ -1263,6 +1263,10 @@ score:
   scoreTypeFleet: Fleet
   scoreTypeAchievements: Achievements
   scoreTypeBattle: Battle
+  scoreTypeDm: "DM metric"
+  scoreTypeMax: "Peak points"
+  sortByLabel: "Sort by:"
+  colMembers: Members
   myRankLabel: "Your rank in «{{typeLabel}}»"
   filterPlaceholder: "🔍 Filter by name…"
   emptyPlayers: Leaderboard is empty — start building!

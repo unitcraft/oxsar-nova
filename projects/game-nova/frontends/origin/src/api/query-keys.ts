@@ -37,8 +37,10 @@ export const QK = {
   battlestats: () => ['battlestats'] as const,
   // Spring 3 (Ф.4) — artefacts / records / stats / catalog
   artefacts: () => ['artefacts'] as const,
-  highscore: () => ['highscore'] as const,
-  highscoreMe: () => ['highscore', 'me'] as const,
+  highscore: (type?: string) => ['highscore', type ?? 'total'] as const,
+  highscoreMe: (type?: string) => ['highscore', 'me', type ?? 'total'] as const,
+  highscoreAlliances: () => ['highscore', 'alliances'] as const,
+  highscoreVacation: () => ['highscore', 'vacation'] as const,
   publicStats: () => ['stats'] as const,
   buildingCatalog: (type: string | number) =>
     ['catalog', 'building', type] as const,

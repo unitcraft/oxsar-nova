@@ -1597,7 +1597,14 @@ paths:
     get:
       tags: [score]
       security: [{ bearerAuth: [] }]
-      summary: Таблица лидеров (топ-50).
+      summary: Таблица лидеров (топ-100).
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [total, b, r, u, a, e, dm, max]
+          description: Тип сортировки очков (план 72.1.12).
       responses:
         "200":
           description: ok
@@ -1615,6 +1622,12 @@ paths:
       tags: [score]
       security: [{ bearerAuth: [] }]
       summary: Ранг и очки текущего игрока.
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [total, b, r, u, a, e, dm, max]
       responses:
         "200":
           description: ok
@@ -4219,11 +4232,29 @@ components:
 
     HighscoreEntry:
       type: object
+      description: |
+        Запись лидерборда. План 72.1.12 расширил DTO: backend `score.Top`
+        возвращает все компоненты очков (b/r/u/a/e/dm/max + total как `points`)
+        чтобы UI мог переключать сортировку без повторного запроса.
+        Для `/api/highscore/me` дополнительно заполняется `score` —
+        значение по выбранному `?type=`.
       properties:
-        user_id:  { type: string, format: uuid }
-        username: { type: string }
-        score:    { type: integer, format: int64 }
-        rank:     { type: integer }
+        user_id:        { type: string, format: uuid }
+        username:       { type: string }
+        rank:           { type: integer }
+        score:          { type: number, description: "Выбранная метрика (только в /me)" }
+        points:         { type: number, description: "total = b+r+u" }
+        b_points:       { type: number }
+        r_points:       { type: number }
+        u_points:       { type: number }
+        a_points:       { type: number }
+        e_points:       { type: number }
+        dm_points:      { type: number }
+        max_points:     { type: number }
+        alliance_tag:   { type: string, nullable: true }
+        home_galaxy:    { type: integer, nullable: true }
+        home_system:    { type: integer, nullable: true }
+        home_position:  { type: integer, nullable: true }
 
     # ----- Techtree (план 72 Ф.4 Spring 3) -----
     Techtree:

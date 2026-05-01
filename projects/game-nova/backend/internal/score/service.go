@@ -506,6 +506,10 @@ func columnFor(t string) string {
 		return "a_points"
 	case "e":
 		return "e_points"
+	case "dm":
+		return "dm_points"
+	case "max":
+		return "max_points"
 	default:
 		return "points"
 	}
