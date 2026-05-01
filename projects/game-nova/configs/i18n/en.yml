@@ -1062,6 +1062,8 @@ artefacts:
   activate: Activate
   sell: Sell
   deactivate: Deactivate
+  # План 72.1.38: battle effect block.
+  battleEffect: "⚔ Battle effect"
   expired: 💀 Expired
   toastActivated: "{{name}} activated"
   toastArtefact: Artefact

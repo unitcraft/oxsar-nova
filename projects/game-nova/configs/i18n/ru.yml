@@ -1059,6 +1059,8 @@ artefacts:
   activate: Активировать
   sell: Продать
   deactivate: Деактивировать
+  # План 72.1.38: ArtefactInfo battle-эффект и боевые модификаторы.
+  battleEffect: "⚔ Боевой эффект"
   expired: 💀 Истёк
   toastActivated: "{{name}} активирован"
   toastArtefact: Артефакт
