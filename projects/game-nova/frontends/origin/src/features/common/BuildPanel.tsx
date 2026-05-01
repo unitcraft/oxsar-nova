@@ -9,6 +9,8 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   buildShipyard,
+  cancelShipyardTask,
+  fetchShipyardCapacity,
   fetchShipyardInventory,
   fetchShipyardQueue,
 } from '@/api/shipyard';
@@ -58,6 +60,33 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
         void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
       }
     },
+  });
+
+  // План 72.1.41: cancel-задача shipyard (legacy `Shipyard::abort`).
+  const cancel = useMutation({
+    mutationFn: (queueId: string) => cancelShipyardTask(planetId!, queueId),
+    onSuccess: () => {
+      if (planetId) {
+        void qc.invalidateQueries({ queryKey: QK.shipyardQueue(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.shipyardInventory(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+      }
+    },
+  });
+
+  // План 72.1.41: capacity-индикатор для DefenseScreen.
+  const capQ = useQuery({
+    queryKey: planetId ? ['shipyard-capacity', planetId] : ['noop-cap'],
+    queryFn: () =>
+      planetId
+        ? fetchShipyardCapacity(planetId)
+        : Promise.resolve({
+            free_shield_fields: 0,
+            max_shield_fields: 0,
+            free_rocket_fields: 0,
+            max_rocket_fields: 0,
+          }),
+    enabled: planetId !== null && group === 'defense',
   });
 
   if (!planetId) {
@@ -116,7 +145,7 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
         <table className="ntable">
           <tbody>
             <tr>
-              <th colSpan={4}>{t('buildings', 'outstandingMissions')}</th>
+              <th colSpan={5}>{t('buildings', 'outstandingMissions')}</th>
             </tr>
             {queue.map((task, idx) => {
               const cat = catalog.find((c) => c.id === task.unit_id);
@@ -130,9 +159,51 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
                   <td width="100px">
                     {formatDuration(secondsUntil(task.end_at))}
                   </td>
+                  {/* План 72.1.41: cancel-кнопка (legacy Shipyard::abort). */}
+                  <td width="60px" align="center">
+                    <button
+                      type="button"
+                      className="button"
+                      disabled={cancel.isPending}
+                      title={t('buildings', 'cancelTask') || 'Отменить'}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            (t('buildings', 'cancelConfirm') as string) ||
+                              'Отменить задачу? Возврат ресурсов в зависимости от прогресса.',
+                          )
+                        ) {
+                          cancel.mutate(task.id);
+                        }
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </td>
                 </tr>
               );
             })}
+          </tbody>
+        </table>
+      )}
+
+      {/* План 72.1.41: capacity-индикатор для DefenseScreen. */}
+      {group === 'defense' && capQ.data && (
+        <table className="ntable">
+          <tbody>
+            <tr>
+              <td className="center">
+                🛡 {t('buildings', 'shieldFields') || 'Поля щитов'}:{' '}
+                <b className={capQ.data.free_shield_fields === 0 ? 'false' : 'true'}>
+                  {capQ.data.free_shield_fields} / {capQ.data.max_shield_fields}
+                </b>
+                {' · '}
+                🚀 {t('buildings', 'rocketFields') || 'Поля ракет'}:{' '}
+                <b className={capQ.data.free_rocket_fields === 0 ? 'false' : 'true'}>
+                  {capQ.data.free_rocket_fields} / {capQ.data.max_rocket_fields}
+                </b>
+              </td>
+            </tr>
           </tbody>
         </table>
       )}

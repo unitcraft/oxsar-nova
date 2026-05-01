@@ -66,3 +66,36 @@ defense:
     shell: 150000      # 27-K: 100000 → 150000
     # 27-S: front 17 → 14
     front: 14
+
+  # План 72.1.41: legacy ID 51-52 (defense missiles) + 354-355
+  # (planet shields). Все 4 ранее отсутствовали — ErrUnknownUnit
+  # при попытке построить. Stats 1:1 из legacy/Java balance.
+  interceptor_rocket:
+    id: 51
+    cost: { metal: 8000, silicon: 0, hydrogen: 0 }
+    attack: 1
+    shield: 1
+    shell: 24000       # 27-K: 16000 → 24000
+
+  interplanetary_rocket:
+    id: 52
+    cost: { metal: 12500, silicon: 2500, hydrogen: 10000 }
+    attack: 12000
+    shield: 1
+    shell: 1500
+
+  small_planet_shield:
+    id: 354
+    cost: { metal: 200000, silicon: 200000, hydrogen: 0 }
+    attack: 1
+    shield: 50000
+    shell: 1500000     # 27-K: 1000000 → 1500000
+    front: 13
+
+  large_planet_shield:
+    id: 355
+    cost: { metal: 1000000, silicon: 1000000, hydrogen: 0 }
+    attack: 1
+    shield: 200000
+    shell: 7500000     # 27-K: 5000000 → 7500000
+    front: 14

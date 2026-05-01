@@ -35,6 +35,10 @@ var (
 	ErrInvalidCount      = errors.New("shipyard: invalid count")
 	ErrQueueItemNotFound = errors.New("shipyard: queue item not found")
 	ErrAlreadyDone       = errors.New("shipyard: queue item already completed")
+	// План 72.1.41: legacy `Shipyard.class.php` строки 390, 394 блокируют
+	// при umode/observer.
+	ErrUmodeBlocked      = errors.New("shipyard: blocked in vacation mode")
+	ErrObserverBlocked   = errors.New("shipyard: blocked in observer mode")
 )
 
 type Service struct {
@@ -82,6 +86,20 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		return QueueItem{}, ErrPlanetOwnership
 	}
 
+	// План 72.1.41: блок umode/observer (legacy Shipyard.class.php:390, 394).
+	var umode, isObs bool
+	if err := s.db.Pool().QueryRow(ctx,
+		`SELECT umode, is_observer FROM users WHERE id = $1`, userID,
+	).Scan(&umode, &isObs); err != nil {
+		return QueueItem{}, fmt.Errorf("read user state: %w", err)
+	}
+	if umode {
+		return QueueItem{}, ErrUmodeBlocked
+	}
+	if isObs {
+		return QueueItem{}, ErrObserverBlocked
+	}
+
 	var item QueueItem
 	err = s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		// 1. Есть ли верфь.
@@ -99,6 +117,12 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 
 		// 2. Зависимости юнита.
 		if err := s.reqs.Check(ctx, tx, key, userID, planetID); err != nil {
+			return err
+		}
+
+		// 2b. План 72.1.41: capacity-check для shield/rocket юнитов
+		// (legacy `Shipyard` строки 41-51, 470-490).
+		if err := s.checkCapacity(ctx, tx, userID, planetID, unitID, count); err != nil {
 			return err
 		}
 
