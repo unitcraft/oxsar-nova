@@ -15,15 +15,29 @@ import { fetchTechtree } from '@/api/catalog';
 import { QK } from '@/api/query-keys';
 import type { TechtreeNode, TechtreeRequirement } from '@/api/types';
 import { useTranslation } from '@/i18n/i18n';
+import { findCatalog } from '@/features/common/catalog';
 
 interface SectionDef {
   kind: TechtreeNode['kind'];
   titleKey: string;
   routePrefix: '/building' | '/unit';
+  // План 72.1.22: для секции 'building' разделяем на наземные/лунные.
+  filter?: (n: TechtreeNode) => boolean;
 }
 
 const SECTIONS: SectionDef[] = [
-  { kind: 'building', titleKey: 'kindBuildings', routePrefix: '/building' },
+  {
+    kind: 'building',
+    titleKey: 'kindBuildings',
+    routePrefix: '/building',
+    filter: (n) => !n.moon_only,
+  },
+  {
+    kind: 'building',
+    titleKey: 'kindMoonBuildings',
+    routePrefix: '/building',
+    filter: (n) => !!n.moon_only,
+  },
   { kind: 'research', titleKey: 'kindResearch', routePrefix: '/unit' },
   { kind: 'ship', titleKey: 'kindShips', routePrefix: '/unit' },
   { kind: 'defense', titleKey: 'kindDefense', routePrefix: '/unit' },
@@ -49,12 +63,14 @@ export function TechtreeScreen() {
         </tr>
       </thead>
       <tbody>
-        {SECTIONS.map((section) => {
-          const items = nodes.filter((n) => n.kind === section.kind);
+        {SECTIONS.map((section, sectionIdx) => {
+          const items = nodes.filter(
+            (n) => n.kind === section.kind && (!section.filter || section.filter(n)),
+          );
           if (items.length === 0) return null;
           return (
             <SectionRows
-              key={section.kind}
+              key={`${section.kind}-${sectionIdx}`}
               titleKey={section.titleKey}
               items={items}
               routePrefix={section.routePrefix}
@@ -93,7 +109,21 @@ function SectionRows({ titleKey, items, routePrefix }: SectionRowsProps) {
         const display = name !== `[info.${i18nKey}]` ? name : n.key;
         return (
           <tr key={`${n.kind}-${n.id}`}>
-            <td style={{ width: '1%' }}>#{n.id}</td>
+            <td style={{ width: '1%' }}>
+              {findCatalog(n.id) ? (
+                <img
+                  src={`/assets/origin/images/units/${findCatalog(n.id)!.icon}.gif`}
+                  alt={display}
+                  width={32}
+                  height={32}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                `#${n.id}`
+              )}
+            </td>
             <td>
               <Link to={`${routePrefix}/${n.id}`}>{display}</Link>
             </td>

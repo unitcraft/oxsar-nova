@@ -486,6 +486,9 @@ export interface TechtreeNode {
   current_level: number;
   unlocked: boolean;
   requirements: TechtreeRequirement[];
+  // План 72.1.22: moon-постройки идут отдельной секцией в legacy
+  // `Techtree.class.php` (sortByMode = UNIT_TYPE_MOON_CONSTRUCTION).
+  moon_only?: boolean;
 }
 
 export interface Techtree {

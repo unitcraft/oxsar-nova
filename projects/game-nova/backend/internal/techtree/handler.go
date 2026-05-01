@@ -35,6 +35,10 @@ type nodeDTO struct {
 	CurrentLevel int      `json:"current_level"`
 	Unlocked     bool     `json:"unlocked"`
 	Requirements []reqDTO `json:"requirements"`
+	// План 72.1.22: legacy `Techtree.class.php` отдельная секция «moon»
+	// для лунных построек. moon_only=true → frontend рендерит в отдельной
+	// секции под обычными зданиями.
+	MoonOnly bool `json:"moon_only,omitempty"`
 }
 
 type response struct {
@@ -115,6 +119,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 			Kind:         "building",
 			ID:           spec.ID,
 			CurrentLevel: buildingLevels[key],
+			MoonOnly:     spec.MoonOnly,
 		}
 		n.Requirements, n.Unlocked = h.buildRequirements(key, buildingLevels, researchLevels)
 		nodes = append(nodes, n)

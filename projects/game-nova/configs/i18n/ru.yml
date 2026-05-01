@@ -1523,6 +1523,7 @@ techtree:
   locked: закрыто
   noRequirements: Без предусловий
   kindBuildings: Постройки
+  kindMoonBuildings: 🌙 Лунные постройки
   kindResearch: Исследования
   kindShips: Флот
   kindDefense: Оборона
