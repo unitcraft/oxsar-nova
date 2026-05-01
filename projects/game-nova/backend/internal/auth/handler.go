@@ -74,12 +74,15 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		ofLevel, battles                     int
 		vacationSince, vacationLastEnd       *time.Time
 		deleteAt                             *time.Time // план 72.1.30: pending удаление
+		isObserver                           bool       // план 72.1.36: observer-режим
+		bannedAt                             *time.Time // план 72.1.36: banned-флаг
 	)
 	if err := h.db.QueryRow(ctx,
 		`SELECT username, credit, COALESCE(profession, 'none'),
 		        points, e_points, be_points, max_points,
 		        of_points, of_level, dm_points, battles,
-		        vacation_since, vacation_last_end, delete_at
+		        vacation_since, vacation_last_end, delete_at,
+		        is_observer, banned_at
 		 FROM users WHERE id=$1`,
 		uid,
 	).Scan(
@@ -87,6 +90,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		&points, &ePoints, &bePoints, &maxPoints,
 		&ofPoints, &ofLevel, &dmPoints, &battles,
 		&vacationSince, &vacationLastEnd, &deleteAt,
+		&isObserver, &bannedAt,
 	); err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
@@ -135,6 +139,13 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		"dm_points":                    dmPoints,
 		"intergalactic_research_level": ignLevel,
 		"battles":                      battles,
+		// План 72.1.36: legacy main.tpl показывает баннеры для
+		// observer/banned + vacation. observer = наблюдатель не
+		// участвует в рейтинге; banned = бан-флаг с datetime.
+		"is_observer":                  isObserver,
+	}
+	if bannedAt != nil {
+		resp["banned_at"] = bannedAt.UTC().Format(time.RFC3339)
 	}
 	if vacationSince != nil {
 		resp["vacation_since"] = vacationSince.UTC().Format(time.RFC3339)

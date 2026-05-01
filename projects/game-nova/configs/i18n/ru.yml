@@ -2548,6 +2548,12 @@ main:
   availableVersion: "Доступные версии:"
   battleActiveExperience: Накопленный опыт
   battleExperience: Военный опыт
+  # План 72.1.36: баннеры состояний аккаунта (vacation/observer/banned/pending-deletion).
+  battles: Битв
+  vacationActive: "✈ Режим отпуска активен"
+  observerMode: "👁 Режим наблюдателя — рейтинг и активность недоступны."
+  bannedAccount: "🚫 Аккаунт заблокирован"
+  pendingDeletion: "⚠ Аккаунт будет удалён"
   changes: Изменения
   curHomePlanet: Главная планета
   debris: Поле обломков

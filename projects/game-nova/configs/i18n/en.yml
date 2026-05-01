@@ -2548,6 +2548,12 @@ main:
   availableVersion: Available version
   battleActiveExperience: Active battle experience
   battleExperience: Battle experience
+  # План 72.1.36: account state banners.
+  battles: Battles
+  vacationActive: "✈ Vacation mode active"
+  observerMode: "👁 Observer mode — ranking and activity disabled."
+  bannedAccount: "🚫 Account banned"
+  pendingDeletion: "⚠ Account scheduled for deletion"
   changes: Changes
   curHomePlanet: Current home planet
   debris: Debris

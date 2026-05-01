@@ -98,6 +98,32 @@ export function MainScreen() {
   );
 
   return (
+    <>
+      {/* План 72.1.36: legacy main.tpl показывает баннеры для
+          vacation/observer/banned/pending-deletion в шапке. */}
+      {me?.vacation_since && (
+        <div className="false" style={{ padding: '0.5em', textAlign: 'center', marginBottom: 4 }}>
+          ✈ {t('main', 'vacationActive') ||
+            `Режим отпуска с ${new Date(me.vacation_since).toLocaleString('ru-RU')}`}
+        </div>
+      )}
+      {me?.is_observer && (
+        <div className="false" style={{ padding: '0.5em', textAlign: 'center', marginBottom: 4 }}>
+          👁 {t('main', 'observerMode') || 'Режим наблюдателя — рейтинг и активность недоступны.'}
+        </div>
+      )}
+      {me?.banned_at && (
+        <div className="false" style={{ padding: '0.5em', textAlign: 'center', marginBottom: 4 }}>
+          🚫 {t('main', 'bannedAccount') ||
+            `Аккаунт заблокирован (${new Date(me.banned_at).toLocaleString('ru-RU')})`}
+        </div>
+      )}
+      {me?.delete_at && (
+        <div className="false" style={{ padding: '0.5em', textAlign: 'center', marginBottom: 4 }}>
+          ⚠ {t('main', 'pendingDeletion') ||
+            `Удаление запланировано на ${new Date(me.delete_at).toLocaleString('ru-RU')}`}
+        </div>
+      )}
     <table className="ntable">
       <thead>
         <tr>
@@ -302,10 +328,19 @@ export function MainScreen() {
                 <td colSpan={2}>{me.intergalactic_research_level}</td>
               </tr>
             )}
+            {/* План 72.1.36: legacy main.tpl показывает счётчик битв
+                рядом с боевым опытом. */}
+            {me.battles > 0 && (
+              <tr>
+                <td>{t('main', 'battles') || 'Битв'}</td>
+                <td colSpan={2}>{formatNumber(me.battles)}</td>
+              </tr>
+            )}
           </>
         )}
       </tbody>
     </table>
+    </>
   );
 }
 

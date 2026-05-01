@@ -37,6 +37,9 @@ export interface MeInfo {
   vacation_last_end?: string;
   // План 72.1.30: запланированное удаление аккаунта (grace 7 дней).
   delete_at?: string;
+  // План 72.1.36: observer/banned флаги для main-баннеров.
+  is_observer?: boolean;
+  banned_at?: string;
 }
 
 export function fetchMe(): Promise<MeInfo> {
