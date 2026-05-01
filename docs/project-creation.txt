@@ -14600,3 +14600,58 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(friends): план 72.1.14 — двусторонний accept-flow (legacy buddylist.accepted).
 
+
+---
+
+2026-05-01 — итерация 72.1.15: Profession — паритет с legacy.
+
+  По чек-листу §20.12 для /profession обнаружены 4 расхождения с
+  legacy `Profession.class.php`. Все закрыты 1:1.
+
+  **Сделано**:
+  - service.Change: legacy `if($umode){ Logger::dieMessage('UMODE_ENABLED') }`
+    → ErrInVacation (мап в 400 в handler).
+  - service.Change: legacy `if($profession != $id)` → no-op без
+    списания, если игрок уже на этой профессии.
+  - service.Change: после успешного UPDATE отправляет AutoMsg
+    `creditProfessionChanged` в папку 8 (legacy MSG_FOLDER_CREDIT)
+    через automsg.SendDirect в той же транзакции (атомарно с
+    списанием 1000 кредитов).
+  - ProfessionSpec.Description (новое поле yaml); заполнено для
+    всех 4 профессий (miner/attacker/defender/tank) — описания
+    зеркалят legacy `getItem(name+'_DESC')`.
+  - DTO ProfessionDTO.Description; types.ts Profession.description.
+  - ProfessionScreen.tsx показывает description под радио-меткой
+    профессии (зеркало legacy `profession.tpl`).
+  - i18n (ru/en): autoMessages.creditProfessionChanged.title/body/
+    noneLabel + profession.errInVacation.
+  - Wiring: professionSvc.WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
+    в main.go.
+
+  **Прогон**: `go test ./internal/profession/...` зелёное (handler
+  401/400 unit-тесты). Round-trip тесты на umode/same/AutoMsg
+  требуют TEST_DATABASE_URL. `npx tsc --noEmit` zero errors.
+  eslint zero errors.
+
+  **Файлы**:
+  - docs/plans/72.1.15-profession-parity.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#27 → ✅).
+  - projects/game-nova/configs/professions.yml (description x4).
+  - projects/game-nova/backend/internal/config/catalog.go
+    (ProfessionSpec.Description).
+  - projects/game-nova/backend/internal/profession/service.go
+    (ErrInVacation, same-check, AutoMsg, DTO).
+  - projects/game-nova/backend/internal/profession/handler.go
+    (ErrInVacation → 400).
+  - projects/game-nova/backend/internal/profession/handler_test.go (новый).
+  - projects/game-nova/backend/cmd/server/main.go
+    (WithAutoMsg + WithBundle на professionSvc).
+  - projects/game-nova/frontends/origin/src/api/types.ts
+    (Profession.description).
+  - projects/game-nova/frontends/origin/src/features/profession/ProfessionScreen.tsx
+    (description под label).
+  - projects/game-nova/configs/i18n/{ru,en}.yml (4 ключа).
+
+  **Коммит**:
+  feat(profession): план 72.1.15 — паритет с legacy (umode + same-check + AutoMsg + description).
+

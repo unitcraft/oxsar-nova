@@ -200,6 +200,9 @@ export function ProfessionScreen() {
                   </label>
                 </td>
                 <td>
+                  {p.description && (
+                    <div style={{ marginBottom: 6 }}>{p.description}</div>
+                  )}
                   {specs.length > 0 && (
                     <table
                       className="table_no_background"

@@ -55,7 +55,7 @@ func (h *Handler) Change(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	case errors.Is(err, ErrUnknownProfession):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
-	case errors.Is(err, ErrNotEnoughCredit), errors.Is(err, ErrChangeTooSoon):
+	case errors.Is(err, ErrNotEnoughCredit), errors.Is(err, ErrChangeTooSoon), errors.Is(err, ErrInVacation):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))

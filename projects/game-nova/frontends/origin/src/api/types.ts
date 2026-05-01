@@ -735,6 +735,8 @@ export interface OfficerActivateRequest {
 export interface Profession {
   key: string;
   label: string;
+  // План 72.1.15: legacy `profession.tpl` показывает «desc» под названием.
+  description?: string;
   bonus?: Record<string, number>;
   malus?: Record<string, number>;
 }
