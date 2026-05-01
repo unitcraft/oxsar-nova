@@ -834,6 +834,10 @@ export interface ProfessionInfo {
   profession: string;
   label: string;
   next_change_allowed?: string | null;
+  // План 72.1.47: legacy `getProfessionChangeCost`. После cooldown
+  // change_cost=0 и days_remain=0; в течение cooldown — 1000 + N дней.
+  change_cost: number;
+  days_remain: number;
 }
 
 // S-MP MonitorPlanet (план 72.1.20). PhalanxScan — DTO из

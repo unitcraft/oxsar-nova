@@ -58,16 +58,6 @@ function fmtDelta(v: number): string {
   return v > 0 ? `+${v}` : String(v);
 }
 
-function timeUntil(iso: string): string | null {
-  const ms = new Date(iso).getTime() - Date.now();
-  if (ms <= 0) return null;
-  const d = Math.floor(ms / 86_400_000);
-  const h = Math.floor((ms % 86_400_000) / 3_600_000);
-  if (d > 0) return `${d}д ${h}ч`;
-  const m = Math.floor((ms % 3_600_000) / 60_000);
-  return `${h}ч ${m}м`;
-}
-
 export function ProfessionScreen() {
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -101,26 +91,28 @@ export function ProfessionScreen() {
   const professions: Profession[] = listQ.data?.professions ?? [];
   const me = meQ.data;
   const currentKey = me?.profession ?? 'none';
-  const blocked = me?.next_change_allowed
-    ? timeUntil(me.next_change_allowed)
-    : null;
+  // План 72.1.47: legacy позволяет менять профессию в любое время —
+  // в cooldown стоимость = 1000 cr, после = 0. UI показывает динамику
+  // через me.change_cost / me.days_remain (backend NS::getProfessionChangeCost).
+  const changeCost = me?.change_cost ?? 0;
+  const daysRemain = me?.days_remain ?? 0;
 
   const radioValue = selected ?? currentKey;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!radioValue || radioValue === currentKey || blocked) return;
+    if (!radioValue || radioValue === currentKey) return;
     change.mutate(radioValue);
   }
 
   // change_info зеркалит legacy: если cooldown активен — показать
-  // оставшееся время; если можно сменить — выводим стоимость 1000 cr +
-  // интервал 14 дней.
-  const changeInfo = blocked
-    ? t('profession', 'confirmChoose', { name: '—', days: '14' }) +
-      ' ' +
-      `(⏳ ${blocked})`
-    : t('profession', 'confirmChoose', { name: '…', days: '14' });
+  // стоимость и days_remain; иначе — «бесплатно».
+  const changeInfo = daysRemain > 0
+    ? t('profession', 'changeCostInfo', {
+        cost: String(changeCost),
+        days: String(daysRemain),
+      })
+    : t('profession', 'changeFreeInfo');
 
   return (
     <form method="post" action="#" onSubmit={submit} data-testid="profession-form">
@@ -144,7 +136,6 @@ export function ProfessionScreen() {
                 className="button"
                 disabled={
                   change.isPending ||
-                  !!blocked ||
                   !radioValue ||
                   radioValue === currentKey
                 }
@@ -185,7 +176,6 @@ export function ProfessionScreen() {
                     value={p.key}
                     checked={radioValue === p.key}
                     onChange={() => setSelected(p.key)}
-                    disabled={!!blocked}
                   />{' '}
                   <label htmlFor={`profession_${p.key}`}>
                     <b className={isCurrent ? 'true' : undefined}>{p.label}</b>
