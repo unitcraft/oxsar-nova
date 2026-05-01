@@ -40,6 +40,11 @@ export interface SimSide {
   tech?: SimTech;
   units: SimUnit[];
   primary_target?: number;
+  // План 72.1.34 ч.C: legacy 6 боевых артефактов с
+  // effect_type=ARTEFACT_EFFECT_TYPE_BATTLE (id 316-318, 359-361).
+  // Backend агрегирует через ComputeBattleModifier и применяет
+  // multiplier к attack/shield/shell.
+  battle_artefact_ids?: number[];
 }
 
 export interface SimInput {
@@ -49,6 +54,9 @@ export interface SimInput {
   attackers: SimSide[];
   defenders: SimSide[];
   is_moon?: boolean;
+  // План 72.1.34 ч.B: цель-здание (legacy target_buildingid).
+  target_building_id?: number;
+  target_building_level?: number;
 }
 
 // Расширенная статистика раунда (план 72.1 ч.20.11.4) — порт
@@ -134,6 +142,9 @@ export interface SimReport {
   haul_metal?: number;
   haul_silicon?: number;
   haul_hydrogen?: number;
+  // План 72.1.34 ч.B: target-building destroy chance.
+  building_destroy_chance?: number;
+  target_destroyed?: boolean;
 }
 
 // Сводка по num_sim итераций (план 72.1 ч.20.11.7) — pixel-perfect клон
