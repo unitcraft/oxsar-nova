@@ -241,6 +241,9 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 		for _, d := range defDefense {
 			defenseIDs[d.UnitID] = true
 		}
+		// План 72.1.31: moonCreated проставится ниже tryCreateMoon'ом
+		// (для INSERT battle_reports.moon_created → /battlestats фильтр).
+		moonCreated := false
 		debrisM, debrisS := calcDebris(report, defenseIDs, s.catalog)
 		if debrisM > 0 || debrisS > 0 {
 			if _, err := tx.Exec(ctx, `
@@ -254,10 +257,12 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 				return fmt.Errorf("acs attack: debris: %w", err)
 			}
 			if !isMoon {
-				if err := tryCreateMoon(ctx, tx, s.bundle, lead.g, lead.sys, lead.pos,
-					debrisM+debrisS, report.Seed, defenderUserID, lead.ownerUserID); err != nil {
+				created, err := tryCreateMoon(ctx, tx, s.bundle, lead.g, lead.sys, lead.pos,
+					debrisM+debrisS, report.Seed, defenderUserID, lead.ownerUserID)
+				if err != nil {
 					return fmt.Errorf("acs attack: moon: %w", err)
 				}
+				moonCreated = created
 			}
 		}
 
@@ -385,17 +390,22 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 
 		reportJSON, _ := json.Marshal(report)
 		reportID := ids.New()
+		// План 72.1.31: 3 флага для фильтров /battlestats. ACS никогда
+		// не имеет alien holding (LoadHoldingDefender вызывается только
+		// в single-attack), поэтому has_aliens=false всегда.
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO battle_reports (id, attacker_user_id, defender_user_id, planet_id,
 			                            seed, winner, rounds,
 			                            debris_metal, debris_silicon,
 			                            loot_metal, loot_silicon, loot_hydrogen,
-			                            report, acs_participants)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			                            report, acs_participants,
+			                            has_aliens, moon_created, is_moon)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 		`, reportID, lead.ownerUserID, defenderUserID, planetID,
 			int64(report.Seed), report.Winner, report.Rounds,
 			debrisM, debrisS, int64(0), int64(0), int64(0),
-			reportJSON, participantsJSON); err != nil {
+			reportJSON, participantsJSON,
+			false, moonCreated, isMoon); err != nil {
 			return fmt.Errorf("acs attack: insert report: %w", err)
 		}
 
