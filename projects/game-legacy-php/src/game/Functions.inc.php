@@ -1779,7 +1779,7 @@ function isHomePlanetRequiredForPage($page_name)
 			'Artefacts', 'Repair', 'Disassemble', 'Stock', 'ExchangeOpts',*/ 'Chat', /*'ChatAlly',*/ 'MSG',
 			/*'Alliance', 'MemberList',*/ 'Friends', /*'Galaxy', 'Empire',*/ 'Techtree', 'Ranking',
 			'Records', 'Battlestats', 'ResTransferStats', 'Simulator', 'AdvTechCalculator', /*'Market',
-			'ArtefactMarket',*/ 'Payment', 'Search', /*'PlanetOptions',*/ 'Prefs', 'UserAgreement', 'Support'
+			'ArtefactMarket',*/ 'Payment', 'Search', /*'PlanetOptions',*/ 'Prefs'
 			) as $name)
 		{
 			$openPages[strtolower($name)] = 1;
@@ -1788,33 +1788,10 @@ function isHomePlanetRequiredForPage($page_name)
 	return !isset($openPages[strtolower($page_name)]);
 }
 
-function isArgeementCanBeShownForPage($page_name)
-{
-	static $list = null;
-	if(empty($list))
-	{
-		foreach(array('Main', /*'HomePlanetRequired',*/ 'Resource', 'Constructions', 'Research', 'Shipyard', 'Defense', 'Mission',
-			'Artefacts', 'Repair', 'Disassemble', 'Stock', 'ExchangeOpts', 'Chat', 'ChatAlly', 'MSG',
-			'Alliance', 'MemberList', 'Friends', 'Galaxy', 'Empire', 'Techtree', 'Ranking',
-			'Records', 'Battlestats', 'ResTransferStats', 'Simulator', 'AdvTechCalculator', 'Market',
-			'ArtefactMarket', /*'Payment'*/ 'Search', 'PlanetOptions', 'Prefs', /*'UserAgreement', 'Support'*/
-			) as $name)
-		{
-			$list[strtolower($name)] = 1;
-		}
-	}
-	return isset($list[strtolower($page_name)]);
-}
-
-function getArgeementTime()
-{
-	if(!NS::getMCH()->get("ArgeementTime", $time))
-	{
-		$time = (int)sqlSelectField("user_agreement", "UNIX_TIMESTAMP(MAX(date))");
-		NS::getMCH()->set("ArgeementTime", $time, 60*10);
-	}
-	return $time;
-}
+// План 72.1 ч.20.12: функции isArgeementCanBeShownForPage и
+// getArgeementTime удалены вместе со страницей UserAgreement.
+// Если в будущем потребуется аналогичный механизм (TOS/EULA),
+// он будет реализован через portal как отдельный сервис.
 
 function isAdmin($userid = null, $allow_admin_login = false)
 {

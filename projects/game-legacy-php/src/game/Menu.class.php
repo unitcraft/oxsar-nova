@@ -135,9 +135,6 @@ class Menu implements IteratorAggregate, Countable
             continue;
           }
         } */
-        if( $second->getAttribute("href") === "UserAgreement" && !SHOW_USER_AGREEMENT ){
-            continue;
-        }
         if( $second->getAttribute("href") === "Achievements" && !ACHIEVEMENTS_ENABLED ){
             continue;
         }

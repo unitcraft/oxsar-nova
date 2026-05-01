@@ -44,11 +44,11 @@
 // Spring 4 ч.2 (Ф.5):
 //   /officer                   → S-040 Officer (наём за credits)
 //   /profession                → S-041 Profession (выбор профессии)
-//   /user-agreement            → S-043 UserAgreement (cross-link на portal)
 //   /changelog                 → S-044 Changelog (bundled markdown)
-//   /support                   → S-045 Support (кросс-сервис на portal)
 //   /tools/tech-calc           → S-047 AdvTechCalculator (pure client)
 //   /widgets                   → S-046 Widgets — redirect на / (см. simplifications)
+// (план 72.1 ч.20.12: /support и /user-agreement удалены — за TOS
+//  и саппорт отвечает портал)
 //
 // план 72.1 — недостающие экраны из legacy-PHP:
 //   /resource                  → ResourceScreen (производство ресурсов)
@@ -119,9 +119,7 @@ import { StockScreen } from './features/stock/StockScreen';
 // Spring 4 ч.2 (Ф.5) — premium / static / utilities
 import { OfficerScreen } from './features/officer/OfficerScreen';
 import { ProfessionScreen } from './features/profession/ProfessionScreen';
-import { UserAgreementScreen } from './features/user-agreement/UserAgreementScreen';
 import { ChangelogScreen } from './features/changelog/ChangelogScreen';
-import { SupportScreen } from './features/support/SupportScreen';
 import { AdvTechCalculatorScreen } from './features/tech-calc/AdvTechCalculatorScreen';
 import { WidgetsRedirect } from './features/widgets/WidgetsRedirect';
 import { RocketAttackScreen } from './features/rocket-attack/RocketAttackScreen';
@@ -236,9 +234,7 @@ function ProtectedRoutes() {
           {/* Spring 4 ч.2 (Ф.5) — premium / static / utilities */}
           <Route path="/officer" element={<OfficerScreen />} />
           <Route path="/profession" element={<ProfessionScreen />} />
-          <Route path="/user-agreement" element={<UserAgreementScreen />} />
           <Route path="/changelog" element={<ChangelogScreen />} />
-          <Route path="/support" element={<SupportScreen />} />
           <Route path="/tools/tech-calc" element={<AdvTechCalculatorScreen />} />
           <Route path="/widgets" element={<WidgetsRedirect />} />
           <Route path="/rocket-attack" element={<RocketAttackScreen />} />

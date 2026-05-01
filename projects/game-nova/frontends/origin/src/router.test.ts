@@ -114,24 +114,22 @@ describe('router Spring 2 — ресурсный/боевой блок (5 экр
   });
 });
 
+// План 72.1 ч.20.12: /user-agreement и /support удалены из origin
+// (за TOS/EULA и саппорт отвечает портал, не игровой сервер).
 const SPRING_4_PART2_PATHS = [
   '/officer',
   '/profession',
-  '/user-agreement',
   '/changelog',
-  '/support',
   '/tools/tech-calc',
   '/widgets',
 ];
 
-describe('router Spring 4 ч.2 — premium / static / utilities (7 маршрутов)', () => {
-  it('покрывает S-040/S-041/S-043/S-044/S-045/S-046/S-047', () => {
-    expect(SPRING_4_PART2_PATHS).toHaveLength(7);
+describe('router Spring 4 ч.2 — premium / static / utilities (5 маршрутов)', () => {
+  it('покрывает S-040/S-041/S-044/S-046/S-047', () => {
+    expect(SPRING_4_PART2_PATHS).toHaveLength(5);
     expect(SPRING_4_PART2_PATHS).toContain('/officer');
     expect(SPRING_4_PART2_PATHS).toContain('/profession');
-    expect(SPRING_4_PART2_PATHS).toContain('/user-agreement');
     expect(SPRING_4_PART2_PATHS).toContain('/changelog');
-    expect(SPRING_4_PART2_PATHS).toContain('/support');
     expect(SPRING_4_PART2_PATHS).toContain('/tools/tech-calc');
     expect(SPRING_4_PART2_PATHS).toContain('/widgets');
   });

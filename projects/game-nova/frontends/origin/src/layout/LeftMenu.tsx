@@ -110,8 +110,6 @@ export function LeftMenu() {
         <MenuSection id="7" colorClass="menu7" title="Настройки">
           <li><Link to="/settings">Планета</Link></li>
           <li><Link to="/settings">Настройки</Link></li>
-          <li><Link to="/user-agreement">Соглашение</Link></li>
-          <li><Link to="/support">Регламент тех поддержки</Link></li>
         </MenuSection>
 
         {/* Секция 8: Выход */}
