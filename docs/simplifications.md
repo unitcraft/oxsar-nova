@@ -2575,3 +2575,52 @@ unit-тесты на форматтеры/валидаторы/router-маршр
   и рейды/экспедиции, передавать `reportID` в ApplyBattleResult.
   Это отдельный план (потенциально 72.1.2 или 73).
 - **Приоритет**: L.
+
+### [P72.1.5.B.DELETION_NO_GRACE] Soft-delete аккаунта вместо grace 7 дней
+
+- **Где**: `internal/settings/delete.go::performDeletion`,
+  `frontends/origin/src/features/settings/SettingsScreen.tsx`.
+- **Что**: legacy `Preferences.class.php::updateDeletion` ставит флаг
+  `users.delete = time() + 604800` (7 дней) — аккаунт помечается на
+  удаление, физическое удаление выполняет cron через неделю. Юзер
+  может **отменить** удаление до истечения срока (`update_deletion`
+  с `delete=0`).
+- **В origin**: при подтверждении email-кодом немедленно
+  выполняется soft-delete: `UPDATE users SET deleted_at = now(),
+  username = '[deleted_<id8>]', email = '[deleted_<id8>]'`. Отмена
+  невозможна.
+- **Почему упрощено**: email-код уже даёт 24-часовое окно «всё
+  обдумать», и отдельный grace 7 дней с cron-задачей увеличивает
+  surface для багов (потерянные cron-events, race conditions при
+  попытке логина в grace-period). Бизнес-семантика «передумать —
+  напиши в саппорт» приемлема для MVP.
+- **Trade-off**: minor. Юзер не может self-revert удаление без
+  саппорт-обращения (требует ручной правки `deleted_at = NULL` и
+  восстановления username/email из бэкапа).
+- **Как чинить**: добавить колонку `users.delete_at timestamptz`
+  (когда физически удалить), миграция cron-job через 7 дней; в
+  ConfirmDeletion вместо немедленного soft-delete ставить
+  `delete_at = now() + 7 days`; UI добавить кнопку «Отменить удаление»
+  если `delete_at != null && delete_at > now()`.
+- **Приоритет**: L (post-MVP).
+
+### [P72.1.5.C.RESEND_ACTIVATION_PORTAL] Повторная отправка email активации делегирована порталу
+
+- **Где**: `projects/identity/` (portal/identity-сервис).
+- **Что**: legacy `Preferences.class.php::resendActivationMail`
+  отправляет повторное письмо активации в случае непод. юзера.
+- **В origin**: вход на game-фронт идёт через handoff с identity-
+  сервиса, и ситуация «юзер с непод. email на game-странице» не
+  возникает в нормальном flow (identity сначала верифицирует email,
+  потом разрешает выписать game-токен).
+- **Почему делегировано**: те же доводы, что и в Support/UA
+  (см. §20.12 задача 1) — TOS, account activation, password recovery,
+  email confirmation — это компетенция identity-сервиса/портала,
+  не игрового сервера. Дублирование UI на game-фронте создаёт
+  путаницу и повышает риск SSO-рассинхронизации.
+- **Trade-off**: none. На portal'е соответствующая страница
+  «resend activation» уже планируется отдельно.
+- **Как чинить**: не нужно. Если позже понадобится cross-link с
+  game-фронта — это будет ссылка `<a href="{PORTAL_URL}/activate-resend">`,
+  без логики на стороне game.
+- **Приоритет**: closed.
