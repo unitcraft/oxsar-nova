@@ -111,6 +111,10 @@ export interface SimSideResult {
   lost_metal: number;
   lost_silicon: number;
   lost_hydrogen: number;
+  // План 72.1.34: legacy simulator.tpl показывает потери в очках
+  // (Σ qty_lost × (cost) / 1000 × 2) — backend уже считает.
+  lost_points?: number;
+  lost_units?: number;
   units: SimUnitResult[];
 }
 
@@ -147,6 +151,11 @@ export interface SimStats {
   defender_lost_metal: number;
   defender_lost_silicon: number;
   defender_lost_hydrogen: number;
+  // План 72.1.34: legacy simulator.tpl показывает потери в очках/юнитах.
+  attacker_lost_points?: number;
+  defender_lost_points?: number;
+  attacker_lost_units?: number;
+  defender_lost_units?: number;
   debris_metal: number;
   debris_silicon: number;
   attacker_exp: number;

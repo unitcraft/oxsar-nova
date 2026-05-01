@@ -27,6 +27,15 @@ type Input struct {
 	// семантика противоположна и обычные атаки планет получали ×0.5
 	// опыта.
 	HasPlanet bool `json:"has_planet,omitempty"`
+	// IsRocketAttack — IPM-удар (Interplanetary Missile). В legacy
+	// (Assault.java:811) опыт за такие атаки НЕ начисляется
+	// (`if (!isRocketAttack && ...)`). У Go тоже добавляем guard в
+	// computeExperience: если флаг true — exp = 0 для обеих сторон.
+	// План 72.1.3 / BA-011: defence-in-depth, на случай если в
+	// будущем IPM-flow пойдёт через Calculate (сейчас рокетная атака
+	// идёт отдельным путём в `internal/rocket/`, не использует
+	// battle.Calculate).
+	IsRocketAttack bool `json:"is_rocket_attack,omitempty"`
 }
 
 // Side — одна сторона боя (один игрок или ACS-участник).
@@ -104,6 +113,13 @@ type SimStats struct {
 	DefenderLostMetal    float64 `json:"defender_lost_metal"`
 	DefenderLostSilicon  float64 `json:"defender_lost_silicon"`
 	DefenderLostHydrogen float64 `json:"defender_lost_hydrogen"`
+
+	// План 72.1.34: legacy simulator.tpl показывает «потери в очках» —
+	// средние lost_points (Σ qty_lost × cost / 1000 × 2) по num_sim.
+	AttackerLostPoints float64 `json:"attacker_lost_points"`
+	DefenderLostPoints float64 `json:"defender_lost_points"`
+	AttackerLostUnits  float64 `json:"attacker_lost_units"`
+	DefenderLostUnits  float64 `json:"defender_lost_units"`
 
 	DebrisMetal   float64 `json:"debris_metal"`
 	DebrisSilicon float64 `json:"debris_silicon"`
