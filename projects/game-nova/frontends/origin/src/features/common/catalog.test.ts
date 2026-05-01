@@ -39,7 +39,8 @@ describe('CATALOG', () => {
   });
 
   it('findCatalog находит по unit_id', () => {
-    const e = findCatalog(204);
+    // Cruiser (legacy unit_id=33) — корабль из каталога origin.
+    const e = findCatalog(33);
     expect(e?.group).toBe('ship');
     expect(findCatalog(99999)).toBeUndefined();
   });
