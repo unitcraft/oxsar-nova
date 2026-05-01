@@ -2667,3 +2667,43 @@ unit-тесты на форматтеры/валидаторы/router-маршр
   не текстовая, а архитектурная правка — выходит за рамки i18n-pass'а.
 - **Приоритет**: L. Затрагивает edge-case, который не должен срабатывать.
 
+
+## 2026-05-01 — P72.1.13.FRIENDS_UNIDIRECTIONAL: упрощение Friends [CLOSED by 72.1.14]
+
+**Закрыто планом [72.1.14](plans/72.1.14-friends-accept-flow.md)**
+2026-05-01: миграция 0086 добавила колонку `accepted` и backfill
+симметричных пар; handler реализует accept-flow с mutual
+auto-accept; UI показывает 3 секции (mutual / incoming / outgoing).
+AutoMsg НЕ реализован — 1:1 с legacy (TODO-комментарии в
+`Friends.class.php` фактически не отправляли уведомления).
+
+- **Где**: [`backend/internal/friends/handler.go`](../projects/game-nova/backend/internal/friends/handler.go),
+  таблица `friends` (миграция 0053, расширена 0086).
+- **Симптом**: legacy [`Friends.class.php`](../projects/game-legacy-php/src/game/page/Friends.class.php)
+  реализует двустороннюю дружбу с подтверждением: `buddylist.accepted: 0/1`.
+  Запрос на добавление — `accepted=0`, принятие — `UPDATE accepted=1`
+  через `setPostAction("accept", "acceptRequest")`. Пока не принято —
+  friendship «pending», обе стороны видят разные состояния.
+- **Что упрощено** (в плане 11 шаг 5, до §20.12 ревизии): таблица
+  `friends (user_id, friend_id, created_at)` без `accepted` flag;
+  handler.go явно: «односторонний: добавление не требует
+  подтверждения». Игрок A добавил B → A видит B в friends,
+  B о факте не знает.
+- **Почему `simplification`, а не `design-decision`**: план 72.1
+  §20.12 перекрывает старые design-решения и требует строгий
+  функциональный паритет с legacy-PHP. Цитата: «Любое отступление
+  от legacy (в том числе "pre-existing simplification" из старых
+  планов) фиксируется как баг и закрывается, либо явно эскалируется
+  отдельным ADR». В перечне запрещённого: «Кнопка/действие в legacy
+  работает, в origin не реализовано» (accept), «Поле/колонка в
+  legacy есть, в game-nova/origin отсутствует» (`accepted`).
+- **План возврата**: миграция `0086_friends_pending.sql` —
+  `ALTER TABLE friends ADD COLUMN accepted boolean NOT NULL DEFAULT false;
+   CREATE INDEX friends_pending_idx ON friends (friend_id) WHERE NOT accepted;`
+  + endpoint `POST /api/friends/{id}/accept` + UI секция «Входящие
+  запросы» в `FriendsScreen` + AutoMsg уведомление получателю при
+  Add (folder=8 кредиты или новая папка). Legacy при удалении
+  записывает MSG (см. TODO в коде Friends.class.php) — также
+  воспроизвести.
+- **Приоритет**: P3 (Social, не блокирует core gameplay, но §20.12
+  требует закрыть либо эскалировать ADR).

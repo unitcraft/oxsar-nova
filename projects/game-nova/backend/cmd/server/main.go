@@ -477,6 +477,7 @@ func run() error {
 		pr.Get("/artefacts/catalog/{type}", catalogH.ArtefactByType)
 		pr.Get("/friends", friendsH.List)
 		pr.Post("/friends/{userId}", friendsH.Add)
+		pr.Post("/friends/{userId}/accept", friendsH.Accept)
 		pr.Delete("/friends/{userId}", friendsH.Remove)
 		pr.Get("/planets", planetH.List)
 		pr.Patch("/planets/order", planetH.Reorder)

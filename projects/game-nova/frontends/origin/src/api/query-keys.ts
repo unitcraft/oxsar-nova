@@ -50,7 +50,8 @@ export const QK = {
   techtree: (planetId?: string) => ['techtree', planetId ?? ''] as const,
   records: () => ['records'] as const,
   // Spring 4 (Ф.5) — communication / notes / search / settings
-  friends: () => ['friends'] as const,
+  friends: (filter: 'mutual' | 'incoming' | 'outgoing' | 'all' = 'mutual') =>
+    ['friends', filter] as const,
   messages: (folder: 'inbox' | 'sent') => ['messages', folder] as const,
   message: (id: string) => ['messages', 'detail', id] as const,
   chatHistory: (kind: 'global' | 'alliance') =>

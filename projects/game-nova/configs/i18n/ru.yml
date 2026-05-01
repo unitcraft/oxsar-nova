@@ -1393,6 +1393,13 @@ friends:
   statusMinAgo: "{{n}} мин назад"
   statusHourAgo: "{{n}} ч назад"
   statusDayAgo: "{{n}} дн назад"
+  # План 72.1.14: двусторонний accept-flow (legacy buddylist.accepted).
+  tabAccepted: 👥 Друзья
+  tabIncoming: 📥 Входящие запросы
+  tabOutgoing: 📤 Отправленные запросы
+  acceptBtn: Принять
+  declineBtn: Отклонить
+  cancelRequestBtn: Отменить
 
 galaxyEvent:
   untilEnd: "До конца:"
