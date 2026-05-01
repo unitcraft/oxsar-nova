@@ -61,6 +61,7 @@ const (
 	KindExchangeBan                Kind = 67 // план 68 Ф.4: бан seller'а → отзыв всех его активных лотов
 	KindScoreRecalcAll             Kind = 70 // ежедневный batch-пересчёт очков всех игроков
 	KindAccountDelete              Kind = 90 // план 72.1.30: 7-day grace перед физическим soft-delete
+	KindArtMarketExpire            Kind = 91 // план 72.1.42: TTL артефакт-маркет лот auto-снимается
 	KindBatchProcessIntervalSecond      = 10
 )
 

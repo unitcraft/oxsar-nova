@@ -4592,11 +4592,18 @@ components:
     ArtMarketOffer:
       type: object
       properties:
-        id:         { type: string, format: uuid }
-        seller_id:  { type: string, format: uuid }
-        unit_id:    { type: integer }
-        price:      { type: integer, format: int64 }
-        created_at: { type: string, format: date-time }
+        id:             { type: string, format: uuid }
+        artefact_id:    { type: string, format: uuid }
+        seller_user_id: { type: string, format: uuid }
+        seller_name:    { type: string }
+        unit_id:        { type: integer }
+        # План 72.1.42: исправлено price → price_credit, created_at →
+        # listed_at (соответствует реальному backend ответу).
+        price_credit:   { type: integer, format: int64 }
+        listed_at:      { type: string, format: date-time }
+        # План 72.1.42: legacy `lifetime` через ads.lifetime — лот
+        # автоматически снимается через TTL.
+        expire_at:      { type: string, format: date-time }
 
     CreditPackage:
       type: object

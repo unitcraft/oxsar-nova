@@ -299,7 +299,7 @@ func run() error {
 	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed, cfg.Game.NumGalaxies, cfg.Game.NumSystems).WithBundle(i18nBundle)
 	rocketH := rocket.NewHandler(rocketSvc)
 
-	artMarketSvc := artmarket.NewService(db)
+	artMarketSvc := artmarket.NewService(db).WithAutoMsg(automsgSvc)
 	artMarketH := artmarket.NewHandler(artMarketSvc, rdb)
 
 	// План 68: биржа артефактов (P2P пакетный обмен на оксариты).

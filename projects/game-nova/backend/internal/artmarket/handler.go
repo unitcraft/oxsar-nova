@@ -81,6 +81,8 @@ func (h *Handler) ListForSale(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrNotFound)
 	case errors.Is(err, ErrNotOwner):
 		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrUmodeBlocked), errors.Is(err, ErrSellerBanned):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}
@@ -114,6 +116,8 @@ func (h *Handler) Buy(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	case errors.Is(err, ErrOfferNotFound):
 		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrUmodeBlocked):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}

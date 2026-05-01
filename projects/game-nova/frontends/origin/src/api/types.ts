@@ -314,10 +314,14 @@ export interface ExchangeResult {
 
 export interface ArtMarketOffer {
   id: string;
-  seller_id: string;
+  artefact_id: string;
+  seller_user_id: string;
+  seller_name?: string;
   unit_id: number;
-  price: number;
-  created_at: string;
+  // План 72.1.42: исправлено имя — backend возвращает price_credit + listed_at + expire_at.
+  price_credit: number;
+  listed_at: string;
+  expire_at: string;
 }
 
 export interface ArtMarketCredit {
