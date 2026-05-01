@@ -638,12 +638,19 @@ type ResourceReportDTO struct {
 	StorageMetal       float64                 `json:"storage_metal"`
 	StorageSilicon     float64                 `json:"storage_silicon"`
 	StorageHydrogen    float64                 `json:"storage_hydrogen"`
-	DailyMetal         float64                 `json:"daily_metal"`
-	DailySilicon       float64                 `json:"daily_silicon"`
-	DailyHydrogen      float64                 `json:"daily_hydrogen"`
-	WeeklyMetal        float64                 `json:"weekly_metal"`
-	WeeklySilicon      float64                 `json:"weekly_silicon"`
-	WeeklyHydrogen     float64                 `json:"weekly_hydrogen"`
+	// План 72.1.26: имена полей JSON синхронизированы с OpenAPI и
+	// frontend (`metal_per_day`, `metal_per_week`). Раньше backend
+	// отдавал `daily_metal` — фронт получал undefined в ячейках.
+	DailyMetal         float64                 `json:"metal_per_day"`
+	DailySilicon       float64                 `json:"silicon_per_day"`
+	DailyHydrogen      float64                 `json:"hydrogen_per_day"`
+	WeeklyMetal        float64                 `json:"metal_per_week"`
+	WeeklySilicon      float64                 `json:"silicon_per_week"`
+	WeeklyHydrogen     float64                 `json:"hydrogen_per_week"`
+	// План 72.1.26: legacy `resource.tpl` показывает monthly = *720.
+	MonthlyMetal       float64                 `json:"metal_per_month"`
+	MonthlySilicon     float64                 `json:"silicon_per_month"`
+	MonthlyHydrogen    float64                 `json:"hydrogen_per_month"`
 	TotalEnergy        float64                 `json:"total_energy"`
 }
 
@@ -767,6 +774,11 @@ func (s *Service) ResourceReport(ctx context.Context, userID, planetID string) (
 	report.WeeklySilicon = report.DailySilicon * 7
 	report.WeeklyHydrogen = report.DailyHydrogen * 7
 
+	// Месячное производство (legacy `resource.tpl`: 720 = 30×24).
+	report.MonthlyMetal = report.MetalPerHour * 720
+	report.MonthlySilicon = report.SiliconPerHour * 720
+	report.MonthlyHydrogen = report.HydrogenPerHour * 720
+
 	return report, nil
 }
 
@@ -778,6 +790,18 @@ func (s *Service) UpdateResourceFactors(ctx context.Context, userID, planetID st
 	}
 	if p.UserID != userID {
 		return ErrNotFound
+	}
+
+	// План 72.1.26: legacy `Resource.class.php` строка 33 блокирует
+	// `setPostAction("update", "updateResources")` при umode.
+	var umode bool
+	if err := s.db.Pool().QueryRow(ctx,
+		`SELECT umode FROM users WHERE id = $1`, userID,
+	).Scan(&umode); err != nil {
+		return fmt.Errorf("read user umode: %w", err)
+	}
+	if umode {
+		return ErrUmodeBlocked
 	}
 
 	// Парсинг и валидация факторов (0-100%).

@@ -4584,6 +4584,10 @@ components:
         metal_per_week: { type: number }
         silicon_per_week: { type: number }
         hydrogen_per_week: { type: number }
+        # План 72.1.26: monthly = *720 (legacy resource.tpl).
+        metal_per_month: { type: number }
+        silicon_per_month: { type: number }
+        hydrogen_per_month: { type: number }
 
     ArtMarketOffer:
       type: object

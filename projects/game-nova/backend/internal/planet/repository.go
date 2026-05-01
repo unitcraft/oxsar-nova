@@ -123,6 +123,9 @@ var (
 	ErrMoonRestricted      = errors.New("planet: operation not allowed for moons")
 	ErrOnlyPlanet          = errors.New("planet: cannot abandon only planet")
 	ErrCannotAbandonHome   = errors.New("planet: cannot abandon home planet")
+	// План 72.1.26: legacy `Resource.class.php` блокирует POST update
+	// при umode (`if(!NS::getUser()->get("umode"))`).
+	ErrUmodeBlocked        = errors.New("planet: operation blocked in vacation mode")
 )
 
 // Building — структура здания на планете.

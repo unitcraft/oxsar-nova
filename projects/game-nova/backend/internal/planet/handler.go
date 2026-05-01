@@ -234,6 +234,11 @@ func (h *Handler) ResourceUpdate(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 			return
 		}
+		// План 72.1.26: legacy POST update блокируется при umode → 409.
+		if errors.Is(err, ErrUmodeBlocked) {
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+			return
+		}
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
