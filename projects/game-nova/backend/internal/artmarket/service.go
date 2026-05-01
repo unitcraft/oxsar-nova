@@ -26,9 +26,11 @@ type Service struct {
 	automsg AutoMsgSender // план 72.1.42: AutoMsg для seller при покупке.
 }
 
-// AutoMsgSender — узкий интерфейс к automsg.SendDirect.
+// AutoMsgSender — узкий интерфейс к automsg.Send (с i18n шаблоном).
+// Используем Send вместо SendDirect, чтобы тексты не были захардкожены
+// и проходили i18n_no_cyrillic_test.
 type AutoMsgSender interface {
-	SendDirect(ctx context.Context, tx pgx.Tx, userID string, folder int, title, body string) error
+	Send(ctx context.Context, tx pgx.Tx, userID, key string, vars map[string]string) error
 }
 
 func NewService(db repo.Exec) *Service { return &Service{db: db} }
@@ -305,11 +307,13 @@ func (s *Service) Buy(ctx context.Context, buyerID, offerID string) error {
 		}
 
 		// План 72.1.42: AutoMsg seller'у — артефакт продан.
-		// folder=8 (credit), legacy MSG_CREDIT_ARTEFACT_BUY.
+		// Шаблон через i18n: autoMessages.artMarketPurchased.{title,body}.
 		if s.automsg != nil {
-			title := "Артефакт продан"
-			body := fmt.Sprintf("Ваш артефакт #%d продан за %d кредитов.", unitID, price)
-			if err := s.automsg.SendDirect(ctx, tx, sellerID, 8, title, body); err != nil {
+			vars := map[string]string{
+				"unit_id": fmt.Sprintf("%d", unitID),
+				"price":   fmt.Sprintf("%d", price),
+			}
+			if err := s.automsg.Send(ctx, tx, sellerID, "artMarketPurchased", vars); err != nil {
 				// AutoMsg не критичен — логируем но не валим транзакцию.
 				_ = err
 			}

@@ -298,3 +298,27 @@ export function confirmTransfer(
     { idempotencyKey },
   );
 }
+
+// План 72.1.43: legacy `Alliance::globalMail` — рассылка всем участникам.
+export function broadcastAllianceMail(
+  allianceID: string,
+  title: string,
+  body: string,
+): Promise<void> {
+  return api.post<void>(
+    `/api/alliances/${allianceID}/broadcast`,
+    { title, body },
+  );
+}
+
+// План 72.1.43: legacy updateAllyTag + updateAllyName (PATCH).
+export function updateAllianceTagName(
+  allianceID: string,
+  tag?: string,
+  name?: string,
+): Promise<void> {
+  const payload: { tag?: string; name?: string } = {};
+  if (tag) payload.tag = tag;
+  if (name) payload.name = name;
+  return api.patch<void>(`/api/alliances/${allianceID}`, payload);
+}
