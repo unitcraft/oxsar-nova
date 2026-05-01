@@ -15194,3 +15194,53 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(resource-market): план 72.1.28 — multi-resource Credit_ex (legacy 1:1).
 
+
+---
+
+2026-05-01 — итерация 72.1.29: Ranking cont (хвост 72.1.12).
+
+  Закрытие хвоста по правилу 1:1. Origin /ranking теперь полностью
+  соответствует legacy `Ranking::playerRanking`.
+
+  **Сделано**:
+  - Backend Entry расширен: BCount, RCount, UCount, Battles, ScoreAvg.
+  - TopFilters DTO для расширенного запроса.
+  - Service.TopExtended (новый): WHERE по mode (player/observer/
+    old_vacation), ORDER BY с avg-делителем, pagination LIMIT/OFFSET.
+    Возвращает (entries, totalCount).
+  - orderExprFor: маппинг для агрегатных типов (b_count → COUNT
+    suб-запрос, r_count → COUNT research, u_count → SUM ships+defense,
+    battles → users.battles).
+  - SELECT добавлены computed colums b_count/r_count/u_count/score_avg
+    через CTE/sub-queries — UI получает все значения для отображения.
+  - handler.Highscore: ?type=&mode=&avg=true&page=N; perPage=25
+    (legacy USER_PER_PAGE).
+  - Frontend: ScoreType расширен 12 значениями; RankingMode
+    (player/observer/old_vacation); HighscoreOptions.
+  - HighscoreEntry в types.ts: +b_count/r_count/u_count/battles/
+    score_avg.
+  - RankingScreen: 5 mode-табов; type-селект 12 значений; avg-checkbox;
+    pagination ◀ ▶ с label «N / total».
+  - i18n (ru/en): 4 scoreType_count/battles, 2 tabPlayer{Observer,
+    OldVacation}, avgCheckbox, colScoreAvg, pageLabel.
+
+  **Прогон**: go build + go test ./internal/score/... — OK.
+  tsc clean. eslint clean.
+
+  **Файлы**:
+  - docs/plans/72.1.29-ranking-cont.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#22 ⚠ → ✅).
+  - projects/game-nova/backend/internal/score/service.go (Entry +
+    TopFilters + TopExtended + orderExprFor).
+  - projects/game-nova/backend/internal/score/handler.go (новые
+    параметры).
+  - projects/game-nova/frontends/origin/src/api/highscore.ts (rewrite).
+  - projects/game-nova/frontends/origin/src/api/types.ts
+    (HighscoreEntry +5 полей).
+  - projects/game-nova/frontends/origin/src/features/ranking/RankingScreen.tsx
+    (полный rewrite).
+  - projects/game-nova/configs/i18n/{ru,en}.yml.
+
+  **Коммит**:
+  feat(ranking): план 72.1.29 — avg + _count/battles + observer/old_vacation + pagination (полный паритет с legacy).
+
