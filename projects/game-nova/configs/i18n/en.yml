@@ -646,6 +646,9 @@ autoMessages:
   # Plan 72.1.21: legacy `MSG_CREDIT_MARKET` — buying resources at bank.
   creditMarketPurchase.title: "Resource purchase"
   creditMarketPurchase.body: "{{credits}} credits charged. Received {{amount}} {{resource}}."
+  # Plan 72.1.25: legacy `MSG_CREDIT_FOR_REPAIR_VIP` / `..._FOR_DISASSEMBLE_VIP`.
+  creditRepairVIP.title: "Credit charge"
+  creditRepairVIP.body: "{{credits}} credits charged for instant {{mode}} start ({{quantity}} units)."
 buddylist:
   accept: ""
   buddylist: ""
@@ -1072,6 +1075,20 @@ repair:
   repairAll: Repair all
   disassembleHint: Disassembling healthy units returns ~70% of their cost.
   disassembleBtn: Disassemble
+  # Plan 72.1.25: new UI keys.
+  disassembleQueue: Disassembly queue
+  disassembleTitle: Disassembly
+  emptyDisassemble: No units to disassemble
+  abortBtn: Cancel
+  vipBtn: "VIP for {{credits}} cr"
+  colRequired: Cost
+  colEarn: Earn
+  colCount: Count
+  errInVacation: "Cannot operate in vacation mode."
+  errObserver: "Cannot operate in observer mode."
+  errPlanetUnderAttack: "Cannot operate — planet under attack."
+  errDockOverflow: "Repair hangar capacity exceeded."
+  errNotEnoughCredit: "Not enough credit for VIP start."
   fuelPer: /unit
   toastRepairTitle: Repair
   toastRepaired: "{{name}} sent for repair"

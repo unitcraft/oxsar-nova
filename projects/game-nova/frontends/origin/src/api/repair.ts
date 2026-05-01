@@ -42,3 +42,44 @@ export function repairUnits(
     { idempotencyKey: newIdempotencyKey() },
   );
 }
+
+// План 72.1.25: cancel задачи в очереди (legacy abortRepair / abortDisassemble).
+export function cancelRepairQueue(
+  planetId: string,
+  queueId: string,
+): Promise<void> {
+  return api.delete<void>(
+    `/api/planets/${planetId}/repair/queue/${queueId}`,
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}
+
+// План 72.1.25: VIP мгновенный старт за credit (legacy startEventVIP).
+export interface RepairVIPResult {
+  queue_id: string;
+  mode: string;
+  credit_debit: number;
+  new_end_at: string;
+}
+
+export function startRepairVIP(
+  planetId: string,
+  queueId: string,
+): Promise<RepairVIPResult> {
+  return api.post<RepairVIPResult>(
+    `/api/planets/${planetId}/repair/queue/${queueId}/vip`,
+    undefined,
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}
+
+// План 72.1.25: legacy `getCreditImmStartShipyard` — публичная формула,
+// чтобы UI показал стоимость до клика.
+export function vipCreditCost(quantity: number): number {
+  if (quantity <= 0) return 10;
+  let v = Math.pow(quantity, 0.8);
+  v = Math.round(v / 10) * 10;
+  if (v < 10) v = 10;
+  if (v > 100000) v = 100000;
+  return v;
+}
