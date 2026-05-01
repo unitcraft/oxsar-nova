@@ -3229,3 +3229,10 @@ monitorPlanet:
   eventsTitle: "Fleet events"
   detectedNote: "Target detected the scan — a notification was sent."
   noPlanetSelected: "No planet selected. Open /monitor-planet?id=<planet_id>."
+
+# План 72.1.33: BuildingInfo demolish section.
+buildinginfo:
+  demolish: "Demolish building"
+  demolishNow: "Demolish now"
+  demolishConfirm: "Demolish {{building}} to level {{level}}?"
+  currentLevel: "Current level"

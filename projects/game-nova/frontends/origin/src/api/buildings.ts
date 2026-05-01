@@ -57,3 +57,17 @@ export function cancelBuildingTask(planetId: string, taskId: string): Promise<vo
     { idempotencyKey: newIdempotencyKey() },
   );
 }
+
+// План 72.1.33: legacy `BuildingInfo::DEMOLISH_NOW` — снос здания
+// на 1 уровень. Cost = (1 / spec.demolish) × cost_at_current_level.
+// Длительность = build duration × 0.5.
+export function demolishBuilding(
+  planetId: string,
+  unitId: number,
+): Promise<QueueItem> {
+  return api.post<QueueItem>(
+    `/api/planets/${planetId}/buildings/${unitId}/demolish`,
+    {},
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}

@@ -3229,3 +3229,10 @@ monitorPlanet:
   eventsTitle: "События флота"
   detectedNote: "Цель обнаружила сканирование — отправлено уведомление."
   noPlanetSelected: "Не выбрана планета. Откройте /monitor-planet?id=<planet_id>."
+
+# План 72.1.33: BuildingInfo demolish секция.
+buildinginfo:
+  demolish: "Снос здания"
+  demolishNow: "Снести сейчас"
+  demolishConfirm: "Снести {{building}} до уровня {{level}}?"
+  currentLevel: "Текущий уровень"
