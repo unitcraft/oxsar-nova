@@ -133,7 +133,13 @@ class ArtefactMarketOld extends Page
 				{
 					Core::getQuery()->update("planet", $names, $rests, "planetid = ".sqlPlanet());
 					$active=$row["can_fly"]&&!$row["usable"];
-					Core::getQuery()->insert("artefact2user", array("typeid","userid","planetid","active","next_activate","times_left"), array($typeid,NS::getUser()->get("userid"),NS::getUser()->get("curplanet"),(int)$active,0,$row["use_times"]));
+					$rc = Core::getQuery()->insert("artefact2user", array("typeid","userid","planetid","active","next_activate","times_left"), array($typeid,NS::getUser()->get("userid"),NS::getUser()->get("curplanet"),(int)$active,0,$row["use_times"]));
+					// План 86: при провале INSERT нельзя ставить событие
+					// удаления — artid указал бы на чужую запись, и через
+					// `lifetime` секунд удалился бы чужой артефакт.
+					if ($rc === false) {
+						Logger::dieMessage('DB_ERROR_BUY_ARTEFACT');
+					}
 					if($row["lifetime"])
 						NS::getEH()->addEvent(EVENT_ARTEFACT_DISAPPEAR,$row["lifetime"]+time(),NS::getUser()->get("curplanet"),NS::getUser()->get("userid"),NS::getUser()->get("curplanet"),array("artid"=>Core::getDB()->insert_id(),"typeid"=>$typeid));
 					doHeaderRedirection("game.php/ArtefactMarket", false);
@@ -180,7 +186,11 @@ class ArtefactMarketOld extends Page
 				{
 					Core::getQuery()->update("officer", array("credit"), array($rest), "userid = ".sqlUser());
 					$active=$row["can_fly"]&&!$row["usable"];
-					Core::getQuery()->insert("artefact2user", array("typeid","userid","planetid","active","next_activate","times_left"), array($typeid,NS::getUser()->get("userid"),NS::getUser()->get("curplanet"),(int)$active,0,$row["use_times"]));
+					$rc = Core::getQuery()->insert("artefact2user", array("typeid","userid","planetid","active","next_activate","times_left"), array($typeid,NS::getUser()->get("userid"),NS::getUser()->get("curplanet"),(int)$active,0,$row["use_times"]));
+					// План 86: см. комментарий в buyArtefact (выше).
+					if ($rc === false) {
+						Logger::dieMessage('DB_ERROR_BUY_ARTEFACT');
+					}
 					if($row["lifetime"])
 						NS::getEH()->addEvent(EVENT_ARTEFACT_DISAPPEAR,$row["lifetime"]+time(),NS::getUser()->get("curplanet"),NS::getUser()->get("userid"),NS::getUser()->get("curplanet"),array("artid"=>Core::getDB()->insert_id(),"typeid"=>$typeid));
 					doHeaderRedirection("game.php/ArtefactMarket", false);

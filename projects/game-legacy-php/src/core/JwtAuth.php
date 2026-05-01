@@ -237,7 +237,7 @@ class JwtAuth
         // Все NOT NULL без default из legacy-схемы na_user (16 полей).
         // activation — varbinary(32) (хеш email-токена), пустая строка = «активирован».
         // dm_points/regtime/last/etc — числовые, передаём 0/$now.
-        $db->query(
+        $rc = $db->query(
             "INSERT INTO `" . PREFIX . "user`"
             . " (global_user_id, username, email, temp_email, languageid, timezone,"
             . "  templatepackage, theme, dm_points, activation, regtime, last,"
@@ -246,6 +246,13 @@ class JwtAuth
             . "         'standard', '', 0, '', $now, $now,"
             . "         0, 0, 0, 0, 0)"
         );
+        // План 86 (критично для auth): без проверки rc insert_id() мог
+        // вернуть PK ЧУЖОГО юзера (от предыдущего успешного INSERT в
+        // соединении), и queryRow ниже подцепил бы чужой профиль —
+        // юзер вошёл бы под чужим аккаунтом.
+        if ($rc === false) {
+            throw new Exception('Failed to create user record');
+        }
 
         $newId = $db->insert_id();
         return $db->queryRow("SELECT * FROM `" . PREFIX . "user` WHERE userid = $newId LIMIT 1");

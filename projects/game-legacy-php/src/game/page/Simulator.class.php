@@ -710,9 +710,15 @@ class Simulator extends Page
 	*/
 	protected function addParticipant($assaultid, $userid, $players)
 	{
-		Core::getQuery()->insert("sim_assaultparticipant",
+		$rc = Core::getQuery()->insert("sim_assaultparticipant",
 			array("assaultid", "userid", "planetid", "mode", "consumption", "preloaded"),
 			array($assaultid, $userid, SIM_PLANET_ID, $players[$userid]["mode"], $players[$userid]["consumption"], 0));
+		// План 86: без проверки rc следующий INSERT в sim_fleet2assault
+		// получил бы lastInsertId() от ПРЕДЫДУЩЕГО успешного INSERT
+		// (например sim_assault.assaultid) → каскадный FK violation.
+		if ($rc === false) {
+			return;
+		}
 		$participantid = Core::getDB()->insert_id();
 		foreach($players[$userid]["ships"] as $ship)
 		{

@@ -434,9 +434,15 @@ class PlanetCreator
 			
 			if( !$this->planetid )
 			{
-				Core::getQuery()->insert("planet", $atts, $vals);
+				$rc = Core::getQuery()->insert("planet", $atts, $vals);
+				// План 86: без проверки rc planetid указал бы на чужую
+				// планету, и REPLACE INTO galaxy переписал бы координаты
+				// чужой записи.
+				if ($rc === false) {
+					throw new Exception('Failed to create planet');
+				}
 				$this->planetid = Core::getDB()->insert_id();
-				
+
 				$atts = array("galaxy", "system", "position", "planetid");
 				$vals = array($this->galaxy, $this->system, $this->position, $this->planetid);
 				Core::getQuery()->replace("galaxy", $atts, $vals);
@@ -455,9 +461,15 @@ class PlanetCreator
 		{
 			$atts = array("userid", "ismoon", "planetname", "diameter", "picture", "temperature", "last", "metal", "silicon");
 			$vals = array($this->userid, 1, Core::getLanguage()->getItem("MOON"), $this->size, "mond", $this->temperature - mt_rand(15, 35), time(), 0, 0);
-			Core::getQuery()->insert("planet", $atts, $vals);
+			$rc = Core::getQuery()->insert("planet", $atts, $vals);
+			// План 86: без проверки rc planetid указал бы на чужую
+			// планету, и UPDATE galaxy ниже привязал бы moonid к
+			// чужой записи.
+			if ($rc === false) {
+				throw new Exception('Failed to create moon');
+			}
 			$this->planetid = Core::getDB()->insert_id();
-			
+
 			Core::getQuery()->update("galaxy", "moonid", $this->planetid, "galaxy = ".sqlVal($this->galaxy)." AND system = ".sqlVal($this->system)." AND position = ".sqlVal($this->position));
 		}
 		
