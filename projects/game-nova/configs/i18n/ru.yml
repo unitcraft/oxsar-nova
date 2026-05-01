@@ -974,6 +974,8 @@ shipyard:
   details: Подробнее о
   cancelled: Отменено
   cancelledBody: Задание отменено, ресурсы возвращены
+  # План 72.1.45 §5: индикатор повреждений в inventory (legacy shipyard.tpl).
+  damagedTooltip: Повреждено
   cancelErr: Не удалось отменить
   enqueued: В очередь
   enqueuedBody: "{{name}} × {{count}} добавлено в верфь"

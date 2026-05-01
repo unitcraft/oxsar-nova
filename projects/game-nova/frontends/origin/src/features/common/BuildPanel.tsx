@@ -111,6 +111,11 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
     group === 'ship' ? inv.ships ?? {} : inv.defense ?? {};
   const costsMap = group === 'ship' ? inv.ship_costs ?? {} : inv.defense_costs ?? {};
   const secsMap = group === 'ship' ? inv.ship_seconds ?? {} : inv.defense_seconds ?? {};
+  // План 72.1.45 §5: damaged_count + shell_percent для индикатора повреждений.
+  const damagedMap =
+    group === 'ship'
+      ? inv.ships_damaged ?? {}
+      : inv.defense_damaged ?? {};
   const catalog = catalogByGroup(group);
 
   const available = planet
@@ -305,6 +310,21 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
                     {stock > 0 && (
                       <>
                         {formatNumber(stock)}
+                        {/* План 72.1.45 §5: damaged-индикатор (legacy
+                            shipyard.tpl показывает рядом с count). */}
+                        {damagedMap[String(entry.id)] && (
+                          <div
+                            style={{
+                              fontSize: 'smaller',
+                              color: '#c44',
+                            }}
+                            title={t('shipyard', 'damagedTooltip') || 'Повреждено'}
+                          >
+                            🔧 {formatNumber(damagedMap[String(entry.id)]!.damaged_count)}
+                            {' · '}
+                            {Math.round(damagedMap[String(entry.id)]!.shell_percent)}%
+                          </div>
+                        )}
                         <br />
                       </>
                     )}
