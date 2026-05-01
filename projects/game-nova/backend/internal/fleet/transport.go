@@ -132,7 +132,7 @@ type TransportInput struct {
 	UserID       string
 	SrcPlanetID  string
 	Dst          galaxy.Coords
-	Mission      int   // 7=TRANSPORT, 8=COLONIZE, 9=RECYCLING, 10=ATTACK, 11=SPY, 12=ACS, 15=EXPEDITION
+	Mission      int   // 7=TRANSPORT, 8=COLONIZE, 9=RECYCLING, 10=ATTACK, 11=SPY, 12=ACS, 15=EXPEDITION, 17=HOLDING
 	ACSGroupID   string // только для mission=12; пусто → создать новую группу
 	ColonyName   string // для mission=8 (COLONIZE); пусто → «Colony»
 	Ships        map[int]int64 // unit_id -> count
@@ -140,6 +140,10 @@ type TransportInput struct {
 	CarrySilicon int64
 	CarryHydro   int64
 	SpeedPercent int // 10..100
+	// План 72.1.47: HOLDING mission (legacy `Mission.class.php::sendFleet` L.1487).
+	// Длительность удержания на цели в часах (clamp 0..99). После прибытия
+	// флот стоит на dst в режиме holding, по истечении возвращается домой.
+	HoldingHours int
 }
 
 // Ошибки доменного слоя.
@@ -310,6 +314,20 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		depart := time.Now().UTC()
 		arrive := depart.Add(duration)
 		returnAt := arrive.Add(duration)
+		// План 72.1.47: HOLDING (kind=17) — флот стоит на dst HoldingHours
+		// часов (clamp 0..99) перед возвратом. Legacy `Mission.class.php`
+		// L.1487: data.duration = min(99,max(0,hours))*3600.
+		var holdingHours int
+		if event.Kind(in.Mission) == event.KindHolding {
+			holdingHours = in.HoldingHours
+			if holdingHours < 0 {
+				holdingHours = 0
+			}
+			if holdingHours > 99 {
+				holdingHours = 99
+			}
+			returnAt = arrive.Add(time.Duration(holdingHours)*time.Hour + duration)
+		}
 
 		// Списываем ресурсы и корабли. FOR UPDATE у планеты
 		// обеспечивает, что параллельный tick или другая отправка
@@ -392,6 +410,7 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			"colony_name":     colonyName,
 			"return_event_id": returnEventID,
 			"flight_seconds":  flightSeconds,
+			"holding_hours":   holdingHours, // план 72.1.47: для KindHolding
 		})
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
