@@ -67,10 +67,14 @@ func (s *Service) WithBundle(b *i18n.Bundle) *Service {
 }
 
 // CurrentInfo — текущая профессия и когда следующая смена будет доступна.
+// План 72.1.47: добавлены ChangeCost (0 после cooldown, иначе ChangeCost=1000)
+// и DaysRemain (legacy `getProfessionChangeDaysRemain()`) для UI.
 type CurrentInfo struct {
 	Profession        string     `json:"profession"`
 	Label             string     `json:"label"`
 	NextChangeAllowed *time.Time `json:"next_change_allowed,omitempty"`
+	ChangeCost        int64      `json:"change_cost"`
+	DaysRemain        int        `json:"days_remain"`
 }
 
 // List возвращает список всех профессий с их бонусами.
@@ -108,6 +112,15 @@ func (s *Service) Get(ctx context.Context, userID string) (CurrentInfo, error) {
 	if changedAt != nil {
 		next := changedAt.Add(ChangeInterval)
 		info.NextChangeAllowed = &next
+		// План 72.1.47: legacy `getProfessionChangeCost`. Если ещё в
+		// cooldown — cost=1000 + days_remain > 0; иначе оба = 0.
+		if time.Since(*changedAt) < ChangeInterval {
+			info.ChangeCost = ChangeCost
+			info.DaysRemain = int((ChangeInterval - time.Since(*changedAt)) / (24 * time.Hour))
+			if info.DaysRemain < 1 {
+				info.DaysRemain = 1
+			}
+		}
 	}
 	return info, nil
 }
@@ -151,29 +164,37 @@ func (s *Service) Change(ctx context.Context, userID, professionKey string) erro
 			return nil
 		}
 
+		// План 72.1.47: legacy `getProfessionChangeCost()` (NS.class.php:2170)
+		// возвращает 0 если `now - prof_time >= MIN_DAYS`, иначе COST. Раньше
+		// мы трактовали это как «нельзя менять до cooldown», но legacy
+		// разрешает менять В ЛЮБОЕ ВРЕМЯ — просто внутри cooldown берёт 1000 cr.
+		var effectiveCost int64 = 0
 		if changedAt != nil && time.Since(*changedAt) < ChangeInterval {
-			return ErrChangeTooSoon
+			effectiveCost = ChangeCost
 		}
 
-		if credit < float64(ChangeCost) {
+		if credit < float64(effectiveCost) {
 			return ErrNotEnoughCredit
 		}
 
 		now := time.Now().UTC()
 		if _, err := tx.Exec(ctx,
 			`UPDATE users SET profession=$1, profession_changed_at=$2, credit=credit-$3 WHERE id=$4`,
-			professionKey, now, ChangeCost, userID,
+			professionKey, now, effectiveCost, userID,
 		); err != nil {
 			return err
 		}
 
 		// Legacy MSG_CREDIT_PROFESSION_CHANGED — отправка в одной транзакции
 		// чтобы списание и уведомление были атомарны.
-		if s.automsg != nil && s.bundle != nil {
+		// План 72.1.47: AutoMsg credit отправляется только когда списались
+		// деньги (effectiveCost > 0). Если cooldown прошёл и cost=0 —
+		// legacy не шлёт `MSG_CREDIT_*`.
+		if effectiveCost > 0 && s.automsg != nil && s.bundle != nil {
 			lang := s.userLang(ctx, tx, userID)
 			label := s.labelFor(professionKey, lang)
 			vars := map[string]string{
-				"credits":    fmt.Sprintf("%d", ChangeCost),
+				"credits":    fmt.Sprintf("%d", effectiveCost),
 				"profession": label,
 			}
 			title := s.bundle.Tr(lang, "autoMessages", "creditProfessionChanged.title", vars)
