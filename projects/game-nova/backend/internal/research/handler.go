@@ -47,11 +47,41 @@ func (h *Handler) Enqueue(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrForbidden)
 	case errors.Is(err, ErrNoResearchLab):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "research lab required"))
+	case errors.Is(err, ErrUmodeBlocked):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	case errors.Is(err, ErrObserverBlocked):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	case errors.Is(err, ErrMaxLevelReached):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "max research level reached"))
 	case requirements.IsNotMet(err):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}
+}
+
+// Cancel DELETE /api/research/{queueId} — отмена исследования с
+// возвратом ресурсов. План 72.1.39 / правило 1:1 (legacy
+// Research::abort).
+func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	queueID := chi.URLParam(r, "queueId")
+	if err := h.svc.Cancel(r.Context(), uid, queueID); err != nil {
+		switch {
+		case errors.Is(err, ErrQueueItemNotFound):
+			httpx.WriteError(w, r, httpx.ErrNotFound)
+		case errors.Is(err, ErrPlanetOwnership):
+			httpx.WriteError(w, r, httpx.ErrForbidden)
+		default:
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // List GET /api/research — все текущие исследования игрока + уровни.
