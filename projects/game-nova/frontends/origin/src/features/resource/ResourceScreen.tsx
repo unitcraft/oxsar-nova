@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchResourceReport, updateResourceFactors } from '@/api/resource';
+import { fetchMe } from '@/api/me';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { useTranslation } from '@/i18n/i18n';
@@ -25,9 +26,10 @@ interface FactorInputProps {
   building: ResourceBuilding;
   value: number;
   onChange: (unitId: number, val: number) => void;
+  disabled?: boolean;
 }
 
-function FactorInput({ building, value, onChange }: FactorInputProps) {
+function FactorInput({ building, value, onChange, disabled }: FactorInputProps) {
   if (!building.allow_factor) return <>&nbsp;</>;
   return (
     <>
@@ -38,6 +40,7 @@ function FactorInput({ building, value, onChange }: FactorInputProps) {
         value={value}
         maxLength={3}
         size={3}
+        disabled={disabled}
         onChange={(e) => {
           const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
           onChange(building.unit_id, v);
@@ -45,6 +48,7 @@ function FactorInput({ building, value, onChange }: FactorInputProps) {
       />
       %{' '}
       <select
+        disabled={disabled}
         onChange={(e) => {
           const v = Number(e.target.value);
           if (!isNaN(v)) onChange(building.unit_id, v);
@@ -73,6 +77,12 @@ export function ResourceScreen() {
     queryFn: () => (planetId ? fetchResourceReport(planetId) : Promise.reject()),
     enabled: planetId !== null,
   });
+
+  // План 72.1.26: legacy `Resource.class.php` строка 33 блокирует
+  // POST update при umode (`if(!NS::getUser()->get("umode"))`).
+  // umode определяется наличием vacation_since в /api/me.
+  const meQ = useQuery({ queryKey: QK.me(), queryFn: fetchMe });
+  const umode = meQ.data?.vacation_since != null;
 
   const save = useMutation({
     mutationFn: () => {
@@ -122,9 +132,16 @@ export function ResourceScreen() {
     <form
       onSubmit={(e) => {
         e.preventDefault();
+        if (umode) return; // План 72.1.26: legacy блокировка POST в umode.
         save.mutate();
       }}
     >
+      {umode && (
+        <div className="false" style={{ padding: '0.5em', textAlign: 'center' }}>
+          {t('resource', 'umodeWarning') ||
+            'Изменение факторов производства недоступно в режиме отпуска.'}
+        </div>
+      )}
       <table className="ntable">
         <tbody>
           <tr>
@@ -191,6 +208,7 @@ export function ResourceScreen() {
                   <FactorInput
                     building={b}
                     value={factorVal(b)}
+                    disabled={umode}
                     onChange={(id, val) =>
                       setLocalFactors((prev) => ({ ...prev, [id]: val }))
                     }
@@ -216,6 +234,7 @@ export function ResourceScreen() {
               <input
                 type="button"
                 className="button"
+                disabled={umode}
                 value={t('resource', 'shutDown') ?? 'Выключить'}
                 onClick={() => {
                   const factors: Record<number, number> = {};
@@ -247,6 +266,7 @@ export function ResourceScreen() {
               <input
                 type="button"
                 className="button"
+                disabled={umode}
                 value={t('resource', 'startUp') ?? 'Включить'}
                 onClick={() => {
                   const factors: Record<number, number> = {};
@@ -278,7 +298,7 @@ export function ResourceScreen() {
                 name="update"
                 value="Применить"
                 className="button"
-                disabled={save.isPending}
+                disabled={save.isPending || umode}
               />
             </td>
           </tr>
@@ -294,6 +314,22 @@ export function ResourceScreen() {
             </td>
             <td align="right">
               <span className={signClass(report.hydrogen_per_week)}>{fmt(report.hydrogen_per_week)}</span>
+            </td>
+            <td align="right">-</td>
+            <td>&nbsp;</td>
+          </tr>
+
+          {/* В месяц (план 72.1.26 — legacy resource.tpl: *720). */}
+          <tr>
+            <td><b>{t('resource', 'monthlyProduction')}</b></td>
+            <td align="right">
+              <span className={signClass(report.metal_per_month)}>{fmt(report.metal_per_month)}</span>
+            </td>
+            <td align="right">
+              <span className={signClass(report.silicon_per_month)}>{fmt(report.silicon_per_month)}</span>
+            </td>
+            <td align="right">
+              <span className={signClass(report.hydrogen_per_month)}>{fmt(report.hydrogen_per_month)}</span>
             </td>
             <td align="right">-</td>
             <td>&nbsp;</td>

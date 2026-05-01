@@ -701,6 +701,10 @@ export interface ResourceReport {
   metal_per_week: number;
   silicon_per_week: number;
   hydrogen_per_week: number;
+  // План 72.1.26: legacy resource.tpl показывает monthly = *720.
+  metal_per_month: number;
+  silicon_per_month: number;
+  hydrogen_per_month: number;
 }
 
 // ===== Repair / Disassemble queue =====

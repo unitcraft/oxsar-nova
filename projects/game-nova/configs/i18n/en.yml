@@ -2933,6 +2933,8 @@ resource:
   perDay: Per day
   perWeek: Per week
   levelAbbr: "lv."
+  # План 72.1.26: legacy POST update blocked in umode.
+  umodeWarning: "⚠ Resource factors are read-only while in vacation mode."
 statistics:
   alliances: ""
   attackerLost: ""

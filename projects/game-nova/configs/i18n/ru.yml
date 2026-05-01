@@ -2932,6 +2932,8 @@ resource:
   perDay: За сутки
   perWeek: За неделю
   levelAbbr: "ур."
+  # План 72.1.26: legacy блокировка POST update в umode.
+  umodeWarning: "⚠ Изменение факторов производства недоступно в режиме отпуска."
 statistics:
   alliances: Альянс
   attackerLost: Потери атаки
