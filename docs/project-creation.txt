@@ -14777,3 +14777,41 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(messages): план 72.1.17 — folder routing (12 папок legacy + SYSTEM=12).
 
+
+---
+
+2026-05-01 — итерация 72.1.18: Officer — renewal + folder fixup.
+
+  Закрытие /officer ❓ → ✅ по §20.12. Найдено 2 расхождения с legacy:
+
+  1. **Renewal**: legacy `hireOfficer` если у игрока активная подписка
+     не истекла → продлевает на 7 дней (`of_time = existing + 7d`).
+     Origin блокировал с ErrAlreadyActive (комментарий «legacy тоже
+     не даёт продлить» был неверен).
+  2. **folder=13** в officer service notify (auto-renew + expire) —
+     не существует в legacy const, после миграции 0087 не пройдёт
+     FK на message_folders.
+
+  **Сделано**:
+  - service.Activate переписан: если `(user, key)` уже active —
+    UPDATE expires_at = existing + duration, factor НЕ меняем (уже
+    применён), старый KindOfficerExpire event помечается
+    state='cancelled', создаётся новый event на новое expires_at.
+  - Group exclusivity (ErrGroupActive) обходится для self-renewal,
+    но сохраняется для других офицеров той же группы.
+  - service notify (auto-renew + expire): folder=13 → 12 (SYSTEM,
+    миграция 0087).
+  - ErrAlreadyActive константа сохранена (используется в artefact
+    flow), но Activate её больше не возвращает; comment обновлён.
+
+  **Прогон**: `go test ./internal/officer/...` зелёное.
+
+  **Файлы**:
+  - docs/plans/72.1.18-officer-renewal.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#15 → ✅).
+  - projects/game-nova/backend/internal/officer/service.go
+    (Activate renewal + folder=12 в notify).
+
+  **Коммит**:
+  feat(officer): план 72.1.18 — renewal + folder fixup (legacy hireOfficer паритет).
+
