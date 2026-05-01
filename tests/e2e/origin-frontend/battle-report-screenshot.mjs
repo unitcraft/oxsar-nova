@@ -11,10 +11,14 @@ if (!REPORT_ID) {
 }
 
 const browser = await chromium.launch({ headless: true });
-const ctx = await browser.newContext({ viewport: { width: 1280, height: 1200 }, deviceScaleFactor: 1 });
+const ctx = await browser.newContext({ viewport: { width: 1280, height: 1400 }, deviceScaleFactor: 2 });
 const page = await ctx.newPage();
 await page.goto(`${ORIGIN_URL}/battle-report/${REPORT_ID}`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(2000);
-await page.screenshot({ path: `${OUT}/origin_battle-report_full.png`, fullPage: true });
+// Скриншот центральной колонки в нормальном масштабе (для проверки Fight-иконок).
+await page.screenshot({
+  path: `${OUT}/origin_battle-report_full.png`,
+  clip: { x: 220, y: 0, width: 900, height: 1200 },
+});
 console.log('saved');
 await browser.close();

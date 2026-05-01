@@ -139,23 +139,23 @@ function RoundView({ index, attacker, defender }: RoundProps) {
         <thead>
           <tr>
             <th>&nbsp;</th>
-            <th title={t('assaultReport', 'fightShotsNumber') ?? 'Делает выстрелов'}>
-              {t('assaultReport', 'shotsNumber') ?? 'Выстрелов'}
+            <th>
+              <FightIcon name="shots_number" title={t('assaultReport', 'fightShotsNumber') ?? 'Делает выстрелов'} />
             </th>
-            <th title={t('assaultReport', 'fightShotsPower') ?? 'Мощность огня'}>
-              {t('assaultReport', 'shotsPower') ?? 'Мощность'}
+            <th>
+              <FightIcon name="shots_power" title={t('assaultReport', 'fightShotsPower') ?? 'Мощность огня'} />
             </th>
-            <th title={t('assaultReport', 'fightShotsMiss') ?? 'Промахи, попадания в уничтоженные.'}>
-              {t('assaultReport', 'shotsMiss') ?? 'Промахи'}
+            <th>
+              <FightIcon name="shots_miss" title={t('assaultReport', 'fightShotsMiss') ?? 'Промахи, попадания в уничтоженные.'} />
             </th>
-            <th title={t('assaultReport', 'fightShieldAbsorb') ?? 'Щиты противника поглотили'}>
-              {t('assaultReport', 'shieldAbsorb') ?? 'Поглощено щитами'}
+            <th>
+              <FightIcon name="shield_absorb" title={t('assaultReport', 'fightShieldAbsorb') ?? 'Щиты противника поглотили'} />
             </th>
-            <th title={t('assaultReport', 'fightShellDestroyed') ?? 'Разрушено брони противника'}>
-              {t('assaultReport', 'shellDestroyedCol') ?? 'Уничтожено брони'}
+            <th>
+              <FightIcon name="shell_destroyed" title={t('assaultReport', 'fightShellDestroyed') ?? 'Разрушено брони противника'} />
             </th>
-            <th title={t('assaultReport', 'fightUnitsDestroyed') ?? 'Уничтожено юнитов противника'}>
-              {t('assaultReport', 'unitsDestroyed') ?? 'Уничтожено юнитов'}
+            <th>
+              <FightIcon name="units_destroyed" title={t('assaultReport', 'fightUnitsDestroyed') ?? 'Уничтожено юнитов противника'} />
             </th>
           </tr>
         </thead>
@@ -432,5 +432,27 @@ function PowerCell({ value, total }: { value: number; total: number }) {
         </sup>
       )}
     </>
+  );
+}
+
+// FightIcon — иконка-заголовок Fight-таблицы (план 72.1 ч.20.11.10).
+// Java: <th>{img}FIGHT_<NAME>{/img}</th>. Файлы взяты из legacy
+// www/images/fight_*.gif и положены в public/assets/origin/images/.
+type FightIconName =
+  | 'shots_number'
+  | 'shots_power'
+  | 'shots_miss'
+  | 'shield_absorb'
+  | 'shell_destroyed'
+  | 'units_destroyed';
+
+function FightIcon({ name, title }: { name: FightIconName; title: string }) {
+  return (
+    <img
+      src={`/assets/origin/images/fight_${name}.gif`}
+      alt={title}
+      title={title}
+      style={{ verticalAlign: 'middle' }}
+    />
   );
 }
