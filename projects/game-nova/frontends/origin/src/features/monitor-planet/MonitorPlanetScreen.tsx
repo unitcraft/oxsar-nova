@@ -60,7 +60,17 @@ export function MonitorPlanetScreen() {
                 type="button"
                 className="button"
                 disabled={scanMut.isPending}
-                onClick={() => scanMut.mutate()}
+                onClick={() => {
+                  // План 72.1.47: pre-scan confirmation для 5000H
+                  // (legacy STAR_SURVEILLANCE_CONSUMPTION списывается
+                  // безусловно при каждом нажатии).
+                  const ok = window.confirm(
+                    (t('monitorPlanet', 'scanConfirm') as string) ||
+                      'Сканирование стоит 5000H. Продолжить?',
+                  );
+                  if (!ok) return;
+                  scanMut.mutate();
+                }}
               >
                 {scanMut.isPending
                   ? '…'

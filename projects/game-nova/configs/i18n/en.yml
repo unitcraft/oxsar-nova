@@ -1643,6 +1643,9 @@ profession:
   available: available
   chooseBtn: Choose
   confirmChoose: "Choose profession «{{name}}»? Change is possible once every {{days}} days."
+  # План 72.1.47: dynamic cost (legacy PROFESSION_CHANGE_COST_INFO/_NO_COST_INFO).
+  changeCostInfo: "Free change in {{days}} days. Change now — {{cost}} cr."
+  changeFreeInfo: "Profession change — free (cooldown passed)."
   confirmBtn: Confirm
   cancelBtn: Cancel
   bonusUnknown: Bonus
@@ -3292,6 +3295,8 @@ msgFolder:
 monitorPlanet:
   title: 🛰 Planet surveillance
   scanBtn: "Scan (5000H)"
+  # План 72.1.47: pre-scan confirmation.
+  scanConfirm: "Scan will deduct 5000H from the source. Continue?"
   scannerLabel: "Source"
   eventsTitle: "Fleet events"
   detectedNote: "Target detected the scan — a notification was sent."

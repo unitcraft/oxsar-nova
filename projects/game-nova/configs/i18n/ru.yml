@@ -1640,6 +1640,9 @@ profession:
   available: доступно
   chooseBtn: Выбрать
   confirmChoose: "Выбрать профессию «{{name}}»? Смена возможна раз в {{days}} дней."
+  # План 72.1.47: динамическая стоимость (legacy PROFESSION_CHANGE_COST_INFO/_NO_COST_INFO).
+  changeCostInfo: "До бесплатной смены: {{days}} дн. Сменить сейчас — {{cost}} cr."
+  changeFreeInfo: "Смена профессии — бесплатно (cooldown пройден)."
   confirmBtn: Подтвердить
   cancelBtn: Отмена
   bonusUnknown: Бонус
@@ -3292,6 +3295,8 @@ msgFolder:
 monitorPlanet:
   title: 🛰 Мониторинг планеты
   scanBtn: "Сканировать (5000H)"
+  # План 72.1.47: подтверждение списания H перед сканированием.
+  scanConfirm: "Сканирование спишет 5000H с источника. Продолжить?"
   scannerLabel: "Источник"
   eventsTitle: "События флота"
   detectedNote: "Цель обнаружила сканирование — отправлено уведомление."
