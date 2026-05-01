@@ -648,6 +648,9 @@ autoMessages:
   # План 72.1.25: legacy `MSG_CREDIT_FOR_REPAIR_VIP` / `..._FOR_DISASSEMBLE_VIP`.
   creditRepairVIP.title: "Списание кредитов"
   creditRepairVIP.body: "Списано {{credits}} кредитов за мгновенный старт {{mode}} ({{quantity}} ед.)."
+  # План 72.1.27: legacy `MSG_CREDIT_EXCHANGE_PREMIUM_LOT`.
+  creditExchangePremium.title: "Списание кредитов"
+  creditExchangePremium.body: "Списано {{credits}} кредитов за премиум-показ лота #{{lotId}} (2 часа в топе)."
 buddylist:
   accept: Принять
   buddylist: Список друзей
@@ -1277,6 +1280,13 @@ stock:
   createExpiryLabel: Истекает (ч.)
   createSubmit: Выставить
   createSuccess: Лот выставлен
+  # План 72.1.27: Premium + Ban (legacy `Stock::premiumLot/ban`).
+  premiumBtn: "⭐ Премиум за {{credits}} кр"
+  premiumConfirm: "Сделать лот премиум за {{credits}} кр? (2 часа в топе)"
+  premiumSuccess: "Лот в премиуме на 2 часа (списано {{credits}} кр)"
+  banBtn: "🚫 Бан (admin)"
+  banConfirm: "Забанить лот? Артефакты вернутся продавцу."
+  banSuccess: "Лот забанен"
 
 score:
   title: "🏆 Рейтинг"

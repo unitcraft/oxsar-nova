@@ -2625,7 +2625,14 @@ unit-тесты на форматтеры/валидаторы/router-маршр
   без логики на стороне game.
 - **Приоритет**: closed.
 
-### [P72.1.8.C.PREMIUM_BAN_ADMIN_ONLY] Premium-лоты и Ban — admin-only, не в MVP origin
+### [P72.1.8.C.PREMIUM_BAN_ADMIN_ONLY] Premium-лоты и Ban [CLOSED by 72.1.27]
+
+**Закрыто планом [72.1.27](plans/72.1.27-stock-premium-ban.md)**
+2026-05-01: backend PromoteLot (любому игроку, cost = max(10,
+price × 0.5%), max 5 featured 2ч) + BanLot (admin-only, escrow
+refund, KindExchangeExpire cancel); миграция 0088 (featured_at +
+banned_at + 'banned' status); UI 2 кнопки в StockScreen (⭐
+Premium + 🚫 Ban для admin); AutoMsg creditExchangePremium folder=8.
 
 - **Где**: legacy `Stock.class.php::premiumLot, ban`.
 - **Что**: legacy биржа имеет два admin-action'а:

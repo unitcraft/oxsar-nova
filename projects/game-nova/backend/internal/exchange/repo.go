@@ -27,6 +27,9 @@ type Lot struct {
 	BuyerUserID      *string    `json:"buyer_user_id,omitempty"`
 	SoldAt           *time.Time `json:"sold_at,omitempty"`
 	ExpireEventID    *string    `json:"expire_event_id,omitempty"`
+	// План 72.1.27: Premium + Ban (legacy `Stock.class.php`).
+	FeaturedAt *time.Time `json:"featured_at,omitempty"`
+	BannedAt   *time.Time `json:"banned_at,omitempty"`
 }
 
 // ListFilters — фильтры для ListLots.
@@ -136,4 +139,20 @@ type Repo interface {
 	// Stats — агрегаты для GET /api/exchange/stats. Возвращает по unit_id:
 	//   active_lots count, avg_unit_price (rolling 30d), last_30d_volume.
 	Stats(ctx context.Context, window time.Duration) ([]StatsRow, error)
+
+	// План 72.1.27: Premium + Ban.
+
+	// CountActiveFeaturedLots — количество active-лотов с featured_at в
+	// окне `featuredWindow` (legacy EXCH_PREMIUM_LOT_EXPIRY_TIME=2ч).
+	// Используется для проверки лимита EXCH_PREMIUM_LIST_MAX_SIZE=5.
+	CountActiveFeaturedLots(ctx context.Context, tx pgx.Tx, featuredWindow time.Duration) (int, error)
+
+	// MarkLotFeatured — UPDATE featured_at = $now WHERE lid AND status='active'.
+	MarkLotFeatured(ctx context.Context, tx pgx.Tx, lotID string, at time.Time) error
+
+	// MarkLotBanned — status='banned', banned_at=$now.
+	MarkLotBanned(ctx context.Context, tx pgx.Tx, lotID string, at time.Time) error
+
+	// CheckIsAdmin — проверяет users.role='admin' (legacy `isAdmin()`).
+	CheckIsAdmin(ctx context.Context, tx pgx.Tx, userID string) (bool, error)
 }

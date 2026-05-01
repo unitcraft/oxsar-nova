@@ -15105,3 +15105,51 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(repair,disassemble): план 72.1.25 — полный паритет с legacy (umode/observer/under-attack + dock_capacity + VIP + abort + earn UI).
 
+
+---
+
+2026-05-01 — итерация 72.1.27: Stock cont — Premium-лоты + Ban (хвост 72.1.8).
+
+  Закрытие хвоста P72.1.8.C.PREMIUM_BAN_ADMIN_ONLY по правилу 1:1.
+
+  **Сделано (1:1 с legacy)**:
+  - migration 0088: featured_at + banned_at колонки + 'banned' status
+    + partial-index featured-лотов.
+  - exchange.Service.PromoteLot: cost = max(10, price × 0.5%);
+    лимит 5 одновременных featured в окне 2ч; AutoMsg
+    creditExchangePremium folder=8.
+  - exchange.Service.BanLot: admin-проверка через CheckIsAdmin
+    (`users.role='admin'`); refund escrow продавцу; cancel
+    KindExchangeExpire event.
+  - Repo extended: CountActiveFeaturedLots, MarkLotFeatured,
+    MarkLotBanned, CheckIsAdmin (+ stubs для fakeRepo).
+  - ListLots ORDER BY featured (active 2ч) сначала; banned_at IS NULL
+    фильтр.
+  - 5 новых ошибок (ErrPremiumLimit, ErrInsufficientCreditPremium,
+    ErrAdminRequired, ErrLotAlreadyFeatured, ErrLotBanned).
+  - 2 endpoint: POST /api/exchange/lots/{id}/premium и /ban.
+  - Frontend: api/exchange.ts (promoteLot, banLot, premiumCost
+    клиент-side preview); StockScreen — ⭐ Premium кнопка всем,
+    🚫 Ban кнопка admin-only; featured-лот с golden-rim.
+  - i18n (ru/en): 7 ключей (premiumBtn/Confirm/Success, banBtn/
+    Confirm/Success, autoMessages.creditExchangePremium).
+  - Wiring: exchangeSvc.WithAutoMsg(automsgSvc).WithBundle(i18nBundle).
+
+  **Прогон**: `go test ./internal/exchange/...` — 1.467s OK
+  (existing fakeRepo extended). `tsc --noEmit` clean. eslint clean.
+
+  **Файлы**:
+  - docs/plans/72.1.27-stock-premium-ban.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#12 ⚠ → ✅).
+  - docs/simplifications.md (P72.1.8.C → CLOSED by 72.1.27).
+  - projects/game-nova/migrations/0088_exchange_premium_ban.sql (новый).
+  - projects/game-nova/backend/internal/exchange/{repo,repo_pgx,service,handler,errors,service_test}.go.
+  - projects/game-nova/backend/cmd/server/main.go (wiring).
+  - projects/game-nova/frontends/origin/src/api/{exchange.ts,types.ts}.
+  - projects/game-nova/frontends/origin/src/features/stock/StockScreen.tsx
+    (Premium + Ban + featured-rim).
+  - projects/game-nova/configs/i18n/{ru,en}.yml.
+
+  **Коммит**:
+  feat(stock): план 72.1.27 — Premium-лоты + Ban (полный паритет с legacy).
+

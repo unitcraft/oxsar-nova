@@ -21,7 +21,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"oxsar/game-nova/internal/automsg"
 	"oxsar/game-nova/internal/event"
+	"oxsar/game-nova/internal/i18n"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/pkg/metrics"
 )
@@ -55,6 +57,11 @@ type Config struct {
 	ReferenceWindow       time.Duration // 30 * 24h
 	ExpiresInHoursMin     int           // 1
 	ExpiresInHoursMax     int           // 168 (7 дней)
+	// План 72.1.27: Premium-лоты (legacy `EXCH_PREMIUM_*`).
+	PremiumPercent     float64       // 0.5 (% от lot.price)
+	PremiumMinCost     int64         // 10 (мин. cost в credit)
+	PremiumExpiry      time.Duration // 2h (legacy EXCH_PREMIUM_LOT_EXPIRY_TIME)
+	PremiumMaxSize     int           // 5 (legacy EXCH_PREMIUM_LIST_MAX_SIZE)
 }
 
 // DefaultConfig — fallback на случай если configs/balance не загрузился.
@@ -66,6 +73,10 @@ func DefaultConfig() Config {
 		ReferenceWindow:      30 * 24 * time.Hour,
 		ExpiresInHoursMin:    1,
 		ExpiresInHoursMax:    168,
+		PremiumPercent:       0.5,
+		PremiumMinCost:       10,
+		PremiumExpiry:        2 * time.Hour,
+		PremiumMaxSize:       5,
 	}
 }
 
@@ -84,6 +95,9 @@ type Service struct {
 	cfg         Config
 	permit      PermitChecker
 	insertEvent EventInserter
+	// План 72.1.27: AutoMsg для credit-уведомления при Premium-старте.
+	automsg *automsg.Service
+	bundle  *i18n.Bundle
 }
 
 func NewService(db repo.Exec, r Repo, cfg Config) *Service {
@@ -94,6 +108,28 @@ func NewService(db repo.Exec, r Repo, cfg Config) *Service {
 		permit:      AlwaysAllowPermit{},
 		insertEvent: defaultEventInserter,
 	}
+}
+
+// WithAutoMsg подключает automsg для Premium-уведомлений (план 72.1.27).
+func (s *Service) WithAutoMsg(am *automsg.Service) *Service {
+	s.automsg = am
+	return s
+}
+
+// WithBundle — i18n для текстов AutoMsg.
+func (s *Service) WithBundle(b *i18n.Bundle) *Service {
+	s.bundle = b
+	return s
+}
+
+// userLang читает язык пользователя для AutoMsg. Fallback ru.
+func (s *Service) userLang(ctx context.Context, tx pgx.Tx, userID string) i18n.Lang {
+	var lang string
+	_ = tx.QueryRow(ctx, `SELECT language FROM users WHERE id=$1`, userID).Scan(&lang)
+	if lang == "" {
+		return i18n.LangRu
+	}
+	return i18n.Lang(lang)
 }
 
 // WithPermitChecker — DI для тестов и будущей реальной реализации.
@@ -476,4 +512,179 @@ func recordExchangeAction(action string, err error) {
 		status = "error"
 	}
 	metrics.ExchangeLotsTotal.WithLabelValues(action, status).Inc()
+}
+
+// План 72.1.27: Premium-лоты + Ban (legacy `Stock.class.php::premiumLot/ban`).
+
+// FolderCredit — папка кредитных уведомлений (см. automsg/service.go).
+const folderCredit = 8
+
+// PromoteResult — итог PromoteLot.
+type PromoteResult struct {
+	LotID       string `json:"lot_id"`
+	CreditDebit int64  `json:"credit_debit"`
+}
+
+// PromoteLot — featured-promotion лота за credit (legacy
+// `premiumLot`). Cost = max(PremiumMinCost, lot.price × PremiumPercent/100).
+//
+// Любой user может премиумить ЛЮБОЙ active-лот (свой или чужой). Лимит
+// EXCH_PREMIUM_LIST_MAX_SIZE=5 одновременных featured-лотов в окне
+// PremiumExpiry (2ч). Если лимит превышен → ErrPremiumLimit.
+//
+// AutoMsg `creditExchangePremium` в folder=8 уведомляет actor'а о
+// списании.
+func (s *Service) PromoteLot(ctx context.Context, lotID, actorUserID string) (PromoteResult, error) {
+	t0 := time.Now()
+	defer func() {
+		if metrics.ExchangeActionDuration != nil {
+			metrics.ExchangeActionDuration.WithLabelValues("promote").Observe(time.Since(t0).Seconds())
+		}
+	}()
+
+	var out PromoteResult
+	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// 1. Лок лота, валидация active + не banned.
+		lot, err := s.repo.LockLotForUpdate(ctx, tx, lotID)
+		if err != nil {
+			return err
+		}
+		if lot.BannedAt != nil {
+			return ErrLotBanned
+		}
+		if lot.Status != "active" {
+			return ErrLotNotActive
+		}
+		// Уже featured в окне 2ч?
+		if lot.FeaturedAt != nil &&
+			lot.FeaturedAt.Add(s.cfg.PremiumExpiry).After(time.Now().UTC()) {
+			return ErrLotAlreadyFeatured
+		}
+
+		// 2. Лимит max featured (legacy EXCH_PREMIUM_LIST_MAX_SIZE).
+		n, err := s.repo.CountActiveFeaturedLots(ctx, tx, s.cfg.PremiumExpiry)
+		if err != nil {
+			return err
+		}
+		if n >= s.cfg.PremiumMaxSize {
+			return ErrPremiumLimit
+		}
+
+		// 3. Cost = max(min, price × percent/100).
+		cost := int64(float64(lot.PriceOxsarit) * s.cfg.PremiumPercent / 100.0)
+		if cost < s.cfg.PremiumMinCost {
+			cost = s.cfg.PremiumMinCost
+		}
+
+		// 4. Списать credit (atomic via SpendOxsarits — оно использует
+		// `users.credit` колонку, что эквивалент legacy `credit`).
+		if err := s.repo.SpendOxsarits(ctx, tx, actorUserID, cost); err != nil {
+			if errors.Is(err, ErrInsufficientOxsarits) {
+				return ErrInsufficientCreditPremium
+			}
+			return err
+		}
+
+		// 5. UPDATE featured_at.
+		now := time.Now().UTC()
+		if err := s.repo.MarkLotFeatured(ctx, tx, lotID, now); err != nil {
+			return err
+		}
+
+		// 6. AutoMsg credit (folder=8, legacy `MSG_CREDIT_EXCHANGE_PREMIUM_LOT`).
+		if s.automsg != nil && s.bundle != nil {
+			lang := s.userLang(ctx, tx, actorUserID)
+			vars := map[string]string{
+				"credits": fmt.Sprintf("%d", cost),
+				"lotId":   lotID,
+			}
+			title := s.bundle.Tr(lang, "autoMessages", "creditExchangePremium.title", vars)
+			body := s.bundle.Tr(lang, "autoMessages", "creditExchangePremium.body", vars)
+			_ = s.automsg.SendDirect(ctx, tx, actorUserID, folderCredit, title, body)
+		}
+
+		// 7. История (для аудита).
+		if err := s.repo.InsertHistory(ctx, tx, lotID, "promoted", &actorUserID,
+			fmt.Appendf(nil, `{"credit_cost":%d}`, cost),
+		); err != nil {
+			slog.Warn("exchange: promote history insert failed", "err", err)
+		}
+
+		out = PromoteResult{LotID: lotID, CreditDebit: cost}
+		return nil
+	})
+
+	recordExchangeAction("promote", err)
+	return out, err
+}
+
+// BanLot — admin-only ban лота (legacy `Stock::ban`). Возвращает escrow
+// продавцу + status='banned'. Связанный KindExchangeExpire event
+// помечается cancelled.
+//
+// Проверка `users.role='admin'` обязательна — без неё ошибка
+// ErrAdminRequired (legacy: UI показывал кнопку только админам, action
+// в роуте без проверки → дыра, мы её закрываем).
+func (s *Service) BanLot(ctx context.Context, lotID, adminUserID string) error {
+	t0 := time.Now()
+	defer func() {
+		if metrics.ExchangeActionDuration != nil {
+			metrics.ExchangeActionDuration.WithLabelValues("ban").Observe(time.Since(t0).Seconds())
+		}
+	}()
+
+	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// 1. Admin-проверка.
+		isAdmin, err := s.repo.CheckIsAdmin(ctx, tx, adminUserID)
+		if err != nil {
+			return err
+		}
+		if !isAdmin {
+			return ErrAdminRequired
+		}
+
+		// 2. Лок лота.
+		lot, err := s.repo.LockLotForUpdate(ctx, tx, lotID)
+		if err != nil {
+			return err
+		}
+		if lot.Status != "active" {
+			return ErrLotNotActive
+		}
+
+		// 3. Возврат escrow продавцу (артефакты state='held' обратно).
+		artefactIDs, err := s.repo.GetLotItems(ctx, lotID)
+		if err != nil {
+			return err
+		}
+		// MarkArtefactsHeld без смены owner_id (escrow к seller'у вернётся).
+		if err := s.repo.MarkArtefactsHeld(ctx, tx, artefactIDs, "", ""); err != nil {
+			return err
+		}
+
+		// 4. status='banned' + banned_at=now.
+		now := time.Now().UTC()
+		if err := s.repo.MarkLotBanned(ctx, tx, lotID, now); err != nil {
+			return err
+		}
+
+		// 5. Отменить связанный KindExchangeExpire event.
+		if lot.ExpireEventID != nil && *lot.ExpireEventID != "" {
+			if err := s.repo.CancelExpireEvent(ctx, tx, *lot.ExpireEventID,
+				"banned by admin"); err != nil {
+				return err
+			}
+		}
+
+		// 6. История.
+		payload := fmt.Appendf(nil, `{"admin_user_id":%q}`, adminUserID)
+		if err := s.repo.InsertHistory(ctx, tx, lotID, "banned", &adminUserID, payload); err != nil {
+			slog.Warn("exchange: ban history insert failed", "err", err)
+		}
+
+		return nil
+	})
+
+	recordExchangeAction("ban", err)
+	return err
 }

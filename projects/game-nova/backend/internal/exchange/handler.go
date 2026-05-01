@@ -28,6 +28,9 @@ func (h *Handler) Routes(r chi.Router) {
 	r.Get("/api/exchange/lots/{id}", h.Get)
 	r.Delete("/api/exchange/lots/{id}", h.Cancel)
 	r.Post("/api/exchange/lots/{id}/buy", h.Buy)
+	// План 72.1.27: Premium + Ban (legacy `Stock.class.php`).
+	r.Post("/api/exchange/lots/{id}/premium", h.Promote)
+	r.Post("/api/exchange/lots/{id}/ban", h.Ban)
 	r.Get("/api/exchange/stats", h.Stats)
 }
 
@@ -198,6 +201,68 @@ func (h *Handler) Buy(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrPaymentRequired, "insufficient_oxsarits"))
 	case errors.Is(err, ErrUserHasNoPlanet):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "buyer_has_no_planet"))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// Promote POST /api/exchange/lots/{id}/premium — featured-promotion за credit.
+// План 72.1.27, legacy `Stock::premiumLot`.
+func (h *Handler) Promote(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	if r.Header.Get("Idempotency-Key") == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "Idempotency-Key required"))
+		return
+	}
+	id := chi.URLParam(r, "id")
+	res, err := h.svc.PromoteLot(r.Context(), id, uid)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, res)
+	case errors.Is(err, ErrLotNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrLotNotActive):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "lot_not_active"))
+	case errors.Is(err, ErrLotBanned):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "lot_banned"))
+	case errors.Is(err, ErrLotAlreadyFeatured):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "lot_already_featured"))
+	case errors.Is(err, ErrPremiumLimit):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrRateLimit, "premium_list_full"))
+	case errors.Is(err, ErrInsufficientCreditPremium):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrPaymentRequired, "insufficient_credit"))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// Ban POST /api/exchange/lots/{id}/ban — admin-only ban лота.
+// План 72.1.27, legacy `Stock::ban`.
+func (h *Handler) Ban(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	if r.Header.Get("Idempotency-Key") == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "Idempotency-Key required"))
+		return
+	}
+	id := chi.URLParam(r, "id")
+	err := h.svc.BanLot(r.Context(), id, uid)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrLotNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrLotNotActive):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "lot_not_active"))
+	case errors.Is(err, ErrAdminRequired):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrForbidden, "admin_required"))
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}

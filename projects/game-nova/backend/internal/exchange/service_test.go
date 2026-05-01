@@ -3,6 +3,7 @@ package exchange
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -322,6 +323,46 @@ func (f *fakeRepo) SelectActiveLotsBySeller(ctx context.Context, _ pgx.Tx, selle
 
 func (f *fakeRepo) Stats(ctx context.Context, window time.Duration) ([]StatsRow, error) {
 	return nil, nil
+}
+
+// План 72.1.27: Premium + Ban (stubs для тестов).
+
+func (f *fakeRepo) CountActiveFeaturedLots(_ context.Context, _ pgx.Tx, _ time.Duration) (int, error) {
+	n := 0
+	for _, l := range f.lots {
+		if l.Status == "active" && l.BannedAt == nil && l.FeaturedAt != nil {
+			n++
+		}
+	}
+	return n, nil
+}
+
+func (f *fakeRepo) MarkLotFeatured(_ context.Context, _ pgx.Tx, lotID string, at time.Time) error {
+	for i := range f.lots {
+		if f.lots[i].ID == lotID && f.lots[i].Status == "active" && f.lots[i].BannedAt == nil {
+			t := at
+			f.lots[i].FeaturedAt = &t
+			return nil
+		}
+	}
+	return ErrLotNotActive
+}
+
+func (f *fakeRepo) MarkLotBanned(_ context.Context, _ pgx.Tx, lotID string, at time.Time) error {
+	for i := range f.lots {
+		if f.lots[i].ID == lotID && f.lots[i].Status == "active" {
+			f.lots[i].Status = "banned"
+			t := at
+			f.lots[i].BannedAt = &t
+			return nil
+		}
+	}
+	return ErrLotNotActive
+}
+
+func (f *fakeRepo) CheckIsAdmin(_ context.Context, _ pgx.Tx, userID string) (bool, error) {
+	// fakeRepo: admin если userID начинается с "admin-".
+	return strings.HasPrefix(userID, "admin-"), nil
 }
 
 // compile-check

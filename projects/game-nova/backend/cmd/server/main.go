@@ -304,7 +304,8 @@ func run() error {
 
 	// План 68: биржа артефактов (P2P пакетный обмен на оксариты).
 	exchangeRepo := exchange.NewPgRepo(db)
-	exchangeSvc := exchange.NewService(db, exchangeRepo, exchange.DefaultConfig())
+	exchangeSvc := exchange.NewService(db, exchangeRepo, exchange.DefaultConfig()).
+		WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
 	exchangeH := exchange.NewHandler(exchangeSvc)
 
 	achSvc := achievement.NewService(db).WithBundle(i18nBundle)
