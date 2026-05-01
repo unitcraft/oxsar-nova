@@ -640,6 +640,9 @@ autoMessages:
   creditProfessionChanged.title: Credit charge
   creditProfessionChanged.body: "{{credits}} credits charged for profession change to «{{profession}}»."
   creditProfessionChanged.noneLabel: "no profession"
+  # Plan 72.1.20: surveillance detected (legacy MSG_SURVEILLANCE_DETECTED, folder=11).
+  surveillanceDetected.title: "Surveillance detected"
+  surveillanceDetected.body: "Your planet «{{planet}}» [{{galaxy}}:{{system}}:{{position}}] has been scanned by a hostile sensor phalanx. Your espionage level allowed detecting the attempt."
 buddylist:
   accept: ""
   buddylist: ""
@@ -3156,3 +3159,12 @@ msgFolder:
   recycler: ♻ Recycler
   surveillance: 🛰 Surveillance
   system: 🔔 System
+
+# Plan 72.1.20: Planet surveillance via STAR_SURVEILLANCE building.
+monitorPlanet:
+  title: 🛰 Planet surveillance
+  scanBtn: "Scan (5000H)"
+  scannerLabel: "Source"
+  eventsTitle: "Fleet events"
+  detectedNote: "Target detected the scan — a notification was sent."
+  noPlanetSelected: "No planet selected. Open /monitor-planet?id=<planet_id>."

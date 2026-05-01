@@ -14863,3 +14863,55 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(chat): план 72.1.19 — паритет с legacy (umode-RO + anti-flood + BBCode + history=75).
 
+
+---
+
+2026-05-01 — итерация 72.1.20: MonitorPlanet — паритет с legacy.
+
+  Закрытие /monitor-planet ❓ → ✅ по §20.12. Origin
+  MonitorPlanetScreen (50 строк) показывал СВОИ флоты через
+  fetchFleet — совсем не соответствовал legacy. Legacy
+  MonitorPlanet.class.php — отдельный экран ?id=<planet> для
+  мониторинга ЧУЖОЙ планеты через здание UNIT_STAR_SURVEILLANCE.
+
+  **Сделано (1:1 с legacy)**:
+  - Новый пакет `internal/monitor/handler.go` (~190 строк):
+    - GET /api/monitor-planet?id=<planet_id>
+    - Резолв scanner — луна юзера в той же галактике с
+      UNIT_STAR_SURVEILLANCE>=1.
+    - Делегирование TransportService.Phalanx — он списывает 5000H,
+      проверяет range = round((level² - 1) × (1 + hyper/10)).
+    - Фильтрация Phalanx event'ов по target.galaxy/system/position
+      (legacy: planetid OR destination = $target).
+    - AutoMsg surveillanceDetected цели в folder=11 если
+      target.spyware × 2 >= my.spyware (эквивалент legacy
+      `target_spy >= my_spy/2`).
+  - Route /api/monitor-planet в main.go.
+  - Frontend api/monitor.ts (новый): fetchMonitorPlanet, MonitorResult.
+  - PhalanxScan тип в types.ts (раньше отсутствовал).
+  - MonitorPlanetScreen полностью переписан: ?id= flow, кнопка
+    «Сканировать» (single-shot, не auto-refetch — каждое
+    сканирование = 5000H), таблицы target/scanner/events.
+  - i18n autoMessages.surveillanceDetected.title/body (ru/en).
+  - i18n monitorPlanet группа: title, scanBtn, scannerLabel,
+    eventsTitle, detectedNote, noPlanetSelected.
+
+  **Прогон**: `go build ./...` zero issues. `npx tsc --noEmit`
+  zero errors. `npx eslint src/features/monitor-planet src/api/monitor.ts`
+  zero errors.
+
+  **Файлы**:
+  - docs/plans/72.1.20-monitor-planet.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#32 → ✅).
+  - projects/game-nova/backend/internal/monitor/handler.go (новый).
+  - projects/game-nova/backend/cmd/server/main.go (+ wiring + route).
+  - projects/game-nova/frontends/origin/src/api/monitor.ts (новый).
+  - projects/game-nova/frontends/origin/src/api/types.ts (+PhalanxScan).
+  - projects/game-nova/frontends/origin/src/features/monitor-planet/MonitorPlanetScreen.tsx
+    (полный rewrite).
+  - projects/game-nova/configs/i18n/{ru,en}.yml
+    (autoMessages.surveillanceDetected + monitorPlanet группа).
+
+  **Коммит**:
+  feat(monitor-planet): план 72.1.20 — паритет с legacy (range + hydrogen + events + AutoMsg).
+
