@@ -473,10 +473,13 @@ func expArtefact(ctx context.Context, tx pgx.Tx, r *rng.R, userID string,
 	}
 	idx := r.IntN(len(artIDs))
 	artID := artIDs[idx]
+	// План 72.1.46 P1#2: payload содержит acquisition_source для триггера
+	// `trg_artefacts_user_history` (миграция 0093) → artefact_history
+	// получит правильный source='expedition'.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO artefacts_user (id, user_id, planet_id, unit_id, state, acquired_at)
-		VALUES ($1, $2, NULL, $3, 'held', now())
-	`, ids.New(), userID, artID); err != nil {
+		INSERT INTO artefacts_user (id, user_id, planet_id, unit_id, state, acquired_at, payload)
+		VALUES ($1, $2, NULL, $3, 'held', now(), $4)
+	`, ids.New(), userID, artID, []byte(`{"acquisition_source":"expedition"}`)); err != nil {
 		return map[string]any{"error": err.Error()}
 	}
 	return map[string]any{"artefact_id": artID}

@@ -2,6 +2,7 @@ package artefact
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -93,6 +94,9 @@ func (s *Service) Grant(ctx context.Context, userID string, unitID int, planetID
 		ID: ids.New(), UserID: userID, PlanetID: planetID,
 		UnitID: unitID, State: StateHeld, AcquiredAt: time.Now().UTC(),
 	}
+	// План 72.1.46 P1#2: artefact_history заполняется триггером
+	// `trg_artefacts_user_history` (миграция 0093). source='admin' по
+	// умолчанию; для battle/expedition/alien вызывайте GrantWithSource.
 	_, err := s.db.Pool().Exec(ctx, `
 		INSERT INTO artefacts_user (id, user_id, planet_id, unit_id, state, acquired_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -100,29 +104,44 @@ func (s *Service) Grant(ctx context.Context, userID string, unitID int, planetID
 	if err != nil {
 		return Record{}, fmt.Errorf("insert artefact: %w", err)
 	}
-	// План 72.1.45 §2: artefact_history запись (legacy `Artefact.class.php` L.296).
-	// Источник без battle-context — пометим 'admin'/'quest' через GrantWithSource.
-	_, _ = s.db.Pool().Exec(ctx, `
-		INSERT INTO artefact_history (unit_id, user_id, source, acquired_at)
-		VALUES ($1, $2, 'admin', $3)
-	`, rec.UnitID, rec.UserID, rec.AcquiredAt)
 	return rec, nil
 }
 
-// GrantWithBattle — вариант Grant для случая, когда артефакт получен в бою.
-// Используется fleet/battle-flow при `award` после боя (план 72.1.45 §2).
-func (s *Service) GrantWithBattle(ctx context.Context, userID string, unitID int, planetID *string, battleReportID string) (Record, error) {
-	rec, err := s.Grant(ctx, userID, unitID, planetID)
-	if err != nil {
-		return Record{}, err
+// GrantWithSource — план 72.1.46 P1#2.
+// Создаёт артефакт с явным источником (battle/expedition/quest/market).
+// Если source='battle' — battleReportID должен быть не пуст и пишется
+// в artefact_history.battle_report_id (для UI «история боёв»).
+//
+// Реализация: payload содержит acquisition_source + battle_report_id,
+// триггер `trg_artefacts_user_history` читает их и пишет правильную
+// запись в artefact_history.
+func (s *Service) GrantWithSource(ctx context.Context, userID string, unitID int, planetID *string, source, battleReportID string) (Record, error) {
+	if _, ok := s.lookupByID(unitID); !ok {
+		return Record{}, ErrUnknownArtefact
 	}
-	_, _ = s.db.Pool().Exec(ctx, `
-		UPDATE artefact_history
-		   SET battle_report_id = $1, source = 'battle'
-		 WHERE unit_id = $2 AND user_id = $3
-		   AND acquired_at = $4
-	`, battleReportID, unitID, userID, rec.AcquiredAt)
+	rec := Record{
+		ID: ids.New(), UserID: userID, PlanetID: planetID,
+		UnitID: unitID, State: StateHeld, AcquiredAt: time.Now().UTC(),
+	}
+	payload := map[string]string{"acquisition_source": source}
+	if battleReportID != "" {
+		payload["battle_report_id"] = battleReportID
+	}
+	payloadJSON, _ := json.Marshal(payload)
+	_, err := s.db.Pool().Exec(ctx, `
+		INSERT INTO artefacts_user (id, user_id, planet_id, unit_id, state, acquired_at, payload)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, rec.ID, rec.UserID, rec.PlanetID, rec.UnitID, rec.State, rec.AcquiredAt, payloadJSON)
+	if err != nil {
+		return Record{}, fmt.Errorf("insert artefact: %w", err)
+	}
 	return rec, nil
+}
+
+// GrantWithBattle — обёртка GrantWithSource для боевых трофеев.
+// Сохранена для обратной совместимости (план 72.1.45 §2).
+func (s *Service) GrantWithBattle(ctx context.Context, userID string, unitID int, planetID *string, battleReportID string) (Record, error) {
+	return s.GrantWithSource(ctx, userID, unitID, planetID, "battle", battleReportID)
 }
 
 // HistoryEntry — строка истории артефакта для UI (план 72.1.45 §2).
