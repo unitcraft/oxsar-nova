@@ -79,6 +79,24 @@ interface TechSet {
   defenseFactory: number; // только для защитника
 }
 
+// План 72.1.34 ч.C: id-маркеры боевых артефактов (legacy 316-318
+// базовые × +10% и 359-361 ×10-версии). Каждый stack даёт ×1.1
+// к одной из tech (attack/shield/shell), max 3 stack/тип.
+const BATTLE_ARTEFACT_IDS = [
+  316, 317, 318, // shell/shield/attack базовые
+  359, 360, 361, // shell/shield/attack ×10-версии
+] as const;
+
+function expandArtefactStacks(stacks: Record<number, number>): number[] {
+  const out: number[] = [];
+  for (const idStr of Object.keys(stacks)) {
+    const id = Number(idStr);
+    const cnt = Math.max(0, Math.min(3, stacks[id] ?? 0));
+    for (let i = 0; i < cnt; i++) out.push(id);
+  }
+  return out;
+}
+
 const ZERO_TECH: TechSet = {
   gun: 0, shield: 0, shell: 0, laser: 0, ion: 0, plasma: 0,
   ballistics: 0, masking: 0,
@@ -98,12 +116,24 @@ export function SimulatorScreen() {
   const { planetId } = useResolvedPlanet();
   const ships = catalogByGroup('ship');
   const defense = catalogByGroup('defense');
+  // План 72.1.34 ч.B: список зданий для target-селекта (legacy
+  // показывает все mode=construction).
+  const buildings = catalogByGroup('building');
 
   const [aTech, setATech] = useState<TechSet>({ ...ZERO_TECH });
   const [dTech, setDTech] = useState<TechSet>({ ...ZERO_TECH });
   const [numSim, setNumSim] = useState('1');
   const [aUnits, setAUnits] = useState<Record<number, UnitForm>>({});
   const [dUnits, setDUnits] = useState<Record<number, UnitForm>>({});
+  // План 72.1.34 ч.B: target-building (legacy `Simulator::target_buildingid`).
+  // 0 = no target. Селект показывает все здания из catalog (mode=construction).
+  const [targetBuildingID, setTargetBuildingID] = useState('0');
+  const [targetBuildingLevel, setTargetBuildingLevel] = useState('1');
+  // План 72.1.34 ч.C: battle artefacts (legacy 6 артефактов
+  // ARTEFACT_EFFECT_TYPE_BATTLE — id 316-318, 359-361). Простая
+  // реализация: stack count для каждого ID на каждой стороне.
+  const [aBattleArts, setABattleArts] = useState<Record<number, number>>({});
+  const [dBattleArts, setDBattleArts] = useState<Record<number, number>>({});
 
   // Inventory для bulk-кнопки «Установить флот».
   const invQ = useQuery({
@@ -236,6 +266,7 @@ export function SimulatorScreen() {
           masking: aTech.masking,
         },
         units: attackerUnits,
+        battle_artefact_ids: expandArtefactStacks(aBattleArts),
       },
     ];
     const defenders: SimSide[] = [
@@ -252,13 +283,19 @@ export function SimulatorScreen() {
           masking: dTech.masking,
         },
         units: defenderUnits,
+        battle_artefact_ids: expandArtefactStacks(dBattleArts),
       },
     ];
+    const tbID = Number(targetBuildingID) || 0;
+    const tbLevel = Number(targetBuildingLevel) || 0;
     sim.mutate({
       attackers,
       defenders,
       rounds: 6,
       num_sim: Math.max(1, Math.min(100, Number(numSim) || 1)),
+      ...(tbID > 0 && tbLevel > 0
+        ? { target_building_id: tbID, target_building_level: tbLevel }
+        : {}),
     });
   }
 
@@ -335,6 +372,39 @@ export function SimulatorScreen() {
                         maxLength={2}
                         value={numSim}
                         onChange={(e) => setNumSim(e.target.value)}
+                      />
+                    </td>
+                  </tr>
+                  {/* План 72.1.34 ч.B: target-building селект + level. */}
+                  <tr>
+                    <td style={{ paddingTop: '0.6em' }}>
+                      {t('simulator', 'targetBuilding') || 'Цель: здание'}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <select
+                        value={targetBuildingID}
+                        onChange={(e) => setTargetBuildingID(e.target.value)}
+                      >
+                        <option value="0">—</option>
+                        {buildings.map((b) => {
+                          const [g, k] = b.i18n.split('.') as [string, string];
+                          return (
+                            <option key={b.id} value={b.id}>
+                              {t(g, k)}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      {' '}
+                      <input
+                        type="text"
+                        size={3}
+                        maxLength={3}
+                        value={targetBuildingLevel}
+                        onChange={(e) => setTargetBuildingLevel(e.target.value)}
+                        title={t('simulator', 'targetBuildingLevel') || 'Уровень'}
                       />
                     </td>
                   </tr>
@@ -457,6 +527,60 @@ export function SimulatorScreen() {
               onAReset={() => {}}
               onDReset={() => setUnitField('d', entry.id, 'qty', '0')}
             />
+          ))}
+        </tbody>
+      </table>
+
+      {/* План 72.1.34 ч.C: боевые артефакты (legacy 6 артефактов
+          с effect_type=ARTEFACT_EFFECT_TYPE_BATTLE — ID 316-318
+          базовые ×1.1 и 359-361 ×10-версии тоже ×1.1 per stack,
+          max 3 stack/тип). Stack count для каждой стороны. */}
+      <table className="ntable">
+        <thead>
+          <tr>
+            <th colSpan={3}>
+              {t('simulator', 'battleArtefacts') || 'Боевые артефакты'}
+            </th>
+          </tr>
+          <tr>
+            <th>{t('simulator', 'artefactName') || 'Артефакт'}</th>
+            <th>{t('mission', 'attacker')}</th>
+            <th>{t('mission', 'defender')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {BATTLE_ARTEFACT_IDS.map((aid) => (
+            <tr key={aid}>
+              <td>#{aid}</td>
+              <td className="center">
+                <input
+                  type="number"
+                  min={0}
+                  max={3}
+                  size={2}
+                  style={{ width: '3em' }}
+                  value={aBattleArts[aid] ?? 0}
+                  onChange={(e) => {
+                    const v = Math.max(0, Math.min(3, Number(e.target.value) || 0));
+                    setABattleArts((p) => ({ ...p, [aid]: v }));
+                  }}
+                />
+              </td>
+              <td className="center">
+                <input
+                  type="number"
+                  min={0}
+                  max={3}
+                  size={2}
+                  style={{ width: '3em' }}
+                  value={dBattleArts[aid] ?? 0}
+                  onChange={(e) => {
+                    const v = Math.max(0, Math.min(3, Number(e.target.value) || 0));
+                    setDBattleArts((p) => ({ ...p, [aid]: v }));
+                  }}
+                />
+              </td>
+            </tr>
           ))}
         </tbody>
       </table>
@@ -647,6 +771,22 @@ function SimResultsView({
           <th>{t('mission', 'moonChance')}</th>
           <td colSpan={2}>{fmt(s.avg_moon_chance, 1)}%</td>
         </tr>
+        {/* План 72.1.34 ч.B: building_destroy_chance (legacy
+            simulator.tpl показывает % уничтожения здания-цели). */}
+        {resp.report.building_destroy_chance != null &&
+          resp.report.building_destroy_chance > 0 && (
+            <tr>
+              <th>
+                {t('simulator', 'buildingDestroyChance') || 'Шанс разрушения'}
+              </th>
+              <td colSpan={2}>
+                {fmt(resp.report.building_destroy_chance, 1)}%
+                {resp.report.target_destroyed && (
+                  <span className="true"> ✓</span>
+                )}
+              </td>
+            </tr>
+          )}
 
         {/* Потери — две колонки */}
         <tr>
@@ -694,6 +834,29 @@ function SimResultsView({
           <td>{fmt(s.attacker_exp, 1)}</td>
           <td>{fmt(s.defender_exp, 1)}</td>
         </tr>
+
+        {/* План 72.1.34 ч.D: derived calc — рециклеры и трансплантёры
+            (legacy `simulator.tpl` строки 208-211: ceil(total_debris /
+            cargo)). Cargo жёстко прибит из ships.yml: recycler=20000,
+            ship_transplantator=2000000. */}
+        {(s.debris_metal > 0 || s.debris_silicon > 0) && (
+          <>
+            <tr>
+              <th>{t('simulator', 'recyclersNeeded') || 'Нужно рециклеров'}</th>
+              <td colSpan={2}>
+                {fmt(Math.ceil((s.debris_metal + s.debris_silicon) / 20_000), 0)}
+              </td>
+            </tr>
+            <tr>
+              <th>
+                {t('simulator', 'transplantersNeeded') || 'Нужно трансплантёров'}
+              </th>
+              <td colSpan={2}>
+                {fmt(Math.ceil((s.debris_metal + s.debris_silicon) / 2_000_000), 0)}
+              </td>
+            </tr>
+          </>
+        )}
 
         {/* Обломки на орбите — общая строка */}
         <tr>

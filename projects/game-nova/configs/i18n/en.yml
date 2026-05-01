@@ -3230,6 +3230,16 @@ monitorPlanet:
   detectedNote: "Target detected the scan — a notification was sent."
   noPlanetSelected: "No planet selected. Open /monitor-planet?id=<planet_id>."
 
+# План 72.1.34: simulator extras (ч.B + ч.C + ч.D).
+simulator:
+  targetBuilding: "Target: building"
+  targetBuildingLevel: "Building level"
+  buildingDestroyChance: "Destroy chance"
+  battleArtefacts: "Battle artefacts"
+  artefactName: "Artefact"
+  recyclersNeeded: "Recyclers needed"
+  transplantersNeeded: "Transplanters needed"
+
 # План 72.1.33: BuildingInfo demolish section.
 buildinginfo:
   demolish: "Demolish building"
