@@ -15378,3 +15378,75 @@ not-a-fix + BA-019 mitigated.
   - docs(plan-72.1.26): новый план — Resource cont (umode/solar/halting/monthly/cascade).
   - docs(plan-72.1.26): audit ❓ → ⚠ + dev-log ч.A.
 
+2026-05-01 — итерация 72.1.26 ч.B+C: /resource — solar/halting/virt-rows + cascade-payback (FINAL).
+
+  Закрытие правила 1:1 для /resource (правило 72.1 §20.12).
+  Подплан 72.1 / audit #40.
+
+  ч.B (коммиты f810923bb0 backend, 58df9ed696 frontend):
+  - **Solar satellite** (UnitID=39): отдельный ряд с энерго-формулой
+    `max(10, min(floor(temp/4+20), 50)) * pow(1.05, energy_tech) *
+    energy_factor` (round до 0.01) * sat_count из ships,
+    * solar_satellite_prod / 100. Legacy degradation для sat_count
+    > 16,500,000: × (sat_count - 16500000) / 140000.
+    UpdateResourceFactors разделяет: UID=39 → planets.solar_satellite_prod,
+    остальное → buildings.production_factor.
+  - **Halting fleets** (UnitID=1000003+i): выборка `fleets WHERE
+    state='hold' AND dst_galaxy/system/position/is_moon = planet's
+    coords` JOIN fleet_ships, ряд на каждый удерживающий флот с
+    halting_from_coord ("1:23:4") и halting_ships (unit_id → count).
+  - **Virt-fleet / defense / stock_fleet** (UID 1000000/1000001/1000002):
+    SUM по ships/defense/fleet_lots с потреблением водорода через
+    unitGroupConsumptionPerHour.
+  - **unitGroupConsumptionPerHour** (port Functions.inc.php:1681):
+    `min(0.1, pow(1.000003, count) * scale / 240) * count`,
+    scale=0.5 для defense, count<1000 → 0, < 0.01 → 0.
+  - DTO +cons_metal/cons_silicon/cons_hydrogen + kind + helptip
+    + halting_from_coord/halting_ships.
+  - Frontend net-формула prod − cons на каждом ресурсе, имена для
+    virt/halting через resource.{fleetConsumption,
+    fleetStockConsumption, defenseConsumption, haltingConsumption}.
+
+  ч.C (коммит c6f5b81d72):
+  - **Cascade-payback** (port Planet.class.php:481-555):
+    Шаг 1 (H→Si): если consH+h>prodH → over=excess (clamp), h-=over,
+                  cons[Si] = over × 400/200 = ×2.
+    Шаг 2 (Si→M): если consSi+si>prodSi → over=excess, si-=over,
+                  cons[M] = over × 600/400 = ×1.5.
+    Шаг 3 (M→ratio): если consM+m>prodM → over=excess, m-=over,
+                     ratio = (mEff, siEff*1.5, hEff*3) / sumEff
+                     по запасам планеты (sum=0 → 1/3 каждый);
+                     m += over*rM; si += over*rSi*400/600;
+                     h  += over*rH*200/600.
+    Аккумулирующая running-sum для consM/Si/H между рядами.
+  - HourlyM/Si/H = totalProd − cumulative cons по 3 ресурсам.
+  - Тесты: unitGroupConsumptionPerHour (count<1000=0, defense ×0.5,
+    fleet/defense ratio≈2.0); cascade ratios (MARKET_BASE_CURS_*
+    константы, H→Si=×2, Si→M=×1.5).
+
+  /resource ⚠ → ✅ — правило 1:1 закрыто полностью.
+
+  Изменённые файлы (ч.B+C):
+  - projects/game-nova/backend/internal/planet/resource_extras.go (новый,
+    unitGroupConsumptionPerHour + shipyardCounts + haltingFleets).
+  - projects/game-nova/backend/internal/planet/service.go (cascade
+    + solar строка + virt-rows + UpdateResourceFactors split solar/buildings).
+  - projects/game-nova/backend/internal/planet/resource_extras_test.go (новый).
+  - projects/game-nova/frontends/origin/src/api/types.ts
+    (+cons_metal/silicon/hydrogen, +kind, +helptip, +halting_*).
+  - projects/game-nova/frontends/origin/src/features/resource/ResourceScreen.tsx
+    (shouldShowRow, buildingName для virt/halting, net-формула,
+    title=helptip).
+  - projects/game-nova/configs/i18n/{ru,en}.yml (fleetStockConsumption
+    + заполнены fleet/defense/halting на en).
+  - docs/plans/72.1.26-resource-cont.md ✅ Завершён.
+  - docs/plans/72.1.2-screen-audit.md /resource ⚠ → ✅.
+
+  **Коммиты** (по типам задач):
+  - feat(planet): план 72.1.26 ч.B — solar satellite + halting + virt-rows.
+  - feat(origin/frontend): план 72.1.26 ч.B — solar/halting/virt UI.
+  - docs(plan-72.1.26): ч.B → ✅.
+  - feat(planet): план 72.1.26 ч.C — cascade-payback H→Si→M (legacy 1:1).
+  - docs(plan-72.1.26): ✅ Завершён + audit /resource ⚠ → ✅.
+
+
