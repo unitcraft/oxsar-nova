@@ -46,6 +46,9 @@ type Fleet struct {
 	Carry        Resources  `json:"carry"`
 	SpeedPercent int        `json:"speed_percent"`
 	Ships        map[int]int64 `json:"ships"`
+	// План 72.1.48: ACS-formation. Для ACS-флотов содержит UUID
+	// acs_groups записи; иначе пусто.
+	ACSGroupID   *string    `json:"acs_group_id,omitempty"`
 }
 
 type Resources struct {

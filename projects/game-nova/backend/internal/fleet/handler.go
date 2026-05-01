@@ -312,6 +312,121 @@ func (h *Handler) Unload(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// PromoteToACS POST /api/fleet/{id}/promote-to-acs
+// План 72.1.48: legacy `Mission.class.php::formation` — конверсия
+// уже летящего ATTACK_SINGLE в именованную ACS-группу.
+// Body: { "name": "..." }
+func (h *Handler) PromoteToACS(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	fleetID := chi.URLParam(r, "id")
+	if fleetID == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing fleet id"))
+		return
+	}
+	var body struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	g, err := h.transport.PromoteToACS(r.Context(), uid, fleetID, body.Name)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, g)
+	case errors.Is(err, ErrFleetNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrFleetNotPromotable),
+		errors.Is(err, ErrAlreadyPromoted):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	case errors.Is(err, ErrInvalidName):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// InviteACS POST /api/acs/{groupId}/invite
+// Body: { "username": "..." }
+func (h *Handler) InviteACS(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	groupID := chi.URLParam(r, "groupId")
+	if groupID == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing group id"))
+		return
+	}
+	var body struct {
+		Username string `json:"username"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	err := h.transport.InviteToFormation(r.Context(), uid, groupID, body.Username)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrInvitationNotFound), errors.Is(err, ErrInviteeNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotLeader):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrSelfInvite),
+		errors.Is(err, ErrNoRelation):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// ListACSInvitations GET /api/acs/invitations — pending+accepted
+// инвайты для текущего юзера.
+func (h *Handler) ListACSInvitations(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	out, err := h.transport.ListInvitations(r.Context(), uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"invitations": out})
+}
+
+// AcceptACSInvitation POST /api/acs/invitations/{groupId}/accept
+func (h *Handler) AcceptACSInvitation(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	groupID := chi.URLParam(r, "groupId")
+	if groupID == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing group id"))
+		return
+	}
+	err := h.transport.AcceptInvitation(r.Context(), uid, groupID)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrInvitationNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 // Stargate POST /api/stargate
 // Body: { "src_planet_id": "...", "dst_planet_id": "...", "ships": {"unit_id": count} }
 func (h *Handler) Stargate(w http.ResponseWriter, r *http.Request) {
