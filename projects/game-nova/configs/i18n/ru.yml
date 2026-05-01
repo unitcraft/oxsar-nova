@@ -1260,7 +1260,6 @@ market:
   toastDeal: Сделка выполнена
   creditHint: "Покупка ресурсов за кредиты. 1 кредит = {{rate}} единиц металла. Курс учитывает ваш personal rate ({{userRate}})."
   creditResLabel: Ресурс
-  creditAmountLabel: Количество кредитов
   creditYouGet: "Вы получите:"
   creditBuy: Купить
   creditToast: "{{amount}} кред. → {{delta}} {{res}}"
@@ -2951,7 +2950,6 @@ statistics:
   bsShowDrawn: показывать ничьи
   bsShowNoDestroyed: показывать бои без потерь (грабежи ресурсов)
   bsShowUfoBattles: показывать бои в экспедициях (с инопланетянами)
-  bsMoonBattle: только бои на луне
   bsSortBy: Сортировка
   bsSortDate: по дате
   bsSortRounds: по раундам
