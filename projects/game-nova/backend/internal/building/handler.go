@@ -54,6 +54,8 @@ func (h *Handler) Enqueue(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "not available on moon"))
 	case errors.Is(err, ErrMaxLevelReached):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "max level reached"))
+	case errors.Is(err, ErrUmodeBlocked), errors.Is(err, ErrObserverBlocked):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
 	case requirements.IsNotMet(err):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	default:
@@ -125,6 +127,8 @@ func (h *Handler) Demolish(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrForbidden)
 	case errors.Is(err, ErrLevelZero):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "level is zero"))
+	case errors.Is(err, ErrUmodeBlocked), errors.Is(err, ErrObserverBlocked):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}

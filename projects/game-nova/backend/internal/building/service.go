@@ -33,6 +33,10 @@ var (
 	ErrFieldsExhausted   = errors.New("building: no free fields on planet")
 	// План 72.1.33: попытка demolish здания на уровне 0.
 	ErrLevelZero         = errors.New("building: level is zero, nothing to demolish")
+	// План 72.1.40: legacy `Constructions::index` строки 22, 247 блокируют
+	// при umode; строки 64-66, 386 — при observer.
+	ErrUmodeBlocked      = errors.New("building: blocked in vacation mode")
+	ErrObserverBlocked   = errors.New("building: blocked in observer mode")
 )
 
 type Service struct {
@@ -83,6 +87,21 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 	}
 	if !spec.MoonOnly && p.IsMoon {
 		return QueueItem{}, ErrPlanetOnly
+	}
+
+	// План 72.1.40: блокировка umode/observer (legacy строки 22,247,
+	// 64-66, 386).
+	var umode, isObs bool
+	if err := s.db.Pool().QueryRow(ctx,
+		`SELECT umode, is_observer FROM users WHERE id = $1`, userID,
+	).Scan(&umode, &isObs); err != nil {
+		return QueueItem{}, fmt.Errorf("read user state: %w", err)
+	}
+	if umode {
+		return QueueItem{}, ErrUmodeBlocked
+	}
+	if isObs {
+		return QueueItem{}, ErrObserverBlocked
 	}
 
 	var item QueueItem
@@ -223,6 +242,20 @@ func (s *Service) EnqueueDemolish(ctx context.Context, userID, planetID string, 
 	}
 	if p.UserID != userID {
 		return QueueItem{}, ErrPlanetOwnership
+	}
+
+	// План 72.1.40: blocked при umode/observer (то же что Enqueue).
+	var umode, isObs bool
+	if err := s.db.Pool().QueryRow(ctx,
+		`SELECT umode, is_observer FROM users WHERE id = $1`, userID,
+	).Scan(&umode, &isObs); err != nil {
+		return QueueItem{}, fmt.Errorf("read user state: %w", err)
+	}
+	if umode {
+		return QueueItem{}, ErrUmodeBlocked
+	}
+	if isObs {
+		return QueueItem{}, ErrObserverBlocked
 	}
 
 	var item QueueItem

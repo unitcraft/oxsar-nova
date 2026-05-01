@@ -4,6 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   cancelBuildingTask,
+  demolishBuilding,
   enqueueBuilding,
   fetchBuildingQueue,
   fetchBuildingsOverview,
@@ -59,6 +60,20 @@ export function ConstructionsScreen() {
       if (planetId) {
         void qc.invalidateQueries({ queryKey: QK.buildingQueue(planetId) });
         void qc.invalidateQueries({ queryKey: QK.buildingsOverview(planetId) });
+      }
+    },
+  });
+
+  // План 72.1.40: legacy `Constructions` имеет ссылку «снести здание»
+  // (DemolishConstruction). Раньше demolish был только в /building/:type
+  // (BuildingInfoScreen), но в legacy он доступен и в списке зданий.
+  const demolish = useMutation({
+    mutationFn: (unitId: number) => demolishBuilding(planetId!, unitId),
+    onSuccess: () => {
+      if (planetId) {
+        void qc.invalidateQueries({ queryKey: QK.buildingQueue(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.buildingsOverview(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
       }
     },
   });
@@ -230,15 +245,40 @@ export function ConstructionsScreen() {
                       {t('buildings', 'buildingAtWork') ?? 'Занято'}
                     </span>
                   ) : (
-                    <button
-                      type="button"
-                      className={`btn-link ${enough ? 'true' : 'false'}`}
-                      onClick={() => enqueue.mutate(entry.id)}
-                      disabled={enqueue.isPending || !enough}
-                    >
-                      {t('buildings', 'upgradeToLevel') ?? 'Построить'}<br />
-                      уровень {level + 1}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className={`btn-link ${enough ? 'true' : 'false'}`}
+                        onClick={() => enqueue.mutate(entry.id)}
+                        disabled={enqueue.isPending || !enough}
+                      >
+                        {t('buildings', 'upgradeToLevel') ?? 'Построить'}<br />
+                        уровень {level + 1}
+                      </button>
+                      {/* План 72.1.40: legacy demolish action в списке. */}
+                      {level > 0 && (
+                        <div style={{ marginTop: 4 }}>
+                          <button
+                            type="button"
+                            className="button"
+                            disabled={demolish.isPending}
+                            title={t('buildinginfo', 'demolish') || 'Снос здания'}
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  (t('buildinginfo', 'demolishConfirm') as string) ||
+                                    'Снести здание на 1 уровень?',
+                                )
+                              ) {
+                                demolish.mutate(entry.id);
+                              }
+                            }}
+                          >
+                            ⚒ {t('buildinginfo', 'demolishNow') || 'Снести'}
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </td>
               </tr>
