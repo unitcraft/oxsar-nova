@@ -15,6 +15,22 @@ import type { SearchType } from '@/api/types';
 import { QK } from '@/api/query-keys';
 import { useTranslation } from '@/i18n/i18n';
 
+// План 72.1.16: legacy выводит «N min ago» / «online» через
+// `getTimeTerm(time() - last)`. Воспроизводим компактно.
+function formatLastSeen(
+  lastSeen: string | undefined,
+  t: (g: string, k: string, v?: Record<string, string | number>) => string,
+): string {
+  if (!lastSeen) return '—';
+  const minutes = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 60_000);
+  if (minutes < 5) return t('friends', 'statusOnline');
+  if (minutes < 60) return t('friends', 'statusMinAgo', { n: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return t('friends', 'statusHourAgo', { n: hours });
+  const days = Math.floor(hours / 24);
+  return t('friends', 'statusDayAgo', { n: days });
+}
+
 export function SearchScreen() {
   const { t } = useTranslation();
   const [type, setType] = useState<SearchType>('player');
@@ -108,21 +124,44 @@ function ResultsTable({
             <th>{t('overview', 'username') || 'Игрок'}</th>
             <th>{t('overview', 'points') || 'Очки'}</th>
             <th>{t('alliance', 'alliance') || 'Альянс'}</th>
+            <th>{t('main', 'curHomePlanet') || 'Планета'}</th>
+            <th>{t('mission', 'target') || 'Координаты'}</th>
+            <th>{t('friends', 'colStatus') || 'Активность'}</th>
           </tr>
         </thead>
         <tbody>
           {data.players.length === 0 ? (
             <tr>
-              <td colSpan={3} className="center">
+              <td colSpan={6} className="center">
                 {t('search', 'notFound')}
               </td>
             </tr>
           ) : (
             data.players.map((p) => (
-              <tr key={p.user_id}>
-                <td>{p.username}</td>
+              <tr
+                key={p.user_id}
+                style={p.banned ? { textDecoration: 'line-through', opacity: 0.6 } : undefined}
+              >
+                <td>
+                  {p.username}
+                  {p.banned && ' '}
+                  {p.banned && (
+                    <span className="false">{t('search', 'markerBanned')}</span>
+                  )}
+                </td>
                 <td>{Math.round(p.points)}</td>
                 <td>{p.alliance_tag ?? '—'}</td>
+                <td>{p.home_planet ?? '—'}</td>
+                <td>
+                  {p.home_galaxy !== undefined ? (
+                    <Link to={`/galaxy/${p.home_galaxy}/${p.home_system}`}>
+                      [{p.home_galaxy}:{p.home_system}:{p.home_position}]
+                    </Link>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td>{formatLastSeen(p.last_seen, t)}</td>
               </tr>
             ))
           )}
@@ -184,17 +223,28 @@ function ResultsTable({
             </td>
           </tr>
         ) : (
-          data.planets.map((p) => (
-            <tr key={p.planet_id}>
-              <td>{p.name}</td>
-              <td>
-                <Link to={`/galaxy/${p.galaxy}/${p.system}`}>
-                  [{p.galaxy}:{p.system}:{p.position}]
-                </Link>
-              </td>
-              <td>{p.owner}</td>
-            </tr>
-          ))
+          data.planets.map((p) => {
+            // Legacy: " (HP)" если planet=user.hp, " (MOON)" если ismoon.
+            const marker = p.is_home
+              ? ' ' + t('search', 'markerHomePlanet')
+              : p.is_moon
+                ? ' ' + t('search', 'markerMoon')
+                : '';
+            return (
+              <tr key={p.planet_id}>
+                <td>
+                  {p.name}
+                  {marker}
+                </td>
+                <td>
+                  <Link to={`/galaxy/${p.galaxy}/${p.system}`}>
+                    [{p.galaxy}:{p.system}:{p.position}]
+                  </Link>
+                </td>
+                <td>{p.owner}</td>
+              </tr>
+            );
+          })
         )}
       </tbody>
     </table>

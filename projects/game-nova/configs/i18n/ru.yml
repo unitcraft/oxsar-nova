@@ -1490,6 +1490,10 @@ search:
   sectionAlliances: Альянсы
   sectionPlanets: Планеты
   membersCount: "{{n}} чел."
+  # План 72.1.16: legacy суффиксы к именам в результатах.
+  markerHomePlanet: "(ГП)"
+  markerMoon: "(Луна)"
+  markerBanned: "(забанен)"
 
 wiki:
   sidebarTitle: Вики
