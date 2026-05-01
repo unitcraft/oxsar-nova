@@ -2906,7 +2906,8 @@ resource:
   defenseConsumption: Оборона
   difference: Разница
   fleetConsumption: Флот
-  haltingConsumption: "Удержание {@fleet} с {@planet}"
+  fleetStockConsumption: "Лоты биржи"
+  haltingConsumption: "Удержание флота с {{planet}}"
   hourlyProduction: За час
   monthlyPrdouction: За месяц
   monthlyProduction: За месяц

@@ -117,6 +117,20 @@ export function ResourceScreen() {
   }
 
   function buildingName(b: ResourceBuilding): string {
+    // План 72.1.26 ч.B: virt/halting/solar — отдельные имена из resource.*.
+    if (b.kind === 'fleet') return t('resource', 'fleetConsumption') || 'Флот';
+    if (b.kind === 'stock_fleet')
+      return t('resource', 'fleetStockConsumption') || 'Лоты биржи';
+    if (b.kind === 'defense') return t('resource', 'defenseConsumption') || 'Оборона';
+    if (b.kind === 'halting') {
+      const tpl =
+        t('resource', 'haltingConsumption', {
+          planet: b.halting_from_coord ?? '',
+          fleet: '',
+        }) || `Удержание с ${b.halting_from_coord ?? '?'}`;
+      return tpl;
+    }
+
     // snake_case → camelCase: metal_mine→metalmine, silicon_lab→siliconLab
     const camel = b.name.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
     const val = t('info', camel);
@@ -126,6 +140,18 @@ export function ResourceScreen() {
     const val2 = t('info', flat);
     if (!val2.startsWith('[')) return val2;
     return b.name;
+  }
+
+  // План 72.1.26 ч.B: virt/halting/solar — это «не здания», у них нет
+  // фильтра allow_factor. Показываем все строки с непустым уровнем/счётчиком.
+  function shouldShowRow(b: ResourceBuilding): boolean {
+    if (b.level <= 0 && (b.kind === 'building' || b.kind == null)) return false;
+    if (b.kind === 'building' || b.kind == null) {
+      return b.level > 0 && b.allow_factor;
+    }
+    // solar / fleet / stock_fleet / defense / halting → всегда показываем
+    // если есть потребление или производство (level=count>0).
+    return b.level > 0;
   }
 
   return (
@@ -170,39 +196,56 @@ export function ResourceScreen() {
             <td></td>
           </tr>
 
-          {/* Здания: только умеющие производить/потреблять (legacy WHERE-фильтр) и с level>0 */}
-          {report.buildings
-            .filter((b) => b.level > 0 && b.allow_factor)
-            .map((b) => (
-              <tr key={b.unit_id}>
-                <td><b>{buildingName(b)} ({b.level})</b></td>
-                <td align="right">
-                  {b.prod_metal > 0
-                    ? <span className="true">{fmt(b.prod_metal)}</span>
-                    : b.prod_metal < 0
-                    ? <span className="false">{fmt(Math.abs(b.prod_metal))}</span>
-                    : '0'}
+          {/* Здания + virt/halting/solar (план 72.1.26 ч.B). */}
+          {report.buildings.filter(shouldShowRow).map((b) => {
+            // Net-значения по ресурсу = prod − cons (legacy показывает
+            // потребление красным, производство — зелёным).
+            const netMetal = (b.prod_metal ?? 0) - (b.cons_metal ?? 0);
+            const netSilicon = (b.prod_silicon ?? 0) - (b.cons_silicon ?? 0);
+            const netHydrogen = (b.prod_hydrogen ?? 0) - (b.cons_hydrogen ?? 0);
+            return (
+              <tr key={b.unit_id} title={b.helptip ?? undefined}>
+                <td>
+                  <b>
+                    {buildingName(b)}
+                    {b.kind === 'building' || b.kind == null ? ` (${b.level})` : ''}
+                  </b>
                 </td>
                 <td align="right">
-                  {b.prod_silicon > 0
-                    ? <span className="true">{fmt(b.prod_silicon)}</span>
-                    : b.prod_silicon < 0
-                    ? <span className="false">{fmt(Math.abs(b.prod_silicon))}</span>
-                    : '0'}
+                  {netMetal > 0 ? (
+                    <span className="true">{fmt(netMetal)}</span>
+                  ) : netMetal < 0 ? (
+                    <span className="false">{fmt(Math.abs(netMetal))}</span>
+                  ) : (
+                    '0'
+                  )}
                 </td>
                 <td align="right">
-                  {b.prod_hydrogen > 0
-                    ? <span className="true">{fmt(b.prod_hydrogen)}</span>
-                    : b.prod_hydrogen < 0
-                    ? <span className="false">{fmt(Math.abs(b.prod_hydrogen))}</span>
-                    : '0'}
+                  {netSilicon > 0 ? (
+                    <span className="true">{fmt(netSilicon)}</span>
+                  ) : netSilicon < 0 ? (
+                    <span className="false">{fmt(Math.abs(netSilicon))}</span>
+                  ) : (
+                    '0'
+                  )}
                 </td>
                 <td align="right">
-                  {b.cons_energy > 0
-                    ? <span className="false">{fmt(b.cons_energy)}</span>
-                    : b.cons_energy < 0
-                    ? <span className="true">{fmt(Math.abs(b.cons_energy))}</span>
-                    : '0'}
+                  {netHydrogen > 0 ? (
+                    <span className="true">{fmt(netHydrogen)}</span>
+                  ) : netHydrogen < 0 ? (
+                    <span className="false">{fmt(Math.abs(netHydrogen))}</span>
+                  ) : (
+                    '0'
+                  )}
+                </td>
+                <td align="right">
+                  {b.cons_energy > 0 ? (
+                    <span className="false">{fmt(b.cons_energy)}</span>
+                  ) : b.cons_energy < 0 ? (
+                    <span className="true">{fmt(Math.abs(b.cons_energy))}</span>
+                  ) : (
+                    '0'
+                  )}
                 </td>
                 <td>
                   <FactorInput
@@ -215,7 +258,8 @@ export function ResourceScreen() {
                   />
                 </td>
               </tr>
-            ))}
+            );
+          })}
 
           {/* Склад */}
           <tr>
