@@ -60,6 +60,7 @@ const (
 	KindExchangeExpire             Kind = 66 // план 68 Ф.4: истечение лота на бирже артефактов — возврат escrow
 	KindExchangeBan                Kind = 67 // план 68 Ф.4: бан seller'а → отзыв всех его активных лотов
 	KindScoreRecalcAll             Kind = 70 // ежедневный batch-пересчёт очков всех игроков
+	KindAccountDelete              Kind = 90 // план 72.1.30: 7-day grace перед физическим soft-delete
 	KindBatchProcessIntervalSecond      = 10
 )
 

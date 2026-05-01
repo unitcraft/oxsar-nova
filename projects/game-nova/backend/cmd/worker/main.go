@@ -38,6 +38,7 @@ import (
 	"oxsar/game-nova/internal/repair"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/internal/requirements"
+	"oxsar/game-nova/internal/settings"
 	"oxsar/game-nova/internal/rocket"
 	"oxsar/game-nova/internal/scheduler"
 	"oxsar/game-nova/internal/score"
@@ -300,6 +301,10 @@ func run() error {
 	w.Register(event.KindExpedition, withAchievement(transportSvc.ExpeditionHandler()))
 	w.Register(event.KindOfficerExpire, officerSvc.ExpireHandler())
 	w.Register(event.KindExpirePlanet, event.HandleExpirePlanet)
+	// План 72.1.30: KindAccountDelete=90 — физический soft-delete
+	// после grace-period 7 дней.
+	settingsH := settings.NewHandler(pool)
+	w.Register(event.KindAccountDelete, settingsH.AccountDeleteEventHandler())
 	// План 68 Ф.4: биржа артефактов.
 	w.Register(event.KindExchangeExpire, event.HandleExchangeExpire)
 	w.Register(event.KindExchangeBan, event.HandleExchangeBan)

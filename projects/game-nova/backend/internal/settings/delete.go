@@ -200,32 +200,106 @@ func (h *Handler) performDeletion(ctx context.Context, uid, code string) error {
 		return errCodeInvalid
 	}
 
-	// Успех: soft-delete.
+	// План 72.1.30: 7-day grace вместо немедленного soft-delete (legacy
+	// `Preferences::updateDeletion` ставит `delete = time() + 604800`).
+	// Юзер может отменить через POST /api/me/deletion/cancel в grace-period;
+	// физическое soft-delete выполнит KindAccountDelete event-handler.
+	deleteAt := time.Now().UTC().Add(deletionGracePeriod)
 	if _, err := tx.Exec(ctx, `
-		UPDATE users SET
-			deleted_at = now(),
-			username = '[deleted_' || substr(id::text, 1, 8) || ']',
-			email = '[deleted_' || substr(id::text, 1, 8) || ']',
-			alliance_id = NULL
-		WHERE id = $1
-	`, uid); err != nil {
-		return fmt.Errorf("soft-delete users: %w", err)
+		UPDATE users SET delete_at = $2 WHERE id = $1 AND deleted_at IS NULL
+	`, uid, deleteAt); err != nil {
+		return fmt.Errorf("schedule delete_at: %w", err)
 	}
-	// Закрыть открытые лоты игрока — ресурсы остаются в таблице,
-	// игровая логика (market.Accept/Cancel) их игнорирует по owner_id.
+	// Event для физического удаления (kind=90 KindAccountDelete).
+	eventID, err := generateEventID()
+	if err != nil {
+		return fmt.Errorf("gen event id: %w", err)
+	}
 	if _, err := tx.Exec(ctx, `
-		UPDATE market_lots SET state = 'cancelled'
-		WHERE seller_id = $1 AND state = 'open'
-	`, uid); err != nil {
-		// market_lots может отсутствовать в некоторых окружениях — не критично.
-		_ = err
+		INSERT INTO events (id, user_id, kind, state, fire_at, payload)
+		VALUES ($1, $2, 90, 'wait', $3, '{}'::jsonb)
+	`, eventID, uid, deleteAt); err != nil {
+		return fmt.Errorf("insert delete event: %w", err)
 	}
-	// Удалить код.
+	// Удалить код (одноразовый, чтобы повторно нельзя было).
 	if _, err := tx.Exec(ctx, `DELETE FROM account_deletion_codes WHERE user_id = $1`, uid); err != nil {
 		return fmt.Errorf("delete code: %w", err)
 	}
 
 	return tx.Commit(ctx)
+}
+
+// План 72.1.30: grace-period 7 дней (legacy 604800 сек) перед физическим
+// удалением аккаунта. Юзер может отменить через CancelDeletion endpoint.
+const deletionGracePeriod = 7 * 24 * time.Hour
+
+// generateEventID — UUID для events.id.
+func generateEventID() (string, error) {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	// RFC 4122 v4 fixed bits.
+	buf[6] = (buf[6] & 0x0f) | 0x40
+	buf[8] = (buf[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		buf[0:4], buf[4:6], buf[6:8], buf[8:10], buf[10:16]), nil
+}
+
+// CancelDeletion POST /api/me/deletion/cancel — отменяет запланированное
+// удаление в grace-period (legacy `Preferences::updateDeletion` с delete=0).
+// Возвращает 400 если delete_at NULL или прошло.
+func (h *Handler) CancelDeletion(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	tx, err := h.pool.Begin(r.Context())
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var deleteAt *time.Time
+	if err := tx.QueryRow(r.Context(),
+		`SELECT delete_at FROM users WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
+		uid).Scan(&deleteAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			httpx.WriteError(w, r, httpx.ErrNotFound)
+			return
+		}
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	if deleteAt == nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "no pending deletion"))
+		return
+	}
+	if deleteAt.Before(time.Now()) {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "deletion already executing"))
+		return
+	}
+
+	// Сбрасываем флаг + помечаем event как cancelled.
+	if _, err := tx.Exec(r.Context(),
+		`UPDATE users SET delete_at = NULL WHERE id = $1`, uid); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	if _, err := tx.Exec(r.Context(), `
+		UPDATE events SET state = 'cancelled'
+		WHERE user_id = $1 AND kind = 90 AND state = 'wait'
+	`, uid); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // generateCode возвращает 8-символьный код из безопасного алфавита.

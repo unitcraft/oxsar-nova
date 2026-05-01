@@ -472,6 +472,8 @@ func run() error {
 		// План 36 Critical-6: смена пароля — POST /auth/password в identity-service.
 		pr.Post("/me/deletion/code", settingsH.RequestDeletionCode)
 		pr.Delete("/me", settingsH.ConfirmDeletion)
+		// План 72.1.30: cancel pending удалением в grace-period.
+		pr.Post("/me/deletion/cancel", settingsH.CancelDeletion)
 		pr.Get("/referrals", referralH.Mine)
 		pr.Get("/notepad", notepadH.Get)
 		pr.Put("/notepad", notepadH.Save)
