@@ -1030,6 +1030,11 @@ fleet:
   stateOutbound: "→ В пути"
   stateReturning: "← Возврат"
   stateArrived: "✓ Прибыл"
+  # План 72.1.47: HOLDING state + load/unload UI.
+  stateHold: "🛡 На цели"
+  controlBtn: "⚙ Управление"
+  loadOpt: "Загрузить с планеты"
+  unloadOpt: "Выгрузить с флота"
   missionRebase: Перебазирование
   missionTransport: Транспорт
   missionColonize: Колонизация
@@ -1037,6 +1042,8 @@ fleet:
   missionAttack: Атака
   missionSpy: Шпионаж
   missionExpedition: Экспедиция
+  # План 72.1.47: HOLDING (legacy mode=17).
+  missionHolding: 🛡 Удержание
 
 battlestats:
   title: ⚔ История боёв
@@ -2735,13 +2742,14 @@ message:
   subject: Тема
   unreaded: Есть непрочитанные сообщения
 mission:
-  # План 72.1.47: дополнения к MissionScreen (resource-carry/StarGate/Recall).
+  # План 72.1.47: дополнения к MissionScreen (resource-carry/StarGate/Recall/Holding).
   colonyName: "Имя колонии"
   acsGroupId: "ID ACS-группы"
   acsGroupHint: "пусто = создать новую"
   recallFleetsLink: "← Активные флоты / отозвать"
   stargateTitle: "🌀 StarGate (прыжок между лунами)"
   stargateBtn: "Прыжок"
+  holdingHours: "Удерживать (часов, 0..99)"
   # Boevoy симулятор (план 72.1 ч.20.7) — shipName/max ниже в группе
   simulator: "Симулятор боя"
   attacker: "Атакующий"

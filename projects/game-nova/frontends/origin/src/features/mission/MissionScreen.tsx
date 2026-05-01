@@ -32,6 +32,8 @@ const MISSION_CODES: { code: MissionCode; key: string }[] = [
   { code: 15, key: 'missionExpedition' },
   { code: 6, key: 'missionRebase' },
   { code: 12, key: 'missionAttack' },
+  // План 72.1.47: HOLDING (legacy mode=17).
+  { code: 17, key: 'missionHolding' },
 ];
 
 export function MissionScreen() {
@@ -57,6 +59,8 @@ export function MissionScreen() {
   const [carryHydrogen, setCarryHydrogen] = useState('0');
   const [colonyName, setColonyName] = useState('');
   const [acsGroupId, setAcsGroupId] = useState('');
+  // План 72.1.47: HOLDING duration (legacy holdingtime, 0..99 часов).
+  const [holdingHours, setHoldingHours] = useState('0');
 
   const invQ = useQuery({
     queryKey: planetId ? QK.shipyardInventory(planetId) : ['noop-mission'],
@@ -140,9 +144,13 @@ export function MissionScreen() {
       ...(cm > 0 ? { carry_metal: cm } : {}),
       ...(cs > 0 ? { carry_silicon: cs } : {}),
       ...(ch > 0 ? { carry_hydrogen: ch } : {}),
-      // План 72.1.47: ACS-группа только для mission=12; colony — только для 8.
+      // План 72.1.47: ACS-группа только для mission=12; colony — только для 8;
+      // holding_hours — только для 17.
       ...(mission === 12 && acsGroupId ? { acs_group_id: acsGroupId } : {}),
       ...(mission === 8 && colonyName ? { colony_name: colonyName } : {}),
+      ...(mission === 17
+        ? { holding_hours: Math.max(0, Math.min(99, Math.floor(Number(holdingHours) || 0))) }
+        : {}),
     };
     dispatch.mutate(input);
   }
@@ -321,6 +329,22 @@ export function MissionScreen() {
                   onChange={(e) => setAcsGroupId(e.target.value)}
                   placeholder={t('mission', 'acsGroupHint') || 'пусто = создать новую'}
                   aria-label="acs_group_id"
+                />
+              </td>
+            </tr>
+          )}
+          {/* План 72.1.47: HOLDING — длительность удержания на цели. */}
+          {mission === 17 && (
+            <tr>
+              <td>{t('mission', 'holdingHours') || 'Удерживать (ч)'}</td>
+              <td>
+                <input
+                  type="number"
+                  min={0}
+                  max={99}
+                  value={holdingHours}
+                  onChange={(e) => setHoldingHours(e.target.value)}
+                  aria-label="holding_hours"
                 />
               </td>
             </tr>

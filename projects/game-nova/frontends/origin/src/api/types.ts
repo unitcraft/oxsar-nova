@@ -132,7 +132,7 @@ export interface Coords {
   is_moon?: boolean;
 }
 
-export type MissionCode = 6 | 7 | 8 | 9 | 10 | 11 | 12 | 15;
+export type MissionCode = 6 | 7 | 8 | 9 | 10 | 11 | 12 | 15 | 17;
 
 export interface FleetDispatchInput {
   src_planet_id: string;
@@ -148,6 +148,8 @@ export interface FleetDispatchInput {
   // уже пробрасывает эти поля.
   acs_group_id?: string;
   colony_name?: string;
+  // План 72.1.47: HOLDING (mission=17) duration в часах (clamp 0..99).
+  holding_hours?: number;
 }
 
 export interface Fleet {
