@@ -639,6 +639,9 @@ autoMessages:
   creditProfessionChanged.title: Списание кредитов
   creditProfessionChanged.body: "Списано {{credits}} кредитов за смену профессии на «{{profession}}»."
   creditProfessionChanged.noneLabel: "без профессии"
+  # План 72.1.20: surveillance detected (legacy MSG_SURVEILLANCE_DETECTED, folder=11).
+  surveillanceDetected.title: "Обнаружено сканирование"
+  surveillanceDetected.body: "Ваша планета «{{planet}}» [{{galaxy}}:{{system}}:{{position}}] была отсканирована чужой сенсорной фалангой. Уровень ваших шпионских технологий позволил детектировать попытку."
 buddylist:
   accept: Принять
   buddylist: Список друзей
@@ -3155,3 +3158,12 @@ msgFolder:
   recycler: ♻ Мусорщики
   surveillance: 🛰 Сканирования
   system: 🔔 Системные
+
+# План 72.1.20: Мониторинг планеты через STAR_SURVEILLANCE.
+monitorPlanet:
+  title: 🛰 Мониторинг планеты
+  scanBtn: "Сканировать (5000H)"
+  scannerLabel: "Источник"
+  eventsTitle: "События флота"
+  detectedNote: "Цель обнаружила сканирование — отправлено уведомление."
+  noPlanetSelected: "Не выбрана планета. Откройте /monitor-planet?id=<planet_id>."

@@ -44,6 +44,7 @@ import (
 	"oxsar/game-nova/internal/market"
 	"oxsar/game-nova/internal/message"
 	"oxsar/game-nova/internal/moderation"
+	"oxsar/game-nova/internal/monitor"
 	"oxsar/game-nova/internal/notepad"
 	"oxsar/game-nova/internal/officer"
 	originalien "oxsar/game-nova/internal/origin/alien"
@@ -282,6 +283,11 @@ func run() error {
 	transportSvc.SetBashingLimits(cfg.Game.BashingPeriod, cfg.Game.BashingMaxAttacks)
 	transportSvc.SetDailyQuestSvc(dailyQuestSvc)
 	fleetH := fleet.NewHandler(transportSvc, rdb)
+
+	// План 72.1.20: /api/monitor-planet — мониторинг чужой планеты
+	// через здание STAR_SURVEILLANCE (legacy MonitorPlanet.class.php).
+	monitorH := monitor.NewHandler(db, transportSvc).
+		WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
 
 	messageSvc := message.NewService(db)
 	messageH := message.NewHandler(messageSvc)
@@ -565,6 +571,8 @@ func run() error {
 		pr.Get("/fleet", fleetH.List)
 		pr.Get("/fleet/incoming", fleetH.Incoming)
 		pr.Get("/phalanx", fleetH.Phalanx)
+		// План 72.1.20: monitor-planet (legacy `?go=MonitorPlanet&id=`).
+		pr.Get("/monitor-planet", monitorH.Monitor)
 		pr.Post("/stargate", fleetH.Stargate)
 		pr.Post("/fleet/{id}/recall", fleetH.Recall)
 

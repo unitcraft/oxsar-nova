@@ -774,3 +774,23 @@ export interface ProfessionInfo {
   label: string;
   next_change_allowed?: string | null;
 }
+
+// S-MP MonitorPlanet (план 72.1.20). PhalanxScan — DTO из
+// internal/fleet/phalanx.go (используется и фалангой, и monitor-planet).
+export interface PhalanxScan {
+  fleet_id: string;
+  owner_id: string;
+  owner_name?: string;
+  mission: number;
+  state: string; // outbound | returning
+  src_galaxy: number;
+  src_system: number;
+  src_position: number;
+  dst_galaxy: number;
+  dst_system: number;
+  dst_position: number;
+  dst_is_moon: boolean;
+  depart_at: string;
+  arrive_at: string;
+  return_at: string;
+}
