@@ -2549,3 +2549,29 @@ unit-тесты на форматтеры/валидаторы/router-маршр
 - **Как чинить**: после финализации header'а в Ф.9 либо добавить
   `<span className="balance">` в officer-table thead, если потребуется.
 - **Приоритет**: L.
+
+
+### [P72.1.1.NO_BATTLE_REPORT_FOR_RAIDS] Alien-рейды и экспедиционные бои не пишут battle_reports
+
+- **Где**: `internal/alien/alien.go`, `internal/fleet/expedition.go`.
+- **Что**: `battlestats.ApplyBattleResult(ctx, tx, report, "")`
+  вызывается с пустым `battleID` — у этих сценариев нет записи в
+  `battle_reports` (alien использует отдельный flow через
+  `messages`; экспедиции — через `expedition_reports`). Это
+  значит `user_experience.battle_id = NULL`, и UNIQUE
+  (battle_id, user_id, is_atter) НЕ блокирует дубликат при
+  повторе event'а (NULL != NULL в SQL).
+- **Почему**: legacy `oxsar2-java` хранит ВСЕ бои в одной таблице
+  `assault` с инкрементальным id; у нас раньше бои разделены по
+  поведению на `battle_reports` (PvP) и `messages`-only (рейды),
+  что требует более сложной унификации схемы. Чтобы не утроить
+  scope подплана 72.1.1, оставляем `battle_id=NULL` для рейдов и
+  ловим idempotency event-loop'ом.
+- **Trade-off**: minor. Если event переиграется (что крайне редко
+  при exactly-once-семантике event-loop'а), defender получит
+  опыт и потери дважды. Нагрузка минимальная (event re-process —
+  edge-case).
+- **Как чинить**: унифицировать `battle_reports` чтобы туда писались
+  и рейды/экспедиции, передавать `reportID` в ApplyBattleResult.
+  Это отдельный план (потенциально 72.1.2 или 73).
+- **Приоритет**: L.

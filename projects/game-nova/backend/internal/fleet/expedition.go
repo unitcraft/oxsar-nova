@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"oxsar/game-nova/internal/battle"
+	"oxsar/game-nova/internal/battlestats"
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/event"
 	"oxsar/game-nova/pkg/ids"
@@ -162,12 +163,12 @@ func (s *TransportService) ExpeditionHandler() event.Handler {
 				return err
 			}
 		case "xSkirmish":
-			reportData, err = expPirates(ctx, tx, pl.FleetID, fleetShips, s.catalog, expPower, r, s.tr)
+			reportData, err = expPirates(ctx, tx, pl.FleetID, ownerUserID, fleetShips, s.catalog, expPower, r, s.tr)
 			if err != nil {
 				return err
 			}
 		case "battlefield":
-			reportData, err = expBattlefield(ctx, tx, pl.FleetID, fleetShips, s.catalog, expPower, r, s.tr)
+			reportData, err = expBattlefield(ctx, tx, pl.FleetID, ownerUserID, fleetShips, s.catalog, expPower, r, s.tr)
 			if err != nil {
 				return err
 			}
@@ -563,7 +564,7 @@ func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string, num
 }
 
 // expPirates — PvE-битва с флотом пиратов, масштабированным по exp_power.
-func expPirates(ctx context.Context, tx pgx.Tx, fleetID string,
+func expPirates(ctx context.Context, tx pgx.Tx, fleetID, ownerUserID string,
 	ships []unitStack, cat *config.Catalog, expPower float64, r *rng.R, tr trFn) (map[string]any, error) {
 	atkUnits := stacksToBattleUnits(ships, cat, false)
 	if len(atkUnits) == 0 {
@@ -574,7 +575,8 @@ func expPirates(ctx context.Context, tx pgx.Tx, fleetID string,
 
 	lfSpec := findShipSpec(cat, unitLF)
 	pirateSide := battle.Side{
-		UserID: "pirates",
+		UserID:   "pirates",
+		IsAliens: true, // NPC-сторона: ApplyBattleResult её скипнет.
 		Units: []battle.Unit{{
 			UnitID:   unitLF,
 			Quantity: pirateCount,
@@ -587,7 +589,7 @@ func expPirates(ctx context.Context, tx pgx.Tx, fleetID string,
 	input := battle.Input{
 		Seed:      deriveSeed(fleetID),
 		Rounds:    6,
-		Attackers: []battle.Side{{UserID: "expedition", Units: atkUnits}},
+		Attackers: []battle.Side{{UserID: ownerUserID, Units: atkUnits}},
 		Defenders: []battle.Side{pirateSide},
 	}
 	report, err := battle.Calculate(input)
@@ -597,6 +599,13 @@ func expPirates(ctx context.Context, tx pgx.Tx, fleetID string,
 	if _, err := applyAttackerLosses(ctx, tx, fleetID, ships, report.Attackers[0].Units); err != nil {
 		return nil, fmt.Errorf("expedition pirates: losses: %w", err)
 	}
+	// План 72.1.1: зачислить опыт/потери игроку. battleID="" — у
+	// экспедиций нет записи в battle_reports (legacy: assaultid=0
+	// для NPC). Idempotency обеспечивается event-loop уровнем.
+	if err := battlestats.ApplyBattleResult(ctx, tx, report, ""); err != nil &&
+		!errors.Is(err, battlestats.ErrAlreadyApplied) {
+		return nil, fmt.Errorf("expedition pirates: apply battle result: %w", err)
+	}
 	return map[string]any{
 		"winner":       report.Winner,
 		"rounds":       report.Rounds,
@@ -605,7 +614,7 @@ func expPirates(ctx context.Context, tx pgx.Tx, fleetID string,
 }
 
 // expBattlefield — бой с повреждённым флотом противника (shell_percent=0.5).
-func expBattlefield(ctx context.Context, tx pgx.Tx, fleetID string,
+func expBattlefield(ctx context.Context, tx pgx.Tx, fleetID, ownerUserID string,
 	ships []unitStack, cat *config.Catalog, expPower float64, r *rng.R, tr trFn) (map[string]any, error) {
 	atkUnits := stacksToBattleUnits(ships, cat, false)
 	if len(atkUnits) == 0 {
@@ -631,8 +640,12 @@ func expBattlefield(ctx context.Context, tx pgx.Tx, fleetID string,
 	input := battle.Input{
 		Seed:      deriveSeed(fleetID),
 		Rounds:    6,
-		Attackers: []battle.Side{{UserID: "expedition", Units: atkUnits}},
-		Defenders: []battle.Side{{UserID: "battlefield_enemy", Units: []battle.Unit{enemyUnit}}},
+		Attackers: []battle.Side{{UserID: ownerUserID, Units: atkUnits}},
+		Defenders: []battle.Side{{
+			UserID:   "battlefield_enemy",
+			IsAliens: true, // NPC: ApplyBattleResult её скипнет.
+			Units:    []battle.Unit{enemyUnit},
+		}},
 	}
 	report, err := battle.Calculate(input)
 	if err != nil {
@@ -640,6 +653,11 @@ func expBattlefield(ctx context.Context, tx pgx.Tx, fleetID string,
 	}
 	if _, err := applyAttackerLosses(ctx, tx, fleetID, ships, report.Attackers[0].Units); err != nil {
 		return nil, fmt.Errorf("expedition battlefield: losses: %w", err)
+	}
+	// План 72.1.1: зачислить опыт/потери. battleID="" (см. expPirates).
+	if err := battlestats.ApplyBattleResult(ctx, tx, report, ""); err != nil &&
+		!errors.Is(err, battlestats.ErrAlreadyApplied) {
+		return nil, fmt.Errorf("expedition battlefield: apply battle result: %w", err)
 	}
 
 	// При победе игрока — добавляем выживших противников в fleet_ships.
