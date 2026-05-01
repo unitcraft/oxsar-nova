@@ -38,11 +38,23 @@ export function requestDeletionCode(): Promise<DeletionCodeResponse> {
 export function confirmDeletion(code: string): Promise<void> {
   // backend ждёт DELETE /api/me с body {code}. fetch-DELETE с body
   // допустим в современных браузерах; backend парсит JSON-тело.
+  // План 72.1.30: после ConfirmDeletion ставится grace 7 дней
+  // (delete_at), а не немедленный soft-delete. Юзер остаётся
+  // залогиненным; UI показывает grace-warning + cancel кнопку.
   return api.deleteWithBody<void>(
     '/api/me',
     { code },
     { idempotencyKey: newIdempotencyKey() },
   );
+}
+
+// План 72.1.30: отмена pending удаления в grace-period.
+// Backend (settings/delete.go::CancelDeletion):
+//   400 если no pending или grace истёк / 404 если уже deleted_at.
+export function cancelDeletion(): Promise<void> {
+  return api.post<void>('/api/me/deletion/cancel', undefined, {
+    idempotencyKey: newIdempotencyKey(),
+  });
 }
 
 export interface ChangePasswordPayload {

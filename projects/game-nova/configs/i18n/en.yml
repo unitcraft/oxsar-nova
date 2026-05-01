@@ -881,6 +881,11 @@ settings:
   confirmDeleteBtn: "🗑 Delete account permanently"
   confirmDeleteErr: Invalid code
   cancelBtn: Cancel
+  deletionScheduledTitle: "⚠ Account will be deleted"
+  deletionScheduledBody: "Deletion scheduled at {{when}}. You can cancel during the grace period (7 days)."
+  cancelDeletionBtn: Cancel deletion
+  deletionCancelled: "✓ Deletion cancelled"
+  cancelDeletionErr: Failed to cancel deletion
 
 artefact:
   expired.title: ""

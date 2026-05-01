@@ -16,6 +16,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  cancelDeletion,
   changePassword,
   confirmDeletion,
   disableVacation,
@@ -27,7 +28,6 @@ import {
 import { fetchMe } from '@/api/me';
 import { QK } from '@/api/query-keys';
 import type { ApiError } from '@/api/client';
-import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/i18n/i18n';
 
 const TIMEZONES = [
@@ -49,7 +49,6 @@ const TIMEZONES = [
 export function SettingsScreen() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const logout = useAuthStore((s) => s.logout);
 
   const settingsQ = useQuery({
     queryKey: QK.settings(),
@@ -152,7 +151,25 @@ export function SettingsScreen() {
 
   const confirmMut = useMutation({
     mutationFn: confirmDeletion,
-    onSuccess: () => logout(),
+    // План 72.1.30: после ConfirmDeletion ставится grace 7 дней,
+    // юзер остаётся залогиненным. Invalidate me чтобы UI показал
+    // delete_at + cancel-кнопку. Раньше делали logout().
+    onSuccess: () => {
+      setDeleteErr(null);
+      void qc.invalidateQueries({ queryKey: QK.me() });
+    },
+    onError: (e) => setDeleteErr((e as ApiError).message),
+  });
+
+  // План 72.1.30: cancel pending удаления.
+  const cancelDelMut = useMutation({
+    mutationFn: cancelDeletion,
+    onSuccess: () => {
+      setDeleteErr(null);
+      setCodeSent(false);
+      setDeletionCode('');
+      void qc.invalidateQueries({ queryKey: QK.me() });
+    },
     onError: (e) => setDeleteErr((e as ApiError).message),
   });
 
@@ -430,7 +447,37 @@ export function SettingsScreen() {
           </tr>
         </thead>
         <tbody>
-          {!dangerOpen ? (
+          {/* План 72.1.30: grace 7 дней — pending deletion warning. */}
+          {meQ.data?.delete_at ? (
+            <tr>
+              <td colSpan={2} className="center">
+                <p className="false">
+                  {t('settings', 'deletionScheduledTitle') ||
+                    '⚠ Аккаунт будет удалён'}
+                </p>
+                <p>
+                  {t('settings', 'deletionScheduledBody', {
+                    when: new Date(meQ.data.delete_at).toLocaleString('ru-RU'),
+                  }) || `Удаление запланировано на ${new Date(meQ.data.delete_at).toLocaleString('ru-RU')}.`}
+                </p>
+                <button
+                  type="button"
+                  className="button"
+                  disabled={cancelDelMut.isPending}
+                  onClick={() => cancelDelMut.mutate()}
+                >
+                  {cancelDelMut.isPending
+                    ? '…'
+                    : t('settings', 'cancelDeletionBtn') || 'Отменить удаление'}
+                </button>
+                {deleteErr && (
+                  <div>
+                    <span className="false">{deleteErr}</span>
+                  </div>
+                )}
+              </td>
+            </tr>
+          ) : !dangerOpen ? (
             <tr>
               <td colSpan={2} className="center">
                 <button

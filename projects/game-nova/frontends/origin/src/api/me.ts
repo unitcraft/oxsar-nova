@@ -35,6 +35,8 @@ export interface MeInfo {
   vacation_since?: string;
   vacation_unlock_at?: string;
   vacation_last_end?: string;
+  // План 72.1.30: запланированное удаление аккаунта (grace 7 дней).
+  delete_at?: string;
 }
 
 export function fetchMe(): Promise<MeInfo> {

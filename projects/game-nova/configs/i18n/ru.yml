@@ -879,6 +879,11 @@ settings:
   confirmDeleteBtn: "🗑 Удалить аккаунт навсегда"
   confirmDeleteErr: Неверный код
   cancelBtn: Отмена
+  deletionScheduledTitle: "⚠ Аккаунт будет удалён"
+  deletionScheduledBody: "Удаление запланировано на {{when}}. Вы можете отменить в течение grace-периода (7 дней)."
+  cancelDeletionBtn: Отменить удаление
+  deletionCancelled: "✓ Удаление отменено"
+  cancelDeletionErr: Не удалось отменить удаление
 
 artefact:
   expired.title: Артефакт истёк
