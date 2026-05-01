@@ -3,7 +3,12 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchResearch, startResearch, cancelResearch } from '@/api/research';
+import {
+  fetchResearch,
+  startResearch,
+  cancelResearch,
+  startResearchVIP,
+} from '@/api/research';
 import { packResearch } from '@/api/buildings';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
@@ -37,6 +42,15 @@ export function ResearchScreen() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: QK.research() });
       if (planetId) void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+    },
+  });
+
+  // План 72.1.44: VIP-instant старт research за credits.
+  const vipMut = useMutation({
+    mutationFn: (queueId: string) => startResearchVIP(queueId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: QK.research() });
+      void qc.invalidateQueries({ queryKey: QK.me() });
     },
   });
 
@@ -83,7 +97,7 @@ export function ResearchScreen() {
         <table className="ntable">
           <tbody>
             <tr>
-              <th colSpan={4}>{t('buildings', 'outstandingMissions')}</th>
+              <th colSpan={5}>{t('buildings', 'outstandingMissions')}</th>
             </tr>
             {queue.map((task, idx) => {
               const cat = techs.find((c) => c.id === task.unit_id);
@@ -115,6 +129,27 @@ export function ResearchScreen() {
                       }}
                     >
                       ✕
+                    </button>
+                  </td>
+                  {/* План 72.1.44: VIP-instant старт за credits. */}
+                  <td width="80px" align="center">
+                    <button
+                      type="button"
+                      className="button"
+                      disabled={vipMut.isPending}
+                      title={t('buildings', 'vipHint') || 'Мгновенный старт за кредиты'}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            (t('buildings', 'vipConfirm') as string) ||
+                              'Мгновенный старт исследования за кредиты?',
+                          )
+                        ) {
+                          vipMut.mutate(task.id);
+                        }
+                      }}
+                    >
+                      ⚡
                     </button>
                   </td>
                 </tr>

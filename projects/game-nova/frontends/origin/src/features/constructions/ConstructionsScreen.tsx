@@ -8,6 +8,7 @@ import {
   enqueueBuilding,
   fetchBuildingQueue,
   fetchBuildingsOverview,
+  startBuildingVIP,
   type BuildingsOverview,
 } from '@/api/buildings';
 import { QK } from '@/api/query-keys';
@@ -15,7 +16,6 @@ import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { catalogByGroup } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { useTranslation } from '@/i18n/i18n';
-import { secondsUntil, formatDuration } from '@/lib/format';
 
 export function ConstructionsScreen() {
   const { planetId, planet } = useResolvedPlanet();
@@ -78,6 +78,17 @@ export function ConstructionsScreen() {
     },
   });
 
+  // План 72.1.44: VIP-instant старт стройки за credits.
+  const vip = useMutation({
+    mutationFn: (taskId: string) => startBuildingVIP(planetId!, taskId),
+    onSuccess: () => {
+      if (planetId) {
+        void qc.invalidateQueries({ queryKey: QK.buildingQueue(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.me() });
+      }
+    },
+  });
+
   if (!planetId) {
     return <div className="idiv">{t('overview', 'noPlanets')}</div>;
   }
@@ -122,7 +133,7 @@ export function ConstructionsScreen() {
         <table className="ntable">
           <tbody>
             <tr>
-              <th colSpan={4}>{t('buildings', 'outstandingMissions')}</th>
+              <th colSpan={5}>{t('buildings', 'outstandingMissions')}</th>
             </tr>
             {queue.map((task, idx) => {
               const cat = allBuildings.find((b) => b.id === task.unit_id);
@@ -143,6 +154,26 @@ export function ConstructionsScreen() {
                       value={t('info', 'abort')}
                       onClick={() => cancel.mutate(task.id)}
                       disabled={cancel.isPending}
+                    />
+                  </td>
+                  {/* План 72.1.44: VIP-instant старт за credits. */}
+                  <td width="80px">
+                    <input
+                      type="button"
+                      className="button"
+                      value={t('buildings', 'vipBtn') || '⚡ VIP'}
+                      title={t('buildings', 'vipHint') || 'Мгновенный старт за кредиты'}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            (t('buildings', 'vipConfirm') as string) ||
+                              'Мгновенный старт стройки за кредиты?',
+                          )
+                        ) {
+                          vip.mutate(task.id);
+                        }
+                      }}
+                      disabled={vip.isPending}
                     />
                   </td>
                 </tr>

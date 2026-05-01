@@ -27,3 +27,12 @@ export function cancelResearch(queueId: string): Promise<void> {
     idempotencyKey: newIdempotencyKey(),
   });
 }
+
+// План 72.1.44: VIP-instant старт исследования за credits.
+export function startResearchVIP(queueId: string): Promise<QueueItem> {
+  return api.post<QueueItem>(
+    `/api/research/${queueId}/vip`,
+    {},
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}

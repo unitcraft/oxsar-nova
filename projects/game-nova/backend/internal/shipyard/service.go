@@ -39,6 +39,9 @@ var (
 	// при umode/observer.
 	ErrUmodeBlocked      = errors.New("shipyard: blocked in vacation mode")
 	ErrObserverBlocked   = errors.New("shipyard: blocked in observer mode")
+	// План 72.1.44: VIP-instant.
+	ErrNotEnoughCredit   = errors.New("shipyard: not enough credit for VIP start")
+	ErrVIPAlreadyStarted = errors.New("shipyard: task already started, VIP not applicable")
 )
 
 type Service struct {
@@ -248,6 +251,91 @@ func (s *Service) Inventory(ctx context.Context, planetID string) (ships, defens
 		defense[id] = c
 	}
 	return ships, defense, rows.Err()
+}
+
+// StartVIP — план 72.1.44 cross-cut. Legacy
+// `EventHandler::startConstructionEventVIP` для UNIT_TYPE_FLEET/DEFENSE:
+// мгновенный старт ожидающей задачи в shipyard_queue за credits.
+//
+// cost = economy.VIPCostShipyard(count).
+func (s *Service) StartVIP(ctx context.Context, userID, planetID, queueID string) (QueueItem, error) {
+	var out QueueItem
+	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var (
+			unitID         int
+			count          int64
+			perUnitSeconds int
+			startAt        time.Time
+			endAt          time.Time
+			ownerID        string
+			status         string
+		)
+		err := tx.QueryRow(ctx, `
+			SELECT sq.unit_id, sq.count, sq.per_unit_seconds, sq.start_at, sq.end_at, p.user_id, sq.status
+			FROM shipyard_queue sq
+			JOIN planets p ON p.id = sq.planet_id
+			WHERE sq.id = $1 AND sq.planet_id = $2 AND sq.status IN ('queued','running')
+			FOR UPDATE
+		`, queueID, planetID).Scan(&unitID, &count, &perUnitSeconds, &startAt, &endAt, &ownerID, &status)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrQueueItemNotFound
+			}
+			return fmt.Errorf("select queue: %w", err)
+		}
+		if ownerID != userID {
+			return ErrPlanetOwnership
+		}
+		if !startAt.After(time.Now().UTC().Add(5 * time.Second)) {
+			return ErrVIPAlreadyStarted
+		}
+
+		cost := economy.VIPCostShipyard(count)
+
+		var credit int64
+		if err := tx.QueryRow(ctx,
+			`SELECT credit FROM users WHERE id=$1 FOR UPDATE`, userID,
+		).Scan(&credit); err != nil {
+			return fmt.Errorf("select credit: %w", err)
+		}
+		if credit < cost {
+			return ErrNotEnoughCredit
+		}
+
+		now := time.Now().UTC()
+		duration := endAt.Sub(startAt)
+		newEnd := now.Add(duration)
+
+		if _, err := tx.Exec(ctx,
+			`UPDATE users SET credit = credit - $1 WHERE id = $2`,
+			cost, userID,
+		); err != nil {
+			return fmt.Errorf("debit credit: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE shipyard_queue SET start_at=$1, end_at=$2, status='running'
+			WHERE id=$3
+		`, now, newEnd, queueID); err != nil {
+			return fmt.Errorf("update queue: %w", err)
+		}
+		// Shipyard event может быть KindBuildFleet (4) или KindBuildDefense (5);
+		// меняем оба варианта.
+		if _, err := tx.Exec(ctx, `
+			UPDATE events SET fire_at=$1
+			WHERE kind IN (4, 5) AND state='wait' AND user_id=$2
+			  AND payload @> jsonb_build_object('queue_id', $3::text)
+		`, newEnd, userID, queueID); err != nil {
+			return fmt.Errorf("update event: %w", err)
+		}
+
+		out = QueueItem{
+			ID: queueID, PlanetID: planetID, UnitID: unitID, Count: count,
+			PerUnitSeconds: perUnitSeconds,
+			StartAt: now, EndAt: newEnd, Status: "running",
+		}
+		return nil
+	})
+	return out, err
 }
 
 // Cancel отменяет задание очереди верфи и возвращает ресурсы на планету.

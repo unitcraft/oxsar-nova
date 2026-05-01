@@ -753,6 +753,11 @@ buildings:
   confirmNo: Нет
   cancelTitle: "Отменить (ресурсы вернутся)"
   fieldsFull: Занято / максимум полей на планете
+  # План 72.1.44: VIP-instant старт стройки/исследования/верфи.
+  vipBtn: "⚡ VIP"
+  vipHint: "Мгновенный старт за кредиты"
+  vipConfirm: "Мгновенный старт за кредиты?"
+  cancelTask: "Отменить задачу"
 colonize:
   success.title: "Основана колония {{coords}}"
   success.body: "Новая планета «{{planetName}}» на координатах [{{coords}}]. Стартовые ресурсы: {{metal}} M / {{silicon}} Si / {{hydrogen}} H."

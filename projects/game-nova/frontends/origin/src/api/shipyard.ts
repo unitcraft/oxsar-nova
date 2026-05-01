@@ -61,3 +61,15 @@ export function fetchShipyardCapacity(
 ): Promise<ShipyardCapacity> {
   return api.get<ShipyardCapacity>(`/api/planets/${planetId}/shipyard/capacity`);
 }
+
+// План 72.1.44: VIP-instant старт shipyard-задачи за credits.
+export function startShipyardVIP(
+  planetId: string,
+  queueId: string,
+): Promise<ShipyardQueueItem> {
+  return api.post<ShipyardQueueItem>(
+    `/api/planets/${planetId}/shipyard/${queueId}/vip`,
+    {},
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}

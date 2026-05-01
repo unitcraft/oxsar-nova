@@ -39,6 +39,9 @@ var (
 	ErrUmodeBlocked      = errors.New("research: blocked in vacation mode")
 	ErrObserverBlocked   = errors.New("research: blocked in observer mode")
 	ErrMaxLevelReached   = errors.New("research: max level reached")
+	// План 72.1.44: VIP-instant.
+	ErrNotEnoughCredit   = errors.New("research: not enough credit for VIP start")
+	ErrVIPAlreadyStarted = errors.New("research: task already started, VIP not applicable")
 )
 
 // MaxResearchLevel — legacy `MAX_RESEARCH_LEVEL` (consts.php:305), для
@@ -260,6 +263,88 @@ func (s *Service) List(ctx context.Context, userID string) ([]QueueItem, error) 
 		out = append(out, q)
 	}
 	return out, rows.Err()
+}
+
+// StartVIP — план 72.1.44 cross-cut. Legacy
+// `EventHandler::startConstructionEventVIP` для UNIT_TYPE_RESEARCH:
+// мгновенный старт исследования за credits.
+//
+// cost = economy.VIPCostResearch(target_level).
+func (s *Service) StartVIP(ctx context.Context, userID, queueID string) (QueueItem, error) {
+	var out QueueItem
+	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var (
+			planetID    string
+			unitID      int
+			targetLevel int
+			startAt     time.Time
+			endAt       time.Time
+			ownerID     string
+		)
+		err := tx.QueryRow(ctx, `
+			SELECT cq.planet_id, cq.unit_id, cq.target_level, cq.start_at, cq.end_at, p.user_id
+			FROM construction_queue cq
+			JOIN planets p ON p.id = cq.planet_id
+			WHERE cq.id = $1 AND cq.unit_type = 'research'
+			  AND cq.status IN ('queued','running')
+			FOR UPDATE
+		`, queueID).Scan(&planetID, &unitID, &targetLevel, &startAt, &endAt, &ownerID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrQueueItemNotFound
+			}
+			return fmt.Errorf("select queue: %w", err)
+		}
+		if ownerID != userID {
+			return ErrPlanetOwnership
+		}
+		if !startAt.After(time.Now().UTC().Add(5 * time.Second)) {
+			return ErrVIPAlreadyStarted
+		}
+
+		cost := economy.VIPCostResearch(targetLevel)
+
+		var credit int64
+		if err := tx.QueryRow(ctx,
+			`SELECT credit FROM users WHERE id=$1 FOR UPDATE`, userID,
+		).Scan(&credit); err != nil {
+			return fmt.Errorf("select credit: %w", err)
+		}
+		if credit < cost {
+			return ErrNotEnoughCredit
+		}
+
+		now := time.Now().UTC()
+		duration := endAt.Sub(startAt)
+		newEnd := now.Add(duration)
+
+		if _, err := tx.Exec(ctx,
+			`UPDATE users SET credit = credit - $1 WHERE id = $2`,
+			cost, userID,
+		); err != nil {
+			return fmt.Errorf("debit credit: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE construction_queue SET start_at=$1, end_at=$2, status='running'
+			WHERE id=$3
+		`, now, newEnd, queueID); err != nil {
+			return fmt.Errorf("update queue: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE events SET fire_at=$1
+			WHERE kind=3 AND state='wait' AND user_id=$2
+			  AND payload @> jsonb_build_object('queue_id', $3::text)
+		`, newEnd, userID, queueID); err != nil {
+			return fmt.Errorf("update event: %w", err)
+		}
+
+		out = QueueItem{
+			ID: queueID, PlanetID: planetID, UnitID: unitID, TargetLevel: targetLevel,
+			StartAt: now, EndAt: newEnd, Status: "running",
+		}
+		return nil
+	})
+	return out, err
 }
 
 // Cancel отменяет research-задачу. План 72.1.39 / правило 1:1 для

@@ -98,6 +98,35 @@ func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// StartVIP POST /api/planets/{id}/shipyard/{queueId}/vip (план 72.1.44).
+//
+// Legacy `EventHandler::startConstructionEventVIP` для UNIT_TYPE_FLEET/
+// DEFENSE: мгновенный старт shipyard-задачи за credits.
+func (h *Handler) StartVIP(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	queueID := chi.URLParam(r, "queueId")
+	item, err := h.svc.StartVIP(r.Context(), uid, planetID, queueID)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, item)
+	case errors.Is(err, ErrQueueItemNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrNotEnoughCredit):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "not enough credit"))
+	case errors.Is(err, ErrVIPAlreadyStarted):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "task already started"))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 // Capacity GET /api/planets/{id}/shipyard/capacity (план 72.1.41).
 // Legacy `Shipyard` показывает freeShieldFields/freeRocketFields.
 func (h *Handler) Capacity(w http.ResponseWriter, r *http.Request) {

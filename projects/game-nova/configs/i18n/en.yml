@@ -754,6 +754,11 @@ buildings:
   confirmNo: No
   cancelTitle: "Cancel (resources will be refunded)"
   fieldsFull: Occupied / max planet fields
+  # План 72.1.44: VIP-instant старт.
+  vipBtn: "⚡ VIP"
+  vipHint: "Instant start for credits"
+  vipConfirm: "Instant start for credits?"
+  cancelTask: "Cancel task"
 # TODO: en
 colonize:
   success.title: ""
