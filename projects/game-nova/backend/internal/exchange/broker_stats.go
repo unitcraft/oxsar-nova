@@ -17,8 +17,11 @@ package exchange
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // BrokerStatsRow — строка таблицы статистики.
@@ -87,6 +90,29 @@ func (s *Service) GetBrokerSettings(ctx context.Context, userID string) (BrokerS
 	`, userID, bs.Title, bs.FeePercent)
 	if err != nil {
 		return BrokerSettings{}, fmt.Errorf("init broker settings: %w", err)
+	}
+	return bs, nil
+}
+
+// getBrokerSettingsTx — план 72.1.46 P1#1: вариант для использования
+// внутри открытой транзакции BuyLot. Не создаёт записи (read-only) —
+// если нет строки, возвращает дефолт без INSERT.
+//
+// В unit-тестах с fakeRepo `tx` может быть nil — в этом случае
+// возвращаем дефолт (тесты не покрывают per-broker fee, для них fee=0
+// эквивалентно отсутствию изменения seller_profit).
+func (s *Service) getBrokerSettingsTx(ctx context.Context, tx pgx.Tx, userID string) (BrokerSettings, error) {
+	bs := BrokerSettings{UserID: userID, Title: "My exchange", FeePercent: DefaultBrokerFee}
+	if tx == nil {
+		return bs, nil
+	}
+	err := tx.QueryRow(ctx, `
+		SELECT title, fee_percent
+		  FROM exchange_settings
+		 WHERE user_id = $1
+	`, userID).Scan(&bs.Title, &bs.FeePercent)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return BrokerSettings{}, fmt.Errorf("read broker settings: %w", err)
 	}
 	return bs, nil
 }

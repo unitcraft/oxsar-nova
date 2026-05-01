@@ -634,16 +634,23 @@ func TestBuyLot_HappyPath(t *testing.T) {
 	if fr.totalQtyOfUnit(unitA) != totalArtBefore {
 		t.Errorf("artefacts disappeared")
 	}
-	// Oxsarit-инвариант.
-	if fr.totalOxsarits() != totalOxBefore {
-		t.Errorf("oxsarits leaked: %d → %d", totalOxBefore, fr.totalOxsarits())
+	// План 72.1.46 P1#1: per-broker fee удерживается с продавца
+	// (DefaultBrokerFee=5%). Buyer платит 1000, seller получает
+	// 1000 × (100-5)/100 = 950, 50 oxsarits — системная комиссия
+	// (legacy `Exchange.class.php`: exchange_profit идёт брокеру; в
+	// origin/nova brokers как отдельных юзеров нет → системная).
+	expectedFee := int64(50)
+	expectedSellerProfit := int64(1000) - expectedFee
+	if fr.totalOxsarits() != totalOxBefore-expectedFee {
+		t.Errorf("oxsarits sum: %d → %d, want fee=%d удержан",
+			totalOxBefore, fr.totalOxsarits(), expectedFee)
 	}
-	// Buyer списан, seller получен.
+	// Buyer списан полностью, seller получил с вычетом fee.
 	if fr.oxsarits[buyer] != 4000 {
 		t.Errorf("buyer balance = %d, want 4000", fr.oxsarits[buyer])
 	}
-	if fr.oxsarits[seller] != 1000 {
-		t.Errorf("seller balance = %d, want 1000", fr.oxsarits[seller])
+	if fr.oxsarits[seller] != expectedSellerProfit {
+		t.Errorf("seller balance = %d, want %d", fr.oxsarits[seller], expectedSellerProfit)
 	}
 	// Артефакты у buyer'а в state='held'.
 	heldByBuyer := 0
