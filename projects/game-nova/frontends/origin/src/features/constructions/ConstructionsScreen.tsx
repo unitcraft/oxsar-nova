@@ -15,6 +15,7 @@ import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { catalogByGroup } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
+import { ConstructionProgress } from '@/features/common/ConstructionProgress';
 import { useTranslation } from '@/i18n/i18n';
 
 export function ConstructionsScreen() {
@@ -144,8 +145,16 @@ export function ConstructionsScreen() {
               return (
                 <tr key={task.id}>
                   <td width="1px">{idx + 1}.</td>
-                  <td colSpan={2}>
+                  <td>
                     {name}&nbsp;{task.target_level}
+                  </td>
+                  {/* План 72.1.45 §4: VIP-progress bar (legacy
+                      constructions.tpl L.24-50 + ExtRepair L.244-249). */}
+                  <td width="130px">
+                    <ConstructionProgress
+                      startAt={task.start_at}
+                      endAt={task.end_at}
+                    />
                   </td>
                   <td width="100px">
                     <input

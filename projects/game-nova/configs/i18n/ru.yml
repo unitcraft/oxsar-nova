@@ -940,6 +940,13 @@ overview:
   resMetalLabel: Металл
   resSiliconLabel: Кремний
   resHydrogenLabel: Водород
+  # План 72.1.45 §4: использует RequiredResTable (legacy required_res_table.tpl).
+  metal: Металл
+  silicon: Кремний
+  hydrogen: Водород
+  energy: Энергия
+  credits: Кредиты
+  points: Очки
   storageLabel: "Склад:"
   diameterKm: км
   levelAbbr: "ур."
