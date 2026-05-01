@@ -107,7 +107,11 @@ export function EmpireScreen() {
                 </td>
                 <td align="right">{formatNumber(m.diameter)} км</td>
                 <td align="right">
-                  {m.used_fields}
+                  {m.used_fields} ({m.max_fields}
+                  {m.max_fields < m.max_fields_diameter_only
+                    ? `-${m.max_fields_diameter_only}`
+                    : ''}
+                  )
                 </td>
               </tr>
             ))}
@@ -166,7 +170,15 @@ function OverviewTable({
               </button>
             </td>
             <td align="right">{formatNumber(p.diameter)} км</td>
-            <td align="right">{p.used_fields}</td>
+            <td align="right">
+              {/* План 72.1.47: legacy `empire.tpl:16` —
+                  `(used/max-max2)` для лун с moon_base < diameter potential. */}
+              {p.used_fields} ({p.max_fields}
+              {p.is_moon && p.max_fields < p.max_fields_diameter_only
+                ? `-${p.max_fields_diameter_only}`
+                : ''}
+              )
+            </td>
             <td align="right">
               {p.temp_min}…{p.temp_max} °C
             </td>

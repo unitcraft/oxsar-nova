@@ -36,7 +36,10 @@ var DefaultFieldConsts = FieldConsts{
 }
 
 // MaxFields возвращает максимальное количество полей для застройки
-// на планете/луне. Формула legacy:
+// на планете/луне (legacy `Planet::getMaxFields()` без аргумента).
+// План 72.1.47: для лун применяется `min(moon_base × {3.5|5} + 1, fmax)` —
+// фактический max игрока. Голый максимум по диаметру/moon_lab — через
+// `MaxFieldsDiameterOnly` (legacy `getMaxFields(true)`).
 //
 //	base = round((diameter / 1000)^2)
 //
@@ -47,19 +50,45 @@ var DefaultFieldConsts = FieldConsts{
 // Moon:
 //
 //	if diameter <= 2500: base *= 2
-//	max = base + moon_lab × 5
+//	fmax = base + moon_lab × 5
+//	fields = moon_base × (moon_lab > 0 ? 5 : 3.5) + 1
+//	max = min(fields, fmax)
 //
 // buildings — карта unit_id → level (может быть nil, тогда бонусы = 0).
 func MaxFields(p *Planet, buildings map[int]int, c FieldConsts) int {
+	if p.IsMoon {
+		fmax := MaxFieldsDiameterOnly(p, buildings, c)
+		moonLab := buildings[350] // UNIT_MOON_LAB
+		moonBase := buildings[54] // UNIT_MOON_BASE
+		multiplier := 3.5
+		if moonLab > 0 {
+			multiplier = 5
+		}
+		fields := round(float64(moonBase)*multiplier) + 1
+		if fields < fmax {
+			return fields
+		}
+		return fmax
+	}
+	base := round(math.Pow(float64(p.Diameter)/1000.0, 2))
+	terraFormer := buildings[58] // UNIT_TERRA_FORMER
+	return base + terraFormer*c.TerraFormerFieldsPerLevel + c.PlanetFieldAddition
+}
+
+// MaxFieldsDiameterOnly — legacy `Planet::getMaxFields(true)`. Для лун —
+// «теоретический максимум» по диаметру + moon_lab бонус, без ограничения
+// moon_base. Используется в Empire UI для display `(N/M-K)` где K — этот
+// максимум. Для планет совпадает с `MaxFields`.
+func MaxFieldsDiameterOnly(p *Planet, buildings map[int]int, c FieldConsts) int {
 	base := round(math.Pow(float64(p.Diameter)/1000.0, 2))
 	if p.IsMoon {
 		if p.Diameter <= c.TempMoonSizeMax {
 			base *= 2
 		}
-		moonLab := buildings[350] // UNIT_MOON_LAB
+		moonLab := buildings[350]
 		return base + moonLab*c.MoonLabFieldsPerLevel
 	}
-	terraFormer := buildings[58] // UNIT_TERRA_FORMER
+	terraFormer := buildings[58]
 	return base + terraFormer*c.TerraFormerFieldsPerLevel + c.PlanetFieldAddition
 }
 

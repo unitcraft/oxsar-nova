@@ -9,6 +9,7 @@ import (
 
 	"oxsar/game-nova/internal/auth"
 	"oxsar/game-nova/internal/httpx"
+	"oxsar/game-nova/internal/planet"
 )
 
 // PlanetRow — данные одной планеты для empire-таблицы.
@@ -22,6 +23,11 @@ type PlanetRow struct {
 
 	Diameter   int `json:"diameter"`
 	UsedFields int `json:"used_fields"`
+	// План 72.1.47: maxFields/maxFields2 для legacy display (N/M-K).
+	// MaxFields — текущий потолок (учёт moon_base). MaxFieldsDiameterOnly —
+	// «теоретический» fmax по диаметру и moon_lab.
+	MaxFields            int `json:"max_fields"`
+	MaxFieldsDiameterOnly int `json:"max_fields_diameter_only"`
 	TempMin    int `json:"temp_min"`
 	TempMax    int `json:"temp_max"`
 
@@ -212,6 +218,17 @@ func (h *Handler) loadPlanets(ctx context.Context, userID string) ([]PlanetRow, 
 		return nil, err
 	}
 
+	// План 72.1.47: maxFields/maxFields2 (legacy `Empire::index` L.39-40)
+	// для каждой планеты — нужно для display `(used/maxFields-maxFields2)`.
+	for i := range planets {
+		pp := &planet.Planet{
+			Diameter: planets[i].Diameter,
+			IsMoon:   planets[i].IsMoon,
+		}
+		planets[i].MaxFields = planet.MaxFields(pp, planets[i].Buildings, planet.DefaultFieldConsts)
+		planets[i].MaxFieldsDiameterOnly = planet.MaxFieldsDiameterOnly(pp, planets[i].Buildings, planet.DefaultFieldConsts)
+	}
+
 	// 5. План 72.1.45: УМИ (research_virt_lab) per-planet —
 	// legacy `Planet::reseach_virt_lab`.
 	//   IGR=0 → research_lab.level (уровень лабы этой планеты).
@@ -223,7 +240,7 @@ func (h *Handler) loadPlanets(ctx context.Context, userID string) ([]PlanetRow, 
 	// связанной луне (если есть). Эта формула совпадает с per-planet
 	// вкладом легаси при IGR=0 и при IGR>0 (bound внутри суммы).
 	const unitResearchLab = 12
-	const unitMoonLab = 41
+	const unitMoonLab = 350 // legacy UNIT_MOON_LAB (план 72.1.47: было 41 — star_destroyer, баг 72.1.45 §7).
 	var ignLevel int
 	_ = h.pool.QueryRow(ctx,
 		`SELECT COALESCE(level, 0) FROM research WHERE user_id=$1 AND unit_id=113`,

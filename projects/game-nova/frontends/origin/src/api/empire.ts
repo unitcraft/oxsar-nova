@@ -19,6 +19,10 @@ export interface EmpirePlanet {
   is_moon: boolean;
   diameter: number;
   used_fields: number;
+  // План 72.1.47: maxFields (legacy display) + maxFieldsDiameterOnly
+  // (теоретический максимум по диаметру/moon_lab).
+  max_fields: number;
+  max_fields_diameter_only: number;
   temp_min: number;
   temp_max: number;
   metal: number;
