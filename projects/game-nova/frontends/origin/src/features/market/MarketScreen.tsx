@@ -92,22 +92,31 @@ export function MarketScreen() {
           </tr>
         )}
         {offers.map((offer) => {
-          const mine = !!userId && userId === offer.seller_id;
-          const canBuy = !mine && credit >= offer.price;
+          const mine = !!userId && userId === offer.seller_user_id;
+          const canBuy = !mine && credit >= offer.price_credit;
           return (
             <tr key={offer.id}>
               <td style={{ width: '1%' }}>#{offer.unit_id}</td>
               <td>
                 <div style={{ width: '100%' }}>
                   <b>{t('artefacts', 'title')} #{offer.unit_id}</b>
+                  {offer.seller_name && (
+                    <span style={{ marginLeft: 8 }}>· {offer.seller_name}</span>
+                  )}
                 </div>
                 <div style={{ fontSize: 'smaller', margin: 5 }}>
-                  {new Date(offer.created_at).toLocaleString('ru-RU')}
+                  {new Date(offer.listed_at).toLocaleString('ru-RU')}
+                  {offer.expire_at && (
+                    <>
+                      {' · '}
+                      ⏳ {new Date(offer.expire_at).toLocaleString('ru-RU')}
+                    </>
+                  )}
                 </div>
               </td>
               <td className="center" style={{ width: '10%' }}>
                 <span className={canBuy ? 'true' : 'false'}>
-                  {formatNumber(offer.price)}
+                  {formatNumber(offer.price_credit)}
                 </span>
                 <br />
                 {mine ? (

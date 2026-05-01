@@ -22,6 +22,7 @@ import (
 	"oxsar/game-nova/internal/achievement"
 	"oxsar/game-nova/internal/alien"
 	"oxsar/game-nova/internal/artefact"
+	"oxsar/game-nova/internal/artmarket"
 	"oxsar/game-nova/internal/automsg"
 	"oxsar/game-nova/internal/balance"
 	billingclient "oxsar/game-nova/internal/billing/client"
@@ -308,6 +309,10 @@ func run() error {
 	// План 68 Ф.4: биржа артефактов.
 	w.Register(event.KindExchangeExpire, event.HandleExchangeExpire)
 	w.Register(event.KindExchangeBan, event.HandleExchangeBan)
+	// План 72.1.42: KindArtMarketExpire=91 — auto-снятие лота
+	// артефакт-маркета через TTL.
+	artMarketSvc := artmarket.NewService(db)
+	w.Register(event.KindArtMarketExpire, artMarketSvc.ExpireEvent())
 
 	alienSvc := alien.NewService(db, cat).WithBundle(i18nBundle)
 	w.Register(event.KindAlienAttack, alienSvc.AttackHandler())
