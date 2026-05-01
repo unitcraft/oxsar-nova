@@ -292,7 +292,14 @@ class Simulator extends Page
 		$users = array();
 		foreach(array(__toUtf8(""), __toUtf8("")) as $i => $username)
 		{
-			$users[] = $cur_userid = sqlInsert("sim_user", array("username" => $username, "regtime" => time()));
+			$cur_userid = sqlInsert("sim_user", array("username" => $username, "regtime" => time()));
+			// План 86 audit: при провале INSERT $cur_userid=false →
+			// sim_research2user.userid=0 → FK violation. Прерываем до
+			// того, как создадим sim_assault и попадём в Java-вызов.
+			if ($cur_userid === false) {
+				Logger::dieMessage('DB_ERROR_BATTLE');
+			}
+			$users[] = $cur_userid;
 
 			$aval_tech = array(UNIT_GUN_TECH, UNIT_SHIELD_TECH, UNIT_SHELL_TECH, UNIT_BALLISTICS_TECH, UNIT_MASKING_TECH,
 				 UNIT_LASER_TECH, UNIT_ION_TECH, UNIT_PLASMA_TECH,
@@ -384,6 +391,11 @@ class Simulator extends Page
 			"building_hydrogen" 	=> $target_building ? $target_building["hydrogen"] : null,
 			"advanced_system"		=> (($ships['new_ass'] == 1) ? 1: 0),
 			));
+		// План 86 audit: $assaultid идёт в addParticipant + Java exec.
+		// При провале FK по всем downstream'ам — прерываем здесь.
+		if ($assaultid === false) {
+			Logger::dieMessage('DB_ERROR_BATTLE');
+		}
 
 		// DB access for external Java sim — константы из bd_connect_info.php.
 		//Simulation

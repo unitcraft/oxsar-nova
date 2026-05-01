@@ -92,6 +92,13 @@ class Assault
 
 		// Create a new assault in the database.
 		$this->assaultid = sqlInsert("assault", array("planetid" => $this->planetid, "time" => time()));
+		// План 86 audit: продакшн-аналог Simulator-бага. assaultid идёт
+		// FK во ВСЕ downstream INSERT'ы: assaultparticipant,
+		// fleet2assault, и в Java exec параметром. Без guard'а —
+		// каскадный мусор, как мы наблюдали в симуляторе.
+		if ($this->assaultid === false) {
+			throw new Exception('Failed to create assault record');
+		}
 
 		// If the planetid is a planet, we have to update the ressource production.
 		if($this->planetid && $this->userid)
@@ -165,6 +172,11 @@ class Assault
 				"mode" => 0
 			)
 		);
+		// План 86 audit: participantid идёт FK в fleet2assault.participantid
+		// (foreach ниже). Аналог фикса в Simulator::addParticipant.
+		if ($participantid === false) {
+			return $this;
+		}
 		$this->mainDefenderParticipantId = $participantid;
 
 //		This is not used. Why ?

@@ -161,6 +161,12 @@ class PlanetCreator
 				"temperature" => 1,
 				"last" => time(),
 				));
+			// План 86 audit: planetid идёт FK во ВСЕ дальнейшие галактиc-запросы
+			// (sqlUpdate galaxy, INSERT galaxy через cut2). Без guard'а —
+			// чужая планета попадёт в galaxy.planetid.
+			if ($this->planetid === false) {
+				throw new Exception('Failed to create planet placeholder');
+			}
 			$log_str .= 'Incerted Planet ' . $this->planetid . '. ';
 			
 			if( sqlSelectField("galaxy", "count(*)", "", "position <= ".MAX_NORMAL_PLANET_POSITION." AND destroyed = 1 AND moonid is NULL") > 10 )

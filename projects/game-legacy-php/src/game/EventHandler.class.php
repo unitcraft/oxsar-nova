@@ -352,6 +352,13 @@ class EventHandler
 			$arrayToInsert['planetid'] = $planetid;
 		}
 		$eventid = sqlInsert( "events", $arrayToInsert );
+		// План 86 audit: $eventid идёт в addEventIDToArtefacts ниже,
+		// который пишет artefact2user.delay_eventid/lifetime_eventid.
+		// При false артефакты получили бы event_id=0 → потеряли бы
+		// связь с событиями удаления (артефакт повисит вечно).
+		if ($eventid === false) {
+			return false;
+		}
 
 		if(!isset($data["control_times"]))
 		{
@@ -453,6 +460,10 @@ class EventHandler
 				"events",
 				$params
 			);
+			// План 86 audit: см. комментарий в addEvent (выше).
+			if ($new_event_id === false) {
+				return false;
+			}
 			$this->addEventIDToArtefacts($new_event_id, $data);
 			return $new_event_id;
 		}

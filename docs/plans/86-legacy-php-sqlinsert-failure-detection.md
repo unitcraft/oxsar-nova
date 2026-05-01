@@ -288,10 +288,88 @@ nullable).
 повторно.
 
 **Не делаем сейчас**:
-- audit оставшихся 49 call sites `sqlInsert()` (помимо 9 прямых) —
-  они защищены через п.1 автоматически. Если какие-то из них зависят
-  от строгого числового возврата, это всплывёт в smoke на конкретной
-  странице — фиксим по факту.
+- ~~audit оставшихся 49 call sites `sqlInsert()` (помимо 9 прямых)~~ —
+  выполнен, см. раздел «Audit оставшихся call sites» ниже.
 - transactional-обёртка вокруг multi-INSERT-блоков (`addParticipant +
   fleet2assault inserts` могли бы быть в одной транзакции) — это
   отдельный рефакторинг, не входит в этот план.
+
+---
+
+## Audit оставшихся call sites (2026-05-01, расширение плана)
+
+После закрытия первой части плана (фикс `sqlInsert()` + 9 прямых
+`insert_id()`) выполнен полный audit оставшихся 54 вызовов
+`sqlInsert()` в кодовой базе legacy-PHP. Цель: убедиться что
+центральный фикс (`sqlInsert` возвращает `false`) безопасен для
+всех call sites, и точечно защитить те, где `false → 0` мог бы
+породить порчу данных через FK chain.
+
+### Методология
+
+`grep -rEn '(^|[^a-zA-Z_])sqlInsert\(' src/ public/ worker/` →
+54 совпадения (исключая определение функции и `PS_sqlInsert`).
+По каждому смотрел: используется ли возврат как FK / параметр
+последующего запроса.
+
+### Категоризация
+
+| Группа | Описание | Кол-во | Действие |
+|---|---|---|---|
+| **A** | Возврат игнорируется (`sqlInsert(...);` без присваивания) | ~30 | Безопасно автоматически. `false` теряется без последствий. |
+| **B** | Возврат используется как маркер (не FK), `false → 0` некритично | ~10 | Безопасно. Например `NS.class.php:1690` ($params["id"]), `Functions.inc.php:1703` (logMessage). |
+| **C** | Возврат используется как FK в следующем INSERT/UPDATE/event | **14** | **Точечный guard**, см. ниже. |
+
+### Группа C — критичные точки (14 шт., все исправлены)
+
+| # | File:Line | Var | Стратегия | Severity |
+|---|---|---|---|---|
+| 1 | `Simulator.class.php:295` | `$cur_userid` (sim_user) | `Logger::dieMessage('DB_ERROR_BATTLE')` | medium |
+| 2 | `Simulator.class.php:377` | `$assaultid` (sim_assault) | `Logger::dieMessage('DB_ERROR_BATTLE')` | high (тот же класс, что породил план) |
+| 3 | `Participant.class.php:160` | `$this->participantid` (assaultparticipant) | early-return из `setDBEntry()` | high (продакшн-аналог Simulator-бага) |
+| 4 | `Expedition.class.php:290` | `$this->statid` (expedition_stats) | `throw Exception` | medium |
+| 5 | `ExpedPlanetCreator.class.php:94` | `$this->planetid` (planet) | `throw Exception` | high |
+| 6 | `ExpedPlanetCreator.class.php:123` | `$this->planetid` (moon) | `throw Exception` | high |
+| 7 | `Artefact.class.php:246` | `$art_id` (artefact2user) | `return null` (метод `appear()`) | high (без guard события удаления повисли бы на чужом артефакте) |
+| 8 | `AccountCreator.class.php:232` | `$userid` (user) | `throw Exception` | **critical** (security: при провале `password.userid` мог записаться поверх чужого) |
+| 9 | `Assault.class.php:94` | `$this->assaultid` (assault) | `throw Exception` | **critical** (продакшн-аналог симуляторного бага: assaultid идёт во ВСЕ downstream + Java exec) |
+| 10 | `Assault.class.php:159` | `$participantid` (assaultparticipant) | early-return из `loadDefenders()` | high |
+| 11 | `PlanetCreator.class.php:156` | `$this->planetid` (planet placeholder) | `throw Exception` | high |
+| 12 | `EventHandler.class.php:354` | `$eventid` (events) | `return false` из метода | medium (артефакты получили бы потерянные event_id) |
+| 13 | `EventHandler.class.php:452` | `$new_event_id` (events sendBack) | `return false` | medium |
+| 14 | `StockNew.class.php:768` | `$exchid` (exchange_lots) | `Logger::dieMessage('DB_ERROR_EXCHANGE')` | high (артефакт связали бы с чужим лотом) |
+| 15 | `Payment.class.php:491` | `$pay_id` (payments) | `Logger::dieMessage('DB_ERROR_PAYMENT')` | **critical** (billing: `pay_id` уходит в URL 2pay; callback мог начислить кредиты на чужую запись) |
+
+(15 строк — потому что `Simulator.class.php:716` (16-й) уже был исправлен в первой итерации плана 86, не считается повторно.)
+
+### Smoke
+
+Тот же сценарий что в основной части плана (откат миграции 006 →
+имитация Simulator::simulate flow → восстановление):
+
+```
+PLAN86_AUDIT sim_user insert: '19'        ← успех
+PLAN86_AUDIT sim_assault insert: '12'     ← успех
+PLAN86_AUDIT participant insert rc: false ← FK violation на planetid
+PLAN86_AUDIT lastInsertId after fail: 12  ← подтверждение бага: возврат от sim_assault, не от participant
+PLAN86_AUDIT (cf. assaultid=12 — would be the FAKE participantid without guard)
+```
+
+То же поведение, что и до audit'а (центральный механизм бага не
+изменился). Изменилось то, что **теперь все 14 critical-точек явно
+прерывают flow** при `false`-возврате, вместо тихого продолжения
+с фейковым `0`.
+
+### Файлы (доп. правки в рамках плана 86)
+
+- `projects/game-legacy-php/src/game/page/Simulator.class.php` — 2 guard'а (sim_user, sim_assault).
+- `projects/game-legacy-php/src/game/Participant.class.php` — early-return setDBEntry.
+- `projects/game-legacy-php/src/game/Expedition.class.php` — throw в expedition_stats.
+- `projects/game-legacy-php/src/game/ExpedPlanetCreator.class.php` — throw в planet (×2).
+- `projects/game-legacy-php/src/game/Artefact.class.php` — return null в appear().
+- `projects/game-legacy-php/src/game/AccountCreator.class.php` — throw в create() (security-critical).
+- `projects/game-legacy-php/src/game/Assault.class.php` — throw + early-return (×2, продакшн-аналог симулятора).
+- `projects/game-legacy-php/src/game/PlanetCreator.class.php` — throw в setRandPos().
+- `projects/game-legacy-php/src/game/EventHandler.class.php` — return false (×2, addEvent + sendBack).
+- `projects/game-legacy-php/src/game/page/StockNew.class.php` — dieMessage в exchange_lots.
+- `projects/game-legacy-php/src/game/page/Payment.class.php` — dieMessage в 2pay (billing-critical).

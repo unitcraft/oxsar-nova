@@ -789,6 +789,13 @@ class StockNew extends Page {
 					"featured_date" => $premium ? time() : null,
 				)
 			);
+			// План 86 audit: $exchid идёт в artefact2user.lot_id и в
+			// EXCH_EXPIRE event payload. Без guard'а артефакт связали
+			// бы с чужим лотом, событие истечения сработало бы на
+			// чужом лоте.
+			if ($exchid === false) {
+				Logger::dieMessage('DB_ERROR_EXCHANGE');
+			}
 
 			if( $data['lot_type'] == ETYPE_ARTEFACT )
 			{
