@@ -137,7 +137,10 @@ func Calculate(in Input) (Report, error) {
 	atkPower := startBattlePower(atk)
 	defPower := startBattlePower(def)
 	if report.Rounds > 0 && atkPower > 0 && defPower > 0 {
-		atkExp, defExp := computeExperience(report.Winner, report.Rounds, atkPower, defPower, in.IsMoon)
+		// План 87 / BA-007: hasPlanet, не IsMoon. До фикса IsMoon
+		// передавалось напрямую, что делало bpc *= 0.5 для обычных
+		// атак планет (in.IsMoon=false → !hasPlanet).
+		atkExp, defExp := computeExperience(report.Winner, report.Rounds, atkPower, defPower, in.HasPlanet)
 		report.AttackerExp = atkExp
 		report.DefenderExp = defExp
 	}

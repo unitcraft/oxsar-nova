@@ -256,6 +256,7 @@ func (s *Service) AttackHandler() event.Handler {
 				Attackers: []battle.Side{atkSide},
 				Defenders: []battle.Side{defSide},
 				Rapidfire: rapidfireToMap(s.cat),
+				HasPlanet: true, // alien рейд на планету защитника → опыт без штрафа (BA-007).
 			}
 			var err error
 			report, err = battle.Calculate(inp)

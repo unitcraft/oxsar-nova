@@ -57,6 +57,9 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "attackers and defenders required"))
 		return
 	}
+	// План 87 / BA-007: симулятор всегда «бой на планете» (legacy:
+	// SIM_PLANET_ID=1, planetid != 0). Опыт без штрафа bpc *= 0.5.
+	in.HasPlanet = true
 	n := in.NumSim
 	if n < 1 {
 		n = 1
