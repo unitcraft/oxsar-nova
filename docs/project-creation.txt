@@ -15004,3 +15004,37 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(techtree): план 72.1.22 — icon + moon-section (legacy паритет).
 
+
+---
+
+2026-05-01 — итерация 72.1.23: BuildingInfo + UnitInfo — icon.
+
+  Чек-лист §20.12 для info-страниц: legacy `Image::getImage(getUnitImage(name))`
+  ставит иконку 120×120 рядом с описанием. Origin показывал только
+  название и текст без image.
+
+  **Сделано (1:1)**:
+  - BuildingInfoScreen: findCatalog(entry.id) → <img> 120×120
+    с float:left перед description.
+  - UnitInfoScreen: то же самое.
+  - Заодно поправил случайный typo `desc = t('info', desc)` →
+    `t('info', descKey)` в UnitInfoScreen (было: переменная вместо
+    строки-ключа).
+
+  **Не сделано (вне scope)**:
+  - BuildingInfo demolish-кнопка (legacy `EditConstruction.class.php`
+    отдельный route).
+  - BuildingInfo pack-actions (PackConstruction/PackResearch — это
+    активация артефакта-упаковщика, отдельный план для artefact-
+    integration).
+
+  **Прогон**: tsc clean, eslint clean.
+
+  **Файлы**:
+  - docs/plans/72.1.2-screen-audit.md (#35 ⚠, #36 ✅).
+  - projects/game-nova/frontends/origin/src/features/info/BuildingInfoScreen.tsx (icon).
+  - projects/game-nova/frontends/origin/src/features/info/UnitInfoScreen.tsx (icon + typo-fix).
+
+  **Коммит**:
+  feat(info): план 72.1.23 — icon в BuildingInfo + UnitInfo (legacy паритет).
+

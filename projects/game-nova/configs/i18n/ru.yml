@@ -2680,7 +2680,7 @@ mission:
   notEnoughFuel: Не хватает водорода.
   order: Действие
   quantity: Число
-  reloadingStarGate: Телепорт еще не готов.
+  reloadingStarGate: Телепорт ещё не готов.
   resources: Ресурсы
   retreat: Отозвать
   return: Возвращение
@@ -2696,13 +2696,13 @@ mission:
   start: Старт
   target: Цель
   time: Время
-  unkownMission: Задание не известно или не доступно.
+  unkownMission: Миссия неизвестна или недоступна.
   unkownPlanet: Неизвестная планета
   waiting: Готово
   relocateDoneSubject: Перебазирование завершено
-  relocateDoneBody: "Флот прибыл на [{{g}}:{{s}}:{{pos}}]. Корабли перемещены на планету, ресурсы разгружены."
-  raidWarnSubject: "Предупреждение: вражеский флот!"
-  raidWarnBody: "Вражеский флот приближается к вашей планете [{{g}}:{{s}}:{{pos}}]. Ожидаемое прибытие — менее чем через 10 минут."
+  relocateDoneBody: "Флот прибыл на [{{g}}:{{s}}:{{pos}}]. Корабли пристыкованы, ресурсы разгружены."
+  raidWarnSubject: "Тревога: вражеский флот!"
+  raidWarnBody: "К планете [{{g}}:{{s}}:{{pos}}] приближается вражеский флот. Расчётное прибытие — меньше 10 минут."
   expeditionSubject: "Экспедиция: {{outcome}}"
   expeditionBody: "Результат: {{outcome}}"
   expeditionNothingFound: Ничего не нашли.
