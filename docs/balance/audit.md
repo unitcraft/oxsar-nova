@@ -490,7 +490,7 @@ unit-ов (energy weapons). В config'е на 2026-05-01 урон зашит в
 
 - **Дата находки**: 2026-05-01
 - **Серьёзность**: P3 (low — пока ApplyBattleResult фильтрует)
-- **Статус**: **open**
+- **Статус**: **not-a-fix** 2026-05-01 (план 72.1.3, осознанное закрытие)
 - **Категория**: фича частично реализована
 
 **Файлы**: [engine.go](../../projects/game-nova/backend/internal/battle/engine.go) (нигде не читается), [types.go:27](../../projects/game-nova/backend/internal/battle/types.go#L27).
@@ -507,6 +507,14 @@ JSON, копируется в `SideResult` (engine.go:993). Но в **самой
 **Фикс**: пока не нужен. Зафиксировать как known-limitation на случай
 когда будем делать «alien empire» или сложнее текущей одноразовой
 HOLDING-логики.
+
+**Закрытие 2026-05-01 (план 72.1.3, not-a-fix)**: проверено, что
+`battlestats.ApplyBattleResult` (план 72.1.1) фильтрует `IsAliens=true`
+по UserID, не зачисляя опыт alien-стороне. В `Calculate` IsAliens
+действительно влияет только на копию в `SideResult.IsAliens` для
+визуализации. Реальный вред от текущего поведения отсутствует. При
+будущих расширениях alien-логики (отдельный эмпайр, специальный
+haul) — пересмотреть.
 
 ---
 
@@ -662,7 +670,7 @@ shootAtSides). На момент 2026-05-01 — флаг для повторно
 
 - **Дата находки**: 2026-05-01
 - **Серьёзность**: P3 (теоретический edge case)
-- **Статус**: **open** (close-as-not-a-fix вероятно)
+- **Статус**: **mitigated** 2026-05-01 (план 72.1.3, через BA-015)
 - **Категория**: численное
 
 **Файлы**: [types.go:201-203](../../projects/game-nova/backend/internal/battle/types.go#L201), [engine.go:1008-1010](../../projects/game-nova/backend/internal/battle/engine.go#L1008).
@@ -672,6 +680,13 @@ shootAtSides). На момент 2026-05-01 — флаг для повторно
 `Cost.Metal = 10^7` получим `10^16`, что < `int64.MAX = 9.2×10^18`.
 Безопасно, но тонкий margin. Защита: ограничить `Quantity`
 на этапе validate (см. BA-015).
+
+**Закрытие 2026-05-01 (план 72.1.3, mitigated)**: BA-015 ограничил
+`Quantity ≤ 10^10`, валидно через validate. При типичной `Cost.Metal ≤ 10^7`
+максимум `LostMetal = 10^17`, что < `int64.MAX = 9.2×10^18`. Запас
+×92. Угроза переполнения снята через BA-015 без изменений типа поля.
+Если позже понадобится `Quantity > 10^10` — пересмотреть тип на
+`numeric/decimal`.
 
 ---
 
@@ -701,7 +716,7 @@ golden-снимки.
 
 - **Дата находки**: 2026-05-01
 - **Серьёзность**: P3 (артефакт)
-- **Статус**: **open**
+- **Статус**: **patched** 2026-05-01 (план 72.1.3, commit того же дня)
 - **Категория**: численное
 
 **Файлы**: [simstats.go:32](../../projects/game-nova/backend/internal/battle/simstats.go#L32), [rng.go:23-27](../../projects/game-nova/backend/pkg/rng/rng.go#L23).
@@ -715,9 +730,16 @@ golden-снимки.
 статистику, но создаёт неожиданный pattern — `seed=0` всегда даёт
 тот же исход, не зависящий от N.
 
-**Фикс**: либо убрать guard в `rng.New` (требует изменения семантики
-RNG для всех клиентов), либо в `MultiRun` стартовать `i = 1` если
-`seed0 == 0`.
+**Фикс** (применён 2026-05-01): в [simstats.go::MultiRun](../../projects/game-nova/backend/internal/battle/simstats.go)
+если `in.Seed == 0`, добавляется `seedOffset=1` к индексу: вместо
+последовательности `Seed = 0, 1, 2, …` идёт `Seed = 1, 2, 3, …`.
+Это предотвращает попадание первой итерации на `rng.New(0) →
+golden_ratio` (см. [pkg/rng/rng.go:23-27](../../projects/game-nova/backend/pkg/rng/rng.go#L23)).
+Для `Seed != 0` поведение не меняется.
+
+**Тест**: `TestMultiRun_Seed0_NoGoldenRatioArtefact` в `engine_test.go`
+— прогон `MultiRun(in_seed_0, n=5)` не падает и возвращает валидную
+статистику.
 
 ---
 
