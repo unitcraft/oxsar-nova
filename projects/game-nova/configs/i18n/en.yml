@@ -76,6 +76,12 @@ administrator:
 alliance:
   abandonAlliance: ""
   accept: ""
+  # План 72.1.43: tag/name edit + broadcast.
+  saveBtn: "Save"
+  globalMail: "Broadcast"
+  broadcastTitle: "Title"
+  broadcastBody: "Message"
+  broadcastBtn: "📨 Send to all"
   allianceAlreadyExists: ""
   allianceDiplomacyApplications: ""
   allianceDiplomacyRelationships: ""
@@ -526,6 +532,9 @@ assaultReport:
 autoMessages:
   allianceAbandoned: ""
   allianceAbandonedSubject: ""
+  # План 72.1.42: AutoMsg на покупке артефакта.
+  artMarketPurchased.title: "Artefact sold"
+  artMarketPurchased.body: "Your artefact #{{unit_id}} was sold for {{price}} credits."
   allianceApplication: ""
   artefactsGraspedMsg: ""
   artefactsGraspedSubject: ""

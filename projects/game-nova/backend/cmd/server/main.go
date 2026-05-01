@@ -299,6 +299,8 @@ func run() error {
 	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed, cfg.Game.NumGalaxies, cfg.Game.NumSystems).WithBundle(i18nBundle)
 	rocketH := rocket.NewHandler(rocketSvc)
 
+	// План 72.1.42: artmarket теперь использует automsg.Send (i18n
+	// шаблон), bundle нужен на стороне automsg (он уже подключён выше).
 	artMarketSvc := artmarket.NewService(db).WithAutoMsg(automsgSvc)
 	artMarketH := artmarket.NewHandler(artMarketSvc, rdb)
 
@@ -618,6 +620,9 @@ func run() error {
 		pr.Get("/alliances/me", allianceH.My)
 		pr.Get("/alliances/{id}", allianceH.Get)
 		pr.Get("/alliances/{id}/applications", allianceH.Applications)
+		// План 72.1.43: legacy globalMail + updateAllyTag/Name.
+		pr.Post("/alliances/{id}/broadcast", allianceH.BroadcastMail)
+		pr.Patch("/alliances/{id}", allianceH.UpdateTagName)
 		pr.Post("/alliances", allianceH.Create)
 		pr.Post("/alliances/{id}/join", allianceH.Join)
 		pr.Patch("/alliances/{id}/open", allianceH.SetOpen)

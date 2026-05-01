@@ -76,6 +76,12 @@ administrator:
 alliance:
   abandonAlliance: Распустить альянс
   accept: Принять
+  # План 72.1.43: tag/name edit + broadcast.
+  saveBtn: Сохранить
+  globalMail: "Общая рассылка"
+  broadcastTitle: "Заголовок"
+  broadcastBody: "Сообщение"
+  broadcastBtn: "📨 Отправить всем"
   allianceAlreadyExists: Альянс с таким названием или аббревиатурой уже есть.
   allianceDiplomacyApplications: Текущие предложения от альнсов
   allianceDiplomacyRelationships: Дипломатические отношения с другими альянсами
@@ -526,6 +532,9 @@ assaultReport:
 autoMessages:
   allianceAbandoned: "Ваш альянс [{{arg1}}] распался. Вы можете найти новый альянс, либо продолжать играть в одиночку."
   allianceAbandonedSubject: Альянс распущен
+  # План 72.1.42: AutoMsg при продаже артефакта на маркете.
+  artMarketPurchased.title: "Артефакт продан"
+  artMarketPurchased.body: "Ваш артефакт #{{unit_id}} продан за {{price}} кредитов."
   allianceApplication: Заявка на вступление
   artefactsGraspedMsg: "В сражение на планете {@coords_from} были захвачены артефакты: {@artefacts}. Ваш флот вместе с артефактами прибудет на планету {@planet} {@coords}."
   artefactsGraspedSubject: Захват артефактов противника

@@ -75,6 +75,143 @@ func (s *Service) notifyAlliance(ctx context.Context, userID, title, body string
 	_ = s.automsg.SendDirect(ctx, nil, userID, 6, title, body)
 }
 
+// BroadcastMail — план 72.1.43 / правило 1:1 для /alliance.
+// Legacy `Alliance::globalMail` отправляет message всем участникам
+// альянса (с проверкой permission CAN_SEND_GLOBAL_MAIL).
+//
+// Использует AutoMsg (folder=6 = alliance) для каждого активного
+// участника. Не шлёт самому себе и забаненным.
+func (s *Service) BroadcastMail(ctx context.Context, requesterID, allianceID, title, body string) error {
+	var memberIDs []string
+	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		mem, err := LoadMembership(ctx, tx, requesterID, allianceID)
+		if err != nil {
+			return err
+		}
+		if mem == nil {
+			return ErrNotMember
+		}
+		can, err := Has(ctx, tx, mem, PermSendGlobalMail)
+		if err != nil {
+			return err
+		}
+		if !can {
+			return ErrForbidden
+		}
+		rows, err := tx.Query(ctx, `
+			SELECT id FROM users
+			WHERE alliance_id = $1 AND id <> $2 AND banned_at IS NULL
+		`, allianceID, requesterID)
+		if err != nil {
+			return fmt.Errorf("broadcast: list members: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var memberID string
+			if err := rows.Scan(&memberID); err != nil {
+				return err
+			}
+			memberIDs = append(memberIDs, memberID)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return err
+	}
+
+	if s.automsg == nil {
+		return nil // тестовое окружение без AutoMsg.
+	}
+	// Шлём за пределами транзакции — AutoMsg сам начинает свой tx
+	// при необходимости (передаём nil).
+	for _, mid := range memberIDs {
+		_ = s.automsg.SendDirect(ctx, nil, mid, 6, title, body)
+	}
+	return nil
+}
+
+// UpdateTagName — план 72.1.43 / правило 1:1. Legacy
+// `Alliance::updateAllyTag` + `updateAllyName`. Только owner может
+// менять. Проверка уникальности через ErrTagTaken/ErrNameTaken.
+//
+// Если tag/name пустой — поле не меняется (PATCH-семантика).
+func (s *Service) UpdateTagName(ctx context.Context, ownerID, allianceID, newTag, newName string) error {
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var owner string
+		if err := tx.QueryRow(ctx,
+			`SELECT owner_user_id FROM alliances WHERE id = $1 FOR UPDATE`, allianceID,
+		).Scan(&owner); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrNotFound
+			}
+			return fmt.Errorf("read alliance: %w", err)
+		}
+		if owner != ownerID {
+			return ErrNotOwner
+		}
+		// tag валидация (если изменяем).
+		if newTag != "" {
+			if !isValidTag(newTag) {
+				return ErrInvalidTag
+			}
+			// Уникальность tag.
+			var taken bool
+			if err := tx.QueryRow(ctx,
+				`SELECT EXISTS(SELECT 1 FROM alliances WHERE LOWER(tag) = LOWER($1) AND id <> $2)`,
+				newTag, allianceID,
+			).Scan(&taken); err != nil {
+				return fmt.Errorf("tag check: %w", err)
+			}
+			if taken {
+				return ErrTagTaken
+			}
+			if _, err := tx.Exec(ctx,
+				`UPDATE alliances SET tag = $1 WHERE id = $2`, newTag, allianceID,
+			); err != nil {
+				return fmt.Errorf("update tag: %w", err)
+			}
+		}
+		if newName != "" {
+			// Уникальность name.
+			var taken bool
+			if err := tx.QueryRow(ctx,
+				`SELECT EXISTS(SELECT 1 FROM alliances WHERE LOWER(name) = LOWER($1) AND id <> $2)`,
+				newName, allianceID,
+			).Scan(&taken); err != nil {
+				return fmt.Errorf("name check: %w", err)
+			}
+			if taken {
+				return ErrNameTaken
+			}
+			// План 46: blacklist.
+			if s.blacklist != nil {
+				if forbidden, _ := s.blacklist.IsForbidden(newName); forbidden {
+					return ErrNameForbidden
+				}
+			}
+			if _, err := tx.Exec(ctx,
+				`UPDATE alliances SET name = $1 WHERE id = $2`, newName, allianceID,
+			); err != nil {
+				return fmt.Errorf("update name: %w", err)
+			}
+		}
+		return nil
+	})
+}
+
+// isValidTag — 3-5 латинских/цифр (legacy regex).
+func isValidTag(tag string) bool {
+	if len(tag) < 3 || len(tag) > 5 {
+		return false
+	}
+	for _, r := range tag {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')) {
+			return false
+		}
+	}
+	return true
+}
+
 var (
 	ErrNotFound          = errors.New("alliance: not found")
 	ErrAlreadyMember     = errors.New("alliance: already in an alliance")

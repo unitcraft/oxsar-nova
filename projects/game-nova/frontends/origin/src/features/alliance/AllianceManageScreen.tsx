@@ -15,11 +15,15 @@
 
 import { Link, Navigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { setAllianceOpen } from '@/api/alliance';
+import {
+  setAllianceOpen,
+  broadcastAllianceMail,
+  updateAllianceTagName,
+} from '@/api/alliance';
 import type { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/i18n/i18n';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMyAlliance } from './common';
 
 export function AllianceManageScreen() {
@@ -34,6 +38,38 @@ export function AllianceManageScreen() {
   const setOpen = useMutation({
     mutationFn: (isOpen: boolean) => setAllianceOpen(allianceID, isOpen),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['alliances'] }),
+    onError: (e) => setErrMsg((e as ApiError).message),
+  });
+
+  // План 72.1.43: tag/name edit + broadcast.
+  const [tagInput, setTagInput] = useState('');
+  const [nameInput, setNameInput] = useState('');
+  const [bcTitle, setBcTitle] = useState('');
+  const [bcBody, setBcBody] = useState('');
+  // Init inputs from alliance data — useEffect зависит от al.tag/name.
+  useEffect(() => {
+    if (my.data) {
+      setTagInput(my.data.alliance.tag);
+      setNameInput(my.data.alliance.name);
+    }
+  }, [my.data]);
+
+  const updateTagName = useMutation({
+    mutationFn: ({ tag, name }: { tag?: string; name?: string }) =>
+      updateAllianceTagName(allianceID, tag, name),
+    onSuccess: () => {
+      setErrMsg(null);
+      void qc.invalidateQueries({ queryKey: ['alliances'] });
+    },
+    onError: (e) => setErrMsg((e as ApiError).message),
+  });
+  const broadcast = useMutation({
+    mutationFn: () => broadcastAllianceMail(allianceID, bcTitle, bcBody),
+    onSuccess: () => {
+      setErrMsg(null);
+      setBcTitle('');
+      setBcBody('');
+    },
     onError: (e) => setErrMsg((e as ApiError).message),
   });
 
@@ -65,15 +101,55 @@ export function AllianceManageScreen() {
         <tbody>
           <tr>
             <td>
-              <label>{t('alliance', 'allianceTag')}</label>
+              <label htmlFor="tag-input">{t('alliance', 'allianceTag')}</label>
             </td>
-            <td>{al.tag}</td>
+            <td>
+              {/* План 72.1.43: tag editable. Submit через кнопку ниже. */}
+              <input
+                id="tag-input"
+                type="text"
+                value={tagInput}
+                maxLength={5}
+                onChange={(e) => setTagInput(e.target.value)}
+                disabled={updateTagName.isPending}
+              />
+            </td>
           </tr>
           <tr>
             <td>
-              <label>{t('alliance', 'allianceName')}</label>
+              <label htmlFor="name-input">{t('alliance', 'allianceName')}</label>
             </td>
-            <td>{al.name}</td>
+            <td>
+              <input
+                id="name-input"
+                type="text"
+                value={nameInput}
+                maxLength={64}
+                onChange={(e) => setNameInput(e.target.value)}
+                disabled={updateTagName.isPending}
+                style={{ width: '20em' }}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={2} className="center">
+              <button
+                type="button"
+                className="button"
+                disabled={
+                  updateTagName.isPending ||
+                  (tagInput === al.tag && nameInput === al.name)
+                }
+                onClick={() => {
+                  const payload: { tag?: string; name?: string } = {};
+                  if (tagInput !== al.tag) payload.tag = tagInput;
+                  if (nameInput !== al.name) payload.name = nameInput;
+                  updateTagName.mutate(payload);
+                }}
+              >
+                {t('alliance', 'saveBtn') || 'Сохранить'}
+              </button>
+            </td>
           </tr>
           <tr>
             <td colSpan={2} className="center">
@@ -141,6 +217,53 @@ export function AllianceManageScreen() {
               <Link to="/alliance/transfer">
                 {t('alliance', 'referFounderStatus')}
               </Link>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* План 72.1.43: legacy `Alliance::globalMail`. */}
+      <table className="ntable">
+        <thead>
+          <tr>
+            <th>📨 {t('alliance', 'globalMail') || 'Рассылка'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <input
+                type="text"
+                placeholder={t('alliance', 'broadcastTitle') || 'Заголовок'}
+                value={bcTitle}
+                maxLength={120}
+                onChange={(e) => setBcTitle(e.target.value)}
+                disabled={broadcast.isPending}
+                style={{ width: '100%' }}
+              />
+              <textarea
+                placeholder={t('alliance', 'broadcastBody') || 'Сообщение'}
+                value={bcBody}
+                rows={4}
+                maxLength={2000}
+                onChange={(e) => setBcBody(e.target.value)}
+                disabled={broadcast.isPending}
+                style={{ width: '100%', marginTop: 4 }}
+              />
+              <div style={{ marginTop: 4, textAlign: 'right' }}>
+                <button
+                  type="button"
+                  className="button"
+                  disabled={
+                    broadcast.isPending || !bcTitle || !bcBody
+                  }
+                  onClick={() => broadcast.mutate()}
+                >
+                  {broadcast.isPending
+                    ? '…'
+                    : t('alliance', 'broadcastBtn') || 'Отправить всем'}
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>

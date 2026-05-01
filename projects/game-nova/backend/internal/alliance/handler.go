@@ -755,3 +755,76 @@ func (h *Handler) ListAudit(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}
 }
+
+// BroadcastMail POST /api/alliances/{id}/broadcast (план 72.1.43).
+// Body: { title, body }. Permission: CAN_SEND_GLOBAL_MAIL.
+func (h *Handler) BroadcastMail(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	allianceID := chi.URLParam(r, "id")
+	var body struct {
+		Title string `json:"title"`
+		Body  string `json:"body"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	if body.Title == "" || body.Body == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "title and body required"))
+		return
+	}
+	err := h.svc.BroadcastMail(r.Context(), uid, allianceID, body.Title, body.Body)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrNotMember):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrForbidden):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// UpdateTagName PATCH /api/alliances/{id} (план 72.1.43).
+// Body: { tag?, name? }. Только owner.
+func (h *Handler) UpdateTagName(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	allianceID := chi.URLParam(r, "id")
+	var body struct {
+		Tag  string `json:"tag,omitempty"`
+		Name string `json:"name,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	if body.Tag == "" && body.Name == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "tag or name required"))
+		return
+	}
+	err := h.svc.UpdateTagName(r.Context(), uid, allianceID, body.Tag, body.Name)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotOwner):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrInvalidTag),
+		errors.Is(err, ErrTagTaken),
+		errors.Is(err, ErrNameTaken),
+		errors.Is(err, ErrNameForbidden):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
