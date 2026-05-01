@@ -214,11 +214,20 @@ function sqlSelectField($table, $select, $join = '', $where = '', $order = '', $
 
 function sqlInsert($table_name, $values)
 {
-    Core::getQuery()->insert(
+    $rc = Core::getQuery()->insert(
         $table_name,
         array_keys($values),
         array_values($values)
     );
+    // QueryParser::insert() возвращает false при PDOException
+    // (DB_MYSQL_PDO::query пишет error_log и проглатывает throw).
+    // Без этой проверки sqlInsert() возвращал бы lastInsertId() от
+    // ПРЕДЫДУЩЕГО успешного INSERT — вызывающий код получил бы
+    // фейковый PK другой строки и каскадно ломал FK на следующих
+    // запросах. См. план 86.
+    if ($rc === false) {
+        return false;
+    }
     return Core::getDB()->insert_id();
 }
 

@@ -204,7 +204,12 @@ class Alliance extends Page
 			$result_count = sqlSelectField("alliance", "count(*)", "", "tag = ".sqlVal($name)." OR name = ".sqlVal($name));
 			if($result_count == 0)
 			{
-				Core::getQuery()->insert("alliance", array("tag", "name", "founder", "open"), array($tag, $name, NS::getUser()->get("userid"), 1));
+				$rc = Core::getQuery()->insert("alliance", array("tag", "name", "founder", "open"), array($tag, $name, NS::getUser()->get("userid"), 1));
+				// План 86: при провале INSERT нельзя продолжать —
+				// `aid` указал бы на чужую запись и сломал user2ally.
+				if ($rc === false) {
+					Logger::dieMessage('DB_ERROR_CREATE_ALLIANCE');
+				}
 				$aid = Core::getDB()->insert_id();
 				Core::getQuery()->insert("user2ally", array("userid", "aid", "joindate", "rank"), array(NS::getUser()->get("userid"), $aid, time(), Core::getLanguage()->getItem("FOUNDER")));
 				NS::getUser()->rebuild();

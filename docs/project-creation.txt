@@ -14013,3 +14013,70 @@ config.inc.php cleanup; статус «на удаление» отозван.
 
   **Коммит**:
   fix(legacy-php): seed na_sim_planet (planetid=1) — без него отчёт боя пустой.
+
+---
+
+2026-05-01 — итерация 86: legacy-PHP — sqlInsert() / прямые insert_id()
+проверяют rc от INSERT (защита от тихого фейкового PK).
+
+  **Контекст**: после плана 86 диагностики симулятора стало ясно, что
+  баг архитектурный. `Core::getQuery()->insert()` корректно возвращает
+  false при PDOException (DB_MYSQL_PDO::query пишет error_log и
+  swallows throw), но 67 call sites в legacy-PHP этот rc игнорируют.
+  PDO `lastInsertId()` после провала возвращает PK от ПРЕДЫДУЩЕГО
+  успешного INSERT в connection — вызывающий код получает фейковый
+  PK другой строки, использует его как FK на следующий INSERT, и
+  каскад растёт.
+
+  **Что сделано** (по плану 86):
+
+  - **Главный фикс** в `src/core/Functions.php:215` — `sqlInsert($table, $values)`
+    проверяет результат `Core::getQuery()->insert()` и возвращает
+    `false` при ошибке вместо вызова `insert_id()`. Это защищает все
+    58 call sites через `sqlInsert()` автоматически.
+
+  - **9 точечных правок** прямых `Core::getDB()->insert_id()` без
+    обёртки:
+    · [Simulator.class.php:716](../projects/game-legacy-php/src/game/page/Simulator.class.php#L716) — early-return из `addParticipant` (предотвращает каскад в `sim_fleet2assault`).
+    · [Alliance.class.php:208](../projects/game-legacy-php/src/game/page/Alliance.class.php#L208) — `Logger::dieMessage('DB_ERROR_CREATE_ALLIANCE')`.
+    · [MSG.class.php:179](../projects/game-legacy-php/src/game/page/MSG.class.php#L179) — inline `($rc !== false) ? insert_id() : 0`.
+    · [ArtefactMarketOld.class.php:138, :185](../projects/game-legacy-php/src/game/page/ArtefactMarketOld.class.php#L138) — `Logger::dieMessage('DB_ERROR_BUY_ARTEFACT')` (без guard'а лайфтайм-удаление сработало бы на чужом артефакте).
+    · [JwtAuth.php:250](../projects/game-legacy-php/src/core/JwtAuth.php#L250) — `throw new Exception('Failed to create user record')` (КРИТИЧНО для auth: без guard'а юзер вошёл бы под чужим аккаунтом).
+    · [PlanetCreator.class.php:438, :459](../projects/game-legacy-php/src/game/PlanetCreator.class.php#L438) — `throw new Exception('Failed to create planet/moon')`.
+
+  **Smoke** (план 86 §«Тесты / проверка»):
+  - Откат миграции 006 (`DELETE FROM na_sim_planet WHERE planetid=1`) →
+    воспроизведение FK violation.
+  - Прогон тест-скрипта, имитирующего `Simulator::simulate()` flow:
+    sim_assault INSERT успешен (`assaultid=10`), sim_assaultparticipant
+    INSERT падает с FK violation, `Core::getDB()->insert_id()` сразу
+    после fail возвращает `10` — **подтверждение что lastInsertId
+    указывает на ПРЕДЫДУЩИЙ успешный INSERT**. Без фикса этот `10`
+    стал бы фейковым `participantid` в fleet2assault.
+  - С фиксом `addParticipant` делает early-return, fleet2assault не
+    пишется. В логе ровно одна ожидаемая FK-ошибка вместо каскада.
+  - Восстановление миграции 006 → повторный smoke: `participant INSERT
+    rc=PDOStatement` (success), happy-path не сломан.
+
+  **Решения / trade-offs**:
+  - Возврат `false` из `sqlInsert()` (не throw) — risk-trade, см. план
+    86 §«Риски». В worst case `(int) sqlInsert(...)` даёт `0`, что
+    лучше фейкового ID. Existing 58 call sites не аудитим — если
+    конкретная регрессия всплывёт, починим точечно.
+  - В JwtAuth.php — throw, не false, потому что auth-flow никогда не
+    должен продолжаться с чужим userid (security-critical).
+  - В PlanetCreator — throw, потому что вызывающий код уже в
+    try/catch.
+
+  **Файлы**:
+  - projects/game-legacy-php/src/core/Functions.php (sqlInsert, +5 строк).
+  - projects/game-legacy-php/src/core/JwtAuth.php (+5 строк).
+  - projects/game-legacy-php/src/game/PlanetCreator.class.php (+12 строк, два места).
+  - projects/game-legacy-php/src/game/page/Simulator.class.php (+5 строк, addParticipant).
+  - projects/game-legacy-php/src/game/page/Alliance.class.php (+5 строк).
+  - projects/game-legacy-php/src/game/page/MSG.class.php (+3 строки).
+  - projects/game-legacy-php/src/game/page/ArtefactMarketOld.class.php (+10 строк, два места).
+  - docs/plans/86-legacy-php-sqlinsert-failure-detection.md (статус ✅ + summary).
+
+  **Коммит**:
+  fix(legacy-php): sqlInsert() и 9 прямых insert_id-вызовов проверяют rc (план 86).

@@ -175,8 +175,11 @@ class MSG extends Page
 					$message = Moderation::mask($message);
 					// Hook::event("SEND_PRIVATE_MESSAGE", array(&$row, $receiver, &$subject, &$message));
 					Core::getQuery()->insert("message", array("mode", "time", "sender", "receiver", "subject", "message", "readed", "related_user"), array(1, time(), NS::getUser()->get("userid"), $row["userid"], Str::validateXHTML($subject), Str::validateXHTML($message), 0, $row["userid"]));
-					Core::getQuery()->insert("message", array("mode", "time", "sender", "receiver", "subject", "message", "readed", "related_user"), array(2, time(), $row["userid"], NS::getUser()->get("userid"), Str::validateXHTML($subject), Str::validateXHTML($message), 1, NS::getUser()->get("userid")));
-					$eventid = Core::getDB()->insert_id();
+					$rc = Core::getQuery()->insert("message", array("mode", "time", "sender", "receiver", "subject", "message", "readed", "related_user"), array(2, time(), $row["userid"], NS::getUser()->get("userid"), Str::validateXHTML($subject), Str::validateXHTML($message), 1, NS::getUser()->get("userid")));
+					// План 86: $eventid используется в закомментированном блоке
+					// optimize/cleanup ниже; всё равно guard'им rc, чтобы при
+					// будущем раскомментировании не получить чужой ID.
+					$eventid = ($rc !== false) ? Core::getDB()->insert_id() : 0;
 					/*
 					if($eventid % 500 == 0)
 					{
