@@ -651,6 +651,9 @@ autoMessages:
   # План 72.1.27: legacy `MSG_CREDIT_EXCHANGE_PREMIUM_LOT`.
   creditExchangePremium.title: "Списание кредитов"
   creditExchangePremium.body: "Списано {{credits}} кредитов за премиум-показ лота #{{lotId}} (2 часа в топе)."
+  # План 72.1.28: multi-resource Credit_ex AutoMsg.
+  creditMarketPurchaseMulti.title: "Покупка ресурсов"
+  creditMarketPurchaseMulti.body: "Списано {{credits}} кредитов. Получено: {{metal}} металла, {{silicon}} кремния, {{hydrogen}} водорода."
 buddylist:
   accept: Принять
   buddylist: Список друзей
@@ -1228,6 +1231,9 @@ market:
   creditAmountLabel: "Кредитов потратить"
   creditExchangeBtn: "Купить за кредиты"
   creditLastExchange: "Куплено: {{amount}} {{res}} за {{credits}} кредитов"
+  # План 72.1.28: multi-resource Credit_ex.
+  creditTotalLabel: "Итого:"
+  creditLastExchangeMulti: "Куплено: {{metal}} М, {{silicon}} К, {{hydrogen}} В за {{credits}} кр"
   resLabelMetal: 🟠 Металл
   resLabelSilicon: 💎 Кремний
   resLabelHydrogen: 💧 Водород

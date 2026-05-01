@@ -65,6 +65,48 @@ export function exchangeCredit(input: {
   );
 }
 
+// План 72.1.28: multi-resource Credit_ex (legacy `Market::Credit_ex`).
+// Любой комбинацию M/Si/H одной транзакцией. Пользователь указывает
+// сколько ресурсов хочет купить, backend считает суммарную стоимость.
+export interface CreditExchangeMultiResult {
+  direction: string;
+  metal: number;
+  silicon: number;
+  hydrogen: number;
+  credits: number;
+}
+
+export function exchangeCreditMulti(input: {
+  planetId: string;
+  metal: number;
+  silicon: number;
+  hydrogen: number;
+}): Promise<CreditExchangeMultiResult> {
+  return api.post<CreditExchangeMultiResult>(
+    `/api/planets/${input.planetId}/market/credit-multi`,
+    {
+      metal: input.metal,
+      silicon: input.silicon,
+      hydrogen: input.hydrogen,
+    },
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}
+
+// Клиент-side preview total cost (legacy `Market::Credit_ex`).
+// Курсы: 100 metal = 1 cr, 50 silicon = 1 cr, 25 hydrogen = 1 cr.
+// Каждый по отдельности ceil, потом sum (не суммарный ceil).
+export function multiCreditCost(
+  metal: number,
+  silicon: number,
+  hydrogen: number,
+): number {
+  const m = metal > 0 ? Math.ceil(metal / 100) : 0;
+  const s = silicon > 0 ? Math.ceil(silicon / 50) : 0;
+  const h = hydrogen > 0 ? Math.ceil(hydrogen / 25) : 0;
+  return m + s + h;
+}
+
 // ---- Artefact market ----
 
 export function fetchArtMarketOffers(): Promise<{

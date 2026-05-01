@@ -233,6 +233,18 @@ type CreditExchangeResult struct {
 	CreditDelta   float64 `json:"credit_delta"`
 }
 
+// План 72.1.28: multi-resource Credit_ex (legacy `Market::Credit_ex`).
+// Передаются все три амаунта за раз; общая стоимость списывается
+// одной транзакцией. Legacy: comis=0 (override), storage=UNLIMIT
+// (cap не проверяется).
+type CreditExchangeMultiResult struct {
+	Direction string  `json:"direction"`
+	Metal     int64   `json:"metal"`
+	Silicon   int64   `json:"silicon"`
+	Hydrogen  int64   `json:"hydrogen"`
+	Credits   float64 `json:"credits"` // списанная сумма
+}
+
 func (s *Service) ExchangeCredit(ctx context.Context, userID, planetID, direction, resource string, amount float64) (CreditExchangeResult, error) {
 	cost, ok := resourceCost[resource]
 	if !ok {
@@ -312,6 +324,129 @@ func (s *Service) ExchangeCredit(ctx context.Context, userID, planetID, directio
 		}
 
 		out = CreditExchangeResult{Direction: "from_credit", Resource: resource, ResourceDelta: resAmount, CreditDelta: -amount}
+		return nil
+	})
+	return out, err
+}
+
+// ExchangeCreditMulti — multi-resource credit→ресурсы (legacy
+// `Market::Credit_ex(metal, silicon, hydrogen)`). Все три ресурса
+// покупаются одним запросом; общая стоимость списывается атомарно.
+//
+// Legacy специфика: commission=0 (override `$this->comis = 0` строка
+// 194), storage=UNLIMIT (capacity-cap не проверяется). Воспроизведено
+// 1:1.
+//
+// Формула:
+//
+//	credit_per_res = ceil(amount × CreditRatePerUnit / curs_res)
+//	total = sum(credit_per_res for each)
+//
+// Если хотя бы один amount>0 и недостаточно credit → ErrNotEnough.
+// AutoMsg `creditMarketPurchase` отправляется с агрегатным сообщением.
+func (s *Service) ExchangeCreditMulti(ctx context.Context, userID, planetID string, metal, silicon, hydrogen int64) (CreditExchangeMultiResult, error) {
+	// Базовая валидация: все amount >= 0, хотя бы один > 0.
+	if metal < 0 || silicon < 0 || hydrogen < 0 {
+		return CreditExchangeMultiResult{}, ErrInvalidAmount
+	}
+	if metal == 0 && silicon == 0 && hydrogen == 0 {
+		return CreditExchangeMultiResult{}, ErrInvalidAmount
+	}
+
+	var out CreditExchangeMultiResult
+	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// Проверка владельца планеты + lock.
+		var ownerID string
+		err := tx.QueryRow(ctx,
+			`SELECT user_id FROM planets WHERE id = $1 FOR UPDATE`,
+			planetID).Scan(&ownerID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrPlanetNotFound
+			}
+			return fmt.Errorf("market multi: read planet: %w", err)
+		}
+		if ownerID != userID {
+			return ErrPlanetOwnership
+		}
+
+		// userRate в Credit_ex не используется (комиссия 0). Читаем credit
+		// FOR UPDATE для атомарного списания.
+		var credit float64
+		if err := tx.QueryRow(ctx,
+			`SELECT credit FROM users WHERE id = $1 FOR UPDATE`, userID).Scan(&credit); err != nil {
+			return fmt.Errorf("market multi: read credit: %w", err)
+		}
+
+		// Стоимость каждого ресурса. Legacy:
+		//   credit_metal_0 = ceil(amount × curs_credit / curs_metal)
+		// curs_credit=1, curs_X = resourceCost[X] × CreditRatePerUnit (наша
+		// шкала). Для legacy-эквивалентности используем те же константы:
+		//   credit_per_res = ceil(amount / CreditRatePerUnit × resourceCost[X])
+		// При CreditRatePerUnit=100 и cost{metal:1, silicon:2, hydrogen:4}:
+		//   100 metal = 1 credit, 50 silicon = 1 credit, 25 hydrogen = 1 credit
+		costM := math.Ceil(float64(metal) / CreditRatePerUnit * resourceCost["metal"])
+		costS := math.Ceil(float64(silicon) / CreditRatePerUnit * resourceCost["silicon"])
+		costH := math.Ceil(float64(hydrogen) / CreditRatePerUnit * resourceCost["hydrogen"])
+		totalCost := costM + costS + costH
+		if totalCost <= 0 {
+			return ErrInvalidAmount
+		}
+		if credit < totalCost {
+			return ErrNotEnough
+		}
+
+		// Атомарное списание credit (с гарантией credit ≥ totalCost из-за FOR UPDATE).
+		if _, err := tx.Exec(ctx,
+			`UPDATE users SET credit = credit - $1 WHERE id = $2`,
+			totalCost, userID); err != nil {
+			return fmt.Errorf("market multi: debit credit: %w", err)
+		}
+
+		// Зачисление ресурсов (только тех, которые > 0).
+		if metal > 0 {
+			if _, err := tx.Exec(ctx,
+				`UPDATE planets SET metal = metal + $1 WHERE id = $2`,
+				metal, planetID); err != nil {
+				return fmt.Errorf("market multi: credit metal: %w", err)
+			}
+		}
+		if silicon > 0 {
+			if _, err := tx.Exec(ctx,
+				`UPDATE planets SET silicon = silicon + $1 WHERE id = $2`,
+				silicon, planetID); err != nil {
+				return fmt.Errorf("market multi: credit silicon: %w", err)
+			}
+		}
+		if hydrogen > 0 {
+			if _, err := tx.Exec(ctx,
+				`UPDATE planets SET hydrogen = hydrogen + $1 WHERE id = $2`,
+				hydrogen, planetID); err != nil {
+				return fmt.Errorf("market multi: credit hydrogen: %w", err)
+			}
+		}
+
+		// AutoMsg `MSG_CREDIT_MARKET` (агрегатно).
+		if s.automsg != nil && s.bundle != nil {
+			lang := s.userLang(ctx, tx, userID)
+			vars := map[string]string{
+				"credits":  strconv.FormatFloat(totalCost, 'f', 0, 64),
+				"metal":    strconv.FormatInt(metal, 10),
+				"silicon":  strconv.FormatInt(silicon, 10),
+				"hydrogen": strconv.FormatInt(hydrogen, 10),
+			}
+			title := s.bundle.Tr(lang, "autoMessages", "creditMarketPurchaseMulti.title", vars)
+			body := s.bundle.Tr(lang, "autoMessages", "creditMarketPurchaseMulti.body", vars)
+			_ = s.automsg.SendDirect(ctx, tx, userID, automsg.FolderCredit, title, body)
+		}
+
+		out = CreditExchangeMultiResult{
+			Direction: "from_credit",
+			Metal:     metal,
+			Silicon:   silicon,
+			Hydrogen:  hydrogen,
+			Credits:   totalCost,
+		}
 		return nil
 	})
 	return out, err

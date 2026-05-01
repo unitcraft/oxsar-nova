@@ -15153,3 +15153,44 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(stock): план 72.1.27 — Premium-лоты + Ban (полный паритет с legacy).
 
+
+---
+
+2026-05-01 — итерация 72.1.28: Resource Market — multi-resource Credit_ex.
+
+  Закрытие хвоста 72.1.21 по правилу 1:1. Origin теперь имеет
+  multi-resource credit→ресурсы один запросом (legacy
+  `Market::Credit_ex(metal, silicon, hydrogen)`).
+
+  **Сделано**:
+  - Service.ExchangeCreditMulti: cost = ceil(metal/100) + ceil(silicon/50)
+    + ceil(hydrogen/25) (per-resource ceil, потом sum); commission=0
+    и storage=UNLIMIT (legacy 194-198); AutoMsg
+    creditMarketPurchaseMulti в folder=8.
+  - CreditExchangeMultiResult DTO; endpoint POST
+    /api/planets/{id}/market/credit-multi.
+  - Frontend api/market.ts: exchangeCreditMulti, multiCreditCost
+    (preview).
+  - ResourceMarketScreen: credit-block переписан в multi-resource UI
+    (3 input M/Si/H, per-resource preview-стоимость, total label,
+    1 кнопка submit).
+  - i18n (ru/en): market.creditTotalLabel,
+    creditLastExchangeMulti; autoMessages.creditMarketPurchaseMulti.
+
+  **Прогон**: go build + test ./internal/market/... — OK.
+  tsc clean. eslint clean.
+
+  **Файлы**:
+  - docs/plans/72.1.28-resource-market-multi-credit.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#13 ⚠ → ✅).
+  - projects/game-nova/backend/internal/market/service.go (+ExchangeCreditMulti).
+  - projects/game-nova/backend/internal/market/handler.go (+endpoint).
+  - projects/game-nova/backend/cmd/server/main.go (route).
+  - projects/game-nova/frontends/origin/src/api/market.ts (+multi).
+  - projects/game-nova/frontends/origin/src/features/resource-market/ResourceMarketScreen.tsx
+    (multi-resource UI).
+  - projects/game-nova/configs/i18n/{ru,en}.yml.
+
+  **Коммит**:
+  feat(resource-market): план 72.1.28 — multi-resource Credit_ex (legacy 1:1).
+
