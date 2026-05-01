@@ -15244,3 +15244,71 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(ranking): план 72.1.29 — avg + _count/battles + observer/old_vacation + pagination (полный паритет с legacy).
 
+2026-05-01 — итерация 72.1.30: Settings cont — 7-day grace на удалении аккаунта (хвост 72.1.5).
+
+  Закрывает P72.1.5.B.DELETION_NO_GRACE по правилу 1:1
+  ([план 72.1 §20.12](plans/72.1-post-remaster-stabilization.md)). Legacy
+  `Preferences::updateDeletion` ставит `users.delete = time() + 604800`
+  (7 дней grace), юзер может отменить через тот же endpoint с `delete=0`,
+  cron физически удаляет по истечении. Origin раньше делал немедленный
+  soft-delete без grace (зафиксировано как simplification).
+
+  Реализация:
+  - Миграция 0089_users_delete_at.sql: ALTER TABLE users ADD COLUMN
+    delete_at timestamptz + partial index (delete_at IS NOT NULL AND
+    deleted_at IS NULL).
+  - Backend: вместо немедленного soft-delete `ConfirmDeletion` ставит
+    `users.delete_at = now() + 7d` + INSERT в events (KindAccountDelete=90,
+    fire_at=delete_at). Новый endpoint `POST /api/me/deletion/cancel`
+    (UPDATE users.delete_at=NULL + UPDATE events.state='cancelled').
+  - Event-handler `AccountDeleteEventHandler` (settings/delete_event.go,
+    зарегистрирован в worker) идемпотентен: внутри tx проверяет
+    `delete_at IS NOT NULL AND <= now()` (если CancelDeletion успел —
+    выходит без эффекта). Финализирует soft-delete +
+    анонимизация username/email + закрытие открытых market_lots.
+  - `/api/me` возвращает `delete_at`.
+  - Frontend: `confirmMut.onSuccess` больше не вызывает logout —
+    invalidate me, юзер остаётся залогиненным в grace-период.
+    SettingsScreen показывает warning-блок «Аккаунт будет удалён
+    {when}» + кнопку «Отменить удаление» когда `me.delete_at != null`.
+  - i18n: 5 ключей (deletionScheduledTitle/Body, cancelDeletionBtn,
+    deletionCancelled, cancelDeletionErr).
+
+  Ключевое решение: использовать существующий event-loop вместо
+  отдельного cron'а. Это типовой паттерн nova (KindArtefactExpire,
+  KindOfficerExpire и т.д.) и автоматически даёт идемпотентность +
+  retry + graceful shutdown.
+
+  P72.1.5.C.RESEND_ACTIVATION_PORTAL остаётся `closed` — это
+  архитектурное решение (resend-activation в identity-сервисе как
+  самостоятельный слой), не игровая логика, не подпадает под §20.12.
+
+  Изменённые файлы:
+  - projects/game-nova/migrations/0089_users_delete_at.sql (новый).
+  - projects/game-nova/backend/internal/event/kinds.go
+    (KindAccountDelete=90).
+  - projects/game-nova/backend/internal/settings/delete.go
+    (grace + CancelDeletion + generateEventID).
+  - projects/game-nova/backend/internal/settings/delete_event.go (новый).
+  - projects/game-nova/backend/internal/auth/handler.go::Me
+    (+delete_at).
+  - projects/game-nova/backend/cmd/server/main.go (роут).
+  - projects/game-nova/backend/cmd/worker/main.go (Register).
+  - projects/game-nova/frontends/origin/src/api/me.ts
+    (MeInfo +delete_at).
+  - projects/game-nova/frontends/origin/src/api/settings.ts
+    (cancelDeletion).
+  - projects/game-nova/frontends/origin/src/features/settings/SettingsScreen.tsx
+    (logout убран, grace UI добавлен).
+  - projects/game-nova/configs/i18n/{ru,en}.yml.
+  - docs/plans/72.1.30-settings-cont.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (/settings ⚠ → ✅).
+  - docs/simplifications.md (P72.1.5.B → CLOSED by 72.1.30).
+
+  **Коммиты** (по типам задач):
+  - feat(migrations): план 72.1.30 — users.delete_at + partial index.
+  - feat(settings): план 72.1.30 — 7-day grace + CancelDeletion endpoint
+    + KindAccountDelete event-handler.
+  - feat(origin/frontend): план 72.1.30 — Settings cont, grace-period UI.
+  - docs(plan-72.1.30): /settings ⚠ → ✅ + simplification CLOSED.
+

@@ -2576,7 +2576,16 @@ unit-тесты на форматтеры/валидаторы/router-маршр
   Это отдельный план (потенциально 72.1.2 или 73).
 - **Приоритет**: L.
 
-### [P72.1.5.B.DELETION_NO_GRACE] Soft-delete аккаунта вместо grace 7 дней
+### [P72.1.5.B.DELETION_NO_GRACE] Soft-delete аккаунта вместо grace 7 дней — [CLOSED by 72.1.30]
+
+**Закрыто 2026-05-01** ([план 72.1.30](plans/72.1.30-settings-cont.md)).
+Реализован legacy 7-day grace: `ConfirmDeletion` ставит `users.delete_at = now()+7d`
++ event `KindAccountDelete=90` (fire_at=delete_at). Юзер отменяет через
+`POST /api/me/deletion/cancel` (UPDATE delete_at=NULL + state='cancelled' для events).
+Event-handler `AccountDeleteEventHandler` идемпотентен (повторно проверяет
+`delete_at IS NOT NULL AND <= now()`), физически делает soft-delete +
+анонимизация username/email + закрытие market_lots. UI отрисовывает
+warning-блок с кнопкой «Отменить удаление» когда `me.delete_at != null`.
 
 - **Где**: `internal/settings/delete.go::performDeletion`,
   `frontends/origin/src/features/settings/SettingsScreen.tsx`.
