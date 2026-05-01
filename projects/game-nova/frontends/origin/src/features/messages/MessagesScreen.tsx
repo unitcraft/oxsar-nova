@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  deleteAllMessages,
   deleteMessage,
   fetchMessages,
   markMessageRead,
@@ -55,6 +56,17 @@ export function MessagesScreen() {
     onError: (e) => setErrMsg((e as ApiError).message),
   });
 
+  // План 72.1.11: bulk-delete (legacy MSG.class.php::DeleteAll).
+  // Backend DELETE /api/messages удаляет все сообщения юзера с
+  // to_user_id=uid (folder=0 в DeleteAll service). Для папки 'sent'
+  // backend семантику не поддерживает — кнопка показывается только
+  // для inbox.
+  const deleteAllMut = useMutation({
+    mutationFn: deleteAllMessages,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['messages'] }),
+    onError: (e) => setErrMsg((e as ApiError).message),
+  });
+
   const list = q.data?.messages ?? [];
 
   function expand(id: string, isRead: boolean) {
@@ -80,6 +92,23 @@ export function MessagesScreen() {
         </Link>{' '}
         |{' '}
         <Link to="/msg/compose">{t('message', 'createNewMessage')}</Link>
+        {folder === 'inbox' && list.length > 0 && (
+          <>
+            {' | '}
+            <button
+              type="button"
+              className="button"
+              disabled={deleteAllMut.isPending}
+              onClick={() => {
+                if (window.confirm(t('message', 'deleteAllConfirm'))) {
+                  deleteAllMut.mutate();
+                }
+              }}
+            >
+              {t('message', 'deleteAllBtn')}
+            </button>
+          </>
+        )}
       </div>
 
       <table className="ntable">
@@ -119,7 +148,7 @@ export function MessagesScreen() {
                   isSent={folder === 'sent'}
                   onExpand={() => expand(m.id, isRead)}
                   onDelete={() => {
-                    if (window.confirm(`${t('message', 'deleteAll')}?`)) {
+                    if (window.confirm(t('message', 'deleteOneConfirm'))) {
                       deleteMut.mutate(m.id);
                     }
                   }}
