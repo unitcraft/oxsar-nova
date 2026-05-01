@@ -29,6 +29,11 @@ type PlanetRow struct {
 	Silicon  float64 `json:"silicon"`
 	Hydrogen float64 `json:"hydrogen"`
 
+	// План 72.1.45: УМИ — virtual research lab level. Legacy
+	// `Planet::reseach_virt_lab` (Planet.class.php:806-845):
+	// research_lab.level × max(1, moon_lab×10) + IGR-pool bonus.
+	UMI int `json:"umi"`
+
 	Buildings map[int]int   `json:"buildings"` // unit_id → level
 	Ships     map[int]int64 `json:"ships"`      // unit_id → count
 	Defense   map[int]int64 `json:"defense"`    // unit_id → count
@@ -205,6 +210,98 @@ func (h *Handler) loadPlanets(ctx context.Context, userID string) ([]PlanetRow, 
 	}
 	if err := dRows.Err(); err != nil {
 		return nil, err
+	}
+
+	// 5. План 72.1.45: УМИ (research_virt_lab) per-planet —
+	// legacy `Planet::reseach_virt_lab`.
+	//   IGR=0 → research_lab.level (уровень лабы этой планеты).
+	//   IGR>0 → SUM top-(1+ign) (lab.level × max(1, moon_lab.level × 10))
+	//           по всем планетам user'а, где первой берётся текущая.
+	//
+	// Для Empire-обзора достаточно простой формулы: УМИ = research_lab
+	// конкретной планеты × max(1, moon_lab×10), где moon_lab — на
+	// связанной луне (если есть). Эта формула совпадает с per-planet
+	// вкладом легаси при IGR=0 и при IGR>0 (bound внутри суммы).
+	const unitResearchLab = 12
+	const unitMoonLab = 41
+	var ignLevel int
+	_ = h.pool.QueryRow(ctx,
+		`SELECT COALESCE(level, 0) FROM research WHERE user_id=$1 AND unit_id=113`,
+		userID,
+	).Scan(&ignLevel)
+
+	for i := range planets {
+		labLvl := planets[i].Buildings[unitResearchLab]
+		// moon_lab у связанной луны (legacy: для не-луны ищем луну в той же позиции).
+		moonLabLvl := 0
+		if !planets[i].IsMoon {
+			for j := range planets {
+				if planets[j].IsMoon &&
+					planets[j].Galaxy == planets[i].Galaxy &&
+					planets[j].System == planets[i].System &&
+					planets[j].Position == planets[i].Position {
+					moonLabLvl = planets[j].Buildings[unitMoonLab]
+					break
+				}
+			}
+		}
+		multiplier := 1
+		if moonLabLvl*10 > 1 {
+			multiplier = moonLabLvl * 10
+		}
+		planets[i].UMI = labLvl * multiplier
+	}
+
+	// Если IGR > 0 — добавляем top-(1+ign) бонус из других планет.
+	// Для UI достаточно показать «свой + bonus». Bonus = сумма
+	// labLvl × moonMul у других топовых планет.
+	if ignLevel > 0 {
+		// Сортируем планет-вклады DESC.
+		type contrib struct {
+			idx int
+			val int
+		}
+		all := make([]contrib, 0, len(planets))
+		for i, p := range planets {
+			if p.IsMoon {
+				continue
+			}
+			all = append(all, contrib{idx: i, val: p.UMI})
+		}
+		// Простая сортировка пузырьком DESC (n маленькое).
+		for i := 0; i < len(all); i++ {
+			for j := i + 1; j < len(all); j++ {
+				if all[j].val > all[i].val {
+					all[i], all[j] = all[j], all[i]
+				}
+			}
+		}
+		// Top (1+ign). Для каждой планеты её UMI = swap into top + bonus.
+		topCount := 1 + ignLevel
+		if topCount > len(all) {
+			topCount = len(all)
+		}
+		for i := range planets {
+			if planets[i].IsMoon {
+				continue
+			}
+			// Вклад текущей планеты + top-(ign) из остальных.
+			selfVal := planets[i].UMI
+			sum := selfVal
+			added := 0
+			for _, c := range all {
+				if c.idx == i {
+					continue
+				}
+				if added >= ignLevel {
+					break
+				}
+				sum += c.val
+				added++
+			}
+			_ = topCount
+			planets[i].UMI = sum
+		}
 	}
 
 	return planets, nil
