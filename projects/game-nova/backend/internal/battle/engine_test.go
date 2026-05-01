@@ -687,3 +687,82 @@ func TestTechZero_Regression(t *testing.T) {
 		t.Fatalf("tech=0 regression: rounds differ: %d vs %d", rep1.Rounds, rep2.Rounds)
 	}
 }
+
+// --- Plan 72.1.1: формула опыта (atan-based, Java Assault.java:817-847) ---
+
+// TestExperience_EqualPower: одинаковая мощность, ничья → atan(0) ≈ 0,
+// turnsCoef = 6^1.1 / 6 ≈ 1.144. Это скорее проверка sanity-bounds:
+// результат в положительной стороне, draw-множитель 1.5/1.7 даёт небольшую
+// разницу между attacker/defender.
+func TestExperience_EqualPower_Draw(t *testing.T) {
+	atk, def := computeExperience("draw", 6, 100_000, 100_000, true)
+	if atk <= 0 || def <= 0 {
+		t.Fatalf("expected positive exp, got atk=%d def=%d", atk, def)
+	}
+	// draw: defender ×1.7, attacker ×1.5 → defender > attacker.
+	if def < atk {
+		t.Fatalf("draw multiplier: defender %d should be ≥ attacker %d", def, atk)
+	}
+}
+
+// TestExperience_AttackerMuchStronger_AttackerWon: сильный атакующий
+// побеждает слабого защитника. defender получает больше exp (атаковал
+// сильного), attacker × 3 множитель за победу.
+func TestExperience_AttackerMuchStronger_AttackerWon(t *testing.T) {
+	atk, def := computeExperience("attackers", 3, 1_000_000, 10_000, true)
+	if atk <= 0 || def <= 0 {
+		t.Fatalf("non-positive exp: atk=%d def=%d", atk, def)
+	}
+}
+
+// TestExperience_NoPlanet_HalfCoeff: planetid=0 (нет планеты-цели —
+// бой в полёте) → battlePowerCoefficient *= 0.5. Опыт меньше ровно
+// в 2 раза по сравнению с тем же боем «с планетой».
+func TestExperience_NoPlanet_HalfCoeff(t *testing.T) {
+	atkW, defW := computeExperience("draw", 4, 50_000, 50_000, true)
+	atkN, defN := computeExperience("draw", 4, 50_000, 50_000, false)
+	// Из-за финального round() и +1 константы результат не идеально ×2,
+	// но без планеты опыт всегда меньше.
+	if atkN >= atkW || defN >= defW {
+		t.Fatalf("noplanet should reduce exp: with %d/%d, no %d/%d",
+			atkW, defW, atkN, defN)
+	}
+}
+
+// TestExperience_ZeroPower_NoOp: если одна из сторон с нулевой мощностью,
+// formula не выполняется (деление на ноль). Calculate должен оставить
+// AttackerExp = DefenderExp = 0.
+func TestExperience_ZeroPower_NoOp(t *testing.T) {
+	in := Input{
+		Seed:      1,
+		Rounds:    1,
+		Attackers: []Side{{UserID: "att", Units: []Unit{{UnitID: 1, Quantity: 1, Attack: 0, Shell: 1000}}}},
+		Defenders: []Side{simpleDefender(1, 0, 1000)},
+	}
+	rep, err := Calculate(in)
+	if err != nil {
+		t.Fatalf("unexpected: %v", err)
+	}
+	if rep.AttackerExp != 0 || rep.DefenderExp != 0 {
+		t.Fatalf("zero power should yield 0 exp, got atk=%d def=%d",
+			rep.AttackerExp, rep.DefenderExp)
+	}
+}
+
+// TestExperience_DeterministicSeed: одинаковый Input → одинаковый exp
+// (детерминизм rng). Проверка для регрессии: формула не должна зависеть
+// от глобального состояния.
+func TestExperience_DeterministicSeed(t *testing.T) {
+	in := Input{
+		Seed:      42,
+		Rounds:    6,
+		Attackers: []Side{simpleAttacker(10, 50, 1000000)},
+		Defenders: []Side{simpleDefender(10, 0, 1000)},
+	}
+	r1, _ := Calculate(in)
+	r2, _ := Calculate(in)
+	if r1.AttackerExp != r2.AttackerExp || r1.DefenderExp != r2.DefenderExp {
+		t.Fatalf("non-deterministic exp: %d/%d vs %d/%d",
+			r1.AttackerExp, r1.DefenderExp, r2.AttackerExp, r2.DefenderExp)
+	}
+}

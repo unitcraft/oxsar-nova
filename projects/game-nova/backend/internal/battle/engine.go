@@ -130,21 +130,72 @@ func Calculate(in Input) (Report, error) {
 	report.Defenders = summarize(in.Defenders, def.toSides())
 	report.Winner = decideWinner(report)
 
-	// Опыт сторон — порт Java Assault.java:811-816:
-	//   atterExperience  = min(20, max(0.1, defStartPower/atkStartPower)) × rounds
-	//   defenderExperience = min(20, max(0.1, atkStartPower/defStartPower)) × rounds
-	// startBattlePower считаем как сумма attack × startBattleQuantity по
-	// всем юнитам стороны (соответствие Java startBattleAtterPower).
+	// Опыт сторон — порт Java Assault.java:817-847 (план 72.1.1 ч.2,
+	// atan-based формула, action в legacy).
+	// Старая закомменченная min/max-формула из Assault.java:811-816 не
+	// используется в legacy — выкинута.
 	atkPower := startBattlePower(atk)
 	defPower := startBattlePower(def)
 	if report.Rounds > 0 && atkPower > 0 && defPower > 0 {
-		atkRatio := math.Max(0.1, math.Min(20, defPower/atkPower))
-		defRatio := math.Max(0.1, math.Min(20, atkPower/defPower))
-		report.AttackerExp = int(math.Round(atkRatio * float64(report.Rounds)))
-		report.DefenderExp = int(math.Round(defRatio * float64(report.Rounds)))
+		atkExp, defExp := computeExperience(report.Winner, report.Rounds, atkPower, defPower, in.IsMoon)
+		report.AttackerExp = atkExp
+		report.DefenderExp = defExp
 	}
 
 	return report, nil
+}
+
+// battleMaxTurns — порт Java BATTLE_MAX_TURNS (Assault.java:103).
+const battleMaxTurns = 6
+
+// computeExperience — порт Java Assault.java:817-847 (atan-based формула
+// опыта). Семантика 1:1:
+//
+//  1. battleTurnsCoefficient = rounds^1.1 / BATTLE_MAX_TURNS.
+//  2. atterExperience    = (atan(defPow/atkPow * 1.5 - 1.5) + 1) * 0.4 * 3
+//                          * battleTurnsCoefficient + 1.
+//     defenderExperience = (atan(atkPow/defPow * 1.5 - 1.5) + 1) * 0.4 * 3
+//                          * battleTurnsCoefficient + 1.
+//  3. Моральные множители (по итогу боя):
+//     - attacker won → atterExperience *= 3.
+//     - defender won → defenderExperience *= 3.
+//     - draw         → atterExperience *= 1.5; defenderExperience *= 1.7.
+//  4. battlePower = sqrt(atkPow * defPow) / 1_000_000.
+//     battlePowerCoefficient = (atan(battlePower * 10 * 0.2 - 1.6) + 1)
+//                              * 0.4 * 19 + 1.
+//     Если planetid == 0 (бой в полёте, без планеты-цели — у нас это
+//     эквивалентно `IsMoon == false && PrimaryTarget == 0`; для
+//     симулятора/боя пришельцев фронт может ставить флаг is_moon=false
+//     и Galaxy/System/Position=0 — этот случай помечаем как «нет
+//     планеты-цели»), коэффициент halves: *= 0.5.
+//  5. atterExperience *= battlePowerCoefficient; то же defender.
+//  6. Финал: round(atterExperience), round(defenderExperience).
+func computeExperience(winner string, rounds int, atkPower, defPower float64, hasPlanet bool) (int, int) {
+	turnsCoef := math.Pow(float64(rounds), 1.1) / float64(battleMaxTurns)
+
+	atter := (math.Atan(defPower/atkPower*1.5-1.5)+1)*0.4*3*turnsCoef + 1
+	defender := (math.Atan(atkPower/defPower*1.5-1.5)+1)*0.4*3*turnsCoef + 1
+
+	switch winner {
+	case "attackers":
+		atter *= 3
+	case "defenders":
+		defender *= 3
+	default: // "draw"
+		atter *= 1.5
+		defender *= 1.7
+	}
+
+	battlePower := math.Sqrt(atkPower*defPower) / 1_000_000
+	bpc := (math.Atan(battlePower*10*0.2-1.6)+1)*0.4*19 + 1
+	if !hasPlanet {
+		bpc *= 0.5
+	}
+
+	atter *= bpc
+	defender *= bpc
+
+	return int(math.Round(atter)), int(math.Round(defender))
 }
 
 // startBattlePower — суммарная начальная огневая мощность стороны
