@@ -268,6 +268,33 @@ func (s *Service) Deactivate(ctx context.Context, userID, artefactID string) err
 	})
 }
 
+// SlotsInfo — план 72.1.45: storage_slots/used_slots для UI шапки
+// (legacy `Artefact::getStorageSlots`/`getUsedSlots`).
+//
+// storage_slots = research level UNIT_ARTEFACTS_TECH=111.
+// used_slots    = COUNT(*) FROM artefacts_user WHERE state='active'.
+//
+// Возвращает (techLevel, usedSlots).
+func (s *Service) SlotsInfo(ctx context.Context, userID string) (int, int, error) {
+	const unitArtefactsTech = 111
+	var techLevel int
+	if err := s.db.Pool().QueryRow(ctx,
+		`SELECT COALESCE(level, 0) FROM research WHERE user_id=$1 AND unit_id=$2`,
+		userID, unitArtefactsTech,
+	).Scan(&techLevel); err != nil {
+		// no row OK.
+		techLevel = 0
+	}
+	var usedSlots int
+	if err := s.db.Pool().QueryRow(ctx,
+		`SELECT COUNT(*) FROM artefacts_user WHERE user_id=$1 AND state='active'`,
+		userID,
+	).Scan(&usedSlots); err != nil {
+		return 0, 0, fmt.Errorf("count active: %w", err)
+	}
+	return techLevel, usedSlots, nil
+}
+
 // ListUser возвращает инвентарь игрока.
 func (s *Service) ListUser(ctx context.Context, userID string) ([]Record, error) {
 	rows, err := s.db.Pool().Query(ctx, `

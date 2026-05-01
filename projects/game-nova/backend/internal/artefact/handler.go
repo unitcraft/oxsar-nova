@@ -16,6 +16,9 @@ type Handler struct{ svc *Service }
 func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 
 // List GET /api/artefacts — инвентарь текущего пользователя.
+//
+// План 72.1.45: legacy `Artefacts.class.php` показывает в шапке
+// storage_slots/used_slots/tech_level (research UNIT_ARTEFACTS_TECH=111).
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
 	if !ok {
@@ -27,7 +30,17 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"artefacts": items})
+	techLevel, usedSlots, err := h.svc.SlotsInfo(r.Context(), uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
+		"artefacts":     items,
+		"tech_level":    techLevel,
+		"storage_slots": techLevel,
+		"used_slots":    usedSlots,
+	})
 }
 
 // Activate POST /api/artefacts/{id}/activate
