@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"oxsar/game-nova/internal/artefact"
 	"oxsar/game-nova/internal/auth"
 	"oxsar/game-nova/internal/battle"
 	"oxsar/game-nova/internal/config"
@@ -78,10 +79,47 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 		fillCosts(in.Defenders[si].Units, costByID)
 	}
 
+	// План 72.1.34 ч.C: применяем battle artefacts (legacy
+	// `Simulator` строки 124-163, 6 артефактов с
+	// effect_type=ARTEFACT_EFFECT_TYPE_BATTLE). Каждый артефакт
+	// в Side.BattleArtefactIDs мапится на ArtefactSpec, аккумулируется
+	// через ComputeBattleModifier (multiplier на attack/shield/shell),
+	// применяется к юнитам стороны.
+	h.applyBattleArtefacts(in.Attackers)
+	h.applyBattleArtefacts(in.Defenders)
+
 	stats, last, err := battle.MultiRun(in, n)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 		return
+	}
+
+	// План 72.1.34 ч.B: расчёт шанса уничтожения здания-цели (legacy
+	// `Simulator::building_destroy_chance`). Применимо только если
+	// `target_building_id`/`level` заданы и атакующий выжил с ≥1 DS.
+	// Формула (упрощённая OGame): chance = min(100, ds_count × 100 / level).
+	// Записываем в last.BuildingDestroyChance + last.TargetDestroyed (avg
+	// > 50% → true).
+	if in.TargetBuildingID > 0 && in.TargetBuildingLevel > 0 {
+		const unitDeathstarID = 42
+		var dsCount int64
+		if last.Winner == "attackers" {
+			for _, side := range last.Attackers {
+				for _, u := range side.Units {
+					if u.UnitID == unitDeathstarID {
+						dsCount += u.QuantityEnd
+					}
+				}
+			}
+		}
+		if dsCount > 0 {
+			chance := float64(dsCount*100) / float64(in.TargetBuildingLevel)
+			if chance > 100 {
+				chance = 100
+			}
+			last.BuildingDestroyChance = chance
+			last.TargetDestroyed = chance >= 50.0
+		}
 	}
 
 	id := ids.New()
@@ -135,6 +173,42 @@ func fillCosts(units []battle.Unit, costs map[int]battle.UnitCost) {
 	for i := range units {
 		if c, ok := costs[units[i].UnitID]; ok {
 			units[i].Cost = c
+		}
+	}
+}
+
+// applyBattleArtefacts применяет battle_bonus от артефактов из
+// Side.BattleArtefactIDs к юнитам. Bonus умножается на attack/shield/shell
+// каждого юнита (legacy effect_type=ARTEFACT_EFFECT_TYPE_BATTLE).
+//
+// Пустой/несуществующий ID игнорируется. Stack >max_stacks обрезается
+// (legacy soft-cap, у нас просто все ID применяются — пользователь сам
+// проверяет лимит на UI).
+func (h *Handler) applyBattleArtefacts(sides []battle.Side) {
+	for si := range sides {
+		ids := sides[si].BattleArtefactIDs
+		if len(ids) == 0 {
+			continue
+		}
+		specs := make([]config.ArtefactSpec, 0, len(ids))
+		for _, id := range ids {
+			for _, sp := range h.cat.Artefacts.Artefacts {
+				if sp.ID == id {
+					specs = append(specs, sp)
+					break
+				}
+			}
+		}
+		if len(specs) == 0 {
+			continue
+		}
+		mod := artefact.ComputeBattleModifier(specs)
+		// Применяем к каждому юниту side.
+		for ui := range sides[si].Units {
+			u := &sides[si].Units[ui]
+			u.Attack *= mod.AttackMul
+			u.Shield *= mod.ShieldMul
+			u.Shell *= mod.ShellMul
 		}
 	}
 }
