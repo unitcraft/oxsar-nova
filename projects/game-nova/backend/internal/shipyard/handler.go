@@ -48,6 +48,10 @@ func (h *Handler) Enqueue(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "shipyard required"))
 	case errors.Is(err, ErrPlanetOwnership):
 		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrUmodeBlocked), errors.Is(err, ErrObserverBlocked):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	case errors.Is(err, ErrCapacityExceeded):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "shield/rocket capacity exceeded"))
 	case requirements.IsNotMet(err):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	default:
@@ -92,6 +96,23 @@ func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}
+}
+
+// Capacity GET /api/planets/{id}/shipyard/capacity (план 72.1.41).
+// Legacy `Shipyard` показывает freeShieldFields/freeRocketFields.
+func (h *Handler) Capacity(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	cap, err := h.svc.Capacity(r.Context(), uid, planetID)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, cap)
 }
 
 // Inventory GET /api/planets/{id}/shipyard/inventory

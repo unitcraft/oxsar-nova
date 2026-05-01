@@ -91,6 +91,12 @@ export const CATALOG: CatalogEntry[] = [
   { id: 48, group: 'defense', i18n: 'info.plasmaGun',          icon: 'plasma_gun' },
   { id: 49, group: 'defense', i18n: 'info.smallShield',        icon: 'small_shield' },
   { id: 50, group: 'defense', i18n: 'info.bigShield',          icon: 'large_shield' },
+  // План 72.1.41: legacy ID 51-52 (defense missiles), 354-355
+  // (planet shields). До этого 4 юнита отсутствовали в DefenseScreen.
+  { id: 51, group: 'defense', i18n: 'info.interceptorRocket',  icon: 'interceptor_rocket' },
+  { id: 52, group: 'defense', i18n: 'info.interplanetaryRocket', icon: 'interplanetary_rocket' },
+  { id: 354, group: 'defense', i18n: 'info.smallPlanetShield', icon: 'small_planet_shield' },
+  { id: 355, group: 'defense', i18n: 'info.largePlanetShield', icon: 'large_planet_shield' },
 ];
 
 export function catalogByGroup(

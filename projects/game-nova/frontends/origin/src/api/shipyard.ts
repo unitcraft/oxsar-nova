@@ -35,3 +35,29 @@ export function buildShipyard(
     { idempotencyKey: newIdempotencyKey() },
   );
 }
+
+// План 72.1.41: legacy `Shipyard::abort` — отмена задачи в очереди.
+export function cancelShipyardTask(
+  planetId: string,
+  queueId: string,
+): Promise<void> {
+  return api.delete<void>(
+    `/api/planets/${planetId}/shipyard/${queueId}`,
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}
+
+// План 72.1.41: capacity-индикатор для DefenseScreen
+// (legacy `freeShieldFields`, `freeRocketFields`).
+export interface ShipyardCapacity {
+  free_shield_fields: number;
+  max_shield_fields: number;
+  free_rocket_fields: number;
+  max_rocket_fields: number;
+}
+
+export function fetchShipyardCapacity(
+  planetId: string,
+): Promise<ShipyardCapacity> {
+  return api.get<ShipyardCapacity>(`/api/planets/${planetId}/shipyard/capacity`);
+}

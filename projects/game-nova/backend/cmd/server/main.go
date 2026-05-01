@@ -518,6 +518,8 @@ func run() error {
 		pr.Post("/planets/{id}/shipyard", shipyardH.Enqueue)
 		pr.Get("/planets/{id}/shipyard/queue", shipyardH.List)
 		pr.Get("/planets/{id}/shipyard/inventory", shipyardH.Inventory)
+		// План 72.1.41: legacy `Shipyard` capacity-info (freeShield/Rocket).
+		pr.Get("/planets/{id}/shipyard/capacity", shipyardH.Capacity)
 		pr.Delete("/planets/{id}/shipyard/{queueId}", shipyardH.Cancel)
 
 		pr.Post("/simulator/run", simulatorH.Run)
