@@ -487,7 +487,8 @@ func (s *TransportService) List(ctx context.Context, userID string) ([]Fleet, er
 	rows, err := s.db.Pool().Query(ctx, `
 		SELECT id, owner_user_id, src_planet_id, dst_galaxy, dst_system, dst_position,
 		       dst_is_moon, mission, state, depart_at, arrive_at, return_at,
-		       carried_metal, carried_silicon, carried_hydrogen, speed_percent
+		       carried_metal, carried_silicon, carried_hydrogen, speed_percent,
+		       acs_group_id
 		FROM fleets
 		WHERE owner_user_id = $1 AND state IN ('outbound', 'hold', 'returning')
 		ORDER BY depart_at DESC
@@ -504,6 +505,7 @@ func (s *TransportService) List(ctx context.Context, userID string) ([]Fleet, er
 			&f.DstSystem, &f.DstPosition, &f.DstIsMoon, &f.Mission, &f.State,
 			&f.DepartAt, &f.ArriveAt, &f.ReturnAt,
 			&f.Carry.Metal, &f.Carry.Silicon, &f.Carry.Hydrogen, &f.SpeedPercent,
+			&f.ACSGroupID,
 		); err != nil {
 			return nil, err
 		}
@@ -1015,6 +1017,25 @@ func transportDuration(distance float64, minSpeed, speedPercent int, gameSpeed f
 func (s *TransportService) resolveACSGroup(ctx context.Context, tx pgx.Tx, in TransportInput,
 	arrive, returnAt time.Time) (string, time.Time, time.Time, error) {
 	if in.ACSGroupID != "" {
+		// План 72.1.48: проверка accepted invitation (или сам leader).
+		// Без accepted_at — нельзя присоединяться (legacy: только
+		// явно приглашённые через formation_invitation).
+		var allowed bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM acs_groups
+				WHERE id=$1 AND leader_user_id=$2
+			) OR EXISTS (
+				SELECT 1 FROM acs_invitations
+				WHERE acs_group_id=$1 AND user_id=$2 AND accepted_at IS NOT NULL
+			)
+		`, in.ACSGroupID, in.UserID).Scan(&allowed); err != nil {
+			return "", time.Time{}, time.Time{}, fmt.Errorf("acs invite check: %w", err)
+		}
+		if !allowed {
+			return "", time.Time{}, time.Time{},
+				fmt.Errorf("%w: not invited to ACS group (need accepted_at)", ErrInvalidDispatch)
+		}
 		// Join: проверяем что группа существует и цель совпадает.
 		var gArriveAt time.Time
 		err := tx.QueryRow(ctx, `

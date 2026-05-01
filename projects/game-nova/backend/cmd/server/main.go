@@ -605,6 +605,11 @@ func run() error {
 		// `Mission.class.php::loadResourcesToFleet/unloadResourcesFromFleet`).
 		pr.Post("/fleet/{id}/load", fleetH.Load)
 		pr.Post("/fleet/{id}/unload", fleetH.Unload)
+		// План 72.1.48: formation (legacy `Mission.class.php::formation`).
+		pr.Post("/fleet/{id}/promote-to-acs", fleetH.PromoteToACS)
+		pr.Post("/acs/{groupId}/invite", fleetH.InviteACS)
+		pr.Get("/acs/invitations", fleetH.ListACSInvitations)
+		pr.Post("/acs/invitations/{groupId}/accept", fleetH.AcceptACSInvitation)
 
 		pr.Get("/market/rates", marketH.Rates)
 		pr.Post("/planets/{id}/market/exchange", marketH.Exchange)
