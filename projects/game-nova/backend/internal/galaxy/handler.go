@@ -53,8 +53,10 @@ func (h *Handler) System(w http.ResponseWriter, r *http.Request) {
 	}
 	uid, _ := auth.UserID(r.Context())
 
+	fromPlanetID := r.URL.Query().Get("from_planet_id")
+
 	// План 72.1.24: hydrogen-cost при просмотре чужой системы.
-	if fromPlanetID := r.URL.Query().Get("from_planet_id"); fromPlanetID != "" && uid != "" {
+	if fromPlanetID != "" && uid != "" {
 		if err := h.chargeHydrogenIfRemote(r, uid, fromPlanetID, g, s); err != nil {
 			switch {
 			case errors.Is(err, ErrInsufficientHydrogen):
@@ -66,7 +68,10 @@ func (h *Handler) System(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	view, err := h.repo.ReadSystem(r.Context(), g, s, uid)
+	// План 72.1.32: from_planet_id используется и для CanMonitorActivity
+	// + InMissileRange (нужны star_surveillance, hyper_tech, impulse_engine
+	// viewer'а). Если параметр не задан, оба флага останутся false.
+	view, err := h.repo.ReadSystem(r.Context(), g, s, uid, fromPlanetID, h.numSystems)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
