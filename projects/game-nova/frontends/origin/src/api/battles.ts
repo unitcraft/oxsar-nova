@@ -38,6 +38,11 @@ export function fetchMyBattles(params?: {
   return api.get<BattleListResult>(url);
 }
 
-export function fetchBattleReport(id: string): Promise<{ report: SimReport }> {
-  return api.get<{ report: SimReport }>(`/api/battle-reports/${id}`);
+export interface BattleReportFull {
+  report: SimReport;
+  started_at: string; // RFC3339, время записи отчёта (Java assaultTime).
+}
+
+export function fetchBattleReport(id: string): Promise<BattleReportFull> {
+  return api.get<BattleReportFull>(`/api/battle-reports/${id}`);
 }

@@ -122,15 +122,19 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 // (план 72.1 ч.20.11). Любой пользователь по ссылке может посмотреть
 // результат боя или симуляции. Permission check снят — отчёты
 // идентифицируются непредсказуемым UUID v7.
+//
+// Возвращает {report, started_at} — фронт показывает «Флоты соперников
+// встрелись в <started_at> часов:» (план 72.1 ч.20.11.12).
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	var reportRaw []byte
+	var at time.Time
 	err := h.db.Pool().QueryRow(r.Context(), `
-		SELECT report
+		SELECT report, at
 		FROM battle_reports
 		WHERE id = $1
-	`, id).Scan(&reportRaw)
+	`, id).Scan(&reportRaw, &at)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			httpx.WriteError(w, r, httpx.ErrNotFound)
@@ -141,16 +145,14 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	_ = writeRaw(w, reportRaw)
-}
-
-func writeRaw(w http.ResponseWriter, raw []byte) error {
-	// Compose: { "report": <raw>, "id": ... } — но проще вернуть
-	// raw как есть с обёрткой.
-	wrapped := map[string]json.RawMessage{
-		"report": raw,
+	wrapped := struct {
+		Report    json.RawMessage `json:"report"`
+		StartedAt time.Time       `json:"started_at"`
+	}{
+		Report:    reportRaw,
+		StartedAt: at,
 	}
-	return json.NewEncoder(w).Encode(wrapped)
+	_ = json.NewEncoder(w).Encode(wrapped)
 }
 
 // контекст для совместимости (не используется явно, но импорт нужен).

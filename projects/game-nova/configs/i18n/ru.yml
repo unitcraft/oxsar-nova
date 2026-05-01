@@ -1870,6 +1870,8 @@ global:
   email: E-Mail
   energy: Энергия
   error: Ошибка
+  unitMs: мс
+  unitSec: с
   errorousParam: Ошибочный параметр
   exchBan: Вас забанил хозяин биржи
   exchCanntRetreatTransport: Вы не можете расторгнуть договор купли-продажи и отозвать транспорт.
