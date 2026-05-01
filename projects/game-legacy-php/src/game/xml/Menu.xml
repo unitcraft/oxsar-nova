@@ -55,8 +55,6 @@
 	<info7 class="menu-info" class-max="menu7-max" class-min="menu7-min" title-min="Настройки">
 		<planet href="PlanetOptions">MENU_PLANET_OPTIONS</planet>
 		<preferences href="Prefs">MENU_PREFERENCES</preferences>
-		<agreement href="UserAgreement">MENU_USER_AGREEMENT</agreement>
-		<support href="Support">MENU_SUPPORT</support>
 		<widgets href="Widgets">MENU_WIDGETS</widgets>
 	</info7>
 

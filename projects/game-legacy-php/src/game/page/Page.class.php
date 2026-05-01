@@ -108,14 +108,8 @@ abstract class Page
 		}
 
         $isAjaxRequest = (!empty($_SERVER["HTTP_X_REQUESTED_WITH"]) && strtolower($_SERVER["HTTP_X_REQUESTED_WITH"]) === "xmlhttprequest");
-		if( 0
-			&& !$isAjaxRequest
-			&& !mt_rand(0, 1000)
-			&& isArgeementCanBeShownForPage(Core::getRequest()->getGET("go"))
-			&& getArgeementTime() > NS::getUser()->get('user_agreement_read') )
-		{
-			doHeaderRedirection("game.php/UserAgreement", false);
-		}
+		// План 72.1 ч.20.12: страница UserAgreement удалена из
+		// legacy-PHP — соответствующий redirect-блок снят целиком.
 		$this->checkForTW();
 
         // if(!isAdmin(null, true))
