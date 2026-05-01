@@ -8,7 +8,6 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import { fetchMyBattles } from '@/api/battles';
-import { QK } from '@/api/query-keys';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber } from '@/lib/format';
 
@@ -36,12 +35,20 @@ function fmtDate(iso: string): string {
 
 export function BattleStatsScreen() {
   const { t } = useTranslation();
+  // Все 11 фильтров (план 72.1.10 — порт legacy showBattles).
+  // Дефолты — соответствуют legacy index() (показываем всё кроме
+  // пришельцев и moon-only).
   const [dateFirst, setDateFirst] = useState('');
   const [dateLast, setDateLast] = useState('');
   const [userFilter, setUserFilter] = useState('');
   const [allianceFilter, setAllianceFilter] = useState('');
-  const [showDrawn, setShowDrawn] = useState(false);
+  const [showDrawn, setShowDrawn] = useState(true);
   const [showAliens, setShowAliens] = useState(false);
+  const [showNoDestroyed, setShowNoDestroyed] = useState(true);
+  const [newMoon, setNewMoon] = useState(false);
+  const [moonBattle, setMoonBattle] = useState(false);
+  const [sortField, setSortField] = useState<'date' | 'rounds' | 'debris' | 'loot'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
   const meQ = useQuery({
@@ -50,9 +57,36 @@ export function BattleStatsScreen() {
     staleTime: 60_000,
   });
 
+  // Сборка набора фильтров для useQuery: пустые поля не попадают в
+  // params, чтобы дефолты сервера оставались дефолтами.
+  const filterParams: import('@/api/battles').BattleListFilters = {
+    limit: 20,
+    show_drawn: showDrawn,
+    show_aliens: showAliens,
+    show_no_destroyed: showNoDestroyed,
+    new_moon: newMoon,
+    moon_battle: moonBattle,
+    sort_field: sortField,
+    sort_order: sortOrder,
+  };
+  if (cursor !== undefined) filterParams.cursor = cursor;
+  if (dateFirst) filterParams.date_min = new Date(dateFirst).toISOString();
+  if (dateLast) filterParams.date_max = new Date(dateLast).toISOString();
+  if (userFilter) filterParams.user_filter = userFilter;
+  if (allianceFilter) filterParams.alliance_filter = allianceFilter;
+
+  // queryKey включает все фильтры — при их изменении query
+  // автоматически перезапускается.
+  const queryKey = [
+    'my-battles',
+    cursor ?? '',
+    dateFirst, dateLast, userFilter, allianceFilter,
+    showDrawn, showAliens, showNoDestroyed, newMoon, moonBattle,
+    sortField, sortOrder,
+  ];
   const battlesQ = useQuery({
-    queryKey: QK.myBattles(cursor),
-    queryFn: () => fetchMyBattles(cursor !== undefined ? { cursor, limit: 20 } : { limit: 20 }),
+    queryKey,
+    queryFn: () => fetchMyBattles(filterParams),
   });
 
   const battles = battlesQ.data?.battles ?? [];
@@ -139,6 +173,61 @@ export function BattleStatsScreen() {
                         onChange={(e) => setShowAliens(e.target.checked)}
                       />{' '}
                       <label htmlFor="show_aliens">{t('statistics', 'bsShowUfoBattles')}</label>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={2}>
+                      <input
+                        id="show_no_destroyed"
+                        type="checkbox"
+                        checked={showNoDestroyed}
+                        onChange={(e) => setShowNoDestroyed(e.target.checked)}
+                      />{' '}
+                      <label htmlFor="show_no_destroyed">{t('statistics', 'bsShowNoDestroyed')}</label>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={2}>
+                      <input
+                        id="new_moon"
+                        type="checkbox"
+                        checked={newMoon}
+                        onChange={(e) => setNewMoon(e.target.checked)}
+                      />{' '}
+                      <label htmlFor="new_moon">{t('statistics', 'bsNewMoon')}</label>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={2}>
+                      <input
+                        id="moon_battle"
+                        type="checkbox"
+                        checked={moonBattle}
+                        onChange={(e) => setMoonBattle(e.target.checked)}
+                      />{' '}
+                      <label htmlFor="moon_battle">{t('statistics', 'bsMoonBattle')}</label>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><label htmlFor="sort_field">{t('statistics', 'bsSortBy')}</label></td>
+                    <td>
+                      <select
+                        id="sort_field"
+                        value={sortField}
+                        onChange={(e) => setSortField(e.target.value as typeof sortField)}
+                      >
+                        <option value="date">{t('statistics', 'bsSortDate')}</option>
+                        <option value="rounds">{t('statistics', 'bsSortRounds')}</option>
+                        <option value="debris">{t('statistics', 'bsSortDebris')}</option>
+                        <option value="loot">{t('statistics', 'bsSortLoot')}</option>
+                      </select>{' '}
+                      <select
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+                      >
+                        <option value="desc">{t('statistics', 'bsSortDesc')}</option>
+                        <option value="asc">{t('statistics', 'bsSortAsc')}</option>
+                      </select>
                     </td>
                   </tr>
                 </tbody>

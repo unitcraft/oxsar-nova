@@ -15,8 +15,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -52,37 +54,137 @@ type ListItem struct {
 }
 
 // ListMine GET /api/users/me/battles?limit=20&cursor=<at>
+// ListMine GET /api/users/me/battles
+//
+// Query-параметры (план 72.1.10 ч.A3 — порт legacy
+// Battlestats.class.php::showBattles):
+//
+//	limit, cursor              базовая пагинация (cursor = at-RFC3339Nano).
+//	date_min, date_max         ограничение по at (RFC3339).
+//	user_filter                uuid оппонента (атакер ИЛИ дефендер,
+//	                            при условии что юзер тоже участник).
+//	alliance_filter            uuid альянса оппонента.
+//	show_drawn=false           скрыть ничьи (winner='draw').
+//	show_aliens=true           включить бои с aliens
+//	                            (battle_reports.has_aliens=true).
+//	show_no_destroyed=false    скрыть «пустые» бои (без debris и loot).
+//	new_moon=true              только бои с появлением луны
+//	                            (moon_created=true).
+//	moon_battle=true           только бои на луне (is_moon=true).
+//	sort_field=date|rounds|debris|loot
+//	sort_order=asc|desc
+//
+// Дефолты: show_drawn=true, show_aliens=false, show_no_destroyed=true,
+// new_moon=false, moon_battle=false, sort_field=date, sort_order=desc
+// (как в legacy `index()`).
 func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
 	if !ok {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
+	q := r.URL.Query()
 	limit := 20
-	if v := r.URL.Query().Get("limit"); v != "" {
+	if v := q.Get("limit"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 {
 			limit = n
 		}
 	}
 	cursorAt := time.Now()
-	if v := r.URL.Query().Get("cursor"); v != "" {
+	if v := q.Get("cursor"); v != "" {
 		if t, err := time.Parse(time.RFC3339Nano, v); err == nil {
 			cursorAt = t
 		}
 	}
 
-	rows, err := h.db.Pool().Query(r.Context(), `
+	// Динамический WHERE — собираем conditions + args. $1..$N
+	// генерируется по индексу.
+	args := []any{uid, cursorAt}
+	conds := []string{
+		"(attacker_user_id = $1 OR defender_user_id = $1)",
+		"is_simulation = false",
+		"at < $2",
+	}
+	addArg := func(v any) string {
+		args = append(args, v)
+		return fmt.Sprintf("$%d", len(args))
+	}
+
+	if v := q.Get("date_min"); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			conds = append(conds, "at >= "+addArg(t))
+		}
+	}
+	if v := q.Get("date_max"); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			conds = append(conds, "at <= "+addArg(t))
+		}
+	}
+	if v := q.Get("user_filter"); v != "" {
+		ph := addArg(v)
+		conds = append(conds,
+			"(attacker_user_id = "+ph+" OR defender_user_id = "+ph+")")
+	}
+	if v := q.Get("alliance_filter"); v != "" {
+		ph := addArg(v)
+		// Оппонент = тот, кто НЕ uid. Альянс оппонента совпадает с
+		// заданным.
+		conds = append(conds, `EXISTS (
+			SELECT 1 FROM users u
+			WHERE u.alliance_id = `+ph+`
+			  AND u.id IN (attacker_user_id, defender_user_id)
+			  AND u.id != $1
+		)`)
+	}
+
+	// Boolean-фильтры (по дефолту в legacy).
+	showDrawn := parseBool(q.Get("show_drawn"), true)
+	if !showDrawn {
+		conds = append(conds, "winner != 'draw'")
+	}
+	showAliens := parseBool(q.Get("show_aliens"), false)
+	if !showAliens {
+		conds = append(conds, "has_aliens = false")
+	}
+	showNoDestroyed := parseBool(q.Get("show_no_destroyed"), true)
+	if !showNoDestroyed {
+		conds = append(conds,
+			"(loot_metal + loot_silicon + loot_hydrogen + debris_metal + debris_silicon) > 0")
+	}
+	if parseBool(q.Get("new_moon"), false) {
+		conds = append(conds, "moon_created = true")
+	}
+	if parseBool(q.Get("moon_battle"), false) {
+		conds = append(conds, "is_moon = true")
+	}
+
+	// Sort.
+	sortField := "at"
+	switch q.Get("sort_field") {
+	case "rounds":
+		sortField = "rounds"
+	case "debris":
+		sortField = "(debris_metal + debris_silicon)"
+	case "loot":
+		sortField = "(loot_metal + loot_silicon + loot_hydrogen)"
+	}
+	sortOrder := "DESC"
+	if q.Get("sort_order") == "asc" {
+		sortOrder = "ASC"
+	}
+
+	limitArg := addArg(limit)
+	sql := `
 		SELECT id, attacker_user_id, defender_user_id, winner, rounds,
 		       debris_metal::bigint, debris_silicon::bigint,
 		       loot_metal::bigint, loot_silicon::bigint, loot_hydrogen::bigint,
 		       at
 		FROM battle_reports
-		WHERE (attacker_user_id = $1 OR defender_user_id = $1)
-		  AND is_simulation = false
-		  AND at < $2
-		ORDER BY at DESC
-		LIMIT $3
-	`, uid, cursorAt, limit)
+		WHERE ` + strings.Join(conds, " AND ") + `
+		ORDER BY ` + sortField + ` ` + sortOrder + `
+		LIMIT ` + limitArg
+
+	rows, err := h.db.Pool().Query(r.Context(), sql, args...)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
@@ -116,6 +218,19 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 		resp["next_cursor"] = lastAt.Format(time.RFC3339Nano)
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, resp)
+}
+
+// parseBool — парсит query-флаг с дефолтом. Принимает "1"/"true"/
+// "yes" как true; "0"/"false"/"no" как false; пусто/невалидно — def.
+func parseBool(v string, def bool) bool {
+	switch strings.ToLower(v) {
+	case "1", "true", "yes":
+		return true
+	case "0", "false", "no":
+		return false
+	default:
+		return def
+	}
 }
 
 // GetByID GET /api/battle-reports/{id} — публичный анонимный endpoint
