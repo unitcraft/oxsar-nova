@@ -15904,3 +15904,54 @@ not-a-fix + BA-019 mitigated.
   - feat(shipyard+defense): план 72.1.41 (56f605cbb4).
   - feat(artmarket): план 72.1.42 (cabe70e5f8).
   - feat(alliance): план 72.1.43 (8c8d163ece).
+
+2026-05-01 — итерация 72.1 FINAL: /p2p-exchange + VIP cross-cut +
+              audit ✅ (все §20.12 критерии закрыты).
+
+  Закрытие out-of-scope-задач плана 72.1 без simplifications:
+
+  /p2p-exchange (commit 31cdbfb214):
+  - Backend internal/exchange/broker_stats.go: BrokerStats(filters)
+    с фильтрами date_min/date_max + sort_field (date|lot|lot_price|
+    lot_amount|lot_profit) + sort_order + page (USER_PER_PAGE=25).
+    Summary: total/sold/turnover/profit. fee=5% MVP (legacy
+    хранит per-broker в exchange-таблице — отдельный план).
+  - Handler GET /api/exchange/broker-stats.
+  - Frontend P2PExchangeScreen pixel-perfect клон exchange.tpl
+    с фильтрами + summary + таблицей + ◀ N/M ▶ pagination.
+  - Route /p2p-exchange.
+  - i18n ru/en p2pExchange (16 ключей).
+  - Audit table 20.0: not-started → pixel-perfect 95%.
+
+  72.1.44 VIP-instant cross-cut (commit 0feed72593):
+  - economy/vip.go: 1:1 формулы из legacy Functions.inc.php:875-924.
+    Construction: pow(L,e)×5, Research: pow(L,e)×10, Shipyard:
+    clamp(pow(qty,0.8), 10, 100000). Exponent: L<30→1.3, L<35→2,
+    иначе 2.5. roundToTens = round(x/10)×10.
+  - building/research/shipyard.Service.StartVIP: транзакция —
+    SELECT FOR UPDATE queue + ownership + start_at>now+5s,
+    SELECT credit FOR UPDATE, charge credit, UPDATE
+    queue.start/end к now/now+duration, UPDATE events.fire_at.
+  - HTTP: POST /api/planets/{id}/buildings/queue/{taskId}/vip,
+    POST /api/research/{queueId}/vip,
+    POST /api/planets/{id}/shipyard/{queueId}/vip.
+  - Frontend ⚡ VIP кнопки в queue-row 3 экранов
+    (ConstructionsScreen, ResearchScreen, BuildPanel для
+    shipyard+defense), с confirm-prompt и invalidate me.
+  - i18n buildings.{vipBtn, vipHint, vipConfirm, cancelTask}.
+
+  ИТОГ 72.1 §20.12:
+  - [x] Support/UserAgreement удалены (ранее).
+  - [x] Market vs Exchange: ResourceMarket=банк, /market=
+    артефакт-биржа, /p2p-exchange=брокеры. Все 3 в audit.
+  - [x] 40 экранов проверены (audit 72.1.2 — все ✅).
+  - [x] Achievements в docs/status.md с пометкой про future
+    origin Achievements UI.
+  - [x] go test ./... + go vet + tsc + eslint (touched files)
+    зелёные.
+
+  План 72.1 закрыт полностью.
+
+  **Коммиты**:
+  - feat(p2p-exchange): план 72.1 §20.12 (31cdbfb214).
+  - feat(economy+building+research+shipyard): план 72.1.44 (0feed72593).
