@@ -497,7 +497,7 @@ HOLDING-логики.
 
 - **Дата находки**: 2026-05-01
 - **Серьёзность**: P1 (для симулятор-handler где input открыт через JSON)
-- **Статус**: **open**
+- **Статус**: **patched** 2026-05-01 (план 72.1.3, commit того же дня)
 - **Категория**: дыра в правилах / возможный exploit
 
 **Файлы**: [engine.go:970-985](../../projects/game-nova/backend/internal/battle/engine.go#L970), [simulator/handler.go](../../projects/game-nova/backend/internal/simulator/handler.go).
@@ -523,15 +523,30 @@ HOLDING-логики.
 Симулятор-handler уже залогинен (`auth.UserID(r.Context())`), но любой
 залогиненный юзер может прислать malicious input.
 
-**Фикс**: расширить `validate`:
+**Фикс** (применён 2026-05-01): расширен `validate()` в
+[engine.go:973-1071](../../projects/game-nova/backend/internal/battle/engine.go#L973):
 
-```go
-if u.Damaged < 0 || u.Damaged > u.Quantity { return ErrInvalidInput }
-if u.ShellPercent < 0 || u.ShellPercent > 100 { return ErrInvalidInput }
-if u.Front < 0 || u.Front > 30 { return ErrInvalidInput }
-// Rapidfire: всем парам value <= 100 (legacy максимум).
-// Tech: все поля 0..99.
-```
+- Лимиты-константы `maxQuantity=1e10`, `maxAttack=1e9`,
+  `maxShield=1e9`, `maxShell=1e10`, `maxFront=30`, `maxTechLevel=99`,
+  `maxRapidfire=1000`, `maxRounds=20`, `maxNumSim=100`.
+- `validate(in)` проверяет: `Rounds`, `NumSim`, `Rapidfire[i][j]`.
+- `validateSide(s)` → `validateTech(s.Tech)` (8 полей в [0, 99]).
+- `validateUnit(u)`: `Quantity ∈ [0, 1e10]`, `Damaged ∈ [0, Quantity]`,
+  `ShellPercent ∈ [0, 100]`, `Front ∈ [0, 30]`, `Attack ∈ [0, 1e9]`,
+  `Shield ∈ [0, 1e9]`, `Shell ∈ [0, 1e10]`, `Cost.{Metal,Silicon,Hydrogen} ≥ 0`.
+- Все ошибки оборачиваются как `ErrInvalidInput` (через
+  `errors.Is(err, ErrInvalidInput)`).
+
+**Тесты**:
+- `TestValidate_AcceptsHappyPath` — нормальный input проходит.
+- `TestValidate_RejectsTopLevel` — 6 cases (rounds, numSim, empty sides).
+- `TestValidate_RejectsRapidfire` — 4 invalid + 2 boundary positive.
+- `TestValidate_RejectsTech` — 9 invalid + 1 boundary positive (tech=99).
+- `TestValidate_RejectsUnit` — 17 invalid + 5 boundary positive.
+- `TestValidate_DefenderUnitsCheckedToo` — guard на defenders.
+- `TestValidate_EmptyUnitsRejected` — Side без юнитов отвергается.
+- `TestValidate_CalculateRejectsMaliciousInput` — end-to-end через
+  `Calculate(in)`: malicious Rapidfire отбрасывается до запуска движка.
 
 ---
 

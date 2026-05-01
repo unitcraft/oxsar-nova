@@ -1,6 +1,7 @@
 package battle
 
 import (
+	"errors"
 	"math"
 	"testing"
 )
@@ -816,5 +817,277 @@ func TestExperience_HasPlanet_NotIsMoon(t *testing.T) {
 	if repFlight.AttackerExp >= repPlanet.AttackerExp {
 		t.Fatalf("BA-007 регрессия: flight (HasPlanet=false) должен быть < planet (HasPlanet=true): flight=%d planet=%d",
 			repFlight.AttackerExp, repPlanet.AttackerExp)
+	}
+}
+
+// --- BA-015: validate отвергает malicious input -----------------------
+// План 72.1.3. Любой залогиненный юзер может слать произвольный JSON в
+// /api/simulator/run. Без guard'ов клиент мог:
+//   - подсунуть Damaged > Quantity → корабль «повреждён сильнее, чем
+//     существует»; clampDamaged-патч в newState скрывал баг.
+//   - ShellPercent < 0 / > 100 → отрицательный/гипер shell.
+//   - Front > 30 → 2^Front overflow в float64 weight, ломалась
+//     пропорциональная дробёжка по целям.
+//   - Rapidfire без лимита → shots = quantity × 10^9 → timeout/overflow.
+//   - Tech-уровни > 99 → factor = 1 + 99×0.1 = 10.9× обычно, но
+//     сотни уровней раздували числа.
+//   - Quantity > 10^10 → overflow в LostMetal = lost × Cost.Metal.
+//
+// Тесты обязательны (CLAUDE.md: ≥85% покрытие для battle/event/economy).
+
+// validHappyInput — минимальный валидный вход для теста, чтобы
+// table-driven cases меняли только одно поле и проверяли guard.
+func validHappyInput() Input {
+	return Input{
+		Seed:      1,
+		Rounds:    6,
+		NumSim:    1,
+		Attackers: []Side{simpleAttacker(10, 100, 1000)},
+		Defenders: []Side{simpleDefender(10, 50, 1000)},
+		HasPlanet: true,
+	}
+}
+
+func TestValidate_AcceptsHappyPath(t *testing.T) {
+	t.Parallel()
+	if err := validate(validHappyInput()); err != nil {
+		t.Fatalf("happy path должен пройти validate, получили %v", err)
+	}
+}
+
+// TestValidate_RejectsTopLevel — Rounds, NumSim вне диапазона, пустые
+// Attackers/Defenders.
+func TestValidate_RejectsTopLevel(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name   string
+		mutate func(*Input)
+	}{
+		{"empty attackers", func(in *Input) { in.Attackers = nil }},
+		{"empty defenders", func(in *Input) { in.Defenders = nil }},
+		{"rounds < 0", func(in *Input) { in.Rounds = -1 }},
+		{"rounds > maxRounds", func(in *Input) { in.Rounds = maxRounds + 1 }},
+		{"num_sim < 0", func(in *Input) { in.NumSim = -1 }},
+		{"num_sim > maxNumSim", func(in *Input) { in.NumSim = maxNumSim + 1 }},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			in := validHappyInput()
+			tc.mutate(&in)
+			err := validate(in)
+			if !errors.Is(err, ErrInvalidInput) {
+				t.Fatalf("ожидали ErrInvalidInput, получили %v", err)
+			}
+		})
+	}
+}
+
+// TestValidate_RejectsRapidfire — диапазон [1, maxRapidfire].
+func TestValidate_RejectsRapidfire(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		rf   map[int]map[int]int
+	}{
+		{"rf=0 (< 1)", map[int]map[int]int{1: {2: 0}}},
+		{"rf negative", map[int]map[int]int{1: {2: -5}}},
+		{"rf > maxRapidfire", map[int]map[int]int{1: {2: maxRapidfire + 1}}},
+		{"rf overflow attempt", map[int]map[int]int{1: {2: 1_000_000_000}}},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			in := validHappyInput()
+			in.Rapidfire = tc.rf
+			err := validate(in)
+			if !errors.Is(err, ErrInvalidInput) {
+				t.Fatalf("ожидали ErrInvalidInput, получили %v", err)
+			}
+		})
+	}
+
+	// Boundary positives: rf=1 и rf=maxRapidfire — оба валидны.
+	t.Run("rf=1 valid", func(t *testing.T) {
+		t.Parallel()
+		in := validHappyInput()
+		in.Rapidfire = map[int]map[int]int{1: {2: 1}}
+		if err := validate(in); err != nil {
+			t.Fatalf("rf=1 должен быть валиден: %v", err)
+		}
+	})
+	t.Run("rf=maxRapidfire valid", func(t *testing.T) {
+		t.Parallel()
+		in := validHappyInput()
+		in.Rapidfire = map[int]map[int]int{1: {2: maxRapidfire}}
+		if err := validate(in); err != nil {
+			t.Fatalf("rf=maxRapidfire должен быть валиден: %v", err)
+		}
+	})
+}
+
+// TestValidate_RejectsTech — все 8 tech-полей в [0, 99].
+func TestValidate_RejectsTech(t *testing.T) {
+	t.Parallel()
+	techCases := []struct {
+		name  string
+		apply func(*Tech)
+	}{
+		{"gun negative", func(t *Tech) { t.Gun = -1 }},
+		{"gun > max", func(t *Tech) { t.Gun = maxTechLevel + 1 }},
+		{"shield > max", func(t *Tech) { t.Shield = maxTechLevel + 1 }},
+		{"shell > max", func(t *Tech) { t.Shell = maxTechLevel + 1 }},
+		{"laser > max", func(t *Tech) { t.Laser = maxTechLevel + 1 }},
+		{"ion > max", func(t *Tech) { t.Ion = maxTechLevel + 1 }},
+		{"plasma > max", func(t *Tech) { t.Plasma = maxTechLevel + 1 }},
+		{"ballistics > max", func(t *Tech) { t.Ballistics = maxTechLevel + 1 }},
+		{"masking > max", func(t *Tech) { t.Masking = maxTechLevel + 1 }},
+	}
+	for _, tc := range techCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			in := validHappyInput()
+			in.Attackers[0].Tech = Tech{}
+			tc.apply(&in.Attackers[0].Tech)
+			err := validate(in)
+			if !errors.Is(err, ErrInvalidInput) {
+				t.Fatalf("ожидали ErrInvalidInput, получили %v", err)
+			}
+		})
+	}
+
+	// Boundary positive: tech=99 проходит.
+	t.Run("tech=99 valid", func(t *testing.T) {
+		t.Parallel()
+		in := validHappyInput()
+		in.Attackers[0].Tech = Tech{
+			Gun: 99, Shield: 99, Shell: 99,
+			Laser: 99, Ion: 99, Plasma: 99,
+			Ballistics: 99, Masking: 99,
+		}
+		if err := validate(in); err != nil {
+			t.Fatalf("tech=99 должен быть валиден: %v", err)
+		}
+	})
+}
+
+// TestValidate_RejectsUnit — все 7 числовых полей юнита (Quantity,
+// Damaged, ShellPercent, Front, Attack, Shield, Shell) + Cost.*.
+func TestValidate_RejectsUnit(t *testing.T) {
+	t.Parallel()
+	unitCases := []struct {
+		name   string
+		mutate func(*Unit)
+	}{
+		{"quantity negative", func(u *Unit) { u.Quantity = -1 }},
+		{"quantity > maxQuantity", func(u *Unit) { u.Quantity = maxQuantity + 1 }},
+		{"damaged negative", func(u *Unit) { u.Damaged = -1 }},
+		{"damaged > quantity", func(u *Unit) { u.Damaged = u.Quantity + 1 }},
+		{"shell_percent < 0", func(u *Unit) { u.ShellPercent = -0.1 }},
+		{"shell_percent > 100", func(u *Unit) { u.ShellPercent = 100.0001 }},
+		{"front negative", func(u *Unit) { u.Front = -1 }},
+		{"front > maxFront", func(u *Unit) { u.Front = maxFront + 1 }},
+		{"attack negative", func(u *Unit) { u.Attack = -1 }},
+		{"attack > maxAttack", func(u *Unit) { u.Attack = maxAttack + 1 }},
+		{"shield negative", func(u *Unit) { u.Shield = -1 }},
+		{"shield > maxShield", func(u *Unit) { u.Shield = maxShield + 1 }},
+		{"shell negative", func(u *Unit) { u.Shell = -1 }},
+		{"shell > maxShell", func(u *Unit) { u.Shell = maxShell + 1 }},
+		{"cost.metal negative", func(u *Unit) { u.Cost.Metal = -1 }},
+		{"cost.silicon negative", func(u *Unit) { u.Cost.Silicon = -1 }},
+		{"cost.hydrogen negative", func(u *Unit) { u.Cost.Hydrogen = -1 }},
+	}
+	for _, tc := range unitCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			in := validHappyInput()
+			tc.mutate(&in.Attackers[0].Units[0])
+			err := validate(in)
+			if !errors.Is(err, ErrInvalidInput) {
+				t.Fatalf("ожидали ErrInvalidInput, получили %v", err)
+			}
+		})
+	}
+
+	// Boundary positives (verify не отвергает граничные значения).
+	t.Run("quantity=maxQuantity valid", func(t *testing.T) {
+		t.Parallel()
+		in := validHappyInput()
+		in.Attackers[0].Units[0].Quantity = maxQuantity
+		if err := validate(in); err != nil {
+			t.Fatalf("quantity=maxQuantity должно быть валидно: %v", err)
+		}
+	})
+	t.Run("front=maxFront valid", func(t *testing.T) {
+		t.Parallel()
+		in := validHappyInput()
+		in.Attackers[0].Units[0].Front = maxFront
+		if err := validate(in); err != nil {
+			t.Fatalf("front=maxFront должно быть валидно: %v", err)
+		}
+	})
+	t.Run("damaged=quantity valid", func(t *testing.T) {
+		t.Parallel()
+		in := validHappyInput()
+		in.Attackers[0].Units[0].Damaged = in.Attackers[0].Units[0].Quantity
+		if err := validate(in); err != nil {
+			t.Fatalf("damaged=quantity должно быть валидно: %v", err)
+		}
+	})
+	t.Run("shell_percent=0 valid", func(t *testing.T) {
+		t.Parallel()
+		in := validHappyInput()
+		in.Attackers[0].Units[0].ShellPercent = 0
+		if err := validate(in); err != nil {
+			t.Fatalf("shell_percent=0 должно быть валидно: %v", err)
+		}
+	})
+	t.Run("shell_percent=100 valid", func(t *testing.T) {
+		t.Parallel()
+		in := validHappyInput()
+		in.Attackers[0].Units[0].ShellPercent = 100
+		if err := validate(in); err != nil {
+			t.Fatalf("shell_percent=100 должно быть валидно: %v", err)
+		}
+	})
+}
+
+// TestValidate_DefenderUnitsCheckedToo — guard'ы применяются и к
+// сторонам defenders, не только attackers.
+func TestValidate_DefenderUnitsCheckedToo(t *testing.T) {
+	t.Parallel()
+	in := validHappyInput()
+	in.Defenders[0].Units[0].Front = maxFront + 1
+	err := validate(in)
+	if !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("guard на defenders должен сработать: %v", err)
+	}
+}
+
+// TestValidate_EmptyUnitsRejected — Side без юнитов отвергается.
+func TestValidate_EmptyUnitsRejected(t *testing.T) {
+	t.Parallel()
+	in := validHappyInput()
+	in.Attackers[0].Units = nil
+	err := validate(in)
+	if !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("Side без юнитов должен отвергаться: %v", err)
+	}
+}
+
+// TestValidate_CalculateRejectsMaliciousInput — end-to-end через
+// Calculate. Без validate Calculate не должен запускать движок на
+// malicious input.
+func TestValidate_CalculateRejectsMaliciousInput(t *testing.T) {
+	t.Parallel()
+	in := validHappyInput()
+	in.Rapidfire = map[int]map[int]int{1: {2: 1_000_000_000}} // exploit attempt
+	_, err := Calculate(in)
+	if !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("Calculate должен отвергнуть malicious Rapidfire через validate: %v", err)
 	}
 }

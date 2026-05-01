@@ -970,16 +970,102 @@ func unitWeight(u unitState) float64 {
 	return math.Pow(2, float64(front)) * float64(u.quantity)
 }
 
+// Лимиты для validate (план 72.1.3 / BA-015 — защита от malicious
+// input через JSON-API simulator/handler.go). Любой залогиненный
+// пользователь может вызвать симулятор; без guard'ов клиент мог
+// прислать огромные числа и вызвать timeout / overflow / порчу
+// агрегатов в SimStats.
+const (
+	maxQuantity  = int64(1e10) // практический предел; legacy max ~10^10.
+	maxAttack    = float64(1e9)
+	maxShield    = float64(1e9)
+	maxShell     = float64(1e10)
+	maxFront     = 30   // совпадает с clamp в unitWeight (2^30 ≈ 1.07e9).
+	maxTechLevel = 99   // legacy max.
+	maxRapidfire = 1000 // legacy max RF около 250, запас 4×.
+	maxRounds    = 20
+	maxNumSim    = 100
+)
+
 func validate(in Input) error {
 	if len(in.Attackers) == 0 || len(in.Defenders) == 0 {
 		return ErrInvalidInput
 	}
+	if in.Rounds < 0 || in.Rounds > maxRounds {
+		return ErrInvalidInput
+	}
+	if in.NumSim < 0 || in.NumSim > maxNumSim {
+		return ErrInvalidInput
+	}
+	if err := validateRapidfire(in.Rapidfire); err != nil {
+		return err
+	}
 	for _, s := range append(append([]Side{}, in.Attackers...), in.Defenders...) {
-		if len(s.Units) == 0 {
+		if err := validateSide(s); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateSide(s Side) error {
+	if len(s.Units) == 0 {
+		return ErrInvalidInput
+	}
+	if err := validateTech(s.Tech); err != nil {
+		return err
+	}
+	for _, u := range s.Units {
+		if err := validateUnit(u); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateTech(t Tech) error {
+	for _, lvl := range []int{t.Gun, t.Shield, t.Shell, t.Laser, t.Ion, t.Plasma, t.Ballistics, t.Masking} {
+		if lvl < 0 || lvl > maxTechLevel {
 			return ErrInvalidInput
 		}
-		for _, u := range s.Units {
-			if u.Quantity < 0 {
+	}
+	return nil
+}
+
+func validateUnit(u Unit) error {
+	if u.Quantity < 0 || u.Quantity > maxQuantity {
+		return ErrInvalidInput
+	}
+	if u.Damaged < 0 || u.Damaged > u.Quantity {
+		return ErrInvalidInput
+	}
+	if u.ShellPercent < 0 || u.ShellPercent > 100 {
+		return ErrInvalidInput
+	}
+	if u.Front < 0 || u.Front > maxFront {
+		return ErrInvalidInput
+	}
+	if u.Attack < 0 || u.Attack > maxAttack {
+		return ErrInvalidInput
+	}
+	if u.Shield < 0 || u.Shield > maxShield {
+		return ErrInvalidInput
+	}
+	if u.Shell < 0 || u.Shell > maxShell {
+		return ErrInvalidInput
+	}
+	// Cost — defensive: отрицательная стоимость породила бы
+	// отрицательные LostMetal/LostPoints. NaN/+Inf не возможен в int64.
+	if u.Cost.Metal < 0 || u.Cost.Silicon < 0 || u.Cost.Hydrogen < 0 {
+		return ErrInvalidInput
+	}
+	return nil
+}
+
+func validateRapidfire(rf map[int]map[int]int) error {
+	for _, row := range rf {
+		for _, v := range row {
+			if v < 1 || v > maxRapidfire {
 				return ErrInvalidInput
 			}
 		}
