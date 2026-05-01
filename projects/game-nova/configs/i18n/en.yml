@@ -977,6 +977,8 @@ shipyard:
   details: Details for
   cancelled: Cancelled
   cancelledBody: Order cancelled, resources refunded
+  # План 72.1.45 §5: damaged indicator in inventory (legacy shipyard.tpl).
+  damagedTooltip: Damaged
   cancelErr: Failed to cancel
   enqueued: Queued
   enqueuedBody: "{{name}} × {{count}} added to shipyard"

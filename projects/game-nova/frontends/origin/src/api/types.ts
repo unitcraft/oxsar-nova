@@ -61,6 +61,11 @@ export interface ShipyardQueueItem {
   status: string;
 }
 
+export interface ShipyardDamaged {
+  damaged_count: number;
+  shell_percent: number;
+}
+
 export interface ShipyardInventory {
   ships: Record<string, number>;
   defense: Record<string, number>;
@@ -72,6 +77,9 @@ export interface ShipyardInventory {
   ship_seconds?: Record<string, number>;
   /** Per-unit время постройки обороны. */
   defense_seconds?: Record<string, number>;
+  /** План 72.1.45 §5: damaged_count + shell_percent (только rows с damaged>0). */
+  ships_damaged?: Record<string, ShipyardDamaged>;
+  defense_damaged?: Record<string, ShipyardDamaged>;
 }
 
 export interface ResearchOverview {
