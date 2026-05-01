@@ -15449,4 +15449,67 @@ not-a-fix + BA-019 mitigated.
   - feat(planet): план 72.1.26 ч.C — cascade-payback H→Si→M (legacy 1:1).
   - docs(plan-72.1.26): ✅ Завершён + audit /resource ⚠ → ✅.
 
+2026-05-01 — итерация 72.1.31: Battlestats — INSERT has_aliens/moon_created/is_moon (FINAL).
+
+  Закрывает хвост 72.1.10 / правило 1:1 для /battlestats. Миграция
+  0085 добавила колонки battle_reports.has_aliens, moon_created,
+  is_moon с DEFAULT false + индексами WHERE col=true, но INSERT-
+  запросы их не заполняли — все бои в БД имели false, фильтры
+  new_moon/show_aliens/moon_battle (handler battlereport.List)
+  возвращали пустоту.
+
+  Реализация:
+  - attack.go::tryCreateMoon → (bool, error): возвращает true
+    только если в этой битве была реально создана новая луна.
+  - attack.go::finalizeAttack принимает +3 флага (isMoon, hasAliens,
+    moonCreated). hasAliens = (alien.LoadHoldingDefender != nil).
+    INSERT теперь записывает все 3 флага. Для случая «пустая
+    планета без alien holding» (early return до боя) передаются
+    isMoon, false, false.
+  - acs_attack.go аналогично — moonCreated проставляется реально
+    созданной луной. ACS не имеет alien holding (LoadHoldingDefender
+    вызывается только в single-attack), поэтому has_aliens=false.
+  - simulator/handler.go: симуляции имеют planet_id=NULL и не
+    имеют реальных alien/moon-эффектов. INSERT теперь явно задаёт
+    false, false, false (раньше полагался на DEFAULT — теперь
+    explicit для будущей консистентности).
+  - battlestats/handler.go (admin-вариант /api/battlestats):
+    добавлены query-параметры has_aliens/moon_created/is_moon
+    (trinary "1"/"true"|"0"/"false"|""), SELECT возвращает 3 поля
+    в DTO. /api/users/me/battles (battlereport.List) уже имел
+    эту WHERE-логику — фикс INSERT просто заставил её работать.
+  - expedition.go не пишет в battle_reports (нет реального боя),
+    изменения не требовались.
+
+  Frontend изменений нет — UI уже посылал show_aliens/new_moon/
+  moon_battle через fetchMyBattles, отрисовывал колонки. После
+  фикса INSERT фронт начинает получать корректные результаты.
+
+  Попутно: cleanup yaml-дубликатов в i18n/{ru,en}.yml
+  (market.creditAmountLabel и statistics.bsMoonBattle), которые
+  ловил i18n_consistency_test.go.
+
+  /battlestats ⚠ → ✅ — правило 1:1 закрыто полностью.
+
+  Изменённые файлы:
+  - projects/game-nova/backend/internal/fleet/attack.go
+    (tryCreateMoon → (bool, error), finalizeAttack +3 флага).
+  - projects/game-nova/backend/internal/fleet/acs_attack.go
+    (moonCreated, INSERT +3 флага).
+  - projects/game-nova/backend/internal/simulator/handler.go
+    (INSERT +3 флага явно).
+  - projects/game-nova/backend/internal/battlestats/handler.go
+    (фильтры + DTO +3 поля).
+  - projects/game-nova/configs/i18n/{ru,en}.yml (cleanup дублей).
+  - docs/plans/72.1.31-battlestats-flags.md (новый план).
+  - docs/plans/72.1.2-screen-audit.md (#2 /battlestats ⚠ → ✅).
+
+  **Коммиты** (по типам задач):
+  - feat(fleet+battlestats): план 72.1.31 — INSERT
+    has_aliens/moon_created/is_moon (4 файла backend).
+  - fix(i18n): удалить дубли creditAmountLabel + bsMoonBattle.
+  - docs(plan-72.1.31): новый план + audit /battlestats ⚠ → ✅
+    + dev-log.
+
+
 
