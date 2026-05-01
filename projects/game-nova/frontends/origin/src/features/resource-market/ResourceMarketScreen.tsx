@@ -20,7 +20,12 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { exchangeResource, fetchMarketRates } from '@/api/market';
+import {
+  exchangeCredit,
+  exchangeResource,
+  fetchMarketRates,
+  type CreditExchangeResult,
+} from '@/api/market';
 import { QK } from '@/api/query-keys';
 import type { ApiError } from '@/api/client';
 import type { ExchangeResult, ResourceKind } from '@/api/types';
@@ -40,6 +45,11 @@ export function ResourceMarketScreen() {
   const [amount, setAmount] = useState<string>('1000');
   const [last, setLast] = useState<ExchangeResult | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  // План 72.1.21: credit-exchange (legacy `Credit_ex`).
+  const [creditResource, setCreditResource] = useState<ResourceKind>('metal');
+  const [creditAmount, setCreditAmount] = useState<string>('100');
+  const [creditLast, setCreditLast] = useState<CreditExchangeResult | null>(null);
 
   const ratesQ = useQuery({
     queryKey: QK.marketRates(),
@@ -63,6 +73,23 @@ export function ResourceMarketScreen() {
     onError: (e) => setErrMsg((e as ApiError).message),
   });
 
+  const creditExchange = useMutation({
+    mutationFn: () =>
+      exchangeCredit({
+        planetId: planet?.id ?? '',
+        resource: creditResource,
+        amount: parseAmount(creditAmount),
+      }),
+    onSuccess: (res) => {
+      setCreditLast(res);
+      setErrMsg(null);
+      void qc.invalidateQueries({ queryKey: QK.planets() });
+      // /me invalidate чтобы шапка с credit обновилась.
+      void qc.invalidateQueries({ queryKey: ['me'] });
+    },
+    onError: (e) => setErrMsg((e as ApiError).message),
+  });
+
   if (isLoading) return <div className="idiv">…</div>;
   if (!planet) return <div className="idiv">—</div>;
 
@@ -74,7 +101,10 @@ export function ResourceMarketScreen() {
   const amt = parseAmount(amount);
   const expected = amt > 0 ? Math.floor(amt * rateFromTo) : 0;
 
+  const creditAmt = parseAmount(creditAmount);
+
   return (
+    <>
     <form
       method="post"
       onSubmit={(ev) => {
@@ -203,6 +233,85 @@ export function ResourceMarketScreen() {
         </tbody>
       </table>
     </form>
+
+    {/* План 72.1.21: legacy `Credit_ex` — покупка ресурса за кредиты. */}
+    <form
+      method="post"
+      onSubmit={(ev) => {
+        ev.preventDefault();
+        if (!creditExchange.isPending && creditAmt > 0) creditExchange.mutate();
+      }}
+    >
+      <table className="ntable">
+        <thead>
+          <tr>
+            <th colSpan={3}>
+              {t('market', 'tabCredit') || 'Купить за кредиты'}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <label htmlFor="cr-resource">
+                {t('market', 'labelTo')}
+              </label>
+              <br />
+              <select
+                id="cr-resource"
+                value={creditResource}
+                onChange={(e) =>
+                  setCreditResource(e.target.value as ResourceKind)
+                }
+              >
+                {RESOURCES.map((r) => (
+                  <option key={r} value={r}>
+                    {t('market', `resLabel${capitalize(r)}`)}
+                  </option>
+                ))}
+              </select>
+            </td>
+            <td>
+              <label htmlFor="cr-amount">
+                {t('market', 'creditAmountLabel') || 'Кредитов'}
+              </label>
+              <br />
+              <input
+                type="text"
+                id="cr-amount"
+                name="credit_amount"
+                value={creditAmount}
+                onChange={(e) => setCreditAmount(e.target.value)}
+              />
+            </td>
+            <td className="center">
+              <input
+                type="submit"
+                className="button"
+                value={
+                  creditExchange.isPending
+                    ? '…'
+                    : t('market', 'creditExchangeBtn') || 'Купить'
+                }
+                disabled={creditAmt <= 0 || creditExchange.isPending}
+              />
+            </td>
+          </tr>
+          {creditLast && (
+            <tr>
+              <td colSpan={3} className="center">
+                {t('market', 'creditLastExchange', {
+                  credits: formatNumber(-creditLast.credit_delta),
+                  amount: formatNumber(creditLast.resource_delta),
+                  res: t('market', `resLabel${capitalize(creditLast.resource)}`),
+                })}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </form>
+    </>
   );
 }
 

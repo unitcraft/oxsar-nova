@@ -39,6 +39,32 @@ export function exchangeResource(input: {
   );
 }
 
+// План 72.1.21: покупка ресурса за кредиты (legacy `Credit_ex`).
+// amount — сколько кредитов потратить; ответ содержит фактический
+// resource_delta (полученное количество ресурса).
+export interface CreditExchangeResult {
+  direction: string; // всегда "from_credit"
+  resource: string;
+  resource_delta: number;
+  credit_delta: number; // отрицательное число — списание
+}
+
+export function exchangeCredit(input: {
+  planetId: string;
+  resource: ResourceKind;
+  amount: number; // кредиты
+}): Promise<CreditExchangeResult> {
+  return api.post<CreditExchangeResult>(
+    `/api/planets/${input.planetId}/market/credit`,
+    {
+      direction: 'from_credit',
+      resource: input.resource,
+      amount: input.amount,
+    },
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}
+
 // ---- Artefact market ----
 
 export function fetchArtMarketOffers(): Promise<{

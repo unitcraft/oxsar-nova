@@ -20,17 +20,49 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
+	"oxsar/game-nova/internal/automsg"
+	"oxsar/game-nova/internal/i18n"
 	"oxsar/game-nova/internal/repo"
 )
 
 type Service struct {
-	db repo.Exec
+	db      repo.Exec
+	automsg *automsg.Service
+	bundle  *i18n.Bundle
 }
 
 func NewService(db repo.Exec) *Service { return &Service{db: db} }
+
+// WithAutoMsg подключает automsg для уведомления MSG_CREDIT_MARKET
+// при покупке ресурса за кредиты (план 72.1.21).
+func (s *Service) WithAutoMsg(am *automsg.Service) *Service {
+	s.automsg = am
+	return s
+}
+
+// WithBundle — i18n для текста AutoMsg.
+func (s *Service) WithBundle(b *i18n.Bundle) *Service {
+	s.bundle = b
+	return s
+}
+
+// userLang читает язык получателя AutoMsg.
+func (s *Service) userLang(ctx context.Context, tx pgx.Tx, userID string) i18n.Lang {
+	var lang string
+	if tx != nil {
+		_ = tx.QueryRow(ctx, `SELECT language FROM users WHERE id=$1`, userID).Scan(&lang)
+	} else {
+		_ = s.db.Pool().QueryRow(ctx, `SELECT language FROM users WHERE id=$1`, userID).Scan(&lang)
+	}
+	if lang == "" {
+		return i18n.LangRu
+	}
+	return i18n.Lang(lang)
+}
 
 var (
 	ErrInvalidResource  = errors.New("market: invalid resource")
@@ -262,6 +294,23 @@ func (s *Service) ExchangeCredit(ctx context.Context, userID, planetID, directio
 			resAmount, planetID); err != nil {
 			return fmt.Errorf("market: credit planet: %w", err)
 		}
+
+		// План 72.1.21: AutoMsg `MSG_CREDIT_MARKET` (legacy
+		// `Market.class.php::Credit_ex` строки 250-258) в folder=8
+		// (FolderCredit). Best-effort — ошибка глотается, чтобы не
+		// откатывать саму покупку.
+		if s.automsg != nil && s.bundle != nil && amount > 0 {
+			lang := s.userLang(ctx, tx, userID)
+			vars := map[string]string{
+				"credits":  strconv.FormatFloat(amount, 'f', 0, 64),
+				"resource": resource,
+				"amount":   strconv.FormatInt(resAmount, 10),
+			}
+			title := s.bundle.Tr(lang, "autoMessages", "creditMarketPurchase.title", vars)
+			body := s.bundle.Tr(lang, "autoMessages", "creditMarketPurchase.body", vars)
+			_ = s.automsg.SendDirect(ctx, tx, userID, automsg.FolderCredit, title, body)
+		}
+
 		out = CreditExchangeResult{Direction: "from_credit", Resource: resource, ResourceDelta: resAmount, CreditDelta: -amount}
 		return nil
 	})
