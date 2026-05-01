@@ -1260,6 +1260,10 @@ score:
   scoreTypeFleet: Флот
   scoreTypeAchievements: Достижения
   scoreTypeBattle: Боевой
+  scoreTypeDm: "DM-метрика"
+  scoreTypeMax: "Пик очков"
+  sortByLabel: "Сортировка:"
+  colMembers: Участников
   myRankLabel: "Ваше место в рейтинге «{{typeLabel}}»"
   filterPlaceholder: "🔍 Фильтр по нику…"
   emptyPlayers: Рейтинг пока пуст — начните строить!

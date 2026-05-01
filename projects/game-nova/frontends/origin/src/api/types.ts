@@ -339,11 +339,46 @@ export interface Artefact {
 
 // ===== Highscore / public stats (план 72 Ф.4 — S-023, S-024, S-032) =====
 
+// План 72.1.12: backend возвращает все компоненты очков (points, b/r/u/a/e/dm/max),
+// `score` — алиас для выбранной метрики (только в /api/highscore/me).
 export interface HighscoreEntry {
   user_id: string;
   username: string;
-  score: number;
   rank: number;
+  // /api/highscore/me — выбранная метрика по ?type=
+  score?: number;
+  // Все компоненты — из /api/highscore (Top), для отображения по выбору пользователя
+  points?: number;
+  b_points?: number;
+  r_points?: number;
+  u_points?: number;
+  a_points?: number;
+  e_points?: number;
+  dm_points?: number;
+  max_points?: number;
+  alliance_tag?: string | null;
+  home_galaxy?: number | null;
+  home_system?: number | null;
+  home_position?: number | null;
+}
+
+// План 72.1.12: рейтинг альянсов.
+export interface HighscoreAlliance {
+  rank: number;
+  tag: string;
+  name: string;
+  points: number;
+  count: number;
+}
+
+// План 72.1.12: список игроков в отпуске.
+export interface HighscoreVacation {
+  rank: number;
+  user_id: string;
+  username: string;
+  alliance_tag?: string | null;
+  points: number;
+  vacation_since: string;
 }
 
 export interface PublicStats {
