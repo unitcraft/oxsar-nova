@@ -677,6 +677,16 @@ export interface ResourceBuilding {
   cons_energy: number;
   factor: number;
   allow_factor: boolean;
+  // План 72.1.26 ч.B: cascade-payback может перенаправить потребление
+  // hydrogen → silicon → metal (legacy MARKET_BASE_CURS_*).
+  cons_metal?: number;
+  cons_silicon?: number;
+  cons_hydrogen?: number;
+  // "building" | "solar" | "fleet" | "defense" | "stock_fleet" | "halting".
+  kind?: string;
+  helptip?: string;
+  halting_from_coord?: string; // для kind="halting"
+  halting_ships?: Record<string, number>;
 }
 
 export interface ResourceReport {
