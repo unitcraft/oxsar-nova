@@ -1,17 +1,19 @@
-// S-035 MSG — личные сообщения (план 72 Ф.5 Spring 4).
+// S-035 MSG — личные сообщения (план 72 Ф.5 Spring 4,
+// расширен 72.1.17: folder routing).
 //
-// Pixel-perfect зеркало legacy `templates/standard/folder.tpl`:
-//   ntable со списком сообщений, foreach-ряд: sender / subject / time
-//   + чекбоксы для bulk-удаления, ниже — раскрытое тело сообщения.
+// Pixel-perfect зеркало legacy `templates/standard/folder.tpl`.
 //
-// Tabs: inbox / sent (legacy folders 1/2). URL: /msg/inbox по умолчанию.
+// Поддерживаемые URL:
+//   /msg/inbox            — folder=1 (INBOX, легаси)
+//   /msg/sent             — folder=2 (SENT, легаси)
+//   /msg/folder/<N>       — произвольная папка (план 72.1.17)
 //
 // Endpoints:
-//   GET /api/messages          — inbox
-//   GET /api/messages/sent     — sent
-//   DELETE /api/messages/{id}  — удалить одно
+//   GET /api/messages?folder=N   — содержимое папки
+//   GET /api/messages/sent       — отправленные (legacy backwards-compat)
+//   DELETE /api/messages/{id}    — удалить одно
 //   POST /api/messages/{id}/read — пометить прочитанным
-//   POST /api/messages         — отправить (compose)
+//   POST /api/messages           — отправить (compose)
 
 import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
@@ -32,14 +34,28 @@ const MAX_PM_LENGTH = 2000;
 
 export function MessagesScreen() {
   const { t } = useTranslation();
-  const params = useParams<{ folder?: string }>();
-  const folder: MessageFolder =
+  const params = useParams<{ folder?: string; folderId?: string }>();
+
+  // Резолвим источник: legacy 'inbox'/'sent' или числовой folderId.
+  // folderId перекрывает folder, если задан.
+  const numericFolderId =
+    params.folderId !== undefined ? Number(params.folderId) : null;
+  const legacyFolder: MessageFolder =
     params.folder === 'sent' ? 'sent' : 'inbox';
+  const folderKey: MessageFolder | number =
+    numericFolderId !== null && Number.isFinite(numericFolderId)
+      ? numericFolderId
+      : legacyFolder;
+  // 'inbox' для UI-логики (delete-all, expand-mark-read) равно folder=1
+  // и любой другой numericFolderId, который не 2 (sent). 'sent' — это
+  // legacy=2, мы не помечаем читать и не показываем «удалить все».
+  const isSent = folderKey === 'sent' || folderKey === 2;
+  const folder: MessageFolder = isSent ? 'sent' : 'inbox';
 
   const qc = useQueryClient();
   const q = useQuery({
-    queryKey: QK.messages(folder),
-    queryFn: () => fetchMessages(folder),
+    queryKey: QK.messages(folderKey),
+    queryFn: () => fetchMessages(folderKey),
   });
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -79,11 +95,12 @@ export function MessagesScreen() {
   return (
     <>
       <div className="idiv">
-        <Link to="/msg/inbox">
-          <b>{t('message', 'folder')}</b>
+        {/* План 72.1.17: ссылка «← к папкам» (legacy index с списком). */}
+        <Link to="/msg">
+          <b>← {t('message', 'folder')}</b>
         </Link>{' '}
         |{' '}
-        <Link to="/msg/inbox" className={folder === 'inbox' ? 'true' : ''}>
+        <Link to="/msg/inbox" className={folder === 'inbox' && numericFolderId === null ? 'true' : ''}>
           {t('overview', 'unreadPlural') || 'Входящие'}
         </Link>{' '}
         |{' '}

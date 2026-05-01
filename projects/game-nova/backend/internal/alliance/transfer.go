@@ -149,7 +149,8 @@ func (s *Service) RequestTransferCode(ctx context.Context, requesterID, alliance
 		return TransferCodeIssued{}, err
 	}
 
-	// Отправить код системным сообщением (folder=13 SYSTEM).
+	// Отправить код системным сообщением (folder=12 = automsg.FolderSystem,
+	// расширение oxsar-nova; в legacy const folder=13 не существовал).
 	// Best-effort: ошибка не пробрасывается — игрок увидит код в
 	// inbox'е, но запрос уже зафиксирован и можно подтвердить.
 	if s.automsg != nil {
@@ -158,7 +159,7 @@ func (s *Service) RequestTransferCode(ctx context.Context, requesterID, alliance
 			"code":      code,
 			"expiresAt": expiresAt.Format("15:04 02.01.2006"),
 		})
-		_ = s.automsg.SendDirect(ctx, nil, requesterID, 13, title, body)
+		_ = s.automsg.SendDirect(ctx, nil, requesterID, 12, title, body)
 	}
 
 	return TransferCodeIssued{

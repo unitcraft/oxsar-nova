@@ -546,6 +546,20 @@ export interface MessagesList {
   messages: Message[] | null;
 }
 
+// План 72.1.17: legacy folder routing — список папок с счётчиками.
+export interface MessageFolderInfo {
+  folder_id: number;
+  label_key: string; // ключ msgFolder.<key>
+  is_standard: boolean;
+  display_order: number;
+  total: number;
+  unread: number;
+}
+
+export interface MessageFoldersList {
+  folders: MessageFolderInfo[] | null;
+}
+
 export interface MessageCompose {
   to: string; // username получателя (backend ожидает поле "to")
   subject: string;

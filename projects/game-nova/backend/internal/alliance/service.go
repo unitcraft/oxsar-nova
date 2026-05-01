@@ -65,8 +65,9 @@ func (s *Service) tr(group, key string, vars map[string]string) string {
 	return s.bundle.Tr(i18n.LangRu, group, key, vars)
 }
 
-// notifyAlliance (folder=6 MSG_FOLDER_ALLIANCE) — помощник для рассылки
-// уведомления конкретному пользователю. Ошибки глотаются (не критично).
+// notifyAlliance — помощник для рассылки уведомлений в папку
+// MSG_FOLDER_ALLIANCE=6 (legacy `config/consts.php:513`, см.
+// automsg.FolderAlliance). Ошибки глотаются (не критично).
 func (s *Service) notifyAlliance(ctx context.Context, userID, title, body string) {
 	if s.automsg == nil {
 		return

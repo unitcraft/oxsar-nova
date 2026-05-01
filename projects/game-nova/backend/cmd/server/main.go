@@ -626,6 +626,7 @@ func run() error {
 		pr.Delete("/chat/messages/{id}", chatH.DeleteMessage)
 
 		pr.Get("/messages", messageH.Inbox)
+		pr.Get("/messages/folders", messageH.Folders)
 		pr.Get("/messages/sent", messageH.Sent)
 		pr.Post("/messages", messageH.Compose)
 		pr.Delete("/messages", messageH.DeleteAll)

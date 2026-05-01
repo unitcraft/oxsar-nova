@@ -18,19 +18,49 @@ type Handler struct {
 
 func NewHandler(s *Service) *Handler { return &Handler{svc: s} }
 
-// Inbox GET /api/messages
+// Inbox GET /api/messages?folder=<id>
+//
+// План 72.1.17: ?folder=<id> фильтрует по конкретной папке (legacy
+// `?go=MSG&id=ReadFolder&folder=N`). Без параметра — все папки
+// (legacy паритет: index без `id=ReadFolder` показывает summary, но
+// для текущего UI остаётся «все» как backwards-compat).
 func (h *Handler) Inbox(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
 	if !ok {
 		httpx.WriteError(w, r, httpx.ErrUnauthorized)
 		return
 	}
-	list, err := h.svc.Inbox(r.Context(), uid, 100)
+	folder := 0
+	if f := r.URL.Query().Get("folder"); f != "" {
+		fmt.Sscanf(f, "%d", &folder) //nolint:errcheck
+		if folder < 0 {
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid folder"))
+			return
+		}
+	}
+	list, err := h.svc.Inbox(r.Context(), uid, 100, folder)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"messages": list})
+}
+
+// Folders GET /api/messages/folders — список папок с счётчиками
+// для текущего юзера. План 72.1.17 (legacy MSG.class.php::index
+// показывал именно это: набор папок с total / unread / storage).
+func (h *Handler) Folders(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	list, err := h.svc.Folders(r.Context(), uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"folders": list})
 }
 
 // Sent GET /api/messages/sent

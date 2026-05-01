@@ -104,6 +104,7 @@ import {
   MessagesScreen,
   MessageComposeScreen,
 } from './features/messages/MessagesScreen';
+import { MessageFoldersScreen } from './features/messages/MessageFoldersScreen';
 import {
   ChatGlobalScreen,
   ChatAllyScreen,
@@ -222,8 +223,14 @@ function ProtectedRoutes() {
 
           {/* Spring 4 ч.1 (Ф.5) — communication / notes / search / settings */}
           <Route path="/friends" element={<FriendsScreen />} />
-          <Route path="/msg" element={<Navigate to="/msg/inbox" replace />} />
+          {/* План 72.1.17: /msg root — список папок с счётчиками
+              (legacy MSG.class.php index). */}
+          <Route path="/msg" element={<MessageFoldersScreen />} />
           <Route path="/msg/compose" element={<MessageComposeScreen />} />
+          <Route
+            path="/msg/folder/:folderId"
+            element={<MessagesScreen />}
+          />
           <Route path="/msg/:folder" element={<MessagesScreen />} />
           <Route path="/chat" element={<ChatGlobalScreen />} />
           <Route path="/chat/ally" element={<ChatAllyScreen />} />
