@@ -14501,3 +14501,31 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(ranking): план 72.1.12 — type-select + tabs (player/alliance/vacation).
 
+
+---
+
+2026-05-01 — итерация 72.1.13: audit display-only экранов.
+
+  Серия аудитов по чек-листу §20.12 для экранов с 0 actions, где
+  достаточно сверить «все ли поля показаны» — глубокая проверка
+  не нужна.
+
+  **Сделано**:
+  - /changelog — ✅ паритет (bundled CHANGELOG.md, easter-egg legacy
+    не переносим как разработческую шутку без gameplay-эффекта).
+  - /records — ✅ паритет + расширения (backend выдаёт MAX-агрегаты
+    по постройкам/исследованиям/юнитам, UI добавляет my_value и
+    score-record которых в legacy нет).
+  - /widgets — ✅ redirect-only (legacy iframe-виджеты для встраивания
+    на сторонние сайты, в oxsar-nova не нужны).
+  - /tools/tech-calc — ✅ паритет (React-калькулятор 319 строк vs
+    58 PHP+JS legacy; покрывает tech-scale матрицу полностью + тесты).
+  - Audit 72.1.2: 4 строки переведены ❓ → ✅.
+
+  **Файлы**:
+  - docs/plans/72.1.13-display-only-audit.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (4 строки таблицы).
+
+  **Коммит**:
+  docs(plan-72.1.13): audit display-only screens — changelog/records/widgets/tech-calc → ✅.
+
