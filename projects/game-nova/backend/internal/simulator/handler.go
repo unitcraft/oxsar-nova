@@ -16,6 +16,7 @@ package simulator
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
 
 	"oxsar/game-nova/internal/artefact"
@@ -94,12 +95,12 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// План 72.1.34 ч.B: расчёт шанса уничтожения здания-цели (legacy
-	// `Simulator::building_destroy_chance`). Применимо только если
+	// План 72.1.45 §6: реальная формула destroy_chance из Java Assault.java
+	// L.937: `5 × DS_count^0.3` clamped to [0, 25]. Уровень здания-цели в
+	// формулу не входит (legacy не использует его). Применимо только если
 	// `target_building_id`/`level` заданы и атакующий выжил с ≥1 DS.
-	// Формула (упрощённая OGame): chance = min(100, ds_count × 100 / level).
-	// Записываем в last.BuildingDestroyChance + last.TargetDestroyed (avg
-	// > 50% → true).
+	// Записываем в last.BuildingDestroyChance + last.TargetDestroyed (chance
+	// ≥ 25% → true для simulator-репорта; реальный бой бросает RNG).
 	if in.TargetBuildingID > 0 && in.TargetBuildingLevel > 0 {
 		const unitDeathstarID = 42
 		var dsCount int64
@@ -113,12 +114,15 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if dsCount > 0 {
-			chance := float64(dsCount*100) / float64(in.TargetBuildingLevel)
-			if chance > 100 {
-				chance = 100
+			// 5 * pow(ds, 0.3) clamp [0, 25]
+			chance := 5.0 * math.Pow(float64(dsCount), 0.3)
+			if chance > 25.0 {
+				chance = 25.0
+			} else if chance < 0 {
+				chance = 0
 			}
 			last.BuildingDestroyChance = chance
-			last.TargetDestroyed = chance >= 50.0
+			last.TargetDestroyed = chance >= 25.0
 		}
 	}
 
