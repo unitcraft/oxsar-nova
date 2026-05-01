@@ -15312,3 +15312,69 @@ not-a-fix + BA-019 mitigated.
   - feat(origin/frontend): план 72.1.30 — Settings cont, grace-period UI.
   - docs(plan-72.1.30): /settings ⚠ → ✅ + simplification CLOSED.
 
+2026-05-01 — итерация 72.1.26 ч.A: Resource — umode POST-блок + monthly + JSON-fix.
+
+  Подплан 72.1 §20.12 / audit #40 «/resource». Закрывает первую часть
+  расхождения с legacy `Resource.class.php` + `Planet.class.php::getProduction()`
+  по правилу 1:1.
+
+  Реализация (ч.A):
+  - Backend `internal/planet/service.go::UpdateResourceFactors`:
+    проверка `users.umode` через прямой SELECT, при umode возврат
+    `ErrUmodeBlocked` → handler 409 (legacy: `if(!NS::getUser()->get("umode"))`
+    в Resource.class.php:33 блокирует POST setPostAction).
+  - `ResourceReportDTO` +monthly fields (`metal_per_month`,
+    `silicon_per_month`, `hydrogen_per_month` = hourly*720) — legacy
+    resource.tpl показывает дополнительный ряд "За месяц".
+  - **Bug-fix**: JSON-имена полей синхронизированы с OpenAPI и фронтом
+    (`metal_per_day`, `metal_per_week` вместо `daily_metal`/`weekly_metal`).
+    До этого бэкенд отдавал `daily_metal`, фронт читал `metal_per_day`
+    из ответа — ячейки day/week отображали undefined → пустые. Этот
+    баг существовал с момента создания экрана (план 72.1 ч.19).
+  - OpenAPI `ResourceReport` +`metal_per_month`/`silicon_per_month`/
+    `hydrogen_per_month`.
+  - Frontend `ResourceScreen.tsx`:
+    * Подключен `useQuery(QK.me)` → `umode = vacation_since != null`.
+    * Баннер `umodeWarning` сверху формы.
+    * `disabled={umode}` на factor-инпутах, селектах, кнопках
+      Shutdown/StartUp/Применить + ранний return в onSubmit.
+    * Новый ряд «За месяц» в таблице после weekly.
+  - i18n ru/en: `resource.umodeWarning`.
+
+  Что осталось (ч.B/C — отдельный коммит):
+  - Solar satellite отдельная строка (UnitID=39) с энерго-формулой
+    `max(10, min(floor(temp/4+20), 50)) * pow(1.05, energy_tech) *
+    sat_count * solar_satellite_prod / 100` + degradation для
+    sat_count > 16,500,000.
+  - Halting fleets ряды (UnitID=1000003+i) — `SELECT FROM fleets
+    WHERE state='hold' AND dst_planet_id=$1` с потреблением водорода
+    через `unitGroupConsumptionPerHour`.
+  - Virt-fleet / defense / stock_fleet (UnitID 1000000/1000001/1000002)
+    — суммирование ships+defense+exchange_lots с потреблением.
+  - Cascade-payback (legacy Planet.class.php:494-540): когда нет
+    водорода → переключение в silicon → metal через `MARKET_BASE_CURS_*`.
+
+  Audit обновлён: ⚠ с пометкой ч.A закрыта, ч.B/C — следующая итерация.
+  /resource НЕ ставим ✅ до полного 1:1 (правило 72.1 §20.12).
+
+  Изменённые файлы:
+  - projects/game-nova/backend/internal/planet/service.go (umode check
+    + monthly + JSON-имена).
+  - projects/game-nova/backend/internal/planet/repository.go
+    (+ErrUmodeBlocked).
+  - projects/game-nova/backend/internal/planet/handler.go (mapping
+    ErrUmodeBlocked → 409).
+  - projects/game-nova/api/openapi.yaml (+monthly).
+  - projects/game-nova/frontends/origin/src/api/types.ts (+monthly).
+  - projects/game-nova/frontends/origin/src/features/resource/ResourceScreen.tsx
+    (umode, monthly ряд).
+  - projects/game-nova/configs/i18n/{ru,en}.yml (umodeWarning).
+  - docs/plans/72.1.26-resource-cont.md (новый план).
+  - docs/plans/72.1.2-screen-audit.md (#40 ❓ → ⚠ с маркером ч.A done).
+
+  **Коммиты** (по типам задач):
+  - feat(planet): план 72.1.26 ч.A — /resource umode-блок + monthly + JSON-fix.
+  - feat(origin/frontend): план 72.1.26 ч.A — /resource umode + monthly UI.
+  - docs(plan-72.1.26): новый план — Resource cont (umode/solar/halting/monthly/cascade).
+  - docs(plan-72.1.26): audit ❓ → ⚠ + dev-log ч.A.
+
