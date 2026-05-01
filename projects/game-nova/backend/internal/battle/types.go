@@ -197,10 +197,20 @@ type RoundUnit struct {
 type SideResult struct {
 	UserID       string       `json:"user_id"`
 	Username     string       `json:"username,omitempty"`
+	IsAliens     bool         `json:"is_aliens,omitempty"`
 	LostMetal    int64        `json:"lost_metal"`
 	LostSilicon  int64        `json:"lost_silicon"`
 	LostHydrogen int64        `json:"lost_hydrogen"`
-	Units        []UnitResult `json:"units"`
+	// LostPoints — суммарные очки потерянных юнитов (план 72.1.1):
+	//   Σ qty_lost × (cost.metal + cost.silicon + cost.hydrogen) / 1000 × 2
+	// Используется в `users.points -= LostPoints` после реального боя
+	// (порт Java Participant.java:766, Units.java:113-115).
+	LostPoints float64 `json:"lost_points"`
+	// LostUnits — суммарное число потерянных юнитов (Σ qty_lost).
+	// Используется в `users.u_count -= LostUnits` (Java
+	// Participant.java:759-761).
+	LostUnits int64        `json:"lost_units"`
+	Units     []UnitResult `json:"units"`
 }
 
 type UnitResult struct {
