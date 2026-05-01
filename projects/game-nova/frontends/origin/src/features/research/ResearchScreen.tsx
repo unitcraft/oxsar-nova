@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchResearch, startResearch } from '@/api/research';
+import { fetchResearch, startResearch, cancelResearch } from '@/api/research';
 import { packResearch } from '@/api/buildings';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
@@ -25,6 +25,15 @@ export function ResearchScreen() {
 
   const start = useMutation({
     mutationFn: (unitId: number) => startResearch(planetId!, unitId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: QK.research() });
+      if (planetId) void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+    },
+  });
+
+  // План 72.1.39: cancel research-задачи.
+  const cancelMut = useMutation({
+    mutationFn: (queueId: string) => cancelResearch(queueId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: QK.research() });
       if (planetId) void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
@@ -87,6 +96,27 @@ export function ResearchScreen() {
                     {name}&nbsp;{task.target_level}
                   </td>
                   <td width="100px">{formatDuration(secondsUntil(task.end_at))}</td>
+                  {/* План 72.1.39: cancel-кнопка (legacy Research::abort). */}
+                  <td width="60px" align="center">
+                    <button
+                      type="button"
+                      className="button"
+                      disabled={cancelMut.isPending}
+                      title={t('buildings', 'cancelTask') || 'Отменить'}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            (t('buildings', 'cancelConfirm') as string) ||
+                              'Отменить исследование? Возврат 95% ресурсов (100% если <15 сек).',
+                          )
+                        ) {
+                          cancelMut.mutate(task.id);
+                        }
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </td>
                 </tr>
               );
             })}

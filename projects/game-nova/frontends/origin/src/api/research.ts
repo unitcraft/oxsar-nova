@@ -20,3 +20,10 @@ export function startResearch(planetId: string, unitId: number): Promise<QueueIt
     { idempotencyKey: newIdempotencyKey() },
   );
 }
+
+// План 72.1.39: cancel research-задачи (legacy `Research::abort`).
+export function cancelResearch(queueId: string): Promise<void> {
+  return api.delete<void>(`/api/research/${queueId}`, {
+    idempotencyKey: newIdempotencyKey(),
+  });
+}

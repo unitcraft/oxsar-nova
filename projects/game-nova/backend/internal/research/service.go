@@ -34,7 +34,16 @@ var (
 	ErrPlanetOwnership   = errors.New("research: planet not owned by user")
 	ErrNoResearchLab     = errors.New("research: planet has no research lab")
 	ErrQueueItemNotFound = errors.New("research: queue item not found")
+	// План 72.1.39: legacy `Research.class.php` блокировки (umode/observer)
+	// + MAX_RESEARCH_LEVEL.
+	ErrUmodeBlocked      = errors.New("research: blocked in vacation mode")
+	ErrObserverBlocked   = errors.New("research: blocked in observer mode")
+	ErrMaxLevelReached   = errors.New("research: max level reached")
 )
+
+// MaxResearchLevel — legacy `MAX_RESEARCH_LEVEL` (consts.php:305), для
+// non-deathmatch. DEATHMATCH=35 — отдельная ветка для будущего.
+const MaxResearchLevel = 40
 
 type Service struct {
 	db          repo.Exec
@@ -84,6 +93,21 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 	}
 	if p.UserID != userID {
 		return QueueItem{}, ErrPlanetOwnership
+	}
+
+	// План 72.1.39: legacy `Research.class.php` строки 76-78 блокирует
+	// исследование при umode/observer.
+	var umode, isObs bool
+	if err := s.db.Pool().QueryRow(ctx,
+		`SELECT umode, is_observer FROM users WHERE id = $1`, userID,
+	).Scan(&umode, &isObs); err != nil {
+		return QueueItem{}, fmt.Errorf("read user state: %w", err)
+	}
+	if umode {
+		return QueueItem{}, ErrUmodeBlocked
+	}
+	if isObs {
+		return QueueItem{}, ErrObserverBlocked
 	}
 
 	var item QueueItem
@@ -139,6 +163,10 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 			return fmt.Errorf("current level: %w", err)
 		}
 		targetLevel := curLevel + 1
+		// План 72.1.39: legacy MAX_RESEARCH_LEVEL=40 (consts.php:305).
+		if targetLevel > MaxResearchLevel {
+			return ErrMaxLevelReached
+		}
 		cost := economy.CostForLevel(economy.Cost{
 			Metal:    spec.CostBase.Metal,
 			Silicon:  spec.CostBase.Silicon,
@@ -232,6 +260,75 @@ func (s *Service) List(ctx context.Context, userID string) ([]QueueItem, error) 
 		out = append(out, q)
 	}
 	return out, rows.Err()
+}
+
+// Cancel отменяет research-задачу. План 72.1.39 / правило 1:1 для
+// /research (legacy `Research::abort` через `abortConstructionEvent`).
+// Refund 95% (или 100% если <15 сек), удаление события + пометка
+// queue.status='cancelled'.
+//
+// Возвращает ErrQueueItemNotFound если задачи нет.
+func (s *Service) Cancel(ctx context.Context, userID, queueID string) error {
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var (
+			planetID   string
+			startAt    time.Time
+			cm, cs, ch int64
+			ownerID    string
+		)
+		err := tx.QueryRow(ctx, `
+			SELECT cq.planet_id, cq.start_at, cq.cost_metal, cq.cost_silicon, cq.cost_hydrogen,
+			       p.user_id
+			FROM construction_queue cq
+			JOIN planets p ON p.id = cq.planet_id
+			WHERE cq.id = $1 AND cq.unit_type = 'research'
+			  AND cq.status IN ('queued','running')
+			FOR UPDATE
+		`, queueID).Scan(&planetID, &startAt, &cm, &cs, &ch, &ownerID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrQueueItemNotFound
+			}
+			return fmt.Errorf("select queue: %w", err)
+		}
+		if ownerID != userID {
+			return ErrPlanetOwnership
+		}
+
+		refundFactor := 0.95
+		if time.Since(startAt) < 15*time.Second {
+			refundFactor = 1.0
+		}
+		rm := int64(float64(cm) * refundFactor)
+		rs := int64(float64(cs) * refundFactor)
+		rh := int64(float64(ch) * refundFactor)
+		if _, err := tx.Exec(ctx, `
+			UPDATE planets SET metal = metal + $1, silicon = silicon + $2, hydrogen = hydrogen + $3
+			WHERE id = $4
+		`, rm, rs, rh, planetID); err != nil {
+			return fmt.Errorf("refund: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO res_log (user_id, planet_id, reason, delta_metal, delta_silicon, delta_hydrogen)
+			VALUES ($1, $2, 'refund', $3, $4, $5)
+		`, userID, planetID, rm, rs, rh); err != nil {
+			return fmt.Errorf("res_log: %w", err)
+		}
+		// Cancel pending event (его handler не должен apply'ить уровень).
+		if _, err := tx.Exec(ctx, `
+			UPDATE events SET state='cancelled'
+			WHERE kind=3 AND state='wait' AND user_id=$1
+			  AND payload @> jsonb_build_object('queue_id', $2::text)
+		`, userID, queueID); err != nil {
+			return fmt.Errorf("cancel event: %w", err)
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE construction_queue SET status='cancelled' WHERE id=$1`,
+			queueID); err != nil {
+			return fmt.Errorf("update queue: %w", err)
+		}
+		return nil
+	})
 }
 
 // Levels возвращает текущие уровни всех исследований пользователя.

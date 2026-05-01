@@ -512,6 +512,8 @@ func run() error {
 
 		pr.Post("/planets/{id}/research", researchH.Enqueue)
 		pr.Get("/research", researchH.List)
+		// План 72.1.39: legacy `Research::abort` — отмена с refund.
+		pr.Delete("/research/{queueId}", researchH.Cancel)
 
 		pr.Post("/planets/{id}/shipyard", shipyardH.Enqueue)
 		pr.Get("/planets/{id}/shipyard/queue", shipyardH.List)
