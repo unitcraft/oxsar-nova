@@ -3316,6 +3316,16 @@ p2pExchange:
   status_cancelled: "Отозван"
   status_expired: "Истёк"
 
+# План 72.1.45 §9: ExchangeOpts admin страница (legacy ?go=ExchangeOpts).
+exchangeOpts:
+  title: "Настройки биржи"
+  titleLabel: "Название"
+  feeLabel: "Комиссия (%)"
+  feeHint: "0..50%, влияет на расчёт прибыли в статистике"
+  feeOutOfRange: "Комиссия должна быть в диапазоне 0..50%"
+  saveBtn: "Сохранить"
+  saved: "✅ Сохранено"
+
 # План 72.1.34: simulator extras (ч.B target-building + ч.C battle
 # artefacts + ч.D recyclers).
 simulator:

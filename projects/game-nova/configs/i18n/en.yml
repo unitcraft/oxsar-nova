@@ -3316,6 +3316,16 @@ p2pExchange:
   status_cancelled: "Cancelled"
   status_expired: "Expired"
 
+# План 72.1.45 §9: ExchangeOpts admin page (legacy ?go=ExchangeOpts).
+exchangeOpts:
+  title: "Exchange settings"
+  titleLabel: "Title"
+  feeLabel: "Fee (%)"
+  feeHint: "0..50%, affects profit calculations"
+  feeOutOfRange: "Fee must be in 0..50%"
+  saveBtn: "Save"
+  saved: "✅ Saved"
+
 # План 72.1.34: simulator extras (ч.B + ч.C + ч.D).
 simulator:
   targetBuilding: "Target: building"

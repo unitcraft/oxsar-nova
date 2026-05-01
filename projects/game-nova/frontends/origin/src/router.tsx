@@ -89,6 +89,7 @@ import { AlliancePageScreen } from './features/alliance/AlliancePageScreen';
 import { ResourceMarketScreen } from './features/resource-market/ResourceMarketScreen';
 import { MarketScreen } from './features/market/MarketScreen';
 import { P2PExchangeScreen } from './features/p2p-exchange/P2PExchangeScreen';
+import { ExchangeOptsScreen } from './features/p2p-exchange/ExchangeOptsScreen';
 import { RepairScreen } from './features/repair/RepairScreen';
 import { BattleStatsScreen } from './features/battlestats/BattleStatsScreen';
 import { FleetOperationsScreen } from './features/fleet-operations/FleetOperationsScreen';
@@ -208,6 +209,8 @@ function ProtectedRoutes() {
           <Route path="/market" element={<MarketScreen />} />
           {/* План 72.1 §20.12 P2P-биржа: статистика брокера. */}
           <Route path="/p2p-exchange" element={<P2PExchangeScreen />} />
+          {/* План 72.1.45 §9: ExchangeOpts admin (legacy ?go=ExchangeOpts). */}
+          <Route path="/p2p-exchange/opts" element={<ExchangeOptsScreen />} />
           <Route path="/repair" element={<RepairScreen />} />
           <Route path="/battlestats" element={<BattleStatsScreen />} />
           <Route
