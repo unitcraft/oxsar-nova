@@ -14529,3 +14529,74 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   docs(plan-72.1.13): audit display-only screens — changelog/records/widgets/tech-calc → ✅.
 
+
+---
+
+2026-05-01 — итерация 72.1.14: Friends — двусторонний accept-flow.
+
+  Закрытие simplification P72.1.13.FRIENDS_UNIDIRECTIONAL: legacy
+  buddylist реализует двустороннюю дружбу с подтверждением
+  (accepted=0/1), а origin делал однонаправленную модель из плана 11
+  шаг 5. По §20.12 любое отступление от legacy = баг → закрыли.
+
+  **Сделано**:
+  - migration 0086: ADD COLUMN accepted bool DEFAULT false; backfill
+    существующих как accepted=true + симметричные пары (B,A,true)
+    для всех (A,B); partial-index friends_pending_idx WHERE NOT
+    accepted.
+  - handler.List: `?pending=incoming|outgoing|all` или (default)
+    только mutual=true. SQL подбирается switch-case'ом.
+  - handler.Add: pending по умолчанию; mutual auto-accept если
+    встречная (target,me) уже есть (legacy эквивалент проверки
+    count>0 в обе стороны). Транзакция, idempotent на дубликат своей
+    записи.
+  - handler.Accept (новый POST /api/friends/{id}/accept):
+    транзакция UPDATE встречной accepted=true + INSERT моей
+    симметричной accepted=true (или ON CONFLICT DO UPDATE).
+  - handler.Remove: удаляет ОБЕ стороны (me,$1) и ($1,me) одной
+    DELETE — соответствует legacy `WHERE friend1=me OR friend2=me`.
+  - openapi.yaml: ?pending параметр, /accept endpoint, Friend
+    DTO расширен accepted+direction.
+  - frontend api/friends.ts + types: FriendsFilter='mutual'|'incoming'
+    |'outgoing'|'all', acceptFriend, FriendDirection.
+  - FriendsScreen.tsx переписан: 3 секции (mutual / incoming /
+    outgoing), incoming/outgoing рендерятся только при наличии,
+    кнопки Accept/Decline/Cancel-request.
+  - i18n (ru/en): tabAccepted/Incoming/Outgoing, acceptBtn,
+    declineBtn, cancelRequestBtn.
+  - tests: handler unit-тесты на auth-границы + self-add 400.
+
+  **AutoMsg НЕ реализован** — 1:1 с legacy. В legacy три
+  TODO-комментария закомментированы (legacy фактически не шлёт
+  уведомления). Решение пользователя 2026-05-01: байтовое
+  соответствие, TODO остаётся TODO.
+
+  **Прогон**: `go build ./... && go test ./internal/friends/...`
+  zero issues. `npx tsc --noEmit` zero errors. eslint friends/api
+  zero errors.
+
+  **Файлы**:
+  - docs/plans/72.1.14-friends-accept-flow.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (/friends ❓ → ✅).
+  - docs/simplifications.md (P72.1.13 пометка CLOSED by 72.1.14).
+  - projects/game-nova/migrations/0086_friends_pending.sql (новый).
+  - projects/game-nova/backend/internal/friends/handler.go
+    (полная переработка под двусторонний accept-flow).
+  - projects/game-nova/backend/internal/friends/handler_test.go
+    (новый).
+  - projects/game-nova/backend/cmd/server/main.go (+1 route).
+  - projects/game-nova/api/openapi.yaml (Friend DTO + ?pending +
+    /accept endpoint).
+  - projects/game-nova/frontends/origin/src/api/friends.ts
+    (FriendsFilter, acceptFriend, withPending).
+  - projects/game-nova/frontends/origin/src/api/types.ts
+    (Friend.accepted, FriendDirection).
+  - projects/game-nova/frontends/origin/src/api/query-keys.ts
+    (friends с фильтром).
+  - projects/game-nova/frontends/origin/src/features/friends/FriendsScreen.tsx
+    (3 секции + acceptMut).
+  - projects/game-nova/configs/i18n/{ru,en}.yml (6 ключей).
+
+  **Коммит**:
+  feat(friends): план 72.1.14 — двусторонний accept-flow (legacy buddylist.accepted).
+

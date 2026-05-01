@@ -506,12 +506,19 @@ export interface RecordEntry {
 // ===== Spring 4 (план 72 Ф.5) =====
 
 // S-034 Friends
+// План 72.1.14: двусторонний accept-flow.
+//   accepted=true   → mutual friendship
+//   accepted=false  → pending (направление в `direction`)
+export type FriendDirection = 'mutual' | 'incoming' | 'outgoing';
+
 export interface Friend {
   user_id: string;
   username: string;
   points: number;
   last_seen?: string;
   alliance_tag?: string;
+  accepted: boolean;
+  direction: FriendDirection;
 }
 
 export interface FriendsList {

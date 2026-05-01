@@ -3208,10 +3208,20 @@ paths:
     get:
       tags: [friends]
       security: [{ bearerAuth: [] }]
-      summary: Список друзей текущего игрока.
+      summary: Список друзей / запросов текущего игрока.
       description: |
-        Односторонний friend-list (legacy buddylist): добавление не
-        требует подтверждения второй стороной.
+        Двусторонний friend-list с подтверждением (legacy buddylist
+        с `accepted` flag, план 72.1.14). Без параметра `pending`
+        возвращает только mutual-друзей. С `pending=incoming` —
+        входящие запросы (мне отправили), `outgoing` — отправленные
+        мной (ждут подтверждения), `all` — всё вместе.
+      parameters:
+        - in: query
+          name: pending
+          required: false
+          schema:
+            type: string
+            enum: [all, incoming, outgoing]
       responses:
         "200":
           description: ok
@@ -3229,7 +3239,12 @@ paths:
     post:
       tags: [friends]
       security: [{ bearerAuth: [] }]
-      summary: Добавить пользователя в друзья.
+      summary: Отправить запрос в друзья.
+      description: |
+        Создаёт pending-запись (accepted=false). Если встречная запись
+        от target ко мне уже существует — mutual auto-accept (план
+        72.1.14, legacy эквивалент `addToBuddylist` при count>0 в
+        обе стороны).
       parameters:
         - in: path
           name: userId
@@ -3237,13 +3252,17 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: "#/components/parameters/IdempotencyKey"
       responses:
-        "204": { description: added }
+        "204": { description: added or already exists (idempotent) }
         "400": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
     delete:
       tags: [friends]
       security: [{ bearerAuth: [] }]
-      summary: Удалить пользователя из друзей.
+      summary: Удалить пользователя из друзей (или отменить запрос).
+      description: |
+        Удаляет обе симметричные записи (legacy `delete WHERE
+        friend1=me OR friend2=me`). Работает и для accepted и для
+        pending (отмена outgoing-заявки или отклонение incoming).
       parameters:
         - in: path
           name: userId
@@ -3252,6 +3271,27 @@ paths:
         - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "204": { description: removed }
+
+  /api/friends/{userId}/accept:
+    post:
+      tags: [friends]
+      security: [{ bearerAuth: [] }]
+      summary: Принять входящий запрос в друзья (план 72.1.14).
+      description: |
+        Транзакция: UPDATE встречной записи (sender→me) accepted=true
+        + INSERT моей симметричной (me→sender, accepted=true).
+        Идемпотентен.
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          description: ID отправителя (того, чей запрос принимаем).
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: accepted }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: pending request not found }
 
   /api/chat/{kind}/history:
     get:
@@ -4634,13 +4674,24 @@ components:
 
     Friend:
       type: object
-      required: [user_id, username, points]
+      required: [user_id, username, points, accepted, direction]
       properties:
         user_id:      { type: string, format: uuid }
         username:     { type: string }
         points:       { type: number, format: double }
         last_seen:    { type: string, format: date-time, nullable: true }
         alliance_tag: { type: string, nullable: true }
+        # План 72.1.14: двусторонний accept-flow.
+        accepted:
+          type: boolean
+          description: "true = mutual friendship; false = pending запрос"
+        direction:
+          type: string
+          enum: [mutual, incoming, outgoing]
+          description: |
+            mutual — accepted с обеих сторон (по умолчанию в /api/friends);
+            incoming — запрос мне (?pending=incoming);
+            outgoing — мой запрос ждёт подтверждения (?pending=outgoing).
 
     ChatMessage:
       type: object

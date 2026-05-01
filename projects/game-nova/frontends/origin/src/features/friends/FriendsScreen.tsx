@@ -1,19 +1,29 @@
-// S-034 Friends — список друзей (план 72 Ф.5 Spring 4).
+// S-034 Friends — список друзей и запросов (план 72 Ф.5 Spring 4,
+// расширен 72.1.14: двусторонний accept-flow с подтверждением).
 //
-// Pixel-perfect зеркало legacy `templates/standard/buddylist.tpl`:
-//   ntable с колонками username / points / alliance / position / status.
-//   Удаление через DELETE-кнопку, добавление через input + поиск.
+// Pixel-perfect зеркало legacy `templates/standard/buddylist.tpl` с
+// учётом legacy `Friends.class.php`/`buddylist.accepted=0/1`:
+//   - Mutual-друзья: основная таблица (как раньше).
+//   - Incoming pending: входящие запросы — кнопки Accept/Decline.
+//   - Outgoing pending: отправленные мной — кнопка Cancel.
 //
-// Endpoints: GET /api/friends, POST /api/friends/{userId},
-//            DELETE /api/friends/{userId} + GET /api/search для add-flow.
+// Endpoints: GET /api/friends?pending=...,
+// POST /api/friends/{userId}, POST /api/friends/{userId}/accept,
+// DELETE /api/friends/{userId}.
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { addFriend, fetchFriends, removeFriend } from '@/api/friends';
+import {
+  acceptFriend,
+  addFriend,
+  fetchFriends,
+  removeFriend,
+} from '@/api/friends';
 import { search } from '@/api/search';
 import { QK } from '@/api/query-keys';
 import type { ApiError } from '@/api/client';
+import type { Friend } from '@/api/types';
 import { useTranslation } from '@/i18n/i18n';
 
 function formatLastSeen(
@@ -36,9 +46,17 @@ export function FriendsScreen() {
   const [addQuery, setAddQuery] = useState('');
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  const friendsQ = useQuery({
-    queryKey: QK.friends(),
-    queryFn: fetchFriends,
+  const mutualQ = useQuery({
+    queryKey: QK.friends('mutual'),
+    queryFn: () => fetchFriends('mutual'),
+  });
+  const incomingQ = useQuery({
+    queryKey: QK.friends('incoming'),
+    queryFn: () => fetchFriends('incoming'),
+  });
+  const outgoingQ = useQuery({
+    queryKey: QK.friends('outgoing'),
+    queryFn: () => fetchFriends('outgoing'),
   });
 
   const lookupQ = useQuery({
@@ -47,34 +65,52 @@ export function FriendsScreen() {
     enabled: addQuery.length >= 2,
   });
 
+  function invalidateAll() {
+    void qc.invalidateQueries({ queryKey: ['friends'] });
+  }
+
   const addMut = useMutation({
     mutationFn: addFriend,
     onSuccess: () => {
       setAddQuery('');
       setErrMsg(null);
-      void qc.invalidateQueries({ queryKey: QK.friends() });
+      invalidateAll();
+    },
+    onError: (e) => setErrMsg((e as ApiError).message),
+  });
+
+  const acceptMut = useMutation({
+    mutationFn: acceptFriend,
+    onSuccess: () => {
+      setErrMsg(null);
+      invalidateAll();
     },
     onError: (e) => setErrMsg((e as ApiError).message),
   });
 
   const removeMut = useMutation({
     mutationFn: removeFriend,
-    onSuccess: () => void qc.invalidateQueries({ queryKey: QK.friends() }),
+    onSuccess: invalidateAll,
     onError: (e) => setErrMsg((e as ApiError).message),
   });
 
-  if (friendsQ.isLoading) {
+  if (mutualQ.isLoading) {
     return <div className="idiv">{t('friends', 'loading')}</div>;
   }
-  const friends = friendsQ.data?.friends ?? [];
+  const mutual = mutualQ.data?.friends ?? [];
+  const incoming = incomingQ.data?.friends ?? [];
+  const outgoing = outgoingQ.data?.friends ?? [];
   const candidates = lookupQ.data?.players ?? [];
 
   return (
     <>
+      {/* Mutual-друзья */}
       <table className="ntable">
         <thead>
           <tr>
-            <th colSpan={5}>{t('friends', 'title')}</th>
+            <th colSpan={5}>
+              {t('friends', 'tabAccepted')} ({mutual.length})
+            </th>
           </tr>
           <tr>
             <th>{t('friends', 'colPlayer')}</th>
@@ -85,47 +121,138 @@ export function FriendsScreen() {
           </tr>
         </thead>
         <tbody>
-          {friends.length === 0 ? (
+          {mutual.length === 0 ? (
             <tr>
               <td colSpan={5} className="center">
                 {t('friends', 'empty')}
               </td>
             </tr>
           ) : (
-            friends.map((f) => (
-              <tr key={f.user_id}>
-                <td>{f.username}</td>
-                <td>{Math.round(f.points)}</td>
-                <td>{f.alliance_tag ?? '—'}</td>
-                <td>{formatLastSeen(f.last_seen, t)}</td>
-                <td className="center">
-                  <Link to={`/msg/compose?to=${encodeURIComponent(f.username)}`}>
-                    {t('message', 'newMessage') || 'Сообщение'}
-                  </Link>
-                  {' · '}
-                  <button
-                    type="button"
-                    className="button"
-                    disabled={removeMut.isPending}
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          `${t('friends', 'removeBtn')} ${f.username}?`,
-                        )
-                      ) {
-                        removeMut.mutate(f.user_id);
-                      }
-                    }}
-                  >
-                    ✕
-                  </button>
-                </td>
-              </tr>
+            mutual.map((f) => (
+              <FriendRow
+                key={f.user_id}
+                f={f}
+                tools={
+                  <>
+                    <Link to={`/msg/compose?to=${encodeURIComponent(f.username)}`}>
+                      {t('message', 'newMessage') || 'Сообщение'}
+                    </Link>
+                    {' · '}
+                    <button
+                      type="button"
+                      className="button"
+                      disabled={removeMut.isPending}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `${t('friends', 'removeBtn')} ${f.username}?`,
+                          )
+                        ) {
+                          removeMut.mutate(f.user_id);
+                        }
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </>
+                }
+                t={t}
+              />
             ))
           )}
         </tbody>
       </table>
 
+      {/* Входящие запросы — рендерим только если есть */}
+      {incoming.length > 0 && (
+        <table className="ntable">
+          <thead>
+            <tr>
+              <th colSpan={5}>
+                {t('friends', 'tabIncoming')} ({incoming.length})
+              </th>
+            </tr>
+            <tr>
+              <th>{t('friends', 'colPlayer')}</th>
+              <th>{t('overview', 'points') || 'Очки'}</th>
+              <th>{t('alliance', 'alliance') || 'Альянс'}</th>
+              <th>{t('friends', 'colStatus')}</th>
+              <th>{t('friends', 'colActions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {incoming.map((f) => (
+              <FriendRow
+                key={f.user_id}
+                f={f}
+                tools={
+                  <>
+                    <button
+                      type="button"
+                      className="button"
+                      disabled={acceptMut.isPending}
+                      onClick={() => acceptMut.mutate(f.user_id)}
+                    >
+                      ✓ {t('friends', 'acceptBtn')}
+                    </button>
+                    {' · '}
+                    <button
+                      type="button"
+                      className="button"
+                      disabled={removeMut.isPending}
+                      onClick={() => removeMut.mutate(f.user_id)}
+                    >
+                      ✕ {t('friends', 'declineBtn')}
+                    </button>
+                  </>
+                }
+                t={t}
+              />
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {/* Отправленные запросы — рендерим только если есть */}
+      {outgoing.length > 0 && (
+        <table className="ntable">
+          <thead>
+            <tr>
+              <th colSpan={5}>
+                {t('friends', 'tabOutgoing')} ({outgoing.length})
+              </th>
+            </tr>
+            <tr>
+              <th>{t('friends', 'colPlayer')}</th>
+              <th>{t('overview', 'points') || 'Очки'}</th>
+              <th>{t('alliance', 'alliance') || 'Альянс'}</th>
+              <th>{t('friends', 'colStatus')}</th>
+              <th>{t('friends', 'colActions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {outgoing.map((f) => (
+              <FriendRow
+                key={f.user_id}
+                f={f}
+                tools={
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={removeMut.isPending}
+                    onClick={() => removeMut.mutate(f.user_id)}
+                  >
+                    ✕ {t('friends', 'cancelRequestBtn')}
+                  </button>
+                }
+                t={t}
+              />
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {/* Add-form */}
       <table className="ntable">
         <thead>
           <tr>
@@ -183,5 +310,25 @@ export function FriendsScreen() {
         </div>
       )}
     </>
+  );
+}
+
+function FriendRow({
+  f,
+  tools,
+  t,
+}: {
+  f: Friend;
+  tools: React.ReactNode;
+  t: (g: string, k: string, v?: Record<string, string | number>) => string;
+}) {
+  return (
+    <tr>
+      <td>{f.username}</td>
+      <td>{Math.round(f.points)}</td>
+      <td>{f.alliance_tag ?? '—'}</td>
+      <td>{formatLastSeen(f.last_seen, t)}</td>
+      <td className="center">{tools}</td>
+    </tr>
   );
 }
