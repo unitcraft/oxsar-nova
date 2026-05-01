@@ -15565,3 +15565,54 @@ not-a-fix + BA-019 mitigated.
   - feat(galaxy): план 72.1.32 — backend (repository + handler).
   - feat(origin/frontend): план 72.1.32 — UI (types + screen + i18n).
   - docs(plan-72.1.32): новый план + audit /galaxy ⚠ → ✅ + dev-log.
+
+2026-05-01 — итерация 72.1.33: BuildingInfo — demolish (pack-artefacts отложен).
+
+  Закрывает demolish-хвост 72.1.23 / правило 1:1 для /building/:type
+  (audit #35). Legacy `BuildingInfo::DEMOLISH_NOW` ставит здание на
+  снос на 1 уровень в очередь стройки.
+
+  Реализация:
+  - Backend internal/building/service.go::EnqueueDemolish:
+    cost = (1 / spec.Demolish) × cost_at_current_level (legacy
+    parseChargeFormula); duration = build_duration × 0.5 (стандарт
+    OGame); INSERT в construction_queue + INSERT events Kind=2
+    (KindDemolishConstruction). HandleDemolishConstruction уже был
+    реализован планом 65 Ф.1.
+  - Новая ошибка ErrLevelZero (попытка снести здание на 0).
+  - Backend handler.go::Demolish: POST
+    /api/planets/{id}/buildings/{unitId}/demolish → 201 + QueueItem.
+  - Frontend BuildingInfoScreen: useResolvedPlanet() +
+    fetchBuildingsOverview() для curLevel; кнопка «Снести сейчас»
+    с confirm-prompt появляется при curLevel > 0; useMutation
+    invalidate buildings+planet при успехе.
+  - api/buildings.ts: demolishBuilding(planetId, unitId).
+  - i18n ru/en: новая секция buildinginfo (demolish, demolishNow,
+    demolishConfirm с placeholder'ами {{building}} + {{level}},
+    currentLevel).
+
+  Pack-artefacts (legacy `PackConstruction`/`PackResearch`) отложен
+  как simplification P72.1.33.PACK_ARTEFACTS_DEFERRED. Требует:
+  4 новых типов артефактов (packing/packed × building/research),
+  расширения artefacts_user state, миграции, сервиса активации с
+  requirements check, UI. ~500 LOC — отдельный крупный план.
+  Не блокирует gameplay (premium-фича).
+
+  /building/:type остаётся ⚠ (demolish ✅, pack-artefacts отложен
+  с явной simplification-записью).
+
+  Изменённые файлы:
+  - projects/game-nova/backend/internal/building/service.go.
+  - projects/game-nova/backend/internal/building/handler.go.
+  - projects/game-nova/backend/cmd/server/main.go (route).
+  - projects/game-nova/frontends/origin/src/api/buildings.ts.
+  - projects/game-nova/frontends/origin/src/features/info/BuildingInfoScreen.tsx.
+  - projects/game-nova/configs/i18n/{ru,en}.yml (buildinginfo секция).
+  - docs/plans/72.1.33-building-info-cont.md (новый).
+  - docs/simplifications.md (P72.1.33.PACK_ARTEFACTS_DEFERRED).
+  - docs/plans/72.1.2-screen-audit.md (#35 — обновлён).
+
+  **Коммиты** (по типам задач):
+  - feat(building): план 72.1.33 — EnqueueDemolish + POST .../demolish.
+  - feat(origin/frontend): план 72.1.33 — BuildingInfo demolish UI.
+  - docs(plan-72.1.33): demolish ✅; pack-artefacts deferred + dev-log.
