@@ -249,7 +249,440 @@ if attack > 0 && attack <= ignoreAttack {
 
 ---
 
-## Не-дыры (проверено)
+## Audit движка `internal/battle/` (план 87, 2026-05-01)
+
+Глубокий обзор движка `projects/game-nova/backend/internal/battle/`
+(engine.go ~1040 строк, types.go, simstats.go) + 5 call sites
+(`internal/fleet/{attack,acs_attack,expedition}.go`, `internal/alien/alien.go`,
+`internal/simulator/handler.go`) и сверка с reference-Java (`d:\Sources\oxsar2-java\`).
+
+Сводка находок: **3 critical**, **6 high**, **3 medium**, **3 low/info**.
+Большинство critical — пропавшие фичи относительно legacy (debris formula,
+moon chance, building destroy, ракетная атака). Самый болезненный
+регресс — **BA-007** (опыт занижен в 2× в обычных боях из-за путаницы
+семантики `IsMoon` vs `hasPlanet`).
+
+### BA-007: Опыт за бой занижен в 2× для обычных атак (IsMoon vs hasPlanet)
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: **P0** (затрагивает каждую атаку планеты — большинство боёв)
+- **Статус**: **open**
+- **Категория**: расхождение семантики с legacy
+
+**Файлы**: [engine.go:140](../../projects/game-nova/backend/internal/battle/engine.go#L140), [engine.go:191-193](../../projects/game-nova/backend/internal/battle/engine.go#L191).
+
+**Что не так**: в `Calculate` параметр `hasPlanet` для `computeExperience`
+берётся из `in.IsMoon`:
+
+```go
+atkExp, defExp := computeExperience(report.Winner, report.Rounds,
+    atkPower, defPower, in.IsMoon)
+```
+
+В Java [Assault.java:838](d:/Sources/oxsar2-java/assault/src/assault/Assault.java#L838) условие — `if (planetid == 0)
+battlePowerCoefficient *= 0.5`. То есть «×0.5 опыта **только** если бой
+без планеты-цели» (бой в полёте, ACS-перехват). У Go условие
+семантически противоположно — `if !IsMoon`, что значит «×0.5 если цель
+**не луна**»:
+
+| Сценарий боя | Java (правильно) | Go (текущий баг) |
+|---|---|---|
+| Атака на планету (`IsMoon=false`, planetid≠0) | ×1 | **×0.5 (БАГ)** |
+| Атака на луну (`IsMoon=true`, moonid≠0) | ×1 | ×1 |
+| Бой в полёте (без цели) | ×0.5 | ×0.5 |
+| Симулятор боя (planetid=SIM_PLANET_ID=1) | ×1 | **×0.5 (БАГ)** |
+
+В обычной атаке планеты опыт **в 2 раза меньше нужного**. Тест
+[engine_test.go:721](../../projects/game-nova/backend/internal/battle/engine_test.go#L721) `TestExperience_NoPlanet_HalfCoeff` **не ловит** баг,
+потому что вызывает `computeExperience` напрямую с заранее заданным
+`hasPlanet`, минуя Calculate.
+
+**Фикс**: завести в `Input` отдельный флаг `HasPlanet bool` (по
+умолчанию `true`, ставится `false` явно для боя в полёте) и передавать
+его, а не `IsMoon`.
+
+---
+
+### BA-008: Debris formula расходится с legacy (30% vs 50%/1%)
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P1 (меняет экономику обломков для всех боёв)
+- **Статус**: **open**
+- **Категория**: расхождение формулы с legacy
+
+**Файлы**: [attack.go:328-353](../../projects/game-nova/backend/internal/fleet/attack.go#L328), [Participant.java:773-778](d:/Sources/oxsar2-java/assault/src/assault/Participant.java#L773).
+
+**Что не так**: в Go обломки = `30% от (metal+silicon)` потерянных
+**кораблей**, оборона исключается целиком. В Java — bulk factor зависит
+от типа юнита: **50% для флота, 1% для обороны** ([Assault.java:246-255](d:/Sources/oxsar2-java/assault/src/assault/Assault.java#L246)).
+
+Эффект: при больших морских боях у нас **в ~1.67× меньше обломков от
+флота**, и при разрушении обороны не падает 1% от её стоимости как в
+legacy. Это меняет EV/ROI рециклеров и стимулы к атаке.
+
+**Фикс**: либо вынести debris-расчёт в `engine.go` (заполнять
+`Report.DebrisMetal/Silicon` по правилам Java), либо привести
+`calcDebris` в `attack.go` к 50/1.
+
+---
+
+### BA-009: Moon chance — упрощённая формула (debris/100k vs композитная)
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P2 (геймплей-фича, влияет на эндгейм без катастроф)
+- **Статус**: **open** (возможно «упрощено сознательно» — нужен ADR)
+- **Категория**: пропущенная сложность legacy
+
+**Файлы**: [attack.go:823-877](../../projects/game-nova/backend/internal/fleet/attack.go#L823), [Assault.java:1280-1370](d:/Sources/oxsar2-java/assault/src/assault/Assault.java#L1280).
+
+**Что не так**: Go-формула шанса луны — `min(20, debris/100000)`
+([attack.go:825-828](../../projects/game-nova/backend/internal/fleet/attack.go#L825)). Java-формула композитная:
+- `experienceMoonChance = round(min(atkExp, defExp)^0.8)` if
+  `min(atkExp, defExp) >= MOON_EXP_START_CHANCE`;
+- `debrisMoonChance = (debrisM + debrisS) / MOON_PERCENT_PER_RES`;
+- `moonChance = min(experienceMoonChance, debrisMoonChance, min(atkLost, defLost))`;
+- `guaranteedDebrisMoonChance` (нижний пол), `MOON_MAX_CHANCE` (верх);
+- `moonAllowType` модификатор (вселенная исчерпала лимит лун);
+- финальный roll vs random.
+
+Эффект: у нас луны выпадают вне зависимости от опыта обоих сторон и
+числа потерь. В legacy «гарантированно крупный бой» давал большой шанс,
+у нас — только большой debris.
+
+**Фикс**: либо порт композитной формулы (с `users.e_points` как опытом),
+либо ADR «упрощённый шанс луны как осознанный trade-off с указанием
+причины».
+
+---
+
+### BA-010: Building destroy / Moon destroy / DeathStar self-destroy не реализованы
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P1 (для прод-запуска отсутствует целая механика)
+- **Статус**: **open**
+- **Категория**: фича отсутствует целиком
+
+**Файлы**: ничего в Go, [Assault.java:850-1000](d:/Sources/oxsar2-java/assault/src/assault/Assault.java#L850) (полный блок destroy).
+
+**Что не так**: после боя в Java есть три отдельных пути:
+
+1. **Уничтожение луны Death Star'ами** при `targetMoon==true && attackerWon`
+   — formula `chance = 2 × (DS - minDS + 1)^0.45`, capped 20%; при
+   успехе луна стирается, при провале — DS-флот атакующего взрывается с
+   `attackerFleetsExplodeChance = 70%`.
+2. **Разрушение здания** при `targetBuildingid != 0` — formula
+   `chance = 5 × DS^0.3`, capped 25%; metal/silicon здания добавляются
+   к `planetMetal/Silicon` (пополняют добычу атакующего).
+3. **Само-уничтожение DS при попытке destroy** — formula
+   `100 - clamp(targetDestroyChance × 4, 50, 90)`. Часть DS гибнут.
+
+В Go всех трёх путей **нет**. `Report.MoonChance/MoonCreated`,
+`HaulMetal/Silicon/Hydrogen` — просто болтаются в типе как
+поля, но никогда не заполняются движком (только привязка через
+`fleet/attack.go::tryCreateMoon`, см. BA-009).
+
+Эффект: невозможно уничтожить луну, нельзя выпиливать постройки врага
+DS-флотом, DS не взрываются при провале атаки на луну. Это **basic
+OGame-механика**.
+
+**Фикс**: отдельный план «port destroy-mechanics», требует решения
+«что считать planetDiameter для лунной формулы», работы с `targetBuildingid`
+в `Input` и записи в БД.
+
+---
+
+### BA-011: Опыт за ракетную атаку начисляется (legacy не начисляет)
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P3 (мелочь, IPM редко используются)
+- **Статус**: **open**
+- **Категория**: расхождение правила с legacy
+
+**Файлы**: [engine.go:139-143](../../projects/game-nova/backend/internal/battle/engine.go#L139), [Assault.java:811](d:/Sources/oxsar2-java/assault/src/assault/Assault.java#L811).
+
+**Что не так**: Java — `if (!isRocketAttack && ...)` блокирует расчёт
+опыта при IPM-ударе. У Go нет ни поля `Input.IsRocketAttack`, ни такой
+проверки. В `internal/rocket/` логика IPM есть отдельно, **возможно** не
+вызывает `battle.Calculate` (проверить отдельно), но если будет
+переписано через Calculate — игроки получат халявный опыт за IPM.
+
+**Фикс**: добавить `Input.IsRocketAttack bool`, в `computeExperience`
+рано выйти при `isRocket=true`. Пока IPM не идут через Calculate —
+trivial-задача на будущее.
+
+---
+
+### BA-012: SimStats.AttackerExp — не опыт, а сумма ресурсов противника
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P1 (критичный мисдизайн UI симулятора)
+- **Статус**: **open**
+- **Категория**: данные UI расходятся с реальностью
+
+**Файлы**: [simstats.go:60-65](../../projects/game-nova/backend/internal/battle/simstats.go#L60), [types.go:102-103](../../projects/game-nova/backend/internal/battle/types.go#L102).
+
+**Что не так**: в `MultiRun` поле `SimStats.AttackerExp` заполняется
+**не очками опыта**, а **сумарными потерями ресурсов противника**:
+
+```go
+atkExp += defLostM + defLostS + defLostH
+defExp += atkLostM + atkLostS + atkLostH
+```
+
+Комментарий рядом честно говорит «приближённо как в legacy», но поле
+называется `attacker_exp` и попадает в JSON ответ симулятора как
+`AttackerExp/DefenderExp`. UI покажет «опыт атакующего: 1 234 567»
+вместо реальных 5-10 очков — т.е. в 100 000× больше.
+
+**Фикс**: либо переименовать поля в `SimStats` на `EstimatedAtkExp`
+(понятная семантика), либо **вызывать в multi-run`computeExperience`**
+для каждой итерации (правильно), либо собирать `Report.AttackerExp` через
+`avg(reps[i].AttackerExp)` (тоже правильно — он уже считается).
+
+---
+
+### BA-013: Tech.Laser/Ion/Plasma — поля игнорируются
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P2 (фича отсутствует, но её и в legacy частично нет)
+- **Статус**: **open**
+- **Категория**: фича отсутствует / не нужна
+
+**Файлы**: [types.go:48-52](../../projects/game-nova/backend/internal/battle/types.go#L48), нигде не читается в [engine.go](../../projects/game-nova/backend/internal/battle/engine.go).
+
+**Что не так**: в `Tech` есть `Laser/Ion/Plasma int`, но `engine.go`
+их **не использует**. В legacy эти tech модифицируют атаку конкретных
+unit-ов (energy weapons). В config'е на 2026-05-01 урон зашит в
+`unit.Attack` по умолчанию, тех-уровень не масштабирует.
+
+**Фикс**: либо реализовать (добавить factor аналогично `gunFactor`),
+либо удалить поля из `Tech` (YAGNI). См. [docs/balance/3channel-combat-idea.md](3channel-combat-idea.md)
+— там обсуждается расширение боевой системы на 3 канала, тогда поля
+понадобятся.
+
+---
+
+### BA-014: IsAliens поле не учитывается в Calculate
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P3 (low — пока ApplyBattleResult фильтрует)
+- **Статус**: **open**
+- **Категория**: фича частично реализована
+
+**Файлы**: [engine.go](../../projects/game-nova/backend/internal/battle/engine.go) (нигде не читается), [types.go:27](../../projects/game-nova/backend/internal/battle/types.go#L27).
+
+**Что не так**: `Side.IsAliens bool` — есть в типе, передаётся через
+JSON, копируется в `SideResult` (engine.go:993). Но в **самой формуле
+боя** (uron, опыт, потери) флаг **никак не используется**. Java для
+пришельцев меняет несколько правил:
+- skip building-exists check ([Assault.java:912](d:/Sources/oxsar2-java/assault/src/assault/Assault.java#L912));
+- особый haul (только metal/silicon, hydrogen=0);
+- defender'ы-aliens не получают `users.e_points` (наш `ApplyBattleResult`
+  это уже учитывает по флагу).
+
+**Фикс**: пока не нужен. Зафиксировать как known-limitation на случай
+когда будем делать «alien empire» или сложнее текущей одноразовой
+HOLDING-логики.
+
+---
+
+### BA-015: Validate пропускает malicious input (Damaged>Quantity, ShellPercent < 0/>100, Front >> 30, Rapidfire без лимита)
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P1 (для симулятор-handler где input открыт через JSON)
+- **Статус**: **open**
+- **Категория**: дыра в правилах / возможный exploit
+
+**Файлы**: [engine.go:970-985](../../projects/game-nova/backend/internal/battle/engine.go#L970), [simulator/handler.go](../../projects/game-nova/backend/internal/simulator/handler.go).
+
+**Что не так**: `validate` проверяет только `Quantity < 0`. Не отвергает:
+
+- `Damaged > Quantity` (юнит «повреждён сильнее, чем существует»). У нас
+  есть `clampDamaged` на этапе `newState`, но это инвариант приложения
+  — лучше отвергать на входе.
+- `ShellPercent < 0` или `> 100`. Та же ситуация — `clampPercent` после.
+- `Front > 30` или `< 0`. Влияет на `unitWeight = 2^Front × Quantity`.
+  Если кто-то подсунет Front=63 — `2^63` overflow в float64, weight
+  становится огромным, вся пропорциональная дробёжка ломается. Сейчас
+  `unitWeight` clamped на [0, 30], но это в самой функции — лучше
+  отвергать на входе.
+- `Rapidfire[i][j]` — нет лимита значения. Злонамеренный клиент через
+  `simulator/handler.go` может прислать `{1: {2: 1_000_000_000}}`,
+  получить `shots = quantity × 10^9` и хотя бы вызвать timeout (или
+  переполнение int64 в `shots × attack`).
+- `Tech.Gun/Shield/Shell > 99` — `gunFactor = 1 + 99×0.10 = 10.9×`,
+  attack умножается на 10.9. Не дыра, но защиту хорошо бы.
+
+Симулятор-handler уже залогинен (`auth.UserID(r.Context())`), но любой
+залогиненный юзер может прислать malicious input.
+
+**Фикс**: расширить `validate`:
+
+```go
+if u.Damaged < 0 || u.Damaged > u.Quantity { return ErrInvalidInput }
+if u.ShellPercent < 0 || u.ShellPercent > 100 { return ErrInvalidInput }
+if u.Front < 0 || u.Front > 30 { return ErrInvalidInput }
+// Rapidfire: всем парам value <= 100 (legacy максимум).
+// Tech: все поля 0..99.
+```
+
+---
+
+### BA-016: Слабый шутер всегда стреляет минимум 1 раз (rawShots=0 → 1)
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P3 (мелкая дисперсия в крупных боях)
+- **Статус**: **open**
+- **Категория**: расхождение правила с legacy / численное
+
+**Файлы**: [engine.go:758-760](../../projects/game-nova/backend/internal/battle/engine.go#L758).
+
+**Что не так**: при распределении выстрелов по целям пропорционально
+weight:
+
+```go
+rawShots := int64(math.Round(float64(shooter.quantity) * portion))
+if rawShots <= 0 {
+    rawShots = 1
+}
+```
+
+Если `portion ≈ 0` (слабый юнит среди очень сильных целей), он всё
+равно делает **минимум 1 выстрел в каждую цель**. Например, 1 Light
+Fighter среди 1000 Lancer'ов противника — стреляет в каждый Lancer
+по 1 разу, давая `1000 × attack_LF` урона по совокупности.
+
+В Java [Units.processAttack:336](d:/Sources/oxsar2-java/assault/src/assault/Units.java#L336) формула пропорциональная без
+гарантии минимума. Эффект — у нас слабые юниты в **больших боях**
+имеют больше «номинального» вклада.
+
+**Фикс**: либо убрать guard (тогда слабые юниты бьют только при
+`portion > 1/quantity`), либо статистический подход — `rng.IntN`
+roll'ом с вероятностью `portion`. Java-вариант проще: убрать guard.
+
+---
+
+### BA-017: Rapidfire применяется per-target, а не per-shooter (расхождение с Java)
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P2 (меняет числовые цифры боя в крупных RF-цепочках)
+- **Статус**: **open**
+- **Категория**: расхождение формулы с legacy
+
+**Файлы**: [engine.go:761-762](../../projects/game-nova/backend/internal/battle/engine.go#L761), [Units.java:336-340](d:/Sources/oxsar2-java/assault/src/assault/Units.java#L336).
+
+**Что не так**: в Go rapidfire применяется **после** распределения
+выстрелов:
+
+```go
+rawShots := round(quantity × portion)  // распределили
+shots := rawShots * rf                  // умножили на rapidfire
+```
+
+В Java: `total_shots = quantity × rf`, потом распределение по целям.
+Разница: у нас RF не масштабирует число шотов **с других целей**.
+Например, BS (RF=10 vs LF) против 50% LF и 50% Cruiser:
+
+| Метод | Всего shots при 100 BS | По LF | По Cruiser |
+|---|---|---|---|
+| Java | 100×10 = 1000 (только LF засчитывают RF) | 500×10=5000 | 500×1=500 |
+| Go | 50×10=500 + 50×1=50 = 550 | 50×10=500 | 50×1=50 |
+
+В Java получается заметно больше выстрелов по «своей» жертве.
+
+**Фикс**: пересмотреть распределение — сначала `rawShots = quantity × portion`,
+затем для каждой цели `shots × rapidfire(this_target)`. Возможно текущая
+семантика более «справедливая», но это **отклонение от паритета**.
+
+---
+
+### BA-018: Front contributes to weight (получает БОЛЬШЕ выстрелов), а не absorb (получает первым)
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P1 (фундаментальное расхождение боевой механики)
+- **Статус**: **open**
+- **Категория**: расхождение концепции с legacy
+
+**Файлы**: [engine.go:955-968](../../projects/game-nova/backend/internal/battle/engine.go#L955), [Units.java getStartTurnWeight](d:/Sources/oxsar2-java/assault/src/assault/Units.java).
+
+**Что не так**: В Go `unitWeight = 2^Front × Quantity` означает «больше
+front → больше выстрелов по этому юниту получает». То есть **высокий
+front = front-line absorber**, как в Java. Но в legacy тoже так? Нужно
+сверить. Если в Java Front действительно контролирует «получение
+выстрелов» (sense-check: `getStartTurnWeight` название), то всё верно.
+Если же Front — это «приоритет, кто бьёт в текущем раунде» — то в Go
+семантика обратна.
+
+⚠️ **Open Question**: требуется уточнить семантику `getStartTurnWeight`
+в Java (нужно ~30 мин на разбор Units.java и Assault.java
+shootAtSides). На момент 2026-05-01 — флаг для повторной проверки.
+
+---
+
+### BA-019: int64 для LostMetal — теоретическое переполнение при 10^15+ потерях
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P3 (теоретический edge case)
+- **Статус**: **open** (close-as-not-a-fix вероятно)
+- **Категория**: численное
+
+**Файлы**: [types.go:201-203](../../projects/game-nova/backend/internal/battle/types.go#L201), [engine.go:1008-1010](../../projects/game-nova/backend/internal/battle/engine.go#L1008).
+
+**Что не так**: `LostMetal int64` = `Σ lost × Cost.Metal`. При
+`Quantity = 10^9` (теоретически возможно через тилт-баг) и
+`Cost.Metal = 10^7` получим `10^16`, что < `int64.MAX = 9.2×10^18`.
+Безопасно, но тонкий margin. Защита: ограничить `Quantity`
+на этапе validate (см. BA-015).
+
+---
+
+### BA-020: RNG не совместим с java.util.Random (cross-verification невозможен)
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P2 (блокирует §14.4 ТЗ — golden-сверку с Assault.jar)
+- **Статус**: **open** (план — отдельный)
+- **Категория**: тестируемость
+
+**Файлы**: [pkg/rng/rng.go](../../projects/game-nova/backend/pkg/rng/rng.go) (xorshift64*),
+[Java Random](https://docs.oracle.com/javase/8/docs/api/java/util/Random.html) (LCG).
+
+**Что не так**: ADR-0002 декларирует «совместимость по семантике, не
+bit-в-bit», но §14.4 ТЗ требует cross-verification против Assault.jar.
+Это требует **JavaRandom-адаптера** (xorshift и Java.util.Random не
+совпадают, у Java LCG `seed = (seed × 0x5DEECE66D + 0xB) & ((1L<<48)-1)`).
+Адаптер сейчас отсутствует.
+
+**Фикс**: реализовать `rng.NewJavaRandom(seed)` для cross-verification.
+Не блокирует прод (наш xorshift статистически валиден), но блокирует
+golden-снимки.
+
+---
+
+### BA-021: Multi-sim первая итерация имеет другой RNG-character (seed=0 → golden)
+
+- **Дата находки**: 2026-05-01
+- **Серьёзность**: P3 (артефакт)
+- **Статус**: **open**
+- **Категория**: численное
+
+**Файлы**: [simstats.go:32](../../projects/game-nova/backend/internal/battle/simstats.go#L32), [rng.go:23-27](../../projects/game-nova/backend/pkg/rng/rng.go#L23).
+
+**Что не так**: в `MultiRun(in, n)` `in.Seed = seed0 + i`. При
+`seed0 == 0`:
+- i=0 → `rng.New(0)` подменяет на golden-ratio константу.
+- i=1 → `rng.New(1)` нормальный xorshift.
+
+Первая симуляция из N имеет другой character RNG. Не сильно меняет
+статистику, но создаёт неожиданный pattern — `seed=0` всегда даёт
+тот же исход, не зависящий от N.
+
+**Фикс**: либо убрать guard в `rng.New` (требует изменения семантики
+RNG для всех клиентов), либо в `MultiRun` стартовать `i = 1` если
+`seed0 == 0`.
+
+---
+
+
 
 Записи о том, что проверили и дыр не нашли — чтобы не перепроверять.
 
@@ -269,6 +702,13 @@ if attack > 0 && attack <= ignoreAttack {
 ### NF-003: Боевой движок (ballistics/masking/ablation) — корректен
 
 - **Проверено**: 2026-04-24
+- **Update 2026-05-01**: ⚠️ **частично пересмотрено** — глубокий audit
+  (план 87) подтвердил корректность *именно этих трёх блоков*
+  (ballistics/masking, multi-channel attack, ablation order). Но
+  движок в целом имеет **15 находок BA-007..BA-021**, см. секцию
+  «Audit движка» выше. NF-003 НЕ покрывает: формулу опыта (BA-007),
+  debris (BA-008), отсутствие destroy/moon-механик (BA-009/BA-010),
+  validate-дыру (BA-015), front-семантику (BA-018), и др.
 - **Файлы**: [backend/internal/battle/engine.go](../../backend/internal/battle/engine.go)
 - **Проверено**: формула ballistics vs masking распределяет выстрелы
   правильно. Multi-channel attack раздаёт урон по каналам корректно.
