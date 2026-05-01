@@ -3236,3 +3236,7 @@ buildinginfo:
   demolishNow: "Demolish now"
   demolishConfirm: "Demolish {{building}} to level {{level}}?"
   currentLevel: "Current level"
+  # План 72.1.33 ч.2: pack-артефакты.
+  packBuilding: "📦 Pack building"
+  packResearch: "📦 Pack research"
+  packConfirm: "Pack into artefact? Level drops by 1, you'll receive a packed artefact in inventory. Requires a packing artefact on this planet."

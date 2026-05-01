@@ -71,3 +71,37 @@ export function demolishBuilding(
     { idempotencyKey: newIdempotencyKey() },
   );
 }
+
+// План 72.1.33 ч.2: legacy `BuildingInfo::packCurrentConstruction` —
+// упаковка здания в packed-building артефакт (требует held packing-
+// building артефакта на этой планете, иначе backend вернёт 409).
+export interface PackedArtefact {
+  id: string;
+  user_id: string;
+  unit_id: number;
+  state: string;
+}
+
+export function packBuilding(
+  planetId: string,
+  unitId: number,
+): Promise<PackedArtefact> {
+  return api.post<PackedArtefact>(
+    `/api/planets/${planetId}/buildings/${unitId}/pack`,
+    {},
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}
+
+// План 72.1.33 ч.2: legacy `BuildingInfo::packCurrentResearch` —
+// упаковка исследования. planetId — текущая планета (контекст).
+export function packResearch(
+  planetId: string,
+  unitId: number,
+): Promise<PackedArtefact> {
+  return api.post<PackedArtefact>(
+    `/api/planets/${planetId}/research/${unitId}/pack`,
+    {},
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}

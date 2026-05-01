@@ -15,7 +15,11 @@
 import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchBuildingCatalog } from '@/api/catalog';
-import { fetchBuildingsOverview, demolishBuilding } from '@/api/buildings';
+import {
+  fetchBuildingsOverview,
+  demolishBuilding,
+  packBuilding,
+} from '@/api/buildings';
 import { QK } from '@/api/query-keys';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber, formatDuration } from '@/lib/format';
@@ -60,6 +64,24 @@ export function BuildingInfoScreen() {
       }
     },
     onError: (e) => setDemolishErr((e as ApiError).message),
+  });
+
+  // План 72.1.33 ч.2: pack building через packing-артефакт.
+  const [packErr, setPackErr] = useState<string | null>(null);
+  const packBuildingMut = useMutation({
+    mutationFn: () => {
+      if (!planetId || !q.data) return Promise.reject(new Error('no planet'));
+      return packBuilding(planetId, q.data.id);
+    },
+    onSuccess: () => {
+      setPackErr(null);
+      if (planetId) {
+        void qc.invalidateQueries({ queryKey: QK.buildingsOverview(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.artefacts() });
+      }
+    },
+    onError: (e) => setPackErr((e as ApiError).message),
   });
 
   if (q.isLoading) return <div className="idiv">…</div>;
@@ -166,6 +188,34 @@ export function BuildingInfoScreen() {
                     <span className="false">{demolishErr}</span>
                   </div>
                 )}
+
+                {/* План 72.1.33 ч.2: pack-building через packing-артефакт. */}
+                <p style={{ marginTop: '0.8em' }}>
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={packBuildingMut.isPending}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          (t('buildinginfo', 'packConfirm') as string) ||
+                            `Упаковать ${name} в артефакт (нужен packing-артефакт на этой планете)?`,
+                        )
+                      ) {
+                        packBuildingMut.mutate();
+                      }
+                    }}
+                  >
+                    {packBuildingMut.isPending
+                      ? '…'
+                      : t('buildinginfo', 'packBuilding') || '📦 Упаковать здание'}
+                  </button>
+                  {packErr && (
+                    <div>
+                      <span className="false">{packErr}</span>
+                    </div>
+                  )}
+                </p>
               </td>
             </tr>
           </tbody>

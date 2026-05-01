@@ -3236,3 +3236,7 @@ buildinginfo:
   demolishNow: "Снести сейчас"
   demolishConfirm: "Снести {{building}} до уровня {{level}}?"
   currentLevel: "Текущий уровень"
+  # План 72.1.33 ч.2: pack-артефакты.
+  packBuilding: "📦 Упаковать здание"
+  packResearch: "📦 Упаковать исследование"
+  packConfirm: "Упаковать в артефакт? Уровень понизится на 1, в инвентаре появится packed-артефакт. Требуется packing-артефакт на этой планете."
