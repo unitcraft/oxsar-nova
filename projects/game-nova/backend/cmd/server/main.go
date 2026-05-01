@@ -292,7 +292,7 @@ func run() error {
 	messageSvc := message.NewService(db)
 	messageH := message.NewHandler(messageSvc)
 
-	marketSvc := market.NewService(db)
+	marketSvc := market.NewService(db).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
 	marketH := market.NewHandler(marketSvc, rdb)
 
 	rocketSvc := rocket.NewService(db, cat, cfg.Game.Speed, cfg.Game.NumGalaxies, cfg.Game.NumSystems).WithBundle(i18nBundle)

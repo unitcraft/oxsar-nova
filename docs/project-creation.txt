@@ -14915,3 +14915,49 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(monitor-planet): план 72.1.20 — паритет с legacy (range + hydrogen + events + AutoMsg).
 
+
+---
+
+2026-05-01 — итерация 72.1.21: Resource Market — credit-exchange UI + AutoMsg.
+
+  Закрытие /resource-market ❓ → ✅ по §20.12. Origin поддерживал
+  только M↔S↔H обмен; legacy `Credit_ex` (покупка ресурсов за кредиты)
+  был отмечен как simplification «не входит в S-020». Backend
+  ExchangeCredit уже был реализован, но без UI и без AutoMsg.
+
+  **Сделано (1:1 с legacy)**:
+  - market.Service: WithAutoMsg + WithBundle hooks; userLang helper.
+  - service.ExchangeCredit: после успешного списания credit и
+    зачисления ресурса отправляет AutoMsg `creditMarketPurchase`
+    в folder=8 (FolderCredit) — legacy `MSG_CREDIT_MARKET` в
+    `Market.class.php:250-258`.
+  - main.go: marketSvc.WithAutoMsg(automsgSvc).WithBundle(i18nBundle).
+  - api/market.ts: exchangeCredit + CreditExchangeResult DTO.
+  - ResourceMarketScreen: вторая <form> ниже — селект resource +
+    input credits + кнопка «Купить за кредиты»; результат в
+    `creditLast`.
+  - i18n (ru/en):
+    - market.creditAmountLabel, creditExchangeBtn, creditLastExchange.
+    - autoMessages.creditMarketPurchase.title/body.
+
+  **Не сделано (вне scope)**:
+  - Multi-resource credit_ex в одном запросе (legacy
+    `Credit_ex(metal, silicon, hydrogen)`). UX-ценность низкая —
+    можно по очереди купить нужное.
+
+  **Прогон**: `go build ./...` zero issues. `tsc --noEmit` zero errors.
+  `eslint resource-market market.ts` zero errors.
+
+  **Файлы**:
+  - docs/plans/72.1.21-resource-market-credit.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#13 → ✅).
+  - projects/game-nova/backend/internal/market/service.go (AutoMsg).
+  - projects/game-nova/backend/cmd/server/main.go (wiring).
+  - projects/game-nova/frontends/origin/src/api/market.ts (exchangeCredit).
+  - projects/game-nova/frontends/origin/src/features/resource-market/ResourceMarketScreen.tsx
+    (credit-form блок).
+  - projects/game-nova/configs/i18n/{ru,en}.yml (4 ключа).
+
+  **Коммит**:
+  feat(resource-market): план 72.1.21 — credit-exchange UI + AutoMsg.
+

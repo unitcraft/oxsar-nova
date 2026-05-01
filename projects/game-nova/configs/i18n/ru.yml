@@ -642,6 +642,9 @@ autoMessages:
   # План 72.1.20: surveillance detected (legacy MSG_SURVEILLANCE_DETECTED, folder=11).
   surveillanceDetected.title: "Обнаружено сканирование"
   surveillanceDetected.body: "Ваша планета «{{planet}}» [{{galaxy}}:{{system}}:{{position}}] была отсканирована чужой сенсорной фалангой. Уровень ваших шпионских технологий позволил детектировать попытку."
+  # План 72.1.21: legacy `MSG_CREDIT_MARKET` — покупка ресурсов на банке.
+  creditMarketPurchase.title: "Покупка ресурсов"
+  creditMarketPurchase.body: "Списано {{credits}} кредитов. Получено {{amount}} {{resource}}."
 buddylist:
   accept: Принять
   buddylist: Список друзей
@@ -1201,6 +1204,10 @@ market:
   youWillGet: "Вы получите:"
   exchangeBtn: Обменять
   lastExchange: "Последний обмен: {{fa}} {{fr}} → {{ta}} {{tr}} (курс {{rate}})"
+  # План 72.1.21: legacy `Credit_ex` — покупка ресурсов за кредиты.
+  creditAmountLabel: "Кредитов потратить"
+  creditExchangeBtn: "Купить за кредиты"
+  creditLastExchange: "Куплено: {{amount}} {{res}} за {{credits}} кредитов"
   resLabelMetal: 🟠 Металл
   resLabelSilicon: 💎 Кремний
   resLabelHydrogen: 💧 Водород

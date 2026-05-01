@@ -643,6 +643,9 @@ autoMessages:
   # Plan 72.1.20: surveillance detected (legacy MSG_SURVEILLANCE_DETECTED, folder=11).
   surveillanceDetected.title: "Surveillance detected"
   surveillanceDetected.body: "Your planet «{{planet}}» [{{galaxy}}:{{system}}:{{position}}] has been scanned by a hostile sensor phalanx. Your espionage level allowed detecting the attempt."
+  # Plan 72.1.21: legacy `MSG_CREDIT_MARKET` — buying resources at bank.
+  creditMarketPurchase.title: "Resource purchase"
+  creditMarketPurchase.body: "{{credits}} credits charged. Received {{amount}} {{resource}}."
 buddylist:
   accept: ""
   buddylist: ""
@@ -1204,6 +1207,10 @@ market:
   youWillGet: "You will get:"
   exchangeBtn: Exchange
   lastExchange: "Last exchange: {{fa}} {{fr}} → {{ta}} {{tr}} (rate {{rate}})"
+  # Plan 72.1.21: legacy `Credit_ex` — buy resources for credits.
+  creditAmountLabel: "Credits to spend"
+  creditExchangeBtn: "Buy for credits"
+  creditLastExchange: "Bought: {{amount}} {{res}} for {{credits}} credits"
   resLabelMetal: 🟠 Metal
   resLabelSilicon: 💎 Silicon
   resLabelHydrogen: 💧 Hydrogen
