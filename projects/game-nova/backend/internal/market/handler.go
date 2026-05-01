@@ -220,6 +220,47 @@ func (h *Handler) ExchangeCredit(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ExchangeCreditMulti POST /api/planets/{id}/market/credit-multi — multi-resource
+// покупка за кредиты (legacy `Market::Credit_ex`, план 72.1.28).
+type creditExchangeMultiRequest struct {
+	Metal    int64 `json:"metal"`
+	Silicon  int64 `json:"silicon"`
+	Hydrogen int64 `json:"hydrogen"`
+}
+
+func (h *Handler) ExchangeCreditMulti(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	if planetID == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing planet id"))
+		return
+	}
+	var req creditExchangeMultiRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	res, err := h.svc.ExchangeCreditMulti(r.Context(), uid, planetID, req.Metal, req.Silicon, req.Hydrogen)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, res)
+	case errors.Is(err, ErrInvalidResource),
+		errors.Is(err, ErrInvalidAmount),
+		errors.Is(err, ErrNotEnough):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrPlanetNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 // ListFleetLots GET /api/market/fleet-lots
 func (h *Handler) ListFleetLots(w http.ResponseWriter, r *http.Request) {
 	if _, ok := auth.UserID(r.Context()); !ok {

@@ -21,10 +21,11 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  exchangeCredit,
+  exchangeCreditMulti,
   exchangeResource,
   fetchMarketRates,
-  type CreditExchangeResult,
+  multiCreditCost,
+  type CreditExchangeMultiResult,
 } from '@/api/market';
 import { QK } from '@/api/query-keys';
 import type { ApiError } from '@/api/client';
@@ -46,10 +47,12 @@ export function ResourceMarketScreen() {
   const [last, setLast] = useState<ExchangeResult | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  // План 72.1.21: credit-exchange (legacy `Credit_ex`).
-  const [creditResource, setCreditResource] = useState<ResourceKind>('metal');
-  const [creditAmount, setCreditAmount] = useState<string>('100');
-  const [creditLast, setCreditLast] = useState<CreditExchangeResult | null>(null);
+  // План 72.1.28: multi-resource credit-exchange (legacy
+  // `Credit_ex(metal, silicon, hydrogen)`). Все три за раз.
+  const [creditMetal, setCreditMetal] = useState<string>('0');
+  const [creditSilicon, setCreditSilicon] = useState<string>('0');
+  const [creditHydrogen, setCreditHydrogen] = useState<string>('0');
+  const [creditLast, setCreditLast] = useState<CreditExchangeMultiResult | null>(null);
 
   const ratesQ = useQuery({
     queryKey: QK.marketRates(),
@@ -75,16 +78,16 @@ export function ResourceMarketScreen() {
 
   const creditExchange = useMutation({
     mutationFn: () =>
-      exchangeCredit({
+      exchangeCreditMulti({
         planetId: planet?.id ?? '',
-        resource: creditResource,
-        amount: parseAmount(creditAmount),
+        metal: parseAmount(creditMetal),
+        silicon: parseAmount(creditSilicon),
+        hydrogen: parseAmount(creditHydrogen),
       }),
     onSuccess: (res) => {
       setCreditLast(res);
       setErrMsg(null);
       void qc.invalidateQueries({ queryKey: QK.planets() });
-      // /me invalidate чтобы шапка с credit обновилась.
       void qc.invalidateQueries({ queryKey: ['me'] });
     },
     onError: (e) => setErrMsg((e as ApiError).message),
@@ -101,7 +104,11 @@ export function ResourceMarketScreen() {
   const amt = parseAmount(amount);
   const expected = amt > 0 ? Math.floor(amt * rateFromTo) : 0;
 
-  const creditAmt = parseAmount(creditAmount);
+  const cMetal = parseAmount(creditMetal);
+  const cSilicon = parseAmount(creditSilicon);
+  const cHydrogen = parseAmount(creditHydrogen);
+  const totalCreditCost = multiCreditCost(cMetal, cSilicon, cHydrogen);
+  const hasCreditAmount = cMetal > 0 || cSilicon > 0 || cHydrogen > 0;
 
   return (
     <>
@@ -234,76 +241,103 @@ export function ResourceMarketScreen() {
       </table>
     </form>
 
-    {/* План 72.1.21: legacy `Credit_ex` — покупка ресурса за кредиты. */}
+    {/* План 72.1.28: legacy `Credit_ex(metal, silicon, hydrogen)` —
+        multi-resource покупка за кредиты. Все три за раз; commission=0
+        и storage=UNLIMIT (legacy override в Credit_ex). */}
     <form
       method="post"
       onSubmit={(ev) => {
         ev.preventDefault();
-        if (!creditExchange.isPending && creditAmt > 0) creditExchange.mutate();
+        if (!creditExchange.isPending && hasCreditAmount) creditExchange.mutate();
       }}
     >
       <table className="ntable">
         <thead>
           <tr>
-            <th colSpan={3}>
+            <th colSpan={4}>
               {t('market', 'tabCredit') || 'Купить за кредиты'}
             </th>
+          </tr>
+          <tr>
+            <th>{t('market', 'resLabelMetal')}</th>
+            <th>{t('market', 'resLabelSilicon')}</th>
+            <th>{t('market', 'resLabelHydrogen')}</th>
+            <th className="center">{t('market', 'creditExchangeBtn') || 'Купить'}</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>
-              <label htmlFor="cr-resource">
-                {t('market', 'labelTo')}
-              </label>
-              <br />
-              <select
-                id="cr-resource"
-                value={creditResource}
-                onChange={(e) =>
-                  setCreditResource(e.target.value as ResourceKind)
-                }
-              >
-                {RESOURCES.map((r) => (
-                  <option key={r} value={r}>
-                    {t('market', `resLabel${capitalize(r)}`)}
-                  </option>
-                ))}
-              </select>
-            </td>
-            <td>
-              <label htmlFor="cr-amount">
-                {t('market', 'creditAmountLabel') || 'Кредитов'}
-              </label>
-              <br />
               <input
                 type="text"
-                id="cr-amount"
-                name="credit_amount"
-                value={creditAmount}
-                onChange={(e) => setCreditAmount(e.target.value)}
+                id="cr-metal"
+                name="credit_metal"
+                value={creditMetal}
+                onChange={(e) => setCreditMetal(e.target.value)}
+                style={{ width: '100%' }}
               />
+              {cMetal > 0 && (
+                <div style={{ fontSize: 'smaller' }}>
+                  {Math.ceil(cMetal / 100)} кр
+                </div>
+              )}
+            </td>
+            <td>
+              <input
+                type="text"
+                id="cr-silicon"
+                name="credit_silicon"
+                value={creditSilicon}
+                onChange={(e) => setCreditSilicon(e.target.value)}
+                style={{ width: '100%' }}
+              />
+              {cSilicon > 0 && (
+                <div style={{ fontSize: 'smaller' }}>
+                  {Math.ceil(cSilicon / 50)} кр
+                </div>
+              )}
+            </td>
+            <td>
+              <input
+                type="text"
+                id="cr-hydrogen"
+                name="credit_hydrogen"
+                value={creditHydrogen}
+                onChange={(e) => setCreditHydrogen(e.target.value)}
+                style={{ width: '100%' }}
+              />
+              {cHydrogen > 0 && (
+                <div style={{ fontSize: 'smaller' }}>
+                  {Math.ceil(cHydrogen / 25)} кр
+                </div>
+              )}
             </td>
             <td className="center">
+              <div>
+                {t('market', 'creditTotalLabel') || 'Итого:'}{' '}
+                <b>{formatNumber(totalCreditCost)}</b> кр
+              </div>
               <input
                 type="submit"
                 className="button"
+                style={{ marginTop: 4 }}
                 value={
                   creditExchange.isPending
                     ? '…'
                     : t('market', 'creditExchangeBtn') || 'Купить'
                 }
-                disabled={creditAmt <= 0 || creditExchange.isPending}
+                disabled={!hasCreditAmount || creditExchange.isPending}
               />
             </td>
           </tr>
           {creditLast && (
             <tr>
-              <td colSpan={3} className="center">
-                {t('market', 'creditLastExchange', {
-                  credits: formatNumber(-creditLast.credit_delta),
-                  amount: formatNumber(creditLast.resource_delta),
-                  res: t('market', `resLabel${capitalize(creditLast.resource)}`),
+              <td colSpan={4} className="center">
+                {t('market', 'creditLastExchangeMulti', {
+                  credits: formatNumber(creditLast.credits),
+                  metal: formatNumber(creditLast.metal),
+                  silicon: formatNumber(creditLast.silicon),
+                  hydrogen: formatNumber(creditLast.hydrogen),
                 })}
               </td>
             </tr>

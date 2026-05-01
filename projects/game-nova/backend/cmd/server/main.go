@@ -583,6 +583,8 @@ func run() error {
 		pr.Get("/market/rates", marketH.Rates)
 		pr.Post("/planets/{id}/market/exchange", marketH.Exchange)
 		pr.Post("/planets/{id}/market/credit", marketH.ExchangeCredit)
+		// План 72.1.28: multi-resource Credit_ex (legacy `Market::Credit_ex`).
+		pr.Post("/planets/{id}/market/credit-multi", marketH.ExchangeCreditMulti)
 		pr.Get("/market/lots", marketH.ListLots)
 		pr.Post("/market/lots", marketH.CreateLot)
 		pr.Delete("/market/lots/{id}", marketH.CancelLot)

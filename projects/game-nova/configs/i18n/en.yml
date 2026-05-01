@@ -652,6 +652,9 @@ autoMessages:
   # Plan 72.1.27: legacy `MSG_CREDIT_EXCHANGE_PREMIUM_LOT`.
   creditExchangePremium.title: "Credit charge"
   creditExchangePremium.body: "{{credits}} credits charged for premium promotion of lot #{{lotId}} (2h on top)."
+  # Plan 72.1.28: multi-resource Credit_ex AutoMsg.
+  creditMarketPurchaseMulti.title: "Resource purchase"
+  creditMarketPurchaseMulti.body: "{{credits}} credits charged. Received: {{metal}} metal, {{silicon}} silicon, {{hydrogen}} hydrogen."
 buddylist:
   accept: ""
   buddylist: ""
@@ -1231,6 +1234,9 @@ market:
   creditAmountLabel: "Credits to spend"
   creditExchangeBtn: "Buy for credits"
   creditLastExchange: "Bought: {{amount}} {{res}} for {{credits}} credits"
+  # Plan 72.1.28: multi-resource Credit_ex.
+  creditTotalLabel: "Total:"
+  creditLastExchangeMulti: "Bought: {{metal}} M, {{silicon}} S, {{hydrogen}} H for {{credits}} cr"
   resLabelMetal: 🟠 Metal
   resLabelSilicon: 💎 Silicon
   resLabelHydrogen: 💧 Hydrogen
