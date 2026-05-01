@@ -146,3 +146,44 @@ artefacts:
     stackable: true
     max_stacks: 3
     lifetime_seconds: 0
+
+  # План 72.1.33-pack-artefacts: legacy `Artefact::canPackBuilding`
+  # + `packCurrentConstruction` / `canPackResearch` + `packCurrentResearch`.
+  # Packing-артефакт держится в инвентаре, имеет state=held. При
+  # активации (= pack-операции на BuildingInfo) понижает уровень
+  # здания/исследования и **создаёт packed-артефакт** с payload
+  # {construction_id, level}. Packing-артефакт удаляется
+  # (state=consumed). Packed-артефакт затем активируется через
+  # обычный Activate — добавляет уровни обратно (потенциально на
+  # другой планете/в другой research).
+  packing_building:
+    id: 323
+    name: "Упаковщик здания"
+    effect:
+      type: pack_building
+    stackable: false
+    lifetime_seconds: 0   # без срока
+
+  packing_research:
+    id: 324
+    name: "Упаковщик исследования"
+    effect:
+      type: pack_research
+    stackable: false
+    lifetime_seconds: 0
+
+  packed_building:
+    id: 321
+    name: "Упакованное здание"
+    effect:
+      type: packed_building
+    stackable: false
+    lifetime_seconds: 0
+
+  packed_research:
+    id: 322
+    name: "Упакованное исследование"
+    effect:
+      type: packed_research
+    stackable: false
+    lifetime_seconds: 0
