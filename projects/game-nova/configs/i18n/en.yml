@@ -2735,6 +2735,13 @@ message:
   subject: ""
   unreaded: ""
 mission:
+  # План 72.1.47: MissionScreen extras.
+  colonyName: "Colony name"
+  acsGroupId: "ACS group ID"
+  acsGroupHint: "empty = create new"
+  recallFleetsLink: "← Active fleets / recall"
+  stargateTitle: "🌀 StarGate (moon-to-moon jump)"
+  stargateBtn: "Jump"
   # Battle simulator (plan 72.1 ч.20.7)
   simulator: "Battle Simulator"
   attacker: "Attacker"

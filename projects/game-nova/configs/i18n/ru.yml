@@ -2735,6 +2735,13 @@ message:
   subject: Тема
   unreaded: Есть непрочитанные сообщения
 mission:
+  # План 72.1.47: дополнения к MissionScreen (resource-carry/StarGate/Recall).
+  colonyName: "Имя колонии"
+  acsGroupId: "ID ACS-группы"
+  acsGroupHint: "пусто = создать новую"
+  recallFleetsLink: "← Активные флоты / отозвать"
+  stargateTitle: "🌀 StarGate (прыжок между лунами)"
+  stargateBtn: "Прыжок"
   # Boevoy симулятор (план 72.1 ч.20.7) — shipName/max ниже в группе
   simulator: "Симулятор боя"
   attacker: "Атакующий"

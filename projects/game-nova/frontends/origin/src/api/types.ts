@@ -143,6 +143,11 @@ export interface FleetDispatchInput {
   carry_hydrogen?: number;
   speed_percent: number;
   mission: MissionCode;
+  // План 72.1.47: legacy `Mission.class.php::sendFleet` принимает ACS-группу
+  // (mission=12) и colony_name (mission=8). Backend (handler.go sendRequest)
+  // уже пробрасывает эти поля.
+  acs_group_id?: string;
+  colony_name?: string;
 }
 
 export interface Fleet {
