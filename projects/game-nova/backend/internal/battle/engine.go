@@ -936,7 +936,11 @@ func validate(in Input) error {
 func summarize(before []Side, after []Side) []SideResult {
 	out := make([]SideResult, len(before))
 	for i := range before {
-		sr := SideResult{UserID: before[i].UserID, Username: before[i].Username}
+		sr := SideResult{
+			UserID:   before[i].UserID,
+			Username: before[i].Username,
+			IsAliens: before[i].IsAliens,
+		}
 		for j, u := range before[i].Units {
 			endQ := int64(0)
 			var endDamaged int64
@@ -953,6 +957,12 @@ func summarize(before []Side, after []Side) []SideResult {
 			sr.LostMetal += lost * u.Cost.Metal
 			sr.LostSilicon += lost * u.Cost.Silicon
 			sr.LostHydrogen += lost * u.Cost.Hydrogen
+			// Очки за потерянные юниты — порт Java Units.java:113-115:
+			// pointsPerUnit = (metal + silicon + hydrogen) / 1000 × 2.
+			// LostPoints = Σ qty_lost × pointsPerUnit (Participant.java:766).
+			pointsPerUnit := float64(u.Cost.Metal+u.Cost.Silicon+u.Cost.Hydrogen) / 1000.0 * 2.0
+			sr.LostPoints += float64(lost) * pointsPerUnit
+			sr.LostUnits += lost
 			sr.Units = append(sr.Units, UnitResult{
 				UnitID: u.UnitID, QuantityStart: u.Quantity,
 				QuantityEnd: endQ, DamagedEnd: endDamaged,
