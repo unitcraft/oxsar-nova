@@ -15591,15 +15591,17 @@ not-a-fix + BA-019 mitigated.
     demolishConfirm с placeholder'ами {{building}} + {{level}},
     currentLevel).
 
-  Pack-artefacts (legacy `PackConstruction`/`PackResearch`) отложен
-  как simplification P72.1.33.PACK_ARTEFACTS_DEFERRED. Требует:
-  4 новых типов артефактов (packing/packed × building/research),
-  расширения artefacts_user state, миграции, сервиса активации с
-  requirements check, UI. ~500 LOC — отдельный крупный план.
-  Не блокирует gameplay (premium-фича).
+  Pack-artefacts (legacy `PackConstruction`/`PackResearch`) — это
+  **часть 2** подплана 72.1.33 (по §20.12 «подплан режется на N
+  частей, но каждая часть закрывает свою долю полностью»). Объём
+  части 2: 4 новых типа артефактов (packing/packed × building/
+  research), миграция artefacts_user (расширение state: active,
+  delay_eventid, times_left, lifetime_eventid), сервис активации
+  с requirements check, UI. Закроется отдельным подпланом
+  72.1.33-pack-artefacts.
 
-  /building/:type остаётся ⚠ (demolish ✅, pack-artefacts отложен
-  с явной simplification-записью).
+  /building/:type остаётся ⚠ до закрытия части 2 — **не помечен
+  как simplification** (правило §20.12 запрещает отступления).
 
   Изменённые файлы:
   - projects/game-nova/backend/internal/building/service.go.
@@ -15609,10 +15611,51 @@ not-a-fix + BA-019 mitigated.
   - projects/game-nova/frontends/origin/src/features/info/BuildingInfoScreen.tsx.
   - projects/game-nova/configs/i18n/{ru,en}.yml (buildinginfo секция).
   - docs/plans/72.1.33-building-info-cont.md (новый).
-  - docs/simplifications.md (P72.1.33.PACK_ARTEFACTS_DEFERRED).
   - docs/plans/72.1.2-screen-audit.md (#35 — обновлён).
 
   **Коммиты** (по типам задач):
   - feat(building): план 72.1.33 — EnqueueDemolish + POST .../demolish.
   - feat(origin/frontend): план 72.1.33 — BuildingInfo demolish UI.
-  - docs(plan-72.1.33): demolish ✅; pack-artefacts deferred + dev-log.
+  - docs(plan-72.1.33): demolish ✅; pack-artefacts → отдельный подплан 72.1.33-pack-artefacts (§20.12 «без упрощений»).
+
+2026-05-01 — итерация 72.1.34: Simulator — 3-channel tech + lost_points (часть A).
+
+  Подплан 72.1 §20.12 / audit #4. По правилу 1:1 — простые хвосты
+  закрыты, остальные вынесены в части B/C/D как отдельные
+  подпланы (НЕ simplifications, §20.12 их запрещает).
+
+  Часть A (закрыта в этой итерации):
+  - 3-channel combat tech (laser/ion/plasma): backend SimTech уже
+    поддерживал, фронт-форма не собирала (отправлял 0). Теперь
+    TechSet +3 поля, форма +3 input-колонки между Armoring и
+    Ballistics, onSubmit пробрасывает в SimSide.tech.
+  - Lost points / units в SimStats: backend SideResult уже считал
+    LostPoints (Σ qty_lost × cost / 1000 × 2) и LostUnits, но
+    MultiRun не агрегировал в SimStats. Теперь SimStats +4 поля
+    (attacker_lost_points/defender_lost_points/lost_units),
+    MultiRun делит сумму на num_sim, Report-блок UI отрисовывает
+    2 новые строки.
+
+  Части B/C/D (TBD, следующие подпланы — НЕ simplifications):
+  - **B**: target_buildingid селект + building_level (legacy
+    Simulator.class.php строки 171-196). ~150 LOC.
+  - **C**: 6 боевых артефактов через ARTEFACT_EFFECT_TYPE_BATTLE
+    (legacy 124-163). Зависит от battle-артефактов в catalog.
+  - **D**: рециклеры/трансплантеры derived-калькуляция (legacy
+    208-211). Простая формула на UI.
+
+  /simulator остаётся ⚠ до закрытия частей B/C/D —
+  **НЕ помечен как simplification** (правило §20.12 запрещает
+  отступления).
+
+  Изменённые файлы (часть A):
+  - projects/game-nova/backend/internal/battle/types.go.
+  - projects/game-nova/backend/internal/battle/simstats.go.
+  - projects/game-nova/frontends/origin/src/api/simulator.ts.
+  - projects/game-nova/frontends/origin/src/features/simulator/SimulatorScreen.tsx.
+  - docs/plans/72.1.34-simulator-cont.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#4 ❓ → ⚠).
+
+  **Коммиты** (по типам задач):
+  - feat(simulator): план 72.1.34 — laser/ion/plasma + lost_points/units в SimStats (135fd5e1f5).
+  - docs(plan-72.1.34): часть A ✅; B/C/D — TBD (§20.12).
