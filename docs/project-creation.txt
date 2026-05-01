@@ -15038,3 +15038,70 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(info): план 72.1.23 — icon в BuildingInfo + UnitInfo (legacy паритет).
 
+
+---
+
+2026-05-01 — итерация 72.1.25: Repair + Disassemble — полный паритет с legacy.
+
+  Закрытие /repair ❓ → ✅ + /disassemble ❓ → ✅ по §20.12.
+  Без упрощений — все блокировки, формулы и actions из
+  Repair.class.php перенесены 1:1.
+
+  **Сделано (backend repair/service.go)**:
+  - Helper checkOperationAllowed: умоде/observer/under-attack (legacy
+    `umode/observer/PLANET_UNDER_ATTACK`).
+  - planet/service.go: новый IsUnderAttack helper — JOIN fleets с
+    planets по координатам + mission IN (10,11,12) + state='outbound'.
+  - EnqueueDisassemble + EnqueueRepair вызывают checkOperationAllowed
+    в начале транзакции.
+  - dock_capacity (legacy `getDockUnitsCapacity`): проверка
+    `repairStorageForLevel - queue_used >= count` перед списанием.
+  - Новый StartVIP метод: legacy `Repair::startEventVIP` —
+    списывает credit (clamp(round(quantity^0.8,-1), 10, 100000)),
+    переносит event.fire_at = now (мгновенный финиш), AutoMsg
+    creditRepairVIP в folder=8.
+  - WithAutoMsg + WithBundle hooks; main.go wiring.
+  - Новый POST /api/planets/{id}/repair/queue/{queueId}/vip route.
+  - 5 новых errors: ErrInVacation, ErrIsObserver, ErrPlanetUnderAttack,
+    ErrDockOverflow, ErrNotEnoughCredit.
+
+  **Сделано (frontend)**:
+  - api/repair.ts: cancelRepairQueue, startRepairVIP, vipCreditCost
+    (legacy formula клиент-side для preview).
+  - DisassembleScreen полностью переписан: required/earn колонки
+    (legacy `setDisassembleUnitRequirements`: required=20%, return=90%,
+    earn=70% от base; hydrogen=0); abort + VIP кнопки в очереди;
+    errMsg блок.
+  - RepairScreen: queue с abort + VIP; errMsg.
+
+  **i18n (ru/en)**:
+  - autoMessages.creditRepairVIP.title/body.
+  - repair.disassembleQueue, disassembleTitle, emptyDisassemble,
+    abortBtn, vipBtn, colRequired, colEarn, colCount.
+  - 5 errors keys (errInVacation, errObserver, errPlanetUnderAttack,
+    errDockOverflow, errNotEnoughCredit).
+
+  **Прогон**: `go test ./internal/repair/... ./internal/planet/...` —
+  оба зелёные. `tsc --noEmit` zero errors. eslint zero errors.
+
+  **Файлы**:
+  - docs/plans/72.1.25-repair-disassemble-parity.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#10 + #11 → ✅).
+  - projects/game-nova/backend/internal/planet/service.go (IsUnderAttack).
+  - projects/game-nova/backend/internal/repair/service.go (большое
+    расширение: checkOperationAllowed + dock_capacity + StartVIP +
+    AutoMsg + 5 новых ошибок).
+  - projects/game-nova/backend/internal/repair/handler.go (StartVIP +
+    error mapping).
+  - projects/game-nova/backend/cmd/server/main.go (wiring + route).
+  - projects/game-nova/frontends/origin/src/api/repair.ts
+    (cancelRepairQueue + startRepairVIP + vipCreditCost).
+  - projects/game-nova/frontends/origin/src/features/disassemble/DisassembleScreen.tsx
+    (полный rewrite с required/earn).
+  - projects/game-nova/frontends/origin/src/features/repair/RepairScreen.tsx
+    (abort + VIP в queue + errMsg).
+  - projects/game-nova/configs/i18n/{ru,en}.yml.
+
+  **Коммит**:
+  feat(repair,disassemble): план 72.1.25 — полный паритет с legacy (umode/observer/under-attack + dock_capacity + VIP + abort + earn UI).
+

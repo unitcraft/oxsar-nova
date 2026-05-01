@@ -645,6 +645,9 @@ autoMessages:
   # План 72.1.21: legacy `MSG_CREDIT_MARKET` — покупка ресурсов на банке.
   creditMarketPurchase.title: "Покупка ресурсов"
   creditMarketPurchase.body: "Списано {{credits}} кредитов. Получено {{amount}} {{resource}}."
+  # План 72.1.25: legacy `MSG_CREDIT_FOR_REPAIR_VIP` / `..._FOR_DISASSEMBLE_VIP`.
+  creditRepairVIP.title: "Списание кредитов"
+  creditRepairVIP.body: "Списано {{credits}} кредитов за мгновенный старт {{mode}} ({{quantity}} ед.)."
 buddylist:
   accept: Принять
   buddylist: Список друзей
@@ -1069,6 +1072,20 @@ repair:
   repairAll: Починить все
   disassembleHint: Разбор здоровых юнитов возвращает ~70% стоимости.
   disassembleBtn: Разобрать
+  # План 72.1.25: новые ключи UI.
+  disassembleQueue: Очередь утилизации
+  disassembleTitle: Утилизация
+  emptyDisassemble: Нет юнитов для утилизации
+  abortBtn: Отменить
+  vipBtn: "VIP за {{credits}} кр"
+  colRequired: Стоимость
+  colEarn: Получите
+  colCount: Количество
+  errInVacation: "Нельзя ремонтировать в режиме отпуска."
+  errObserver: "Нельзя ремонтировать в режиме наблюдателя."
+  errPlanetUnderAttack: "Нельзя — планета атакована."
+  errDockOverflow: "Превышена вместимость ремонтного ангара."
+  errNotEnoughCredit: "Недостаточно кредитов для VIP-старта."
   fuelPer: /ед.
   toastRepairTitle: Ремонт
   toastRepaired: "{{name}} отправлен на ремонт"

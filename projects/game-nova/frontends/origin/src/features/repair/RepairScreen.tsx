@@ -7,14 +7,19 @@
 // 3. Таблица повреждённых юнитов: иконка / имя / поля / количество input
 // 4. Submit «Ремонтировать» внизу формы
 
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  cancelRepairQueue,
   fetchDamagedShips,
   fetchRepairQueue,
   repairUnits,
+  startRepairVIP,
+  vipCreditCost,
 } from '@/api/repair';
 import { fetchResourceReport } from '@/api/resource';
 import { QK } from '@/api/query-keys';
+import type { ApiError } from '@/api/client';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { findCatalog } from '@/features/common/catalog';
 import { useTranslation } from '@/i18n/i18n';
@@ -47,16 +52,38 @@ export function RepairScreen() {
     enabled: planetId !== null,
   });
 
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  function invalidateAll() {
+    if (!planetId) return;
+    void qc.invalidateQueries({ queryKey: QK.repairDamaged(planetId) });
+    void qc.invalidateQueries({ queryKey: QK.repairQueue(planetId) });
+    void qc.invalidateQueries({ queryKey: QK.shipyardInventory(planetId) });
+    void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+    void qc.invalidateQueries({ queryKey: ['me'] });
+  }
+
   const repair = useMutation({
     mutationFn: (unitId: number) => repairUnits(planetId!, unitId),
     onSuccess: () => {
-      if (planetId) {
-        void qc.invalidateQueries({ queryKey: QK.repairDamaged(planetId) });
-        void qc.invalidateQueries({ queryKey: QK.repairQueue(planetId) });
-        void qc.invalidateQueries({ queryKey: QK.shipyardInventory(planetId) });
-        void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
-      }
+      setErrMsg(null);
+      invalidateAll();
     },
+    onError: (e) => setErrMsg((e as ApiError).message),
+  });
+
+  // План 72.1.25: legacy `abortRepair`.
+  const cancel = useMutation({
+    mutationFn: (queueId: string) => cancelRepairQueue(planetId!, queueId),
+    onSuccess: invalidateAll,
+    onError: (e) => setErrMsg((e as ApiError).message),
+  });
+
+  // План 72.1.25: legacy `startRepairVIP`.
+  const vip = useMutation({
+    mutationFn: (queueId: string) => startRepairVIP(planetId!, queueId),
+    onSuccess: invalidateAll,
+    onError: (e) => setErrMsg((e as ApiError).message),
   });
 
   if (!planetId) {
@@ -112,17 +139,42 @@ export function RepairScreen() {
             </td>
           </tr>
           {queue.length > 0 &&
-            queue.map((task, idx) => (
-              <tr key={task.id}>
-                <td width="1px">{idx + 1}.</td>
-                <td colSpan={2}>
-                  {unitName(task.unit_id)}: {formatNumber(task.count)}
-                </td>
-                <td width="100px">
-                  {formatDuration(secondsUntil(task.end_at))}
-                </td>
-              </tr>
-            ))}
+            queue.map((task, idx) => {
+              const secLeft = secondsUntil(task.end_at);
+              const cost = vipCreditCost(task.count);
+              return (
+                <tr key={task.id}>
+                  <td width="1px">{idx + 1}.</td>
+                  <td>
+                    {unitName(task.unit_id)}: {formatNumber(task.count)}
+                  </td>
+                  <td width="120px" className="center">
+                    {secLeft > 0 ? formatDuration(secLeft) : '—'}
+                  </td>
+                  <td width="160px" className="center">
+                    <button
+                      type="button"
+                      className="button"
+                      disabled={cancel.isPending}
+                      onClick={() => cancel.mutate(task.id)}
+                      title={t('repair', 'abortBtn') || 'Отменить'}
+                    >
+                      ✕
+                    </button>
+                    {' '}
+                    <button
+                      type="button"
+                      className="button"
+                      disabled={vip.isPending}
+                      onClick={() => vip.mutate(task.id)}
+                      title={t('repair', 'vipBtn', { credits: cost }) || `VIP (${cost} cr)`}
+                    >
+                      ⚡ {cost}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
         </tbody>
       </table>
 
@@ -185,6 +237,12 @@ export function RepairScreen() {
           })}
         </tbody>
       </table>
+
+      {errMsg && (
+        <div className="idiv">
+          <span className="false">{errMsg}</span>
+        </div>
+      )}
     </>
   );
 }

@@ -48,7 +48,11 @@ func (h *Handler) EnqueueDisassemble(w http.ResponseWriter, r *http.Request) {
 		errors.Is(err, ErrUnknownUnit),
 		errors.Is(err, ErrNotEnoughRes),
 		errors.Is(err, ErrNotEnoughShips),
-		errors.Is(err, ErrNoRepairBuilding):
+		errors.Is(err, ErrNoRepairBuilding),
+		errors.Is(err, ErrInVacation),
+		errors.Is(err, ErrIsObserver),
+		errors.Is(err, ErrPlanetUnderAttack),
+		errors.Is(err, ErrDockOverflow):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	case errors.Is(err, ErrPlanetOwnership):
 		httpx.WriteError(w, r, httpx.ErrForbidden)
@@ -87,7 +91,40 @@ func (h *Handler) EnqueueRepair(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrUnknownUnit),
 		errors.Is(err, ErrNotEnoughRes),
 		errors.Is(err, ErrNoRepairBuilding),
-		errors.Is(err, ErrNothingToRepair):
+		errors.Is(err, ErrNothingToRepair),
+		errors.Is(err, ErrInVacation),
+		errors.Is(err, ErrIsObserver),
+		errors.Is(err, ErrPlanetUnderAttack):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	case errors.Is(err, ErrPlanetOwnership):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// StartVIP POST /api/planets/{id}/repair/queue/{queueId}/vip — мгновенный
+// старт за credit (legacy `Repair.class.php::startEventVIP`).
+func (h *Handler) StartVIP(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	planetID := chi.URLParam(r, "id")
+	queueID := chi.URLParam(r, "queueId")
+	if planetID == "" || queueID == "" {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "missing id"))
+		return
+	}
+	res, err := h.svc.StartVIP(r.Context(), uid, planetID, queueID)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, r, http.StatusOK, res)
+	case errors.Is(err, ErrQueueItemNotFound):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrNotFound, err.Error()))
+	case errors.Is(err, ErrAlreadyDone),
+		errors.Is(err, ErrNotEnoughCredit):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
 	case errors.Is(err, ErrPlanetOwnership):
 		httpx.WriteError(w, r, httpx.ErrForbidden)

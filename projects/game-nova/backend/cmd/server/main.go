@@ -268,7 +268,8 @@ func run() error {
 	simulatorH := simulator.NewHandler(db, cat)
 	battleReportH := battlereport.NewHandler(db)
 
-	repairSvc := repair.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
+	repairSvc := repair.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed).
+		WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
 	repairH := repair.NewHandler(repairSvc)
 
 	artefactSvc := artefact.NewService(db, cat).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
@@ -519,6 +520,8 @@ func run() error {
 		pr.Get("/planets/{id}/repair/damaged", repairH.ListDamaged)
 		pr.Get("/planets/{id}/repair/queue", repairH.List)
 		pr.Delete("/planets/{id}/repair/queue/{queueId}", repairH.Cancel)
+		// План 72.1.25: VIP-старт за credit (legacy startEventVIP).
+		pr.Post("/planets/{id}/repair/queue/{queueId}/vip", repairH.StartVIP)
 
 		pr.Get("/artefacts", artefactH.List)
 		pr.Post("/artefacts/{id}/activate", artefactH.Activate)

@@ -108,6 +108,31 @@ func (s *Service) Forecast(ctx context.Context, planetID string, hours int) (For
 	return r, nil
 }
 
+// IsUnderAttack проверяет, есть ли исходящий вражеский флот mission
+// IN (10, 11, 12) — ATTACK_SINGLE / SPY / ATTACK_ALLIANCE — нацеленный
+// на планету и ещё не прибывший. Legacy `NS::isPlanetUnderAttack`.
+//
+// Используется в /repair, /shipyard, /constructions, /research, /mission
+// для блокировки операций под атакой.
+func (s *Service) IsUnderAttack(ctx context.Context, planetID string) (bool, error) {
+	var n int
+	err := s.db.Pool().QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM fleets f
+		JOIN planets p ON
+		    p.galaxy = f.dst_galaxy AND p.system = f.dst_system
+		    AND p.position = f.dst_position AND p.is_moon = f.dst_is_moon
+		WHERE p.id = $1
+		  AND f.mission IN (10, 11, 12)
+		  AND f.state = 'outbound'
+		  AND f.arrive_at > now()
+	`, planetID).Scan(&n)
+	if err != nil {
+		return false, fmt.Errorf("planet: under_attack: %w", err)
+	}
+	return n > 0, nil
+}
+
 // ListByUser возвращает все планеты игрока с применённым тиком каждой.
 func (s *Service) ListByUser(ctx context.Context, userID string) ([]Planet, error) {
 	planets, err := s.repo.ListByUser(ctx, userID)

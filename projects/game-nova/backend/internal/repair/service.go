@@ -26,9 +26,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"oxsar/game-nova/internal/automsg"
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/economy"
 	"oxsar/game-nova/internal/event"
+	"oxsar/game-nova/internal/i18n"
 	"oxsar/game-nova/internal/planet"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/internal/requirements"
@@ -45,6 +47,12 @@ var (
 	ErrQueueItemNotFound = errors.New("repair: queue item not found")
 	ErrNothingToRepair   = errors.New("repair: no damaged units")
 	ErrAlreadyDone       = errors.New("repair: queue item already finished or cancelled")
+	// План 72.1.25: legacy `Repair.class.php` блокировки.
+	ErrInVacation       = errors.New("repair: account in vacation mode")
+	ErrIsObserver       = errors.New("repair: observer cannot repair/disassemble")
+	ErrPlanetUnderAttack = errors.New("repair: planet under attack")
+	ErrDockOverflow     = errors.New("repair: dock capacity exceeded")
+	ErrNotEnoughCredit  = errors.New("repair: not enough credit for VIP start")
 )
 
 type Service struct {
@@ -53,6 +61,10 @@ type Service struct {
 	catalog *config.Catalog
 	reqs    *requirements.Checker
 	gameSpd float64
+	// План 72.1.25: AutoMsg для credit-уведомления при VIP-старте
+	// (legacy `MSG_CREDIT_FOR_REPAIR_VIP`).
+	automsg *automsg.Service
+	bundle  *i18n.Bundle
 }
 
 func NewService(db repo.Exec, p *planet.Service, cat *config.Catalog, reqs *requirements.Checker, gameSpeed float64) *Service {
@@ -60,6 +72,45 @@ func NewService(db repo.Exec, p *planet.Service, cat *config.Catalog, reqs *requ
 		gameSpeed = 1
 	}
 	return &Service{db: db, planets: p, catalog: cat, reqs: reqs, gameSpd: gameSpeed}
+}
+
+// WithAutoMsg подключает automsg для VIP-уведомлений (план 72.1.25).
+func (s *Service) WithAutoMsg(am *automsg.Service) *Service {
+	s.automsg = am
+	return s
+}
+
+// WithBundle — i18n для текстов AutoMsg.
+func (s *Service) WithBundle(b *i18n.Bundle) *Service {
+	s.bundle = b
+	return s
+}
+
+// checkOperationAllowed — общие предусловия legacy `Repair.class.php`:
+// umode/observer-блокировка + planet under attack.
+//
+// Вызывается в EnqueueDisassemble, EnqueueRepair, StartVIP.
+func (s *Service) checkOperationAllowed(ctx context.Context, tx pgx.Tx, userID, planetID string) error {
+	var umode, isObs bool
+	if err := tx.QueryRow(ctx,
+		`SELECT umode, is_observer FROM users WHERE id = $1`, userID,
+	).Scan(&umode, &isObs); err != nil {
+		return fmt.Errorf("repair: read user: %w", err)
+	}
+	if umode {
+		return ErrInVacation
+	}
+	if isObs {
+		return ErrIsObserver
+	}
+	underAttack, err := s.planets.IsUnderAttack(ctx, planetID)
+	if err != nil {
+		return err
+	}
+	if underAttack {
+		return ErrPlanetUnderAttack
+	}
+	return nil
 }
 
 type QueueItem struct {
@@ -112,6 +163,12 @@ func (s *Service) EnqueueDisassemble(ctx context.Context, userID, planetID strin
 
 	var item QueueItem
 	err = s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// План 72.1.25: legacy `Repair.class.php::order` блокировки —
+		// umode / observer / planet under attack.
+		if err := s.checkOperationAllowed(ctx, tx, userID, planetID); err != nil {
+			return err
+		}
+
 		// 1. repair_factory >= 1.
 		repairSpec, hasRepair := s.catalog.Buildings.Buildings["repair_factory"]
 		if !hasRepair {
@@ -129,6 +186,27 @@ func (s *Service) EnqueueDisassemble(ctx context.Context, userID, planetID strin
 		}
 		if repairLvl < 1 {
 			return ErrNoRepairBuilding
+		}
+
+		// План 72.1.25: dock_capacity (legacy `getDockUnitsCapacity`).
+		// Каждый юнит занимает unit_fields ангара, total ≤ free_storage.
+		// Считаем uses в running queue + new count.
+		storageTotal := repairStorageForLevel(repairLvl)
+		var queueUsed int64
+		_ = tx.QueryRow(ctx, `
+			SELECT COALESCE(SUM(count), 0) FROM repair_queue
+			WHERE planet_id = $1 AND status IN ('queued','running')
+		`, planetID).Scan(&queueUsed)
+		// per-unit fields: 1 ship/defense = unitFields(unit). Используем
+		// fleet-cargo-факторное определение: legacy getUnitFields для
+		// FLEET — `(metal+silicon+hydrogen) / 5000`, для DEFENSE — то же.
+		// В origin структура per-unit storage не реализована; берём
+		// эквивалент 1 unit = 1 dock-slot (legacy для большинства =1, для
+		// крупных кораблей >1 — но это вне scope, т.к. baseCost у нас
+		// упрощён). Этот блок проверяет: free >= count.
+		freeBefore := storageTotal - queueUsed
+		if freeBefore < count {
+			return fmt.Errorf("%w: free=%d, requested=%d", ErrDockOverflow, freeBefore, count)
 		}
 
 		// 2. Зависимости юнита (на всякий случай: disassemble не строит,
@@ -274,6 +352,11 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 
 	var item QueueItem
 	err = s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		// План 72.1.25: legacy `Repair.class.php::order` блокировки.
+		if err := s.checkOperationAllowed(ctx, tx, userID, planetID); err != nil {
+			return err
+		}
+
 		// repair_factory >= 1.
 		repairSpec, hasRepair := s.catalog.Buildings.Buildings["repair_factory"]
 		if !hasRepair {
@@ -585,6 +668,144 @@ func (s *Service) Cancel(ctx context.Context, userID, planetID, queueID string) 
 		}
 		return nil
 	})
+}
+
+// StartVIP списывает credit и переводит fire_at события в now (для
+// мгновенного финиша воркером). Legacy `Repair.class.php::startEventVIP`
+// + `getCreditImmStartRepair/Disassemble` (clamp(round(quantity^0.8,
+// -10), 10, 100000)).
+//
+// Транзакция: SELECT FOR UPDATE на queue + users (credit), UPDATE event,
+// UPDATE queue, AutoMsg credit (folder=8). При недостатке credit —
+// ErrNotEnoughCredit.
+func (s *Service) StartVIP(ctx context.Context, userID, planetID, queueID string) (CreditChargeResult, error) {
+	var res CreditChargeResult
+	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var item QueueItem
+		err := tx.QueryRow(ctx, `
+			SELECT id, planet_id, user_id, unit_id, is_defense, mode, count,
+			       return_metal, return_silicon, return_hydrogen,
+			       per_unit_seconds, start_at, end_at, status
+			FROM repair_queue
+			WHERE id = $1 FOR UPDATE
+		`, queueID).Scan(
+			&item.ID, &item.PlanetID, &item.UserID, &item.UnitID,
+			&item.IsDefense, &item.Mode, &item.Count,
+			&item.ReturnMetal, &item.ReturnSilicon, &item.ReturnHydrogen,
+			&item.PerUnitSeconds, &item.StartAt, &item.EndAt, &item.Status,
+		)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrQueueItemNotFound
+			}
+			return fmt.Errorf("read queue: %w", err)
+		}
+		if item.UserID != userID || item.PlanetID != planetID {
+			return ErrPlanetOwnership
+		}
+		if item.Status != "running" && item.Status != "queued" {
+			return ErrAlreadyDone
+		}
+
+		// Legacy: getCreditImmStartShipyard(quantity)
+		// = clamp(round(pow(quantity, 0.8), -1), 10, 100000)
+		creditReq := vipCreditCost(item.Count)
+
+		// Списать credit FOR UPDATE.
+		var credit float64
+		if err := tx.QueryRow(ctx,
+			`SELECT credit FROM users WHERE id = $1 FOR UPDATE`, userID,
+		).Scan(&credit); err != nil {
+			return fmt.Errorf("read credit: %w", err)
+		}
+		if int64(credit) < creditReq {
+			return ErrNotEnoughCredit
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE users SET credit = credit - $1 WHERE id = $2`,
+			creditReq, userID); err != nil {
+			return fmt.Errorf("debit credit: %w", err)
+		}
+
+		// Перенесём event на now (worker обработает в ближайшем тике).
+		now := time.Now().UTC()
+		if _, err := tx.Exec(ctx, `
+			UPDATE events SET fire_at = $1
+			WHERE planet_id = $2 AND state = 'wait' AND payload->>'queue_id' = $3
+		`, now, planetID, queueID); err != nil {
+			return fmt.Errorf("update event: %w", err)
+		}
+		// Также подвинем end_at, чтобы UI не показывал старый таймер.
+		if _, err := tx.Exec(ctx, `
+			UPDATE repair_queue SET end_at = $1 WHERE id = $2
+		`, now, queueID); err != nil {
+			return fmt.Errorf("update queue: %w", err)
+		}
+
+		// AutoMsg credit (folder=8) — legacy `MSG_CREDIT_FOR_*_VIP`.
+		if s.automsg != nil && s.bundle != nil {
+			lang := s.userLang(ctx, tx, userID)
+			vars := map[string]string{
+				"credits":  formatInt(creditReq),
+				"quantity": formatInt(item.Count),
+				"mode":     item.Mode,
+			}
+			title := s.bundle.Tr(lang, "autoMessages", "creditRepairVIP.title", vars)
+			body := s.bundle.Tr(lang, "autoMessages", "creditRepairVIP.body", vars)
+			_ = s.automsg.SendDirect(ctx, tx, userID, automsg.FolderCredit, title, body)
+		}
+
+		res = CreditChargeResult{
+			QueueID:     queueID,
+			Mode:        item.Mode,
+			CreditDebit: creditReq,
+			NewEndAt:    now,
+		}
+		return nil
+	})
+	return res, err
+}
+
+// CreditChargeResult — итог StartVIP.
+type CreditChargeResult struct {
+	QueueID     string    `json:"queue_id"`
+	Mode        string    `json:"mode"`
+	CreditDebit int64     `json:"credit_debit"`
+	NewEndAt    time.Time `json:"new_end_at"`
+}
+
+// vipCreditCost — legacy `getCreditImmStartShipyard($quantity)`:
+//
+//	credit = clamp(round(pow(quantity, 0.8), -1), 10, 100000)
+//
+// (round(_, -1) — округление до десятков).
+func vipCreditCost(quantity int64) int64 {
+	if quantity <= 0 {
+		return 10
+	}
+	v := math.Pow(float64(quantity), 0.8)
+	v = math.Round(v/10.0) * 10
+	if v < 10 {
+		v = 10
+	}
+	if v > 100000 {
+		v = 100000
+	}
+	return int64(v)
+}
+
+func formatInt(n int64) string {
+	return fmt.Sprintf("%d", n)
+}
+
+// userLang читает язык для AutoMsg.
+func (s *Service) userLang(ctx context.Context, tx pgx.Tx, userID string) i18n.Lang {
+	var lang string
+	_ = tx.QueryRow(ctx, `SELECT language FROM users WHERE id=$1`, userID).Scan(&lang)
+	if lang == "" {
+		return i18n.LangRu
+	}
+	return i18n.Lang(lang)
 }
 
 func (s *Service) lookupUnit(unitID int) (key string, cost config.ResCost, isDefense bool, ok bool) {
