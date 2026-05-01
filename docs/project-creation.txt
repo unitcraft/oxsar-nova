@@ -14961,3 +14961,46 @@ not-a-fix + BA-019 mitigated.
   **Коммит**:
   feat(resource-market): план 72.1.21 — credit-exchange UI + AutoMsg.
 
+
+---
+
+2026-05-01 — итерация 72.1.22: Techtree — icon + moon-section.
+
+  Закрытие /techtree ❓ → ✅ по §20.12. Display-only экран, по чек-листу
+  обнаружено 2 расхождения с legacy:
+
+  1. **icon отсутствует**: legacy `Image::getImage(getUnitImage(name))`
+     рисует иконку юнита в каждой строке. Origin показывал только
+     `#ID`.
+  2. **moon-секция отсутствует**: legacy `Techtree.class.php`
+     `addLoop("moon", $moon)` — отдельная секция для лунных построек
+     (UNIT_TYPE_MOON_CONSTRUCTION). Origin рендерил все building
+     одной секцией.
+
+  **Сделано (1:1)**:
+  - backend nodeDTO: добавлено поле `moon_only bool`
+    (BuildingSpec.MoonOnly). Заполняется при сборке building-нод.
+  - frontend types.ts: TechtreeNode.moon_only?.
+  - SECTIONS расширен: 'building' разделён на две секции через
+    filter (no-moon vs moon_only); добавлен kindMoonBuildings.
+  - SectionRows: при наличии findCatalog(n.id) рендерится `<img>`
+    из `/assets/origin/images/units/<icon>.gif`, иначе fallback `#ID`.
+  - i18n (ru/en): kindMoonBuildings («🌙 Лунные постройки» /
+    «🌙 Moon buildings»).
+
+  **Прогон**: `go build ./...` zero issues. `tsc --noEmit` zero errors.
+  `eslint techtree types.ts` zero errors.
+
+  **Файлы**:
+  - docs/plans/72.1.2-screen-audit.md (#26 → ✅).
+  - projects/game-nova/backend/internal/techtree/handler.go
+    (nodeDTO.MoonOnly + заполнение).
+  - projects/game-nova/frontends/origin/src/api/types.ts
+    (TechtreeNode.moon_only).
+  - projects/game-nova/frontends/origin/src/features/techtree/TechtreeScreen.tsx
+    (filter + icon + новая секция).
+  - projects/game-nova/configs/i18n/{ru,en}.yml (kindMoonBuildings).
+
+  **Коммит**:
+  feat(techtree): план 72.1.22 — icon + moon-section (legacy паритет).
+

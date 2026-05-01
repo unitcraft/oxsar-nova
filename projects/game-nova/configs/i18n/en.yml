@@ -1526,6 +1526,7 @@ techtree:
   locked: locked
   noRequirements: No prerequisites
   kindBuildings: Buildings
+  kindMoonBuildings: 🌙 Moon buildings
   kindResearch: Research
   kindShips: Fleet
   kindDefense: Defense
