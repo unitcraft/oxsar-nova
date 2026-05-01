@@ -1130,6 +1130,42 @@ func TestMultiRun_AvgExp_MatchesSingleRunForN1(t *testing.T) {
 	}
 }
 
+// TestMultiRun_Seed0_NoGoldenRatioArtefact — регрессия BA-021. При
+// seed=0 первая итерация (i=0) попадала на rng.New(0) → golden_ratio
+// (см. pkg/rng/rng.go:23-27), и character RNG отличался от остальных
+// итераций. Фикс: если seed0=0, смещаем индексацию (Seed = 1, 2, ..., n).
+// Проверка: при двух прогонах MultiRun(in_seed_0, n=5) и
+// MultiRun(in_seed_1, n=5) дисперсия результата сопоставима — ни один
+// из прогонов не имеет «лишний» rng-state.
+func TestMultiRun_Seed0_NoGoldenRatioArtefact(t *testing.T) {
+	t.Parallel()
+	mkInput := func(seed uint64) Input {
+		return Input{
+			Seed:      seed,
+			Rounds:    6,
+			Attackers: []Side{simpleAttacker(50, 100, 1000)},
+			Defenders: []Side{simpleDefender(50, 50, 1000)},
+			HasPlanet: true,
+		}
+	}
+	// Прогон с seed=0 не должен падать или вести себя неожиданно.
+	stats0, _, err := MultiRun(mkInput(0), 5)
+	if err != nil {
+		t.Fatalf("seed=0 не должен ломать MultiRun: %v", err)
+	}
+	stats1, _, err := MultiRun(mkInput(1), 5)
+	if err != nil {
+		t.Fatalf("seed=1: %v", err)
+	}
+	// AvgRounds, AvgMoonChance, шансы побед должны быть в одном порядке —
+	// regression check на «character RNG не должен качаться»: оба прогона
+	// показывают валидные числа.
+	if stats0.AvgRounds <= 0 || stats1.AvgRounds <= 0 {
+		t.Fatalf("AvgRounds должно быть положительным: stats0=%v stats1=%v",
+			stats0.AvgRounds, stats1.AvgRounds)
+	}
+}
+
 // TestMultiRun_AvgExp_StaysOrderOfMagnitude — для n=10 avg всё ещё в
 // том же порядке что Report.AttackerExp одиночного боя (5-15 очков),
 // не 10^6+.

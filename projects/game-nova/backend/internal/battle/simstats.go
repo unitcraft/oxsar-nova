@@ -32,9 +32,18 @@ func MultiRun(in Input, n int) (SimStats, Report, error) {
 		atkExp, defExp int64
 		last           Report
 	)
+	// План 72.1.3 / BA-021: при seed=0 первая итерация (i=0) попадает на
+	// guard `rng.New(0) → golden_ratio`, тогда как i=1,2,...,n получают
+	// нормальный xorshift. Из-за этого первая симуляция при seed=0 имела
+	// другой RNG-character, статистика смещалась. Если seed0 пуст —
+	// смещаем индексирование на 1, чтобы Seed никогда не был 0.
 	seed0 := in.Seed
+	seedOffset := uint64(0)
+	if seed0 == 0 {
+		seedOffset = 1
+	}
 	for i := 0; i < n; i++ {
-		in.Seed = seed0 + uint64(i)
+		in.Seed = seed0 + uint64(i) + seedOffset
 		rep, err := Calculate(in)
 		if err != nil {
 			return SimStats{}, Report{}, err
