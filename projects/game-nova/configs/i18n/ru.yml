@@ -1083,6 +1083,12 @@ artefacts:
   toastActivateErr: Ошибка активации
   toastSellErr: Ошибка продажи
   toastError: Ошибка
+  # План 72.1.45: шапка с информацией о технологии артефактов (legacy artefacts.tpl §1).
+  techName: Технология артефактов
+  techLevelLabel: "Уровень"
+  techStorage: "Хранилище:"
+  techUsed: "Используется:"
+  techFree: "Свободно:"
 
 repair:
   title: "Ремонтный ангар — {{planetName}}"
@@ -1388,6 +1394,8 @@ empire:
   totalResources: "Всего ресурсов:"
   colParam: Параметр
   groupPlanet: Планета
+  # План 72.1.45: УМИ — virtual research lab level.
+  umi: "УМИ"
   # План 72.1.37: 5 вкладок (legacy empire.tpl).
   tab_overview: "📊 Обзор"
   tab_buildings: "🏛 Постройки"
