@@ -218,7 +218,7 @@ export function RepairScreen() {
                   <div style={{ clear: 'both', fontSize: 'smaller' }}>
                     {t('buildings', 'shipsExist', { arg1: formatNumber(u.count) })}
                     {' · '}
-                    Целостность: {Math.floor(u.shell_percent * 100)}%
+                    Целостность: {Math.floor(u.shell_percent)}%
                   </div>
                 </td>
                 <td width="100px" align="center" valign="top">
