@@ -69,6 +69,10 @@ interface TechSet {
   gun: number;
   shield: number;
   shell: number;
+  // План 72.1.34: 3-channel combat (legacy `gun_laser`/`gun_ion`/`gun_plasma`).
+  laser: number;
+  ion: number;
+  plasma: number;
   ballistics: number;
   masking: number;
   shipyard: number;     // только для атакующего (не используется в bой)
@@ -76,7 +80,8 @@ interface TechSet {
 }
 
 const ZERO_TECH: TechSet = {
-  gun: 0, shield: 0, shell: 0, ballistics: 0, masking: 0,
+  gun: 0, shield: 0, shell: 0, laser: 0, ion: 0, plasma: 0,
+  ballistics: 0, masking: 0,
   shipyard: 0, defenseFactory: 0,
 };
 
@@ -224,6 +229,9 @@ export function SimulatorScreen() {
           gun: aTech.gun,
           shield: aTech.shield,
           shell: aTech.shell,
+          laser: aTech.laser,
+          ion: aTech.ion,
+          plasma: aTech.plasma,
           ballistics: aTech.ballistics,
           masking: aTech.masking,
         },
@@ -237,6 +245,9 @@ export function SimulatorScreen() {
           gun: dTech.gun,
           shield: dTech.shield,
           shell: dTech.shell,
+          laser: dTech.laser,
+          ion: dTech.ion,
+          plasma: dTech.plasma,
           ballistics: dTech.ballistics,
           masking: dTech.masking,
         },
@@ -275,6 +286,9 @@ export function SimulatorScreen() {
                     <td>{t('assaultReport', 'gunPower')}</td>
                     <td>{t('assaultReport', 'shieldPower')}</td>
                     <td>{t('assaultReport', 'armoring')}</td>
+                    <td>{t('info', 'laserTech') || 'Laser'}</td>
+                    <td>{t('info', 'ionTech') || 'Ion'}</td>
+                    <td>{t('info', 'plasmaTech') || 'Plasma'}</td>
                     <td>{t('assaultReport', 'ballisticsPower')}</td>
                     <td>{t('assaultReport', 'maskingPower')}</td>
                     <td>{t('assaultReport', 'shipyardPower')}</td>
@@ -285,6 +299,9 @@ export function SimulatorScreen() {
                     <td><TechInput v={aTech.gun} on={(v) => setATech({ ...aTech, gun: v })} /></td>
                     <td><TechInput v={aTech.shield} on={(v) => setATech({ ...aTech, shield: v })} /></td>
                     <td><TechInput v={aTech.shell} on={(v) => setATech({ ...aTech, shell: v })} /></td>
+                    <td><TechInput v={aTech.laser} on={(v) => setATech({ ...aTech, laser: v })} /></td>
+                    <td><TechInput v={aTech.ion} on={(v) => setATech({ ...aTech, ion: v })} /></td>
+                    <td><TechInput v={aTech.plasma} on={(v) => setATech({ ...aTech, plasma: v })} /></td>
                     <td><TechInput v={aTech.ballistics} on={(v) => setATech({ ...aTech, ballistics: v })} /></td>
                     <td><TechInput v={aTech.masking} on={(v) => setATech({ ...aTech, masking: v })} /></td>
                     <td><TechInput v={aTech.shipyard} on={(v) => setATech({ ...aTech, shipyard: v })} /></td>
@@ -295,6 +312,9 @@ export function SimulatorScreen() {
                     <td><TechInput v={dTech.gun} on={(v) => setDTech({ ...dTech, gun: v })} /></td>
                     <td><TechInput v={dTech.shield} on={(v) => setDTech({ ...dTech, shield: v })} /></td>
                     <td><TechInput v={dTech.shell} on={(v) => setDTech({ ...dTech, shell: v })} /></td>
+                    <td><TechInput v={dTech.laser} on={(v) => setDTech({ ...dTech, laser: v })} /></td>
+                    <td><TechInput v={dTech.ion} on={(v) => setDTech({ ...dTech, ion: v })} /></td>
+                    <td><TechInput v={dTech.plasma} on={(v) => setDTech({ ...dTech, plasma: v })} /></td>
                     <td><TechInput v={dTech.ballistics} on={(v) => setDTech({ ...dTech, ballistics: v })} /></td>
                     <td><TechInput v={dTech.masking} on={(v) => setDTech({ ...dTech, masking: v })} /></td>
                     <td>&nbsp;</td>
@@ -650,6 +670,23 @@ function SimResultsView({
             </small>
           </td>
         </tr>
+
+        {/* План 72.1.34: потери в очках/юнитах (legacy simulator.tpl
+            строки 198-205 показывает каждой стороной отдельно). */}
+        {(s.attacker_lost_points != null || s.defender_lost_points != null) && (
+          <tr>
+            <th>{t('score', 'colPoints') || 'Очки'}</th>
+            <td>−{fmt(s.attacker_lost_points ?? 0, 0)}</td>
+            <td>−{fmt(s.defender_lost_points ?? 0, 0)}</td>
+          </tr>
+        )}
+        {(s.attacker_lost_units != null || s.defender_lost_units != null) && (
+          <tr>
+            <th>{t('mission', 'unitsLost') || 'Юнитов потеряно'}</th>
+            <td>{fmt(s.attacker_lost_units ?? 0, 0)}</td>
+            <td>{fmt(s.defender_lost_units ?? 0, 0)}</td>
+          </tr>
+        )}
 
         {/* Опыт */}
         <tr>

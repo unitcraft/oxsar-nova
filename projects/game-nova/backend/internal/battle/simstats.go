@@ -23,6 +23,8 @@ func MultiRun(in Input, n int) (SimStats, Report, error) {
 		totalMoonChance              float64
 		atkLostM, atkLostS, atkLostH int64
 		defLostM, defLostS, defLostH int64
+		atkLostPts, defLostPts       float64 // План 72.1.34: средние lost_points.
+		atkLostUnits, defLostUnits   int64
 		debrisM, debrisS             int64
 		// План 72.1.3 / BA-012: суммируем РЕАЛЬНЫЙ опыт из rep.AttackerExp/
 		// DefenderExp (atan-based formula в computeExperience). До фикса
@@ -65,11 +67,15 @@ func MultiRun(in Input, n int) (SimStats, Report, error) {
 			atkLostM += s.LostMetal
 			atkLostS += s.LostSilicon
 			atkLostH += s.LostHydrogen
+			atkLostPts += s.LostPoints
+			atkLostUnits += s.LostUnits
 		}
 		for _, s := range rep.Defenders {
 			defLostM += s.LostMetal
 			defLostS += s.LostSilicon
 			defLostH += s.LostHydrogen
+			defLostPts += s.LostPoints
+			defLostUnits += s.LostUnits
 		}
 		atkExp += int64(rep.AttackerExp)
 		defExp += int64(rep.DefenderExp)
@@ -89,6 +95,10 @@ func MultiRun(in Input, n int) (SimStats, Report, error) {
 		DefenderLostMetal:    float64(defLostM) / fn,
 		DefenderLostSilicon:  float64(defLostS) / fn,
 		DefenderLostHydrogen: float64(defLostH) / fn,
+		AttackerLostPoints:   atkLostPts / fn,
+		DefenderLostPoints:   defLostPts / fn,
+		AttackerLostUnits:    float64(atkLostUnits) / fn,
+		DefenderLostUnits:    float64(defLostUnits) / fn,
 		DebrisMetal:          float64(debrisM) / fn,
 		DebrisSilicon:        float64(debrisS) / fn,
 		AttackerExp:          float64(atkExp) / fn,
