@@ -334,7 +334,7 @@ func run() error {
 	// План 46 Ф.3 (149-ФЗ) → план 56: жалобы перенесены в portal-backend.
 	// game-nova больше не владеет user_reports, см. portal/internal/report.
 
-	professionSvc := profession.NewService(db, cat)
+	professionSvc := profession.NewService(db, cat).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
 	professionH := profession.NewHandler(professionSvc)
 
 	aiAdvisorSvc := aiadvisor.NewService(db, cfg.AIAdvisor)

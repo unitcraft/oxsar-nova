@@ -147,9 +147,10 @@ type ProfessionCatalog struct {
 // плюс специальные: "gun", "shield_weapon", "shell_weapon" (боевые техи),
 // "ballistics", "masking" (fleet техи), "computer_tech".
 type ProfessionSpec struct {
-	Label string         `yaml:"label"`
-	Bonus map[string]int `yaml:"bonus"`
-	Malus map[string]int `yaml:"malus"`
+	Label       string         `yaml:"label"`
+	Description string         `yaml:"description,omitempty"`
+	Bonus       map[string]int `yaml:"bonus"`
+	Malus       map[string]int `yaml:"malus"`
 }
 
 // ArtefactSpec — один артефакт. Содержит идентификатор, эффект и

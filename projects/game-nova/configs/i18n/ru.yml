@@ -634,6 +634,11 @@ autoMessages:
   firstAttackReceived.body: "Игрок {{attacker}} направил флот на вашу планету {{planet_name}}. Прибытие: {{arrive_at}}. Рекомендуется укрепить оборону или отправить транспортом ресурсы в безопасное место."
   inactivityReminder.title: "Давно не виделись, {{username}}!"
   inactivityReminder.body: "Прошло несколько дней с вашего последнего визита. Не забывайте — ваши шахты продолжают добычу, хранилища могут переполниться. Возвращайтесь и проверьте статус ваших планет."
+  # План 72.1.15: уведомление при списании кредитов за смену профессии
+  # (legacy MSG_CREDIT_PROFESSION_CHANGED, папка MSG_FOLDER_CREDIT=8).
+  creditProfessionChanged.title: Списание кредитов
+  creditProfessionChanged.body: "Списано {{credits}} кредитов за смену профессии на «{{profession}}»."
+  creditProfessionChanged.noneLabel: "без профессии"
 buddylist:
   accept: Принять
   buddylist: Список друзей
@@ -1528,6 +1533,8 @@ profession:
   bonusShipShield: Щит кораблей
   bonusShipHull: Броня кораблей
   bonusEspionage: Шпионаж
+  # План 72.1.15: error mapping для ErrInVacation (legacy UMODE_ENABLED).
+  errInVacation: Нельзя менять профессию в режиме отпуска.
 
 admin:
   title: Панель администратора
