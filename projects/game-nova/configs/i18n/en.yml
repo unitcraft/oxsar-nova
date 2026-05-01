@@ -76,6 +76,10 @@ administrator:
 alliance:
   abandonAlliance: ""
   accept: ""
+  # План 72.1.45 §3: online indicator + points in memberlist + coords in candidates.
+  memberOnline: Activity
+  memberPoints: Points
+  candidateCoords: Coords
   # План 72.1.43: tag/name edit + broadcast.
   saveBtn: "Save"
   globalMail: "Broadcast"
