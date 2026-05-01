@@ -24,6 +24,8 @@ export interface EmpirePlanet {
   metal: number;
   silicon: number;
   hydrogen: number;
+  // План 72.1.45: УМИ (virtual research lab level).
+  umi: number;
   buildings: Record<string, number>;
   ships: Record<string, number>;
   defense: Record<string, number>;

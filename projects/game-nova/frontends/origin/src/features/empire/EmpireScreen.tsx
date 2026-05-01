@@ -140,6 +140,8 @@ function OverviewTable({
           <th>{t('empire', 'rowDiameter')}</th>
           <th>{t('empire', 'rowFields')}</th>
           <th>{t('empire', 'rowTemp')}</th>
+          {/* План 72.1.45: УМИ (research_virt_lab). */}
+          <th>{t('empire', 'umi') || 'УМИ'}</th>
           <th colSpan={2}>{t('empire', 'groupResources')}</th>
         </tr>
       </thead>
@@ -168,6 +170,7 @@ function OverviewTable({
             <td align="right">
               {p.temp_min}…{p.temp_max} °C
             </td>
+            <td align="right">{formatNumber(p.umi)}</td>
             <td>
               М <br />К <br />В
             </td>
