@@ -330,11 +330,34 @@ func (s *Service) BuyLot(ctx context.Context, lotID, buyerID string) (Lot, error
 			return err
 		}
 
-		// 3. Atomic oxsarit transfer: spend buyer (с проверкой баланса), add seller.
+		// 3. Atomic oxsarit transfer.
+		// План 72.1.46 P1#1: legacy `Exchange::buyLot` с EXCH_NEW_PROFIT_TYPE
+		// (consts.php:..., always true в проде) удерживает с продавца
+		// комиссию брокера: seller_profit = price × (100-fee)/100,
+		// exchange_profit = price × fee/100. У origin/nova brokers
+		// отсутствуют как отдельные сущности (seller = broker), поэтому
+		// `exchange_profit` остаётся в круговороте — не зачисляется
+		// никому (системная комиссия). Покупатель всё равно платит
+		// `lot.PriceOxsarit` целиком.
+		bs, err := s.getBrokerSettingsTx(ctx, tx, lot.SellerUserID)
+		if err != nil {
+			return fmt.Errorf("get broker settings: %w", err)
+		}
+		sellerProfit := lot.PriceOxsarit
+		if bs.FeePercent > 0 {
+			fee := int64(float64(lot.PriceOxsarit) * bs.FeePercent / 100.0)
+			if fee < 0 {
+				fee = 0
+			}
+			sellerProfit = lot.PriceOxsarit - fee
+			if sellerProfit < 0 {
+				sellerProfit = 0
+			}
+		}
 		if err := s.repo.SpendOxsarits(ctx, tx, buyerID, lot.PriceOxsarit); err != nil {
 			return err
 		}
-		if err := s.repo.AddOxsarits(ctx, tx, lot.SellerUserID, lot.PriceOxsarit); err != nil {
+		if err := s.repo.AddOxsarits(ctx, tx, lot.SellerUserID, sellerProfit); err != nil {
 			return err
 		}
 

@@ -122,8 +122,11 @@ func TestProperty_EscrowInvariant(t *testing.T) {
 	})
 }
 
-// PropertyOxsaritInvariant: сумма oxsarit участников константна (она не
-// уходит в null/system).
+// PropertyOxsaritInvariant: сумма oxsarit участников **не растёт**.
+// Может уменьшаться: план 72.1.46 P1#1 BuyLot удерживает per-broker
+// fee — комиссия списывается из системы (broker как отдельный юзер
+// в origin/nova отсутствует, см. service.go::BuyLot). Гарантия:
+// oxsarit не появляется из ниоткуда (нет leak в плюс).
 func TestProperty_OxsaritInvariant(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
 		w := makeWorld(rt)
@@ -157,8 +160,8 @@ func TestProperty_OxsaritInvariant(t *testing.T) {
 			}
 		}
 		got := w.repo.totalOxsarits()
-		if got != startSum {
-			rt.Fatalf("oxsarit invariant violated: sum %d → %d", startSum, got)
+		if got > startSum {
+			rt.Fatalf("oxsarit appeared from nothing: %d → %d", startSum, got)
 		}
 	})
 }
