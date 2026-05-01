@@ -15511,5 +15511,57 @@ not-a-fix + BA-019 mitigated.
   - docs(plan-72.1.31): новый план + audit /battlestats ⚠ → ✅
     + dev-log.
 
+2026-05-01 — итерация 72.1.32: Galaxy — activity/rocket/monitor/e_points/alliance_rank.
 
+  Закрывает 5 хвостов 72.1.24 / правило 1:1 для /galaxy
+  (audit #24). Legacy `Galaxy.class.php` строки 162-247.
 
+  Реализация:
+  - Backend internal/galaxy/repository.go:
+    * CellView +owner_e_points, +owner_alliance_rank
+      (computed: COUNT WHERE alliance_id=u.alliance_id AND
+      points>u.points + 1).
+    * SystemView +can_monitor_activity, +in_missile_range.
+    * ReadSystem(...) принимает viewerPlanetID, numSystems.
+      Без viewerPlanetID — backwards-compat, оба флага false.
+    * Helpers: systemDiffWrap (NS::getSystemsDiff с wrap-around)
+      и roundHalfAwayFromZero (PHP-стиль). Один доп-SQL запрос
+      к planets+buildings(SS=55)+research(hyper_tech=19,
+      impulse_engine=21) для viewer-meta.
+  - Backend handler.go: from_planet_id используется и для
+    hydrogen-cost (72.1.24), и для viewer-meta-флагов.
+  - Frontend GalaxyScreen.tsx:
+    * activityLabel(last_seen): "(*)" <15min, "(N min)" <1ч,
+      "" иначе. Видна только если can_monitor_activity=true.
+    * Колонка «Игрок»: rank #N + e_points + activity + 💤/🚫/⭐.
+    * Колонка «Альянс»: [TAG] + alliance_rank + relation
+      (war красным, ally/nap зелёным).
+    * Action 🚀 виден если in_missile_range=true и has_planet,
+      ведёт на /rocket-attack/{planet_id}.
+  - api/types.ts: GalaxyCell +planet_id, +owner_rank,
+    +owner_e_points, +owner_alliance_rank, +owner_last_seen,
+    +owner_vacation, +owner_banned, +alliance_tag, +relation,
+    +is_friend. SystemView +can_monitor_activity,
+    +in_missile_range.
+  - i18n ru/en: galaxy.rocketAttack.
+
+  Формулы (1:1 с legacy):
+  - rocket range: impulse_engine * 8 - 1.
+  - monitor activity range: round((SS²-1) * (1 + hyper_tech/10)).
+  - sys diff: min(|a-b|, NUM_SYSTEMS - max(a,b) + min(a,b)).
+
+  /galaxy ⚠ → ✅ — правило 1:1 закрыто полностью.
+
+  Изменённые файлы:
+  - projects/game-nova/backend/internal/galaxy/repository.go.
+  - projects/game-nova/backend/internal/galaxy/handler.go.
+  - projects/game-nova/frontends/origin/src/api/types.ts.
+  - projects/game-nova/frontends/origin/src/features/galaxy/GalaxyScreen.tsx.
+  - projects/game-nova/configs/i18n/{ru,en}.yml.
+  - docs/plans/72.1.32-galaxy-cont.md (новый).
+  - docs/plans/72.1.2-screen-audit.md (#24 ⚠ → ✅).
+
+  **Коммиты** (по типам задач):
+  - feat(galaxy): план 72.1.32 — backend (repository + handler).
+  - feat(origin/frontend): план 72.1.32 — UI (types + screen + i18n).
+  - docs(plan-72.1.32): новый план + audit /galaxy ⚠ → ✅ + dev-log.
