@@ -251,12 +251,18 @@ type Alliance struct {
 
 // Application — заявка на вступление в альянс.
 type Application struct {
-	ID          string    `json:"id"`
-	AllianceID  string    `json:"alliance_id"`
-	UserID      string    `json:"user_id"`
-	Username    string    `json:"username"`
-	Message     string    `json:"message"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID         string    `json:"id"`
+	AllianceID string    `json:"alliance_id"`
+	UserID     string    `json:"user_id"`
+	Username   string    `json:"username"`
+	Message    string    `json:"message"`
+	CreatedAt  time.Time `json:"created_at"`
+	// План 72.1.45 §3: координаты главной планеты + очки кандидата
+	// (legacy candidates view — owner видит куда упасть/забрать).
+	HomeGalaxy   int     `json:"home_galaxy"`
+	HomeSystem   int     `json:"home_system"`
+	HomePosition int     `json:"home_position"`
+	Points       float64 `json:"points"`
 }
 
 // Member — элемент списка участников.
@@ -266,6 +272,12 @@ type Member struct {
 	Rank     string    `json:"rank"`
 	RankName string    `json:"rank_name"` // произвольный ранг от owner'а
 	JoinedAt time.Time `json:"joined_at"`
+	// План 72.1.45 §3: online-статус для UI индикатора (legacy memberlist
+	// использует last_login/online из user-карточки).
+	LastSeen time.Time `json:"last_seen"`
+	// Очки: legacy memberlist отображает `points` рядом с username.
+	// Источник — users.points (поддерживается score-сервисом).
+	Points float64 `json:"points"`
 }
 
 var ErrMemberNotFound = errors.New("alliance: member not found")
@@ -412,14 +424,19 @@ func (s *Service) Get(ctx context.Context, id string) (Alliance, []Member, error
 		return Alliance{}, nil, fmt.Errorf("get alliance: %w", err)
 	}
 
+	// План 72.1.45 §3: добавили u.last_seen + u.points (агрегированный
+	// score из service score.go). legacy memberlist отображает рядом с
+	// username.
 	rows, err := s.db.Pool().Query(ctx, `
-		SELECT m.user_id, COALESCE(u.username,''), m.rank, m.rank_name, m.joined_at
-		FROM alliance_members m
-		JOIN users u ON u.id = m.user_id
-		WHERE m.alliance_id = $1
-		ORDER BY
-		  CASE m.rank WHEN 'owner' THEN 0 ELSE 1 END,
-		  m.joined_at ASC
+		SELECT m.user_id, COALESCE(u.username,''), m.rank, m.rank_name, m.joined_at,
+		       u.last_seen,
+		       COALESCE(u.points, 0) AS points
+		  FROM alliance_members m
+		  JOIN users u ON u.id = m.user_id
+		 WHERE m.alliance_id = $1
+		 ORDER BY
+		    CASE m.rank WHEN 'owner' THEN 0 ELSE 1 END,
+		    m.joined_at ASC
 	`, id)
 	if err != nil {
 		return Alliance{}, nil, fmt.Errorf("get members: %w", err)
@@ -428,7 +445,7 @@ func (s *Service) Get(ctx context.Context, id string) (Alliance, []Member, error
 	var members []Member
 	for rows.Next() {
 		var m Member
-		if err := rows.Scan(&m.UserID, &m.Username, &m.Rank, &m.RankName, &m.JoinedAt); err != nil {
+		if err := rows.Scan(&m.UserID, &m.Username, &m.Rank, &m.RankName, &m.JoinedAt, &m.LastSeen, &m.Points); err != nil {
 			return Alliance{}, nil, err
 		}
 		members = append(members, m)
@@ -799,12 +816,23 @@ func (s *Service) Applications(ctx context.Context, userID, allianceID string) (
 	if ownerID != userID {
 		return nil, ErrNotOwner
 	}
+	// План 72.1.45 §3: добавили координаты home-планеты (subquery
+	// homeworld → coords) + очки. legacy candidates view это показывает.
 	rows, err := s.db.Pool().Query(ctx, `
-		SELECT a.id, a.alliance_id, a.user_id, COALESCE(u.username,''), a.message, a.created_at
-		FROM alliance_applications a
-		JOIN users u ON u.id = a.user_id
-		WHERE a.alliance_id = $1
-		ORDER BY a.created_at ASC
+		SELECT a.id, a.alliance_id, a.user_id, COALESCE(u.username,''), a.message, a.created_at,
+		       COALESCE(p.galaxy, 0), COALESCE(p.system, 0), COALESCE(p.position, 0),
+		       COALESCE(u.points, 0) AS points
+		  FROM alliance_applications a
+		  JOIN users u ON u.id = a.user_id
+		  LEFT JOIN LATERAL (
+		      SELECT galaxy, system, position
+		        FROM planets
+		       WHERE user_id = a.user_id AND is_moon = false
+		       ORDER BY created_at ASC
+		       LIMIT 1
+		  ) p ON true
+		 WHERE a.alliance_id = $1
+		 ORDER BY a.created_at ASC
 	`, allianceID)
 	if err != nil {
 		return nil, fmt.Errorf("list applications: %w", err)
@@ -814,7 +842,8 @@ func (s *Service) Applications(ctx context.Context, userID, allianceID string) (
 	for rows.Next() {
 		var ap Application
 		if err := rows.Scan(&ap.ID, &ap.AllianceID, &ap.UserID, &ap.Username,
-			&ap.Message, &ap.CreatedAt); err != nil {
+			&ap.Message, &ap.CreatedAt,
+			&ap.HomeGalaxy, &ap.HomeSystem, &ap.HomePosition, &ap.Points); err != nil {
 			return nil, err
 		}
 		out = append(out, ap)
