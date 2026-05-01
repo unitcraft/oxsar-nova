@@ -2624,3 +2624,24 @@ unit-тесты на форматтеры/валидаторы/router-маршр
   game-фронта — это будет ссылка `<a href="{PORTAL_URL}/activate-resend">`,
   без логики на стороне game.
 - **Приоритет**: closed.
+
+### [P72.1.8.C.PREMIUM_BAN_ADMIN_ONLY] Premium-лоты и Ban — admin-only, не в MVP origin
+
+- **Где**: legacy `Stock.class.php::premiumLot, ban`.
+- **Что**: legacy биржа имеет два admin-action'а:
+  - `premiumLot` — выставить лот как премиум (видимость наверху,
+    специальная пометка). Доступ — moderator+.
+  - `ban` — admin может забанить лот (скрыть из списка, расследовать
+    мошенничество).
+- **В origin**: оба отсутствуют.
+- **Почему**: это admin-инструменты, а не игровые функции. На старте
+  oxsar-nova модерация биржи — ручная (через прямые SQL-операции),
+  для штатного процесса admin-UI запланирован в `projects/admin/`
+  отдельно.
+- **Trade-off**: minor. Игроки не видят разницы между обычным и
+  премиум-лотом (в MVP — обычные сортируются по дате). Бан-функция
+  — для модератора, не для игрока.
+- **Как чинить**: добавить admin-роуты (`POST /api/admin/exchange/lots/{id}/ban`,
+  `POST /api/admin/exchange/lots/{id}/premium`) и UI-кнопки в
+  admin-фронте (не origin). Это отдельный план в admin-консоли.
+- **Приоритет**: L (post-MVP).

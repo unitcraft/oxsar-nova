@@ -1233,12 +1233,21 @@ market:
   fleetNoLots: No open fleet lots
   fleetLotCreated: Fleet lot listed
 
-# Stock — artefact exchange (plan 72.1.8 ч.A).
+# Stock — artefact exchange (plan 72.1.8 ч.A + ч.B).
 stock:
   buyBtn: Buy
   cancelBtn: Cancel
   buySuccess: Lot purchased
   cancelSuccess: Lot withdrawn
+  createBtn: List lot
+  createCancel: Cancel
+  createArtLabel: Artefact
+  createArtPlaceholder: select
+  createQtyLabel: Qty
+  createPriceLabel: Price (oxsarits)
+  createExpiryLabel: Expires (h)
+  createSubmit: List
+  createSuccess: Lot listed
 
 score:
   title: "🏆 Leaderboard"
