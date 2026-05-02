@@ -618,11 +618,16 @@ paths:
       tags: [shipyard]
       security: [{ bearerAuth: [] }]
       summary: Build ships or defense
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.49).
+        Повтор с тем же ключом и теми же body вернёт кешированный
+        ответ; повтор с тем же ключом и другими body — 409.
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -642,6 +647,11 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Idempotency-Key reuse with different body
+          content:
+            text/plain:
+              schema: { type: string }
 
   /api/planets/{id}/shipyard/queue:
     get:
@@ -710,11 +720,14 @@ paths:
         Enqueue a batch disassembly of healthy units. Charges required
         cost and subtracts units up-front; returns cost is credited when
         the event fires (see DisassembleHandler).
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.49).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -734,6 +747,11 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Idempotency-Key reuse with different body
+          content:
+            text/plain:
+              schema: { type: string }
 
   /api/planets/{id}/repair/repair:
     post:
@@ -743,11 +761,14 @@ paths:
         Enqueue repair of all damaged ships of one unit_id. Cost scales
         with remaining shell_percent (more damaged = cheaper to repair,
         less damaged = more expensive in legacy formula).
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.49).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -766,6 +787,11 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Idempotency-Key reuse with different body
+          content:
+            text/plain:
+              schema: { type: string }
 
   /api/planets/{id}/repair/damaged:
     get:
