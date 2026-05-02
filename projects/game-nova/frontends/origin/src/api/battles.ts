@@ -44,7 +44,8 @@ export interface BattleListFilters {
   show_no_destroyed?: boolean;
   new_moon?: boolean;
   moon_battle?: boolean;
-  sort_field?: 'date' | 'rounds' | 'debris' | 'loot';
+  // План 72.1.10 wave 2: backend whitelist расширен outcome+moon.
+  sort_field?: 'date' | 'rounds' | 'debris' | 'loot' | 'outcome' | 'moon';
   sort_order?: 'asc' | 'desc';
 }
 

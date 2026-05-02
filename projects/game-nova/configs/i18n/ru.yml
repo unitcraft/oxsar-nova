@@ -3062,6 +3062,8 @@ statistics:
   bsSortRounds: по раундам
   bsSortDebris: по обломкам
   bsSortLoot: по добыче
+  bsSortOutcome: по результату
+  bsSortMoon: по луне
   bsSortAsc: по возрастанию
   bsSortDesc: по убыванию
   bsUserFilter: Имя игрока

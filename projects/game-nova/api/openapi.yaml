@@ -486,6 +486,15 @@ paths:
       summary: |
         Список боёв текущего юзера (план 72.1 ч.20.8 — battle viewer).
         Cursor-paginated по полю `at` (timestamp последнего боя).
+      description: |
+        Параметры фильтрации портированы из legacy
+        `Battlestats.class.php::showBattles` (планы 72.1.10 + wave 2).
+        Date-range серверно-clamp'ится в окно [now-18d .. now-3d]
+        (legacy hidden_days=3, window=15d) — клиентское расширение
+        диапазона игнорируется. Sort whitelisted: date / rounds /
+        debris / loot / outcome / moon. Поле `planet_name` legacy
+        требует JOIN с planets и колонки target_planet_id —
+        отложено в wave 3.
       parameters:
         - in: query
           name: limit
@@ -493,6 +502,45 @@ paths:
         - in: query
           name: cursor
           schema: { type: string, format: date-time, description: "RFC3339 timestamp последнего боя" }
+        - in: query
+          name: date_min
+          schema: { type: string, format: date-time, description: "RFC3339; clamp в [now-18d .. now-3d]" }
+        - in: query
+          name: date_max
+          schema: { type: string, format: date-time, description: "RFC3339; clamp в [now-18d .. now-3d]" }
+        - in: query
+          name: user_filter
+          schema: { type: string, format: uuid, description: "uuid оппонента (атакер ИЛИ дефендер)" }
+        - in: query
+          name: alliance_filter
+          schema: { type: string, format: uuid, description: "uuid альянса оппонента" }
+        - in: query
+          name: show_drawn
+          schema: { type: boolean, default: true, description: "false → скрыть ничьи (winner='draw')" }
+        - in: query
+          name: show_aliens
+          schema: { type: boolean, default: false, description: "true → включить бои с aliens" }
+        - in: query
+          name: show_no_destroyed
+          schema: { type: boolean, default: true, description: "false → скрыть бои без потерь" }
+        - in: query
+          name: new_moon
+          schema: { type: boolean, default: false, description: "true → только бои с появлением луны" }
+        - in: query
+          name: moon_battle
+          schema: { type: boolean, default: false, description: "true → только бои на луне" }
+        - in: query
+          name: sort_field
+          schema:
+            type: string
+            default: date
+            enum: [date, rounds, debris, loot, outcome, moon]
+        - in: query
+          name: sort_order
+          schema:
+            type: string
+            default: desc
+            enum: [asc, desc]
       responses:
         "200":
           description: ok
