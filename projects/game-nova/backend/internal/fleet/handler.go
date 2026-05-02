@@ -259,7 +259,8 @@ func (h *Handler) Load(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrFleetNotHolding),
 		errors.Is(err, ErrPlanetNotDst),
 		errors.Is(err, ErrLoadFromOwnSrc),
-		errors.Is(err, ErrLoadCapacity):
+		errors.Is(err, ErrLoadCapacity),
+		errors.Is(err, ErrControlsExhausted):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
 	case errors.Is(err, ErrInvalidDispatch):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
@@ -303,7 +304,9 @@ func (h *Handler) Unload(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrPlanetOwnership):
 		httpx.WriteError(w, r, httpx.ErrForbidden)
 	case errors.Is(err, ErrFleetNotHolding),
-		errors.Is(err, ErrPlanetNotDst):
+		errors.Is(err, ErrPlanetNotDst),
+		errors.Is(err, ErrControlsExhausted),
+		errors.Is(err, ErrInsufficientReturnFuel):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
 	case errors.Is(err, ErrInvalidDispatch):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))

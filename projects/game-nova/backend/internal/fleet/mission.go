@@ -49,6 +49,10 @@ type Fleet struct {
 	// План 72.1.48: ACS-formation. Для ACS-флотов содержит UUID
 	// acs_groups записи; иначе пусто.
 	ACSGroupID   *string    `json:"acs_group_id,omitempty"`
+	// План 72.1.48 (доделка): rate-limit на load/unload + резерв H.
+	ControlTimes     int   `json:"control_times,omitempty"`
+	MaxControlTimes  int   `json:"max_control_times,omitempty"`
+	BackConsumption  int64 `json:"back_consumption,omitempty"`
 }
 
 type Resources struct {
