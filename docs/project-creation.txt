@@ -16087,3 +16087,51 @@ not-a-fix + BA-019 mitigated.
 
   Коммит: feat(api+server): план 72.1.50 ч.4A — idempotency rollout
   builds+economy (18 routes + 13 openapi endpoints).
+
+Итерация 2026-05-02 (вечер) — план 72.1.50 ч.4B (idempotency rollout part B):
+
+  Social + fleet + planet: 29 мутирующих route'ов nova обёрнуты в
+  idempotency-middleware. Завершает rollout 77 Ф.3.2 после части A
+  (builds+economy, 18 routes).
+
+  Backend (cmd/server/main.go):
+  - settings: 4 (PUT /settings, deletion code/cancel, DELETE /me)
+  - notepad: 1
+  - friends: 3 (Add/Accept/Remove)
+  - planets: 5 (Reorder/Rename/SetHome/Abandon/ResourceUpdate)
+  - fleet (без Send — handler-level): 7 (stargate, recall, load,
+    unload, promote-to-acs, ACS invite/accept)
+  - market: 9 (exchange, credit, credit-multi, lots+fleet-lots CRUD)
+  - rocket: launch
+  - chat: 4 (send, read, edit, delete)
+  - messages: 4 (Compose, DeleteAll, Delete, MarkRead)
+  - alien: holding/pay
+
+  Verify-handsweep: alliance/exchange/fleet.Send/alien-buyout/
+  planet-teleport уже имеют handler-level idempotency через
+  FromRequest — middleware на них не ставим (двойного оборачивания
+  нет, но удобства тоже нет).
+
+  OpenAPI (только описанные в спеке):
+  - 11 endpoint'ов получили IdempotencyKey + 409 ref:
+    notepad, planets/{id} PATCH/DELETE, set-home, resource-update,
+    fleet/recall, stargate, market/exchange, rockets/launch,
+    messages/{id} (DELETE + read).
+  - Для fleet/recall и stargate (где 409 уже занят семантически)
+    добавлено union-описание про idempotency-conflict.
+
+  Документационный gap: 16 endpoint'ов из части B не описаны
+  в openapi вовсе (load/unload, promote-to-acs, ACS invite/accept,
+  market credit/lots серия, planets/order, deletion/cancel,
+  alien/holding/pay). Backend обёртка применена, добавление в
+  спеку — самостоятельный план.
+
+  Итог 72.1.50 ч.4 (A+B): 47 middleware-обёрток + 12 handler-level
+  идемпотентных endpoint'ов. Все мутирующие route'ы nova защищены
+  от double-submit. Двойной клик «Купить»/«Построить»/«Отправить»/
+  «Отозвать»/«Активировать»/«Удалить» больше не создаёт дубль.
+
+  Tests: backend go test ./... зелёный.
+
+  Коммит: feat(api+server): план 72.1.50 ч.4B — idempotency rollout
+  social+fleet+planet (29 routes + 11 openapi endpoints).

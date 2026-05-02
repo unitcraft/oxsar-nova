@@ -470,15 +470,20 @@ func run() error {
 		pr.Use(auth.LastSeenMiddleware(pool))
 		pr.Get("/empire", empireH.GetAll)
 		pr.Get("/settings", settingsH.Get)
-		pr.Put("/settings", settingsH.Update)
+		// План 72.1.50 ч.4B (rollout 77 Ф.3.2): social+fleet+planet
+		// мутирующие endpoint'ы. Фронт уже шлёт Idempotency-Key для
+		// каждого. Alliance — пропущено (handler-level idempotency
+		// через FromRequest уже есть, план 67); fleet.Send тоже
+		// (handler.go:56 FromRequest).
+		pr.With(idemMW.Wrap).Put("/settings", settingsH.Update)
 		// План 36 Critical-6: смена пароля — POST /auth/password в identity-service.
-		pr.Post("/me/deletion/code", settingsH.RequestDeletionCode)
-		pr.Delete("/me", settingsH.ConfirmDeletion)
+		pr.With(idemMW.Wrap).Post("/me/deletion/code", settingsH.RequestDeletionCode)
+		pr.With(idemMW.Wrap).Delete("/me", settingsH.ConfirmDeletion)
 		// План 72.1.30: cancel pending удалением в grace-period.
-		pr.Post("/me/deletion/cancel", settingsH.CancelDeletion)
+		pr.With(idemMW.Wrap).Post("/me/deletion/cancel", settingsH.CancelDeletion)
 		pr.Get("/referrals", referralH.Mine)
 		pr.Get("/notepad", notepadH.Get)
-		pr.Put("/notepad", notepadH.Save)
+		pr.With(idemMW.Wrap).Put("/notepad", notepadH.Save)
 		pr.Get("/search", searchH.Search)
 		pr.Get("/techtree", techtreeH.Get)
 		pr.Get("/battlestats", battlestatsH.List)
@@ -488,17 +493,17 @@ func run() error {
 		pr.Get("/units/catalog/{type}", catalogH.UnitByType)
 		pr.Get("/artefacts/catalog/{type}", catalogH.ArtefactByType)
 		pr.Get("/friends", friendsH.List)
-		pr.Post("/friends/{userId}", friendsH.Add)
-		pr.Post("/friends/{userId}/accept", friendsH.Accept)
-		pr.Delete("/friends/{userId}", friendsH.Remove)
+		pr.With(idemMW.Wrap).Post("/friends/{userId}", friendsH.Add)
+		pr.With(idemMW.Wrap).Post("/friends/{userId}/accept", friendsH.Accept)
+		pr.With(idemMW.Wrap).Delete("/friends/{userId}", friendsH.Remove)
 		pr.Get("/planets", planetH.List)
-		pr.Patch("/planets/order", planetH.Reorder)
+		pr.With(idemMW.Wrap).Patch("/planets/order", planetH.Reorder)
 		pr.Get("/planets/{id}", planetH.Get)
-		pr.Patch("/planets/{id}", planetH.Rename)
-		pr.Post("/planets/{id}/set-home", planetH.SetHome)
-		pr.Delete("/planets/{id}", planetH.Abandon)
+		pr.With(idemMW.Wrap).Patch("/planets/{id}", planetH.Rename)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/set-home", planetH.SetHome)
+		pr.With(idemMW.Wrap).Delete("/planets/{id}", planetH.Abandon)
 		pr.Get("/planets/{id}/resource-report", planetH.ResourceReport)
-		pr.Post("/planets/{id}/resource-update", planetH.ResourceUpdate)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/resource-update", planetH.ResourceUpdate)
 		pr.Get("/planets/{id}/forecast", planetH.Forecast)
 
 		pr.Get("/planets/{id}/buildings", buildingH.Levels)
@@ -587,7 +592,7 @@ func run() error {
 		// План 38 Ф.5: /payment/order и /payment/history удалены. См. billing-service:
 		//   POST /billing/orders, GET /billing/wallet/history.
 
-		pr.Post("/alien/holding/{event_id}/pay", alienH.Pay)
+		pr.With(idemMW.Wrap).Post("/alien/holding/{event_id}/pay", alienH.Pay)
 		pr.Get("/alien/holdings/me", alienH.MyHoldings)
 
 		// План 66 Ф.5: платный выкуп HOLDING-удержания за оксары.
@@ -602,39 +607,41 @@ func run() error {
 
 		pr.Get("/galaxy/{g}/{s}", galaxyH.System)
 
+		// План 72.1.50 ч.4B: fleet (без Send — handler-level FromRequest
+		// уже есть в fleet/handler.go:56), market, rocket.
 		pr.Post("/fleet", fleetH.Send)
 		pr.Get("/fleet", fleetH.List)
 		pr.Get("/fleet/incoming", fleetH.Incoming)
 		pr.Get("/phalanx", fleetH.Phalanx)
 		// План 72.1.20: monitor-planet (legacy `?go=MonitorPlanet&id=`).
 		pr.Get("/monitor-planet", monitorH.Monitor)
-		pr.Post("/stargate", fleetH.Stargate)
-		pr.Post("/fleet/{id}/recall", fleetH.Recall)
+		pr.With(idemMW.Wrap).Post("/stargate", fleetH.Stargate)
+		pr.With(idemMW.Wrap).Post("/fleet/{id}/recall", fleetH.Recall)
 		// План 72.1.47: load/unload для HOLDING-флотов (legacy
 		// `Mission.class.php::loadResourcesToFleet/unloadResourcesFromFleet`).
-		pr.Post("/fleet/{id}/load", fleetH.Load)
-		pr.Post("/fleet/{id}/unload", fleetH.Unload)
+		pr.With(idemMW.Wrap).Post("/fleet/{id}/load", fleetH.Load)
+		pr.With(idemMW.Wrap).Post("/fleet/{id}/unload", fleetH.Unload)
 		// План 72.1.48: formation (legacy `Mission.class.php::formation`).
-		pr.Post("/fleet/{id}/promote-to-acs", fleetH.PromoteToACS)
-		pr.Post("/acs/{groupId}/invite", fleetH.InviteACS)
+		pr.With(idemMW.Wrap).Post("/fleet/{id}/promote-to-acs", fleetH.PromoteToACS)
+		pr.With(idemMW.Wrap).Post("/acs/{groupId}/invite", fleetH.InviteACS)
 		pr.Get("/acs/invitations", fleetH.ListACSInvitations)
-		pr.Post("/acs/invitations/{groupId}/accept", fleetH.AcceptACSInvitation)
+		pr.With(idemMW.Wrap).Post("/acs/invitations/{groupId}/accept", fleetH.AcceptACSInvitation)
 
 		pr.Get("/market/rates", marketH.Rates)
-		pr.Post("/planets/{id}/market/exchange", marketH.Exchange)
-		pr.Post("/planets/{id}/market/credit", marketH.ExchangeCredit)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/market/exchange", marketH.Exchange)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/market/credit", marketH.ExchangeCredit)
 		// План 72.1.28: multi-resource Credit_ex (legacy `Market::Credit_ex`).
-		pr.Post("/planets/{id}/market/credit-multi", marketH.ExchangeCreditMulti)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/market/credit-multi", marketH.ExchangeCreditMulti)
 		pr.Get("/market/lots", marketH.ListLots)
-		pr.Post("/market/lots", marketH.CreateLot)
-		pr.Delete("/market/lots/{id}", marketH.CancelLot)
-		pr.Post("/market/lots/{id}/accept", marketH.AcceptLot)
+		pr.With(idemMW.Wrap).Post("/market/lots", marketH.CreateLot)
+		pr.With(idemMW.Wrap).Delete("/market/lots/{id}", marketH.CancelLot)
+		pr.With(idemMW.Wrap).Post("/market/lots/{id}/accept", marketH.AcceptLot)
 		pr.Get("/market/fleet-lots", marketH.ListFleetLots)
-		pr.Post("/planets/{id}/market/fleet-lots", marketH.CreateFleetLot)
-		pr.Post("/market/fleet-lots/{lotId}/accept", marketH.AcceptFleetLot)
-		pr.Delete("/market/fleet-lots/{lotId}", marketH.CancelFleetLot)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/market/fleet-lots", marketH.CreateFleetLot)
+		pr.With(idemMW.Wrap).Post("/market/fleet-lots/{lotId}/accept", marketH.AcceptFleetLot)
+		pr.With(idemMW.Wrap).Delete("/market/fleet-lots/{lotId}", marketH.CancelFleetLot)
 
-		pr.Post("/planets/{id}/rockets/launch", rocketH.Launch)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/rockets/launch", rocketH.Launch)
 		pr.Get("/planets/{id}/rockets", rocketH.Stock)
 
 		pr.Get("/highscore", scoreH.Highscore)
@@ -675,21 +682,21 @@ func run() error {
 		pr.Post("/alliances/{id}/transfer-leadership", allianceH.ConfirmTransferLeadership)
 
 		pr.Get("/chat/{kind}/history", chatH.History)
-		pr.Post("/chat/{kind}/send", chatH.Send)
+		pr.With(idemMW.Wrap).Post("/chat/{kind}/send", chatH.Send)
 		pr.Get("/chat/{kind}/ws", chatH.Connect)
 		pr.Get("/chat/{kind}/unread", chatH.UnreadCount)
-		pr.Post("/chat/{kind}/read", chatH.MarkRead)
-		pr.Patch("/chat/messages/{id}", chatH.EditMessage)
-		pr.Delete("/chat/messages/{id}", chatH.DeleteMessage)
+		pr.With(idemMW.Wrap).Post("/chat/{kind}/read", chatH.MarkRead)
+		pr.With(idemMW.Wrap).Patch("/chat/messages/{id}", chatH.EditMessage)
+		pr.With(idemMW.Wrap).Delete("/chat/messages/{id}", chatH.DeleteMessage)
 
 		pr.Get("/messages", messageH.Inbox)
 		pr.Get("/messages/folders", messageH.Folders)
 		pr.Get("/messages/sent", messageH.Sent)
-		pr.Post("/messages", messageH.Compose)
-		pr.Delete("/messages", messageH.DeleteAll)
-		pr.Delete("/messages/{id}", messageH.Delete)
+		pr.With(idemMW.Wrap).Post("/messages", messageH.Compose)
+		pr.With(idemMW.Wrap).Delete("/messages", messageH.DeleteAll)
+		pr.With(idemMW.Wrap).Delete("/messages/{id}", messageH.Delete)
 		pr.Get("/messages/unread-count", messageH.UnreadCount)
-		pr.Post("/messages/{id}/read", messageH.MarkRead)
+		pr.With(idemMW.Wrap).Post("/messages/{id}/read", messageH.MarkRead)
 		// /battle-reports/{id} перенесён в публичный router (план 72.1 ч.20.11).
 		pr.Get("/espionage-reports/{id}", messageH.GetEspionageReport)
 		pr.Get("/expedition-reports/{id}", messageH.GetExpeditionReport)
