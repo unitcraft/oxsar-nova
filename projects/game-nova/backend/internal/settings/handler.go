@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -107,7 +108,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid email"))
 			return
 		}
-		if err := h.setEmail(r.Context(), uid, email); err != nil {
+		// План 72.1.49: AutoMsg при смене email (legacy
+		// `Preferences.class.php:305` EMAIL_EMAIL_MESSAGE).
+		// Атомарно: SET email + INSERT message в одной транзакции.
+		if err := h.setEmailWithNotice(r.Context(), uid, email); err != nil {
 			if strings.Contains(err.Error(), "unique") {
 				httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, "email already taken"))
 			} else {
@@ -165,4 +169,36 @@ func (h *Handler) setEmail(ctx context.Context, uid, email string) error {
 		return errors.New("user not found")
 	}
 	return nil
+}
+
+// setEmailWithNotice — план 72.1.49: атомарно меняет email и шлёт
+// AutoMsg юзеру (legacy `Preferences.class.php::305 EMAIL_EMAIL_MESSAGE`).
+// Если automsg не подключён — fallback на простую setEmail.
+const settingsMessageFolder = 1 // системные сообщения (legacy `MSG_SYSTEM`).
+
+func (h *Handler) setEmailWithNotice(ctx context.Context, uid, email string) error {
+	if h.automsg == nil || h.bundle == nil {
+		return h.setEmail(ctx, uid, email)
+	}
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	tag, err := tx.Exec(ctx,
+		`UPDATE users SET email = $1 WHERE id = $2`, email, uid)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return errors.New("user not found")
+	}
+	title := h.tr("autoMessages", "settingsEmailChanged.title", nil)
+	body := h.tr("autoMessages", "settingsEmailChanged.body", map[string]string{
+		"email": email,
+	})
+	if err := h.automsg.SendDirect(ctx, tx, uid, settingsMessageFolder, title, body); err != nil {
+		return fmt.Errorf("automsg: %w", err)
+	}
+	return tx.Commit(ctx)
 }
