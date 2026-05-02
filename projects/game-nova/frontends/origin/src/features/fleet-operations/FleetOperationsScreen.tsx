@@ -28,6 +28,7 @@ import type { ApiError } from '@/api/client';
 import { QK } from '@/api/query-keys';
 import type { Fleet } from '@/api/types';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { formatCoords, formatDuration, secondsUntil } from '@/lib/format';
 import { useTranslation } from '@/i18n/i18n';
 import { useState } from 'react';
@@ -241,6 +242,8 @@ function FleetRow({
   disabled: boolean;
 }) {
   const { t } = useTranslation();
+  // План 72.1.53: in-game confirm-dialog вместо window.confirm.
+  const { confirm, dialogProps } = useConfirm();
   const missionKey = MISSION_LABEL_KEY[fleet.mission] ?? 'missionFallback';
   const total = Object.values(fleet.ships).reduce((s, n) => s + (n || 0), 0);
   const arrival =
@@ -322,8 +325,14 @@ function FleetRow({
               className="button"
               value={t('fleet', 'recall')}
               disabled={disabled}
-              onClick={() => {
-                if (window.confirm(t('fleet', 'recall') + '?')) onRecall();
+              onClick={async () => {
+                const ok = await confirm({
+                  title: t('fleet', 'recall'),
+                  message: `${t('fleet', 'recall')}? ${formatCoords(fleet.dst_galaxy, fleet.dst_system, fleet.dst_position)}`,
+                  confirmLabel: t('fleet', 'recall'),
+                  destructive: true,
+                });
+                if (ok) onRecall();
               }}
             />
           )}
@@ -459,6 +468,8 @@ function FleetRow({
           </td>
         </tr>
       )}
+      {/* План 72.1.53: in-game confirm-dialog. */}
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }

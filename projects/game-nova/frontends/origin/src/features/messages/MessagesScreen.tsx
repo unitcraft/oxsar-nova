@@ -28,12 +28,15 @@ import {
 import type { ApiError } from '@/api/client';
 import type { MessageFolder } from '@/api/types';
 import { QK } from '@/api/query-keys';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { useTranslation } from '@/i18n/i18n';
 
 const MAX_PM_LENGTH = 2000;
 
 export function MessagesScreen() {
   const { t } = useTranslation();
+  // План 72.1.53: in-game confirm-dialog.
+  const { confirm, dialogProps } = useConfirm();
   const params = useParams<{ folder?: string; folderId?: string }>();
 
   // Резолвим источник: legacy 'inbox'/'sent' или числовой folderId.
@@ -116,8 +119,12 @@ export function MessagesScreen() {
               type="button"
               className="button"
               disabled={deleteAllMut.isPending}
-              onClick={() => {
-                if (window.confirm(t('message', 'deleteAllConfirm'))) {
+              onClick={async () => {
+                if (await confirm({
+                  title: t('message', 'deleteAllBtn'),
+                  message: t('message', 'deleteAllConfirm'),
+                  destructive: true,
+                })) {
                   deleteAllMut.mutate();
                 }
               }}
@@ -164,8 +171,11 @@ export function MessagesScreen() {
                   isRead={isRead}
                   isSent={folder === 'sent'}
                   onExpand={() => expand(m.id, isRead)}
-                  onDelete={() => {
-                    if (window.confirm(t('message', 'deleteOneConfirm'))) {
+                  onDelete={async () => {
+                    if (await confirm({
+                      message: t('message', 'deleteOneConfirm'),
+                      destructive: true,
+                    })) {
                       deleteMut.mutate(m.id);
                     }
                   }}
@@ -182,6 +192,7 @@ export function MessagesScreen() {
           <span className="false">{errMsg}</span>
         </div>
       )}
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }

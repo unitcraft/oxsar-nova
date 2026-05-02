@@ -16,6 +16,7 @@ import { useSearchParams } from 'react-router-dom';
 import { fetchMonitorPlanet, type MonitorResult } from '@/api/monitor';
 import type { ApiError } from '@/api/client';
 import type { PhalanxScan } from '@/api/types';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { useTranslation } from '@/i18n/i18n';
 import { formatDuration, secondsUntil } from '@/lib/format';
 
@@ -26,6 +27,8 @@ export function MonitorPlanetScreen() {
 
   const [data, setData] = useState<MonitorResult | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  // План 72.1.53: in-game confirm-диалог вместо window.confirm.
+  const { confirm, dialogProps } = useConfirm();
 
   const scanMut = useMutation({
     mutationFn: () => fetchMonitorPlanet(planetId),
@@ -60,14 +63,19 @@ export function MonitorPlanetScreen() {
                 type="button"
                 className="button"
                 disabled={scanMut.isPending}
-                onClick={() => {
-                  // План 72.1.47: pre-scan confirmation для 5000H
-                  // (legacy STAR_SURVEILLANCE_CONSUMPTION списывается
-                  // безусловно при каждом нажатии).
-                  const ok = window.confirm(
-                    (t('monitorPlanet', 'scanConfirm') as string) ||
+                onClick={async () => {
+                  // План 72.1.47 + 72.1.53: pre-scan confirmation
+                  // для 5000H (legacy STAR_SURVEILLANCE_CONSUMPTION
+                  // списывается безусловно при каждом нажатии).
+                  // Стилизованный in-game dialog заменил window.confirm.
+                  const ok = await confirm({
+                    title: (t('monitorPlanet', 'scanBtn') as string) ||
+                      'Сканировать',
+                    message:
+                      (t('monitorPlanet', 'scanConfirm') as string) ||
                       'Сканирование стоит 5000H. Продолжить?',
-                  );
+                    confirmLabel: 'OK',
+                  });
                   if (!ok) return;
                   scanMut.mutate();
                 }}
@@ -142,6 +150,8 @@ export function MonitorPlanetScreen() {
           </table>
         </>
       )}
+      {/* План 72.1.53: in-game confirm-dialog (см. ConfirmDialog.tsx). */}
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }

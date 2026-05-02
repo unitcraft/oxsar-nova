@@ -16229,3 +16229,30 @@ not-a-fix + BA-019 mitigated.
 
   Коммит: feat(origin/alliance): план 72.1.52 — client-side
   validation + P72.S2.ALLIANCE_PREFS simplification.
+
+Итерация 2026-05-02 (вечер) — план 72.1.53 (in-game ConfirmDialog):
+
+  Native window.confirm() заменён переиспользуемым стилизованным
+  компонентом для критичных destructive action'ов.
+
+  Сделано:
+  A. features/common/ConfirmDialog.tsx + useConfirm hook
+     (HTML5 <dialog> с backdrop, focus-trap, Esc closes; native API
+     без сторонних deps).
+  B. styles/base.css: .game-confirm-dialog + ::backdrop styles.
+  C. 5 call sites заменены в 4 экранах:
+     - MainScreen: recall флота из строки fleet-event.
+     - MonitorPlanetScreen: pre-scan 5000H confirmation.
+     - FleetOperationsScreen: recall в FleetRow.
+     - MessagesScreen: deleteAll + deleteOne (×2 call sites).
+
+  Backlog (постепенная миграция, 17 call sites):
+     BuildPanel, ConstructionsScreen, ResearchScreen,
+     AllianceMembers/My/Ranks, BuildingInfoScreen, FriendsScreen,
+     ChatScreen, StockScreen — заменим при следующих правках.
+     Не блокер: visual mismatch, не функциональный gap.
+
+  Tests: tsc чистый, vitest 133/133.
+
+  Коммит: feat(origin): план 72.1.53 — in-game ConfirmDialog +
+  замена 5 destructive window.confirm.
