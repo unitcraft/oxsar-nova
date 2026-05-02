@@ -16054,3 +16054,36 @@ not-a-fix + BA-019 mitigated.
 
   Коммит: feat(alliance): план 72.1.50 ч.3 (72.1.6 P3) —
   MinPointsToFound check в Create (legacy 1:1).
+
+Итерация 2026-05-02 (вечер) — план 72.1.50 ч.4A (idempotency rollout 77 Ф.3.2):
+
+  Builds + economy: 18 мутирующих route'ов nova обёрнуты в
+  idempotency-middleware. Фронт уже шлёт Idempotency-Key для каждого
+  через api/*.ts; до этой итерации серверу было всё равно — двойной
+  клик «Построить»/«Купить»/«Активировать» создавал дубль.
+
+  Backend (cmd/server/main.go):
+  - buildings: POST + DELETE queue/{taskId} + POST .../vip + demolish + 2 pack
+  - research: POST + DELETE + VIP
+  - shipyard: DELETE {queueId} + VIP {queueId}/vip (Enqueue был в 72.1.49)
+  - repair: DELETE queue/{queueId} + VIP queue/{queueId}/vip (2 Enqueue в 72.1.49)
+  - artefacts: activate/deactivate/sell
+  - artefact-market: buy + cancel
+  - officers: activate; professions: change
+
+  OpenAPI:
+  - Новый компонент responses.IdempotencyConflict (text/plain — то что
+    middleware пишет на body-mismatch).
+  - Inline 409 от плана 72.1.49 (shipyard/repair) переведены на
+    общий $ref → 3 endpoint'а.
+  - 13 описанных в openapi мутирующих endpoint'ов получили
+    параметр IdempotencyKey + 409.
+
+  Документационный gap: 8 route'ов (Cancel/VIP/demolish/pack series)
+  не описаны в openapi вовсе — backend обёртка применена, openapi
+  coverage — самостоятельный план «openapi coverage gap».
+
+  Tests: backend go test ./... зелёный (все cached).
+
+  Коммит: feat(api+server): план 72.1.50 ч.4A — idempotency rollout
+  builds+economy (18 routes + 13 openapi endpoints).
