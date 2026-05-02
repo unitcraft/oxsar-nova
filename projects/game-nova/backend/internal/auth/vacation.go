@@ -81,6 +81,18 @@ func (s *VacationService) SetVacation(ctx context.Context, userID string) error 
 	if pendingCount > 0 {
 		return ErrVacationBlocked
 	}
+	// План 72.1.49: legacy `Preferences.class.php:375` setProdOfUser(uid, 0)
+	// при включении umode — обнуляет production_factor всех зданий
+	// юзера. Защита от майнинга в режиме отпуска (vacation shield +
+	// 0 production = чистый ban-protection без эксплойта).
+	// production_factor — integer 0..100 (миграция 0041), per-building.
+	_, err = s.db.Exec(ctx, `
+		UPDATE buildings SET production_factor = 0
+		WHERE planet_id IN (SELECT id FROM planets WHERE user_id = $1)
+	`, userID)
+	if err != nil {
+		return fmt.Errorf("reset production: %w", err)
+	}
 	_, err = s.db.Exec(ctx,
 		`UPDATE users SET vacation_since=NOW() WHERE id=$1`, userID)
 	return err
@@ -101,6 +113,15 @@ func (s *VacationService) UnsetVacation(ctx context.Context, userID string) erro
 	}
 	if time.Since(*vacSince) < VacationMinDuration {
 		return ErrVacationTooEarly
+	}
+	// План 72.1.49: восстанавливаем production_factor=100 (default)
+	// у всех зданий юзера при выходе из отпуска.
+	_, err = s.db.Exec(ctx, `
+		UPDATE buildings SET production_factor = 100
+		WHERE planet_id IN (SELECT id FROM planets WHERE user_id = $1)
+	`, userID)
+	if err != nil {
+		return fmt.Errorf("restore production: %w", err)
 	}
 	_, err = s.db.Exec(ctx,
 		`UPDATE users SET vacation_since=NULL, vacation_last_end=NOW() WHERE id=$1`, userID)

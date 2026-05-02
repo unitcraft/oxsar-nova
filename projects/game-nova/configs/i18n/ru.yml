@@ -652,6 +652,10 @@ autoMessages:
   creditProfessionChanged.title: Списание кредитов
   creditProfessionChanged.body: "Списано {{credits}} кредитов за смену профессии на «{{profession}}»."
   creditProfessionChanged.noneLabel: "без профессии"
+  # План 72.1.49: уведомление о смене email (legacy
+  # `Preferences.class.php:305 EMAIL_EMAIL_MESSAGE`).
+  settingsEmailChanged.title: "Email-адрес изменён"
+  settingsEmailChanged.body: "Ваш email-адрес изменён на: {{email}}. Если это не вы, немедленно свяжитесь с поддержкой."
   # План 72.1.20: surveillance detected (legacy MSG_SURVEILLANCE_DETECTED, folder=11).
   surveillanceDetected.title: "Обнаружено сканирование"
   surveillanceDetected.body: "Ваша планета «{{planet}}» [{{galaxy}}:{{system}}:{{position}}] была отсканирована чужой сенсорной фалангой. Уровень ваших шпионских технологий позволил детектировать попытку."
