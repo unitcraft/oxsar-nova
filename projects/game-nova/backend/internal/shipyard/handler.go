@@ -50,6 +50,8 @@ func (h *Handler) Enqueue(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.ErrForbidden)
 	case errors.Is(err, ErrUmodeBlocked), errors.Is(err, ErrObserverBlocked):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
+	case errors.Is(err, ErrQueueFull):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrConflict, err.Error()))
 	case errors.Is(err, ErrCapacityExceeded):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "shield/rocket capacity exceeded"))
 	case requirements.IsNotMet(err):
