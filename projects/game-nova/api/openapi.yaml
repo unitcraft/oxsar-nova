@@ -144,11 +144,14 @@ paths:
       tags: [planets]
       security: [{ bearerAuth: [] }]
       summary: Rename planet
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4B).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -170,15 +173,19 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
     delete:
       tags: [planets]
       security: [{ bearerAuth: [] }]
       summary: Abandon planet (soft-delete)
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4B).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "200":
           description: abandoned
@@ -191,17 +198,21 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/planets/{id}/set-home:
     post:
       tags: [planets]
       security: [{ bearerAuth: [] }]
       summary: Set planet as home planet
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4B).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "200":
           description: home set
@@ -214,6 +225,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/planets/{id}/teleport:
     post:
@@ -308,11 +320,14 @@ paths:
       tags: [planets]
       security: [{ bearerAuth: [] }]
       summary: Update building production factors
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4B).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -338,6 +353,7 @@ paths:
                 properties:
                   status: { type: string }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -1030,11 +1046,17 @@ paths:
         state=outbound; any other state → 409 Conflict. Cargo stays
         on board and is refunded back to the source planet together
         with the ships by the return handler.
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4B).
+        В 409 могут вернуться два варианта: JSON ErrorEnvelope с
+        `not_recallable` (state не outbound) ИЛИ plain text от
+        idempotency-middleware при повторе с другим body.
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "200":
           description: returning
@@ -1056,6 +1078,10 @@ paths:
         здание star_gate >= 1. Cooldown на источнике: 3600 × 0.7^(level-1)
         секунд. Запрещены щиты и ракеты. Источник должен быть с
         position >= 3.
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4B).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -1087,7 +1113,10 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409":
-          description: cooldown active or not enough ships
+          description: |
+            cooldown active OR not enough ships OR
+            (план 72.1.50 ч.4B) idempotency-conflict: повтор с тем же
+            Idempotency-Key и другим body (text/plain).
 
   /api/phalanx:
     get:
@@ -1410,30 +1439,38 @@ paths:
       tags: [messages]
       security: [{ bearerAuth: [] }]
       summary: Удалить сообщение.
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4B).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "204": { description: deleted }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/messages/{id}/read:
     post:
       tags: [messages]
       security: [{ bearerAuth: [] }]
       summary: Пометить сообщение прочитанным (идемпотентно).
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4B).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "204": { description: marked (or already was) }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/notepad:
     get:
@@ -1459,6 +1496,9 @@ paths:
         Полная замена содержимого блокнота. Лимит: 50 000 символов
         UTF-8 (защита от заливки больших объёмов; ориентир — крупные
         списки координат и шаблоны атак). Превышение → 400.
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4B).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -1468,6 +1508,7 @@ paths:
         "204": { description: saved }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/espionage-reports/{id}:
     get:
@@ -1606,11 +1647,14 @@ paths:
       tags: [market]
       security: [{ bearerAuth: [] }]
       summary: Обменять ресурсы на планете.
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4B).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -1629,6 +1673,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ExchangeResult" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/planets/{id}/rockets:
     get:
@@ -1655,11 +1700,14 @@ paths:
       tags: [rockets]
       security: [{ bearerAuth: [] }]
       summary: Запустить межпланетную ракету.
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4B).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -1673,6 +1721,7 @@ paths:
       responses:
         "201": { description: launched }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/highscore:
     get:
