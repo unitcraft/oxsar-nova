@@ -2202,6 +2202,33 @@ unit-тесты на форматтеры/валидаторы/router-маршр
   repo_pgx.go артефактного market.
 - **Приоритет**: L (UX-улучшение, не блокер).
 
+### [P72.S2.ALLIANCE_PREFS] updateAllyPrefs: logo/homepage/foundername/showmember/memberlistsort не реализованы
+- **Где**: backend `internal/alliance/`, frontend `AllianceManageScreen.tsx` / `AllianceDescriptionsScreen.tsx`.
+- **Что упрощено**: legacy `Alliance.class.php::updateAllyPrefs`
+  (L.979-1015) принимает 10 полей: `showmember, showhomepage, open,
+  foundername, memberlistsort, textextern, textintern, logo, homepage,
+  applicationtext`. В nova реализованы только: open, textextern,
+  textintern, applicationtext (плюс tag/name через отдельный
+  `updateAllianceTagName`). **НЕ реализованы**: `logo, homepage,
+  foundername, showmember, showhomepage, memberlistsort`.
+- **Почему**:
+  - `logo / homepage` — пользовательский URL-контент, требует image-proxy,
+    SSRF-защиты, медиа-storage. Это plan-46-tier UGC moderation.
+  - `foundername` — кастомный title для основателя; в nova owner_id
+    сам по себе title (через alliance_members.rank='owner').
+  - `showmember / showhomepage` — privacy-preferences; в nova
+    memberlist всем доступен по умолчанию (упрощение видимости).
+  - `memberlistsort` — preference сортировки; в nova сортировка
+    клиентская (ColumnHeader.click) или фиксированная (по rank → join).
+- **Когда восстанавливать**: при появлении moderation-pipeline для
+  пользовательских изображений (plan 46 wave 2 или отдельный plan).
+  Частично можно ввести `foundername` как nullable text-поле в
+  `alliances` без UGC-риска — мелкая задача.
+- **Приоритет**: L (нет влияния на core gameplay; cosmetic preferences).
+
+**Связанный план**: [72.1.6 P3 closure в 72.1.50 ч.3](plans/72.1.50-screen-audit-followups.md)
++ [72.1.52 alliance UI 1:1](plans/72.1.52-alliance-ui-final.md).
+
 ### [P72.S2.F] Pixel-perfect доводка alliance отложена на план 73
 - **Где**: все alliance-экраны.
 - **Что упрощено**: HTML-структура и CSS-классы (`ntable`, `center`,

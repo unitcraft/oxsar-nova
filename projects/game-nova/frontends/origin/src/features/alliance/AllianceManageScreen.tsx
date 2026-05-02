@@ -133,12 +133,22 @@ export function AllianceManageScreen() {
           </tr>
           <tr>
             <td colSpan={2} className="center">
+              {/* План 72.1.52 (72.1.6 P3 closure): client-side
+                  validation tag (3-5 символов, ASCII alphanumeric) и
+                  name (3-64 символа). Backend `validateTag` /
+                  `Create` сентинели дублируют, но FE-кнопка не должна
+                  даже пытаться отправить пустое/негодное значение. */}
               <button
                 type="button"
                 className="button"
                 disabled={
                   updateTagName.isPending ||
-                  (tagInput === al.tag && nameInput === al.name)
+                  (tagInput === al.tag && nameInput === al.name) ||
+                  tagInput.trim().length < 3 ||
+                  tagInput.trim().length > 5 ||
+                  !/^[A-Za-z0-9]+$/.test(tagInput.trim()) ||
+                  nameInput.trim().length < 3 ||
+                  nameInput.trim().length > 64
                 }
                 onClick={() => {
                   const payload: { tag?: string; name?: string } = {};
