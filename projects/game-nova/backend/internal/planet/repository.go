@@ -43,6 +43,22 @@ func (r *Repository) GetByID(ctx context.Context, id string) (Planet, error) {
 }
 
 func (r *Repository) ListByUser(ctx context.Context, userID string) ([]Planet, error) {
+	// План 72.1.55.E (effects): planetorder preference из users
+	// (legacy `Preferences.class.php`). 0=date (default sort_order),
+	// 1=name, 2=coords (galaxy, system, position).
+	// Прочитаем планы через CTE, чтобы не делать 2 запроса.
+	var planetOrder int16
+	_ = r.pool.QueryRow(ctx,
+		`SELECT planetorder FROM users WHERE id=$1`, userID).Scan(&planetOrder)
+	// Owner-планеты сначала по is_moon (планета перед луной), потом
+	// по preference. Drag&drop sort_order остаётся fallback'ом.
+	orderBy := "is_moon, sort_order, galaxy, system, position"
+	switch planetOrder {
+	case 1:
+		orderBy = "is_moon, LOWER(name), sort_order"
+	case 2:
+		orderBy = "is_moon, galaxy, system, position, sort_order"
+	}
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, user_id, is_moon, name, galaxy, system, position,
 		       diameter, used_fields, planet_type, temperature_min, temperature_max,
@@ -50,7 +66,7 @@ func (r *Repository) ListByUser(ctx context.Context, userID string) ([]Planet, e
 		       solar_satellite_prod, build_factor, research_factor,
 		       produce_factor, energy_factor, storage_factor
 		FROM planets WHERE user_id = $1 AND destroyed_at IS NULL
-		ORDER BY is_moon, sort_order, galaxy, system, position
+		ORDER BY `+orderBy+`
 	`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list planets: %w", err)

@@ -15,6 +15,7 @@ import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { catalogByGroup } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
+import { fetchSettings } from '@/api/settings';
 import { useTranslation } from '@/i18n/i18n';
 import { secondsUntil, formatDuration } from '@/lib/format';
 import type { ApiError } from '@/api/client';
@@ -78,6 +79,24 @@ export function ResearchScreen() {
   const seconds = overviewQ.data?.research_seconds ?? {};
   const costs = overviewQ.data?.research_costs ?? {};
   const techs = catalogByGroup('research');
+  // План 72.1.55.E (effects): show_all_research preference.
+  const settingsQ = useQuery({
+    queryKey: QK.settings(),
+    queryFn: fetchSettings,
+    staleTime: 60_000,
+  });
+  const showAll = settingsQ.data?.show_all_research ?? true;
+  // Filter: если выкл и tech 0-level + cost == 0 (= unmet/max),
+  // скрываем. Backend research/handler не возвращает unmet явно;
+  // cost=0 — proxy для «недоступно».
+  const visibleTechs = techs.filter((entry) => {
+    if (showAll) return true;
+    const lvl = levels[String(entry.id)] ?? 0;
+    if (lvl > 0) return true;
+    const c = costs[String(entry.id)];
+    if (!c) return false;
+    return c.metal > 0 || c.silicon > 0 || c.hydrogen > 0;
+  });
 
   const available = planet
     ? { metal: Math.floor(planet.metal), silicon: Math.floor(planet.silicon), hydrogen: Math.floor(planet.hydrogen) }
@@ -167,7 +186,7 @@ export function ResearchScreen() {
             <th colSpan={3}>{t('buildings', 'research') ?? 'Исследования'}</th>
           </tr>
 
-          {techs.map((entry) => {
+          {visibleTechs.map((entry) => {
             const [group, key] = entry.i18n.split('.') as [string, string];
             const lvl = levels[String(entry.id)] ?? 0;
             const secs = seconds[String(entry.id)] ?? 0;

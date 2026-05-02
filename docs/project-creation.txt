@@ -16393,3 +16393,49 @@ not-a-fix + BA-019 mitigated.
   Tests: backend go test ./... зелёный, vitest 133/133, tsc чистый.
 
   Коммит: feat(plans 72.1.55): закрытие 9 simplifications 1:1.
+
+Итерация 2026-05-03 (ночь) — план 72.1.55 Task I.E (effects):
+
+  Подключены реальные effects для 7 settings preferences (Task I
+  закрывал только storage + UI form, без применения).
+
+  Verify-handsweep: оказалось что в migration 0097 esps был ошибочно
+  bool (legacy — int 1..99 default count of espionage_sensor), а
+  ipcheck default false (legacy default true). Migration 0098
+  исправляет типы и добавляет `users.last_seen_ip text` для
+  ipcheck-effect.
+
+  Backend:
+  - Migration 0098: esps int1..99 + ipcheck default true +
+    last_seen_ip column.
+  - settings handler: Esps DTO `int16`, отдельный clamp UPDATE
+    branch (1..99); IpCheck default true; новая колонка
+    last_seen_ip — не выставляется через PUT (read-only для
+    юзера, обновляется middleware'ом).
+  - planet/repository.go::ListByUser: ORDER BY на основе
+    users.planetorder (0=date+sort_order, 1=name+lower, 2=coords).
+    Owner-планеты первые по is_moon, drag&drop sort_order
+    остаётся fallback.
+  - auth/middleware.go::LastSeenMiddleware: добавлен IP-check.
+    clientIP() resolve через X-Forwarded-For/RemoteAddr.
+    checkIPChange(): SELECT users.last_seen_ip+ipcheck; если
+    изменился и ipcheck=true → INSERT messages folder=11
+    с описанием инцидента; всегда UPDATE last_seen_ip.
+
+  Frontend:
+  - api/types.ts: Esps int (вместо bool).
+  - SettingsScreen: esps теперь number input (min=1 max=99),
+    ipcheck default state=true.
+  - i18n esps text «Шпионских зондов по умолчанию (1..99)».
+  - ConstructionsScreen: settingsQ + filter показывает только
+    доступные / уже построенные если showAll=false.
+  - ResearchScreen: filter (proxy через cost === 0 для unmet).
+  - BuildPanel (используется shipyard/defense): filter с
+    группой-аware (show_all_shipyard или show_all_defense).
+  - MissionScreen: useEffect autofill espionage_sensor count
+    при mission=11; clamp до stock на планете; не перезаписывает
+    уже введённое юзером значение.
+
+  Tests: backend go test ./... зелёный, vitest 133/133, tsc чистый.
+
+  Коммит: feat(plan 72.1.55.E): подключены 7 settings effects 1:1.

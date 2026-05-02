@@ -17,6 +17,7 @@ import { catalogByGroup } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { ConstructionProgress } from '@/features/common/ConstructionProgress';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
+import { fetchSettings } from '@/api/settings';
 import { useTranslation } from '@/i18n/i18n';
 
 export function ConstructionsScreen() {
@@ -25,6 +26,15 @@ export function ConstructionsScreen() {
   const qc = useQueryClient();
   // План 72.1.53 ч.B: in-game confirm-dialog.
   const { confirm, dialogProps } = useConfirm();
+  // План 72.1.55.E (effects): show_all_constructions preference
+  // (legacy `Preferences::updateUserData::show_all_constructions`).
+  // Если false — скрываем здания с unmet requirements.
+  const settingsQ = useQuery({
+    queryKey: QK.settings(),
+    queryFn: fetchSettings,
+    staleTime: 60_000,
+  });
+  const showAll = settingsQ.data?.show_all_constructions ?? true;
 
   const queueQ = useQuery({
     queryKey: planetId ? QK.buildingQueue(planetId) : ['noop-bq'],
@@ -200,7 +210,18 @@ export function ConstructionsScreen() {
             <th colSpan={3}>{t('buildings', 'constructions') ?? 'Постройки'}</th>
           </tr>
 
-          {buildings.map((entry) => {
+          {buildings
+            // План 72.1.55.E (effects): фильтр по show_all_constructions.
+            // Если выкл и здание не построено + есть unmet requirements —
+            // скрываем (legacy 1:1).
+            .filter((entry) => {
+              if (showAll) return true;
+              const lvl = levels[String(entry.id)] ?? 0;
+              if (lvl > 0) return true; // уже построено — показываем
+              const u = unmet[String(entry.id)] ?? [];
+              return u.length === 0;
+            })
+            .map((entry) => {
             const [group, key] = entry.i18n.split('.') as [string, string];
             const level = levels[String(entry.id)] ?? 0;
             const secs = buildSecs[String(entry.id)] ?? 0;

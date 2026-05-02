@@ -896,7 +896,7 @@ settings:
   planetOrderDate: "По дате колонизации"
   planetOrderName: "По имени"
   planetOrderCoords: "По координатам"
-  esps: "Расширенные шпионские отчёты"
+  esps: "Шпионских зондов по умолчанию (1..99)"
   ipcheck: "Уведомлять при логине с другого IP"
   sectionSecurity: Безопасность
   labelCurrentPw: Текущий пароль

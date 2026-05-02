@@ -717,7 +717,9 @@ export interface SettingsResponse {
   show_all_shipyard: boolean;
   show_all_defense: boolean;
   planet_order: number; // 0=date, 1=name, 2=coords
-  esps: boolean;
+  // План 72.1.55.E (effects fix): esps — int 1..99 (default count
+  // of espionage probes в Mission spy form), не bool.
+  esps: number;
   ipcheck: boolean;
 }
 
@@ -731,7 +733,7 @@ export interface SettingsUpdate {
   show_all_shipyard?: boolean;
   show_all_defense?: boolean;
   planet_order?: number;
-  esps?: boolean;
+  esps?: number; // int 1..99 (clamp on backend)
   ipcheck?: boolean;
 }
 
