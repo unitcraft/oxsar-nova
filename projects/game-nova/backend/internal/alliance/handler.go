@@ -3,6 +3,7 @@ package alliance
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -167,6 +168,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "tag must be 3–5 latin letters/digits"))
 	case errors.Is(err, ErrNameForbidden):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "name contains forbidden word"))
+	case errors.Is(err, ErrNotEnoughPoints):
+		httpx.WriteError(w, r,
+			httpx.Wrap(httpx.ErrBadRequest, fmt.Sprintf("need %d points to found alliance", MinPointsToFound)))
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}

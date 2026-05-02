@@ -212,6 +212,11 @@ func isValidTag(tag string) bool {
 	return true
 }
 
+// MinPointsToFound — минимум очков, требуемый для создания альянса.
+// Legacy `consts.php:639` `ALLIANCE_FOUND_USER_MIN_POINTS = 100`,
+// проверка в `Alliance.class.php:158`. План 72.1.50 ч.3 (72.1.6 P3).
+const MinPointsToFound = 100
+
 var (
 	ErrNotFound          = errors.New("alliance: not found")
 	ErrAlreadyMember     = errors.New("alliance: already in an alliance")
@@ -222,6 +227,9 @@ var (
 	ErrInvalidTag        = errors.New("alliance: tag must be 3–5 latin letters/digits")
 	// План 46: tag или name содержит запрещённое слово.
 	ErrNameForbidden     = errors.New("alliance: name contains forbidden word")
+	// План 72.1.50 ч.3 (72.1.6 P3): legacy
+	// `Alliance.class.php:158` `ALLIANCE_FOUND_USER_MIN_POINTS=100`.
+	ErrNotEnoughPoints   = errors.New("alliance: not enough points to found")
 	ErrCannotLeaveOwn    = errors.New("alliance: owner must transfer or disband before leaving")
 	ErrApplicationExists = errors.New("alliance: application already pending")
 	ErrApplicationNotFound = errors.New("alliance: application not found")
@@ -480,14 +488,21 @@ func (s *Service) Create(ctx context.Context, ownerID, tag, name, description st
 
 	var out Alliance
 	err := s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		// Проверяем что пользователь не в альянсе.
+		// Проверяем что пользователь не в альянсе и имеет
+		// достаточно очков (legacy `Alliance.class.php:158`
+		// `ALLIANCE_FOUND_USER_MIN_POINTS=100`).
 		var existing *string
+		var points float64
 		if err := tx.QueryRow(ctx,
-			`SELECT alliance_id FROM users WHERE id=$1`, ownerID).Scan(&existing); err != nil {
+			`SELECT alliance_id, COALESCE(points, 0) FROM users WHERE id=$1`,
+			ownerID).Scan(&existing, &points); err != nil {
 			return fmt.Errorf("check user: %w", err)
 		}
 		if existing != nil {
 			return ErrAlreadyMember
+		}
+		if points < MinPointsToFound {
+			return ErrNotEnoughPoints
 		}
 
 		var id string
