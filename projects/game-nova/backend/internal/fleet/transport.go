@@ -329,6 +329,34 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			returnAt = arrive.Add(time.Duration(holdingHours)*time.Hour + duration)
 		}
 
+		// План 72.1.48 (доделка): для HOLDING-флота вычисляем
+		// back_consumption и max_control_times.
+		//   back_consumption = ceil(totalConsume × dist / 35000) — нижняя
+		//   оценка H, нужного на возврат. Legacy `Mission.class.php`
+		//   использует точную формулу из calcFleetParams; у nova fuel
+		//   не списывается с планет вовсе (упрощение), поэтому минимум
+		//   достаточно для unload-проверки.
+		//   max_control_times = 1 + floor(comp_tech_owner/6) (legacy
+		//   `NS::getMaxFleetControls`). Если на чужой планете —
+		//   добавляется comp_tech_location/6, но это применимо только
+		//   когда фактический owner-локации ≠ owner флота; на момент
+		//   Send цель ещё не достигнута, поэтому считаем по owner'у.
+		//   Когда / если в будущем добавим runtime-recalc, можно учесть.
+		var backConsumption int64
+		var maxControlTimes int
+		if event.Kind(in.Mission) == event.KindHolding {
+			backConsumption = int64(math.Ceil(float64(totalConsume) * dist / 35000.0))
+			if backConsumption < 0 {
+				backConsumption = 0
+			}
+			var compTech int
+			_ = tx.QueryRow(ctx,
+				`SELECT COALESCE(level,0) FROM research WHERE user_id=$1 AND unit_id=109`,
+				in.UserID,
+			).Scan(&compTech)
+			maxControlTimes = 1 + compTech/6
+		}
+
 		// Списываем ресурсы и корабли. FOR UPDATE у планеты
 		// обеспечивает, что параллельный tick или другая отправка
 		// не создадут гонки.
@@ -349,6 +377,8 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		}
 
 		// Записываем флот.
+		// План 72.1.48: для KindHolding пишем max_control_times и
+		// back_consumption (для остальных типов миссий — 0).
 		fleetID := ids.New()
 		if acsGroupID != "" {
 			if _, err := tx.Exec(ctx, `
@@ -356,14 +386,16 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 				                    dst_galaxy, dst_system, dst_position, dst_is_moon,
 				                    mission, state, depart_at, arrive_at, return_at,
 				                    carried_metal, carried_silicon, carried_hydrogen,
-				                    speed_percent, acs_group_id)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'outbound', $9, $10, $11, $12, $13, $14, $15, $16)
+				                    speed_percent, acs_group_id,
+				                    max_control_times, back_consumption)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'outbound', $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 			`, fleetID, in.UserID, in.SrcPlanetID,
 				in.Dst.Galaxy, in.Dst.System, in.Dst.Position, in.Dst.IsMoon,
 				in.Mission,
 				depart, arrive, returnAt,
 				in.CarryMetal, in.CarrySilicon, in.CarryHydro,
 				in.SpeedPercent, acsGroupID,
+				maxControlTimes, backConsumption,
 			); err != nil {
 				return fmt.Errorf("insert fleet: %w", err)
 			}
@@ -373,14 +405,16 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 				                    dst_galaxy, dst_system, dst_position, dst_is_moon,
 				                    mission, state, depart_at, arrive_at, return_at,
 				                    carried_metal, carried_silicon, carried_hydrogen,
-				                    speed_percent)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'outbound', $9, $10, $11, $12, $13, $14, $15)
+				                    speed_percent,
+				                    max_control_times, back_consumption)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'outbound', $9, $10, $11, $12, $13, $14, $15, $16, $17)
 			`, fleetID, in.UserID, in.SrcPlanetID,
 				in.Dst.Galaxy, in.Dst.System, in.Dst.Position, in.Dst.IsMoon,
 				in.Mission,
 				depart, arrive, returnAt,
 				in.CarryMetal, in.CarrySilicon, in.CarryHydro,
 				in.SpeedPercent,
+				maxControlTimes, backConsumption,
 			); err != nil {
 				return fmt.Errorf("insert fleet: %w", err)
 			}
@@ -488,7 +522,7 @@ func (s *TransportService) List(ctx context.Context, userID string) ([]Fleet, er
 		SELECT id, owner_user_id, src_planet_id, dst_galaxy, dst_system, dst_position,
 		       dst_is_moon, mission, state, depart_at, arrive_at, return_at,
 		       carried_metal, carried_silicon, carried_hydrogen, speed_percent,
-		       acs_group_id
+		       acs_group_id, control_times, max_control_times, back_consumption
 		FROM fleets
 		WHERE owner_user_id = $1 AND state IN ('outbound', 'hold', 'returning')
 		ORDER BY depart_at DESC
@@ -505,7 +539,7 @@ func (s *TransportService) List(ctx context.Context, userID string) ([]Fleet, er
 			&f.DstSystem, &f.DstPosition, &f.DstIsMoon, &f.Mission, &f.State,
 			&f.DepartAt, &f.ArriveAt, &f.ReturnAt,
 			&f.Carry.Metal, &f.Carry.Silicon, &f.Carry.Hydrogen, &f.SpeedPercent,
-			&f.ACSGroupID,
+			&f.ACSGroupID, &f.ControlTimes, &f.MaxControlTimes, &f.BackConsumption,
 		); err != nil {
 			return nil, err
 		}
