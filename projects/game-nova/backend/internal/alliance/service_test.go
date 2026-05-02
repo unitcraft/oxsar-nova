@@ -76,11 +76,25 @@ func TestErrorSentinels_NotNil(t *testing.T) {
 		ErrNotOwner, ErrTagTaken, ErrNameTaken,
 		ErrInvalidTag, ErrCannotLeaveOwn,
 		ErrApplicationExists, ErrApplicationNotFound,
+		ErrNotEnoughPoints,
 	}
 	for _, err := range sentinels {
 		if err == nil {
 			t.Errorf("sentinel error is nil: %T", err)
 		}
+	}
+}
+
+// TestMinPointsToFound_Legacy1to1 — план 72.1.50 ч.3 (72.1.6 P3).
+// Константа должна оставаться 1:1 с legacy
+// `consts.php:639` `ALLIANCE_FOUND_USER_MIN_POINTS = 100`. Тест ловит
+// случайные изменения значения без обновления legacy-pointer.
+func TestMinPointsToFound_Legacy1to1(t *testing.T) {
+	t.Parallel()
+	const legacyValue = 100
+	if MinPointsToFound != legacyValue {
+		t.Errorf("MinPointsToFound = %d, want %d (legacy consts.php:639)",
+			MinPointsToFound, legacyValue)
 	}
 }
 

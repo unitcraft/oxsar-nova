@@ -16026,3 +16026,31 @@ not-a-fix + BA-019 mitigated.
 
   Коммит: feat(battlereport): план 72.1.50 ч.2 (72.1.10 wave 2) —
   battlestats sort outcome/moon + date-range clamp.
+
+Итерация 2026-05-02 (вечер) — план 72.1.50 ч.3 (alliance secondary mgmt):
+
+  Из 4 «реальных gap'ов» re-audit для /alliance secondary management
+  при verify-handsweep оказалось что **3 из 4 уже реализованы** в
+  существующем коде nova:
+    - isForbidden tag/name → план 46 (`s.blacklist.IsForbidden`)
+    - AutoMsg при approve/reject заявки → notifyAlliance
+    - audit_log для дип. событий → ActionRelationProposed/Accepted/...
+
+  Реализовано (только 1 реальный gap):
+  - alliance/service.go: const MinPointsToFound = 100 (legacy
+    consts.php:639 ALLIANCE_FOUND_USER_MIN_POINTS), sentinel
+    ErrNotEnoughPoints, проверка в Create (SELECT user.points
+    с COALESCE 0 для новых юзеров без score-tick).
+  - alliance/handler.go: новая ветка обработки 400 с сообщением,
+    импорт fmt для форматирования с константой.
+  - service_test.go: ErrNotEnoughPoints в sentinels + новый тест
+    TestMinPointsToFound_Legacy1to1 фиксирует константу 100.
+
+  Tests: alliance go test 12/12 passed.
+
+  Урок: продолжаю подтверждать, что аудит-агенты дают высокий
+  процент false positives. Без verify-handsweep я бы реализовал
+  4 фичи вместо 1 необходимой, дублируя существующий код.
+
+  Коммит: feat(alliance): план 72.1.50 ч.3 (72.1.6 P3) —
+  MinPointsToFound check в Create (legacy 1:1).
