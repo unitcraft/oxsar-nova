@@ -250,6 +250,19 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
+		// План 72.1.2 re-audit 2026-05-02: dedupe (legacy
+		// `ChatAlly.class.php:136-138`) — если последнее сообщение того же
+		// автора в этом канале == body, не пишем (silent drop).
+		var lastBody string
+		_ = h.db.Pool().QueryRow(ctx, `
+			SELECT body FROM chat_messages
+			WHERE channel = $1 AND author_id = $2
+			ORDER BY created_at DESC LIMIT 1
+		`, channel, uid).Scan(&lastBody)
+		if lastBody == body {
+			continue
+		}
+
 		msgID := ids.New()
 		now := time.Now().UTC()
 		if _, err := h.db.Pool().Exec(ctx, `
