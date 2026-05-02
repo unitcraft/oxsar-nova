@@ -15955,3 +15955,39 @@ not-a-fix + BA-019 mitigated.
   **Коммиты**:
   - feat(p2p-exchange): план 72.1 §20.12 (31cdbfb214).
   - feat(economy+building+research+shipyard): план 72.1.44 (0feed72593).
+
+Итерация 2026-05-02 (вечер) — план 72.1.50 ч.1:
+  /Main retreat-кнопка (P72.S4.MAIN_RETREAT — реализовано 1:1, не
+  отложено как simplification).
+
+  Legacy Main.class.php:38-50 setPostAction("retreat", "retreatFleet")
+  показывал кнопку отзыва прямо в строке fleet event главного
+  экрана. Origin вынес функциональность на /fleet-operations
+  (FleetOperationsScreen.tsx), оставив Main read-only — это было
+  отступление от 1:1.
+
+  Реализация:
+  - MainScreen.tsx добавил useMutation(recallFleet) + state
+    recallErr + кнопку «↩» в строку fleet (видна только для
+    state='outbound', backend transport.go:633 не позволяет
+    отзывать returning).
+  - window.confirm перед mutate — UX-паттерн как в monitor-planet
+    (план 72.1.47).
+  - Ошибка отображается строкой с colSpan=3 под блоком events —
+    эквивалент legacy Logger::dieMessage('PLANET_UNDER_ATTACK').
+  - i18n ключи fleet.recall + fleet.recallErr уже существуют
+    (configs/i18n/ru.yml:1016,1035 — для FleetOperationsScreen).
+
+  Документация:
+  - План 72.1.50 создан как зонтичный для 4 follow-up'ов из
+    72.1.2 verify-and-fix.
+  - План 72.1.2 snapshot обновлён: #39 → ✅, итог 39 ✅ + 1
+    backlog + 1 🚧.
+  - simplifications.md НЕ трогается — gap закрыт реально, маркер
+    P72.S4.MAIN_RETREAT не вводится.
+
+  Tests: tsc чистый, vitest 133/133.
+
+  Коммит: feat(origin/main): план 72.1.50 ч.1 — retreat-кнопка в Main
+  fleet events (legacy 1:1).
+

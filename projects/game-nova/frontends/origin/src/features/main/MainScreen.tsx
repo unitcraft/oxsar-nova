@@ -15,9 +15,11 @@
 //   GET /api/messages/unread-count — счётчик непрочитанных
 //   GET /api/professions/me — текущая профессия (label из конфига)
 
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { fetchFleet } from '@/api/fleet';
+import { fetchFleet, recallFleet } from '@/api/fleet';
+import type { ApiError } from '@/api/client';
 import { fetchUnreadCount } from '@/api/messages';
 import { fetchMe } from '@/api/me';
 import { fetchProfessionMe } from '@/api/profession';
@@ -39,6 +41,23 @@ import {
 export function MainScreen() {
   const { planet, planets, isLoading } = useResolvedPlanet();
   const { t } = useTranslation();
+  const qc = useQueryClient();
+  // Сообщение об ошибке отзыва флота. Кладём в state, рендерим под
+  // блоком events. Аналог Logger::dieMessage('PLANET_UNDER_ATTACK')
+  // в legacy Main.class.php:64-67.
+  const [recallErr, setRecallErr] = useState<string | null>(null);
+
+  // План 72.1.50 / P72.S4.MAIN_RETREAT: legacy `Main.class.php::retreatFleet`
+  // (setPostAction "retreat", L.46-70) — кнопка отзыва прямо в строке
+  // fleet event. Раньше отзыв был доступен только на /fleet-operations.
+  const recall = useMutation({
+    mutationFn: (id: string) => recallFleet(id),
+    onSuccess: () => {
+      setRecallErr(null);
+      void qc.invalidateQueries({ queryKey: QK.fleet() });
+    },
+    onError: (e) => setRecallErr((e as ApiError).message),
+  });
 
   const meQ = useQuery({
     queryKey: QK.me(),
@@ -201,9 +220,35 @@ export function MainScreen() {
                       : f.arrive_at,
                   ),
                 )}
+                {f.state === 'outbound' && (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ marginLeft: 8 }}
+                      disabled={recall.isPending}
+                      onClick={() => {
+                        if (window.confirm(t('fleet', 'recall') + '?')) {
+                          recall.mutate(f.id);
+                        }
+                      }}
+                      title={t('fleet', 'recall')}
+                    >
+                      ↩
+                    </button>
+                  </>
+                )}
               </td>
             </tr>
           ))
+        )}
+        {recallErr && (
+          <tr>
+            <td colSpan={3} className="center" style={{ color: '#c33' }}>
+              {t('fleet', 'recallErr')}: {recallErr}
+            </td>
+          </tr>
         )}
 
         {/*
