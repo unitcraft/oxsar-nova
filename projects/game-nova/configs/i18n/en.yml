@@ -1050,6 +1050,9 @@ fleet:
   acsLeader: "Leader"
   acsInvitedAt: "Sent at"
   acsAccept: "Accept"
+  # План 72.1.48 (доделка): rate-limit + back_consumption.
+  controlsLeft: "Controls"
+  returnReserveH: "Return reserve H"
   missionRebase: Rebase
   missionTransport: Transport
   missionColonize: Colonize
