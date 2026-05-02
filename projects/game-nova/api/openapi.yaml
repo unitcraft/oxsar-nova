@@ -915,6 +915,252 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/RepairQueueItem" }
 
+  # План 72.1.51 (openapi coverage gap): cancel + VIP endpoint'ы
+  # для всех queue-handler'ов nova. Backend и фронт работают давно
+  # (планы 72.1.39/41/44/49), спека отставала.
+
+  /api/planets/{id}/buildings/queue/{taskId}/vip:
+    post:
+      tags: [buildings]
+      security: [{ bearerAuth: [] }]
+      summary: VIP-instant старт стройки за credits.
+      description: |
+        Legacy `Constructions::UpgradeConstructionImm`. Списывает credits
+        с пользователя и сразу запускает таск (event fire_at = now).
+        Anti-double-submit через Idempotency-Key.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: taskId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: started immediately
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QueueItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "402":
+          description: not enough credits
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/planets/{id}/buildings/{unitId}/demolish:
+    post:
+      tags: [buildings]
+      security: [{ bearerAuth: [] }]
+      summary: Снести здание (DEMOLISH_NOW).
+      description: |
+        Legacy `BuildingInfo::DEMOLISH_NOW`. Списывает 1/demolish_spec
+        стоимости + free_fields=+1 (если не moon-only).
+        Anti-double-submit через Idempotency-Key.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: unitId
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: demolished }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/planets/{id}/buildings/{unitId}/pack:
+    post:
+      tags: [buildings]
+      security: [{ bearerAuth: [] }]
+      summary: Упаковать здание в packed-артефакт (legacy PackConstruction).
+      description: |
+        Требует артефакт упаковки в инвентаре (catalog ARTEFACT_PACKING_BUILDING,
+        legacy id=321 / 323). После операции used_fields=-N, артефакт
+        становится `packed` с метаданными уровня здания.
+        Anti-double-submit через Idempotency-Key.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: unitId
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: packed }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/planets/{id}/research/{unitId}/pack:
+    post:
+      tags: [research]
+      security: [{ bearerAuth: [] }]
+      summary: Упаковать исследование в packed-артефакт (legacy PackResearch).
+      description: |
+        Требует артефакт упаковки исследования (catalog
+        ARTEFACT_PACKING_RESEARCH, legacy id=322 / 324).
+        Anti-double-submit через Idempotency-Key.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: unitId
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: packed }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/research/{queueId}:
+    delete:
+      tags: [research]
+      security: [{ bearerAuth: [] }]
+      summary: Отменить активное исследование (legacy `Research::abort`).
+      description: |
+        Возврат: 95% если прошло >15 сек, 100% если меньше (план 72.1.39).
+        Anti-double-submit через Idempotency-Key.
+      parameters:
+        - in: path
+          name: queueId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: cancelled }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/research/{queueId}/vip:
+    post:
+      tags: [research]
+      security: [{ bearerAuth: [] }]
+      summary: VIP-instant старт исследования за credits.
+      parameters:
+        - in: path
+          name: queueId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: started immediately
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QueueItem" }
+        "402":
+          description: not enough credits
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/planets/{id}/shipyard/{queueId}:
+    delete:
+      tags: [shipyard]
+      security: [{ bearerAuth: [] }]
+      summary: Отменить задачу в очереди верфи/обороны.
+      description: |
+        Возврат ресурсов согласно legacy `Shipyard::abort`. Idempotency-Key.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: queueId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: cancelled }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/planets/{id}/shipyard/{queueId}/vip:
+    post:
+      tags: [shipyard]
+      security: [{ bearerAuth: [] }]
+      summary: VIP-instant старт shipyard-задачи за credits.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: queueId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: started immediately
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipyardQueueItem" }
+        "402":
+          description: not enough credits
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/planets/{id}/repair/queue/{queueId}:
+    delete:
+      tags: [repair]
+      security: [{ bearerAuth: [] }]
+      summary: Отменить задачу в очереди ремонта/утилизации.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: queueId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: cancelled }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/planets/{id}/repair/queue/{queueId}/vip:
+    post:
+      tags: [repair]
+      security: [{ bearerAuth: [] }]
+      summary: VIP-instant старт ремонта/утилизации за credits.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: queueId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: started immediately
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RepairQueueItem" }
+        "402":
+          description: not enough credits
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
   /api/artefacts:
     get:
       tags: [artefacts]
@@ -3745,6 +3991,481 @@ paths:
   # /api/officers и /api/officers/{key}/activate уже задокументированы
   # выше; добавлены поля body для activate (auto_renew).
 
+  # ---- План 72.1.51 (openapi coverage gap): прочие мутирующие
+  # endpoint'ы, которые backend и фронт уже поддерживают, но в спеке
+  # отсутствовали. ----
+
+  /api/me/deletion/cancel:
+    post:
+      tags: [settings]
+      security: [{ bearerAuth: [] }]
+      summary: Отменить запланированное удаление в grace-period (план 72.1.30).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: cancelled }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/planets/order:
+    patch:
+      tags: [planets]
+      security: [{ bearerAuth: [] }]
+      summary: Переупорядочить планеты (drag&drop в sidebar).
+      description: |
+        Принимает массив planet_id в новом порядке. Anti-double-submit
+        через Idempotency-Key.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order]
+              properties:
+                order:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        "204": { description: reordered }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/fleet/{id}/load:
+    post:
+      tags: [fleet]
+      security: [{ bearerAuth: [] }]
+      summary: Загрузить ресурсы в HOLDING-флот (план 72.1.47).
+      description: |
+        Legacy `Mission.class.php::loadResourcesToFleet`. Списывает
+        metal/silicon/hydrogen с current_planet_id и кладёт в
+        fleets.carried_*. Учёт capacity, control_times, комиссии
+        (см. план 72.1.48 доделка).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_planet_id]
+              properties:
+                current_planet_id: { type: string, format: uuid }
+                metal:    { type: integer, format: int64, minimum: 0 }
+                silicon:  { type: integer, format: int64, minimum: 0 }
+                hydrogen: { type: integer, format: int64, minimum: 0 }
+      responses:
+        "204": { description: loaded }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409":
+          description: |
+            Не хватает ресурсов / capacity / control_times overflow / OR
+            (план 72.1.50 ч.4B) idempotency-conflict (text/plain).
+
+  /api/fleet/{id}/unload:
+    post:
+      tags: [fleet]
+      security: [{ bearerAuth: [] }]
+      summary: Выгрузить ресурсы из HOLDING-флота на планету.
+      description: |
+        Legacy `Mission.class.php::unloadResourcesFromFleet`. H проверяется
+        против `back_consumption` (минимум для возврата).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_planet_id]
+              properties:
+                current_planet_id: { type: string, format: uuid }
+                metal:    { type: integer, format: int64, minimum: 0 }
+                silicon:  { type: integer, format: int64, minimum: 0 }
+                hydrogen: { type: integer, format: int64, minimum: 0 }
+      responses:
+        "204": { description: unloaded }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409":
+          description: |
+            Не хватает carried_* / hydrogen<back_consumption / OR
+            idempotency-conflict.
+
+  /api/fleet/{id}/promote-to-acs:
+    post:
+      tags: [fleet]
+      security: [{ bearerAuth: [] }]
+      summary: Превратить single-флот в ACS-formation (план 72.1.48).
+      description: |
+        Legacy `Mission.class.php::formation` post-factum. Mission
+        преобразуется: 10→12 (Attack→ACS), 25→27 (DefenceAlliance),
+        26→29 (HoldingAlliance). Создаёт `acs_groups` запись с
+        leader=current_user.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 64 }
+      responses:
+        "201":
+          description: ACS-group created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  group_id: { type: string, format: uuid }
+                  name:     { type: string }
+                  leader_id: { type: string, format: uuid }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/acs/{groupId}/invite:
+    post:
+      tags: [fleet]
+      security: [{ bearerAuth: [] }]
+      summary: Пригласить игрока в ACS-formation (план 72.1.48).
+      description: |
+        Только лидер может инвайтить. Приглашаемый должен быть в
+        `Relation IN (ally, nap)` с лидером. Запись в
+        `acs_invitations`; `accepted_at` остаётся NULL до accept.
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username]
+              properties:
+                username: { type: string }
+      responses:
+        "204": { description: invited }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403":
+          description: not leader OR target not in ally/nap relation
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/acs/invitations/{groupId}/accept:
+    post:
+      tags: [fleet]
+      security: [{ bearerAuth: [] }]
+      summary: Принять приглашение в ACS-formation.
+      description: |
+        Помечает `acs_invitations.accepted_at=now`. Только после этого
+        join-resolver учитывает участника в `resolveACSGroup`.
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: accepted }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/acs/invitations:
+    get:
+      tags: [fleet]
+      security: [{ bearerAuth: [] }]
+      summary: Список pending-инвайтов в ACS для текущего пользователя.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invitations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        group_id:    { type: string, format: uuid }
+                        name:        { type: string }
+                        leader_id:   { type: string, format: uuid }
+                        leader_name: { type: string }
+                        invited_at:  { type: string, format: date-time }
+                        accepted_at: { type: string, format: date-time, nullable: true }
+
+  /api/alien/holding/{event_id}/pay:
+    post:
+      tags: [alien]
+      security: [{ bearerAuth: [] }]
+      summary: Платный выкуп HOLDING-удержания за оксары (план 66 Ф.5).
+      description: |
+        Альтернатива выкупа через alien-buyout (без RU фразы), для
+        обычных HOLDING-инцидентов (не alien-mission). Списывает
+        billing.oxsars и снимает HOLDING. Anti-double-submit через
+        Idempotency-Key.
+      parameters:
+        - in: path
+          name: event_id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: paid, holding cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  paid_oxsars: { type: integer, format: int64 }
+                  cleared_at:  { type: string, format: date-time }
+        "402":
+          description: not enough oxsars
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  # ---- Market: credit / credit-multi / lots / fleet-lots серия ----
+
+  /api/planets/{id}/market/credit:
+    post:
+      tags: [market]
+      security: [{ bearerAuth: [] }]
+      summary: Single-resource обмен ресурса на credit (legacy `Market::Credit_ex` single).
+      description: |
+        Списывает `from_amount` ресурса, начисляет credit по курсу.
+        Anti-double-submit через Idempotency-Key.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resource, amount]
+              properties:
+                resource: { type: string, enum: [metal, silicon, hydrogen] }
+                amount:   { type: integer, format: int64, minimum: 1 }
+      responses:
+        "200":
+          description: credited
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  credit_received: { type: integer, format: int64 }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/planets/{id}/market/credit-multi:
+    post:
+      tags: [market]
+      security: [{ bearerAuth: [] }]
+      summary: Multi-resource обмен сразу metal+silicon+hydrogen на credit (legacy `Market::Credit_ex`).
+      description: |
+        Cascade payback H→Si→M через `MARKET_BASE_CURS_*` (план 72.1.28).
+        Anti-double-submit через Idempotency-Key.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                metal:    { type: integer, format: int64, minimum: 0 }
+                silicon:  { type: integer, format: int64, minimum: 0 }
+                hydrogen: { type: integer, format: int64, minimum: 0 }
+      responses:
+        "200":
+          description: credited
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  credit_received: { type: integer, format: int64 }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/market/lots:
+    get:
+      tags: [market]
+      security: [{ bearerAuth: [] }]
+      summary: Список активных лотов на бирже (legacy resource-market).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lots:
+                    type: array
+                    items: { $ref: "#/components/schemas/MarketLot" }
+    post:
+      tags: [market]
+      security: [{ bearerAuth: [] }]
+      summary: Создать лот (выставить ресурс на продажу).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MarketLotInput" }
+      responses:
+        "201":
+          description: lot created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MarketLot" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/market/lots/{id}:
+    delete:
+      tags: [market]
+      security: [{ bearerAuth: [] }]
+      summary: Снять лот с продажи.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: cancelled }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/market/lots/{id}/accept:
+    post:
+      tags: [market]
+      security: [{ bearerAuth: [] }]
+      summary: Принять лот (купить ресурс).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200": { description: accepted }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/market/fleet-lots:
+    get:
+      tags: [market]
+      security: [{ bearerAuth: [] }]
+      summary: Активные fleet-лоты (P2P-обмен с доставкой через флот).
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lots:
+                    type: array
+                    items: { $ref: "#/components/schemas/MarketFleetLot" }
+
+  /api/planets/{id}/market/fleet-lots:
+    post:
+      tags: [market]
+      security: [{ bearerAuth: [] }]
+      summary: Создать fleet-лот (P2P).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MarketFleetLotInput" }
+      responses:
+        "201":
+          description: fleet-lot created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MarketFleetLot" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/market/fleet-lots/{lotId}/accept:
+    post:
+      tags: [market]
+      security: [{ bearerAuth: [] }]
+      summary: Принять fleet-лот.
+      parameters:
+        - in: path
+          name: lotId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200": { description: accepted }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /api/market/fleet-lots/{lotId}:
+    delete:
+      tags: [market]
+      security: [{ bearerAuth: [] }]
+      summary: Снять fleet-лот.
+      parameters:
+        - in: path
+          name: lotId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: cancelled }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -3807,6 +4528,47 @@ components:
       type: object
       properties:
         status: { type: string }
+
+    # План 72.1.51 (openapi coverage gap): минимальные market-схемы
+    # для документации /market/lots и /market/fleet-lots серий.
+    MarketLot:
+      type: object
+      properties:
+        id:           { type: string, format: uuid }
+        seller_id:    { type: string, format: uuid }
+        seller_name:  { type: string }
+        from_resource: { type: string, enum: [metal, silicon, hydrogen] }
+        from_amount:  { type: integer, format: int64 }
+        to_resource:  { type: string, enum: [metal, silicon, hydrogen, credit] }
+        to_amount:    { type: integer, format: int64 }
+        created_at:   { type: string, format: date-time }
+        expires_at:   { type: string, format: date-time, nullable: true }
+
+    MarketLotInput:
+      type: object
+      required: [from_resource, from_amount, to_resource, to_amount]
+      properties:
+        from_resource: { type: string, enum: [metal, silicon, hydrogen] }
+        from_amount:   { type: integer, format: int64, minimum: 1 }
+        to_resource:   { type: string, enum: [metal, silicon, hydrogen, credit] }
+        to_amount:     { type: integer, format: int64, minimum: 1 }
+
+    MarketFleetLot:
+      allOf:
+        - $ref: "#/components/schemas/MarketLot"
+        - type: object
+          properties:
+            src_planet_id: { type: string, format: uuid }
+            speed_percent: { type: integer, minimum: 10, maximum: 100 }
+
+    MarketFleetLotInput:
+      allOf:
+        - $ref: "#/components/schemas/MarketLotInput"
+        - type: object
+          required: [src_planet_id]
+          properties:
+            src_planet_id: { type: string, format: uuid }
+            speed_percent: { type: integer, minimum: 10, maximum: 100, default: 100 }
 
     ErrorEnvelope:
       type: object
