@@ -15,6 +15,14 @@ func minCatalog(ships map[string]config.ShipSpec) *config.Catalog {
 	}
 }
 
+// minCatalogWithDefense — для тестов BA-008 (debris по defense с factor 1%).
+func minCatalogWithDefense(ships map[string]config.ShipSpec, defense map[string]config.DefenseSpec) *config.Catalog {
+	return &config.Catalog{
+		Ships:   config.ShipCatalog{Ships: ships},
+		Defense: config.DefenseCatalog{Defense: defense},
+	}
+}
+
 // TestGrabLoot_UnlimitedCargo — если cargo > 50% ресурсов, берём ровно 50%.
 func TestGrabLoot_UnlimitedCargo(t *testing.T) {
 	t.Parallel()
@@ -74,7 +82,8 @@ func TestGrabLoot_CarryReducesFree(t *testing.T) {
 	}
 }
 
-// TestCalcDebris_Basic — 30% metal + 30% silicon от lost ships.
+// TestCalcDebris_Basic — 50% metal + 50% silicon от lost ships
+// (план 72.1.3 / BA-008: bulkFactor возвращён к legacy 0.5).
 func TestCalcDebris_Basic(t *testing.T) {
 	t.Parallel()
 	cat := minCatalog(map[string]config.ShipSpec{
@@ -88,31 +97,76 @@ func TestCalcDebris_Basic(t *testing.T) {
 		}},
 		Defenders: nil,
 	}
-	// 6 lost × (3000m + 1000si) × 30% = 5400m + 1800si
+	// 6 lost × 3000m × 50% = 9000m, 6 lost × 1000si × 50% = 3000si.
 	dm, ds := calcDebris(rep, nil, cat)
-	if dm != 5400 {
-		t.Errorf("debris metal: want 5400, got %d", dm)
+	if dm != 9000 {
+		t.Errorf("debris metal: want 9000, got %d", dm)
 	}
-	if ds != 1800 {
-		t.Errorf("debris silicon: want 1800, got %d", ds)
+	if ds != 3000 {
+		t.Errorf("debris silicon: want 3000, got %d", ds)
 	}
 }
 
-// TestCalcDebris_DefenseExcluded — defense не идёт в debris.
-func TestCalcDebris_DefenseExcluded(t *testing.T) {
+// TestCalcDebris_DefenseGives1Percent — план 72.1.3 / BA-008:
+// defense даёт 1% от стоимости в обломки (legacy
+// Assault.getBulkIntoDebris(UNIT_TYPE_DEFENSE) = 0.01). До фикса
+// defense исключался полностью.
+func TestCalcDebris_DefenseGives1Percent(t *testing.T) {
 	t.Parallel()
-	cat := minCatalog(nil)
+	cat := minCatalogWithDefense(
+		nil,
+		map[string]config.DefenseSpec{
+			"rocket_launcher": {ID: 401, Cost: config.ResCost{Metal: 2000, Silicon: 0}},
+		},
+	)
 	rep := battle.Report{
 		Defenders: []battle.SideResult{{
 			Units: []battle.UnitResult{
-				{UnitID: 401, QuantityStart: 5, QuantityEnd: 0},
+				{UnitID: 401, QuantityStart: 5, QuantityEnd: 0}, // 5 lost defense
 			},
 		}},
 	}
 	defIDs := map[int]bool{401: true}
 	dm, ds := calcDebris(rep, defIDs, cat)
-	if dm != 0 || ds != 0 {
-		t.Errorf("defense should produce zero debris, got %d %d", dm, ds)
+	// 5 lost × 2000m × 1% = 100m. Silicon=0.
+	if dm != 100 {
+		t.Errorf("BA-008: defense должен давать 1%% (100m), got %d", dm)
+	}
+	if ds != 0 {
+		t.Errorf("silicon=0 → 0 debris, got %d", ds)
+	}
+}
+
+// TestCalcDebris_MixedShipsAndDefense — bulkFactor правильный для
+// смешанной стороны.
+func TestCalcDebris_MixedShipsAndDefense(t *testing.T) {
+	t.Parallel()
+	cat := minCatalogWithDefense(
+		map[string]config.ShipSpec{
+			"fighter": {ID: 204, Cost: config.ResCost{Metal: 3000, Silicon: 1000}, Cargo: 50},
+		},
+		map[string]config.DefenseSpec{
+			"rocket": {ID: 401, Cost: config.ResCost{Metal: 2000, Silicon: 0}},
+		},
+	)
+	rep := battle.Report{
+		Defenders: []battle.SideResult{{
+			Units: []battle.UnitResult{
+				{UnitID: 204, QuantityStart: 4, QuantityEnd: 0}, // 4 lost ships
+				{UnitID: 401, QuantityStart: 10, QuantityEnd: 0}, // 10 lost defense
+			},
+		}},
+	}
+	defIDs := map[int]bool{401: true}
+	dm, ds := calcDebris(rep, defIDs, cat)
+	// Ships: 4 × 3000m × 50% = 6000m, 4 × 1000si × 50% = 2000si.
+	// Defense: 10 × 2000m × 1% = 200m, 0si.
+	// Total: 6200m + 2000si.
+	if dm != 6200 {
+		t.Errorf("mixed debris metal: want 6200, got %d", dm)
+	}
+	if ds != 2000 {
+		t.Errorf("mixed debris silicon: want 2000, got %d", ds)
 	}
 }
 
