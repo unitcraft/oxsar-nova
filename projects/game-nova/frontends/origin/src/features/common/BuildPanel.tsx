@@ -19,6 +19,7 @@ import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { catalogByGroup, type CatalogEntry } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber, formatDuration, secondsUntil } from '@/lib/format';
 import type { ShipyardInventory } from '@/api/types';
@@ -31,6 +32,8 @@ interface BuildPanelProps {
 }
 
 export function BuildPanel({ group, title }: BuildPanelProps) {
+  // План 72.1.53 ч.B: in-game confirm-dialog (заменяет window.confirm).
+  const { confirm, dialogProps } = useConfirm();
   const { planetId, planet } = useResolvedPlanet();
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -183,13 +186,13 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
                       className="button"
                       disabled={cancel.isPending}
                       title={t('buildings', 'cancelTask') || 'Отменить'}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            (t('buildings', 'cancelConfirm') as string) ||
-                              'Отменить задачу? Возврат ресурсов в зависимости от прогресса.',
-                          )
-                        ) {
+                      onClick={async () => {
+                        if (await confirm({
+                          title: t('buildings', 'cancelTask') || 'Отменить',
+                          message: (t('buildings', 'cancelConfirm') as string) ||
+                            'Отменить задачу? Возврат ресурсов в зависимости от прогресса.',
+                          destructive: true,
+                        })) {
                           cancel.mutate(task.id);
                         }
                       }}
@@ -204,13 +207,12 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
                       className="button"
                       disabled={vip.isPending}
                       title={t('buildings', 'vipHint') || 'Мгновенный старт за кредиты'}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            (t('buildings', 'vipConfirm') as string) ||
-                              'Мгновенный старт за кредиты?',
-                          )
-                        ) {
+                      onClick={async () => {
+                        if (await confirm({
+                          title: t('buildings', 'vipHint') || 'VIP старт',
+                          message: (t('buildings', 'vipConfirm') as string) ||
+                            'Мгновенный старт за кредиты?',
+                        })) {
                           vip.mutate(task.id);
                         }
                       }}
@@ -363,6 +365,7 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
           </tbody>
         </table>
       </form>
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }

@@ -16,12 +16,15 @@ import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { catalogByGroup } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { ConstructionProgress } from '@/features/common/ConstructionProgress';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { useTranslation } from '@/i18n/i18n';
 
 export function ConstructionsScreen() {
   const { planetId, planet } = useResolvedPlanet();
   const { t } = useTranslation();
   const qc = useQueryClient();
+  // План 72.1.53 ч.B: in-game confirm-dialog.
+  const { confirm, dialogProps } = useConfirm();
 
   const queueQ = useQuery({
     queryKey: planetId ? QK.buildingQueue(planetId) : ['noop-bq'],
@@ -172,13 +175,12 @@ export function ConstructionsScreen() {
                       className="button"
                       value={t('buildings', 'vipBtn') || '⚡ VIP'}
                       title={t('buildings', 'vipHint') || 'Мгновенный старт за кредиты'}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            (t('buildings', 'vipConfirm') as string) ||
-                              'Мгновенный старт стройки за кредиты?',
-                          )
-                        ) {
+                      onClick={async () => {
+                        if (await confirm({
+                          title: t('buildings', 'vipBtn') || 'VIP',
+                          message: (t('buildings', 'vipConfirm') as string) ||
+                            'Мгновенный старт стройки за кредиты?',
+                        })) {
                           vip.mutate(task.id);
                         }
                       }}
@@ -303,13 +305,13 @@ export function ConstructionsScreen() {
                             className="button"
                             disabled={demolish.isPending}
                             title={t('buildinginfo', 'demolish') || 'Снос здания'}
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  (t('buildinginfo', 'demolishConfirm') as string) ||
-                                    'Снести здание на 1 уровень?',
-                                )
-                              ) {
+                            onClick={async () => {
+                              if (await confirm({
+                                title: t('buildinginfo', 'demolish') || 'Снос',
+                                message: (t('buildinginfo', 'demolishConfirm') as string) ||
+                                  'Снести здание на 1 уровень?',
+                                destructive: true,
+                              })) {
                                 demolish.mutate(entry.id);
                               }
                             }}
@@ -326,6 +328,7 @@ export function ConstructionsScreen() {
           })}
         </tbody>
       </table>
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }

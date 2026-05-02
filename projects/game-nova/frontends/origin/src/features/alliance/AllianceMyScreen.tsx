@@ -28,6 +28,7 @@ import type { ApiError } from '@/api/client';
 import { QK } from '@/api/query-keys';
 import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/i18n/i18n';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { useMyAlliance } from './common';
 
 export function AllianceMyScreen() {
@@ -36,6 +37,8 @@ export function AllianceMyScreen() {
   const navigate = useNavigate();
   const my = useMyAlliance();
   const userId = useAuthStore((s) => s.userId);
+  // План 72.1.53 ч.B: in-game confirm-dialog.
+  const { confirm, dialogProps } = useConfirm();
 
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
@@ -106,12 +109,12 @@ export function AllianceMyScreen() {
                 <button
                   type="button"
                   className="button"
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        t('alliance', 'leaveConfirm', { name: al.name }),
-                      )
-                    ) {
+                  onClick={async () => {
+                    if (await confirm({
+                      title: t('alliance', 'leaveBtn'),
+                      message: t('alliance', 'leaveConfirm', { name: al.name }),
+                      destructive: true,
+                    })) {
                       leaveAlliance()
                         .then(() => {
                           void qc.invalidateQueries({
@@ -136,12 +139,12 @@ export function AllianceMyScreen() {
                 <button
                   type="button"
                   className="button"
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        t('alliance', 'disbandConfirm', { name: al.name }),
-                      )
-                    ) {
+                  onClick={async () => {
+                    if (await confirm({
+                      title: t('alliance', 'disbandBtn') || 'Распустить',
+                      message: t('alliance', 'disbandConfirm', { name: al.name }),
+                      destructive: true,
+                    })) {
                       disbandAlliance(al.id)
                         .then(() => {
                           void qc.invalidateQueries({
@@ -174,6 +177,7 @@ export function AllianceMyScreen() {
       </table>
 
       {isOwner && !al.is_open && <ApplicationsTable allianceID={al.id} />}
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }

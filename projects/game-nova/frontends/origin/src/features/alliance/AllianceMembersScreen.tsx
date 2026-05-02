@@ -14,10 +14,12 @@ import { kickMember } from '@/api/alliance';
 import type { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/i18n/i18n';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { useMyAlliance } from './common';
 
 export function AllianceMembersScreen() {
   const { t } = useTranslation();
+  const { confirm, dialogProps } = useConfirm();
   const my = useMyAlliance();
   const qc = useQueryClient();
   const userId = useAuthStore((s) => s.userId);
@@ -102,12 +104,12 @@ export function AllianceMembersScreen() {
                       className="button"
                       disabled={kick.isPending}
                       title={t('alliance', 'remove')}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `${t('alliance', 'remove')} ${m.username}?`,
-                          )
-                        ) {
+                      onClick={async () => {
+                        if (await confirm({
+                          title: t('alliance', 'remove'),
+                          message: `${t('alliance', 'remove')} ${m.username}?`,
+                          destructive: true,
+                        })) {
                           kick.mutate({ allianceID: al.id, uid: m.user_id });
                         }
                       }}
@@ -127,6 +129,7 @@ export function AllianceMembersScreen() {
           <span className="false">{errMsg}</span>
         </div>
       )}
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }

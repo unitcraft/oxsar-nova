@@ -28,6 +28,7 @@ import type { ApiError } from '@/api/client';
 import type { ChatChannelKind, ChatMessage } from '@/api/types';
 import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/i18n/i18n';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { renderBBCode } from './bbcode';
 
 const EDIT_WINDOW_MS = 5 * 60 * 1000;
@@ -41,6 +42,8 @@ export function ChatScreen({ kind }: ChatProps) {
   const qc = useQueryClient();
   const token = useAuthStore((s) => s.accessToken);
   const myId = useAuthStore((s) => s.userId);
+  // План 72.1.53 ч.B: in-game confirm-dialog.
+  const { confirm, dialogProps } = useConfirm();
 
   const historyQ = useQuery({
     queryKey: QK.chatHistory(kind),
@@ -164,6 +167,7 @@ export function ChatScreen({ kind }: ChatProps) {
   }
 
   return (
+    <>
     <table className="ntable">
       <thead>
         <tr>
@@ -270,13 +274,13 @@ export function ChatScreen({ kind }: ChatProps) {
                               <a
                                 href="#"
                                 title={t('chat', 'deleteTitle')}
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.preventDefault();
-                                  if (
-                                    window.confirm(
-                                      t('chat', 'deleteConfirmMsg'),
-                                    )
-                                  ) {
+                                  if (await confirm({
+                                    title: t('chat', 'deleteTitle'),
+                                    message: t('chat', 'deleteConfirmMsg'),
+                                    destructive: true,
+                                  })) {
                                     deleteMut.mutate(m.id);
                                   }
                                 }}
@@ -318,6 +322,8 @@ export function ChatScreen({ kind }: ChatProps) {
         </tr>
       </tbody>
     </table>
+    <ConfirmDialog {...dialogProps} />
+    </>
   );
 }
 

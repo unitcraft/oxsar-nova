@@ -25,6 +25,7 @@ import type {
 } from '@/api/types';
 import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/i18n/i18n';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { PERMISSION_KEYS, useMyAlliance } from './common';
 
 export function AllianceRanksScreen() {
@@ -34,6 +35,8 @@ export function AllianceRanksScreen() {
   const userId = useAuthStore((s) => s.userId);
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
+  // План 72.1.53 ч.B: in-game confirm-dialog.
+  const { confirm, dialogProps } = useConfirm();
 
   const ranksQ = useQuery({
     queryKey: QK.allianceRanks(my.data?.alliance.id ?? ''),
@@ -115,12 +118,12 @@ export function AllianceRanksScreen() {
               key={r.id}
               allianceID={al.id}
               rank={r}
-              onDelete={() => {
-                if (
-                  window.confirm(
-                    t('alliance', 'ranks.deleteConfirm', { name: r.name }),
-                  )
-                ) {
+              onDelete={async () => {
+                if (await confirm({
+                  title: t('alliance', 'remove') || 'Удалить',
+                  message: t('alliance', 'ranks.deleteConfirm', { name: r.name }),
+                  destructive: true,
+                })) {
                   remove.mutate(r.id);
                 }
               }}
@@ -164,6 +167,7 @@ export function AllianceRanksScreen() {
           <span className="false">{errMsg}</span>
         </div>
       )}
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }

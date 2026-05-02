@@ -14,6 +14,7 @@ import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { catalogByGroup } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { useTranslation } from '@/i18n/i18n';
 import { secondsUntil, formatDuration } from '@/lib/format';
 import type { ApiError } from '@/api/client';
@@ -22,6 +23,8 @@ export function ResearchScreen() {
   const { planetId, planet } = useResolvedPlanet();
   const { t } = useTranslation();
   const qc = useQueryClient();
+  // План 72.1.53 ч.B: in-game confirm-dialog.
+  const { confirm, dialogProps } = useConfirm();
 
   const overviewQ = useQuery({
     queryKey: QK.research(),
@@ -117,13 +120,13 @@ export function ResearchScreen() {
                       className="button"
                       disabled={cancelMut.isPending}
                       title={t('buildings', 'cancelTask') || 'Отменить'}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            (t('buildings', 'cancelConfirm') as string) ||
-                              'Отменить исследование? Возврат 95% ресурсов (100% если <15 сек).',
-                          )
-                        ) {
+                      onClick={async () => {
+                        if (await confirm({
+                          title: t('buildings', 'cancelTask') || 'Отменить',
+                          message: (t('buildings', 'cancelConfirm') as string) ||
+                            'Отменить исследование? Возврат 95% ресурсов (100% если <15 сек).',
+                          destructive: true,
+                        })) {
                           cancelMut.mutate(task.id);
                         }
                       }}
@@ -138,13 +141,12 @@ export function ResearchScreen() {
                       className="button"
                       disabled={vipMut.isPending}
                       title={t('buildings', 'vipHint') || 'Мгновенный старт за кредиты'}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            (t('buildings', 'vipConfirm') as string) ||
-                              'Мгновенный старт исследования за кредиты?',
-                          )
-                        ) {
+                      onClick={async () => {
+                        if (await confirm({
+                          title: t('buildings', 'vipHint') || 'VIP старт',
+                          message: (t('buildings', 'vipConfirm') as string) ||
+                            'Мгновенный старт исследования за кредиты?',
+                        })) {
                           vipMut.mutate(task.id);
                         }
                       }}
@@ -227,13 +229,12 @@ export function ResearchScreen() {
                         className="button"
                         disabled={packMut.isPending}
                         title={t('buildinginfo', 'packResearch') || 'Упаковать в артефакт'}
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              (t('buildinginfo', 'packConfirm') as string) ||
-                                'Упаковать?',
-                            )
-                          ) {
+                        onClick={async () => {
+                          if (await confirm({
+                            title: t('buildinginfo', 'packResearch') || 'Упаковать',
+                            message: (t('buildinginfo', 'packConfirm') as string) ||
+                              'Упаковать?',
+                          })) {
                             packMut.mutate(entry.id);
                           }
                         }}
@@ -248,6 +249,7 @@ export function ResearchScreen() {
           })}
         </tbody>
       </table>
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }
