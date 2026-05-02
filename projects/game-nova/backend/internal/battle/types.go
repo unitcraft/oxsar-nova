@@ -72,13 +72,16 @@ type Side struct {
 }
 
 // Tech — уровни технологий игрока, влияющие на юнитов этой стороны.
+//
+// План 72.1.3 (re-audit 2026-05-02): удалены поля Laser/Ion/Plasma —
+// принимались, но НЕ применялись к damage в engine.go (BA-013 dead
+// fields). Legacy Java тоже использует только attack/shield/armoring/
+// ballistics/masking. Если 3-channel combat (laser/ion/plasma) будет
+// реализован в будущем — поля вернутся вместе с применяемой формулой.
 type Tech struct {
 	Gun        int `json:"gun,omitempty"`
 	Shield     int `json:"shield,omitempty"`
 	Shell      int `json:"shell,omitempty"`
-	Laser      int `json:"laser,omitempty"`
-	Ion        int `json:"ion,omitempty"`
-	Plasma     int `json:"plasma,omitempty"`
 	Ballistics int `json:"ballistics,omitempty"`
 	Masking    int `json:"masking,omitempty"`
 }

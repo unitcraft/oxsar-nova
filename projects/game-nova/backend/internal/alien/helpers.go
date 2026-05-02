@@ -95,13 +95,12 @@ func readUserTech(ctx context.Context, tx pgx.Tx, userID string, cat *config.Cat
 		}
 	}
 
+	// План 72.1.3 (re-audit): Tech.Laser/Ion/Plasma удалены — dead-fields,
+	// см. battle/types.go.
 	return battle.Tech{
 		Gun:        levels[economy.IDTechGun],
 		Shield:     levels[economy.IDTechShield],
 		Shell:      levels[economy.IDTechShell],
-		Laser:      levels[economy.IDTechLaser],
-		Ion:        levels[economy.IDTechSilicon],
-		Plasma:     levels[economy.IDTechHydrogen],
 		Ballistics: levels[economy.IDTechBallistics],
 		Masking:    levels[economy.IDTechMasking],
 	}, nil

@@ -257,8 +257,20 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 				return fmt.Errorf("acs attack: debris: %w", err)
 			}
 			if !isMoon {
+				// План 72.1.3 (re-audit): передаём atkExp/defExp/lostUnits
+				// для legacy Java moon-formula (Assault.java:1281-1306).
+				var atkLost, defLost int64
+				for _, sr := range report.Attackers {
+					atkLost += sr.LostUnits
+				}
+				for _, sr := range report.Defenders {
+					defLost += sr.LostUnits
+				}
 				created, err := tryCreateMoon(ctx, tx, s.bundle, lead.g, lead.sys, lead.pos,
-					debrisM+debrisS, report.Seed, defenderUserID, lead.ownerUserID)
+					debrisM, debrisS,
+					int64(report.AttackerExp), int64(report.DefenderExp),
+					atkLost, defLost,
+					report.Seed, defenderUserID, lead.ownerUserID)
 				if err != nil {
 					return fmt.Errorf("acs attack: moon: %w", err)
 				}
