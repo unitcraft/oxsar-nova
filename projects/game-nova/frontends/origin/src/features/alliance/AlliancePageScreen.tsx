@@ -86,6 +86,19 @@ export function AlliancePageScreen() {
           </tr>
         </thead>
         <tbody>
+          {/* План 72.1.54: logo показывается всегда (legacy 1:1 —
+              logo есть part of public alliance card). */}
+          {al.logo && (
+            <tr>
+              <td colSpan={2} className="center">
+                <img
+                  src={al.logo}
+                  alt={al.tag}
+                  style={{ maxWidth: 200, maxHeight: 200 }}
+                />
+              </td>
+            </tr>
+          )}
           <tr>
             <td style={{ width: '30%' }}>{t('alliance', 'tag')}</td>
             <td>{al.tag}</td>
@@ -94,6 +107,25 @@ export function AlliancePageScreen() {
             <td>{t('alliance', 'name')}</td>
             <td>{al.name}</td>
           </tr>
+          {/* План 72.1.54: foundername показывается рядом с tag/name
+              если задан (legacy дисплей под именем основателя). */}
+          {al.foundername && (
+            <tr>
+              <td>{t('alliance', 'foundername') || 'Основатель'}</td>
+              <td>{al.foundername}</td>
+            </tr>
+          )}
+          {/* План 72.1.54: homepage URL показывается если show_homepage=true. */}
+          {al.homepage && al.show_homepage && (
+            <tr>
+              <td>{t('alliance', 'homepageUrl') || 'Сайт'}</td>
+              <td>
+                <a href={al.homepage} target="_blank" rel="noopener noreferrer">
+                  {al.homepage}
+                </a>
+              </td>
+            </tr>
+          )}
           <tr>
             <td>{t('alliance', 'member')}</td>
             <td>{al.member_count}</td>

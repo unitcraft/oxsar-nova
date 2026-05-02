@@ -198,6 +198,13 @@ export interface Alliance {
   owner_name: string;
   member_count: number;
   created_at: string;
+  // План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy updateAllyPrefs поля.
+  logo?: string | null;
+  homepage?: string | null;
+  foundername?: string | null;
+  show_member?: boolean;
+  show_homepage?: boolean;
+  memberlist_sort?: number;
 }
 
 export interface AllianceMember {

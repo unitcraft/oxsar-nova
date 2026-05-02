@@ -19,6 +19,8 @@ import {
   setAllianceOpen,
   broadcastAllianceMail,
   updateAllianceTagName,
+  updateAlliancePrefs,
+  type AlliancePrefsInput,
 } from '@/api/alliance';
 import type { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
@@ -72,6 +74,34 @@ export function AllianceManageScreen() {
     },
     onError: (e) => setErrMsg((e as ApiError).message),
   });
+
+  // План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy updateAllyPrefs.
+  const [logoInput, setLogoInput] = useState('');
+  const [homepageInput, setHomepageInput] = useState('');
+  const [foundernameInput, setFoundernameInput] = useState('');
+  const [showMemberInput, setShowMemberInput] = useState(true);
+  const [showHomepageInput, setShowHomepageInput] = useState(true);
+  const [memberlistSortInput, setMemberlistSortInput] = useState(0);
+  const updatePrefs = useMutation({
+    mutationFn: (prefs: AlliancePrefsInput) => updateAlliancePrefs(allianceID, prefs),
+    onSuccess: () => {
+      setErrMsg(null);
+      void qc.invalidateQueries({ queryKey: ['alliances'] });
+    },
+    onError: (e) => setErrMsg((e as ApiError).message),
+  });
+  // Init prefs из alliance data — sync на смену al.
+  useEffect(() => {
+    if (my.data) {
+      const a = my.data.alliance;
+      setLogoInput(a.logo ?? '');
+      setHomepageInput(a.homepage ?? '');
+      setFoundernameInput(a.foundername ?? '');
+      setShowMemberInput(a.show_member ?? true);
+      setShowHomepageInput(a.show_homepage ?? true);
+      setMemberlistSortInput(a.memberlist_sort ?? 0);
+    }
+  }, [my.data]);
 
   if (my.isLoading) return <div className="idiv">…</div>;
   if (!my.data) return <Navigate to="/alliance" replace />;
@@ -212,6 +242,143 @@ export function AllianceManageScreen() {
               </td>
             </tr>
           )}
+        </tbody>
+      </table>
+
+      {/* План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy
+          updateAllyPrefs — logo/homepage/foundername/show_member/
+          show_homepage/memberlist_sort. */}
+      <table className="ntable">
+        <thead>
+          <tr>
+            <th colSpan={2}>{t('alliance', 'preferences') || 'Настройки альянса'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <label htmlFor="logo-input">
+                {t('alliance', 'logoUrl') || 'Логотип (URL картинки)'}
+              </label>
+            </td>
+            <td>
+              <input
+                id="logo-input"
+                type="url"
+                value={logoInput}
+                maxLength={128}
+                placeholder="https://example.com/logo.png"
+                onChange={(e) => setLogoInput(e.target.value)}
+                disabled={updatePrefs.isPending}
+                style={{ width: '24em' }}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <label htmlFor="homepage-input">
+                {t('alliance', 'homepageUrl') || 'Сайт альянса (URL)'}
+              </label>
+            </td>
+            <td>
+              <input
+                id="homepage-input"
+                type="url"
+                value={homepageInput}
+                maxLength={128}
+                placeholder="https://..."
+                onChange={(e) => setHomepageInput(e.target.value)}
+                disabled={updatePrefs.isPending}
+                style={{ width: '24em' }}
+              />{' '}
+              <input
+                type="checkbox"
+                id="show-homepage"
+                checked={showHomepageInput}
+                onChange={(e) => setShowHomepageInput(e.target.checked)}
+                disabled={updatePrefs.isPending}
+              />{' '}
+              <label htmlFor="show-homepage">
+                {t('alliance', 'showHomepage') || 'Показывать всем'}
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <label htmlFor="foundername-input">
+                {t('alliance', 'foundername') || 'Title основателя'}
+              </label>
+            </td>
+            <td>
+              <input
+                id="foundername-input"
+                type="text"
+                value={foundernameInput}
+                maxLength={64}
+                onChange={(e) => setFoundernameInput(e.target.value)}
+                disabled={updatePrefs.isPending}
+                style={{ width: '20em' }}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <label htmlFor="show-member">
+                {t('alliance', 'showMember') || 'Memberlist виден всем'}
+              </label>
+            </td>
+            <td>
+              <input
+                type="checkbox"
+                id="show-member"
+                checked={showMemberInput}
+                onChange={(e) => setShowMemberInput(e.target.checked)}
+                disabled={updatePrefs.isPending}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <label htmlFor="memberlist-sort">
+                {t('alliance', 'memberlistSort') || 'Сортировка memberlist'}
+              </label>
+            </td>
+            <td>
+              <select
+                id="memberlist-sort"
+                value={memberlistSortInput}
+                onChange={(e) => setMemberlistSortInput(Number(e.target.value))}
+                disabled={updatePrefs.isPending}
+              >
+                <option value={0}>{t('alliance', 'sortRank') || 'По рангу'}</option>
+                <option value={1}>{t('alliance', 'sortName') || 'По имени'}</option>
+                <option value={2}>{t('alliance', 'sortPoints') || 'По очкам'}</option>
+                <option value={3}>{t('alliance', 'sortJoined') || 'По дате вступления'}</option>
+                <option value={4}>{t('alliance', 'sortLastSeen') || 'По активности'}</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={2} className="center">
+              <button
+                type="button"
+                className="button"
+                disabled={updatePrefs.isPending}
+                onClick={() => {
+                  updatePrefs.mutate({
+                    logo: logoInput.trim() || null,
+                    homepage: homepageInput.trim() || null,
+                    foundername: foundernameInput.trim() || null,
+                    show_member: showMemberInput,
+                    show_homepage: showHomepageInput,
+                    memberlist_sort: memberlistSortInput,
+                  });
+                }}
+              >
+                {t('alliance', 'saveBtn') || 'Сохранить'}
+              </button>
+            </td>
+          </tr>
         </tbody>
       </table>
 

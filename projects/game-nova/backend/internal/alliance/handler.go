@@ -534,6 +534,64 @@ func (h *Handler) UpdateDescriptions(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UpdatePrefs PATCH /api/alliances/{id}/prefs
+//
+// Body (все поля опциональны; nil = не трогаем):
+//   {"logo"?:"https://...png", "homepage"?:"...",
+//    "foundername"?:"...", "show_member"?:bool, "show_homepage"?:bool,
+//    "memberlist_sort"?:int}
+//
+// Право: PermChangeDescription. Поддерживает Idempotency-Key.
+//
+// План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1) — закрывает legacy
+// `Alliance.class.php:979 updateAllyPrefs`.
+func (h *Handler) UpdatePrefs(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	idem := idempotency.FromRequest(r, h.rdb)
+	if idem.Replay(w) {
+		return
+	}
+	id := chi.URLParam(r, "id")
+	var body struct {
+		Logo            *string `json:"logo"`
+		Homepage        *string `json:"homepage"`
+		Foundername     *string `json:"foundername"`
+		ShowMember      *bool   `json:"show_member"`
+		ShowHomepage    *bool   `json:"show_homepage"`
+		MemberlistSort  *int16  `json:"memberlist_sort"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
+		return
+	}
+	in := UpdatePrefsInput{
+		Logo: body.Logo, Homepage: body.Homepage, Foundername: body.Foundername,
+		ShowMember: body.ShowMember, ShowHomepage: body.ShowHomepage,
+		MemberlistSort: body.MemberlistSort,
+	}
+	err := h.svc.UpdatePrefs(r.Context(), uid, id, in)
+	recordAction(ActionDescriptionChanged, statusFromErr(err))
+	switch {
+	case err == nil:
+		idem.Record(http.StatusNoContent, nil)
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
+	case errors.Is(err, ErrNotMember), errors.Is(err, ErrForbidden):
+		httpx.WriteError(w, r, httpx.ErrForbidden)
+	case errors.Is(err, ErrLogoTooLong), errors.Is(err, ErrLogoInvalid),
+		errors.Is(err, ErrHomepageTooLong), errors.Is(err, ErrHomepageInvalid),
+		errors.Is(err, ErrFoundernameTooLong), errors.Is(err, ErrMemberlistSortRange):
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
 // ListRanks GET /api/alliances/{id}/ranks
 func (h *Handler) ListRanks(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())

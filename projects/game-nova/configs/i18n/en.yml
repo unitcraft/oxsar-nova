@@ -80,6 +80,18 @@ alliance:
   memberOnline: Activity
   memberPoints: Points
   candidateCoords: Coords
+  # План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy updateAllyPrefs.
+  preferences: ""
+  logoUrl: ""
+  homepageUrl: ""
+  showHomepage: ""
+  foundername: ""
+  showMember: ""
+  sortRank: ""
+  sortName: ""
+  sortPoints: ""
+  sortJoined: ""
+  sortLastSeen: ""
   # План 72.1.43: tag/name edit + broadcast.
   saveBtn: "Save"
   globalMail: "Broadcast"

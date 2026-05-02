@@ -2354,6 +2354,44 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/alliances/{id}/prefs:
+    patch:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Обновить preferences альянса (план 72.1.54, P72.S2.ALLIANCE_PREFS 1:1).
+        Закрывает legacy `Alliance.class.php:979 updateAllyPrefs`.
+      description: |
+        Право: can_change_description (или owner). Поддерживает
+        Idempotency-Key. Все поля опциональны (nil = не трогаем).
+        Длина: logo/homepage ≤ 128 символов; foundername ≤ 64.
+        memberlist_sort: 0..4 (legacy enum значения).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                logo:            { type: string, nullable: true, maxLength: 128, description: "URL картинки логотипа (http(s), .png/.jpg/.gif/.webp/.svg)" }
+                homepage:        { type: string, nullable: true, maxLength: 128, description: "URL домашней страницы (http(s))" }
+                foundername:     { type: string, nullable: true, maxLength: 64, description: "Кастомный title для основателя альянса" }
+                show_member:     { type: boolean, description: "Показывать memberlist всем (true) или только членам (false)" }
+                show_homepage:   { type: boolean, description: "Показывать homepage всем (true)" }
+                memberlist_sort: { type: integer, minimum: 0, maximum: 4, description: "Дефолтная сортировка memberlist'а" }
+      responses:
+        "204": { description: updated }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
   /api/alliances/{id}/ranks:
     get:
       tags: [alliances]
@@ -5368,6 +5406,14 @@ components:
         owner_id:     { type: string, format: uuid }
         member_count: { type: integer }
         created_at:   { type: string, format: date-time }
+        # План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy
+        # `updateAllyPrefs` поля. nullable где legacy позволяет очистить.
+        logo:            { type: string, nullable: true }
+        homepage:        { type: string, nullable: true }
+        foundername:     { type: string, nullable: true }
+        show_member:     { type: boolean }
+        show_homepage:   { type: boolean }
+        memberlist_sort: { type: integer }
 
     AllianceMember:
       type: object

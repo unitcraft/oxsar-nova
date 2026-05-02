@@ -16275,3 +16275,39 @@ not-a-fix + BA-019 mitigated.
 
   Коммит: feat(origin): план 72.1.53 ч.B — final window.confirm
   cleanup (17 call sites → ConfirmDialog).
+
+Итерация 2026-05-02 (поздний вечер) — план 72.1.54
+(P72.S2.ALLIANCE_PREFS 1:1):
+
+  По распоряжению пользователя «убрать упрощения, сделать 1:1»
+  полностью реализован legacy `Alliance.class.php::updateAllyPrefs`
+  (6 полей, ранее зафиксированных как simplification в 72.1.52).
+
+  Сделано:
+  A. Migration 0096: +6 колонок alliance (logo/homepage/foundername
+     nullable text; show_member/show_homepage bool default true;
+     memberlist_sort smallint default 0).
+  B. Backend service.UpdatePrefs + URL-validation regex (legacy 1:1
+     isValidImageURL/isValidURL); 6 sentinel errors; permission
+     PermChangeDescription; audit_log. SELECT'ы List+Get расширены.
+  C. Backend handler.UpdatePrefs + route PATCH /api/alliances/{id}/prefs
+     (Idempotency-Key supported via FromRequest).
+  D. OpenAPI: PATCH endpoint + Alliance schema +6 fields.
+  E. Frontend api/alliance.ts updateAlliancePrefs + types.ts расширен.
+  F. AllianceManageScreen: новая form 5 inputs + 1 select для prefs,
+     useEffect-init из alliance data, mutation+invalidate.
+  G. AlliancePageScreen: показ logo (img) + foundername (row) +
+     homepage (link, target=_blank rel=noopener) при show_homepage=true.
+  H. i18n ключи alliance.preferences/logoUrl/homepageUrl/showHomepage/
+     foundername/showMember/sortRank/sortName/sortPoints/sortJoined/
+     sortLastSeen (ru заполнены, en пустые).
+  I. simplifications.md [P72.S2.ALLIANCE_PREFS] помечен ✅ ЗАКРЫТО.
+
+  Известные UGC-риски (legacy 1:1, документированы в плане 72.1.54
+  §2.1): owner может вписать phishing/tracker URL. Mitigation:
+  target=_blank rel=noopener noreferrer на homepage-link.
+
+  Tests: backend go test ./... зелёный, vitest 133/133, tsc чистый.
+
+  Коммит: feat(alliance): план 72.1.54 — alliance prefs 1:1
+  (closing P72.S2.ALLIANCE_PREFS).

@@ -80,6 +80,18 @@ alliance:
   memberOnline: Активность
   memberPoints: Очки
   candidateCoords: Координаты
+  # План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy updateAllyPrefs.
+  preferences: "Настройки альянса"
+  logoUrl: "Логотип (URL картинки)"
+  homepageUrl: "Сайт альянса (URL)"
+  showHomepage: "Показывать всем"
+  foundername: "Title основателя"
+  showMember: "Memberlist виден всем"
+  sortRank: "По рангу"
+  sortName: "По имени"
+  sortPoints: "По очкам"
+  sortJoined: "По дате вступления"
+  sortLastSeen: "По активности"
   # План 72.1.43: tag/name edit + broadcast.
   saveBtn: Сохранить
   globalMail: "Общая рассылка"
