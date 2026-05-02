@@ -323,6 +323,27 @@ export function updateAllianceTagName(
   return api.patch<void>(`/api/alliances/${allianceID}`, payload);
 }
 
+// План 72.1.55 Task B (P72.S2.A 1:1): own pending applications.
+export interface MyApplication {
+  id: string;
+  alliance_id: string;
+  alliance_tag: string;
+  alliance_name: string;
+  message: string;
+  created_at: string;
+}
+
+export function fetchMyApplications(): Promise<{ applications: MyApplication[] }> {
+  return api.get<{ applications: MyApplication[] }>('/api/users/me/applications');
+}
+
+export function cancelMyApplication(applicationID: string): Promise<void> {
+  return api.delete<void>(
+    `/api/users/me/applications/${applicationID}`,
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}
+
 // План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy updateAllyPrefs.
 // Все поля опциональны; nil = не трогаем; пустая строка для
 // logo/homepage/foundername = очистить.

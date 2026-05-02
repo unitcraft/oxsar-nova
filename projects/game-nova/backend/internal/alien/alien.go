@@ -273,11 +273,22 @@ func (s *Service) AttackHandler() event.Handler {
 			}
 		}
 
-		// План 72.1.1: зачислить опыт/потери защитнику-юзеру. atkSide
-		// помечена IsAliens=true → ApplyBattleResult её скипнет.
-		// battleID="" — alien-рейды не пишут battle_reports (отдельный
-		// flow через messages); idempotency event-loop'ом.
-		if err := battlestats.ApplyBattleResult(ctx, tx, report, ""); err != nil &&
+		// План 72.1.55 Task H (P72.1.1.NO_BATTLE_REPORT_FOR_RAIDS 1:1):
+		// alien-рейды теперь пишут battle_reports как и PvP-бои.
+		// UNIQUE (battle_id, user_id, is_atter) защищает от дубль-применения
+		// опыта при event re-process.
+		// attacker_user_id = NULL (alien — NPC), defender = defUserID
+		// (читается выше через SELECT planets.user_id).
+		// is_moon = false: alien-рейды только на планеты (alien.go:96
+		// JOIN planets с p.is_moon=false).
+		reportID, err := battlestats.WriteBattleReport(ctx, tx, report,
+			"", defUserID, pl.PlanetID,
+			0, 0, 0, 0, 0,
+			battlestats.ReportFlags{HasAliens: true, MoonCreated: false, IsMoon: false})
+		if err != nil {
+			return fmt.Errorf("alien attack: write battle report: %w", err)
+		}
+		if err := battlestats.ApplyBattleResult(ctx, tx, report, reportID); err != nil &&
 			!errors.Is(err, battlestats.ErrAlreadyApplied) {
 			return fmt.Errorf("alien attack: apply battle result: %w", err)
 		}

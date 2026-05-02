@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/pkg/ids"
 )
@@ -24,6 +25,9 @@ import (
 type Service struct {
 	db      repo.Exec
 	automsg AutoMsgSender // план 72.1.42: AutoMsg для seller при покупке.
+	// План 72.1.55 Task E: catalog для resolve unit_id → unit name
+	// в ListOffers DTO. Опционально — если не задан, name остаётся пустым.
+	catalog *config.ArtefactCatalog
 }
 
 // AutoMsgSender — узкий интерфейс к automsg.Send (с i18n шаблоном).
@@ -39,6 +43,27 @@ func NewService(db repo.Exec) *Service { return &Service{db: db} }
 func (s *Service) WithAutoMsg(a AutoMsgSender) *Service {
 	s.automsg = a
 	return s
+}
+
+// WithCatalog подключает catalog артефактов для resolve имени по unit_id.
+// План 72.1.55 Task E. Опционально — без catalog поле name остаётся пустым.
+func (s *Service) WithCatalog(c *config.ArtefactCatalog) *Service {
+	s.catalog = c
+	return s
+}
+
+// resolveUnitName ищет артефакт по unit_id в catalog. Возвращает пустую
+// строку если catalog не задан или артефакт не найден.
+func (s *Service) resolveUnitName(unitID int) string {
+	if s.catalog == nil {
+		return ""
+	}
+	for _, spec := range s.catalog.Artefacts {
+		if spec.ID == unitID {
+			return spec.Name
+		}
+	}
+	return ""
 }
 
 var (
@@ -66,6 +91,10 @@ type Offer struct {
 	SellerUserID string    `json:"seller_user_id"`
 	SellerName   string    `json:"seller_name,omitempty"`
 	UnitID       int       `json:"unit_id"`
+	// План 72.1.55 Task E (P72.S2.H 1:1): resolve name из catalog
+	// configs/artefacts.yml. Раньше FE рендерил «Артефакт #unit_id» —
+	// legacy ArtefactMarket.tpl показывает имя артефакта.
+	UnitName     string    `json:"unit_name,omitempty"`
 	PriceCredit  int64     `json:"price_credit"`
 	ListedAt     time.Time `json:"listed_at"`
 	// План 72.1.42: legacy `ads.lifetime` — auto-снятие лота.
@@ -100,6 +129,8 @@ func (s *Service) ListOffers(ctx context.Context) ([]Offer, error) {
 			&o.UnitID, &o.PriceCredit, &o.ListedAt, &o.ExpireAt); err != nil {
 			return nil, err
 		}
+		// План 72.1.55 Task E: name resolve через catalog (in-memory).
+		o.UnitName = s.resolveUnitName(o.UnitID)
 		out = append(out, o)
 	}
 	return out, rows.Err()

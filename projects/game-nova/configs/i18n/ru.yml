@@ -80,6 +80,9 @@ alliance:
   memberOnline: Активность
   memberPoints: Очки
   candidateCoords: Координаты
+  # План 72.1.55 Task B (P72.S2.A 1:1): own applications.
+  myApplications: "Текущие заявки"
+  cancelApplicationConfirm: "Отозвать заявку?"
   # План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy updateAllyPrefs.
   preferences: "Настройки альянса"
   logoUrl: "Логотип (URL картинки)"
@@ -883,6 +886,18 @@ settings:
   langRu: Русский
   langEn: English
   labelTimezone: Часовой пояс
+  # План 72.1.55 Task I (P72.S4.SETTINGS subset 1:1).
+  prefsTitle: "Игровые настройки"
+  showAllConstructions: "Показывать недоступные постройки"
+  showAllResearch: "Показывать недоступные исследования"
+  showAllShipyard: "Показывать недоступные корабли"
+  showAllDefense: "Показывать недоступную оборону"
+  planetOrder: "Сортировка планет"
+  planetOrderDate: "По дате колонизации"
+  planetOrderName: "По имени"
+  planetOrderCoords: "По координатам"
+  esps: "Расширенные шпионские отчёты"
+  ipcheck: "Уведомлять при логине с другого IP"
   sectionSecurity: Безопасность
   labelCurrentPw: Текущий пароль
   labelNewPw: Новый пароль
@@ -1451,6 +1466,17 @@ chat:
   emojiTitle: Смайлики
   inputPlaceholder: "Сообщение… (Enter — отправить)"
   sendBtn: Отправить
+  # План 72.1.55 Task F (P72.S4.BBCODE 1:1): toolbar buttons.
+  bbBold: "Жирный (Ctrl+B)"
+  bbItalic: "Курсив (Ctrl+I)"
+  bbUnderline: "Подчёркнутый"
+  bbStrike: "Зачёркнутый"
+  bbColor: "Цвет текста"
+  bbUrl: "Ссылка"
+  bbImg: "Изображение"
+  urlPrompt: "Введите URL:"
+  imgPrompt: "Введите URL изображения:"
+  colorPrompt: "Введите цвет (red, #f0a, #ff00aa):"
 
 empire:
   title: Империя

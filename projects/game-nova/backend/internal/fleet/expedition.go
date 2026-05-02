@@ -604,10 +604,19 @@ func expPirates(ctx context.Context, tx pgx.Tx, fleetID, ownerUserID string,
 	if _, err := applyAttackerLosses(ctx, tx, fleetID, ships, report.Attackers[0].Units); err != nil {
 		return nil, fmt.Errorf("expedition pirates: losses: %w", err)
 	}
-	// План 72.1.1: зачислить опыт/потери игроку. battleID="" — у
-	// экспедиций нет записи в battle_reports (legacy: assaultid=0
-	// для NPC). Idempotency обеспечивается event-loop уровнем.
-	if err := battlestats.ApplyBattleResult(ctx, tx, report, ""); err != nil &&
+	// План 72.1.55 Task H (P72.1.1.NO_BATTLE_REPORT_FOR_RAIDS 1:1):
+	// expedition pirates теперь пишет battle_reports как и PvP-бои.
+	// UNIQUE (battle_id, user_id, is_atter) защищает от дубль-применения
+	// опыта при event re-process. attacker_user_id = ownerUserID,
+	// defender = NULL (NPC pirates), planet_id = NULL (открытый космос).
+	reportID, err := battlestats.WriteBattleReport(ctx, tx, report,
+		ownerUserID, "", "",
+		0, 0, 0, 0, 0,
+		battlestats.ReportFlags{HasAliens: true, MoonCreated: false, IsMoon: false})
+	if err != nil {
+		return nil, fmt.Errorf("expedition pirates: write battle report: %w", err)
+	}
+	if err := battlestats.ApplyBattleResult(ctx, tx, report, reportID); err != nil &&
 		!errors.Is(err, battlestats.ErrAlreadyApplied) {
 		return nil, fmt.Errorf("expedition pirates: apply battle result: %w", err)
 	}
@@ -660,8 +669,16 @@ func expBattlefield(ctx context.Context, tx pgx.Tx, fleetID, ownerUserID string,
 	if _, err := applyAttackerLosses(ctx, tx, fleetID, ships, report.Attackers[0].Units); err != nil {
 		return nil, fmt.Errorf("expedition battlefield: losses: %w", err)
 	}
-	// План 72.1.1: зачислить опыт/потери. battleID="" (см. expPirates).
-	if err := battlestats.ApplyBattleResult(ctx, tx, report, ""); err != nil &&
+	// План 72.1.55 Task H (P72.1.1.NO_BATTLE_REPORT_FOR_RAIDS 1:1):
+	// expedition battlefield теперь пишет battle_reports.
+	reportID, err := battlestats.WriteBattleReport(ctx, tx, report,
+		ownerUserID, "", "",
+		0, 0, 0, 0, 0,
+		battlestats.ReportFlags{HasAliens: true, MoonCreated: false, IsMoon: false})
+	if err != nil {
+		return nil, fmt.Errorf("expedition battlefield: write battle report: %w", err)
+	}
+	if err := battlestats.ApplyBattleResult(ctx, tx, report, reportID); err != nil &&
 		!errors.Is(err, battlestats.ErrAlreadyApplied) {
 		return nil, fmt.Errorf("expedition battlefield: apply battle result: %w", err)
 	}
