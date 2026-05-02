@@ -25,6 +25,7 @@ import { useTranslation } from '@/i18n/i18n';
 import { formatNumber, formatDuration } from '@/lib/format';
 import { findCatalog } from '@/features/common/catalog';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import type { ApiError } from '@/api/client';
 import { useState } from 'react';
 
@@ -35,6 +36,8 @@ export function BuildingInfoScreen() {
   const qc = useQueryClient();
   const { planetId } = useResolvedPlanet();
   const [demolishErr, setDemolishErr] = useState<string | null>(null);
+  // План 72.1.53 ч.B: in-game confirm-dialog.
+  const { confirm, dialogProps } = useConfirm();
 
   const q = useQuery({
     queryKey: QK.buildingCatalog(type),
@@ -168,13 +171,13 @@ export function BuildingInfoScreen() {
                   type="button"
                   className="button"
                   disabled={demolishMut.isPending}
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        (t('buildinginfo', 'demolishConfirm') as string) ||
-                          `Снести ${name} до уровня ${curLevel - 1}?`,
-                      )
-                    ) {
+                  onClick={async () => {
+                    if (await confirm({
+                      title: t('buildinginfo', 'demolishNow') || 'Снос',
+                      message: (t('buildinginfo', 'demolishConfirm') as string) ||
+                        `Снести ${name} до уровня ${curLevel - 1}?`,
+                      destructive: true,
+                    })) {
                       demolishMut.mutate();
                     }
                   }}
@@ -195,13 +198,12 @@ export function BuildingInfoScreen() {
                     type="button"
                     className="button"
                     disabled={packBuildingMut.isPending}
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          (t('buildinginfo', 'packConfirm') as string) ||
-                            `Упаковать ${name} в артефакт (нужен packing-артефакт на этой планете)?`,
-                        )
-                      ) {
+                    onClick={async () => {
+                      if (await confirm({
+                        title: t('buildinginfo', 'packBuilding') || 'Упаковать',
+                        message: (t('buildinginfo', 'packConfirm') as string) ||
+                          `Упаковать ${name} в артефакт (нужен packing-артефакт на этой планете)?`,
+                      })) {
                         packBuildingMut.mutate();
                       }
                     }}
@@ -264,6 +266,7 @@ export function BuildingInfoScreen() {
           ))}
         </tbody>
       </table>
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }

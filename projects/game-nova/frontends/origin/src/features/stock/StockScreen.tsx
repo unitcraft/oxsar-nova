@@ -25,6 +25,7 @@ import type { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { formatNumber } from '@/lib/format';
 import { useTranslation } from '@/i18n/i18n';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 
 function fmtDate(iso: string): string {
   try {
@@ -46,6 +47,8 @@ export function StockScreen() {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [actionErr, setActionErr] = useState<string | null>(null);
+  // План 72.1.53 ч.B: in-game confirm-dialog.
+  const { confirm, dialogProps } = useConfirm();
   const limit = 20;
 
   const paramKey = [cursor ?? '', String(limit)].join('|');
@@ -190,6 +193,7 @@ export function StockScreen() {
   })();
 
   return (
+    <>
     <table className="ntable">
       <colgroup>
         <col width="1px" />
@@ -427,12 +431,11 @@ export function StockScreen() {
                       className="button"
                       style={{ marginTop: 4 }}
                       disabled={promoteMut.isPending}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            t('stock', 'premiumConfirm', { credits: cost }),
-                          )
-                        ) {
+                      onClick={async () => {
+                        if (await confirm({
+                          title: t('stock', 'premiumBtn', { credits: cost }),
+                          message: t('stock', 'premiumConfirm', { credits: cost }),
+                        })) {
                           promoteMut.mutate(lot.id);
                         }
                       }}
@@ -451,8 +454,12 @@ export function StockScreen() {
                       className="button"
                       style={{ marginTop: 4 }}
                       disabled={banMut.isPending}
-                      onClick={() => {
-                        if (window.confirm(t('stock', 'banConfirm'))) {
+                      onClick={async () => {
+                        if (await confirm({
+                          title: t('stock', 'banBtn'),
+                          message: t('stock', 'banConfirm'),
+                          destructive: true,
+                        })) {
                           banMut.mutate(lot.id);
                         }
                       }}
@@ -475,6 +482,8 @@ export function StockScreen() {
           </tr>
         )}
       </tbody>
-    </table>
+      </table>
+      <ConfirmDialog {...dialogProps} />
+    </>
   );
 }

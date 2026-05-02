@@ -16256,3 +16256,22 @@ not-a-fix + BA-019 mitigated.
 
   Коммит: feat(origin): план 72.1.53 — in-game ConfirmDialog +
   замена 5 destructive window.confirm.
+
+Итерация 2026-05-02 (вечер) — план 72.1.53 ч.B (window.confirm cleanup):
+
+  Закрытие backlog'а из ч.A (17 оставшихся call sites). Полностью
+  устранён native window.confirm() в origin-фронте, заменён на
+  стилизованный <ConfirmDialog>.
+
+  Заменено в 10 файлах: BuildPanel x2, ConstructionsScreen x2,
+  ResearchScreen x3, AllianceMembers/My/Ranks (1+2+1),
+  BuildingInfoScreen x2, FriendsScreen, ChatScreen, StockScreen x2.
+
+  Итого 22 call sites (5 в ч.A + 17 в ч.B). Final grep по
+  window.confirm — пусто (только comment в ConfirmDialog.tsx).
+  UI consistency: 100%.
+
+  Tests: tsc чистый, vitest 133/133.
+
+  Коммит: feat(origin): план 72.1.53 ч.B — final window.confirm
+  cleanup (17 call sites → ConfirmDialog).

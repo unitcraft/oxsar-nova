@@ -25,6 +25,7 @@ import { QK } from '@/api/query-keys';
 import type { ApiError } from '@/api/client';
 import type { Friend } from '@/api/types';
 import { useTranslation } from '@/i18n/i18n';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 
 function formatLastSeen(
   lastSeen: string | undefined,
@@ -45,6 +46,8 @@ export function FriendsScreen() {
   const qc = useQueryClient();
   const [addQuery, setAddQuery] = useState('');
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  // План 72.1.53 ч.B: in-game confirm-dialog.
+  const { confirm, dialogProps } = useConfirm();
 
   const mutualQ = useQuery({
     queryKey: QK.friends('mutual'),
@@ -142,12 +145,12 @@ export function FriendsScreen() {
                       type="button"
                       className="button"
                       disabled={removeMut.isPending}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `${t('friends', 'removeBtn')} ${f.username}?`,
-                          )
-                        ) {
+                      onClick={async () => {
+                        if (await confirm({
+                          title: t('friends', 'removeBtn'),
+                          message: `${t('friends', 'removeBtn')} ${f.username}?`,
+                          destructive: true,
+                        })) {
                           removeMut.mutate(f.user_id);
                         }
                       }}
@@ -309,6 +312,7 @@ export function FriendsScreen() {
           <span className="false">{errMsg}</span>
         </div>
       )}
+      <ConfirmDialog {...dialogProps} />
     </>
   );
 }
