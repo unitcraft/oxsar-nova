@@ -16207,3 +16207,25 @@ not-a-fix + BA-019 mitigated.
   Backend и frontend не правились (документация догоняет реализацию).
 
   Коммит: docs(api): план 72.1.51 — openapi coverage gap closed.
+
+Итерация 2026-05-02 (вечер) — план 72.1.52 (alliance UI 1:1 финал):
+
+  Закрытие 72.1.6 P3 после verify-handsweep: 3 из 4 заявленных
+  «gap'ов» уже были закрыты ранее (isForbidden, AutoMsg, audit_log
+  diplomacy + MIN_POINTS в 72.1.50 ч.3). Реальный остаток оказался
+  cosmetic — client-side validation для tag/name/rank-name.
+
+  Сделано:
+  A. AllianceRanksScreen: validation rank-name 1-32 символа.
+  B. AllianceManageScreen: validation tag (3-5 ASCII alnum) +
+     name (3-64 символа). Backend дублирует, FE-кнопка disabled.
+  C. simplifications.md: [P72.S2.ALLIANCE_PREFS] зафиксировал что
+     legacy полей logo/homepage/foundername/showmember/memberlistsort
+     сознательно не реализованы (требует UGC-moderation pipeline).
+
+  72.1.2 финальный snapshot: 39 ✅ + 1 🚧 (Payment) + 0 backlog.
+
+  Tests: tsc чистый, vitest 133/133.
+
+  Коммит: feat(origin/alliance): план 72.1.52 — client-side
+  validation + P72.S2.ALLIANCE_PREFS simplification.

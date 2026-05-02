@@ -232,11 +232,20 @@ function RankRow({
         </td>
       ))}
       <td className="center">
+        {/* План 72.1.52 (72.1.6 P3 closure): client-side validation
+            длины имени ранга. Backend-сентинель `ErrRankNameInvalid`
+            разрешает 1-32 символа, frontend дублирует чтобы не
+            показывать пустую кнопку «Сохранить». */}
         <input
           type="button"
           className="button"
           value={t('alliance', 'ranks.saveBtn')}
-          disabled={!dirty || save.isPending}
+          disabled={
+            !dirty ||
+            save.isPending ||
+            name.trim().length < 1 ||
+            name.trim().length > 32
+          }
           onClick={() => save.mutate()}
         />{' '}
         <input
