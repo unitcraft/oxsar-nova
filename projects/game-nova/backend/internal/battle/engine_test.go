@@ -820,6 +820,33 @@ func TestExperience_HasPlanet_NotIsMoon(t *testing.T) {
 	}
 }
 
+// TestExperience_RocketAttack_NoExp — BA-011: IPM-удар не даёт опыта
+// (Java Assault.java:811 `if (!isRocketAttack && ...)`).
+func TestExperience_RocketAttack_NoExp(t *testing.T) {
+	t.Parallel()
+	mkInput := func(rocket bool) Input {
+		return Input{
+			Seed:           42,
+			Rounds:         6,
+			Attackers:      []Side{simpleAttacker(100, 100, 1000)},
+			Defenders:      []Side{simpleDefender(100, 50, 1000)},
+			HasPlanet:      true,
+			IsRocketAttack: rocket,
+		}
+	}
+	regular, _ := Calculate(mkInput(false))
+	rocket, _ := Calculate(mkInput(true))
+
+	if regular.AttackerExp == 0 || regular.DefenderExp == 0 {
+		t.Fatalf("regular battle должен давать опыт, получили atk=%d def=%d",
+			regular.AttackerExp, regular.DefenderExp)
+	}
+	if rocket.AttackerExp != 0 || rocket.DefenderExp != 0 {
+		t.Fatalf("BA-011 регрессия: ракетная атака не должна давать опыт, получили atk=%d def=%d",
+			rocket.AttackerExp, rocket.DefenderExp)
+	}
+}
+
 // --- BA-015: validate отвергает malicious input -----------------------
 // План 72.1.3. Любой залогиненный юзер может слать произвольный JSON в
 // /api/simulator/run. Без guard'ов клиент мог:
@@ -939,9 +966,6 @@ func TestValidate_RejectsTech(t *testing.T) {
 		{"gun > max", func(t *Tech) { t.Gun = maxTechLevel + 1 }},
 		{"shield > max", func(t *Tech) { t.Shield = maxTechLevel + 1 }},
 		{"shell > max", func(t *Tech) { t.Shell = maxTechLevel + 1 }},
-		{"laser > max", func(t *Tech) { t.Laser = maxTechLevel + 1 }},
-		{"ion > max", func(t *Tech) { t.Ion = maxTechLevel + 1 }},
-		{"plasma > max", func(t *Tech) { t.Plasma = maxTechLevel + 1 }},
 		{"ballistics > max", func(t *Tech) { t.Ballistics = maxTechLevel + 1 }},
 		{"masking > max", func(t *Tech) { t.Masking = maxTechLevel + 1 }},
 	}
@@ -965,7 +989,6 @@ func TestValidate_RejectsTech(t *testing.T) {
 		in := validHappyInput()
 		in.Attackers[0].Tech = Tech{
 			Gun: 99, Shield: 99, Shell: 99,
-			Laser: 99, Ion: 99, Plasma: 99,
 			Ballistics: 99, Masking: 99,
 		}
 		if err := validate(in); err != nil {

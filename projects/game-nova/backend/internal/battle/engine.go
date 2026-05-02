@@ -136,10 +136,12 @@ func Calculate(in Input) (Report, error) {
 	// используется в legacy — выкинута.
 	atkPower := startBattlePower(atk)
 	defPower := startBattlePower(def)
-	if report.Rounds > 0 && atkPower > 0 && defPower > 0 {
+	if report.Rounds > 0 && atkPower > 0 && defPower > 0 && !in.IsRocketAttack {
 		// План 87 / BA-007: hasPlanet, не IsMoon. До фикса IsMoon
 		// передавалось напрямую, что делало bpc *= 0.5 для обычных
 		// атак планет (in.IsMoon=false → !hasPlanet).
+		// План 72.1.3 / BA-011: ракетная атака не даёт опыта (Java
+		// Assault.java:811 — `if (!isRocketAttack && ...)`).
 		atkExp, defExp := computeExperience(report.Winner, report.Rounds, atkPower, defPower, in.HasPlanet)
 		report.AttackerExp = atkExp
 		report.DefenderExp = defExp
@@ -985,6 +987,11 @@ const (
 	maxRapidfire = 1000 // legacy max RF около 250, запас 4×.
 	maxRounds    = 20
 	maxNumSim    = 100
+	// План 72.1.3 (re-audit, BA-019): legacy ship-cost ≤ 100k за 1 ед.
+	// (deathstar = 5M+8M+1M = 14M суммарно — при 1e8 запас 7×).
+	// Защищает summarize от int64-overflow:
+	// quantity × cost ≤ 1e10 × 1e8 = 1e18 < int64.max ≈ 9.2e18.
+	maxUnitCost = int64(1e8)
 )
 
 func validate(in Input) error {
@@ -1024,7 +1031,7 @@ func validateSide(s Side) error {
 }
 
 func validateTech(t Tech) error {
-	for _, lvl := range []int{t.Gun, t.Shield, t.Shell, t.Laser, t.Ion, t.Plasma, t.Ballistics, t.Masking} {
+	for _, lvl := range []int{t.Gun, t.Shield, t.Shell, t.Ballistics, t.Masking} {
 		if lvl < 0 || lvl > maxTechLevel {
 			return ErrInvalidInput
 		}
@@ -1056,7 +1063,11 @@ func validateUnit(u Unit) error {
 	}
 	// Cost — defensive: отрицательная стоимость породила бы
 	// отрицательные LostMetal/LostPoints. NaN/+Inf не возможен в int64.
-	if u.Cost.Metal < 0 || u.Cost.Silicon < 0 || u.Cost.Hydrogen < 0 {
+	// План 72.1.3 (re-audit, BA-019): верхний предел против overflow в
+	// summarize() (lost × cost.Metal где lost ≤ maxQuantity).
+	if u.Cost.Metal < 0 || u.Cost.Metal > maxUnitCost ||
+		u.Cost.Silicon < 0 || u.Cost.Silicon > maxUnitCost ||
+		u.Cost.Hydrogen < 0 || u.Cost.Hydrogen > maxUnitCost {
 		return ErrInvalidInput
 	}
 	return nil

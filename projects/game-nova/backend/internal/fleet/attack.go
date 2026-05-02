@@ -33,6 +33,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
@@ -283,9 +284,20 @@ func (s *TransportService) AttackHandler() event.Handler {
 			`, g, sys, pos, isMoon, debrisM, debrisS); err != nil {
 				return fmt.Errorf("attack: write debris: %w", err)
 			}
-			// Moon-chance: min(20, total_debris/100000)%.
+			// Moon-chance: legacy Java formula (Assault.java:1281-1306).
 			if !isMoon {
-				created, err := tryCreateMoon(ctx, tx, s.bundle, g, sys, pos, debrisM+debrisS,
+				// Минимум LostUnits сторон — Java читает Σ по всем участникам.
+				var atkLostUnits, defLostUnits int64
+				for _, sr := range report.Attackers {
+					atkLostUnits += sr.LostUnits
+				}
+				for _, sr := range report.Defenders {
+					defLostUnits += sr.LostUnits
+				}
+				created, err := tryCreateMoon(ctx, tx, s.bundle, g, sys, pos,
+					debrisM, debrisS,
+					int64(report.AttackerExp), int64(report.DefenderExp),
+					atkLostUnits, defLostUnits,
 					report.Seed, defenderUserID, attackerUserID)
 				if err != nil {
 					return fmt.Errorf("attack: moon: %w", err)
@@ -493,13 +505,13 @@ func readUserTech(ctx context.Context, tx pgx.Tx, userID string, cat *config.Cat
 		}
 	}
 
+	// План 72.1.3 (re-audit): Tech.Laser/Ion/Plasma удалены —
+	// они нигде не применялись и mapping был ошибочным
+	// (Ion=IDTechSilicon, Plasma=IDTechHydrogen).
 	return battle.Tech{
 		Gun:        levels[economy.IDTechGun],
 		Shield:     levels[economy.IDTechShield],
 		Shell:      levels[economy.IDTechShell],
-		Laser:      levels[economy.IDTechLaser],
-		Ion:        levels[economy.IDTechSilicon],
-		Plasma:     levels[economy.IDTechHydrogen],
 		Ballistics: levels[economy.IDTechBallistics],
 		Masking:    levels[economy.IDTechMasking],
 	}, nil
@@ -866,19 +878,79 @@ func finalizeAttack(ctx context.Context, tx pgx.Tx, b *i18n.Bundle,
 	return nil
 }
 
-// tryCreateMoon проверяет шанс создания луны по формуле OGame:
-// chance = min(20, debrisTotal/100000)%. Если луна уже есть — пропуск.
-// seed берётся из battle.Report.Seed для детерминированности.
+// Constants для формулы создания луны (legacy Java Assault.java:219-223).
+const (
+	moonExpStartChance         = 5        // MOON_EXP_START_CHANCE
+	moonStartChance            = 5        // MOON_START_CHANCE
+	moonMaxChance              = 20       // MOON_MAX_CHANCE
+	moonPercentPerRes          = 200000   // MOON_PERCENT_PER_RES (debris→%)
+	moonGuaranteedPercentPerRes = 10000000 // MOON_GUARANTEED_PERCENT_PER_RES
+)
+
+// tryCreateMoon проверяет шанс создания луны по legacy Java формуле
+// (Assault.java:1281-1306).
+//
+//	if min(atkExp, defExp) >= MOON_EXP_START_CHANCE:
+//	    expChance = round(min(atkExp, defExp) ^ 0.8)
+//	    debrisChance = (debrisM + debrisS) / MOON_PERCENT_PER_RES = /200000
+//	    chance = min(expChance, debrisChance, min(atkLost, defLost))
+//	guaranteed = (debrisM + debrisS) / MOON_GUARANTEED_PERCENT_PER_RES = /10M
+//	chance = max(chance, guaranteed)
+//	chance = clamp(0, MOON_MAX_CHANCE=20)
+//	if chance < MOON_START_CHANCE=5: roll skipped (legacy gates).
+//	if chance >= startChance → roll randDouble(1,100) <= chance.
+//
+// План 72.1.3 (re-audit 2026-05-02): до этого фикса формула была
+// упрощённая `min(20, debrisTotal/100000)`, что давало другие
+// статистические свойства (без учёта опыта боя и units lost).
 //
 // План 72.1.31: возвращает created=true если луна была реально создана
 // (нужно для INSERT battle_reports.moon_created — фильтр /battlestats).
 func tryCreateMoon(ctx context.Context, tx pgx.Tx, b *i18n.Bundle, g, sys, pos int,
-	debrisTotal int64, battleSeed uint64, defUserID, attUserID string) (bool, error) {
-	chance := int(debrisTotal / 100000)
-	if chance > 20 {
-		chance = 20
+	debrisM, debrisS int64,
+	atkExp, defExp int64,
+	atkLostUnits, defLostUnits int64,
+	battleSeed uint64, defUserID, attUserID string) (bool, error) {
+
+	chance := 0
+	debrisTotal := debrisM + debrisS
+
+	// Composite chance — Java строки 1291-1301.
+	effectExp := atkExp
+	if defExp < effectExp {
+		effectExp = defExp
 	}
-	if chance <= 0 {
+	if effectExp >= moonExpStartChance {
+		experienceChance := int(math.Round(math.Pow(float64(effectExp), 0.8)))
+		debrisChance := int(debrisTotal / moonPercentPerRes)
+		chance = experienceChance
+		if debrisChance < chance {
+			chance = debrisChance
+		}
+		minLost := atkLostUnits
+		if defLostUnits < minLost {
+			minLost = defLostUnits
+		}
+		if int(minLost) < chance {
+			chance = int(minLost)
+		}
+	}
+	// Guaranteed-floor по большому количеству debris (Java 1304-1309).
+	guaranteedChance := int(debrisTotal / moonGuaranteedPercentPerRes)
+	if guaranteedChance > chance {
+		chance = guaranteedChance
+	}
+	startChance := moonStartChance
+	if guaranteedChance > 0 && startChance > guaranteedChance {
+		startChance = guaranteedChance
+	}
+	if chance < 0 {
+		chance = 0
+	}
+	if chance > moonMaxChance {
+		chance = moonMaxChance
+	}
+	if chance < startChance {
 		return false, nil
 	}
 	r := rng.New(battleSeed ^ uint64(g)<<32 ^ uint64(sys)<<16 ^ uint64(pos))
