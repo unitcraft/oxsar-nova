@@ -56,8 +56,11 @@ type settingsResponse struct {
 	ShowAllShipyard      bool  `json:"show_all_shipyard"`
 	ShowAllDefense       bool  `json:"show_all_defense"`
 	PlanetOrder          int16 `json:"planet_order"`
-	Esps                 bool  `json:"esps"`
-	IpCheck              bool  `json:"ipcheck"`
+	// План 72.1.55.E (effects): esps — int 1..99 (legacy
+	// `Preferences.class.php:407` ESPIONAGE_DRONES_DEFAULT clamp);
+	// дефолтное число шпионских зондов в Mission spy form.
+	Esps    int16 `json:"esps"`
+	IpCheck bool  `json:"ipcheck"`
 }
 
 // Get GET /api/settings — текущие настройки.
@@ -104,7 +107,7 @@ type updateRequest struct {
 	ShowAllShipyard      *bool  `json:"show_all_shipyard"`
 	ShowAllDefense       *bool  `json:"show_all_defense"`
 	PlanetOrder          *int16 `json:"planet_order"`
-	Esps                 *bool  `json:"esps"`
+	Esps                 *int16 `json:"esps"`
 	IpCheck              *bool  `json:"ipcheck"`
 }
 
@@ -180,7 +183,6 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		{"show_all_research", req.ShowAllResearch, req.ShowAllResearch != nil},
 		{"show_all_shipyard", req.ShowAllShipyard, req.ShowAllShipyard != nil},
 		{"show_all_defense", req.ShowAllDefense, req.ShowAllDefense != nil},
-		{"esps", req.Esps, req.Esps != nil},
 		{"ipcheck", req.IpCheck, req.IpCheck != nil},
 	}
 	for _, b := range bools {
@@ -203,6 +205,21 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 		if _, err := h.pool.Exec(r.Context(),
 			`UPDATE users SET planetorder = $1 WHERE id = $2`, v, uid); err != nil {
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+			return
+		}
+	}
+	// План 72.1.55.E (effects): esps int 1..99 (legacy clamp).
+	if req.Esps != nil {
+		v := *req.Esps
+		if v < 1 {
+			v = 1
+		}
+		if v > 99 {
+			v = 99
+		}
+		if _, err := h.pool.Exec(r.Context(),
+			`UPDATE users SET esps = $1 WHERE id = $2`, v, uid); err != nil {
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 			return
 		}

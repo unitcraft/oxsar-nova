@@ -66,8 +66,9 @@ export function SettingsScreen() {
   const [showAllShipyard, setShowAllShipyard] = useState(true);
   const [showAllDefense, setShowAllDefense] = useState(true);
   const [planetOrder, setPlanetOrder] = useState<number>(0);
-  const [esps, setEsps] = useState(true);
-  const [ipcheck, setIpcheck] = useState(false);
+  // План 72.1.55.E: esps — int 1..99 (default count of spy probes).
+  const [esps, setEsps] = useState<number>(5);
+  const [ipcheck, setIpcheck] = useState(true);
 
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
@@ -385,15 +386,21 @@ export function SettingsScreen() {
             <tr>
               <td>
                 <label htmlFor="esps">
-                  {t('settings', 'esps') || 'Расширенные шпионские отчёты'}
+                  {t('settings', 'esps') || 'Шпионских зондов по умолчанию'}
                 </label>
               </td>
               <td>
                 <input
-                  type="checkbox"
+                  type="number"
                   id="esps"
-                  checked={esps}
-                  onChange={(e) => setEsps(e.target.checked)}
+                  min={1}
+                  max={99}
+                  value={esps}
+                  onChange={(e) => {
+                    const v = Math.max(1, Math.min(99, Number(e.target.value) || 1));
+                    setEsps(v);
+                  }}
+                  style={{ width: '4em' }}
                 />
               </td>
             </tr>

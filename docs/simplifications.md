@@ -2428,18 +2428,23 @@ unit-тесты на форматтеры/валидаторы/router-маршр
     ChatScreen заменил `<input type="text">` на `<textarea>` с
     Enter-submit (Shift+Enter — перенос).
 
-### [P72.S4.SETTINGS] — частично закрыто (7 из 12 полей) 72.1.55 Task I
-- **Статус**: ⚠ split: 7 реализованы в 72.1.55 Task I; 5 остаются
-  как архитектурное упрощение (legacy-PHP темы).
-- **Реализовано (7 полей, 72.1.55 Task I)**:
-  миграция 0097 +7 колонок в `users`:
-    - `show_all_constructions/research/shipyard/defense` (4 bool, default true)
-    - `planetorder` (smallint 0..2: date / name / coords)
-    - `esps` (bool, default true): расширенные шпионские отчёты
-    - `ipcheck` (bool, default false): уведомление о логине с другого IP
-  Backend: settings handler GET/PUT расширен. Frontend: 7 чекбоксов/select
-  в SettingsScreen. **Effects** (применение этих preferences на UI/backend)
-  — отдельные подпланы 72.1.55.* по мере необходимости.
+### [P72.S4.SETTINGS] — частично закрыто (7 из 12 полей)
+- **Статус**: ⚠ split:
+  - 7 полей реализованы 1:1 (storage + UI + **effects**) — 72.1.55 Task I + I.E.
+  - 5 полей остаются как архитектурное упрощение (legacy-PHP темы).
+- **Реализовано (7 полей, 72.1.55 Task I + I.E 2026-05-03)**:
+  - миграции 0097 + 0098 (поправлен тип esps int 1..99,
+    ipcheck default true, добавлена `last_seen_ip text`).
+  - `show_all_constructions/research/shipyard/defense` — backend
+    settings + UI form + **effects** (фильтр недоступных в
+    Constructions/Research/BuildPanel x2).
+  - `planetorder` (smallint 0..2: date/name/coords) + **effect**:
+    серверный ORDER BY в `planet/repository.go::ListByUser`.
+  - `esps` (smallint 1..99) + **effect**: autofill espionage_sensor
+    в Mission spy form (mission=11, unit=38), clamp до stock планеты.
+  - `ipcheck` (bool default true) + **effect**: `LastSeenMiddleware`
+    сравнивает X-Forwarded-For/RemoteAddr с `users.last_seen_ip`;
+    при изменении и ipcheck=true → INSERT system-message folder=11.
 - **НЕ реализовано (5 полей, архитектурно упрощено)**:
   `templatepackage`, `skin_type`, `user_bg_style`, `user_table_style`,
   `imagepackage` — это настройки **legacy-PHP-тем** (выбор картинок/CSS

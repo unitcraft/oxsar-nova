@@ -20,6 +20,7 @@ import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { catalogByGroup, type CatalogEntry } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
+import { fetchSettings } from '@/api/settings';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber, formatDuration, secondsUntil } from '@/lib/format';
 import type { ShipyardInventory } from '@/api/types';
@@ -34,6 +35,16 @@ interface BuildPanelProps {
 export function BuildPanel({ group, title }: BuildPanelProps) {
   // План 72.1.53 ч.B: in-game confirm-dialog (заменяет window.confirm).
   const { confirm, dialogProps } = useConfirm();
+  // План 72.1.55.E (effects): show_all_shipyard / show_all_defense
+  // (legacy preferences). Используется только для proxy-фильтра ниже.
+  const settingsQ = useQuery({
+    queryKey: QK.settings(),
+    queryFn: fetchSettings,
+    staleTime: 60_000,
+  });
+  const showAll = group === 'ship'
+    ? settingsQ.data?.show_all_shipyard ?? true
+    : settingsQ.data?.show_all_defense ?? true;
   const { planetId, planet } = useResolvedPlanet();
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -261,7 +272,20 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
               </th>
             </tr>
 
-            {catalog.map((entry) => {
+            {catalog
+              // План 72.1.55.E: show_all preference. Если выкл и
+              // unit ещё не построен (stock=0) и cost отсутствует
+              // (= unmet requirements) — скрываем. Уже-построенные
+              // юниты всегда видны.
+              .filter((entry) => {
+                if (showAll) return true;
+                const stock = inStock(entry.id);
+                if (stock > 0) return true;
+                const c = costsMap[String(entry.id)];
+                if (!c) return false;
+                return c.metal > 0 || c.silicon > 0 || c.hydrogen > 0;
+              })
+              .map((entry) => {
               const [g, k] = entry.i18n.split('.') as [string, string];
               const stock = inStock(entry.id);
               const cost = costsMap[String(entry.id)] ?? {

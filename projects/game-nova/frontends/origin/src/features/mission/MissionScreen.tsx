@@ -11,12 +11,13 @@
 //
 // Параметры из URL: ?g=1&s=42&p=7 (приходят с Galaxy экрана).
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ApiError } from '@/api/client';
 import { dispatchFleet, stargateJump } from '@/api/fleet';
 import { fetchShipyardInventory } from '@/api/shipyard';
+import { fetchSettings } from '@/api/settings';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { catalogByGroup } from '@/features/common/catalog';
@@ -53,6 +54,14 @@ export function MissionScreen() {
   const [mission, setMission] = useState<MissionCode>(7);
   const [speed, setSpeed] = useState(100);
   const [counts, setCounts] = useState<Record<string, string>>({});
+  // План 72.1.55.E (effects): esps preference (legacy
+  // `Preferences::esps`, FleetAjax.class.php:119) — default count
+  // of espionage_sensor (id=38) при mission=spy.
+  const settingsQ = useQuery({
+    queryKey: QK.settings(),
+    queryFn: fetchSettings,
+    staleTime: 60_000,
+  });
   // План 72.1.47: resource-carry (legacy missions.tpl fields fleetMetal/Silicon/Hydrogen).
   const [carryMetal, setCarryMetal] = useState('0');
   const [carrySilicon, setCarrySilicon] = useState('0');
@@ -99,6 +108,26 @@ export function MissionScreen() {
   });
 
   const ships = useMemo(() => catalogByGroup('ship'), []);
+
+  // План 72.1.55.E (effects): autofill espionage_sensor count при
+  // выборе mission=11 (spy). Хук должен быть до early return по
+  // правилу React Hooks — invQ ссылка через .data, безопасно.
+  useEffect(() => {
+    if (mission !== 11 || !settingsQ.data) return;
+    const espsKey = '38'; // unitEspionageSensor (legacy UNIT_ESPIONAGE_SENSOR=38)
+    const cur = counts[espsKey] ?? '';
+    const curNum = Number(cur) || 0;
+    if (curNum > 0) return; // не перезаписываем уже введённое
+    const shipsMap = invQ.data?.ships as Record<string, number> | undefined;
+    const onPlanet = Number((shipsMap ?? {})[espsKey] ?? 0);
+    if (onPlanet === 0) return;
+    const want = Math.min(settingsQ.data.esps, onPlanet);
+    if (want > 0) {
+      setCounts((c) => ({ ...c, [espsKey]: String(want) }));
+    }
+    // counts намеренно не в deps — иначе loop при каждом изменении.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mission, settingsQ.data, invQ.data]);
 
   if (!planetId) {
     return <div className="idiv">{t('overview', 'noPlanets')}</div>;
