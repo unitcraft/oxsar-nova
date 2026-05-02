@@ -16176,3 +16176,34 @@ not-a-fix + BA-019 mitigated.
 
   Коммит: feat(battlereport): план 72.1.50 ч.5 (72.1.10 wave 3) —
   planet_name sort + JOIN planets.
+
+Итерация 2026-05-02 (вечер) — план 72.1.51 (openapi coverage gap):
+
+  Финальное закрытие документационного backlog'а после 72.1.50 ч.4.
+  24 мутирующих endpoint'а nova добавлены в openapi.yaml + 4
+  минимальные market-схемы + 1 GET /acs/invitations для полноты.
+
+  Группы:
+  - A (10): queue management — buildings VIP/demolish/pack,
+    research pack/Cancel/VIP, shipyard Cancel/VIP, repair Cancel/VIP.
+  - B (2): settings deletion/cancel + planets order PATCH.
+  - C (5+1 GET): fleet load/unload/promote-to-acs + ACS invite/accept
+    (+ GET /acs/invitations).
+  - D (1): alien holding/pay.
+  - E (8): market credit/credit-multi + lots+fleet-lots series.
+  - F (4): минимальные market-схемы MarketLot/Input/Fleet*/Input.
+
+  Каждый endpoint: parameters (path + IdempotencyKey где применимо)
+  + requestBody + responses (включая 409 IdempotencyConflict).
+  Описания ссылаются на legacy-pointer + план 72.1.50 / 72.1.51.
+
+  Проверка: js-yaml парсит, 127 → 155 paths, 73 → 77 schemas.
+  post-check скриптом: 26/26 ожидаемых endpoint'ов задокументированы.
+
+  72.1.2 финальный snapshot: 39 ✅ + 1 🚧 (Payment) + 0 backlog.
+  Все функциональные и документационные task'и плана 72.1.2 закрыты.
+  Остаётся только Payment (юр-блок).
+
+  Backend и frontend не правились (документация догоняет реализацию).
+
+  Коммит: docs(api): план 72.1.51 — openapi coverage gap closed.
