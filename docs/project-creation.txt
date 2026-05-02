@@ -15991,3 +15991,38 @@ not-a-fix + BA-019 mitigated.
   Коммит: feat(origin/main): план 72.1.50 ч.1 — retreat-кнопка в Main
   fleet events (legacy 1:1).
 
+
+Итерация 2026-05-02 (вечер) — план 72.1.50 ч.2 (battlestats wave 2):
+
+  Расширение battlestats фильтров — серверный date-range clamping
+  (legacy hidden_days=3 + window=15d) и 2 новых sort-поля
+  (outcome=winner, moon=is_moon).
+
+  Что сделано:
+  - Backend battlereport/handler.go: pure-функции clampDateRange и
+    sortClause выделены — упрощает тестирование, защищает от
+    SQL-инъекции (whitelist sort_field). Серверный date-range clamp
+    в [now-18d..now-3d] игнорирует расширенный диапазон от клиента.
+  - Backend handler_test.go: 16 тест-кейсов покрывают edge cases
+    (empty/wide/inverted/SQL-injection). Integration-тест с реальной
+    pgx pool отложен (нет паттерна testcontainer в проекте).
+  - OpenAPI: GET /api/users/me/battles описан с 11 query параметрами,
+    sort_field как enum [date,rounds,debris,loot,outcome,moon],
+    sort_order enum [asc,desc].
+  - Frontend api/battles.ts: type sort_field расширен.
+    BattleStatsScreen.tsx: 2 новых option в селекте + i18n
+    bsSortOutcome/bsSortMoon.
+
+  Backlog wave 3:
+  - planet_name sort (требует target_planet_id колонку в
+    battle_reports + миграцию backfill в attack/acs/expedition
+    INSERT'ах). Самостоятельный backlog, не блокирует gameplay.
+
+  Документация: 72.1.50 §3 заполнена; 72.1.10 wave 2 status pointer;
+  72.1.2 snapshot — battlestats частичный backlog (wave 2 ✅, wave 3
+  отложена).
+
+  Tests: backend go test 16/16, vitest 133/133, tsc чистый.
+
+  Коммит: feat(battlereport): план 72.1.50 ч.2 (72.1.10 wave 2) —
+  battlestats sort outcome/moon + date-range clamp.

@@ -3061,6 +3061,8 @@ statistics:
   bsSortRounds: ""
   bsSortDebris: ""
   bsSortLoot: ""
+  bsSortOutcome: ""
+  bsSortMoon: ""
   bsSortAsc: ""
   bsSortDesc: ""
   bsUserFilter: ""

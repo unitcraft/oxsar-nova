@@ -110,16 +110,10 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 		return fmt.Sprintf("$%d", len(args))
 	}
 
-	if v := q.Get("date_min"); v != "" {
-		if t, err := time.Parse(time.RFC3339, v); err == nil {
-			conds = append(conds, "at >= "+addArg(t))
-		}
-	}
-	if v := q.Get("date_max"); v != "" {
-		if t, err := time.Parse(time.RFC3339, v); err == nil {
-			conds = append(conds, "at <= "+addArg(t))
-		}
-	}
+	// План 72.1.10 wave 2: legacy date-range clamping
+	// (Battlestats.class.php:65-88). См. clampDateRange ниже.
+	dateMin, dateMax := clampDateRange(q.Get("date_min"), q.Get("date_max"), time.Now().UTC())
+	conds = append(conds, "at >= "+addArg(dateMin), "at <= "+addArg(dateMax))
 	if v := q.Get("user_filter"); v != "" {
 		ph := addArg(v)
 		conds = append(conds,
@@ -158,20 +152,7 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 		conds = append(conds, "is_moon = true")
 	}
 
-	// Sort.
-	sortField := "at"
-	switch q.Get("sort_field") {
-	case "rounds":
-		sortField = "rounds"
-	case "debris":
-		sortField = "(debris_metal + debris_silicon)"
-	case "loot":
-		sortField = "(loot_metal + loot_silicon + loot_hydrogen)"
-	}
-	sortOrder := "DESC"
-	if q.Get("sort_order") == "asc" {
-		sortOrder = "ASC"
-	}
+	sortField, sortOrder := sortClause(q.Get("sort_field"), q.Get("sort_order"))
 
 	limitArg := addArg(limit)
 	sql := `
@@ -231,6 +212,76 @@ func parseBool(v string, def bool) bool {
 	default:
 		return def
 	}
+}
+
+// hiddenDays / windowDays — legacy константы из
+// Battlestats.class.php:65-68. На прод-сервере (OXSAR_RELEASED &&
+// !DEATHMATCH && !isAdmin) последние 3 дня скрыты, окно — 15 дней
+// перед скрытыми. Админ-bypass будет добавлен при появлении isAdmin
+// контекста на этом эндпоинте (сейчас в nova нет).
+const (
+	battlesHiddenDays = 3
+	battlesWindowDays = 15
+)
+
+// clampDateRange реализует legacy date-range clamping
+// (Battlestats.class.php:65-88). Серверная защита: даже если клиент
+// пришлёт более широкий диапазон, мы его сужаем. Пустые/невалидные
+// строки — дефолтный полный диапазон [now-18d .. now-3d]. План 72.1.10
+// wave 2.
+func clampDateRange(rawMin, rawMax string, now time.Time) (time.Time, time.Time) {
+	maxAllowed := now.Add(-time.Duration(battlesHiddenDays) * 24 * time.Hour)
+	minAllowed := now.Add(-time.Duration(battlesHiddenDays+battlesWindowDays) * 24 * time.Hour)
+
+	dMin := minAllowed
+	if t, err := time.Parse(time.RFC3339, rawMin); err == nil {
+		if t.Before(minAllowed) {
+			t = minAllowed
+		}
+		if t.After(maxAllowed) {
+			t = maxAllowed
+		}
+		dMin = t
+	}
+	dMax := maxAllowed
+	if t, err := time.Parse(time.RFC3339, rawMax); err == nil {
+		if t.After(maxAllowed) {
+			t = maxAllowed
+		}
+		if t.Before(minAllowed) {
+			t = minAllowed
+		}
+		dMax = t
+	}
+	if dMin.After(dMax) {
+		dMin, dMax = dMax, dMin
+	}
+	return dMin, dMax
+}
+
+// sortClause whitelist'ит legacy sort-поля для ORDER BY. Возвращает
+// SQL-фрагмент для поля и направление "ASC"/"DESC". Поле `planet_name`
+// legacy (Battlestats.class.php:96) требует JOIN с planets и колонки
+// target_planet_id в battle_reports — отложено в wave 3.
+func sortClause(field, order string) (string, string) {
+	col := "at"
+	switch field {
+	case "rounds":
+		col = "rounds"
+	case "debris":
+		col = "(debris_metal + debris_silicon)"
+	case "loot":
+		col = "(loot_metal + loot_silicon + loot_hydrogen)"
+	case "outcome":
+		col = "winner"
+	case "moon":
+		col = "is_moon"
+	}
+	dir := "DESC"
+	if order == "asc" {
+		dir = "ASC"
+	}
+	return col, dir
 }
 
 // GetByID GET /api/battle-reports/{id} — публичный анонимный endpoint

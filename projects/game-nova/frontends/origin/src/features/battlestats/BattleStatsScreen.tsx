@@ -47,7 +47,11 @@ export function BattleStatsScreen() {
   const [showNoDestroyed, setShowNoDestroyed] = useState(true);
   const [newMoon, setNewMoon] = useState(false);
   const [moonBattle, setMoonBattle] = useState(false);
-  const [sortField, setSortField] = useState<'date' | 'rounds' | 'debris' | 'loot'>('date');
+  // План 72.1.10 wave 2: добавлены legacy sort-поля outcome (winner)
+  // и moon (is_moon). Поле planet_name legacy требует JOIN — отложено.
+  const [sortField, setSortField] = useState<
+    'date' | 'rounds' | 'debris' | 'loot' | 'outcome' | 'moon'
+  >('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [cursor, setCursor] = useState<string | undefined>(undefined);
 
@@ -220,6 +224,8 @@ export function BattleStatsScreen() {
                         <option value="rounds">{t('statistics', 'bsSortRounds')}</option>
                         <option value="debris">{t('statistics', 'bsSortDebris')}</option>
                         <option value="loot">{t('statistics', 'bsSortLoot')}</option>
+                        <option value="outcome">{t('statistics', 'bsSortOutcome')}</option>
+                        <option value="moon">{t('statistics', 'bsSortMoon')}</option>
                       </select>{' '}
                       <select
                         value={sortOrder}
