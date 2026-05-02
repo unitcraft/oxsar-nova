@@ -13,7 +13,7 @@
 // — реализовано в существующем `api/market.ts` (S-021).
 // Переход на P2P-биржу (план 68) — отдельная сессия Spring 5.
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
@@ -38,6 +38,29 @@ interface Group {
   key: GroupKey;
   titleKey: string;
   items: Artefact[];
+}
+
+// План 72.1.49 / 72.1.2 re-audit: countdown timer для артефактов
+// (legacy delay_counter / expire_counter / disappear_counter в
+// `artefacts.tpl`). Обновляется каждую секунду пока компонент жив.
+function useCountdown(targetIso: string | null | undefined): string {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!targetIso) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [targetIso]);
+  if (!targetIso) return '';
+  const ms = new Date(targetIso).getTime() - now;
+  if (ms <= 0) return '00:00:00';
+  const sec = Math.floor(ms / 1000) % 60;
+  const min = Math.floor(ms / 60_000) % 60;
+  const hrs = Math.floor(ms / 3_600_000) % 24;
+  const days = Math.floor(ms / 86_400_000);
+  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+  return days > 0
+    ? `${days}d ${pad(hrs)}:${pad(min)}:${pad(sec)}`
+    : `${pad(hrs)}:${pad(min)}:${pad(sec)}`;
 }
 
 function stateLabelKey(state: ArtefactState): string {
@@ -279,16 +302,13 @@ function ArtefactGroupRow({
               {desc && (
                 <div style={{ clear: 'both', fontSize: 'smaller' }}>{desc}</div>
               )}
-              <div style={{ fontSize: 'smaller', margin: 5 }}>
-                {t('artefacts', stateLabelKey(a.state))}
-                {a.expire_at && (
-                  <>
-                    {' · '}
-                    {t('artefacts', 'expires')}{' '}
-                    {new Date(a.expire_at).toLocaleString('ru-RU')}
-                  </>
-                )}
-              </div>
+              <ArtefactStatusLine artefact={a} />
+              {a.expire_at && (
+                <div style={{ fontSize: 'smaller', margin: 5 }}>
+                  {t('artefacts', 'expires')}{' '}
+                  {new Date(a.expire_at).toLocaleString('ru-RU')}
+                </div>
+              )}
             </td>
             <td className="center" style={{ width: '15%' }}>
               {a.state === 'held' && (
@@ -346,5 +366,27 @@ function ArtefactImage({ unitId, alt }: { unitId: number; alt: string }) {
         }
       }}
     />
+  );
+}
+
+// ArtefactStatusLine — план 72.1.49 / 72.1.2 re-audit: показывает
+// state-метку + live countdown таймер (legacy artefacts.tpl
+// delay_counter / expire_counter). expire_at для active/delayed.
+function ArtefactStatusLine({ artefact }: { artefact: Artefact }) {
+  const { t } = useTranslation();
+  const showCountdown =
+    (artefact.state === 'active' || artefact.state === 'delayed') &&
+    !!artefact.expire_at;
+  const cd = useCountdown(showCountdown ? artefact.expire_at : undefined);
+  return (
+    <div style={{ fontSize: 'smaller', margin: 5 }}>
+      {t('artefacts', stateLabelKey(artefact.state))}
+      {cd && (
+        <>
+          {' · '}
+          <code>{cd}</code>
+        </>
+      )}
+    </div>
   );
 }
