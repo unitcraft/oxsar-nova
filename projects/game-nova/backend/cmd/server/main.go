@@ -521,7 +521,11 @@ func run() error {
 		// План 72.1.44 cross-cut: VIP-instant старт исследования.
 		pr.Post("/research/{queueId}/vip", researchH.StartVIP)
 
-		pr.Post("/planets/{id}/shipyard", shipyardH.Enqueue)
+		// План 72.1.49: anti-double-submit через Idempotency-Key
+		// (legacy `Shipyard.class.php:382` использовал 5-сек acquireLock).
+		// Frontend `shipyard.ts:35` уже шлёт ключ — middleware теперь
+		// обеспечивает дедуп на сервере.
+		pr.With(idemMW.Wrap).Post("/planets/{id}/shipyard", shipyardH.Enqueue)
 		pr.Get("/planets/{id}/shipyard/queue", shipyardH.List)
 		pr.Get("/planets/{id}/shipyard/inventory", shipyardH.Inventory)
 		// План 72.1.41: legacy `Shipyard` capacity-info (freeShield/Rocket).
@@ -536,8 +540,10 @@ func run() error {
 		// /battle-reports/{id} зарегистрирован публично ниже —
 		// анонимный просмотр по ссылке (план 72.1 ч.20.11).
 
-		pr.Post("/planets/{id}/repair/disassemble", repairH.EnqueueDisassemble)
-		pr.Post("/planets/{id}/repair/repair", repairH.EnqueueRepair)
+		// План 72.1.49: Idempotency-middleware для repair/disassemble и
+		// repair/repair (тот же anti-double-submit паттерн что и shipyard).
+		pr.With(idemMW.Wrap).Post("/planets/{id}/repair/disassemble", repairH.EnqueueDisassemble)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/repair/repair", repairH.EnqueueRepair)
 		pr.Get("/planets/{id}/repair/damaged", repairH.ListDamaged)
 		pr.Get("/planets/{id}/repair/queue", repairH.List)
 		pr.Delete("/planets/{id}/repair/queue/{queueId}", repairH.Cancel)
