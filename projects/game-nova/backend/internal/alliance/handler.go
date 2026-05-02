@@ -103,7 +103,10 @@ func parseIntDefault(s string, def int) int {
 // Get GET /api/alliances/{id}
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	al, members, err := h.svc.Get(r.Context(), id)
+	// План 72.1.55 Task C: viewer для show_member-фильтра. Get —
+	// публичный endpoint (auth опционален), для anon viewerID="".
+	viewerID, _ := auth.UserID(r.Context())
+	al, members, err := h.svc.Get(r.Context(), id, viewerID)
 	switch {
 	case err == nil:
 		httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
@@ -587,6 +590,49 @@ func (h *Handler) UpdatePrefs(w http.ResponseWriter, r *http.Request) {
 		errors.Is(err, ErrHomepageTooLong), errors.Is(err, ErrHomepageInvalid),
 		errors.Is(err, ErrFoundernameTooLong), errors.Is(err, ErrMemberlistSortRange):
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+	default:
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+	}
+}
+
+// MyApplications GET /api/users/me/applications
+//
+// Возвращает все pending заявки текущего пользователя (на какие
+// альянсы он подал, ещё не одобрены).
+//
+// План 72.1.55 Task B (P72.S2.A 1:1) — legacy `ally.tpl` блок
+// «Текущие заявки».
+func (h *Handler) MyApplications(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	apps, err := h.svc.MyApplications(r.Context(), uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"applications": apps})
+}
+
+// CancelMyApplication DELETE /api/users/me/applications/{id}
+//
+// Applicant отзывает свою pending заявку. Только сам applicant может
+// cancel (owner — через Reject /api/alliances/applications/{id}).
+func (h *Handler) CancelMyApplication(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.ErrUnauthorized)
+		return
+	}
+	appID := chi.URLParam(r, "id")
+	err := h.svc.CancelMyApplication(r.Context(), uid, appID)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrApplicationNotFound):
+		httpx.WriteError(w, r, httpx.ErrNotFound)
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}

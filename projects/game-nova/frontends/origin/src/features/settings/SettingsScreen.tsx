@@ -60,6 +60,14 @@ export function SettingsScreen() {
   const [timezone, setTimezone] = useState('UTC');
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [profileErr, setProfileErr] = useState<string | null>(null);
+  // План 72.1.55 Task I (P72.S4.SETTINGS subset 1:1).
+  const [showAllConstr, setShowAllConstr] = useState(true);
+  const [showAllResearch, setShowAllResearch] = useState(true);
+  const [showAllShipyard, setShowAllShipyard] = useState(true);
+  const [showAllDefense, setShowAllDefense] = useState(true);
+  const [planetOrder, setPlanetOrder] = useState<number>(0);
+  const [esps, setEsps] = useState(true);
+  const [ipcheck, setIpcheck] = useState(false);
 
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
@@ -106,6 +114,14 @@ export function SettingsScreen() {
       setEmail(settingsQ.data.email);
       setLanguage(settingsQ.data.language);
       setTimezone(settingsQ.data.timezone);
+      // План 72.1.55 Task I.
+      setShowAllConstr(settingsQ.data.show_all_constructions);
+      setShowAllResearch(settingsQ.data.show_all_research);
+      setShowAllShipyard(settingsQ.data.show_all_shipyard);
+      setShowAllDefense(settingsQ.data.show_all_defense);
+      setPlanetOrder(settingsQ.data.planet_order);
+      setEsps(settingsQ.data.esps);
+      setIpcheck(settingsQ.data.ipcheck);
     }
   }, [settingsQ.data]);
 
@@ -186,6 +202,14 @@ export function SettingsScreen() {
     if (email !== settingsQ.data?.email) patch.email = email;
     if (language !== settingsQ.data?.language) patch.language = language;
     if (timezone !== settingsQ.data?.timezone) patch.timezone = timezone;
+    // План 72.1.55 Task I.
+    if (showAllConstr !== settingsQ.data?.show_all_constructions) patch.show_all_constructions = showAllConstr;
+    if (showAllResearch !== settingsQ.data?.show_all_research) patch.show_all_research = showAllResearch;
+    if (showAllShipyard !== settingsQ.data?.show_all_shipyard) patch.show_all_shipyard = showAllShipyard;
+    if (showAllDefense !== settingsQ.data?.show_all_defense) patch.show_all_defense = showAllDefense;
+    if (planetOrder !== settingsQ.data?.planet_order) patch.planet_order = planetOrder;
+    if (esps !== settingsQ.data?.esps) patch.esps = esps;
+    if (ipcheck !== settingsQ.data?.ipcheck) patch.ipcheck = ipcheck;
     if (Object.keys(patch).length === 0) return;
     updateMut.mutate(patch);
   }
@@ -268,6 +292,124 @@ export function SettingsScreen() {
                     </option>
                   ))}
                 </select>
+              </td>
+            </tr>
+            {/* План 72.1.55 Task I (P72.S4.SETTINGS subset 1:1):
+                legacy preferences.tpl поля. Effects (применение
+                этих preferences на UI/backend) — отдельные подзадачи
+                72.1.55.*. */}
+            <tr>
+              <td colSpan={2}>
+                <hr />
+                <b>{t('settings', 'prefsTitle') || 'Игровые настройки'}</b>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label htmlFor="show-all-constr">
+                  {t('settings', 'showAllConstructions') || 'Показывать недоступные постройки'}
+                </label>
+              </td>
+              <td>
+                <input
+                  type="checkbox"
+                  id="show-all-constr"
+                  checked={showAllConstr}
+                  onChange={(e) => setShowAllConstr(e.target.checked)}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label htmlFor="show-all-research">
+                  {t('settings', 'showAllResearch') || 'Показывать недоступные исследования'}
+                </label>
+              </td>
+              <td>
+                <input
+                  type="checkbox"
+                  id="show-all-research"
+                  checked={showAllResearch}
+                  onChange={(e) => setShowAllResearch(e.target.checked)}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label htmlFor="show-all-shipyard">
+                  {t('settings', 'showAllShipyard') || 'Показывать недоступные корабли'}
+                </label>
+              </td>
+              <td>
+                <input
+                  type="checkbox"
+                  id="show-all-shipyard"
+                  checked={showAllShipyard}
+                  onChange={(e) => setShowAllShipyard(e.target.checked)}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label htmlFor="show-all-defense">
+                  {t('settings', 'showAllDefense') || 'Показывать недоступную оборону'}
+                </label>
+              </td>
+              <td>
+                <input
+                  type="checkbox"
+                  id="show-all-defense"
+                  checked={showAllDefense}
+                  onChange={(e) => setShowAllDefense(e.target.checked)}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label htmlFor="planet-order">
+                  {t('settings', 'planetOrder') || 'Сортировка планет'}
+                </label>
+              </td>
+              <td>
+                <select
+                  id="planet-order"
+                  value={planetOrder}
+                  onChange={(e) => setPlanetOrder(Number(e.target.value))}
+                >
+                  <option value={0}>{t('settings', 'planetOrderDate') || 'По дате колонизации'}</option>
+                  <option value={1}>{t('settings', 'planetOrderName') || 'По имени'}</option>
+                  <option value={2}>{t('settings', 'planetOrderCoords') || 'По координатам'}</option>
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label htmlFor="esps">
+                  {t('settings', 'esps') || 'Расширенные шпионские отчёты'}
+                </label>
+              </td>
+              <td>
+                <input
+                  type="checkbox"
+                  id="esps"
+                  checked={esps}
+                  onChange={(e) => setEsps(e.target.checked)}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label htmlFor="ipcheck">
+                  {t('settings', 'ipcheck') || 'Уведомлять при логине с другого IP'}
+                </label>
+              </td>
+              <td>
+                <input
+                  type="checkbox"
+                  id="ipcheck"
+                  checked={ipcheck}
+                  onChange={(e) => setIpcheck(e.target.checked)}
+                />
               </td>
             </tr>
           </tbody>

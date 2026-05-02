@@ -16311,3 +16311,85 @@ not-a-fix + BA-019 mitigated.
 
   Коммит: feat(alliance): план 72.1.54 — alliance prefs 1:1
   (closing P72.S2.ALLIANCE_PREFS).
+
+Итерация 2026-05-02 (поздний вечер) — план 72.1.55 (simplifications cleanup):
+
+  По распоряжению пользователя «убрать упрощения, сделать 1:1» по
+  9 записям simplifications.md. Из них:
+  - 2 устаревшие (gap уже закрыт): пометить ✅ ЗАКРЫТО (документация).
+  - 1 неверно классифицированная (officer balance = legacy 1:1).
+  - 5 реальные 1:1 нарушения: реализовать.
+  - 1 split (settings legacy полей: 7 реализуемы, 5 архитектурно
+    невозможны).
+
+  Реализовано (9 task'ов):
+
+  Task A — пометил ✅ ЗАКРЫТО:
+    - [P72.S2.B] PATCH alliance name/tag (закрыт планом 72.1.43).
+    - [P72.S2.G] Repair + Battlestats endpoints (72.1.10/72.1.25).
+
+  Task G — переклассифицировал [P72.S4.OFFICER_NO_BALANCE_FETCH]:
+    legacy officer.tpl баланс не показывает (баланс в шапке);
+    origin = легаси 1:1, не упрощение.
+
+  Task B [P72.S2.A] own applications:
+    - service.MyApplications + CancelMyApplication.
+    - GET/DELETE /api/users/me/applications[/{id}].
+    - openapi описан.
+    - AllianceOverviewScreen рендерит блок «Текущие заявки» с
+      cancel-кнопкой (in-game ConfirmDialog).
+
+  Task C [P72.S2.C] memberlist sort + show_member:
+    - Service.Get(viewerID) фильтрует members для outsider'ов
+      при show_member=false.
+    - ORDER BY на основе alliance.memberlist_sort (5 опций:
+      rank+joined / name / points DESC / joined DESC / last_seen
+      DESC NULLS LAST). Owner всегда первым.
+
+  Task D [P72.S2.D] granular permissions UI:
+    - Member DTO +rank_id +effective_perms (только self-row).
+    - Service.resolveEffectivePerms резолвит owner-shortcut /
+      member rank permissions JSONB.
+    - frontend permissions.ts + findSelfPerms(); Alliance
+      Descriptions/Diplomacy/Members screens используют hasPerm()
+      с granular check.
+
+  Task E [P72.S2.H] artefact market имя:
+    - Service.WithCatalog + resolveUnitName(unit_id).
+    - Offer.UnitName заполняется в ListOffers.
+    - openapi schema +unit_name.
+    - MarketScreen рендерит offer.unit_name (fallback на «#N»).
+
+  Task F [P72.S4.BBCODE] chat toolbar:
+    - BBCodeToolbar.tsx — 7 кнопок (B/I/U/S/color/url/img) +
+      emoji-picker (12 emoji), без сторонних deps (textarea
+      selectionStart/End API).
+    - ChatScreen: input → textarea с Enter-submit (Shift+Enter
+      перенос).
+    - i18n bbBold/bbItalic/.../urlPrompt/imgPrompt/colorPrompt.
+
+  Task H [P72.1.1.NO_BATTLE_REPORT_FOR_RAIDS] unified battle_reports:
+    - battlestats.WriteBattleReport helper (write.go).
+    - alien.go: alien-рейд пишет battle_report (HasAliens=true,
+      attacker=NULL, defender=defUserID, planet_id=pl.PlanetID).
+    - expedition.go × 2 (pirates + battlefield): пишут battle_reports
+      (attacker=ownerUserID, defender=NULL, planet_id=NULL).
+    - Все 3 call sites передают reportID в ApplyBattleResult →
+      UNIQUE (battle_id, user_id, is_atter) блокирует дубль опыта
+      при event re-process.
+
+  Task I [P72.S4.SETTINGS] subset:
+    - migration 0097 +7 колонок users (show_all_*, planetorder,
+      esps, ipcheck).
+    - settings handler GET/PUT расширен.
+    - SettingsScreen форма: 4 чекбокса show_all_*, select
+      planetorder (3 опции), 2 чекбокса esps/ipcheck.
+    - i18n: prefsTitle/showAllConstructions/.../planetOrder*.
+    - Effects (применение этих preferences на UI/backend) — backlog.
+
+  simplifications.md обновлён: 5 записей переписаны как ✅ ЗАКРЫТО,
+  1 переклассифицирована, 1 split «реализовано/архитектура».
+
+  Tests: backend go test ./... зелёный, vitest 133/133, tsc чистый.
+
+  Коммит: feat(plans 72.1.55): закрытие 9 simplifications 1:1.

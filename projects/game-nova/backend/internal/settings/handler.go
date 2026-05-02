@@ -49,6 +49,15 @@ type settingsResponse struct {
 	Language     string  `json:"language"`
 	Timezone     string  `json:"timezone"`
 	VacationSince *string `json:"vacation_since"`
+	// План 72.1.55 Task I (P72.S4.SETTINGS subset 1:1): legacy
+	// preferences.tpl поля. Default values заданы миграцией 0097.
+	ShowAllConstructions bool  `json:"show_all_constructions"`
+	ShowAllResearch      bool  `json:"show_all_research"`
+	ShowAllShipyard      bool  `json:"show_all_shipyard"`
+	ShowAllDefense       bool  `json:"show_all_defense"`
+	PlanetOrder          int16 `json:"planet_order"`
+	Esps                 bool  `json:"esps"`
+	IpCheck              bool  `json:"ipcheck"`
 }
 
 // Get GET /api/settings — текущие настройки.
@@ -61,20 +70,23 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	var email, language, timezone string
 	var vacationSince *time.Time
-	err := h.pool.QueryRow(r.Context(),
-		`SELECT email, language, timezone, vacation_since FROM users WHERE id = $1`,
-		uid,
-	).Scan(&email, &language, &timezone, &vacationSince)
+	var resp settingsResponse
+	err := h.pool.QueryRow(r.Context(), `
+		SELECT email, language, timezone, vacation_since,
+		       show_all_constructions, show_all_research, show_all_shipyard,
+		       show_all_defense, planetorder, esps, ipcheck
+		FROM users WHERE id = $1
+	`, uid).Scan(&email, &language, &timezone, &vacationSince,
+		&resp.ShowAllConstructions, &resp.ShowAllResearch, &resp.ShowAllShipyard,
+		&resp.ShowAllDefense, &resp.PlanetOrder, &resp.Esps, &resp.IpCheck)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
 
-	resp := settingsResponse{
-		Email:    email,
-		Language: language,
-		Timezone: timezone,
-	}
+	resp.Email = email
+	resp.Language = language
+	resp.Timezone = timezone
 	if vacationSince != nil {
 		s := vacationSince.UTC().Format(time.RFC3339)
 		resp.VacationSince = &s
@@ -86,6 +98,14 @@ type updateRequest struct {
 	Email    *string `json:"email"`
 	Language *string `json:"language"`
 	Timezone *string `json:"timezone"`
+	// План 72.1.55 Task I (P72.S4.SETTINGS subset 1:1).
+	ShowAllConstructions *bool  `json:"show_all_constructions"`
+	ShowAllResearch      *bool  `json:"show_all_research"`
+	ShowAllShipyard      *bool  `json:"show_all_shipyard"`
+	ShowAllDefense       *bool  `json:"show_all_defense"`
+	PlanetOrder          *int16 `json:"planet_order"`
+	Esps                 *bool  `json:"esps"`
+	IpCheck              *bool  `json:"ipcheck"`
 }
 
 // Update PUT /api/settings — обновить email, language, timezone.
@@ -142,6 +162,47 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 		if _, err := h.pool.Exec(r.Context(),
 			`UPDATE users SET timezone = $1 WHERE id = $2`, tz, uid); err != nil {
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+			return
+		}
+	}
+
+	// План 72.1.55 Task I (P72.S4.SETTINGS subset 1:1): bool/int prefs.
+	// Простые UPDATE — нет сторонних effects (применение в UI/backend
+	// отдельно, по мере подключения каждого preference).
+	type kv struct {
+		col   string
+		val   any
+		isSet bool
+	}
+	bools := []kv{
+		{"show_all_constructions", req.ShowAllConstructions, req.ShowAllConstructions != nil},
+		{"show_all_research", req.ShowAllResearch, req.ShowAllResearch != nil},
+		{"show_all_shipyard", req.ShowAllShipyard, req.ShowAllShipyard != nil},
+		{"show_all_defense", req.ShowAllDefense, req.ShowAllDefense != nil},
+		{"esps", req.Esps, req.Esps != nil},
+		{"ipcheck", req.IpCheck, req.IpCheck != nil},
+	}
+	for _, b := range bools {
+		if !b.isSet {
+			continue
+		}
+		// reflect-free: значение — *bool, разыменуем через type assertion.
+		v := *(b.val.(*bool))
+		if _, err := h.pool.Exec(r.Context(),
+			"UPDATE users SET "+b.col+" = $1 WHERE id = $2", v, uid); err != nil {
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+			return
+		}
+	}
+	if req.PlanetOrder != nil {
+		v := *req.PlanetOrder
+		if v < 0 || v > 2 {
+			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "planet_order out of range (0..2)"))
+			return
+		}
+		if _, err := h.pool.Exec(r.Context(),
+			`UPDATE users SET planetorder = $1 WHERE id = $2`, v, uid); err != nil {
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 			return
 		}

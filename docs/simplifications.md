@@ -2108,57 +2108,52 @@ unit-тесты на форматтеры/валидаторы/router-маршр
 
 ## 2026-04-28 — План 72 Ф.3 Spring 2 ч.1: 12 alliance-экранов origin-фронта
 
-### [P72.S2.A] «Текущие заявки» (own applications) — пустой блок
-- **Где**: `frontends/origin/src/features/alliance/AllianceOverviewScreen.tsx`.
-- **Что упрощено**: legacy `ally.tpl` показывает блок «Текущие заявки»
-  пользователя (где он подал заявки на вступление, но альянс не одобрил).
-  В origin-фронте этот блок не реализован — backend nova не предоставляет
-  endpoint типа `GET /api/users/me/applications`.
-- **Почему**: nova-API ориентирован на actor-сторону: alliance-owner видит
-  pending applications через `GET /api/alliances/{id}/applications`, но
-  applicant своих pending не видит. В Spring 1 закрытие выглядит как
-  «в URL переход → экран альянса покажет appInProgress».
-- **Как чинить**: расширить openapi.yaml `GET /api/users/me/applications`
-  и подмешать блок в AllianceOverviewScreen.
-- **Приоритет**: L (UX-удобство, не блокер).
+### [P72.S2.A] — ✅ ЗАКРЫТО планом 72.1.55 Task B
+- **Статус**: ✅ ЗАКРЫТО 2026-05-02.
+- **Что**: legacy `ally.tpl` блок «Текущие заявки» applicant'а (на
+  какие альянсы подал, ещё не одобрены).
+- **Где закрыто**: backend `MyApplications` + `CancelMyApplication`
+  в [`alliance/service.go`](../projects/game-nova/backend/internal/alliance/service.go),
+  routes `GET/DELETE /api/users/me/applications[/{id}]`, openapi
+  описаны, frontend AllianceOverviewScreen рендерит блок с
+  cancel-кнопкой (in-game ConfirmDialog).
 
-### [P72.S2.B] PATCH alliance name/tag — read-only
-- **Где**: `frontends/origin/src/features/alliance/AllianceManageScreen.tsx`.
-- **Что упрощено**: legacy `manage_ally.tpl` имеет 2 формы для смены
-  tag и name альянса. В origin это поля read-only — backend на
-  `/api/alliances/{id}` экспонирует только `GET` и `DELETE`.
-- **Почему**: rename альянса — критическая операция (ребрендинг,
-  audit-log, рассылки). Backend плана 67 не закрыл её, а в Spring 2
-  делать backend-расширения R0 запрещает.
-- **Как чинить**: backend-PR на `PATCH /api/alliances/{id}` с rate-limit
-  (1 раз в 30 дней) + audit-запись.
-- **Приоритет**: M.
+### [P72.S2.B] PATCH alliance name/tag — ✅ ЗАКРЫТО планом 72.1.43
+- **Статус**: ✅ ЗАКРЫТО 2026-05-01 (план 72.1.43, verified 2026-05-02
+  планом 72.1.55 Task A).
+- **Где**: backend
+  [`internal/alliance/handler.go:857 UpdateTagName`](../projects/game-nova/backend/internal/alliance/handler.go#L857) +
+  route [`PATCH /alliances/{id}`](../projects/game-nova/backend/cmd/server/main.go#L659);
+  frontend
+  [`api/alliance.ts:315 updateAllianceTagName`](../projects/game-nova/frontends/origin/src/api/alliance.ts#L315) +
+  AllianceManageScreen форма редактирования tag/name (с client-side
+  validation после плана 72.1.52).
 
-### [P72.S2.C] Memberlist preferences (sortBy / showmember) не реализованы
-- **Где**: `frontends/origin/src/features/alliance/AllianceManageScreen.tsx`.
-- **Что упрощено**: legacy `manage_ally.tpl` имеет настройки
-  «Сортировать список членов по очкам/имени» + «Показывать список членов
-  всем». В origin-фронте только toggle is_open. Серверной модели нет.
-- **Почему**: эти поля в legacy жили в табличке `aks` (ally settings),
-  в nova-схеме `alliances` их аналога нет. Отображение списка членов
-  доступно владельцу + членам по умолчанию.
-- **Как чинить**: добавить колонки `member_visibility`, `member_sort` в
-  alliances + расширить openapi.yaml.
-- **Приоритет**: L.
+### [P72.S2.C] — ✅ ЗАКРЫТО планами 72.1.54 + 72.1.55 Task C
+- **Статус**: ✅ ЗАКРЫТО 2026-05-02.
+- **Что**: memberlist sort + show_member privacy.
+- **Где закрыто**:
+  - 72.1.54: добавлены колонки `show_member` + `memberlist_sort`
+    в `alliances` (миграция 0096).
+  - 72.1.55 Task C: `Service.Get(viewerID)` фильтрует members для
+    outsider'ов при show_member=false; ORDER BY учитывает
+    memberlist_sort (5 опций: rank+joined / name / points DESC /
+    joined DESC / last_seen DESC NULLS LAST). Owner всегда сверху.
 
-### [P72.S2.D] Granular permissions для не-owner'а UI пока не работают
-- **Где**: alliance-экраны — кнопки management (manage/ranks/diplomacy/
-  descriptions) видны только owner'у.
-- **Что упрощено**: nova frontend и origin frontend оба ограничивают
-  UI-проверки `isOwner`. Бэкенд проверяет `can_manage_ranks`,
-  `can_change_description` и т.д. полноценно — если кнопка случайно
-  будет видна, 403 защитит.
-- **Почему**: уже зафиксировано в плане 67 (P67.S5.B): Member DTO без
-  `rank_id`, поэтому frontend не может разрешить `hasPerm()` без owner'а.
-  Origin-фронт наследует то же ограничение.
-- **Как чинить**: общий fix с планом 67 — добавить `rank_id` (опционально
-  + `effective_perms`) в Member DTO. Один patch на nova и origin.
-- **Приоритет**: M.
+### [P72.S2.D] — ✅ ЗАКРЫТО планом 72.1.55 Task D
+- **Статус**: ✅ ЗАКРЫТО 2026-05-02.
+- **Что**: granular permissions UI для не-owner'ов.
+- **Где закрыто**:
+  - Backend: `Member` DTO расширен `rank_id` + `effective_perms` (map),
+    заполняется только для self-row (UserID == viewerID — нельзя
+    утечь permissions других игроков). `Service.resolveEffectivePerms`
+    резолвит owner-shortcut / member rank_id permissions JSONB / member
+    без rank_id.
+  - Frontend: `findSelfPerms()` helper в permissions.ts извлекает
+    effective_perms текущего viewer'а; `hasPerm()` использует их.
+    AllianceDescriptionsScreen / AllianceDiplomacyScreen /
+    AllianceMembersScreen теперь используют granular check вместо
+    isOwner-shortcut.
 
 ### [P72.S2.E] Alliance audit/diplomacy/transfer без RTL-тестов
 - **Где**: `src/features/alliance/*.test.ts`.
@@ -2173,34 +2168,32 @@ unit-тесты на форматтеры/валидаторы/router-маршр
   ranks/diplomacy.
 - **Приоритет**: L.
 
-### [P72.S2.G] Repair и Battlestats — нет nova-API endpoint'ов
-- **Где**: `frontends/origin/src/features/repair/RepairScreen.tsx`,
-  `frontends/origin/src/features/battlestats/BattleStatsScreen.tsx`.
-- **Что упрощено**: nova-API не предоставляет `/api/planets/{id}/repair`
-  (повреждённые юниты + ремонт) и `/api/users/me/battles` (детальная
-  история боёв). Pixel-perfect-каркас (форма фильтров, таблица) рендерим,
-  но список пустой; Battlestats показывает только ранг через
-  `/api/highscore/me` как proxy.
-- **Почему**: backend repair-домена в nova ещё не написан (legacy ремонт
-  завязан на `repair.tpl` контроллер с очередью аналогичной shipyard);
-  battlestats — отдельный план агрегации боёв (планы 17/41 не покрывают).
-- **Как чинить**: открыть отдельные планы — repair-домен (миграции +
-  service + handler) и battlestats-агрегатор (выборка из messages folder=2
-  battle reports + индекс по дате).
-- **Приоритет**: M (геймплейные фичи).
+### [P72.S2.G] Repair и Battlestats — ✅ ЗАКРЫТО планами 72.1.10 + 72.1.25
+- **Статус**: ✅ ЗАКРЫТО 2026-05-01..02 (verified 2026-05-02 планом
+  72.1.55 Task A).
+- **Где**:
+  - **Repair** — закрыт планом
+    [72.1.25](plans/72.1.25-repair-disassemble-parity.md): backend
+    `internal/repair/` (service + handler с EnqueueRepair/Disassemble/
+    Cancel/StartVIP), routes `/planets/{id}/repair/{repair,disassemble,
+    queue,damaged}` ([`main.go:553-559`](../projects/game-nova/backend/cmd/server/main.go#L553)),
+    frontend RepairScreen + DisassembleScreen.
+  - **Battlestats** — закрыт планом
+    [72.1.10](plans/72.1.10-battlestats-filters.md) + waves 2/3
+    (плана 72.1.50 ч.2/5): backend `internal/battlereport/` (ListMine
+    с 11 фильтрами, sort 7 полей, JOIN planets для planet_name),
+    route [`GET /users/me/battles`](../projects/game-nova/backend/cmd/server/main.go#L547),
+    frontend BattleStatsScreen + BattleReportView.
 
-### [P72.S2.H] Artefact market — DTO без названия артефакта/иконки
-- **Где**: `frontends/origin/src/features/market/MarketScreen.tsx`.
-- **Что упрощено**: `ArtMarketOffer` в openapi содержит только {id,
-  seller_id, unit_id, price, created_at}. Имя артефакта (например,
-  «Знак торговца») и описание/иконка/duration не приходят в offer-list
-  endpoint, поэтому в UI отображаем «Артефакт #unit_id».
-- **Почему**: backend nova `/api/artefact-market/offers` упрощён под
-  legacy-механизм EXT_MODE; обогащение требует JOIN с unit-каталогом или
-  ArtefactCatalog query на каждой строке.
-- **Как чинить**: расширить ArtMarketOffer схемой + добавить join в
-  repo_pgx.go артефактного market.
-- **Приоритет**: L (UX-улучшение, не блокер).
+### [P72.S2.H] — ✅ ЗАКРЫТО планом 72.1.55 Task E
+- **Статус**: ✅ ЗАКРЫТО 2026-05-02.
+- **Что**: имя артефакта в market-offer DTO.
+- **Где закрыто**: backend `Service.WithCatalog` подключает
+  `*config.ArtefactCatalog` (in-memory из configs/artefacts.yml),
+  `resolveUnitName(unit_id)` ищет name в caталоге; `Offer.UnitName`
+  заполняется в `ListOffers` для каждой записи. Frontend
+  MarketScreen рендерит `offer.unit_name` вместо «Артефакт #N»
+  (fallback на «#N» если catalog не подключён).
 
 ### [P72.S2.ALLIANCE_PREFS] — ЗАКРЫТО планом 72.1.54
 - **Статус**: ✅ ЗАКРЫТО 2026-05-02 (план 72.1.54).
@@ -2421,42 +2414,38 @@ unit-тесты на форматтеры/валидаторы/router-маршр
 
 ## 2026-04-28 — План 72 Ф.5 Spring 4 ч.1: communication / notes / search / settings
 
-### [P72.S4.BBCODE] BBCode чата → plain text (отложено в Ф.8)
-- **Где**: `projects/game-nova/frontends/origin/src/features/chat/ChatScreen.tsx`.
-- **Что упрощено**: legacy chat (`templates/standard/chat.tpl`) использовал
-  BBCode-toolbar (`[b]bold[/b]`, `[url]…[/url]`, smileys через
-  jQuery-плагин). В Spring 4 Spring origin-фронта чат рендерит сообщение
-  как `<span style="white-space: pre-wrap">{body}</span>` — без парсинга
-  BBCode и без HTML-render.
-- **Почему**: TipTap-интеграция — отдельная фаза Ф.8 плана 72.
-  Plain-text безопаснее (нет XSS) и приемлем для переходного периода.
-  Существующие BBCode-сообщения из legacy chat_messages таблицы
-  отрендерятся как литералы (`[b]hi[/b]`), что не идеально визуально, но
-  не ломает UX.
-- **Как чинить**: Ф.8 плана 72 — TipTap RichTextEditor + санитайзер
-  на backend (см. план 57 mail-service для аналогичной задачи).
-- **Приоритет**: M (визуальная косметика, функционально чат работает).
+### [P72.S4.BBCODE] — ✅ ЗАКРЫТО планами 72.1.19 + 72.1.55 Task F
+- **Статус**: ✅ ЗАКРЫТО 2026-05-02.
+- **Что**: BBCode parsing + toolbar в чате.
+- **Где закрыто**:
+  - 72.1.19: read-side `renderBBCode` (parser для `[b]/[i]/[u]/[s]/
+    [color]/[url]/[img]/[:emoji:]`), SAFE-whitelist без
+    dangerouslySetInnerHTML.
+  - 72.1.55 Task F: write-side toolbar — компонент
+    `BBCodeToolbar.tsx` с 7 кнопками (B/I/U/S/color/url/img) +
+    emoji-picker (12 emoji). Использует HTML5 textarea
+    selectionStart/End API без TipTap (без зависимостей).
+    ChatScreen заменил `<input type="text">` на `<textarea>` с
+    Enter-submit (Shift+Enter — перенос).
 
-### [P72.S4.SETTINGS] Settings экран не реализует legacy-only поля
-- **Где**: `projects/game-nova/frontends/origin/src/features/settings/SettingsScreen.tsx`.
-- **Что упрощено**: legacy `templates/standard/preferences.tpl` (176 строк)
-  включал поля `templatepackage`, `skin_type`, `user_bg_style`,
-  `user_table_style`, `imagepackage`, `show_all_constructions`,
-  `show_all_research`, `show_all_shipyard`, `show_all_defense`,
-  `planetorder`, `esps`, `ipcheck`. В origin-фронте оставлены только
-  поля, поддерживаемые backend-эндпоинтом `/api/settings`: `email`,
-  `language`, `timezone`, плюс смена пароля (через identity-service)
-  и удаление аккаунта по коду.
-- **Почему**: legacy-only поля — это настройки legacy-PHP темы и
-  персонификации, которые не имеют смысла в pixel-perfect клонe origin
-  (стиль зашит в legacy CSS-классы `.ntable` / `.idiv`). `show_all_*`
-  / `planetorder` — не реализовано в backend (нет соответствующих
-  колонок в users), реализация = новая backend-фича, не «pixel-perfect
-  клон».
-- **Как чинить (если понадобится)**: добавить эти настройки сначала
-  в backend (миграция + handler), затем в origin-фронт. Не блокирует
-  Ф.5 ч.1, не входит в scope Ф.5 ч.2 — TBD при необходимости.
-- **Приоритет**: L (legacy-only косметика).
+### [P72.S4.SETTINGS] — частично закрыто (7 из 12 полей) 72.1.55 Task I
+- **Статус**: ⚠ split: 7 реализованы в 72.1.55 Task I; 5 остаются
+  как архитектурное упрощение (legacy-PHP темы).
+- **Реализовано (7 полей, 72.1.55 Task I)**:
+  миграция 0097 +7 колонок в `users`:
+    - `show_all_constructions/research/shipyard/defense` (4 bool, default true)
+    - `planetorder` (smallint 0..2: date / name / coords)
+    - `esps` (bool, default true): расширенные шпионские отчёты
+    - `ipcheck` (bool, default false): уведомление о логине с другого IP
+  Backend: settings handler GET/PUT расширен. Frontend: 7 чекбоксов/select
+  в SettingsScreen. **Effects** (применение этих preferences на UI/backend)
+  — отдельные подпланы 72.1.55.* по мере необходимости.
+- **НЕ реализовано (5 полей, архитектурно упрощено)**:
+  `templatepackage`, `skin_type`, `user_bg_style`, `user_table_style`,
+  `imagepackage` — это настройки **legacy-PHP-тем** (выбор картинок/CSS
+  пакетов). У nova другая фронтенд-архитектура (React + CSS modules,
+  единый `.ntable`/`.idiv`/`.button` стиль). Реализация требует
+  multi-theme систему — отдельный эпик при необходимости.
 
 ### [P72.S4.MSG_TO] OpenAPI POST /api/messages: исправлено поле `to_username` → `to`
 - **Где**: `projects/game-nova/api/openapi.yaml`.
@@ -2557,28 +2546,31 @@ unit-тесты на форматтеры/валидаторы/router-маршр
   использует portal-backend, отсюда фиксация в simplifications).
 - **Приоритет**: closed.
 
-### [P72.S4.OFFICER_NO_BALANCE_FETCH] Officer-экран не показывает текущий баланс кредитов
-- **Где**: `projects/game-nova/frontends/origin/src/features/officer/
-  OfficerScreen.tsx`.
-- **Что**: legacy officer.tpl показывает кнопку «Нанять» и стоимость,
-  но не текущий баланс (баланс — в шапке legacy). nova-фронт
-  OfficersScreen отдельно фетчит /api/artefact-market/credit для
-  показа баланса. В origin-фронте баланс кредитов в Spring 4 ч.2
-  не рендерим — он будет доступен в шапке (header) когда финализируем
-  AppShell-header в Ф.9.
-- **Почему**: pixel-perfect зеркало legacy не требует баланс прямо в
-  таблице офицеров. Дополнительный fetch + дублирующий UI-блок —
-  отклонение от legacy без явной выгоды.
-- **Trade-off**: minor — игрок видит «Активировать (1000 cr)» но не
-  знает свой баланс прямо сейчас. Workaround — посмотреть в шапке
-  (когда она будет полная) или в /settings.
-- **Как чинить**: после финализации header'а в Ф.9 либо добавить
-  `<span className="balance">` в officer-table thead, если потребуется.
-- **Приоритет**: L.
+### [P72.S4.OFFICER_NO_BALANCE_FETCH] — переклассифицировано (origin = legacy 1:1)
+- **Статус**: ✅ closed 2026-05-02 (план 72.1.55 Task G), не упрощение.
+- **Verify-handsweep**: открыт `templates/standard/officer.tpl` (legacy),
+  подтверждено: legacy officer.tpl **не показывает** баланс кредитов в
+  таблице офицеров (баланс отображается в шапке всех экранов).
+- **Что**: origin OfficerScreen тоже не показывает баланс — это
+  **РОВНО legacy 1:1**. Прежняя классификация записи как «упрощение»
+  была ошибочной — origin = legacy.
+- **Где баланс показывается**: header-шаблон (отдельный экран), то же
+  место что и в legacy.
 
 
-### [P72.1.1.NO_BATTLE_REPORT_FOR_RAIDS] Alien-рейды и экспедиционные бои не пишут battle_reports
+### [P72.1.1.NO_BATTLE_REPORT_FOR_RAIDS] — ✅ ЗАКРЫТО планом 72.1.55 Task H
+- **Статус**: ✅ ЗАКРЫТО 2026-05-02.
+- **Что**: alien-рейды и экспедиционные бои теперь пишут battle_reports.
+- **Где закрыто**: новый helper `battlestats.WriteBattleReport`
+  в [`internal/battlestats/write.go`](../projects/game-nova/backend/internal/battlestats/write.go);
+  3 call sites обновлены (alien.go:280, expedition.go:610, expedition.go:664).
+  Каждый INSERT'ит в battle_reports с has_aliens=true, передаёт reportID
+  в `ApplyBattleResult` — UNIQUE (battle_id, user_id, is_atter) теперь
+  блокирует дубль опыта при event re-process.
 
+---
+
+(Старая запись для истории — закрыта выше.)
 - **Где**: `internal/alien/alien.go`, `internal/fleet/expedition.go`.
 - **Что**: `battlestats.ApplyBattleResult(ctx, tx, report, "")`
   вызывается с пустым `battleID` — у этих сценариев нет записи в

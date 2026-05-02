@@ -31,7 +31,7 @@ import { QK } from '@/api/query-keys';
 import type { AllianceRelation, AllianceRelationStatus } from '@/api/types';
 import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/i18n/i18n';
-import { relationStatusKey, useMyAlliance } from './common';
+import { relationStatusKey, useMyAlliance, hasPerm, findSelfPerms } from './common';
 
 const STATUSES: AllianceRelationStatus[] = [
   'protection',
@@ -95,6 +95,13 @@ export function AllianceDiplomacyScreen() {
 
   const al = my.data.alliance;
   const isOwner = !!userId && userId === al.owner_id;
+  // План 72.1.55 Task D (P72.S2.D 1:1): granular permissions для
+  // не-owner'ов. can_manage_diplomacy резолвит accept/reject/break
+  // диплом-предложений; can_propose_relations — отдельная форма
+  // предложить новые отношения.
+  const selfPerms = findSelfPerms(my.data.members ?? [], userId ?? null);
+  const canManageDip = hasPerm(isOwner, 'can_manage_diplomacy', selfPerms);
+  const canPropose = hasPerm(isOwner, 'can_propose_relations', selfPerms);
   const relations = relsQ.data?.relations ?? [];
 
   return (
@@ -132,7 +139,7 @@ export function AllianceDiplomacyScreen() {
               n={i + 1}
               rel={r}
               myAllianceID={al.id}
-              canAct={isOwner}
+              canAct={canManageDip}
               onAccept={() => accept.mutate(r.initiator_id)}
               onReject={() => rejectFn.mutate(r.initiator_id)}
               onBreak={() => breakFn.mutate(r.initiator_id)}
@@ -141,7 +148,7 @@ export function AllianceDiplomacyScreen() {
         </tbody>
       </table>
 
-      {isOwner && (
+      {canPropose && (
         <form
           method="post"
           onSubmit={(ev) => {

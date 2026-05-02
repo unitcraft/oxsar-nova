@@ -301,7 +301,9 @@ func run() error {
 
 	// План 72.1.42: artmarket теперь использует automsg.Send (i18n
 	// шаблон), bundle нужен на стороне automsg (он уже подключён выше).
-	artMarketSvc := artmarket.NewService(db).WithAutoMsg(automsgSvc)
+	// План 72.1.55 Task E (P72.S2.H 1:1): catalog для resolve unit_id →
+	// unit_name в Offer DTO. Раньше FE рендерил «Артефакт #N».
+	artMarketSvc := artmarket.NewService(db).WithAutoMsg(automsgSvc).WithCatalog(&cat.Artefacts)
 	artMarketH := artmarket.NewHandler(artMarketSvc, rdb)
 
 	// План 68: биржа артефактов (P2P пакетный обмен на оксариты).
@@ -653,6 +655,9 @@ func run() error {
 		pr.Get("/alliances", allianceH.List)
 		pr.Get("/alliances/me", allianceH.My)
 		pr.Get("/alliances/{id}", allianceH.Get)
+		// План 72.1.55 Task B (P72.S2.A 1:1): own applications.
+		pr.Get("/users/me/applications", allianceH.MyApplications)
+		pr.With(idemMW.Wrap).Delete("/users/me/applications/{id}", allianceH.CancelMyApplication)
 		pr.Get("/alliances/{id}/applications", allianceH.Applications)
 		// План 72.1.43: legacy globalMail + updateAllyTag/Name.
 		pr.Post("/alliances/{id}/broadcast", allianceH.BroadcastMail)

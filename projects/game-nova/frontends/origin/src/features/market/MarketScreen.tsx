@@ -99,7 +99,14 @@ export function MarketScreen() {
               <td style={{ width: '1%' }}>#{offer.unit_id}</td>
               <td>
                 <div style={{ width: '100%' }}>
-                  <b>{t('artefacts', 'title')} #{offer.unit_id}</b>
+                  {/* План 72.1.55 Task E (P72.S2.H 1:1): backend resolve
+                      unit_name через catalog. Fallback на «#unit_id»
+                      если catalog пуст или артефакт неизвестен. */}
+                  <b>
+                    {offer.unit_name
+                      ? offer.unit_name
+                      : `${t('artefacts', 'title')} #${offer.unit_id}`}
+                  </b>
                   {offer.seller_name && (
                     <span style={{ marginLeft: 8 }}>· {offer.seller_name}</span>
                   )}

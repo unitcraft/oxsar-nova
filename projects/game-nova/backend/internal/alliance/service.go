@@ -303,6 +303,12 @@ type Member struct {
 	// Очки: legacy memberlist отображает `points` рядом с username.
 	// Источник — users.points (поддерживается score-сервисом).
 	Points float64 `json:"points"`
+	// План 72.1.55 Task D (P72.S2.D 1:1): rank_id + effective_perms
+	// для frontend hasPerm(). Заполняется ТОЛЬКО для self-row (когда
+	// Member.UserID == viewerID), чтобы не утекли permissions других
+	// игроков. Если NULL — фронт fallback'ает на isOwner.
+	RankID         *string         `json:"rank_id,omitempty"`
+	EffectivePerms map[string]bool `json:"effective_perms,omitempty"`
 }
 
 var ErrMemberNotFound = errors.New("alliance: member not found")
@@ -434,7 +440,16 @@ func sanitizeTSQuery(s string) string {
 }
 
 // Get возвращает альянс по ID вместе со списком участников.
-func (s *Service) Get(ctx context.Context, id string) (Alliance, []Member, error) {
+//
+// План 72.1.55 Task C (P72.S2.C 1:1):
+//   - viewerID="" → анонимный/outsider; если alliance.show_member=false,
+//     возвращаем пустой members массив (legacy: «Показывать список членов
+//     всем = нет» — outsider не видит кто в альянсе).
+//   - viewerID — член этого альянса → видит всегда.
+//   - viewerID — outsider/другой альянс — фильтр по show_member.
+//   - ORDER BY members учитывает alliance.memberlist_sort
+//     (0=rank+joined, 1=name, 2=points, 3=joined_at, 4=last_seen).
+func (s *Service) Get(ctx context.Context, id, viewerID string) (Alliance, []Member, error) {
 	var al Alliance
 	err := s.db.Pool().QueryRow(ctx, `
 		SELECT a.id, a.tag, a.name, a.description, a.is_open, a.owner_id,
@@ -457,33 +472,131 @@ func (s *Service) Get(ctx context.Context, id string) (Alliance, []Member, error
 		return Alliance{}, nil, fmt.Errorf("get alliance: %w", err)
 	}
 
+	// План 72.1.55 Task C (P72.S2.C 1:1): show_member фильтрация для
+	// outsider'ов. Viewer считается «своим», если он в этом альянсе
+	// (включая owner). Owner != viewer возможен в анонимном Get.
+	isInsider := false
+	if viewerID != "" {
+		var viewerAlliance *string
+		_ = s.db.Pool().QueryRow(ctx,
+			`SELECT alliance_id FROM users WHERE id=$1`, viewerID).Scan(&viewerAlliance)
+		if viewerAlliance != nil && *viewerAlliance == id {
+			isInsider = true
+		}
+	}
+	if !isInsider && !al.ShowMember {
+		// outsider + show_member=false → пустой массив (legacy 1:1:
+		// memberlist скрыт от чужих).
+		return al, []Member{}, nil
+	}
+
+	// План 72.1.55 Task C: ORDER BY на основе alliance.memberlist_sort.
+	// Owner всегда сверху (legacy: founder rank — pinned).
+	// 0=rank+joined (default), 1=name, 2=points DESC, 3=joined_at,
+	// 4=last_seen DESC.
+	orderBy := "CASE m.rank WHEN 'owner' THEN 0 ELSE 1 END, m.joined_at ASC"
+	switch al.MemberlistSort {
+	case 1:
+		orderBy = "CASE m.rank WHEN 'owner' THEN 0 ELSE 1 END, COALESCE(u.username,'') ASC"
+	case 2:
+		orderBy = "CASE m.rank WHEN 'owner' THEN 0 ELSE 1 END, COALESCE(u.points, 0) DESC"
+	case 3:
+		orderBy = "CASE m.rank WHEN 'owner' THEN 0 ELSE 1 END, m.joined_at DESC"
+	case 4:
+		// last_seen может быть NULL — NULLS LAST для убывающей.
+		orderBy = "CASE m.rank WHEN 'owner' THEN 0 ELSE 1 END, u.last_seen DESC NULLS LAST"
+	}
+
 	// План 72.1.45 §3: добавили u.last_seen + u.points (агрегированный
 	// score из service score.go). legacy memberlist отображает рядом с
 	// username.
+	// План 72.1.55 Task D (P72.S2.D 1:1): SELECT расширен m.rank_id
+	// для self-row resolve effective_perms.
 	rows, err := s.db.Pool().Query(ctx, `
 		SELECT m.user_id, COALESCE(u.username,''), m.rank, m.rank_name, m.joined_at,
 		       u.last_seen,
-		       COALESCE(u.points, 0) AS points
+		       COALESCE(u.points, 0) AS points,
+		       m.rank_id
 		  FROM alliance_members m
 		  JOIN users u ON u.id = m.user_id
 		 WHERE m.alliance_id = $1
-		 ORDER BY
-		    CASE m.rank WHEN 'owner' THEN 0 ELSE 1 END,
-		    m.joined_at ASC
+		 ORDER BY `+orderBy+`
 	`, id)
 	if err != nil {
 		return Alliance{}, nil, fmt.Errorf("get members: %w", err)
 	}
 	defer rows.Close()
 	var members []Member
+	var selfRankID *string
+	var selfBuiltinRank string
 	for rows.Next() {
 		var m Member
-		if err := rows.Scan(&m.UserID, &m.Username, &m.Rank, &m.RankName, &m.JoinedAt, &m.LastSeen, &m.Points); err != nil {
+		if err := rows.Scan(&m.UserID, &m.Username, &m.Rank, &m.RankName, &m.JoinedAt, &m.LastSeen, &m.Points, &m.RankID); err != nil {
 			return Alliance{}, nil, err
+		}
+		// План 72.1.55 Task D: запоминаем rank/rank_id self-row для
+		// последующего resolve effective_perms.
+		if m.UserID == viewerID {
+			selfRankID = m.RankID
+			selfBuiltinRank = m.Rank
 		}
 		members = append(members, m)
 	}
-	return al, members, rows.Err()
+	if err := rows.Err(); err != nil {
+		return al, members, err
+	}
+
+	// План 72.1.55 Task D: resolve effective_perms для self-row.
+	// Owner — все true; member без rank_id — все false; member с
+	// rank_id — читаем permissions JSONB.
+	if viewerID != "" && (selfBuiltinRank == "owner" || selfRankID != nil) {
+		perms, err := s.resolveEffectivePerms(ctx, selfBuiltinRank, selfRankID)
+		if err == nil {
+			for i := range members {
+				if members[i].UserID == viewerID {
+					members[i].EffectivePerms = perms
+					break
+				}
+			}
+		}
+	}
+	return al, members, nil
+}
+
+// resolveEffectivePerms возвращает map[permission_key]bool для
+// текущего viewer. План 72.1.55 Task D (P72.S2.D 1:1).
+//
+// Owner — все true; member без rank_id — все false; member с rank_id —
+// читаем JSONB permissions.
+func (s *Service) resolveEffectivePerms(ctx context.Context, builtinRank string, rankID *string) (map[string]bool, error) {
+	out := make(map[string]bool, len(AllPermissions))
+	if builtinRank == "owner" {
+		for _, p := range AllPermissions {
+			out[string(p)] = true
+		}
+		return out, nil
+	}
+	if rankID == nil {
+		for _, p := range AllPermissions {
+			out[string(p)] = false
+		}
+		return out, nil
+	}
+	var raw []byte
+	if err := s.db.Pool().QueryRow(ctx,
+		`SELECT permissions FROM alliance_ranks WHERE id=$1`, *rankID).Scan(&raw); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			for _, p := range AllPermissions {
+				out[string(p)] = false
+			}
+			return out, nil
+		}
+		return nil, fmt.Errorf("read rank permissions: %w", err)
+	}
+	for _, p := range AllPermissions {
+		out[string(p)] = permissionInJSON(raw, p)
+	}
+	return out, nil
 }
 
 // Create создаёт новый альянс и делает создателя owner'ом.
@@ -1126,6 +1239,60 @@ func (s *Service) Reject(ctx context.Context, ownerID, applicationID string) err
 	return nil
 }
 
+// MyApplication — pending заявка текущего пользователя. План 72.1.55
+// Task B (P72.S2.A 1:1): legacy `ally.tpl` блок «Текущие заявки».
+type MyApplication struct {
+	ID            string    `json:"id"`
+	AllianceID    string    `json:"alliance_id"`
+	AllianceTag   string    `json:"alliance_tag"`
+	AllianceName  string    `json:"alliance_name"`
+	Message       string    `json:"message"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+// MyApplications возвращает все pending заявки текущего пользователя
+// (на какие альянсы он подал, ещё не одобрены).
+func (s *Service) MyApplications(ctx context.Context, userID string) ([]MyApplication, error) {
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT a.id, a.alliance_id, al.tag, al.name, a.message, a.created_at
+		FROM alliance_applications a
+		JOIN alliances al ON al.id = a.alliance_id
+		WHERE a.user_id = $1
+		ORDER BY a.created_at DESC
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("my applications: %w", err)
+	}
+	defer rows.Close()
+	out := []MyApplication{}
+	for rows.Next() {
+		var ap MyApplication
+		if err := rows.Scan(&ap.ID, &ap.AllianceID, &ap.AllianceTag,
+			&ap.AllianceName, &ap.Message, &ap.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, ap)
+	}
+	return out, rows.Err()
+}
+
+// CancelMyApplication — applicant отзывает свою заявку. Только сам
+// applicant может cancel (owner — через Reject). План 72.1.55 Task B
+// (P72.S2.A 1:1): legacy `cancleApplication` action.
+func (s *Service) CancelMyApplication(ctx context.Context, userID, applicationID string) error {
+	tag, err := s.db.Pool().Exec(ctx, `
+		DELETE FROM alliance_applications
+		WHERE id = $1 AND user_id = $2
+	`, applicationID, userID)
+	if err != nil {
+		return fmt.Errorf("cancel application: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrApplicationNotFound
+	}
+	return nil
+}
+
 // Leave удаляет пользователя из альянса. Owner не может выйти
 // (должен сначала передать права или распустить альянс).
 func (s *Service) Leave(ctx context.Context, userID string) error {
@@ -1246,7 +1413,8 @@ func (s *Service) MyAlliance(ctx context.Context, userID string) (*Alliance, []M
 	if allianceID == nil {
 		return nil, nil, nil
 	}
-	al, members, err := s.Get(ctx, *allianceID)
+	// viewer = userID (член своего альянса видит весь memberlist).
+	al, members, err := s.Get(ctx, *allianceID, userID)
 	if err != nil {
 		return nil, nil, err
 	}

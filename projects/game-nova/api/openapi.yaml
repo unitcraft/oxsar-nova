@@ -604,6 +604,54 @@ paths:
                         is_moon_target:   { type: boolean, nullable: true }
                   next_cursor: { type: string, format: date-time, nullable: true }
 
+  /api/users/me/applications:
+    get:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Pending alliance-applications текущего пользователя.
+        План 72.1.55 Task B (P72.S2.A 1:1) — legacy ally.tpl
+        блок «Текущие заявки».
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:             { type: string, format: uuid }
+                        alliance_id:    { type: string, format: uuid }
+                        alliance_tag:   { type: string }
+                        alliance_name:  { type: string }
+                        message:        { type: string }
+                        created_at:     { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/users/me/applications/{id}:
+    delete:
+      tags: [alliances]
+      security: [{ bearerAuth: [] }]
+      summary: |
+        Applicant отзывает свою pending заявку (cancel). Только сам
+        applicant может cancel — owner отзывает через
+        DELETE /api/alliances/applications/{id} (Reject).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: cancelled }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
   /api/battle-reports/{id}:
     get:
       tags: [battle]
@@ -5567,6 +5615,10 @@ components:
         seller_user_id: { type: string, format: uuid }
         seller_name:    { type: string }
         unit_id:        { type: integer }
+        # План 72.1.55 Task E (P72.S2.H 1:1): backend resolve unit_name
+        # из catalog (configs/artefacts.yml). Опционально (пусто, если
+        # catalog не подключён или артефакт удалён).
+        unit_name:      { type: string }
         # План 72.1.42: исправлено price → price_credit, created_at →
         # listed_at (соответствует реальному backend ответу).
         price_credit:   { type: integer, format: int64 }

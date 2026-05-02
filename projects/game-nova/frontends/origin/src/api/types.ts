@@ -216,6 +216,11 @@ export interface AllianceMember {
   // План 72.1.45 §3: online-индикатор + очки (legacy memberlist).
   last_seen?: string;
   points?: number;
+  // План 72.1.55 Task D (P72.S2.D 1:1): rank_id + effective_perms
+  // присутствуют ТОЛЬКО для self-row (UserID === viewerID).
+  // Frontend hasPerm() использует effective_perms, fallback на isOwner.
+  rank_id?: string | null;
+  effective_perms?: Record<string, boolean>;
 }
 
 export interface AllianceDetail {
@@ -354,6 +359,9 @@ export interface ArtMarketOffer {
   seller_user_id: string;
   seller_name?: string;
   unit_id: number;
+  // План 72.1.55 Task E (P72.S2.H 1:1): backend resolve unit_name из
+  // catalog (configs/artefacts.yml). Раньше FE рендерил «Артефакт #N».
+  unit_name?: string;
   // План 72.1.42: исправлено имя — backend возвращает price_credit + listed_at + expire_at.
   price_credit: number;
   listed_at: string;
@@ -703,12 +711,28 @@ export interface SettingsResponse {
   language: 'ru' | 'en';
   timezone: string;
   vacation_since: string | null;
+  // План 72.1.55 Task I (P72.S4.SETTINGS subset 1:1).
+  show_all_constructions: boolean;
+  show_all_research: boolean;
+  show_all_shipyard: boolean;
+  show_all_defense: boolean;
+  planet_order: number; // 0=date, 1=name, 2=coords
+  esps: boolean;
+  ipcheck: boolean;
 }
 
 export interface SettingsUpdate {
   email?: string;
   language?: 'ru' | 'en';
   timezone?: string;
+  // План 72.1.55 Task I.
+  show_all_constructions?: boolean;
+  show_all_research?: boolean;
+  show_all_shipyard?: boolean;
+  show_all_defense?: boolean;
+  planet_order?: number;
+  esps?: boolean;
+  ipcheck?: boolean;
 }
 
 export interface DeletionCodeResponse {

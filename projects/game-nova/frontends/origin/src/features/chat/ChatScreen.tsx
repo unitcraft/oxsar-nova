@@ -30,6 +30,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/i18n/i18n';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { renderBBCode } from './bbcode';
+import { BBCodeToolbar } from './BBCodeToolbar';
 
 const EDIT_WINDOW_MS = 5 * 60 * 1000;
 
@@ -52,6 +53,8 @@ export function ChatScreen({ kind }: ChatProps) {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
+  // План 72.1.55 Task F (P72.S4.BBCODE 1:1): ref для BBCodeToolbar.
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [wsOk, setWsOk] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState('');
@@ -301,13 +304,31 @@ export function ChatScreen({ kind }: ChatProps) {
         <tr>
           <td colSpan={2}>
             <form onSubmit={onSubmit}>
-              <input
-                type="text"
+              {/* План 72.1.55 Task F (P72.S4.BBCODE 1:1): toolbar
+                  для вставки [b]/[i]/[u]/[s]/url/img/color/смайлов. */}
+              <BBCodeToolbar
+                textareaRef={textareaRef}
+                onChange={setInput}
+                disabled={sendMut.isPending}
+              />
+              <textarea
+                ref={textareaRef}
                 value={input}
                 maxLength={500}
                 placeholder={t('chat', 'inputPlaceholder')}
                 onChange={(e) => setInput(e.target.value)}
-                style={{ width: '70%' }}
+                onKeyDown={(e) => {
+                  // Enter без Shift = submit (как одной строкой; Shift+Enter
+                  // даёт перенос).
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (input.trim() && !sendMut.isPending) {
+                      onSubmit(e as unknown as React.FormEvent);
+                    }
+                  }
+                }}
+                style={{ width: '70%', minHeight: '2.4em', resize: 'vertical' }}
+                rows={2}
               />{' '}
               <button
                 type="submit"

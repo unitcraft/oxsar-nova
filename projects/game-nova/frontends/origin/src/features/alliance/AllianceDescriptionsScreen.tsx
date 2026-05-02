@@ -17,7 +17,7 @@ import type { ApiError } from '@/api/client';
 import { QK } from '@/api/query-keys';
 import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/i18n/i18n';
-import { useMyAlliance } from './common';
+import { useMyAlliance, hasPerm, findSelfPerms } from './common';
 
 type Tab = 'external' | 'internal' | 'apply';
 
@@ -70,11 +70,11 @@ export function AllianceDescriptionsScreen() {
 
   const al = my.data.alliance;
   const isOwner = !!userId && userId === al.owner_id;
-  // can_change_description проверяется бэкендом; UI открывает форму
-  // владельцу сразу, прочим — только если viewer === 'member' с правом
-  // (rank_id с бэка пока не приходит — план 67 simplifications.md
-  // P67.S5.B). На UI здесь — только owner, иначе read-only.
-  const canEdit = isOwner;
+  // План 72.1.55 Task D (P72.S2.D 1:1): backend теперь возвращает
+  // effective_perms на self-Member DTO. Используем findSelfPerms
+  // для получения permission map; hasPerm() резолвит owner-shortcut.
+  const selfPerms = findSelfPerms(my.data.members ?? [], userId ?? null);
+  const canEdit = hasPerm(isOwner, 'can_change_description', selfPerms);
 
   return (
     <>

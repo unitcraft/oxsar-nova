@@ -80,6 +80,9 @@ alliance:
   memberOnline: Activity
   memberPoints: Points
   candidateCoords: Coords
+  # План 72.1.55 Task B (P72.S2.A 1:1): own applications.
+  myApplications: ""
+  cancelApplicationConfirm: ""
   # План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy updateAllyPrefs.
   preferences: ""
   logoUrl: ""
@@ -884,6 +887,18 @@ settings:
   langRu: Русский
   langEn: English
   labelTimezone: Timezone
+  # План 72.1.55 Task I (P72.S4.SETTINGS subset 1:1).
+  prefsTitle: ""
+  showAllConstructions: ""
+  showAllResearch: ""
+  showAllShipyard: ""
+  showAllDefense: ""
+  planetOrder: ""
+  planetOrderDate: ""
+  planetOrderName: ""
+  planetOrderCoords: ""
+  esps: ""
+  ipcheck: ""
   sectionSecurity: Security
   labelCurrentPw: Current password
   labelNewPw: New password
@@ -1453,6 +1468,17 @@ chat:
   emojiTitle: Emoji
   inputPlaceholder: "Message… (Enter to send)"
   sendBtn: Send
+  # План 72.1.55 Task F (P72.S4.BBCODE 1:1): toolbar buttons.
+  bbBold: ""
+  bbItalic: ""
+  bbUnderline: ""
+  bbStrike: ""
+  bbColor: ""
+  bbUrl: ""
+  bbImg: ""
+  urlPrompt: ""
+  imgPrompt: ""
+  colorPrompt: ""
 
 empire:
   title: Empire

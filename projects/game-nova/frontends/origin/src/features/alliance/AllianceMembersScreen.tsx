@@ -15,7 +15,7 @@ import type { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/i18n/i18n';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
-import { useMyAlliance } from './common';
+import { useMyAlliance, hasPerm, findSelfPerms } from './common';
 
 export function AllianceMembersScreen() {
   const { t } = useTranslation();
@@ -37,7 +37,10 @@ export function AllianceMembersScreen() {
 
   const al = my.data.alliance;
   const members = my.data.members;
-  const canKick = !!userId && userId === al.owner_id;
+  // План 72.1.55 Task D (P72.S2.D 1:1): granular can_kick.
+  const isOwner = !!userId && userId === al.owner_id;
+  const selfPerms = findSelfPerms(my.data.members ?? [], userId ?? null);
+  const canKick = hasPerm(isOwner, 'can_kick', selfPerms);
   // План 72.1.45 §3: online + points → 6 колонок (5/6 без kick/с).
   const colspan = canKick ? 6 : 5;
 

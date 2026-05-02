@@ -11,6 +11,7 @@ import type { AllianceDetail } from '@/api/types';
 export {
   PERMISSION_KEYS,
   hasPerm,
+  findSelfPerms,
   relationStatusKey,
 } from './permissions';
 
