@@ -16135,3 +16135,44 @@ not-a-fix + BA-019 mitigated.
 
   Коммит: feat(api+server): план 72.1.50 ч.4B — idempotency rollout
   social+fleet+planet (29 routes + 11 openapi endpoints).
+
+Итерация 2026-05-02 (вечер) — план 72.1.50 ч.5 (battlestats wave 3):
+
+  Финальное закрытие /battlestats: добавлен 7-й sort-поле
+  `planet_name` (legacy 1:1).
+
+  Verify-handsweep: ожидалась миграция target_planet_id колонки +
+  backfill в attack/acs/expedition INSERT'ах. Реальность —
+  battle_reports.planet_id уже есть с миграции 0009, attack.go:796 +
+  acs_attack.go:409 её заполняют. Миграция не нужна, scope — JOIN +
+  SQL refactor + DTO расширение.
+
+  Backend (battlereport/handler.go):
+  - SQL ListMine получил LEFT JOIN planets p ON p.id = b.planet_id.
+  - Все WHERE-условия префиксированы b. (устранение ambiguity:
+    is_moon, galaxy, system, position есть в обеих таблицах).
+  - sortClause whitelist 6 → 7 полей (+ planet_name → p.name).
+  - DTO ListItem +5 nullable полей: PlanetName, Galaxy, System,
+    Position, IsMoonTarget.
+
+  Tests: handler_test обновлён (b.-префиксы), +2 кейса planet_name.
+  16 → 18 кейсов. Backend go test зелёный.
+
+  OpenAPI:
+  - sort_field enum +planet_name (7 значений).
+  - Battle item schema +5 nullable полей.
+
+  Frontend:
+  - api/battles.ts: BattleListItem +5 полей, sort_field type +planet_name.
+  - BattleStatsScreen.tsx: 7-й option в select; в строке оппонента
+    рендерится `🌙 planet_name [g:s:p]` под именем (legacy 1:1).
+  - i18n: statistics.bsSortPlanetName (ru: «по планете»).
+
+  Tests: tsc чистый, vitest 133/133.
+
+  72.1.2 финальный snapshot: 39 ✅ + 1 🚧 (Payment) + 1 backlog
+  (openapi coverage gap, 24 endpoint'а вне спеки). /battlestats
+  полностью закрыт.
+
+  Коммит: feat(battlereport): план 72.1.50 ч.5 (72.1.10 wave 3) —
+  planet_name sort + JOIN planets.

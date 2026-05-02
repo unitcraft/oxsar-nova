@@ -79,25 +79,31 @@ func TestClampDateRange_Inverted_Swapped(t *testing.T) {
 }
 
 func TestSortClause_AllFields(t *testing.T) {
+	// План 72.1.50 ч.5 (72.1.10 wave 3): SQL получил JOIN planets,
+	// поэтому col-фрагменты префиксированы `b.` (battle_reports) или
+	// `p.` (planets).
 	cases := []struct {
 		field, order string
 		wantCol      string
 		wantDir      string
 	}{
-		{"", "", "at", "DESC"},
-		{"date", "", "at", "DESC"},
-		{"date", "asc", "at", "ASC"},
-		{"rounds", "desc", "rounds", "DESC"},
-		{"debris", "asc", "(debris_metal + debris_silicon)", "ASC"},
-		{"loot", "desc", "(loot_metal + loot_silicon + loot_hydrogen)", "DESC"},
-		{"outcome", "asc", "winner", "ASC"},
-		{"moon", "desc", "is_moon", "DESC"},
-		// Неизвестное поле → дефолт `at`.
-		{"unknown", "asc", "at", "ASC"},
+		{"", "", "b.at", "DESC"},
+		{"date", "", "b.at", "DESC"},
+		{"date", "asc", "b.at", "ASC"},
+		{"rounds", "desc", "b.rounds", "DESC"},
+		{"debris", "asc", "(b.debris_metal + b.debris_silicon)", "ASC"},
+		{"loot", "desc", "(b.loot_metal + b.loot_silicon + b.loot_hydrogen)", "DESC"},
+		{"outcome", "asc", "b.winner", "ASC"},
+		{"moon", "desc", "b.is_moon", "DESC"},
+		// План 72.1.50 ч.5 wave 3: planet_name → planets.name (через JOIN).
+		{"planet_name", "asc", "p.name", "ASC"},
+		{"planet_name", "desc", "p.name", "DESC"},
+		// Неизвестное поле → дефолт `b.at`.
+		{"unknown", "asc", "b.at", "ASC"},
 		// SQL-инъекция через field — должна быть проигнорирована (whitelist).
-		{"; DROP TABLE users;--", "asc", "at", "ASC"},
+		{"; DROP TABLE users;--", "asc", "b.at", "ASC"},
 		// Неизвестное направление → DESC.
-		{"date", "ascending", "at", "DESC"},
+		{"date", "ascending", "b.at", "DESC"},
 	}
 	for _, c := range cases {
 		col, dir := sortClause(c.field, c.order)

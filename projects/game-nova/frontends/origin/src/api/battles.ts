@@ -20,6 +20,14 @@ export interface BattleListItem {
   loot_hydrogen: number;
   is_attacker: boolean;
   at: string;
+  // План 72.1.50 ч.5 (72.1.10 wave 3): координаты + название
+  // target-планеты через JOIN battle_reports.planet_id → planets.
+  // null для экспедиции / legacy записей.
+  planet_name?: string | null;
+  galaxy?: number | null;
+  system?: number | null;
+  position?: number | null;
+  is_moon_target?: boolean | null;
 }
 
 export interface BattleListResult {
@@ -45,7 +53,8 @@ export interface BattleListFilters {
   new_moon?: boolean;
   moon_battle?: boolean;
   // План 72.1.10 wave 2: backend whitelist расширен outcome+moon.
-  sort_field?: 'date' | 'rounds' | 'debris' | 'loot' | 'outcome' | 'moon';
+  // План 72.1.10 wave 3: добавлен planet_name (через JOIN planets).
+  sort_field?: 'date' | 'rounds' | 'debris' | 'loot' | 'outcome' | 'moon' | 'planet_name';
   sort_order?: 'asc' | 'desc';
 }
 
