@@ -502,24 +502,27 @@ func run() error {
 		pr.Get("/planets/{id}/forecast", planetH.Forecast)
 
 		pr.Get("/planets/{id}/buildings", buildingH.Levels)
-		pr.Post("/planets/{id}/buildings", buildingH.Enqueue)
+		// План 72.1.50 ч.4 (rollout 77 Ф.3.2): все мутирующие
+		// builds/research/shipyard/repair endpoint'ы оборачиваются в
+		// idemMW.Wrap — фронт уже шлёт Idempotency-Key для каждого.
+		pr.With(idemMW.Wrap).Post("/planets/{id}/buildings", buildingH.Enqueue)
 		pr.Get("/planets/{id}/buildings/queue", buildingH.List)
-		pr.Delete("/planets/{id}/buildings/queue/{taskId}", buildingH.Cancel)
+		pr.With(idemMW.Wrap).Delete("/planets/{id}/buildings/queue/{taskId}", buildingH.Cancel)
 		// План 72.1.44 cross-cut: VIP-instant старт стройки.
-		pr.Post("/planets/{id}/buildings/queue/{taskId}/vip", buildingH.StartVIP)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/buildings/queue/{taskId}/vip", buildingH.StartVIP)
 		// План 72.1.33: legacy BuildingInfo::DEMOLISH_NOW.
-		pr.Post("/planets/{id}/buildings/{unitId}/demolish", buildingH.Demolish)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/buildings/{unitId}/demolish", buildingH.Demolish)
 		// План 72.1.33 ч.2: legacy BuildingInfo::PackConstruction +
 		// PackResearch — упаковка здания/исследования в packed-артефакт.
-		pr.Post("/planets/{id}/buildings/{unitId}/pack", artefactH.PackBuilding)
-		pr.Post("/planets/{id}/research/{unitId}/pack", artefactH.PackResearch)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/buildings/{unitId}/pack", artefactH.PackBuilding)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/research/{unitId}/pack", artefactH.PackResearch)
 
-		pr.Post("/planets/{id}/research", researchH.Enqueue)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/research", researchH.Enqueue)
 		pr.Get("/research", researchH.List)
 		// План 72.1.39: legacy `Research::abort` — отмена с refund.
-		pr.Delete("/research/{queueId}", researchH.Cancel)
+		pr.With(idemMW.Wrap).Delete("/research/{queueId}", researchH.Cancel)
 		// План 72.1.44 cross-cut: VIP-instant старт исследования.
-		pr.Post("/research/{queueId}/vip", researchH.StartVIP)
+		pr.With(idemMW.Wrap).Post("/research/{queueId}/vip", researchH.StartVIP)
 
 		// План 72.1.49: anti-double-submit через Idempotency-Key
 		// (legacy `Shipyard.class.php:382` использовал 5-сек acquireLock).
@@ -530,9 +533,9 @@ func run() error {
 		pr.Get("/planets/{id}/shipyard/inventory", shipyardH.Inventory)
 		// План 72.1.41: legacy `Shipyard` capacity-info (freeShield/Rocket).
 		pr.Get("/planets/{id}/shipyard/capacity", shipyardH.Capacity)
-		pr.Delete("/planets/{id}/shipyard/{queueId}", shipyardH.Cancel)
+		pr.With(idemMW.Wrap).Delete("/planets/{id}/shipyard/{queueId}", shipyardH.Cancel)
 		// План 72.1.44 cross-cut: VIP-instant старт shipyard-задачи.
-		pr.Post("/planets/{id}/shipyard/{queueId}/vip", shipyardH.StartVIP)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/shipyard/{queueId}/vip", shipyardH.StartVIP)
 
 		pr.Post("/simulator/run", simulatorH.Run)
 
@@ -546,21 +549,21 @@ func run() error {
 		pr.With(idemMW.Wrap).Post("/planets/{id}/repair/repair", repairH.EnqueueRepair)
 		pr.Get("/planets/{id}/repair/damaged", repairH.ListDamaged)
 		pr.Get("/planets/{id}/repair/queue", repairH.List)
-		pr.Delete("/planets/{id}/repair/queue/{queueId}", repairH.Cancel)
+		pr.With(idemMW.Wrap).Delete("/planets/{id}/repair/queue/{queueId}", repairH.Cancel)
 		// План 72.1.25: VIP-старт за credit (legacy startEventVIP).
-		pr.Post("/planets/{id}/repair/queue/{queueId}/vip", repairH.StartVIP)
+		pr.With(idemMW.Wrap).Post("/planets/{id}/repair/queue/{queueId}/vip", repairH.StartVIP)
 
 		pr.Get("/artefacts", artefactH.List)
-		pr.Post("/artefacts/{id}/activate", artefactH.Activate)
-		pr.Post("/artefacts/{id}/deactivate", artefactH.Deactivate)
-		pr.Post("/artefacts/{id}/sell", artMarketH.ListForSale)
+		pr.With(idemMW.Wrap).Post("/artefacts/{id}/activate", artefactH.Activate)
+		pr.With(idemMW.Wrap).Post("/artefacts/{id}/deactivate", artefactH.Deactivate)
+		pr.With(idemMW.Wrap).Post("/artefacts/{id}/sell", artMarketH.ListForSale)
 		// План 72.1.45 §2: история приобретений артефакта (legacy ArtefactInfo).
 		pr.Get("/artefacts/info/{unitId}/history", artefactH.History)
 
 		pr.Get("/artefact-market/offers", artMarketH.Offers)
 		pr.Get("/artefact-market/credit", artMarketH.Credit)
-		pr.Post("/artefact-market/offers/{id}/buy", artMarketH.Buy)
-		pr.Delete("/artefact-market/offers/{id}", artMarketH.Cancel)
+		pr.With(idemMW.Wrap).Post("/artefact-market/offers/{id}/buy", artMarketH.Buy)
+		pr.With(idemMW.Wrap).Delete("/artefact-market/offers/{id}", artMarketH.Cancel)
 
 		// План 68: биржа артефактов (player-to-player пакетный обмен).
 		exchangeH.Routes(pr)
@@ -572,11 +575,11 @@ func run() error {
 		pr.Post("/daily-quests/{id}/claim", dailyQuestH.Claim)
 
 		pr.Get("/officers", officerH.List)
-		pr.Post("/officers/{key}/activate", officerH.Activate)
+		pr.With(idemMW.Wrap).Post("/officers/{key}/activate", officerH.Activate)
 
 		pr.Get("/professions", professionH.List)
 		pr.Get("/professions/me", professionH.Get)
-		pr.Post("/professions/me", professionH.Change)
+		pr.With(idemMW.Wrap).Post("/professions/me", professionH.Change)
 
 		pr.Post("/ai-advisor/ask", aiAdvisorH.Ask)
 		pr.Get("/ai-advisor/estimate", aiAdvisorH.Estimate)

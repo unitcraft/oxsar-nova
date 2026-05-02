@@ -384,11 +384,15 @@ paths:
       tags: [buildings]
       security: [{ bearerAuth: [] }]
       summary: Enqueue a building upgrade
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4 /
+        77 Ф.3.2 rollout).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -407,7 +411,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/planets/{id}/buildings/queue:
     get:
@@ -436,6 +440,8 @@ paths:
       tags: [buildings]
       security: [{ bearerAuth: [] }]
       summary: Cancel queued building
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4).
       parameters:
         - in: path
           name: id
@@ -445,20 +451,25 @@ paths:
           name: taskId
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "204": { description: cancelled }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/planets/{id}/research:
     post:
       tags: [research]
       security: [{ bearerAuth: [] }]
       summary: Start a research on a planet
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -477,7 +488,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/users/me/battles:
     get:
@@ -695,11 +706,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409":
-          description: Idempotency-Key reuse with different body
-          content:
-            text/plain:
-              schema: { type: string }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/planets/{id}/shipyard/queue:
     get:
@@ -795,11 +802,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409":
-          description: Idempotency-Key reuse with different body
-          content:
-            text/plain:
-              schema: { type: string }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/planets/{id}/repair/repair:
     post:
@@ -835,11 +838,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "409":
-          description: Idempotency-Key reuse with different body
-          content:
-            text/plain:
-              schema: { type: string }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/planets/{id}/repair/damaged:
     get:
@@ -913,11 +912,14 @@ paths:
       tags: [artefacts]
       security: [{ bearerAuth: [] }]
       summary: Activate an artefact from inventory
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "200":
           description: ok
@@ -927,21 +929,25 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "409": { $ref: "#/components/responses/Conflict" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/artefacts/{id}/deactivate:
     post:
       tags: [artefacts]
       security: [{ bearerAuth: [] }]
       summary: Deactivate an active artefact (revert its effect)
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "204": { description: deactivated }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/galaxy/{g}/{s}:
     get:
@@ -1581,6 +1587,7 @@ paths:
               schema: { $ref: "#/components/schemas/Officer" }
         "402": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/market/rates:
     get:
@@ -2357,11 +2364,14 @@ paths:
       tags: [artefacts]
       security: [{ bearerAuth: [] }]
       summary: Выставить артефакт на рынок (создаёт offer).
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -2374,6 +2384,7 @@ paths:
       responses:
         "201": { description: offer created }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/artefact-market/offers:
     get:
@@ -2412,30 +2423,38 @@ paths:
       tags: [artmarket]
       security: [{ bearerAuth: [] }]
       summary: Купить артефакт с рынка.
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "200": { description: bought }
         "400": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/artefact-market/offers/{id}:
     delete:
       tags: [artmarket]
       security: [{ bearerAuth: [] }]
       summary: Снять артефакт с продажи.
+      description: |
+        Anti-double-submit через Idempotency-Key (план 72.1.50 ч.4).
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
         "204": { description: cancelled }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/i18n:
     get:
@@ -3574,6 +3593,7 @@ paths:
       responses:
         "204": { description: changed }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
   /api/settings:
     get:
@@ -3713,6 +3733,16 @@ components:
     Conflict:
       description: conflict
       content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+    # План 72.1.50 ч.4 (rollout 77 Ф.3.2): фиксированный 409 от
+    # idempotency-middleware. Возвращается plain text "Idempotency-Key
+    # reuse with different body" — middleware пишет именно его при
+    # повторном POST с тем же Idempotency-Key, но изменившимся body
+    # (баг клиента, RFC Idempotency-Key).
+    IdempotencyConflict:
+      description: Idempotency-Key reuse with different body
+      content:
+        text/plain:
+          schema: { type: string }
 
   schemas:
     Status:
