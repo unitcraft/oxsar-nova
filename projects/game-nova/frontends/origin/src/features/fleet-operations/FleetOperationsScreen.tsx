@@ -300,6 +300,20 @@ function FleetRow({
         <td className="center">{total}</td>
         <td>
           {stateLabel} · {formatDuration(secondsUntil(arrival))}
+          {/* План 72.1.48: badge остатка контролей и H-резерва. */}
+          {isHold && fleet.max_control_times != null && fleet.max_control_times > 0 && (
+            <div style={{ fontSize: 'smaller', color: '#888' }}>
+              {t('fleet', 'controlsLeft') || 'Контролей'}:{' '}
+              {Math.max(0, (fleet.max_control_times ?? 0) - (fleet.control_times ?? 0))}
+              /{fleet.max_control_times}
+              {fleet.back_consumption != null && fleet.back_consumption > 0 && (
+                <>
+                  {' · '}
+                  {t('fleet', 'returnReserveH') || 'Резерв H'}: {fleet.back_consumption}
+                </>
+              )}
+            </div>
+          )}
         </td>
         <td className="center">
           {fleet.state === 'outbound' && (

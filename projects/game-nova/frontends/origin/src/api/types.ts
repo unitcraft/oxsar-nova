@@ -170,6 +170,10 @@ export interface Fleet {
   ships: Record<string, number>;
   // План 72.1.48: ACS-formation. У ACS-флотов привязано к acs_groups.
   acs_group_id?: string;
+  // План 72.1.48 (доделка): rate-limit на load/unload + резерв H на возврат.
+  control_times?: number;
+  max_control_times?: number;
+  back_consumption?: number;
 }
 
 export interface FleetList {
