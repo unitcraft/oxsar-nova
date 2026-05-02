@@ -577,7 +577,8 @@ func run() error {
 
 		// План 17 D: daily quests.
 		pr.Get("/daily-quests", dailyQuestH.List)
-		pr.Post("/daily-quests/{id}/claim", dailyQuestH.Claim)
+		// План 72.1.50 ч.4 verify: daily-quests claim списывает ресурсы / выдаёт credit — нужен дедуп.
+		pr.With(idemMW.Wrap).Post("/daily-quests/{id}/claim", dailyQuestH.Claim)
 
 		pr.Get("/officers", officerH.List)
 		pr.With(idemMW.Wrap).Post("/officers/{key}/activate", officerH.Activate)
@@ -671,6 +672,10 @@ func run() error {
 		// План 67 Ф.2: расширения (3 описания, ranks CRUD, kick, audit).
 		pr.Get("/alliances/{id}/descriptions", allianceH.GetDescriptions)
 		pr.Patch("/alliances/{id}/descriptions", allianceH.UpdateDescriptions)
+		// План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy
+		// `Alliance.class.php:979 updateAllyPrefs` — logo/homepage/
+		// foundername/show_member/show_homepage/memberlist_sort.
+		pr.Patch("/alliances/{id}/prefs", allianceH.UpdatePrefs)
 		pr.Get("/alliances/{id}/ranks", allianceH.ListRanks)
 		pr.Post("/alliances/{id}/ranks", allianceH.CreateRank)
 		pr.Patch("/alliances/{id}/ranks/{rank_id}", allianceH.UpdateRank)

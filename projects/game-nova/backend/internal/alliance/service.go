@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -242,6 +243,14 @@ var (
 	ErrCannotKickOwner   = errors.New("alliance: cannot kick the owner")
 	ErrCannotKickSelf    = errors.New("alliance: use leave to remove yourself")
 	ErrDescriptionTooLong = errors.New("alliance: description too long")
+	// План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy
+	// `Alliance.class.php:979 updateAllyPrefs` validation errors.
+	ErrLogoTooLong         = errors.New("alliance: logo URL too long (max 128)")
+	ErrLogoInvalid         = errors.New("alliance: logo must be valid http(s) image URL")
+	ErrHomepageTooLong     = errors.New("alliance: homepage URL too long (max 128)")
+	ErrHomepageInvalid     = errors.New("alliance: homepage must be valid http(s) URL")
+	ErrFoundernameTooLong  = errors.New("alliance: foundername too long (max 64)")
+	ErrMemberlistSortRange = errors.New("alliance: memberlist_sort out of range (0..4)")
 )
 
 // Alliance — полная запись для UI.
@@ -255,6 +264,14 @@ type Alliance struct {
 	OwnerName   string    `json:"owner_name"`
 	MemberCount int       `json:"member_count"`
 	CreatedAt   time.Time `json:"created_at"`
+	// План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy `updateAllyPrefs`
+	// поля. nullable где legacy позволяет очистить.
+	Logo            *string `json:"logo,omitempty"`
+	Homepage        *string `json:"homepage,omitempty"`
+	Foundername     *string `json:"foundername,omitempty"`
+	ShowMember      bool    `json:"show_member"`
+	ShowHomepage    bool    `json:"show_homepage"`
+	MemberlistSort  int16   `json:"memberlist_sort"`
 }
 
 // Application — заявка на вступление в альянс.
@@ -323,7 +340,9 @@ func (s *Service) List(ctx context.Context, f ListFilters) ([]Alliance, error) {
 		SELECT a.id, a.tag, a.name, a.description, a.is_open, a.owner_id,
 		       COALESCE(u.username,'') AS owner_name,
 		       COUNT(m.user_id)        AS member_count,
-		       a.created_at
+		       a.created_at,
+		       a.logo, a.homepage, a.foundername,
+		       a.show_member, a.show_homepage, a.memberlist_sort
 		FROM alliances a
 		LEFT JOIN users u ON u.id = a.owner_id
 		LEFT JOIN alliance_members m ON m.alliance_id = a.id`
@@ -386,7 +405,9 @@ func (s *Service) List(ctx context.Context, f ListFilters) ([]Alliance, error) {
 	for rows.Next() {
 		var al Alliance
 		if err := rows.Scan(&al.ID, &al.Tag, &al.Name, &al.Description, &al.IsOpen,
-			&al.OwnerID, &al.OwnerName, &al.MemberCount, &al.CreatedAt); err != nil {
+			&al.OwnerID, &al.OwnerName, &al.MemberCount, &al.CreatedAt,
+			&al.Logo, &al.Homepage, &al.Foundername,
+			&al.ShowMember, &al.ShowHomepage, &al.MemberlistSort); err != nil {
 			return nil, err
 		}
 		out = append(out, al)
@@ -419,12 +440,16 @@ func (s *Service) Get(ctx context.Context, id string) (Alliance, []Member, error
 		SELECT a.id, a.tag, a.name, a.description, a.is_open, a.owner_id,
 		       COALESCE(u.username,'') AS owner_name,
 		       (SELECT COUNT(*) FROM alliance_members WHERE alliance_id=a.id),
-		       a.created_at
+		       a.created_at,
+		       a.logo, a.homepage, a.foundername,
+		       a.show_member, a.show_homepage, a.memberlist_sort
 		FROM alliances a
 		LEFT JOIN users u ON u.id = a.owner_id
 		WHERE a.id = $1
 	`, id).Scan(&al.ID, &al.Tag, &al.Name, &al.Description, &al.IsOpen,
-		&al.OwnerID, &al.OwnerName, &al.MemberCount, &al.CreatedAt)
+		&al.OwnerID, &al.OwnerName, &al.MemberCount, &al.CreatedAt,
+		&al.Logo, &al.Homepage, &al.Foundername,
+		&al.ShowMember, &al.ShowHomepage, &al.MemberlistSort)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Alliance{}, nil, ErrNotFound
@@ -538,6 +563,9 @@ func (s *Service) Create(ctx context.Context, ownerID, tag, name, description st
 		out = Alliance{
 			ID: id, Tag: tag, Name: name, Description: description,
 			OwnerID: ownerID, OwnerName: ownerName, MemberCount: 1,
+			// План 72.1.54: defaults совпадают с migration 0096
+			// (show_member/show_homepage=true, memberlist_sort=0).
+			ShowMember: true, ShowHomepage: true, MemberlistSort: 0,
 		}
 		writeAuditTx(ctx, tx, id, ownerID, ActionAllianceCreated, TargetKindAlliance, id,
 			map[string]any{"tag": tag, "name": name})
@@ -692,6 +720,139 @@ func (s *Service) UpdateDescriptions(ctx context.Context, requesterID, allianceI
 		tag, err := tx.Exec(ctx, q, args...)
 		if err != nil {
 			return fmt.Errorf("update descriptions: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+
+		writeAuditTx(ctx, tx, allianceID, requesterID, ActionDescriptionChanged,
+			TargetKindAlliance, allianceID, map[string]any{"fields": keysOf(changed)})
+		return nil
+	})
+}
+
+// UpdatePrefsInput — частичное обновление alliance preferences
+// (legacy `Alliance.class.php:979 updateAllyPrefs`). nil = поле не
+// трогаем; пустая строка для logo/homepage/foundername = очистить.
+//
+// План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1).
+type UpdatePrefsInput struct {
+	Logo            *string // URL ≤128, isValidImageURL
+	Homepage        *string // URL ≤128, isValidURL
+	Foundername     *string // text ≤64
+	ShowMember      *bool   // privacy: показывать memberlist всем
+	ShowHomepage    *bool   // privacy: показывать homepage всем
+	MemberlistSort  *int16  // 0..4 (legacy memberlistsort enum)
+}
+
+// validateImageURL — порт legacy `isValidImageURL($logo)`. Принимает
+// http/https URL с расширением .png/.jpg/.jpeg/.gif/.webp/.svg.
+// Длина проверяется отдельно. Пустая строка — валидна (= очистить).
+func validateImageURL(s string) bool {
+	if s == "" {
+		return true
+	}
+	// http(s)://host/path.ext
+	re := regexp.MustCompile(`^https?://[A-Za-z0-9._/\-:?&=%~+#]+\.(png|jpg|jpeg|gif|webp|svg)(\?[A-Za-z0-9._/\-:&=%~+#]*)?$`)
+	return re.MatchString(s)
+}
+
+// validateURL — порт legacy `isValidURL($homepage)`. http/https,
+// без требования расширения. Пустая строка — валидна.
+func validateURL(s string) bool {
+	if s == "" {
+		return true
+	}
+	re := regexp.MustCompile(`^https?://[A-Za-z0-9._/\-:?&=%~+#]+$`)
+	return re.MatchString(s)
+}
+
+// UpdatePrefs PATCH /api/alliances/{id}/prefs
+//
+// Требует can_change_description (или owner). Поля обновляются
+// независимо. Закрывает legacy gap, ранее задокументированный как
+// `[P72.S2.ALLIANCE_PREFS]` simplification (план 72.1.52 §C).
+func (s *Service) UpdatePrefs(ctx context.Context, requesterID, allianceID string, in UpdatePrefsInput) error {
+	// Валидация (legacy `Alliance.class.php:984-993`).
+	if in.Logo != nil {
+		if utf8.RuneCountInString(*in.Logo) > 128 {
+			return ErrLogoTooLong
+		}
+		if !validateImageURL(*in.Logo) {
+			return ErrLogoInvalid
+		}
+	}
+	if in.Homepage != nil {
+		if utf8.RuneCountInString(*in.Homepage) > 128 {
+			return ErrHomepageTooLong
+		}
+		if !validateURL(*in.Homepage) {
+			return ErrHomepageInvalid
+		}
+	}
+	if in.Foundername != nil && utf8.RuneCountInString(*in.Foundername) > 64 {
+		return ErrFoundernameTooLong
+	}
+	if in.MemberlistSort != nil && (*in.MemberlistSort < 0 || *in.MemberlistSort > 4) {
+		return ErrMemberlistSortRange
+	}
+
+	return s.db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		mem, err := LoadMembership(ctx, tx, requesterID, allianceID)
+		if err != nil {
+			return err
+		}
+		if mem == nil {
+			return ErrNotMember
+		}
+		ok, err := Has(ctx, tx, mem, PermChangeDescription)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return ErrForbidden
+		}
+
+		args := []any{allianceID}
+		set := []string{}
+		changed := map[string]bool{}
+		addStr := func(col string, val *string) {
+			if val == nil {
+				return
+			}
+			args = append(args, *val)
+			set = append(set, col+"=$"+strconv.Itoa(len(args)))
+			changed[col] = true
+		}
+		addBool := func(col string, val *bool) {
+			if val == nil {
+				return
+			}
+			args = append(args, *val)
+			set = append(set, col+"=$"+strconv.Itoa(len(args)))
+			changed[col] = true
+		}
+		addInt16 := func(col string, val *int16) {
+			if val == nil {
+				return
+			}
+			args = append(args, *val)
+			set = append(set, col+"=$"+strconv.Itoa(len(args)))
+			changed[col] = true
+		}
+		addStr("logo", in.Logo)
+		addStr("homepage", in.Homepage)
+		addStr("foundername", in.Foundername)
+		addBool("show_member", in.ShowMember)
+		addBool("show_homepage", in.ShowHomepage)
+		addInt16("memberlist_sort", in.MemberlistSort)
+		if len(set) == 0 {
+			return nil
+		}
+		q := "UPDATE alliances SET " + strings.Join(set, ", ") + " WHERE id=$1"
+		tag, err := tx.Exec(ctx, q, args...)
+		if err != nil {
+			return fmt.Errorf("update prefs: %w", err)
 		}
 		if tag.RowsAffected() == 0 {
 			return ErrNotFound

@@ -322,3 +322,26 @@ export function updateAllianceTagName(
   if (name) payload.name = name;
   return api.patch<void>(`/api/alliances/${allianceID}`, payload);
 }
+
+// План 72.1.54 (P72.S2.ALLIANCE_PREFS 1:1): legacy updateAllyPrefs.
+// Все поля опциональны; nil = не трогаем; пустая строка для
+// logo/homepage/foundername = очистить.
+export interface AlliancePrefsInput {
+  logo?: string | null;
+  homepage?: string | null;
+  foundername?: string | null;
+  show_member?: boolean;
+  show_homepage?: boolean;
+  memberlist_sort?: number;
+}
+
+export function updateAlliancePrefs(
+  allianceID: string,
+  prefs: AlliancePrefsInput,
+): Promise<void> {
+  return api.patch<void>(
+    `/api/alliances/${allianceID}/prefs`,
+    prefs,
+    { idempotencyKey: newIdempotencyKey() },
+  );
+}
