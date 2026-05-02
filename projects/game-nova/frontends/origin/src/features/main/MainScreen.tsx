@@ -25,6 +25,7 @@ import { fetchMe } from '@/api/me';
 import { fetchProfessionMe } from '@/api/profession';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { useTranslation } from '@/i18n/i18n';
 import {
   formatCoords,
@@ -46,6 +47,9 @@ export function MainScreen() {
   // блоком events. Аналог Logger::dieMessage('PLANET_UNDER_ATTACK')
   // в legacy Main.class.php:64-67.
   const [recallErr, setRecallErr] = useState<string | null>(null);
+  // План 72.1.53: in-game confirm-диалог вместо window.confirm
+  // (стилизован под игру, native HTML5 dialog с backdrop).
+  const { confirm, dialogProps } = useConfirm();
 
   // План 72.1.50 / P72.S4.MAIN_RETREAT: legacy `Main.class.php::retreatFleet`
   // (setPostAction "retreat", L.46-70) — кнопка отзыва прямо в строке
@@ -228,10 +232,14 @@ export function MainScreen() {
                       className="btn"
                       style={{ marginLeft: 8 }}
                       disabled={recall.isPending}
-                      onClick={() => {
-                        if (window.confirm(t('fleet', 'recall') + '?')) {
-                          recall.mutate(f.id);
-                        }
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: t('fleet', 'recall'),
+                          message: `${t('fleet', 'recall')}? ${formatCoords(f.dst_galaxy, f.dst_system, f.dst_position)}`,
+                          confirmLabel: t('fleet', 'recall'),
+                          destructive: true,
+                        });
+                        if (ok) recall.mutate(f.id);
                       }}
                       title={t('fleet', 'recall')}
                     >
@@ -385,6 +393,8 @@ export function MainScreen() {
         )}
       </tbody>
     </table>
+    {/* План 72.1.53: in-game confirm-dialog (см. ConfirmDialog.tsx). */}
+    <ConfirmDialog {...dialogProps} />
     </>
   );
 }

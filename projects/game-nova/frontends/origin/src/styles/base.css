@@ -280,3 +280,16 @@ fieldset label {
 .external {
   padding-right: 13px;
 }
+
+/* План 72.1.53: in-game ConfirmDialog (см. features/common/ConfirmDialog.tsx). */
+.game-confirm-dialog {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-family: var(--font-base);
+  font-size: var(--font-size-base);
+}
+.game-confirm-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
