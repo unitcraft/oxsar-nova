@@ -78,6 +78,14 @@ type QueueItem struct {
 // ресурсов: одна заявка не может содержать более 1M юнитов.
 const MaxBuildOrderUnits int64 = 1_000_000
 
+// MaxQueueSize — план 72.1.2 re-audit 2026-05-02: legacy
+// `getMaxCountListShipyard/Defense` (Functions.inc.php:842,853) = 5.
+// Раздельные очереди для ships и defense: каждая ограничена 5 заявками.
+const MaxQueueSize = 5
+
+// ErrQueueFull — превышен лимит заявок в очереди.
+var ErrQueueFull = errors.New("shipyard: queue is full (max 5 active orders per type)")
+
 func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID int, count int64) (QueueItem, error) {
 	if count <= 0 {
 		return QueueItem{}, ErrInvalidCount
@@ -130,6 +138,30 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		// 2. Зависимости юнита.
 		if err := s.reqs.Check(ctx, tx, key, userID, planetID); err != nil {
 			return err
+		}
+
+		// 2a. План 72.1.2 re-audit 2026-05-02: queue size limit
+		// (legacy `getMaxCountListShipyard/Defense=5`, Shipyard.class.php:409).
+		// Очереди раздельные: ships vs defense различаем через event kind
+		// (4=KindBuildFleet, 5=KindBuildDefense). JOIN с events по
+		// payload.queue_id == sq.id::text.
+		expectedKind := int(event.KindBuildFleet)
+		if isDefense {
+			expectedKind = int(event.KindBuildDefense)
+		}
+		var queueCount int
+		if err := tx.QueryRow(ctx, `
+			SELECT COUNT(*)
+			FROM shipyard_queue sq
+			JOIN events e ON e.payload->>'queue_id' = sq.id::text AND e.kind = $2
+			WHERE sq.planet_id = $1
+			  AND sq.status IN ('queued', 'running')
+			  AND e.state = 'wait'
+		`, planetID, expectedKind).Scan(&queueCount); err != nil {
+			return fmt.Errorf("queue size: %w", err)
+		}
+		if queueCount >= MaxQueueSize {
+			return ErrQueueFull
 		}
 
 		// 2b. План 72.1.41: capacity-check для shield/rocket юнитов
