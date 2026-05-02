@@ -48,9 +48,10 @@ export function BattleStatsScreen() {
   const [newMoon, setNewMoon] = useState(false);
   const [moonBattle, setMoonBattle] = useState(false);
   // План 72.1.10 wave 2: добавлены legacy sort-поля outcome (winner)
-  // и moon (is_moon). Поле planet_name legacy требует JOIN — отложено.
+  // и moon (is_moon).
+  // План 72.1.10 wave 3: добавлен planet_name (через JOIN planets).
   const [sortField, setSortField] = useState<
-    'date' | 'rounds' | 'debris' | 'loot' | 'outcome' | 'moon'
+    'date' | 'rounds' | 'debris' | 'loot' | 'outcome' | 'moon' | 'planet_name'
   >('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [cursor, setCursor] = useState<string | undefined>(undefined);
@@ -226,6 +227,7 @@ export function BattleStatsScreen() {
                         <option value="loot">{t('statistics', 'bsSortLoot')}</option>
                         <option value="outcome">{t('statistics', 'bsSortOutcome')}</option>
                         <option value="moon">{t('statistics', 'bsSortMoon')}</option>
+                        <option value="planet_name">{t('statistics', 'bsSortPlanetName')}</option>
                       </select>{' '}
                       <select
                         value={sortOrder}
@@ -303,6 +305,22 @@ export function BattleStatsScreen() {
                   {b.is_attacker
                     ? (b.defender_user_id ?? '—')
                     : (b.attacker_user_id ?? '—')}
+                  {/* План 72.1.50 ч.5 (72.1.10 wave 3): legacy
+                      `Battlestats.class.php` рендерит название планеты
+                      и координаты под именем оппонента. */}
+                  {b.planet_name && (
+                    <>
+                      <br />
+                      <small>
+                        {b.is_moon_target
+                          ? `🌙 ${b.planet_name}`
+                          : b.planet_name}
+                        {b.galaxy != null && b.system != null && b.position != null && (
+                          <> [{b.galaxy}:{b.system}:{b.position}]</>
+                        )}
+                      </small>
+                    </>
+                  )}
                 </td>
                 <td className="center">
                   <span className={resultClass}>{resultLabel}</span>

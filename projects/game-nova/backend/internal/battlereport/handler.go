@@ -51,6 +51,16 @@ type ListItem struct {
 	LootHydrogen  int64     `json:"loot_hydrogen"`
 	IsAttacker    bool      `json:"is_attacker"`
 	At            time.Time `json:"at"`
+	// План 72.1.50 ч.5 (72.1.10 wave 3): legacy `Battlestats.class.php`
+	// рендерит координаты + название планеты в каждой строке.
+	// Источник — `battle_reports.planet_id` → `planets.name/galaxy/system/position`.
+	// Может быть NULL для экспедиционных/ACS-битв без конкретного target_planet
+	// и для legacy-записей до миграции 0009 (если такие есть).
+	PlanetName *string `json:"planet_name,omitempty"`
+	Galaxy     *int    `json:"galaxy,omitempty"`
+	System     *int    `json:"system,omitempty"`
+	Position   *int    `json:"position,omitempty"`
+	IsMoonTarget *bool `json:"is_moon_target,omitempty"`
 }
 
 // ListMine GET /api/users/me/battles?limit=20&cursor=<at>
@@ -100,10 +110,14 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 	// Динамический WHERE — собираем conditions + args. $1..$N
 	// генерируется по индексу.
 	args := []any{uid, cursorAt}
+	// План 72.1.50 ч.5 (72.1.10 wave 3): SQL получил JOIN с planets,
+	// поэтому все колонки battle_reports префиксированы `b.` для
+	// устранения ambiguity (есть пересечения: is_moon, galaxy, system,
+	// position у planets).
 	conds := []string{
-		"(attacker_user_id = $1 OR defender_user_id = $1)",
-		"is_simulation = false",
-		"at < $2",
+		"(b.attacker_user_id = $1 OR b.defender_user_id = $1)",
+		"b.is_simulation = false",
+		"b.at < $2",
 	}
 	addArg := func(v any) string {
 		args = append(args, v)
@@ -113,11 +127,11 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 	// План 72.1.10 wave 2: legacy date-range clamping
 	// (Battlestats.class.php:65-88). См. clampDateRange ниже.
 	dateMin, dateMax := clampDateRange(q.Get("date_min"), q.Get("date_max"), time.Now().UTC())
-	conds = append(conds, "at >= "+addArg(dateMin), "at <= "+addArg(dateMax))
+	conds = append(conds, "b.at >= "+addArg(dateMin), "b.at <= "+addArg(dateMax))
 	if v := q.Get("user_filter"); v != "" {
 		ph := addArg(v)
 		conds = append(conds,
-			"(attacker_user_id = "+ph+" OR defender_user_id = "+ph+")")
+			"(b.attacker_user_id = "+ph+" OR b.defender_user_id = "+ph+")")
 	}
 	if v := q.Get("alliance_filter"); v != "" {
 		ph := addArg(v)
@@ -126,7 +140,7 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 		conds = append(conds, `EXISTS (
 			SELECT 1 FROM users u
 			WHERE u.alliance_id = `+ph+`
-			  AND u.id IN (attacker_user_id, defender_user_id)
+			  AND u.id IN (b.attacker_user_id, b.defender_user_id)
 			  AND u.id != $1
 		)`)
 	}
@@ -134,33 +148,39 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 	// Boolean-фильтры (по дефолту в legacy).
 	showDrawn := parseBool(q.Get("show_drawn"), true)
 	if !showDrawn {
-		conds = append(conds, "winner != 'draw'")
+		conds = append(conds, "b.winner != 'draw'")
 	}
 	showAliens := parseBool(q.Get("show_aliens"), false)
 	if !showAliens {
-		conds = append(conds, "has_aliens = false")
+		conds = append(conds, "b.has_aliens = false")
 	}
 	showNoDestroyed := parseBool(q.Get("show_no_destroyed"), true)
 	if !showNoDestroyed {
 		conds = append(conds,
-			"(loot_metal + loot_silicon + loot_hydrogen + debris_metal + debris_silicon) > 0")
+			"(b.loot_metal + b.loot_silicon + b.loot_hydrogen + b.debris_metal + b.debris_silicon) > 0")
 	}
 	if parseBool(q.Get("new_moon"), false) {
-		conds = append(conds, "moon_created = true")
+		conds = append(conds, "b.moon_created = true")
 	}
 	if parseBool(q.Get("moon_battle"), false) {
-		conds = append(conds, "is_moon = true")
+		conds = append(conds, "b.is_moon = true")
 	}
 
 	sortField, sortOrder := sortClause(q.Get("sort_field"), q.Get("sort_order"))
 
 	limitArg := addArg(limit)
+	// План 72.1.50 ч.5 (72.1.10 wave 3): LEFT JOIN planets для
+	// `planet_name` и координат в DTO. Условия WHERE остаются на
+	// `battle_reports` (b.). Используем LEFT JOIN — если planet_id NULL
+	// (legacy запись или экспедиция), строка всё равно попадает в результат.
 	sql := `
-		SELECT id, attacker_user_id, defender_user_id, winner, rounds,
-		       debris_metal::bigint, debris_silicon::bigint,
-		       loot_metal::bigint, loot_silicon::bigint, loot_hydrogen::bigint,
-		       at
-		FROM battle_reports
+		SELECT b.id, b.attacker_user_id, b.defender_user_id, b.winner, b.rounds,
+		       b.debris_metal::bigint, b.debris_silicon::bigint,
+		       b.loot_metal::bigint, b.loot_silicon::bigint, b.loot_hydrogen::bigint,
+		       b.at,
+		       p.name, p.galaxy, p.system, p.position, p.is_moon
+		FROM battle_reports b
+		LEFT JOIN planets p ON p.id = b.planet_id
 		WHERE ` + strings.Join(conds, " AND ") + `
 		ORDER BY ` + sortField + ` ` + sortOrder + `
 		LIMIT ` + limitArg
@@ -181,6 +201,7 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 			&it.DebrisMetal, &it.DebrisSilicon,
 			&it.LootMetal, &it.LootSilicon, &it.LootHydrogen,
 			&it.At,
+			&it.PlanetName, &it.Galaxy, &it.System, &it.Position, &it.IsMoonTarget,
 		); err != nil {
 			httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 			return
@@ -260,22 +281,30 @@ func clampDateRange(rawMin, rawMax string, now time.Time) (time.Time, time.Time)
 }
 
 // sortClause whitelist'ит legacy sort-поля для ORDER BY. Возвращает
-// SQL-фрагмент для поля и направление "ASC"/"DESC". Поле `planet_name`
-// legacy (Battlestats.class.php:96) требует JOIN с planets и колонки
-// target_planet_id в battle_reports — отложено в wave 3.
+// SQL-фрагмент для поля и направление "ASC"/"DESC".
+//
+// План 72.1.50 ч.5 (72.1.10 wave 3): добавлено `planet_name` →
+// `p.name` (legacy `Battlestats.class.php:96`). JOIN planets теперь
+// всегда в SQL (для DTO-полей planet_name/galaxy/system/position),
+// поэтому и сортировка по планете тоже доступна. NULL-safe ASC/DESC
+// — NULLS LAST для DESC, NULLS FIRST для ASC (поведение postgres
+// по умолчанию: NULLS FIRST для ASC, LAST для DESC). Для записей
+// без planet_id (экспедиция / legacy) planet_name=NULL.
 func sortClause(field, order string) (string, string) {
-	col := "at"
+	col := "b.at"
 	switch field {
 	case "rounds":
-		col = "rounds"
+		col = "b.rounds"
 	case "debris":
-		col = "(debris_metal + debris_silicon)"
+		col = "(b.debris_metal + b.debris_silicon)"
 	case "loot":
-		col = "(loot_metal + loot_silicon + loot_hydrogen)"
+		col = "(b.loot_metal + b.loot_silicon + b.loot_hydrogen)"
 	case "outcome":
-		col = "winner"
+		col = "b.winner"
 	case "moon":
-		col = "is_moon"
+		col = "b.is_moon"
+	case "planet_name":
+		col = "p.name"
 	}
 	dir := "DESC"
 	if order == "asc" {

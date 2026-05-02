@@ -3064,6 +3064,7 @@ statistics:
   bsSortLoot: по добыче
   bsSortOutcome: по результату
   bsSortMoon: по луне
+  bsSortPlanetName: по планете
   bsSortAsc: по возрастанию
   bsSortDesc: по убыванию
   bsUserFilter: Имя игрока

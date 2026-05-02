@@ -561,7 +561,7 @@ paths:
           schema:
             type: string
             default: date
-            enum: [date, rounds, debris, loot, outcome, moon]
+            enum: [date, rounds, debris, loot, outcome, moon, planet_name]
         - in: query
           name: sort_order
           schema:
@@ -593,6 +593,15 @@ paths:
                         loot_hydrogen:     { type: integer, format: int64 }
                         is_attacker:       { type: boolean }
                         at:                { type: string, format: date-time }
+                        # План 72.1.50 ч.5 (72.1.10 wave 3):
+                        # координаты + название target-планеты через
+                        # JOIN battle_reports.planet_id → planets.
+                        # NULL для экспедиции / legacy записей.
+                        planet_name:      { type: string, nullable: true }
+                        galaxy:           { type: integer, nullable: true }
+                        system:           { type: integer, nullable: true }
+                        position:         { type: integer, nullable: true }
+                        is_moon_target:   { type: boolean, nullable: true }
                   next_cursor: { type: string, format: date-time, nullable: true }
 
   /api/battle-reports/{id}:

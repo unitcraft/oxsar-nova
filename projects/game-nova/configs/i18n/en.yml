@@ -3063,6 +3063,7 @@ statistics:
   bsSortLoot: ""
   bsSortOutcome: ""
   bsSortMoon: ""
+  bsSortPlanetName: ""
   bsSortAsc: ""
   bsSortDesc: ""
   bsUserFilter: ""
