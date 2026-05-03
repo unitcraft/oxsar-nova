@@ -13,7 +13,6 @@ package rocket
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -22,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"oxsar/game-nova/internal/config"
+	"oxsar/game-nova/internal/event"
 	"oxsar/game-nova/internal/galaxy"
 	"oxsar/game-nova/internal/i18n"
 	"oxsar/game-nova/internal/repo"
@@ -34,10 +34,6 @@ const unitInterplanetary = 52
 // buildingMissileSilo — id здания «Ракетная шахта» (legacy UNIT_ROCKET_STATION=53).
 const buildingMissileSilo = 53
 
-// kindRocketAttack — event.KindRocketAttack=16 (значение задаётся в
-// event/kinds.go). Держим копию, чтобы не импортировать event
-// из пакета rocket и избежать циклов, если они появятся.
-const kindRocketAttack = 16
 
 // missileDamage — урон одной ракеты. По legacy — 12000 (ogame classic).
 const missileDamage = 12000
@@ -202,23 +198,25 @@ func (s *Service) Launch(ctx context.Context, userID, srcPlanetID string,
 		// Event payload: всё нужное handler'у, чтобы не читать
 		// повторно планеты/флот.
 		impactID := ids.New()
-		payload, _ := json.Marshal(map[string]any{
-			"impact_id":      impactID,
-			"attacker_id":    userID,
-			"src_planet":     srcPlanetID,
-			"dst": map[string]any{
-				"galaxy":   dst.Galaxy,
-				"system":   dst.System,
-				"position": dst.Position,
-				"is_moon":  dst.IsMoon,
+		if _, err := event.Insert(ctx, tx, event.InsertOpts{
+			ID:     impactID,
+			UserID: &userID,
+			Kind:   event.KindRocketAttack,
+			FireAt: impactAt,
+			Payload: map[string]any{
+				"impact_id":   impactID,
+				"attacker_id": userID,
+				"src_planet":  srcPlanetID,
+				"dst": map[string]any{
+					"galaxy":   dst.Galaxy,
+					"system":   dst.System,
+					"position": dst.Position,
+					"is_moon":  dst.IsMoon,
+				},
+				"count":          count,
+				"target_unit_id": targetUnitID,
 			},
-			"count":          count,
-			"target_unit_id": targetUnitID,
-		})
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
-			VALUES ($1, $2, $3, 'wait', $4, $5)
-		`, impactID, userID, kindRocketAttack, impactAt, payload); err != nil {
+		}); err != nil {
 			return fmt.Errorf("rocket: insert event: %w", err)
 		}
 

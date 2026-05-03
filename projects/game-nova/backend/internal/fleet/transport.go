@@ -437,7 +437,7 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		}
 		returnEventID := ids.New()
 		flightSeconds := int64(duration.Seconds())
-		payload, _ := json.Marshal(map[string]any{
+		arrivePayload := map[string]any{
 			"fleet_id":        fleetID,
 			"carried":         map[string]int64{"metal": in.CarryMetal, "silicon": in.CarrySilicon, "hydrogen": in.CarryHydro},
 			"acs_group_id":    acsGroupID,
@@ -445,17 +445,22 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			"return_event_id": returnEventID,
 			"flight_seconds":  flightSeconds,
 			"holding_hours":   holdingHours, // план 72.1.47: для KindHolding
-		})
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
-			VALUES ($1, $2, $3, 'wait', $4, $5)
-		`, ids.New(), in.UserID, in.Mission, arrive, payload); err != nil {
+		}
+		if _, err := event.Insert(ctx, tx, event.InsertOpts{
+			UserID:  &in.UserID,
+			Kind:    event.Kind(in.Mission),
+			FireAt:  arrive,
+			Payload: arrivePayload,
+		}); err != nil {
 			return fmt.Errorf("insert arrive event: %w", err)
 		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
-			VALUES ($1, $2, 20, 'wait', $3, $4)
-		`, returnEventID, in.UserID, returnAt, payload); err != nil {
+		if _, err := event.Insert(ctx, tx, event.InsertOpts{
+			ID:      returnEventID,
+			UserID:  &in.UserID,
+			Kind:    event.KindReturn,
+			FireAt:  returnAt,
+			Payload: arrivePayload,
+		}); err != nil {
 			return fmt.Errorf("insert return event: %w", err)
 		}
 
@@ -464,11 +469,12 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			event.Kind(in.Mission) == event.KindAttackAlliance {
 			warnAt := arrive.Add(-10 * time.Minute)
 			if warnAt.After(depart) {
-				warnPayload, _ := json.Marshal(map[string]any{"fleet_id": fleetID})
-				if _, err := tx.Exec(ctx, `
-					INSERT INTO events (id, user_id, kind, state, fire_at, payload)
-					VALUES ($1, $2, $3, 'wait', $4, $5)
-				`, ids.New(), in.UserID, event.KindRaidWarning, warnAt, warnPayload); err != nil {
+				if _, err := event.Insert(ctx, tx, event.InsertOpts{
+					UserID:  &in.UserID,
+					Kind:    event.KindRaidWarning,
+					FireAt:  warnAt,
+					Payload: map[string]any{"fleet_id": fleetID},
+				}); err != nil {
 					return fmt.Errorf("insert raid warning event: %w", err)
 				}
 			}

@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"oxsar/game-nova/internal/event"
-	"oxsar/game-nova/pkg/ids"
 )
 
 // DelayEvent формирует event.Handler для KindArtefactDelay (63).
@@ -73,11 +72,13 @@ func (s *Service) DelayEvent() event.Handler {
 		}
 
 		if expire != nil {
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
-				VALUES ($1, $2, $3, 60, 'wait', $4, $5)
-			`, ids.New(), rec.UserID, rec.PlanetID, *expire,
-				fmt.Sprintf(`{"artefact_id":"%s"}`, rec.ID)); err != nil {
+			if _, err := event.Insert(ctx, tx, event.InsertOpts{
+				UserID:   &rec.UserID,
+				PlanetID: rec.PlanetID,
+				Kind:     event.KindArtefactExpire,
+				FireAt:   *expire,
+				Payload:  map[string]any{"artefact_id": rec.ID},
+			}); err != nil {
 				return fmt.Errorf("insert expire event: %w", err)
 			}
 		}

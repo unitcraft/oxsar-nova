@@ -18,7 +18,6 @@ package repair
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -301,14 +300,16 @@ func (s *Service) EnqueueDisassemble(ctx context.Context, userID, planetID strin
 		}
 
 		// 8. Событие.
-		payload, _ := json.Marshal(map[string]any{
-			"queue_id": id,
-			"mode":     "disassemble",
-		})
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
-			VALUES ($1, $2, $3, $4, 'wait', $5, $6)
-		`, ids.New(), userID, planetID, event.KindDisassemble, end, payload); err != nil {
+		if _, err := event.Insert(ctx, tx, event.InsertOpts{
+			UserID:   &userID,
+			PlanetID: &planetID,
+			Kind:     event.KindDisassemble,
+			FireAt:   end,
+			Payload: map[string]any{
+				"queue_id": id,
+				"mode":     "disassemble",
+			},
+		}); err != nil {
 			return fmt.Errorf("insert event: %w", err)
 		}
 
@@ -452,14 +453,16 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 			return fmt.Errorf("insert queue: %w", err)
 		}
 
-		payload, _ := json.Marshal(map[string]any{
-			"queue_id": id,
-			"mode":     "repair",
-		})
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
-			VALUES ($1, $2, $3, $4, 'wait', $5, $6)
-		`, ids.New(), userID, planetID, event.KindRepair, end, payload); err != nil {
+		if _, err := event.Insert(ctx, tx, event.InsertOpts{
+			UserID:   &userID,
+			PlanetID: &planetID,
+			Kind:     event.KindRepair,
+			FireAt:   end,
+			Payload: map[string]any{
+				"queue_id": id,
+				"mode":     "repair",
+			},
+		}); err != nil {
 			return fmt.Errorf("insert event: %w", err)
 		}
 

@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"oxsar/game-nova/internal/config"
+	"oxsar/game-nova/internal/event"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/pkg/ids"
 )
@@ -214,13 +215,15 @@ func (s *Service) ListForSale(ctx context.Context, userID, artefactID string, pr
 		}
 		// План 72.1.42: event KindArtMarketExpire (91) — воркер снимет
 		// лот через 30 дней (state='held', DELETE offer).
-		eventID := ids.New()
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
-			VALUES ($1, $2, NULL, 91, 'wait', $3, $4)
-		`, eventID, userID, expireAt,
-			fmt.Sprintf(`{"offer_id":"%s","artefact_id":"%s"}`, offerID, artefactID),
-		); err != nil {
+		if _, err := event.Insert(ctx, tx, event.InsertOpts{
+			UserID: &userID,
+			Kind:   event.KindArtMarketExpire,
+			FireAt: expireAt,
+			Payload: map[string]any{
+				"offer_id":    offerID,
+				"artefact_id": artefactID,
+			},
+		}); err != nil {
 			return fmt.Errorf("insert expire event: %w", err)
 		}
 		out = Offer{
