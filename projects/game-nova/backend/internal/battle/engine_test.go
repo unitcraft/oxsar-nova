@@ -1216,3 +1216,112 @@ func TestMultiRun_AvgExp_StaysOrderOfMagnitude(t *testing.T) {
 			stats.AttackerExp, stats.DefenderExp)
 	}
 }
+
+// План 72.1.57 Ф.6: AddTech* поля Side применяются к боевым формулам
+// (legacy Participant.java:520-528). Атакующий с +Gun=10 наносит ×2
+// больше урона, что отражается на потерях защитника.
+func TestCalculate_AddTechGunDoubles(t *testing.T) {
+	t.Parallel()
+
+	// Базовый сценарий: 10 атакующих × attack=100 vs 100 защитников × shell=300.
+	// Урон/раунд = 1000; 100 защитников × 300 shell = 30000 total. Значит
+	// потребуется ~30 раундов до wipe. Без addLevels — атакующие НЕ
+	// успевают убить всех (battleMaxTurns=6, total damage = 6000).
+	makeInput := func(addGun int) Input {
+		atk := simpleAttacker(10, 100, 10000)
+		atk.AddTechGun = addGun
+		return Input{
+			Seed:      42,
+			Attackers: []Side{atk},
+			Defenders: []Side{simpleDefender(100, 1, 300)},
+		}
+	}
+
+	// Без усилений: defender теряет ~6000 / 300 = 20 юнитов.
+	r0, err := Calculate(makeInput(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lostNo := int64(100) - r0.Defenders[0].Units[0].QuantityEnd
+
+	// AddGun=10 → attack ×2 → defender теряет ~12000 / 300 = 40 юнитов.
+	r10, err := Calculate(makeInput(10))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lost10 := int64(100) - r10.Defenders[0].Units[0].QuantityEnd
+
+	// AddGun=10 должно дать ~×2 потерь у защитника.
+	if lost10 < lostNo*3/2 {
+		t.Errorf("AddGun=10 expected to ~double losses: lostNo=%d lost10=%d",
+			lostNo, lost10)
+	}
+}
+
+func TestCalculate_AddTechShieldReducesLosses(t *testing.T) {
+	t.Parallel()
+
+	// Defender имеет shield, атакующие пробивают щиты. С AddTechShield
+	// у defender'а защитник теряет меньше юнитов.
+	makeInput := func(addShield int) Input {
+		def := Side{
+			UserID: "def",
+			Units: []Unit{{
+				UnitID:   31, Quantity: 50, Front: 0,
+				Attack:   1, Shield: 100, Shell: 1000,
+				Cost:     UnitCost{Metal: 3000, Silicon: 1000},
+			}},
+			AddTechShield: addShield,
+		}
+		return Input{
+			Seed:      42,
+			Attackers: []Side{simpleAttacker(50, 200, 10000)},
+			Defenders: []Side{def},
+		}
+	}
+
+	r0, err := Calculate(makeInput(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lostNo := int64(50) - r0.Defenders[0].Units[0].QuantityEnd
+
+	r10, err := Calculate(makeInput(10))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lost10 := int64(50) - r10.Defenders[0].Units[0].QuantityEnd
+
+	// С усилением щита защитник должен потерять не больше (часто — меньше).
+	if lost10 > lostNo {
+		t.Errorf("AddShield=10 should not increase losses: lostNo=%d lost10=%d",
+			lostNo, lost10)
+	}
+}
+
+func TestCalculate_AddTechBallisticsRaisesEffectiveTech(t *testing.T) {
+	t.Parallel()
+
+	// Ballistics/masking аддитивно к Tech (не мультипликативно). Проверяем
+	// что side.tech.Ballistics после новый_battleState_setup = base + add.
+	atk := simpleAttacker(1, 100, 1000)
+	atk.Tech = Tech{Ballistics: 2}
+	atk.AddTechBallistics = 5
+	in := Input{
+		Seed:      42,
+		Attackers: []Side{atk},
+		Defenders: []Side{simpleDefender(1, 50, 1000)},
+	}
+	rep, err := Calculate(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Tech.Ballistics в RoundTrace должен быть 2 + 5 = 7.
+	if len(rep.RoundsTrace) == 0 {
+		t.Skip("no rounds trace; engine made no rounds")
+	}
+	got := rep.RoundsTrace[0].AttackerSide.BallisticsLvl
+	if got != 7 {
+		t.Errorf("expected effective Ballistics=7 (base 2 + add 5), got %d", got)
+	}
+}
