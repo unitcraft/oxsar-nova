@@ -368,6 +368,15 @@ type battleState struct {
 func newState(input []Side, rf map[int]map[int]int) *battleState {
 	bs := &battleState{sides: make([]*sideState, len(input)), rapidfire: rf}
 	for si, s := range input {
+		// План 72.1.57 Ф.4: be_points-усиления применяются ПОВЕРХ tech-
+		// уровней (legacy `Participant.java:520-528`). Семантика:
+		//   - attack/shield/shell: дополнительный мультипликатор
+		//     `(1 + add_lvl/10)` поверх tech-фактора;
+		//   - ballistics/masking: аддитивно к tech-уровню.
+		// Side.AddTech* проходит валидацию в fleet/transport.go (0..20).
+		effTech := s.Tech
+		effTech.Ballistics += s.AddTechBallistics
+		effTech.Masking += s.AddTechMasking
 		ss := &sideState{
 			userID:   s.UserID,
 			username: s.Username,
@@ -375,11 +384,22 @@ func newState(input []Side, rf map[int]map[int]int) *battleState {
 			system:   s.System,
 			position: s.Position,
 			isMoon:   s.IsMoon,
-			tech:     s.Tech,
+			tech:     effTech,
 		}
 		gunFactor := 1.0 + float64(s.Tech.Gun)*0.10
 		shieldFactor := 1.0 + float64(s.Tech.Shield)*0.10
 		shellFactor := 1.0 + float64(s.Tech.Shell)*0.10
+		// Доп. множители из be_points — мультипликативно с tech-фактором
+		// (Java умножает в той же setupBattle строке).
+		if s.AddTechGun != 0 {
+			gunFactor *= 1.0 + float64(s.AddTechGun)/10.0
+		}
+		if s.AddTechShield != 0 {
+			shieldFactor *= 1.0 + float64(s.AddTechShield)/10.0
+		}
+		if s.AddTechShell != 0 {
+			shellFactor *= 1.0 + float64(s.AddTechShell)/10.0
+		}
 		for ui, u := range s.Units {
 			us := &unitState{
 				tmpl:                u,

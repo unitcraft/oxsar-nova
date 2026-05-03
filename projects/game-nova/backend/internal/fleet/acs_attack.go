@@ -40,6 +40,12 @@ type acsPayload struct {
 	FleetID          string `json:"fleet_id"`
 	ACSGroupID       string `json:"acs_group_id"`
 	TargetBuildingID int    `json:"target_building_id,omitempty"`
+	// План 72.1.57: be_points-усиления лидера. ОГРАНИЧЕНИЕ MVP: применяются
+	// КО ВСЕЙ ACS-группе (не per-fleet, как в legacy). Для полного 1:1
+	// нужно расширить fleets таблицу столбцом battle_levels jsonb или
+	// читать payload каждого arrive-event'а. Сейчас trade-off в пользу
+	// простоты: лидер задаёт усиления, все ACS-флоты получают.
+	BattleLevels *BattleLevels `json:"battle_levels,omitempty"`
 }
 
 // ACSAttackHandler — event.Handler для KindAttackAlliance=12.
@@ -170,10 +176,20 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 			if len(units) == 0 {
 				continue
 			}
+			side := battle.Side{UserID: f.ownerUserID, Tech: tech, Units: units}
+			// План 72.1.57: применяем battle_levels лидера ко всей группе
+			// (MVP-упрощение, см. acsPayload).
+			if pl.BattleLevels != nil {
+				side.AddTechGun = pl.BattleLevels.Gun
+				side.AddTechShield = pl.BattleLevels.Shield
+				side.AddTechShell = pl.BattleLevels.Shell
+				side.AddTechBallistics = pl.BattleLevels.Ballistics
+				side.AddTechMasking = pl.BattleLevels.Masking
+			}
 			atkFleets = append(atkFleets, atkFleet{
 				info:  f,
 				ships: ships,
-				side:  battle.Side{UserID: f.ownerUserID, Tech: tech, Units: units},
+				side:  side,
 			})
 		}
 

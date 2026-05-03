@@ -144,6 +144,83 @@ type TransportInput struct {
 	// Длительность удержания на цели в часах (clamp 0..99). После прибытия
 	// флот стоит на dst в режиме holding, по истечении возвращается домой.
 	HoldingHours int
+
+	// План 72.1.57: be_points-усиления для боя (legacy
+	// `Mission.class.php:1638-1671` + `Participant.java:520-528`).
+	// Применимо только для боевых миссий (ATTACK/ATTACK_ALLIANCE/HALT/
+	// DESTROY_BUILDING). Каждое значение 0..K где K = min(20,
+	// users.be_points/100); сумма всех значений ≤ K (общий бюджет).
+	// Cost = Σ values × 100 списывается с users.be_points при Send.
+	// При Recall до прибытия — возвращается.
+	BattleLevels BattleLevels
+}
+
+// BattleLevels — 5 базовых техник legacy `add_tech_*`. Только
+// положительные значения 0..20 (отрицательные доступны для
+// laser/ion/plasma в legacy при ADVANCED_BATTLE — отложено
+// отдельным решением, см. plan 72.1.57).
+type BattleLevels struct {
+	Gun        int `json:"gun,omitempty"`
+	Shield     int `json:"shield,omitempty"`
+	Shell      int `json:"shell,omitempty"`
+	Ballistics int `json:"ballistics,omitempty"`
+	Masking    int `json:"masking,omitempty"`
+}
+
+// Sum возвращает сумму всех уровней (бюджет) — определяет cost и
+// проверяется против лимита K = min(20, be_points/100).
+func (l BattleLevels) Sum() int {
+	return l.Gun + l.Shield + l.Shell + l.Ballistics + l.Masking
+}
+
+// IsZero — true если все техники нулевые (нечего списывать/применять).
+func (l BattleLevels) IsZero() bool {
+	return l.Gun == 0 && l.Shield == 0 && l.Shell == 0 &&
+		l.Ballistics == 0 && l.Masking == 0
+}
+
+// План 72.1.57 (legacy `consts.php:724-725`):
+const (
+	// MaxAddTechLevels — максимум уровня усиления одной техники,
+	// общий бюджет K тоже не может превышать (clamp в Sum-проверке).
+	MaxAddTechLevels = 20
+	// PointsPerAddTechLevel — стоимость одного уровня в be_points.
+	PointsPerAddTechLevel = 100
+)
+
+// validateBattleLevels — pure helper, проверяет что заявленные
+// уровни укладываются в бюджет K = min(MaxAddTechLevels,
+// be_points/PointsPerAddTechLevel) и считает cost (legacy
+// `Mission.class.php:1638-1671`). Возвращает cost и ошибку.
+//
+// Правила (1:1 с legacy для базовых техник, без ADVANCED_BATTLE):
+//   - каждое значение ≥ 0 (отрицательные только для adv-техник legacy);
+//   - каждое значение ≤ K;
+//   - Σ values ≤ K (общий бюджет).
+func validateBattleLevels(lvls BattleLevels, bePoints int64) (cost int64, err error) {
+	if lvls.IsZero() {
+		return 0, nil
+	}
+	values := []int{lvls.Gun, lvls.Shield, lvls.Shell, lvls.Ballistics, lvls.Masking}
+	for _, v := range values {
+		if v < 0 {
+			return 0, ErrBattleLevelNegative
+		}
+	}
+	K := int(bePoints / PointsPerAddTechLevel)
+	if K > MaxAddTechLevels {
+		K = MaxAddTechLevels
+	}
+	for _, v := range values {
+		if v > K {
+			return 0, ErrBattleLevelExceedsCap
+		}
+	}
+	sum := lvls.Sum()
+	if sum > K {
+		return 0, ErrBattleLevelsBudget
+	}
+	return int64(sum) * PointsPerAddTechLevel, nil
 }
 
 // Ошибки доменного слоя.
@@ -163,6 +240,12 @@ var (
 	ErrBashingLimit       = errors.New("fleet: bashing limit reached (too many attacks on this player)")
 	ErrPositionNotAllowed = errors.New("fleet: POSITION only to own planets or ally/NAP targets")
 	ErrExpeditionSlotsFull = errors.New("fleet: no free expedition slots (improve astro_tech)")
+	// План 72.1.57: validation be_points-усилений (legacy
+	// `Mission.class.php:1638-1671`).
+	ErrBattleLevelNegative   = errors.New("fleet: battle level cannot be negative (advanced battle off)")
+	ErrBattleLevelExceedsCap = errors.New("fleet: battle level exceeds K = min(20, be_points/100)")
+	ErrBattleLevelsBudget    = errors.New("fleet: sum of battle levels exceeds budget K")
+	ErrNotEnoughBePoints     = errors.New("fleet: not enough be_points for chosen battle levels")
 )
 
 // Send — запуск TRANSPORT или ATTACK_SINGLE в зависимости от
@@ -437,6 +520,35 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 		}
 		returnEventID := ids.New()
 		flightSeconds := int64(duration.Seconds())
+
+		// План 72.1.57: be_points-усиления. Применимо только для combat-
+		// миссий (legacy `Mission.class.php:1638`). Списываем cost с
+		// users.be_points в той же tx; при Recall возврат — см. Ф.5.
+		var battleLevelsCost int64
+		if isBattleLevelsMission(in.Mission) && !in.BattleLevels.IsZero() {
+			var bePoints int64
+			if err := tx.QueryRow(ctx,
+				`SELECT FLOOR(be_points)::bigint FROM users WHERE id=$1 FOR UPDATE`,
+				in.UserID).Scan(&bePoints); err != nil {
+				return fmt.Errorf("read be_points: %w", err)
+			}
+			cost, vErr := validateBattleLevels(in.BattleLevels, bePoints)
+			if vErr != nil {
+				return vErr
+			}
+			if cost > bePoints {
+				return ErrNotEnoughBePoints
+			}
+			if cost > 0 {
+				if _, err := tx.Exec(ctx,
+					`UPDATE users SET be_points = be_points - $1 WHERE id = $2`,
+					cost, in.UserID); err != nil {
+					return fmt.Errorf("debit be_points: %w", err)
+				}
+			}
+			battleLevelsCost = cost
+		}
+
 		arrivePayload := map[string]any{
 			"fleet_id":        fleetID,
 			"carried":         map[string]int64{"metal": in.CarryMetal, "silicon": in.CarrySilicon, "hydrogen": in.CarryHydro},
@@ -445,6 +557,13 @@ func (s *TransportService) Send(ctx context.Context, in TransportInput) (Fleet, 
 			"return_event_id": returnEventID,
 			"flight_seconds":  flightSeconds,
 			"holding_hours":   holdingHours, // план 72.1.47: для KindHolding
+		}
+		// План 72.1.57: battle_levels + used_be_points в payload
+		// (legacy `EventHandler.class.php:363,1130` хранит "used_exp_points"
+		// в data — мы используем то же имя).
+		if battleLevelsCost > 0 {
+			arrivePayload["battle_levels"] = in.BattleLevels
+			arrivePayload["used_be_points"] = battleLevelsCost
 		}
 		if _, err := event.Insert(ctx, tx, event.InsertOpts{
 			UserID:  &in.UserID,
@@ -653,6 +772,26 @@ func (s *TransportService) Recall(ctx context.Context, userID, fleetID string) (
 		`, fleetID, now, newReturn); err != nil {
 			return fmt.Errorf("update fleet: %w", err)
 		}
+		// План 72.1.57 Ф.5: refund be_points если флот летел с
+		// усилениями (legacy `EventHandler.class.php:1130`). Читаем
+		// used_be_points из payload arrive-event'а ДО его удаления.
+		var refundBePoints int64
+		if err := tx.QueryRow(ctx, `
+			SELECT COALESCE((payload->>'used_be_points')::bigint, 0)
+			FROM events
+			WHERE state = 'wait' AND (payload->>'fleet_id') = $1
+			LIMIT 1
+		`, fleetID).Scan(&refundBePoints); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("read used_be_points: %w", err)
+		}
+		if refundBePoints > 0 {
+			if _, err := tx.Exec(ctx,
+				`UPDATE users SET be_points = be_points + $1 WHERE id = $2`,
+				refundBePoints, userID); err != nil {
+				return fmt.Errorf("refund be_points: %w", err)
+			}
+		}
+
 		// Отменяем arrive-событие: просто удаляем (state='wait' значит
 		// воркер его ещё не взял; FOR UPDATE SKIP LOCKED в воркере
 		// гарантирует, что пересечений нет).
