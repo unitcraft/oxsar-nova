@@ -40,11 +40,12 @@ type acsPayload struct {
 	FleetID          string `json:"fleet_id"`
 	ACSGroupID       string `json:"acs_group_id"`
 	TargetBuildingID int    `json:"target_building_id,omitempty"`
-	// План 72.1.57: be_points-усиления лидера. ОГРАНИЧЕНИЕ MVP: применяются
-	// КО ВСЕЙ ACS-группе (не per-fleet, как в legacy). Для полного 1:1
-	// нужно расширить fleets таблицу столбцом battle_levels jsonb или
-	// читать payload каждого arrive-event'а. Сейчас trade-off в пользу
-	// простоты: лидер задаёт усиления, все ACS-флоты получают.
+	// План 72.1.57: be_points-усиления **этого** fleet'а (лидерского).
+	// Per-fleet 1:1 с legacy: каждый ACS-fleet несёт свои battle_levels
+	// в своём arrive-event'е; ACSAttackHandler читает payload каждого
+	// fleet'а через loadACSFleetBattleLevels — здесь поле дублируется
+	// для лидерского fleet'а только для type-completeness и
+	// сохранения формата payload (десериализация common transportPayload).
 	BattleLevels *BattleLevels `json:"battle_levels,omitempty"`
 }
 
@@ -156,6 +157,17 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 		defUnits = append(defUnits, stacksToBattleUnits(defDefense, s.catalog, true, false)...)
 		defSide := battle.Side{UserID: defenderUserID, Tech: defTech, Units: defUnits}
 
+		// План 72.1.57 (полный 1:1 с legacy ACS):
+		// Загружаем battle_levels из payload arrive-event'а КАЖДОГО fleet'а
+		// группы (а не лидерские для всех). Зеркало
+		// `ExtEventHandler.class.php:723` — addParticipant(...,
+		// unserialize($_row["data"]), ...) — каждый additional fleet
+		// несёт свой `add_tech_*`.
+		fleetLevels, err := loadACSFleetBattleLevels(ctx, tx, fleets)
+		if err != nil {
+			return fmt.Errorf("acs attack: load battle_levels: %w", err)
+		}
+
 		// Собираем стороны атакующих.
 		type atkFleet struct {
 			info  fleetInfo
@@ -177,14 +189,14 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 				continue
 			}
 			side := battle.Side{UserID: f.ownerUserID, Tech: tech, Units: units}
-			// План 72.1.57: применяем battle_levels лидера ко всей группе
-			// (MVP-упрощение, см. acsPayload).
-			if pl.BattleLevels != nil {
-				side.AddTechGun = pl.BattleLevels.Gun
-				side.AddTechShield = pl.BattleLevels.Shield
-				side.AddTechShell = pl.BattleLevels.Shell
-				side.AddTechBallistics = pl.BattleLevels.Ballistics
-				side.AddTechMasking = pl.BattleLevels.Masking
+			// План 72.1.57 1:1 с legacy: per-fleet battle_levels из payload
+			// каждого arrive-event'а (legacy `ExtEventHandler.class.php:723`).
+			if bl, ok := fleetLevels[f.id]; ok && bl != nil {
+				side.AddTechGun = bl.Gun
+				side.AddTechShield = bl.Shield
+				side.AddTechShell = bl.Shell
+				side.AddTechBallistics = bl.Ballistics
+				side.AddTechMasking = bl.Masking
 			}
 			atkFleets = append(atkFleets, atkFleet{
 				info:  f,
@@ -489,4 +501,54 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 		}
 		return nil
 	}
+}
+
+// loadACSFleetBattleLevels — план 72.1.57: per-fleet battle_levels.
+// Для каждого fleet в группе читаем payload его arrive-event'а и
+// извлекаем `battle_levels` (если есть). Зеркалит legacy
+// `ExtEventHandler.class.php:704-724` где `addParticipant(...,
+// unserialize($_row["data"]), ...)` — каждый additional fleet несёт
+// свой `add_tech_*`.
+//
+// Возвращает map fleet_id → *BattleLevels (nil если в payload нет).
+// Ошибка только при SQL/JSON-сбое.
+func loadACSFleetBattleLevels(ctx context.Context, tx pgx.Tx, fleets []fleetInfo) (map[string]*BattleLevels, error) {
+	if len(fleets) == 0 {
+		return nil, nil
+	}
+	ids := make([]string, 0, len(fleets))
+	for _, f := range fleets {
+		ids = append(ids, f.id)
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT (payload->>'fleet_id') AS fid,
+		       payload->'battle_levels' AS bl
+		FROM events
+		WHERE state = 'wait'
+		  AND (payload->>'fleet_id') = ANY($1)
+		  AND payload ? 'battle_levels'
+	`, ids)
+	if err != nil {
+		return nil, fmt.Errorf("select fleet payloads: %w", err)
+	}
+	defer rows.Close()
+	out := make(map[string]*BattleLevels, len(fleets))
+	for rows.Next() {
+		var fid string
+		var blRaw []byte
+		if err := rows.Scan(&fid, &blRaw); err != nil {
+			return nil, err
+		}
+		if len(blRaw) == 0 {
+			continue
+		}
+		var bl BattleLevels
+		if err := json.Unmarshal(blRaw, &bl); err != nil {
+			return nil, fmt.Errorf("unmarshal battle_levels for %s: %w", fid, err)
+		}
+		if !bl.IsZero() {
+			out[fid] = &bl
+		}
+	}
+	return out, rows.Err()
 }
