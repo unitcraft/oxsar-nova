@@ -324,8 +324,12 @@ func (s *TransportService) AttackHandler() event.Handler {
 		// планета (не луна) и атакующий выжил. Понижает уровень здания
 		// на 1 (или удаляет, если level=1→0).
 		if e.Kind == event.KindAttackDestroyBuilding {
+			// План 72.1.56 B7: легаси DESTROY_BUILD_RESULT_MIN_OFFS_LEVEL
+			// эвристика — нужны user_id всех атакующих (для single = 1).
+			attackerIDs := []string{attackerUserID}
 			unitID, lvlFrom, lvlTo, ok, err := tryDestroyBuilding(ctx, tx,
-				planetID, isMoon, report.Winner, pl.TargetBuildingID, report.Seed)
+				planetID, isMoon, report.Winner, pl.TargetBuildingID,
+				attackerIDs, report.Seed)
 			if err != nil {
 				return fmt.Errorf("attack: building destroy: %w", err)
 			}

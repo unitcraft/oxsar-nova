@@ -79,6 +79,13 @@ const (
 	unitNanoFactory  = 7
 )
 
+// destroyBuildResultMinOffsLevel — legacy DESTROY_BUILD_RESULT_MIN_OFFS_LEVEL
+// (consts.php). Значение в legacy `consts.dm.local.php`/`consts.php` обычно 0:
+// исключаем здание защитника, если после понижения его уровень станет
+// ниже уровня соответствующего здания у атакующего. План 72.1.56 B7
+// 1:1 с legacy `Assault.class.php:261-263`.
+const destroyBuildResultMinOffsLevel = 0
+
 // tryDestroyBuilding — общая ветка для KindAttackDestroyBuilding и
 // KindAttackAllianceDestroyBuilding. Понижает уровень здания на 1 при
 // победе атакующего и не-лунной цели. Возвращает (unit_id, levelFrom,
@@ -91,11 +98,17 @@ const (
 //     KindAttackDestroyMoon).
 //   - winner: rep.Winner; здание ломается только при "attackers".
 //   - explicitTargetUnitID: payload.TargetBuildingID; 0 → выбрать случайно.
+//   - attackerUserIDs: список user_id всех атакующих (1 для single,
+//     N для ACS); используется для эвристики
+//     DESTROY_BUILD_RESULT_MIN_OFFS_LEVEL — здание исключается, если
+//     `defender.level - 1 < max_attacker_level + threshold` или ни у
+//     кого из атакующих этого здания нет (план 72.1.56 B7, legacy
+//     `Assault.class.php:253-272`).
 //   - battleSeed: rep.Seed, используется как seed детерминированного
 //     случайного выбора (если explicit не задан).
 func tryDestroyBuilding(ctx context.Context, tx pgx.Tx,
 	planetID string, isMoon bool, winner string,
-	explicitTargetUnitID int, battleSeed uint64) (int, int, int, bool, error) {
+	explicitTargetUnitID int, attackerUserIDs []string, battleSeed uint64) (int, int, int, bool, error) {
 
 	if isMoon {
 		return 0, 0, 0, false, nil
@@ -107,36 +120,17 @@ func tryDestroyBuilding(ctx context.Context, tx pgx.Tx,
 	// 1. Определяем target_unit_id.
 	targetUnitID := explicitTargetUnitID
 	if targetUnitID <= 0 {
-		// Случайный выбор: все здания планеты с level>0, кроме исключений.
-		rows, err := tx.Query(ctx, `
-			SELECT unit_id FROM buildings
-			WHERE planet_id=$1 AND level > 0
-			  AND unit_id NOT IN ($2, $3)
-			ORDER BY unit_id
-		`, planetID, unitExchange, unitNanoFactory)
+		candidates, err := selectRandomDestroyCandidates(ctx, tx, planetID, attackerUserIDs)
 		if err != nil {
-			return 0, 0, 0, false, fmt.Errorf("destroy_building: select candidates: %w", err)
-		}
-		var ids []int
-		for rows.Next() {
-			var id int
-			if err := rows.Scan(&id); err != nil {
-				rows.Close()
-				return 0, 0, 0, false, err
-			}
-			ids = append(ids, id)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
 			return 0, 0, 0, false, err
 		}
-		if len(ids) == 0 {
+		if len(candidates) == 0 {
 			// На планете нет подходящих зданий — handler no-op.
 			return 0, 0, 0, false, nil
 		}
 		// Детерминированный выбор по seed боя — repro отчётов.
 		r := rng.New(battleSeed ^ 0xB1D0DE578C0FFEE)
-		targetUnitID = ids[r.IntN(len(ids))]
+		targetUnitID = candidates[r.IntN(len(candidates))]
 	}
 
 	// 2. Читаем текущий level с lock'ом.
@@ -175,6 +169,135 @@ func tryDestroyBuilding(ctx context.Context, tx pgx.Tx,
 	}
 
 	return targetUnitID, curLevel, newLevel, true, nil
+}
+
+// selectRandomDestroyCandidates возвращает список unit_id зданий
+// планеты-цели, доступных для случайного выбора при destroy_building
+// миссии. Зеркало legacy `Assault.class.php:223-310::getRandomTargetBuilding`:
+//
+//  1. Берём все здания цели с level>0, кроме UNIT_EXCHANGE и
+//     UNIT_NANO_FACTORY (origin-фильтр).
+//  2. Для каждого attacker_user_id читаем MAX(level) каждого здания
+//     по всем его планетам. Здание защитника **исключается**, если
+//     у этого attacker'а есть это здание И
+//     `defender.level - 1 < max_attacker_level + threshold`. Иными
+//     словами — атакующий должен иметь сравнимое здание чтобы понимать
+//     цель сноса (legacy балансовый компромисс).
+//  3. Здание, которое **ни одним** attacker'ом не покрыто, тоже
+//     исключается («unchecked» в legacy).
+//
+// Если attackerUserIDs пуст (нет известных атакующих, например,
+// alien-attack handler не передал) — возвращаем кандидатов без
+// эвристики (legacy fallback: эвристика отключена).
+func selectRandomDestroyCandidates(ctx context.Context, tx pgx.Tx,
+	planetID string, attackerUserIDs []string) ([]int, error) {
+
+	rows, err := tx.Query(ctx, `
+		SELECT unit_id, level FROM buildings
+		WHERE planet_id=$1 AND level > 0
+		  AND unit_id NOT IN ($2, $3)
+		ORDER BY unit_id
+	`, planetID, unitExchange, unitNanoFactory)
+	if err != nil {
+		return nil, fmt.Errorf("destroy_building: select candidates: %w", err)
+	}
+	defenderBuilds := map[int]int{}
+	for rows.Next() {
+		var id, lvl int
+		if err := rows.Scan(&id, &lvl); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		defenderBuilds[id] = lvl
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(defenderBuilds) == 0 {
+		return nil, nil
+	}
+
+	// Без атакующих — fallback на старое поведение (без эвристики).
+	if len(attackerUserIDs) == 0 {
+		return filterDestroyCandidates(defenderBuilds, nil), nil
+	}
+
+	// Для всех attacker'ов: MAX(level) каждого здания по всем планетам.
+	atkRows, err := tx.Query(ctx, `
+		SELECT b.unit_id, MAX(b.level) AS max_level
+		FROM buildings b
+		JOIN planets p ON p.id = b.planet_id
+		WHERE p.user_id = ANY($1) AND p.destroyed_at IS NULL
+		GROUP BY b.unit_id
+	`, attackerUserIDs)
+	if err != nil {
+		return nil, fmt.Errorf("destroy_building: select attacker buildings: %w", err)
+	}
+	attackerMaxLevels := map[int]int{}
+	for atkRows.Next() {
+		var unitID, maxLvl int
+		if err := atkRows.Scan(&unitID, &maxLvl); err != nil {
+			atkRows.Close()
+			return nil, err
+		}
+		attackerMaxLevels[unitID] = maxLvl
+	}
+	atkRows.Close()
+	if err := atkRows.Err(); err != nil {
+		return nil, err
+	}
+
+	return filterDestroyCandidates(defenderBuilds, attackerMaxLevels), nil
+}
+
+// filterDestroyCandidates — pure-функция legacy-эвристики
+// `Assault.class.php:253-281`. Вынесена для unit-тестируемости
+// без БД (план 72.1.56 B7).
+//
+// Если attackerMaxLevels=nil — эвристика выключена, возвращаем все
+// defender_builds (legacy fallback при отсутствии attacker'ов).
+//
+// Иначе:
+//   - Для каждого defender_build: если у атакующих НЕТ этого здания
+//     («unchecked» в legacy) → исключаем.
+//   - Если есть и `defender.level - 1 < attacker.max_level + threshold`
+//     → исключаем («new_result_level < min_result_level»).
+//
+// Результат отсортирован по unit_id для repro.
+func filterDestroyCandidates(defenderBuilds, attackerMaxLevels map[int]int) []int {
+	out := make([]int, 0, len(defenderBuilds))
+	for id, defLvl := range defenderBuilds {
+		if attackerMaxLevels == nil {
+			out = append(out, id)
+			continue
+		}
+		atkLvl, ok := attackerMaxLevels[id]
+		if !ok {
+			// «unchecked» — исключаем.
+			continue
+		}
+		minResultLevel := atkLvl + destroyBuildResultMinOffsLevel
+		newResultLevel := defLvl - 1
+		if newResultLevel < minResultLevel {
+			continue
+		}
+		out = append(out, id)
+	}
+	sortIntsAsc(out)
+	return out
+}
+
+func sortIntsAsc(a []int) {
+	for i := 1; i < len(a); i++ {
+		v := a[i]
+		j := i - 1
+		for j >= 0 && a[j] > v {
+			a[j+1] = a[j]
+			j--
+		}
+		a[j+1] = v
+	}
 }
 
 // sendBuildingDestroyedMessages — два сообщения: защитнику и атакующему.

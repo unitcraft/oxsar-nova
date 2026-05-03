@@ -303,8 +303,19 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 		// сообщения о победе шлются leader'у; defender получает одно
 		// сообщение о потере уровня.
 		if e.Kind == event.KindAttackAllianceDestroyBuilding {
+			// План 72.1.56 B7: легаси DESTROY_BUILD_RESULT_MIN_OFFS_LEVEL
+			// эвристика — нужны user_id всех ACS-атакующих (уникальные).
+			seenAttackers := map[string]bool{}
+			attackerIDs := make([]string, 0, len(atkFleets))
+			for _, af := range atkFleets {
+				if !seenAttackers[af.info.ownerUserID] {
+					seenAttackers[af.info.ownerUserID] = true
+					attackerIDs = append(attackerIDs, af.info.ownerUserID)
+				}
+			}
 			unitID, lvlFrom, lvlTo, ok, err := tryDestroyBuilding(ctx, tx,
-				planetID, isMoon, report.Winner, pl.TargetBuildingID, report.Seed)
+				planetID, isMoon, report.Winner, pl.TargetBuildingID,
+				attackerIDs, report.Seed)
 			if err != nil {
 				return fmt.Errorf("acs attack: building destroy: %w", err)
 			}

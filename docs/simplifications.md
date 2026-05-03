@@ -1757,30 +1757,24 @@ soft-delete смысла нет.
 
 ## 2026-04-28 — План 65 Ф.3-Ф.4: Building Destruction (Kind=26/29)
 
-### [65-Ф.3] Эвристика «у атакующего есть здание сравнимого уровня» НЕ реализована
-**Где**: `projects/game-nova/backend/internal/fleet/destroy_building.go` —
-`tryDestroyBuilding`, ветка random-выбора цели.
-**Что упрощено**: legacy origin (Assault.class.php:253-272, константа
-`DESTROY_BUILD_RESULT_MIN_OFFS_LEVEL`) при random-выборе target_building
-исключает здания, у которых уровень атакующего ниже defender'a более
-чем на N. В nova исключение не реализовано — random выбирает из всех
-buildings планеты, кроме UNIT_EXCHANGE/UNIT_NANO_FACTORY (origin-фильтр
-сохранён).
-**Почему**: эвристика — балансировочный компромисс legacy конкретного
-сервера, без аналитики «зачем именно так». Без её портирования миссия
-становится более прямолинейной (random eligible building), что
-соответствует упрощённому подходу nova. Реализация эвристики потребует
-загрузки buildings всех участников ACS-группы и пер-юзер сравнения —
-+30-50 строк со сложным purpose, который не воспроизводится без
-мотивации legacy-балансера.
-**План возврата**: если в боях обнаружится дисбаланс (атакующий c
-mining-flot уверенно сносит nano factory у застроенного защитника без
-шансов), добавить фильтр через JOIN buildings на attacker(-ов) и
-исключать здания, для которых `defender.level - attacker.level >
-threshold`. Threshold вынести в `configs/balance/origin.yaml`
-(план 64).
-**Приоритет**: L — без эвристики миссия работоспособна; восстановление
-— на этапе балансовой настройки.
+### [65-Ф.3] Эвристика «у атакующего есть здание сравнимого уровня» — ЗАКРЫТО
+- **Статус**: ЗАКРЫТО 2026-05-03 планом 72.1.56 B7 (legacy 1:1).
+- **Где закрыто**: `internal/fleet/destroy_building.go`:
+  - `tryDestroyBuilding(...)` принимает `attackerUserIDs []string` —
+    user_id всех атакующих (1 для single, N для ACS).
+  - `selectRandomDestroyCandidates` грузит `MAX(level)` каждого здания
+    атакующих по всем их планетам, передаёт в pure helper
+    `filterDestroyCandidates(defenderBuilds, attackerMaxLevels)`.
+  - Эвристика 1:1 с legacy `Assault.class.php:253-272`: исключаем
+    `defender_building` если у атакующих НЕТ этого здания
+    («unchecked») ИЛИ
+    `defender.level - 1 < attacker.max_level + DESTROY_BUILD_RESULT_MIN_OFFS_LEVEL`.
+  - Константа `destroyBuildResultMinOffsLevel = 0` (legacy default).
+- **Callers обновлены**: `attack.go` (single → `[]string{attacker}`),
+  `acs_attack.go` (ACS → unique uids всех atkFleets).
+- **Тест**: `TestFilterDestroyCandidates` 7 кейсов покрывает
+  fallback/unchecked/clamp.
+- **Приоритет**: closed.
 
 ### [65-Ф.3] Не пишем `b_count`/`b_points` декремент при сносе
 **Где**: `tryDestroyBuilding` — нет UPDATE `users.points/b_points/b_count`

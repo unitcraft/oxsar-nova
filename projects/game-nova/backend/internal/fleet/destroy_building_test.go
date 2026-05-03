@@ -90,6 +90,81 @@ func TestACSPayload_TargetBuildingRoundTrip(t *testing.T) {
 	}
 }
 
+// План 72.1.56 B7: legacy DESTROY_BUILD_RESULT_MIN_OFFS_LEVEL эвристика
+// (Assault.class.php:253-281). Pure-test без БД.
+func TestFilterDestroyCandidates(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name              string
+		defenderBuilds    map[int]int
+		attackerMaxLevels map[int]int
+		want              []int
+	}{
+		{
+			name:              "nil attackers → fallback no heuristic, all returned",
+			defenderBuilds:    map[int]int{1: 5, 2: 3, 4: 7},
+			attackerMaxLevels: nil,
+			want:              []int{1, 2, 4},
+		},
+		{
+			name:              "attacker has nothing → all unchecked, excluded",
+			defenderBuilds:    map[int]int{1: 5, 2: 3},
+			attackerMaxLevels: map[int]int{},
+			want:              []int{},
+		},
+		{
+			name:              "attacker level=4, defender level=10 → 9>=4, kept",
+			defenderBuilds:    map[int]int{1: 10},
+			attackerMaxLevels: map[int]int{1: 4},
+			want:              []int{1},
+		},
+		{
+			name:              "attacker level=10, defender level=5 → 4<10, excluded",
+			defenderBuilds:    map[int]int{1: 5},
+			attackerMaxLevels: map[int]int{1: 10},
+			want:              []int{},
+		},
+		{
+			name:              "attacker level=5, defender level=5 → 4<5, excluded",
+			defenderBuilds:    map[int]int{1: 5},
+			attackerMaxLevels: map[int]int{1: 5},
+			want:              []int{},
+		},
+		{
+			name:              "attacker level=5, defender level=6 → 5>=5, kept",
+			defenderBuilds:    map[int]int{1: 6},
+			attackerMaxLevels: map[int]int{1: 5},
+			want:              []int{1},
+		},
+		{
+			name: "mixed: building 1 unchecked, 2 dropped, 3 kept",
+			defenderBuilds: map[int]int{
+				1: 8,  // unchecked → excluded
+				2: 4,  // 3<5 → excluded
+				3: 10, // 9>=5 → kept
+			},
+			attackerMaxLevels: map[int]int{
+				2: 5,
+				3: 5,
+			},
+			want: []int{3},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := filterDestroyCandidates(tc.defenderBuilds, tc.attackerMaxLevels)
+			if len(got) != len(tc.want) {
+				t.Fatalf("len: got %v, want %v", got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Errorf("[%d]: got %d, want %d", i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
 // TestProperty_DestroyBuilding_NoOpDecision — детерминированно: handler
 // должен no-op'ить если isMoon=true ИЛИ winner != "attackers".
 //
@@ -236,7 +311,7 @@ func TestDestroyBuilding_GoldenScenarios(t *testing.T) {
 
 		err := db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 			unitID, lvlFrom, lvlTo, ok, err := tryDestroyBuilding(ctx, tx,
-				fx.planetID, false, "attackers", 4, 0xDEADBEEF)
+				fx.planetID, false, "attackers", 4, nil, 0xDEADBEEF)
 			if err != nil {
 				return err
 			}
@@ -266,7 +341,7 @@ func TestDestroyBuilding_GoldenScenarios(t *testing.T) {
 
 		err := db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 			unitID, lvlFrom, lvlTo, ok, err := tryDestroyBuilding(ctx, tx,
-				fx.planetID, false, "attackers", 6, 0)
+				fx.planetID, false, "attackers", 6, nil, 0)
 			if err != nil {
 				return err
 			}
@@ -296,7 +371,7 @@ func TestDestroyBuilding_GoldenScenarios(t *testing.T) {
 
 		err := db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 			_, _, _, ok, err := tryDestroyBuilding(ctx, tx,
-				fx.planetID, false, "defenders", 4, 0)
+				fx.planetID, false, "defenders", 4, nil, 0)
 			if err != nil {
 				return err
 			}
@@ -323,7 +398,7 @@ func TestDestroyBuilding_GoldenScenarios(t *testing.T) {
 
 		err := db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 			_, _, _, ok, err := tryDestroyBuilding(ctx, tx,
-				fx.planetID, true, "attackers", 4, 0)
+				fx.planetID, true, "attackers", 4, nil, 0)
 			if err != nil {
 				return err
 			}
@@ -352,7 +427,7 @@ func TestDestroyBuilding_GoldenScenarios(t *testing.T) {
 
 		err := db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 			_, _, _, ok, err := tryDestroyBuilding(ctx, tx,
-				fx.planetID, false, "attackers", 0, 0xCAFEBABE)
+				fx.planetID, false, "attackers", 0, nil, 0xCAFEBABE)
 			if err != nil {
 				return err
 			}
@@ -389,7 +464,7 @@ func TestDestroyBuilding_GoldenScenarios(t *testing.T) {
 
 		err := db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 			unitID, _, _, ok, err := tryDestroyBuilding(ctx, tx,
-				fx.planetID, false, "attackers", 0, 0xCAFEBABE)
+				fx.planetID, false, "attackers", 0, nil, 0xCAFEBABE)
 			if err != nil {
 				return err
 			}
@@ -430,7 +505,7 @@ func TestDestroyBuilding_GoldenScenarios(t *testing.T) {
 		defer cleanupFixture(ctx, db, fx)
 
 		err := db.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-			if _, _, _, ok, err := tryDestroyBuilding(ctx, tx, fx.planetID, false, "attackers", 4, 1); err != nil || !ok {
+			if _, _, _, ok, err := tryDestroyBuilding(ctx, tx, fx.planetID, false, "attackers", 4, nil, 1); err != nil || !ok {
 				t.Fatalf("first call: ok=%v err=%v", ok, err)
 			}
 			return nil
