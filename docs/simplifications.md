@@ -653,31 +653,22 @@
 - Закрыто: migration 0025 добавляет `acs_participants jsonb` в battle_reports.
   ACS handler записывает [{user_id, fleet_id}] всех атакующих флотов (commit 0025).
 
-### [Alliance план 67 Ф.5.1-5.3] Frontend permissions: видимость только owner'у
-- **Где**: `frontend/src/features/alliance/{DescriptionsPanel,RanksPanel,DiplomacyPanel}.tsx`,
-  `permissions.ts::hasPerm`.
-- **Что упрощено**: `canEdit/canManage` пропсы новых панелей принимают
-  `isOwner` от `MyAlliancePanel`. Гранулярная проверка `can_change_description /
-  can_manage_ranks / can_manage_diplomacy` для не-owner'а с custom-rank'ом
-  на frontend пока **не работает** — все management-кнопки скрыты у не-owner'а
-  (выглядит как «всё может только owner»).
-- **Почему**: backend DTO `AllianceMember` (`internal/alliance/service.go::Member`)
-  не возвращает `rank_id` участника, и нет endpoint'а вида
-  `GET /api/alliances/me/permissions`. Без этого frontend не может резолвить
-  `permissions JSONB` ранга текущего пользователя, и owner-only — единственный
-  безопасный default. На текущем этапе (до создания custom-ranks этим UI)
-  defaultная builtin-роль `member` всё равно имеет 0 прав, поэтому owner-only
-  отражает реальное состояние.
-- **Безопасность**: backend проверяет `Has` в каждом сервисном методе;
-  невидимая на UI кнопка не открывает дыру — мутация всё равно вернёт 403.
-- **Как чинить**: (а) добавить `rank_id` в DTO Member + расширить
-  `permissions.go::LoadMembership` чтобы Member-handler возвращал
-  resolved-permissions; ИЛИ (б) добавить `GET /api/alliances/me/permissions`
-  → `AlliancePermissions`. Frontend берёт оттуда карту, прокидывает в
-  `hasPerm(false, perm, perms)`.
-- **Приоритет**: M — пока custom-ranks не используются (никто их не создал
-  до этого PR), реальный UX-эффект нулевой; станет важным как только
-  владельцы начнут раздавать офицерам права через создаваемый этим PR UI.
+### [Alliance план 67 Ф.5.1-5.3] Frontend permissions: видимость только owner'у — ЗАКРЫТО
+- **Статус**: ЗАКРЫТО 2026-05-03 планами 72.1.55 Task D + 72.1.56 Task A4.
+- **Где закрыто**:
+  - 72.1.55 Task D: backend `Member` DTO расширен `rank_id` +
+    `effective_perms` (только для self-row); helper `findSelfPerms` +
+    `hasPerm` на frontend; AllianceDescriptionsScreen /
+    AllianceDiplomacyScreen / AllianceMembersScreen используют
+    granular check.
+  - 72.1.56 Task A4: AllianceRanksScreen теперь принимает не-owner'а
+    с правом `can_manage_ranks` (раньше owner-only).
+- **owner-only по дизайну** (не упрощение):
+  AllianceManageScreen / AllianceTransferLeadershipScreen / Disband /
+  ApplicationsTable — операции уровня основателя альянса, для них в
+  permissions-каталоге нет соответствующих ключей; legacy тоже
+  ограничивает их founder'ом.
+- **Приоритет**: closed.
 
 ---
 

@@ -26,7 +26,12 @@ import type {
 import { useAuthStore } from '@/stores/auth';
 import { useTranslation } from '@/i18n/i18n';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
-import { PERMISSION_KEYS, useMyAlliance } from './common';
+import {
+  PERMISSION_KEYS,
+  findSelfPerms,
+  hasPerm,
+  useMyAlliance,
+} from './common';
 
 export function AllianceRanksScreen() {
   const { t } = useTranslation();
@@ -71,8 +76,10 @@ export function AllianceRanksScreen() {
 
   const al = my.data.alliance;
   const isOwner = !!userId && userId === al.owner_id;
+  const selfPerms = findSelfPerms(my.data.members ?? [], userId ?? null);
+  const canManageRanks = hasPerm(isOwner, 'can_manage_ranks', selfPerms);
 
-  if (!isOwner) {
+  if (!canManageRanks) {
     return (
       <div className="idiv">
         <span className="false">{t('alliance', 'rightManagement')}</span>
