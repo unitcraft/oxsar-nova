@@ -9,6 +9,27 @@ import (
 	"oxsar/game-nova/internal/httpx"
 )
 
+// Доменные коды ошибок профессии (план 72.1.58). Frontend мапит
+// err.code → i18n key (profession.errInVacation / errNotEnoughCredit /
+// errUnknownProfession). Message остаётся английским — это fallback.
+var (
+	errCodeUnknownProfession = &httpx.Error{
+		Status:  http.StatusBadRequest,
+		Code:    "profession_unknown",
+		Message: "unknown profession",
+	}
+	errCodeNotEnoughCredit = &httpx.Error{
+		Status:  http.StatusBadRequest,
+		Code:    "profession_not_enough_credit",
+		Message: "not enough credits",
+	}
+	errCodeInVacation = &httpx.Error{
+		Status:  http.StatusBadRequest,
+		Code:    "profession_in_vacation",
+		Message: "cannot change profession in vacation mode",
+	}
+)
+
 type Handler struct {
 	svc *Service
 }
@@ -54,9 +75,11 @@ func (h *Handler) Change(w http.ResponseWriter, r *http.Request) {
 	case err == nil:
 		w.WriteHeader(http.StatusNoContent)
 	case errors.Is(err, ErrUnknownProfession):
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
-	case errors.Is(err, ErrNotEnoughCredit), errors.Is(err, ErrChangeTooSoon), errors.Is(err, ErrInVacation):
-		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, err.Error()))
+		httpx.WriteError(w, r, errCodeUnknownProfession)
+	case errors.Is(err, ErrNotEnoughCredit):
+		httpx.WriteError(w, r, errCodeNotEnoughCredit)
+	case errors.Is(err, ErrInVacation):
+		httpx.WriteError(w, r, errCodeInVacation)
 	default:
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 	}

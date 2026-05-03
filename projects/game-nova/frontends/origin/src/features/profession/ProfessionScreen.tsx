@@ -30,28 +30,39 @@ import { useTranslation } from '@/i18n/i18n';
 import type { ApiError } from '@/api/client';
 import type { Profession } from '@/api/types';
 
-// Бонусы/штрафы из profession.yml имеют технические ключи зданий и
-// технологий. i18n-ключи 'profession.bonus*' существуют только для
-// выборочных техн.ключей (план 67); для остальных показываем raw
-// технический ключ как fallback (отображается без перевода) — это
-// ожидаемо для редких профессий.
-const BONUS_LABEL: Record<string, string> = {
-  metalmine: 'bonusProductionMetal',
-  silicon_lab: 'bonusProductionSilicon',
-  solar_plant: 'bonusProductionHydrogen',
-  shipyard: 'bonusBuildSpeed',
-  gun: 'bonusShipAttack',
-  shield_weapon: 'bonusShipShield',
-  shell_weapon: 'bonusShipHull',
-  ballistics: 'bonusFleetSpeed',
-  masking: 'bonusEspionage',
-  defense_factory: 'bonusBuildSpeed',
-  rocket_station: 'bonusBuildSpeed',
-  computer_tech: 'bonusResearchSpeed',
-  gravi: 'bonusResearchSpeed',
-  combustion_drive: 'bonusFleetSpeed',
-  impulse_drive: 'bonusFleetSpeed',
-  hyperspace_drive: 'bonusFleetSpeed',
+// План 72.1.58: имена эффектов 1:1 с legacy. В legacy
+// `Profession.class.php:104` имя эффекта = имя соответствующего
+// здания/исследования из catalog. Маппинг effectKey → info.<key>
+// ниже зеркалит configs/professions.yml ↔ configs/i18n/info.*.
+//
+// Если ключ отсутствует — fallback на 'profession.bonus*' (старая
+// группа), затем raw key.
+const EFFECT_INFO_KEY: Record<string, string> = {
+  metalmine: 'metalmine',
+  silicon_lab: 'siliconLab',
+  solar_plant: 'solarPlant',
+  shipyard: 'shipyard',
+  defense_factory: 'defenseFactory',
+  rocket_station: 'rocketStation',
+  // Боевые техи — отдельные исследования.
+  gun: 'gunTech',
+  shield_weapon: 'shieldTech',
+  shell_weapon: 'shellTech',
+  ballistics: 'ballisticsTech',
+  masking: 'maskingTech',
+  computer_tech: 'computerTech',
+  gravi: 'gravi',
+  combustion_drive: 'combustionEngine',
+  impulse_drive: 'impulseEngine',
+  hyperspace_drive: 'hyperspaceEngine',
+};
+
+// Sentinel error codes от backend (план 72.1.58, см.
+// internal/profession/handler.go::errCode*).
+const ERROR_CODE_TO_I18N: Record<string, string> = {
+  profession_unknown: 'errUnknownProfession',
+  profession_not_enough_credit: 'errNotEnoughCredit',
+  profession_in_vacation: 'errInVacation',
 };
 
 function fmtDelta(v: number): string {
@@ -82,7 +93,23 @@ export function ProfessionScreen() {
       setErrMsg(null);
       void qc.invalidateQueries({ queryKey: QK.professionMe() });
     },
-    onError: (err) => setErrMsg((err as ApiError).message),
+    onError: (err) => {
+      // План 72.1.58: backend возвращает sentinel-коды
+      // (profession_unknown / not_enough_credit / in_vacation), которые
+      // мы переводим через i18n. Generic-ошибки fallback на errGeneric.
+      const apiErr = err as ApiError;
+      const i18nKey = ERROR_CODE_TO_I18N[apiErr.code];
+      if (i18nKey) {
+        // Передаём cost в not_enough_credit (info из meQ).
+        const cost = meQ.data?.change_cost ?? 0;
+        setErrMsg(t('profession', i18nKey, { cost: String(cost) }));
+      } else {
+        setErrMsg(
+          t('profession', 'errGeneric', { msg: apiErr.message }) ||
+            apiErr.message,
+        );
+      }
+    },
   });
 
   if (listQ.isLoading || meQ.isLoading) {
@@ -105,14 +132,21 @@ export function ProfessionScreen() {
     change.mutate(radioValue);
   }
 
-  // change_info зеркалит legacy: если cooldown активен — показать
-  // стоимость и days_remain; иначе — «бесплатно».
+  // План 72.1.58: legacy PROFESSION_CHANGE_*_INFO передают и days, и
+  // cost в обоих ветках (бесплатной и платной). При cooldown=0 —
+  // показываем дефолтные 14 дней / 1000 cr как info о следующем
+  // ограничении (legacy NS::PROFESSION_CHANGE_MIN_DAYS=14, COST=1000).
+  const PROFESSION_CHANGE_MIN_DAYS = 14;
+  const PROFESSION_CHANGE_COST = 1000;
   const changeInfo = daysRemain > 0
     ? t('profession', 'changeCostInfo', {
         cost: String(changeCost),
         days: String(daysRemain),
       })
-    : t('profession', 'changeFreeInfo');
+    : t('profession', 'changeFreeInfo', {
+        days: String(PROFESSION_CHANGE_MIN_DAYS),
+        cost: String(PROFESSION_CHANGE_COST),
+      });
 
   return (
     <form method="post" action="#" onSubmit={submit} data-testid="profession-form">
@@ -191,7 +225,17 @@ export function ProfessionScreen() {
                 </td>
                 <td>
                   {p.description && (
-                    <div style={{ marginBottom: 6 }}>{p.description}</div>
+                    // legacy: <p/><label for=profession_id>{desc}</label>
+                    <label
+                      htmlFor={`profession_${p.key}`}
+                      style={{
+                        display: 'block',
+                        marginBottom: 6,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {p.description}
+                    </label>
                   )}
                   {specs.length > 0 && (
                     <table
@@ -202,17 +246,30 @@ export function ProfessionScreen() {
                     >
                       <thead>
                         <tr>
+                          {/* План 72.1.58: legacy PROFESSION_SPECIALISATION
+                              «Специализация» вместо «Текущая профессия». */}
                           <th colSpan={2}>
-                            {t('profession', 'currentLabel')}
+                            {t('profession', 'specialization')}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         {specs.map(([k, v]) => {
-                          const labelKey = BONUS_LABEL[k];
-                          const label = labelKey
-                            ? t('profession', labelKey)
-                            : k;
+                          // План 72.1.58: имена эффектов 1:1 с legacy —
+                          // имя соответствующего здания/исследования
+                          // (info.<key>). Fallback на старую группу
+                          // profession.bonus*, затем на raw key.
+                          const infoKey = EFFECT_INFO_KEY[k];
+                          let label: string;
+                          if (infoKey) {
+                            label = t('info', infoKey);
+                            if (label.startsWith('[')) {
+                              // не нашлось в info — fallback
+                              label = k;
+                            }
+                          } else {
+                            label = k;
+                          }
                           return (
                             <tr key={k}>
                               <td>{label}</td>

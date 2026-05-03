@@ -1701,15 +1701,21 @@ profession:
   title: Профессия
   active: активна
   currentLabel: Текущая профессия
+  # План 72.1.58: legacy PROFESSION_SPECIALISATION — заголовок секции
+  # эффектов в profession.tpl.
+  specialization: Специализация
   available: доступно
   chooseBtn: Выбрать
   confirmChoose: "Выбрать профессию «{{name}}»? Смена возможна раз в {{days}} дней."
-  # План 72.1.47: динамическая стоимость (legacy PROFESSION_CHANGE_COST_INFO/_NO_COST_INFO).
-  changeCostInfo: "До бесплатной смены: {{days}} дн. Сменить сейчас — {{cost}} cr."
-  changeFreeInfo: "Смена профессии — бесплатно (cooldown пройден)."
+  # План 72.1.58: legacy PROFESSION_CHANGE_COST_INFO / _NO_COST_INFO 1:1.
+  changeCostInfo: "Стоимость смены профессии — {{cost}} кредитов. Бесплатно — через {{days}} дней."
+  changeFreeInfo: "Сейчас можно изменить профессию бесплатно. В следующий раз изменить можно будет через {{days}} дней или за {{cost}} кредитов в любое время."
   confirmBtn: Подтвердить
   cancelBtn: Отмена
   bonusUnknown: Бонус
+  # План 72.1.58: имена эффектов теперь приходят из catalog (имя
+  # здания/исследования через i18n.buildings/research). Эти legacy-
+  # ключи остаются как fallback на случай если catalog не подхватился.
   bonusProductionMetal: Добыча металла
   bonusProductionSilicon: Добыча кристаллов
   bonusProductionHydrogen: Добыча водорода
@@ -1720,8 +1726,11 @@ profession:
   bonusShipShield: Щит кораблей
   bonusShipHull: Броня кораблей
   bonusEspionage: Шпионаж
-  # План 72.1.15: error mapping для ErrInVacation (legacy UMODE_ENABLED).
+  # Sentinel-ошибки backend → русские тексты для UI (план 72.1.58).
   errInVacation: Нельзя менять профессию в режиме отпуска.
+  errNotEnoughCredit: "Недостаточно кредитов для смены профессии (нужно {{cost}})."
+  errUnknownProfession: Неизвестная профессия.
+  errGeneric: "Не удалось сменить профессию: {{msg}}"
 
 admin:
   title: Панель администратора
