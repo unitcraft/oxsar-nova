@@ -25,6 +25,7 @@ import { fetchMe } from '@/api/me';
 import { fetchProfessionMe } from '@/api/profession';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import { useCurrentPlanetStore } from '@/stores/currentPlanet';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { useTranslation } from '@/i18n/i18n';
 import {
@@ -41,6 +42,7 @@ import {
 
 export function MainScreen() {
   const { planet, planets, isLoading } = useResolvedPlanet();
+  const setCurrentPlanet = useCurrentPlanetStore((s) => s.set);
   const { t } = useTranslation();
   const qc = useQueryClient();
   // Сообщение об ошибке отзыва флота. Кладём в state, рендерим под
@@ -112,13 +114,37 @@ export function MainScreen() {
       ? profQ.data.label
       : t('profession', 'title');
 
-  // Планет-картинка — детерминированная по home.id.
-  const planetImg = planetImageUrl(home.planet_type, home.id);
-  // Луна — пока не отдаём в /api/planets, ставим placeholder (если будет
-  // moon-планета в общем списке планет — отрисуем sidebar-иконкой).
-  const moonExists = planets.some(
-    (p) => p.is_moon && p.galaxy === home.galaxy && p.system === home.system,
-  );
+  // Большая картинка в центре — луна или планета в зависимости от
+  // активной (legacy `Main.class.php` использует одинаковый блок
+  // независимо от is_moon).
+  const planetImg = home.is_moon
+    ? moonImageUrl()
+    : planetImageUrl(home.planet_type, home.id);
+  // «Парная сущность» в левом блоке (legacy `Main.class.php:258-278`):
+  // если home — планета, ищем её луну (is_moon=true);
+  // если home — луна, ищем родительскую планету (is_moon=false) на
+  // тех же координатах. В nova-схеме планета и её луна имеют
+  // одинаковые galaxy/system/position, различаются только is_moon.
+  // Клик переключает активную сущность.
+  const partner =
+    planets.find(
+      (p) =>
+        p.is_moon !== home.is_moon &&
+        p.galaxy === home.galaxy &&
+        p.system === home.system &&
+        p.position === home.position,
+    ) ?? null;
+  // Картинка партнёра + label «Луна» / «Планета».
+  const partnerImg = partner
+    ? partner.is_moon
+      ? moonImageUrl()
+      : planetImageSmallUrl(partner.planet_type, partner.id)
+    : null;
+  const partnerLabel = partner
+    ? partner.is_moon
+      ? t('global', 'moon')
+      : t('main', 'currentPlanet') || 'Планета'
+    : '';
 
   return (
     <>
@@ -265,15 +291,22 @@ export function MainScreen() {
         */}
         <tr>
           <td className="center" style={{ width: '33%' }}>
-            {moonExists ? (
+            {partner && partnerImg ? (
               <>
-                {t('global', 'moon')}
+                {partnerLabel}
                 <br />
+                {/* Legacy: <a class="goto pointer" rel="partnerid"><img/></a>
+                    переключает активную планету (Main.class.php:272).
+                    Для текущей планеты блок показывает её луну, для
+                    луны — её родительскую планету. */}
                 <img
-                  src={moonImageUrl()}
-                  alt={t('global', 'moon')}
+                  src={partnerImg}
+                  alt={partner.name}
+                  title={partner.name}
                   width={50}
                   height={50}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setCurrentPlanet(partner.id)}
                 />
               </>
             ) : (
@@ -294,6 +327,7 @@ export function MainScreen() {
             <PlanetSidebar
               currentPlanetId={home.id}
               planets={planets}
+              onSelect={setCurrentPlanet}
             />
           </td>
         </tr>
@@ -405,6 +439,7 @@ export function MainScreen() {
 function PlanetSidebar({
   currentPlanetId,
   planets,
+  onSelect,
 }: {
   currentPlanetId: string;
   planets: Array<{
@@ -416,6 +451,7 @@ function PlanetSidebar({
     planet_type?: string | null;
     is_moon?: boolean;
   }>;
+  onSelect: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const others = planets.filter(
@@ -438,14 +474,19 @@ function PlanetSidebar({
               <td key={p.id}>
                 {p.name}
                 <br />
-                <Link to={`/?planet_id=${encodeURIComponent(p.id)}`}>
-                  <img
-                    src={planetImageSmallUrl(p.planet_type ?? null, p.id)}
-                    alt={p.name}
-                    width={89}
-                    height={89}
-                  />
-                </Link>
+                {/* Legacy `planetMainSelection.tpl`: только картинка
+                    кликабельна (Main.class.php:302 — <a class="goto"
+                    rel="planetid"><img/></a>). Имя и «нет заданий» —
+                    обычный текст. */}
+                <img
+                  src={planetImageSmallUrl(p.planet_type ?? null, p.id)}
+                  alt={p.name}
+                  title={p.name}
+                  width={89}
+                  height={89}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => onSelect(p.id)}
+                />
                 <br />
                 {t('main', 'noTasks')}
               </td>
