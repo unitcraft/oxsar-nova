@@ -106,30 +106,29 @@
 - Остаток: e2e-тест полного цикла AttackHandler + transaction (требует testcontainers).
 - **Приоритет**: L — hot-path покрыт, transaction-level тест отложен.
 
-### [M4.x] attacker_* поля юнитов не используются в бою
-- **Где**: `backend/internal/battle/engine.go::Front/Ballistics/Masking`,
-  `configs/ships.yml`. В `frontend/src/api/catalog.ts` поля
-  `attacker_front/ballistics/masking` объявлены в типе, заполнены у
-  Deathstar (id=42), но в UI не отображаются и в боевой логике не
-  читаются.
-- **Что**: в легаси (`oxsar2-java Participant.java`, таблица
-  `na_ship_datasheet`) параметры юнита раздельны для атакующей и
-  обороняющейся стороны (`attacker_front/attack/shield/ballistics/
-  masking` vs обычные). В nova используется единый набор значений
-  независимо от роли.
-- **Почему**: реальная разница в БД легаси есть только у 2 юнитов из
-  ~30 — Deathstar (front 10→9 в атаке) и Alien Screen (front 15→16 в
-  атаке). У всех остальных `attacker_* = defender_*`. Deathstar — late-
-  game, встречается у 0–2 игроков в партии. Alien Screen — NPC
-  пришельцев (AlienAI ещё не реализован). В массовых боях флотов
-  эффект разницы `front ±1` тонет.
-- **Как чинить**: добавить опциональные поля `attacker_front/attack/
-  shield/ballistics/masking` в `ships.yml`, протащить через
-  `battle.Unit` и в `engine.go` выбирать значение по роли стороны
-  (attacker/defender). Оценка: < 1 дня. Актуально станет при
-  реализации AlienAI с атаками по игрокам и при балансировке late-
-  game с Deathstar.
-- **Приоритет**: L — затрагивает < 1% боёв типичной партии.
+### [M4.x] attacker_* поля юнитов не используются в бою — ЗАКРЫТО
+- **Статус**: ЗАКРЫТО 2026-05-03 планом 72.1.56 B11 (legacy 1:1).
+- **Где закрыто**:
+  - `internal/config/catalog.go`: добавлен `AttackerOverrides{Front,
+    Attack, Shield, Shell}`, optional `Attacker *AttackerOverrides` в
+    `ShipSpec` и `DefenseSpec`. Ballistics/Masking опущены — они
+    давно tech-level (ADR-0015), per-юнит не имеют смысла.
+  - `configs/ships.yml`: `death_star.front=10` + `attacker.front=9`,
+    `unit_a_screen.front=15` + `attacker.front=16` (1:1 с
+    `na_ship_datasheet`).
+  - `internal/fleet/attack.go::stacksToBattleUnits` принимает
+    `isAttacker bool`. Также починен Front (был захардкожен 0!).
+    Все callers обновлены: attack.go (atk=true, def=false),
+    acs_attack.go (defenders=false, fleets=true), expedition.go (PvE
+    игрок=attacker).
+  - `internal/alien/helpers.go::stacksToBattleUnits` зеркально
+    обновлён.
+- **Тест**: `TestStacksToBattleUnits_AttackerOverrides` проверяет
+  Deathstar Front=9 при role=attacker и =10 при defender; cruiser без
+  overrides сохраняет 7 в обеих ролях.
+- **Регрессия Find=0 устранена** — все юниты теперь корректно несут
+  Front в бой.
+- **Приоритет**: closed.
 
 ### [M4.x] Rapidfire — урезанная заглушка — ЗАКРЫТО
 - **Статус**: Закрыто 2026-04-24 (план 18 Фаза 1). До этого

@@ -227,8 +227,8 @@ func (s *Service) AttackHandler() event.Handler {
 			return fmt.Errorf("alien attack: def tech: %w", err)
 		}
 
-		defUnits := stacksToBattleUnits(defShips, s.cat, false)
-		defUnits = append(defUnits, stacksToBattleUnits(defDefense, s.cat, true)...)
+		defUnits := stacksToBattleUnits(defShips, s.cat, false, false)
+		defUnits = append(defUnits, stacksToBattleUnits(defDefense, s.cat, true, false)...)
 		defSide := battle.Side{UserID: defUserID, Tech: defTech, Units: defUnits}
 
 		seed := rng.New(fnvHash(e.ID))

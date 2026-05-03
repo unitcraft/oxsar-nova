@@ -571,7 +571,7 @@ func expExtraPlanet(ctx context.Context, tx pgx.Tx, r *rng.R, userID string, num
 // expPirates — PvE-битва с флотом пиратов, масштабированным по exp_power.
 func expPirates(ctx context.Context, tx pgx.Tx, fleetID, ownerUserID string,
 	ships []unitStack, cat *config.Catalog, expPower float64, r *rng.R, tr trFn) (map[string]any, error) {
-	atkUnits := stacksToBattleUnits(ships, cat, false)
+	atkUnits := stacksToBattleUnits(ships, cat, false, true)
 	if len(atkUnits) == 0 {
 		return map[string]any{"message": tr("mission", "expeditionNoShips", nil)}, nil
 	}
@@ -632,7 +632,7 @@ func expPirates(ctx context.Context, tx pgx.Tx, fleetID, ownerUserID string,
 // expBattlefield — бой с повреждённым флотом противника (shell_percent=0.5).
 func expBattlefield(ctx context.Context, tx pgx.Tx, fleetID, ownerUserID string,
 	ships []unitStack, cat *config.Catalog, expPower float64, r *rng.R, tr trFn) (map[string]any, error) {
-	atkUnits := stacksToBattleUnits(ships, cat, false)
+	atkUnits := stacksToBattleUnits(ships, cat, false, true)
 	if len(atkUnits) == 0 {
 		return map[string]any{"message": tr("mission", "expeditionNoShips", nil)}, nil
 	}

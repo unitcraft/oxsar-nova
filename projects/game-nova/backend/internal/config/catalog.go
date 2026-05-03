@@ -79,6 +79,24 @@ type ShipSpec struct {
 	Front  int     `yaml:"front,omitempty"`
 	// Per-unit ballistics/masking удалены (ADR-0015, план 27-U): движок
 	// использует только Side.Tech.Ballistics/Masking (research уровни).
+
+	// Attacker — опциональные значения параметров когда юнит выступает
+	// в роли АТАКУЮЩЕГО (план 72.1.56 B11, legacy `na_ship_datasheet`
+	// колонки `attacker_front/attack/shield/shell`). Реальная разница
+	// в legacy базе — у Deathstar (front 10→9 в атаке) и Alien Screen
+	// (front 15→16 в атаке). У всех остальных юнитов значения равны
+	// defender-версии и блок не задаётся (omitempty).
+	Attacker *AttackerOverrides `yaml:"attacker,omitempty"`
+}
+
+// AttackerOverrides — переопределения боевых характеристик в роли
+// атакующего (план 72.1.56 B11). Любое поле = 0 → используется
+// defender-значение из ShipSpec/DefenseSpec.
+type AttackerOverrides struct {
+	Front  int `yaml:"front,omitempty"`
+	Attack int `yaml:"attack,omitempty"`
+	Shield int `yaml:"shield,omitempty"`
+	Shell  int `yaml:"shell,omitempty"`
 }
 
 type DefenseCatalog struct {
@@ -93,6 +111,12 @@ type DefenseSpec struct {
 	Shell  int     `yaml:"shell"`
 	Front  int     `yaml:"front,omitempty"`
 	// Per-unit ballistics/masking удалены (ADR-0015, план 27-U).
+
+	// Attacker — опциональные значения когда defense-юнит выступает
+	// атакующим (теоретически — defense обычно не атакует, но 1:1
+	// схема legacy сохраняется на случай специальных миссий). См.
+	// ShipSpec.Attacker для семантики.
+	Attacker *AttackerOverrides `yaml:"attacker,omitempty"`
 }
 
 // RapidfireCatalog — table[shooter][target] = multiplier.
