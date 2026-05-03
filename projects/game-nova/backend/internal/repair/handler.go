@@ -62,12 +62,14 @@ func (h *Handler) EnqueueDisassemble(w http.ResponseWriter, r *http.Request) {
 }
 
 type repairRequest struct {
-	UnitID int `json:"unit_id"`
+	UnitID   int   `json:"unit_id"`
+	Quantity int64 `json:"quantity,omitempty"` // План 72.1.56 B6: legacy 1:1 partial-repair. 0/опущен → чинить всех damaged.
 }
 
 // EnqueueRepair POST /api/planets/{id}/repair/repair — починить
-// damaged-юнитов заданного типа (всех разом). Стоимость считается
-// по legacy-формуле.
+// damaged-юнитов заданного типа. Если quantity > 0 — чинит N штук
+// (legacy `ExtRepair.class.php:510` clamp до damaged_count); иначе —
+// всех. Стоимость считается за фактически чиненое количество.
 func (h *Handler) EnqueueRepair(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
 	if !ok {
@@ -84,7 +86,7 @@ func (h *Handler) EnqueueRepair(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrBadRequest, "invalid json"))
 		return
 	}
-	q, err := h.svc.EnqueueRepair(r.Context(), uid, planetID, req.UnitID)
+	q, err := h.svc.EnqueueRepair(r.Context(), uid, planetID, req.UnitID, req.Quantity)
 	switch {
 	case err == nil:
 		httpx.WriteJSON(w, r, http.StatusCreated, q)

@@ -64,9 +64,14 @@ func (s *Service) DisassembleHandler() event.Handler {
 	}
 }
 
-// RepairHandler — обработчик KindRepair=50. При срабатывании сбрасывает
-// damaged_count и shell_percent у ships для данного unit_id. Ресурсы
-// уже списаны при enqueue.
+// RepairHandler — обработчик KindRepair=50. При срабатывании уменьшает
+// damaged_count на qCount (то, что чинили) у ships или defense для
+// данного unit_id. Если итоговый damaged ≤ 0 — также сбрасывает
+// shell_percent (стек полностью восстановлен).
+//
+// План 72.1.56 B6: legacy 1:1 partial-repair поддерживается; раньше
+// handler сбрасывал damaged=0 безусловно (некорректно при quantity <
+// damaged + не различал ships/defense).
 func (s *Service) RepairHandler() event.Handler {
 	return func(ctx context.Context, tx pgx.Tx, e event.Event) error {
 		var pl struct {
@@ -77,15 +82,16 @@ func (s *Service) RepairHandler() event.Handler {
 			return fmt.Errorf("repair: parse payload: %w", err)
 		}
 		var (
-			status     string
-			planetID   string
-			unitID     int
-			qCount     int64
+			status    string
+			planetID  string
+			unitID    int
+			qCount    int64
+			isDefense bool
 		)
 		err := tx.QueryRow(ctx, `
-			SELECT status, planet_id, unit_id, count
+			SELECT status, planet_id, unit_id, count, is_defense
 			FROM repair_queue WHERE id = $1 FOR UPDATE
-		`, pl.QueueID).Scan(&status, &planetID, &unitID, &qCount)
+		`, pl.QueueID).Scan(&status, &planetID, &unitID, &qCount, &isDefense)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				return nil
@@ -96,16 +102,23 @@ func (s *Service) RepairHandler() event.Handler {
 			return nil
 		}
 
-		// Сбрасываем damaged_count и shell_percent. Если за время
-		// очереди подкинулись новые damaged (ещё один бой) — они тоже
-		// сбросятся, это не идеально, но для M4.4c приемлемо: игрок
-		// может поставить повторный repair.
+		stockTable := "ships"
+		if isDefense {
+			stockTable = "defense"
+		}
+		// Уменьшаем damaged_count на чиненое qCount (clamp ≥ 0).
+		// Если итоговый damaged_count = 0 → сбрасываем shell_percent
+		// (стек полностью восстановлен).
 		if _, err := tx.Exec(ctx, `
-			UPDATE ships
-			SET damaged_count = 0, shell_percent = 0
+			UPDATE `+stockTable+`
+			SET damaged_count = GREATEST(damaged_count - $3, 0),
+			    shell_percent = CASE
+			        WHEN damaged_count - $3 <= 0 THEN 0
+			        ELSE shell_percent
+			    END
 			WHERE planet_id = $1 AND unit_id = $2
-		`, planetID, unitID); err != nil {
-			return fmt.Errorf("repair: reset damaged: %w", err)
+		`, planetID, unitID, qCount); err != nil {
+			return fmt.Errorf("repair: apply damaged: %w", err)
 		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE repair_queue SET status='done' WHERE id=$1`, pl.QueueID,

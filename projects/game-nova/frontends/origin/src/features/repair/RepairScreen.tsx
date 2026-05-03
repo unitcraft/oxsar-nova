@@ -30,6 +30,11 @@ export function RepairScreen() {
   const { t } = useTranslation();
   const qc = useQueryClient();
 
+  // План 72.1.56 B6 (legacy 1:1): per-unit input «сколько чинить».
+  // Map unit_id → строковое значение из <input>. Пустая строка / 0 → backend
+  // починит всех damaged (legacy default).
+  const [quantities, setQuantities] = useState<Record<number, string>>({});
+
   const damagedQ = useQuery({
     queryKey: planetId ? QK.repairDamaged(planetId) : ['noop-rd'],
     queryFn: () =>
@@ -64,9 +69,16 @@ export function RepairScreen() {
   }
 
   const repair = useMutation({
-    mutationFn: (unitId: number) => repairUnits(planetId!, unitId),
-    onSuccess: () => {
+    mutationFn: ({ unitId, quantity }: { unitId: number; quantity?: number }) =>
+      repairUnits(planetId!, unitId, quantity),
+    onSuccess: (_, vars) => {
       setErrMsg(null);
+      // Сбросим input для починенного типа.
+      setQuantities((prev) => {
+        const copy = { ...prev };
+        delete copy[vars.unitId];
+        return copy;
+      });
       invalidateAll();
     },
     onError: (e) => setErrMsg((e as ApiError).message),
@@ -221,13 +233,33 @@ export function RepairScreen() {
                     Целостность: {Math.floor(u.shell_percent)}%
                   </div>
                 </td>
-                <td width="100px" align="center" valign="top">
+                <td width="120px" align="center" valign="top">
+                  {/* План 72.1.56 B6: legacy 1:1 — input quantity. */}
+                  <input
+                    type="text"
+                    size={3}
+                    value={quantities[u.unit_id] ?? ''}
+                    placeholder={String(u.damaged)}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/[^0-9]/g, '');
+                      setQuantities((p) => ({ ...p, [u.unit_id]: v }));
+                    }}
+                    style={{ width: 50, marginRight: 4 }}
+                  />
                   <span className="true">
                     <input
                       type="button"
                       className="button"
                       value={t('buildings', 'repair') ?? 'Ремонтировать'}
-                      onClick={() => repair.mutate(u.unit_id)}
+                      onClick={() => {
+                        const raw = quantities[u.unit_id];
+                        const q = raw ? parseInt(raw, 10) : 0;
+                        repair.mutate(
+                          q > 0
+                            ? { unitId: u.unit_id, quantity: q }
+                            : { unitId: u.unit_id },
+                        );
+                      }}
                       disabled={repair.isPending}
                     />
                   </span>

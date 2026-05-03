@@ -882,11 +882,12 @@ paths:
       tags: [repair]
       security: [{ bearerAuth: [] }]
       summary: |
-        Enqueue repair of all damaged ships of one unit_id. Cost scales
-        with remaining shell_percent (more damaged = cheaper to repair,
-        less damaged = more expensive in legacy formula).
+        Enqueue repair of damaged units. By default repairs ALL damaged
+        of given unit_id; pass `quantity` to repair only N (legacy
+        ExtRepair.class.php:510 — clamp до damaged_count).
       description: |
         Anti-double-submit через Idempotency-Key (план 72.1.49).
+        План 72.1.56 B6: legacy 1:1 partial-repair через quantity.
       parameters:
         - in: path
           name: id
@@ -902,6 +903,13 @@ paths:
               required: [unit_id]
               properties:
                 unit_id: { type: integer }
+                quantity:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                  description: |
+                    Quantity to repair. 0 or omitted = repair all damaged
+                    (legacy default). >damaged → clamp to damaged.
       responses:
         "201":
           description: queued

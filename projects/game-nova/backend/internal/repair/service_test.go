@@ -64,3 +64,29 @@ func TestScalePerUnit_ZeroBase(t *testing.T) {
 		t.Errorf("zero base should give zero: %+v", got)
 	}
 }
+
+// План 72.1.56 B6: legacy 1:1 partial-repair (ExtRepair.class.php:510).
+func TestClampRepairQuantity(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name              string
+		requested, damaged int64
+		want              int64
+	}{
+		{"requested zero → all damaged", 0, 10, 10},
+		{"requested negative → all damaged", -5, 10, 10},
+		{"requested less than damaged → as-is", 3, 10, 3},
+		{"requested equals damaged → all", 10, 10, 10},
+		{"requested greater than damaged → clamp to damaged", 99, 10, 10},
+		{"damaged zero → zero", 5, 0, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := clampRepairQuantity(tc.requested, tc.damaged)
+			if got != tc.want {
+				t.Errorf("clampRepairQuantity(%d,%d) = %d, want %d",
+					tc.requested, tc.damaged, got, tc.want)
+			}
+		})
+	}
+}

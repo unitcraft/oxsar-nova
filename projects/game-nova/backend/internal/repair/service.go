@@ -324,15 +324,34 @@ func (s *Service) EnqueueDisassemble(ctx context.Context, userID, planetID strin
 	return item, err
 }
 
-// EnqueueRepair чинит ВСЕХ damaged-юнитов одного типа (unit_id) на
-// планете. Batch-семантика: списываем required-ресурсы сразу, при
-// finish сбрасываем damaged_count/shell_percent к 0.
+// clampRepairQuantity воспроизводит legacy `ExtRepair.class.php:510`:
+// `$quantity = min($quantity, $row["damaged"])`. Если quantity ≤ 0 —
+// возвращает damaged (legacy default «починить всех» когда форма
+// прислала 0). Если quantity ≥ damaged — clamp до damaged.
+func clampRepairQuantity(requested, damaged int64) int64 {
+	if requested <= 0 || requested >= damaged {
+		return damaged
+	}
+	return requested
+}
+
+// EnqueueRepair чинит N damaged-юнитов одного типа (unit_id) на
+// планете. Если quantity <= 0 — чинит ВСЕХ damaged (legacy default).
+// Если quantity > damaged — clamp до damaged (legacy `ExtRepair::order`
+// L.510: `$quantity = min($quantity, $row["damaged"])`).
+// Списываем required-ресурсы за фактически чиненое количество, при
+// finish сбрасываем damaged_count за это число (если quantity ==
+// damaged → shell_percent тоже сбрасывается к 0).
+//
+// План 72.1.56 B6: legacy 1:1 — игрок задаёт quantity через форму
+// `<input type='text' name='id' value='0' size='3'>` для каждого
+// damaged-юнита (legacy `ExtRepair.class.php:349`).
 //
 // Формула (legacy ExtRepair::setRepairUnitRequirements):
 //   struct_scale = 0.1 × (100 - shell_percent) / 100
 //   required_{m,s,h} = ceil(base × struct_scale / 10) × 10
 //   required_time   = buildTime(base×0.1, base×0.1, mode)
-func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, unitID int) (QueueItem, error) {
+func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, unitID int, quantity int64) (QueueItem, error) {
 	_, baseCost, isDefense, ok := s.lookupUnit(unitID)
 	if !ok {
 		return QueueItem{}, ErrUnknownUnit
@@ -398,6 +417,11 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 			shellPct = 100
 		}
 
+		// Legacy `ExtRepair.class.php:510`:
+		// `$quantity = min($quantity, $row["damaged"])`. Если игрок не
+		// передал quantity (или ≤0) — fallback на «всех» как было раньше.
+		repairCount := clampRepairQuantity(quantity, damaged)
+
 		// Формула стоимости ремонта.
 		structScale := 0.1 * (100.0 - shellPct) / 100.0
 		reqPerUnit := config.ResCost{
@@ -405,7 +429,7 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 			Silicon:  ceil10(float64(baseCost.Silicon) * structScale),
 			Hydrogen: ceil10(float64(baseCost.Hydrogen) * structScale),
 		}
-		totalReq := multiplyCost(reqPerUnit, damaged)
+		totalReq := multiplyCost(reqPerUnit, repairCount)
 
 		if int64(p.Metal) < totalReq.Metal ||
 			int64(p.Silicon) < totalReq.Silicon ||
@@ -438,7 +462,7 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 			},
 			repairLvl, 0, s.gameSpd)
 		perUnitSec := int(math.Max(1, math.Round(perUnit.Seconds())))
-		totalDur := time.Duration(perUnitSec) * time.Duration(damaged) * time.Second
+		totalDur := time.Duration(perUnitSec) * time.Duration(repairCount) * time.Second
 		start := time.Now().UTC()
 		end := start.Add(totalDur)
 
@@ -449,7 +473,7 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 				 return_metal, return_silicon, return_hydrogen,
 				 per_unit_seconds, start_at, end_at, status)
 			VALUES ($1, $2, $3, $4, $5, 'repair', $6, 0, 0, 0, $7, $8, $9, 'running')
-		`, id, planetID, userID, unitID, isDefense, damaged, perUnitSec, start, end); err != nil {
+		`, id, planetID, userID, unitID, isDefense, repairCount, perUnitSec, start, end); err != nil {
 			return fmt.Errorf("insert queue: %w", err)
 		}
 
@@ -468,7 +492,7 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 
 		item = QueueItem{
 			ID: id, PlanetID: planetID, UserID: userID, UnitID: unitID,
-			IsDefense: isDefense, Mode: "repair", Count: damaged,
+			IsDefense: isDefense, Mode: "repair", Count: repairCount,
 			PerUnitSeconds: perUnitSec, StartAt: start, EndAt: end, Status: "running",
 		}
 		return nil
