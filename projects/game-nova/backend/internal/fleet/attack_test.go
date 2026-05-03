@@ -190,3 +190,64 @@ func TestDeriveSeed_Different(t *testing.T) {
 		t.Error("different IDs produced same seed")
 	}
 }
+
+// План 72.1.56 B11: legacy `na_ship_datasheet attacker_front` для
+// Deathstar/Alien Screen применяется только когда юнит — атакующий.
+func TestStacksToBattleUnits_AttackerOverrides(t *testing.T) {
+	t.Parallel()
+	// Имитируем Deathstar (id=42, front=10 defender, attacker.front=9).
+	cat := minCatalog(map[string]config.ShipSpec{
+		"death_star": {
+			ID: 42, Attack: 200000, Shield: 50000, Shell: 9000000,
+			Cargo: 1000000, Speed: 100, Fuel: 1, Front: 10,
+			Cost: config.ResCost{Metal: 5000000, Silicon: 4000000, Hydrogen: 1000000},
+			Attacker: &config.AttackerOverrides{Front: 9},
+		},
+		// Юнит без overrides — Front одинаков для обеих ролей.
+		"cruiser": {
+			ID: 4, Attack: 400, Shield: 50, Shell: 27000,
+			Cargo: 800, Speed: 15000, Fuel: 300, Front: 7,
+			Cost: config.ResCost{Metal: 20000, Silicon: 7000, Hydrogen: 2000},
+		},
+	})
+	stacks := []unitStack{
+		{UnitID: 42, Count: 5},
+		{UnitID: 4, Count: 100},
+	}
+
+	t.Run("attacker role applies overrides", func(t *testing.T) {
+		got := stacksToBattleUnits(stacks, cat, false, true)
+		if len(got) != 2 {
+			t.Fatalf("expected 2 units, got %d", len(got))
+		}
+		var ds, cr battle.Unit
+		for _, u := range got {
+			if u.UnitID == 42 {
+				ds = u
+			}
+			if u.UnitID == 4 {
+				cr = u
+			}
+		}
+		if ds.Front != 9 {
+			t.Errorf("Deathstar attacker Front=%d, want 9", ds.Front)
+		}
+		if cr.Front != 7 {
+			t.Errorf("Cruiser attacker Front=%d, want 7 (no override)", cr.Front)
+		}
+	})
+
+	t.Run("defender role uses base values", func(t *testing.T) {
+		got := stacksToBattleUnits(stacks, cat, false, false)
+		var ds battle.Unit
+		for _, u := range got {
+			if u.UnitID == 42 {
+				ds = u
+			}
+		}
+		if ds.Front != 10 {
+			t.Errorf("Deathstar defender Front=%d, want 10", ds.Front)
+		}
+	})
+}
+

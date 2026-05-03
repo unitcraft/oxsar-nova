@@ -146,8 +146,8 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 		if err != nil {
 			return fmt.Errorf("acs attack: def tech: %w", err)
 		}
-		defUnits := stacksToBattleUnits(defShips, s.catalog, false)
-		defUnits = append(defUnits, stacksToBattleUnits(defDefense, s.catalog, true)...)
+		defUnits := stacksToBattleUnits(defShips, s.catalog, false, false)
+		defUnits = append(defUnits, stacksToBattleUnits(defDefense, s.catalog, true, false)...)
 		defSide := battle.Side{UserID: defenderUserID, Tech: defTech, Units: defUnits}
 
 		// Собираем стороны атакующих.
@@ -166,7 +166,7 @@ func (s *TransportService) ACSAttackHandler() event.Handler {
 			if err != nil {
 				return fmt.Errorf("acs attack: read tech %s: %w", f.ownerUserID, err)
 			}
-			units := stacksToBattleUnits(ships, s.catalog, false)
+			units := stacksToBattleUnits(ships, s.catalog, false, true)
 			if len(units) == 0 {
 				continue
 			}

@@ -106,26 +106,38 @@ func readUserTech(ctx context.Context, tx pgx.Tx, userID string, cat *config.Cat
 	}, nil
 }
 
-func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense bool) []battle.Unit {
+// stacksToBattleUnits (alien-package version) — отличается от fleet.go
+// тем что юниты собираются из defender-планеты (для Alien-атаки игрок
+// — defender). План 72.1.56 B11: добавлен Front + attacker overrides
+// (для симметрии с fleet/attack.go и на случай alien-атаки от лица
+// нашего игрока).
+func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense, isAttacker bool) []battle.Unit {
 	var out []battle.Unit
 	for _, s := range stacks {
 		if s.Count <= 0 {
 			continue
 		}
-		var attack, shield, shell int
+		var attack, shield, shell, frontVal int
 		var cost config.ResCost
+		var ovr *config.AttackerOverrides
 		var found bool
 		if isDefense {
 			for _, spec := range cat.Defense.Defense {
 				if spec.ID == s.UnitID {
-					attack, shield, shell, cost, found = spec.Attack, spec.Shield, spec.Shell, spec.Cost, true
+					attack, shield, shell, cost = spec.Attack, spec.Shield, spec.Shell, spec.Cost
+					frontVal = spec.Front
+					ovr = spec.Attacker
+					found = true
 					break
 				}
 			}
 		} else {
 			for _, spec := range cat.Ships.Ships {
 				if spec.ID == s.UnitID {
-					attack, shield, shell, cost, found = spec.Attack, spec.Shield, spec.Shell, spec.Cost, true
+					attack, shield, shell, cost = spec.Attack, spec.Shield, spec.Shell, spec.Cost
+					frontVal = spec.Front
+					ovr = spec.Attacker
+					found = true
 					break
 				}
 			}
@@ -133,11 +145,26 @@ func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense bool
 		if !found {
 			continue
 		}
+		if isAttacker && ovr != nil {
+			if ovr.Front > 0 {
+				frontVal = ovr.Front
+			}
+			if ovr.Attack > 0 {
+				attack = ovr.Attack
+			}
+			if ovr.Shield > 0 {
+				shield = ovr.Shield
+			}
+			if ovr.Shell > 0 {
+				shell = ovr.Shell
+			}
+		}
 		out = append(out, battle.Unit{
 			UnitID:       s.UnitID,
 			Quantity:     s.Count,
 			Damaged:      s.Damaged,
 			ShellPercent: s.ShellPercent,
+			Front:        frontVal,
 			Attack:       float64(attack),
 			Shield:       float64(shield),
 			Shell:        float64(shell),

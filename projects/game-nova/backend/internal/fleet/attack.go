@@ -178,7 +178,7 @@ func (s *TransportService) AttackHandler() event.Handler {
 			return fmt.Errorf("attack: battle modifiers: %w", err)
 		}
 
-		atkUnits := stacksToBattleUnits(attackerShips, s.catalog, false)
+		atkUnits := stacksToBattleUnits(attackerShips, s.catalog, false, true)
 		atkUnits = applyBattleMod(atkUnits, battleMod)
 
 		atkSide := battle.Side{
@@ -186,8 +186,8 @@ func (s *TransportService) AttackHandler() event.Handler {
 			Tech:   attackerTech,
 			Units:  atkUnits,
 		}
-		defUnits := stacksToBattleUnits(defenderShips, s.catalog, false)
-		defUnits = append(defUnits, stacksToBattleUnits(defenderDefense, s.catalog, true)...)
+		defUnits := stacksToBattleUnits(defenderShips, s.catalog, false, false)
+		defUnits = append(defUnits, stacksToBattleUnits(defenderDefense, s.catalog, true, false)...)
 		defSide := battle.Side{
 			UserID: defenderUserID,
 			Tech:   defenderTech,
@@ -524,24 +524,28 @@ func readUserTech(ctx context.Context, tx pgx.Tx, userID string, cat *config.Cat
 // stacksToBattleUnits — unitStack[] → battle.Unit[] через каталог.
 // Юниты без каталожной записи пропускаются (устаревший unit_id).
 // isDefense → ищем в Defense-каталоге, иначе в Ships.
-func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense bool) []battle.Unit {
+//
+// План 72.1.56 B11: дополнительный параметр isAttacker для применения
+// per-юнит attacker_* overrides из catalog (Deathstar, Alien Screen).
+// Также теперь корректно прокидывается Front (раньше было захардкожено 0).
+func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense, isAttacker bool) []battle.Unit {
 	out := make([]battle.Unit, 0, len(stacks))
 	for _, s := range stacks {
 		if s.Count <= 0 {
 			continue
 		}
 		var (
-			attack, shell    int
-			cost             config.ResCost
-			cargo            int64
-			speed, fuel      int
-			shieldVal        int
-			found            bool
+			attack, shell, frontVal, shieldVal int
+			cost                               config.ResCost
+			ovr                                *config.AttackerOverrides
+			found                              bool
 		)
 		if isDefense {
 			for _, spec := range cat.Defense.Defense {
 				if spec.ID == s.UnitID {
-					attack, shell, cost, shieldVal, found = spec.Attack, spec.Shell, spec.Cost, spec.Shield, true
+					attack, shell, cost, shieldVal, frontVal = spec.Attack, spec.Shell, spec.Cost, spec.Shield, spec.Front
+					ovr = spec.Attacker
+					found = true
 					break
 				}
 			}
@@ -549,8 +553,8 @@ func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense bool
 			for _, spec := range cat.Ships.Ships {
 				if spec.ID == s.UnitID {
 					attack, shell, cost = spec.Attack, spec.Shell, spec.Cost
-					cargo, speed, fuel = spec.Cargo, spec.Speed, spec.Fuel
-					shieldVal = spec.Shield
+					shieldVal, frontVal = spec.Shield, spec.Front
+					ovr = spec.Attacker
 					found = true
 					break
 				}
@@ -559,15 +563,28 @@ func stacksToBattleUnits(stacks []unitStack, cat *config.Catalog, isDefense bool
 		if !found {
 			continue
 		}
-		_ = cargo
-		_ = speed
-		_ = fuel
+		// План 72.1.56 B11: применяем attacker-overrides (если есть и
+		// сторона атакующая). Каждое поле = 0 → не переопределяет.
+		if isAttacker && ovr != nil {
+			if ovr.Front > 0 {
+				frontVal = ovr.Front
+			}
+			if ovr.Attack > 0 {
+				attack = ovr.Attack
+			}
+			if ovr.Shield > 0 {
+				shieldVal = ovr.Shield
+			}
+			if ovr.Shell > 0 {
+				shell = ovr.Shell
+			}
+		}
 		out = append(out, battle.Unit{
 			UnitID:       s.UnitID,
 			Quantity:     s.Count,
 			Damaged:      s.Damaged,
 			ShellPercent: s.ShellPercent,
-			Front:        0,
+			Front:        frontVal,
 			Attack:       float64(attack),
 			Shield:       float64(shieldVal),
 			Shell:        float64(shell),

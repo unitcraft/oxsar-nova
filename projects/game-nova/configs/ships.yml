@@ -166,7 +166,11 @@ ships:
     speed: 100
     fuel: 1
     cost: { metal: 5000000, silicon: 4000000, hydrogen: 1000000 }
-    front: 9
+    # Legacy `na_ship_datasheet` для Deathstar: front=10 (defender),
+    # attacker_front=9. План 72.1.56 B11 — 1:1.
+    front: 10
+    attacker:
+      front: 9
 
   # Interplanetary Missile (id=52 в legacy UNIT_INTERPLANETARY_ROCKET).
   # Не корабль и не участвует в обычном бою (attack=0) — используется
@@ -247,7 +251,11 @@ ships:
     speed: 10000
     fuel: 75
     cost: { metal: 20000, silicon: 10000, hydrogen: 0 }
+    # Legacy `na_ship_datasheet` для Alien Screen: front=15 (defender),
+    # attacker_front=16. План 72.1.56 B11 — 1:1.
     front: 15
+    attacker:
+      front: 16
 
   unit_a_paladin:
     id: 202
