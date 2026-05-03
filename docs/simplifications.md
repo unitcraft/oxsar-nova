@@ -727,14 +727,24 @@
   тесты с фикстурами (`worker_test.go`, `*_integration_test.go`).
 - **Приоритет**: closed.
 
-### [H.1.7] Messages: фаланга-producer отсутствует
-- **Где**: `backend/internal/fleet` — сканы фаланги не реализованы.
-- **Что**: папка «Фаланга» (folder=11) видима в UI, но не наполняется —
-  сам сканер фаланги ещё не реализован в nova-backend.
-- **Почему**: это отдельная большая фича, не входит в план 11.
-- **Как чинить**: реализовать `KindPhalanxScan` event + UI-триггер в
-  galaxy + automsg.SendDirect(folder=11) в обработчике.
-- **Приоритет**: M.
+### [H.1.7] Messages: фаланга-producer отсутствует — ЗАКРЫТО
+- **Статус**: ЗАКРЫТО (verify-handsweep 2026-05-03 при 72.1.56 B5).
+  Запись была устаревшая — фаланга реализована планом 20 Ф.4 + 72.1.20:
+  - `internal/fleet/phalanx.go::TransportService.Phalanx` — формула
+    `range = round((star_surveillance² - 1) × (1 + hyperspace_tech/10))`
+    1:1 с legacy `NS::getMonitorActivityRange`,
+    `STAR_SURVEILLANCE_CONSUMPTION = 5000` водорода.
+  - `GET /api/phalanx?source_planet_id=...&target_galaxy=...&target_system=...`
+    возвращает `[]PhalanxScan` со всеми pending fleet-events в системе.
+  - `internal/monitor/handler.go` — per-planet scan
+    (S-MP MonitorPlanet).
+  - Frontend `MonitorPlanetScreen.tsx` — UI отображает результат.
+- **Не покрыто** (по дизайну, не упрощение): folder=11 «Фаланга» как
+  inbox-папка в legacy наполнялась через scheduled producer; nova
+  показывает результаты scan'а **синхронно** (REST GET), а не
+  через async messages — это лучше UX (мгновенный ответ + актуальные
+  данные на момент клика).
+- **Приоритет**: closed.
 
 ### [H.2.11] Payment: custom-сумма пополнения
 - **Где**: `frontend/src/features/payment/CreditsScreen.tsx`.
