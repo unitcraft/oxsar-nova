@@ -170,29 +170,47 @@
   Alien rapidfire (id 200–204, 348, 352, 353) намеренно не портирован —
   AI-баланс планируется отдельно (план 24).
 
-### [M4.be_points] be_points накопление-only, use-в-бою отложено
-- **Где**: `internal/fleet/attack.go` (накопление), `internal/battle/`
-  (отсутствует use).
-- **Что**: legacy-механика `be_points` имеет 3 части — накопление при
-  бое (`be_points += experience`), use при отправке атаки
-  (`attack_lvl_<tech>` от -K до +K, где K = min(20, be_points/100)),
-  возврат при cancel. Реализуем только **накопление** (план 72.1 ч.17).
-  Поле наполняется при каждом бое и видно на MainScreen, но пока **не
-  приносит in-game эффекта** — игрок копит впрок.
-- **Почему**: full-implementation требует UI-формы для выбора уровней
-  при отправке атаки, валидации, интеграции в `internal/battle/`
-  (формула `unit.attack *= (1 + lvl/10)` для GUN-техов, аналогично
-  для SHIELD/SHELL/BALLISTICS/MASKING), тестов battle-sim. Это объём
-  отдельного плана уровня недели работы. В рамках pixel-perfect
-  MainScreen достаточно показывать поле «Накопленный опыт» — оно
-  должно быть ненулевым после первых боев.
-- **Как чинить**: подробный план — [`72.1.57-be-points-use-in-battle.md`](plans/72.1.57-be-points-use-in-battle.md)
-  (создан 2026-05-03 как stub в рамках 72.1.56 C12). 6 фаз: UI→OpenAPI/
-  dispatch→engine→cancel-refund→tests→i18n+docs.
-  Источники формул: legacy `Mission.class.php:1230,1659,1675`,
-  `EventHandler.class.php:363,1156`, oxsar2-java `Participant.java:524-525,963`.
-- **Приоритет**: M (фича не блокирует игру, но баланс боя без use
-  отличается от legacy — атакующий не может бустить юниты).
+### [M4.be_points] be_points накопление-only, use-в-бою отложено — ЗАКРЫТО
+- **Статус**: ЗАКРЫТО 2026-05-03 планом
+  [72.1.57](plans/72.1.57-be-points-use-in-battle.md) (legacy 1:1).
+- **Что закрыто**:
+  - **Накопление** (Ф.0+Ф.1, было сделано планом 72.1.1):
+    - `battlestats/apply.go::ApplyBattleResult` пишет
+      `e_points/be_points/battles += experience` для каждого участника
+      (зеркало `Participant.java:957-966` — Java assault.jar обновлял
+      БД напрямую, минуя PHP).
+    - `battle/engine.go::computeExperience` вычисляет величину по
+      atan-формуле legacy (`Assault.java:817-847`).
+  - **Использование** (Ф.3+Ф.4):
+    - `fleet/transport.go::validateBattleLevels` — pure helper с правилом
+      `K = min(20, be_points/100)`, диапазон 0..K, сумма ≤ K (legacy
+      `Mission.class.php:1638-1671`).
+    - В `Send`: SELECT be_points FOR UPDATE, validate, UPDATE списания
+      cost = `Σvalues × 100`, сохранение `battle_levels` + `used_be_points`
+      в payload event'а.
+    - `battle.Side.AddTechGun/Shield/Shell/Ballistics/Masking` —
+      применяются в `engine.go::newBattleState`: attack/shield/shell —
+      мультипликативно × (1+lvl/10), ballistics/masking — аддитивно к
+      Tech (1:1 `Participant.java:520-528`).
+    - `attack.go` + `acs_attack.go` читают `pl.BattleLevels` и
+      проставляют в Side. Для ACS — лидерские levels применяются ко
+      всей группе (MVP-упрощение, не per-fleet как в legacy; для
+      полного 1:1 — расширить fleets таблицу).
+  - **Возврат при cancel** (Ф.5):
+    - `Recall` читает `used_be_points` из payload arrive-event'а ДО
+      его удаления и UPDATE be_points += refund (1:1
+      `EventHandler.class.php:1130`).
+  - **UI** (Ф.2): collapsible-блок «Усиления в бою» в MissionScreen
+    для combat-миссий (10/12); 5 number-input'ов с live-cost.
+  - **Тесты** (Ф.6): 12 unit-тестов
+    (`TestValidateBattleLevels`×9, `TestBattleLevels_Sum_IsZero`,
+    `TestCalculate_AddTech*`×3).
+  - **i18n** (Ф.7): 8 новых ключей `mission.battleLevels*` ru/en.
+- **НЕ сделано** (вне scope, отложено отдельным решением):
+  - ADVANCED_BATTLE / Laser/Ion/Plasma техники с отрицательными
+    значениями (требует per-universe флаги + 3-channel attack).
+  - Per-fleet battle_levels в ACS (сейчас лидерские для всех).
+- **Приоритет**: closed.
 
 ---
 
