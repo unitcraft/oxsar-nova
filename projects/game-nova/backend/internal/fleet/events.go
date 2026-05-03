@@ -28,6 +28,11 @@ type transportPayload struct {
 	FlightSeconds    int64            `json:"flight_seconds,omitempty"`     // одно плечо
 	TargetBuildingID int              `json:"target_building_id,omitempty"` // план 65 Ф.3: цель для KindAttackDestroyBuilding
 	HoldingHours     int              `json:"holding_hours,omitempty"`      // план 72.1.47: KindHolding
+	// План 72.1.57: be_points-усиления. Применяются в attack-handler'е
+	// при сборке battle.Side. used_be_points нужен для refund при cancel
+	// (см. transport.go::Recall).
+	BattleLevels  *BattleLevels `json:"battle_levels,omitempty"`
+	UsedBePoints  int64         `json:"used_be_points,omitempty"`
 }
 
 // ArriveHandler — event.Handler для KindTransport. В точке прибытия:

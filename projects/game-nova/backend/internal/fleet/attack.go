@@ -186,6 +186,15 @@ func (s *TransportService) AttackHandler() event.Handler {
 			Tech:   attackerTech,
 			Units:  atkUnits,
 		}
+		// План 72.1.57 Ф.4: be_points-усиления применяются в engine
+		// (formula in `internal/battle/engine.go`).
+		if pl.BattleLevels != nil {
+			atkSide.AddTechGun = pl.BattleLevels.Gun
+			atkSide.AddTechShield = pl.BattleLevels.Shield
+			atkSide.AddTechShell = pl.BattleLevels.Shell
+			atkSide.AddTechBallistics = pl.BattleLevels.Ballistics
+			atkSide.AddTechMasking = pl.BattleLevels.Masking
+		}
 		defUnits := stacksToBattleUnits(defenderShips, s.catalog, false, false)
 		defUnits = append(defUnits, stacksToBattleUnits(defenderDefense, s.catalog, true, false)...)
 		defSide := battle.Side{

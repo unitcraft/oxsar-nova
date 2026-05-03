@@ -69,6 +69,19 @@ type Side struct {
 	System   int  `json:"system,omitempty"`
 	Position int  `json:"position,omitempty"`
 	IsMoon   bool `json:"is_moon,omitempty"`
+
+	// План 72.1.57 Ф.4: be_points-усиления для боя (legacy
+	// `Mission.class.php:1638`). Применяются в engine.go при сборке
+	// Unit (порт Java `Participant.java:520-528`):
+	//   - attack/shield/shell — мультипликативно × (1 + lvl/10);
+	//   - ballistics/masking — аддитивно к Tech-уровню (+ lvl).
+	// Каждое значение в диапазоне 0..20 после валидации в
+	// fleet/transport.go::validateBattleLevels.
+	AddTechGun        int `json:"add_tech_gun,omitempty"`
+	AddTechShield     int `json:"add_tech_shield,omitempty"`
+	AddTechShell      int `json:"add_tech_shell,omitempty"`
+	AddTechBallistics int `json:"add_tech_ballistics,omitempty"`
+	AddTechMasking    int `json:"add_tech_masking,omitempty"`
 }
 
 // Tech — уровни технологий игрока, влияющие на юнитов этой стороны.

@@ -64,6 +64,27 @@ func isMoonDestroyMission(m int) bool {
 	return k == event.KindAttackDestroyMoon || k == event.KindAttackAllianceDestroyMoon
 }
 
+// isBattleLevelsMission — миссия принимает be_points-усиления при
+// отправке (план 72.1.57, legacy `Mission.class.php:1638`):
+// EVENT_ATTACK_SINGLE, EVENT_ATTACK_ALLIANCE, EVENT_ALLIANCE_ATTACK_ADDITIONAL,
+// EVENT_ATTACK_DESTROY_BUILDING, EVENT_ATTACK_ALLIANCE_DESTROY_BUILDING, EVENT_HALT.
+//
+// HALT в nova не отдельная миссия от UI — игрок шлёт обычную атаку,
+// а handler решает spawnHalt по результату. Поэтому HALT здесь
+// явно не указан — battle_levels уже учтены через KindAttackSingle.
+func isBattleLevelsMission(m int) bool {
+	switch event.Kind(m) {
+	case event.KindAttackSingle,
+		event.KindAttackAlliance,
+		event.KindAttackDestroyBuilding,
+		event.KindAttackAllianceDestroyBuilding,
+		event.KindAttackDestroyMoon,
+		event.KindAttackAllianceDestroyMoon:
+		return true
+	}
+	return false
+}
+
 // isFleetSlotMission — миссия занимает слот флота (план 20 Ф.2).
 // Не считаются: EXPEDITION (отдельные слоты через astro_tech),
 // DELIVERY_UNITS (artefact delivery, kind=21).
