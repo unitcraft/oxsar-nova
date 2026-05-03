@@ -17,7 +17,11 @@
 #topHeader {
   margin: 10px;
   padding: 2px;
-  width: auto;
+  /* legacy `<div id="topHeader" align=center>` — div занимает всю
+     доступную ширину, таблица внутри центрируется через margin:0 auto.
+     Раньше `width: auto` ужимало div до ширины таблицы, и центрирование
+     ломалось — таблица прижималась к левому краю.
+     План 72.1.58: фикс центрирования шапки. */
   background-color: var(--c-topheader-bg);
 }
 
@@ -177,6 +181,10 @@
 /* ------- TopHeader table (pixel-perfect из legacy) ------- */
 
 table.top_header_res {
+  /* План 72.1.58: центрирование таблицы внутри #topHeader (div занимает
+     всю ширину). Legacy использовал `<div align=center>` (HTML4-атрибут)
+     — современный эквивалент = margin auto на child-таблице. */
+  margin: 0 auto;
   text-align: center;
 }
 
