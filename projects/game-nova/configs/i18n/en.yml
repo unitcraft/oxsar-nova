@@ -2920,6 +2920,11 @@ officer:
   expiredSubject: ""
   expiredBody: ""
   expiredBodyNoCredits: ""
+officerName:
+  ADMIRAL:   ""
+  GEOLOGIST: ""
+  ENGINEER:  ""
+  MERCHANT:  ""
 prefs:
   activated: ""
   advancedPreferences: ""

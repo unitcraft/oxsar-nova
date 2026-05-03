@@ -56,6 +56,20 @@ func (s *Service) tr(group, key string, vars map[string]string) string {
 	return s.bundle.Tr(i18n.LangRu, group, key, vars)
 }
 
+// officerName резолвит officer_defs.key (например "ENGINEER") в
+// локализованное имя из i18n группы officerName ("Инженер"). Если ключ
+// не найден — возвращает сам key (graceful degradation).
+// План 72.1.56 A3 (P88.2): resolve перед подстановкой в subject push'а.
+func (s *Service) officerName(key string) string {
+	if s.bundle == nil {
+		return key
+	}
+	if s.bundle.Has(i18n.LangRu, "officerName", key) {
+		return s.bundle.Tr(i18n.LangRu, "officerName", key, nil)
+	}
+	return key
+}
+
 var (
 	ErrOfficerNotFound  = errors.New("officer: not found")
 	ErrAlreadyActive    = errors.New("officer: already active")
@@ -390,7 +404,7 @@ func (s *Service) ExpireHandler() event.Handler {
 					INSERT INTO messages (id, to_user_id, from_user_id, folder, subject, body)
 					VALUES ($1, $2, NULL, 12, $3, $4)
 				`, ids.New(), pl.UserID,
-					s.tr("officer", "renewedSubject", map[string]string{"key": pl.OfficerKey}),
+					s.tr("officer", "renewedSubject", map[string]string{"name": s.officerName(pl.OfficerKey)}),
 					s.tr("officer", "renewedBody", map[string]string{"credits": strconv.FormatInt(pl.CostCredit, 10)}),
 				); err != nil {
 					return fmt.Errorf("auto_renew notify: %w", err)
@@ -404,7 +418,7 @@ func (s *Service) ExpireHandler() event.Handler {
 			return fmt.Errorf("revert factor: %w", err)
 		}
 		// Уведомление.
-		subject := s.tr("officer", "expiredSubject", map[string]string{"key": pl.OfficerKey})
+		subject := s.tr("officer", "expiredSubject", map[string]string{"name": s.officerName(pl.OfficerKey)})
 		body := s.tr("officer", "expiredBody", nil)
 		if pl.AutoRenew {
 			body = s.tr("officer", "expiredBodyNoCredits", nil)
