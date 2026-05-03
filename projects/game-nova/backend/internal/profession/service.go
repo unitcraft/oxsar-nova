@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -28,7 +29,14 @@ import (
 const (
 	ChangeCost     = int64(1000) // кредитов за смену профессии
 	ChangeInterval = 14 * 24 * time.Hour
-	NoProfession   = "none"
+	// NoProfession — устаревшее значение в БД для юзеров, у которых
+	// профессия ещё не выбрана. Семантически эквивалентно UniversalKey
+	// (ни бонусов, ни штрафов). План 72.1.58: Get() возвращает
+	// UniversalKey даже если в БД лежит `none` — для совместимости UI.
+	NoProfession = "none"
+	// UniversalKey — ключ опции «Универсал» из configs/professions.yml
+	// (план 72.1.58, legacy `Профессия Универсал`).
+	UniversalKey = "universal"
 
 	// MSG_FOLDER_CREDIT в legacy = 8 (config/consts.php:515).
 	creditMessageFolder = 8
@@ -37,7 +45,6 @@ const (
 var (
 	ErrUnknownProfession = errors.New("profession: unknown profession key")
 	ErrNotEnoughCredit   = errors.New("profession: not enough credit")
-	ErrChangeTooSoon     = errors.New("profession: cannot change profession yet (14 day cooldown)")
 	ErrInVacation        = errors.New("profession: cannot change profession in vacation mode")
 )
 
@@ -77,18 +84,27 @@ type CurrentInfo struct {
 	DaysRemain        int        `json:"days_remain"`
 }
 
-// List возвращает список всех профессий с их бонусами.
+// List возвращает список всех профессий с их бонусами, отсортированный
+// по SortOrder из YAML (legacy: Универсал → Шахтёр → Атакёр → Защитник
+// → Танк). План 72.1.58.
 func (s *Service) List() []ProfessionDTO {
 	out := make([]ProfessionDTO, 0, len(s.catalog.Professions.Professions))
 	for key, spec := range s.catalog.Professions.Professions {
 		out = append(out, ProfessionDTO{
 			Key:         key,
+			SortOrder:   spec.SortOrder,
 			Label:       spec.Label,
 			Description: spec.Description,
 			Bonus:       spec.Bonus,
 			Malus:       spec.Malus,
 		})
 	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].SortOrder != out[j].SortOrder {
+			return out[i].SortOrder < out[j].SortOrder
+		}
+		return out[i].Key < out[j].Key
+	})
 	return out
 }
 
@@ -103,11 +119,16 @@ func (s *Service) Get(ctx context.Context, userID string) (CurrentInfo, error) {
 		return CurrentInfo{}, err
 	}
 
-	info := CurrentInfo{Profession: profession}
-	if profession != NoProfession {
-		if spec, ok := s.catalog.Professions.Professions[profession]; ok {
-			info.Label = spec.Label
-		}
+	// План 72.1.58: legacy-значение БД `none` (юзер не выбрал)
+	// семантически эквивалентно `universal`. Для UI мапим в universal,
+	// чтобы radio-button «Универсал» был отмечен как активный.
+	displayKey := profession
+	if displayKey == NoProfession {
+		displayKey = UniversalKey
+	}
+	info := CurrentInfo{Profession: displayKey}
+	if spec, ok := s.catalog.Professions.Professions[displayKey]; ok {
+		info.Label = spec.Label
 	}
 	if changedAt != nil {
 		next := changedAt.Add(ChangeInterval)
@@ -249,7 +270,8 @@ func (s *Service) BonusForUser(ctx context.Context, userID string) (map[string]i
 
 // BonusFromKey вычисляет суммарные смещения (bonus+malus) для данного ключа профессии.
 func BonusFromKey(cat *config.Catalog, professionKey string) map[string]int {
-	if professionKey == NoProfession || professionKey == "" {
+	// План 72.1.58: universal эквивалентен NoProfession (нет эффектов).
+	if professionKey == NoProfession || professionKey == UniversalKey || professionKey == "" {
 		return nil
 	}
 	spec, ok := cat.Professions.Professions[professionKey]
@@ -268,6 +290,8 @@ func BonusFromKey(cat *config.Catalog, professionKey string) map[string]int {
 
 type ProfessionDTO struct {
 	Key         string         `json:"key"`
+	// SortOrder — порядок сортировки для UI (план 72.1.58).
+	SortOrder   int            `json:"sort_order,omitempty"`
 	Label       string         `json:"label"`
 	Description string         `json:"description,omitempty"`
 	Bonus       map[string]int `json:"bonus,omitempty"`

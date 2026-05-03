@@ -1703,12 +1703,12 @@ profession:
   title: Profession
   active: active
   currentLabel: Current profession
+  specialization: Specialization
   available: available
   chooseBtn: Choose
   confirmChoose: "Choose profession «{{name}}»? Change is possible once every {{days}} days."
-  # План 72.1.47: dynamic cost (legacy PROFESSION_CHANGE_COST_INFO/_NO_COST_INFO).
-  changeCostInfo: "Free change in {{days}} days. Change now — {{cost}} cr."
-  changeFreeInfo: "Profession change — free (cooldown passed)."
+  changeCostInfo: "Profession change cost — {{cost}} credits. Free in {{days}} days."
+  changeFreeInfo: "You can change profession for free now. Next free change in {{days}} days, or anytime for {{cost}} credits."
   confirmBtn: Confirm
   cancelBtn: Cancel
   bonusUnknown: Bonus
@@ -1722,8 +1722,10 @@ profession:
   bonusShipShield: Ship shield
   bonusShipHull: Ship hull
   bonusEspionage: Espionage
-  # Plan 72.1.15: error mapping for ErrInVacation (legacy UMODE_ENABLED).
   errInVacation: Cannot change profession in vacation mode.
+  errNotEnoughCredit: "Not enough credits to change profession (need {{cost}})."
+  errUnknownProfession: Unknown profession.
+  errGeneric: "Profession change failed: {{msg}}"
 
 admin:
   title: Admin panel

@@ -171,6 +171,9 @@ type ProfessionCatalog struct {
 // плюс специальные: "gun", "shield_weapon", "shell_weapon" (боевые техи),
 // "ballistics", "masking" (fleet техи), "computer_tech".
 type ProfessionSpec struct {
+	// SortOrder — порядок отображения в UI (legacy: Универсал=0,
+	// Шахтёр=1, Атакёр=2, Защитник=3, Танк=4). План 72.1.58.
+	SortOrder   int            `yaml:"sort_order,omitempty"`
 	Label       string         `yaml:"label"`
 	Description string         `yaml:"description,omitempty"`
 	Bonus       map[string]int `yaml:"bonus"`
