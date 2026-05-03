@@ -321,7 +321,9 @@ func (s *Service) AttackHandler() event.Handler {
 			if len(report.Attackers) > 0 {
 				survivors := survivorsToStacks(report.Attackers[0].Units)
 				r := rand.New(rand.NewPCG(fnvHash(e.ID)^0xa11e50, fnvHash(e.ID)^0xa11e51))
-				if err := s.spawnHalt(ctx, tx, pl, survivors, r); err != nil {
+				// План 72.1.56 B8: передаём захваченное в HALT payload,
+				// чтобы unloadAlienResources знал «сколько вернуть».
+				if err := s.spawnHalt(ctx, tx, pl, survivors, lootM, lootS, lootH, r); err != nil {
 					return fmt.Errorf("alien attack: spawn halt: %w", err)
 				}
 				haltSpawned = len(survivors) > 0

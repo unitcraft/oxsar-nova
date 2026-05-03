@@ -126,3 +126,33 @@ func containsField(s, f string) bool {
 	}
 	return false
 }
+
+// План 72.1.56 B8: legacy AlienAI.class.php:1056
+// `ceil(min(captured*0.7, captured*0.1*times))`. Pure unit-test.
+func TestUnloadFraction(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name              string
+		captured, times   int64
+		want              int64
+	}{
+		{"zero captured → zero", 0, 1, 0},
+		{"zero times → zero", 1000, 0, 0},
+		{"times=1: min(700, 100) → 100", 1000, 1, 100},
+		{"times=5: min(700, 500) → 500", 1000, 5, 500},
+		{"times=7: min(700, 700) → 700", 1000, 7, 700},
+		{"times=10: min(700, 1000) → 700 (cap at 70%)", 1000, 10, 700},
+		{"times=100: min(700, 10000) → 700", 1000, 100, 700},
+		{"small captured 5: ceil applied", 5, 1, 1}, // 5*0.1=0.5 → ceil 1
+		{"small captured 5: cap at 70% = 4 (ceil)", 5, 10, 4}, // min(ceil(5*0.7=3.5)=4, ceil(5*10/10=5)=5) → 4
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := unloadFraction(tc.captured, tc.times)
+			if got != tc.want {
+				t.Errorf("unloadFraction(%d,%d) = %d, want %d",
+					tc.captured, tc.times, got, tc.want)
+			}
+		})
+	}
+}
