@@ -148,6 +148,12 @@ func stacksToAlienUnits(stacks []fleetStack, cat *config.Catalog) []battle.Unit 
 // StartTime — момент начала HOLDING (для cap 15 дней).
 // HoldingEventID — id родительского KindAlienHolding (у HALT пусто, у
 // HOLDING_AI ссылается на HOLDING — нужно для продления платежом).
+//
+// CapturedMetal/Silicon/Hydrogen — РАНЕЕ захваченные пришельцами
+// ресурсы при первоначальной атаке (план 72.1.56 B8, legacy
+// `AlienAI.class.php:1053-1061`). Используются в onUnloadAlienResources
+// для возврата процента от _захваченного_, а не от текущих ресурсов
+// планеты. Декрементируются по мере выгрузки.
 type holdingPayload struct {
 	PlanetID       string         `json:"planet_id"`
 	UserID         string         `json:"user_id"`
@@ -157,6 +163,9 @@ type holdingPayload struct {
 	HoldingEventID string         `json:"holding_event_id,omitempty"`
 	PaidCredit     int64          `json:"paid_credit,omitempty"`
 	PaidTimes      int            `json:"paid_times,omitempty"`
+	CapturedMetal    int64 `json:"captured_metal,omitempty"`
+	CapturedSilicon  int64 `json:"captured_silicon,omitempty"`
+	CapturedHydrogen int64 `json:"captured_hydrogen,omitempty"`
 }
 
 // fleetStack — компактный снимок alien-флота в payload (без Attack/Shield —
@@ -184,7 +193,13 @@ func survivorsToStacks(units []battle.UnitResult) []fleetStack {
 //
 // Если alien-флот целиком уничтожен (survivors пуст) — HALT не спавнится,
 // пришельцам некого оставлять.
-func (s *Service) spawnHalt(ctx context.Context, tx pgx.Tx, pl alienPayload, survivors []fleetStack, r *rand.Rand) error {
+//
+// План 72.1.56 B8: lootM/lootS/lootH — ресурсы, захваченные при
+// первоначальной атаке. Сохраняются в payload как Captured* для
+// последующего unloadAlienResources (legacy
+// `AlienAI.class.php:1053-1061` использует `parent_event["data"][$res]`).
+func (s *Service) spawnHalt(ctx context.Context, tx pgx.Tx, pl alienPayload,
+	survivors []fleetStack, lootM, lootS, lootH int64, r *rand.Rand) error {
 	if len(survivors) == 0 {
 		return nil
 	}
@@ -192,11 +207,14 @@ func (s *Service) spawnHalt(ctx context.Context, tx pgx.Tx, pl alienPayload, sur
 	// детерминированности в тестах (caller передаёт свой seed).
 	dur := AlienHaltingMinTime + time.Duration(r.Int64N(int64(AlienHaltingMaxTime-AlienHaltingMinTime)))
 	hp := holdingPayload{
-		PlanetID:   pl.PlanetID,
-		UserID:     pl.UserID,
-		Tier:       pl.Tier,
-		AlienFleet: survivors,
-		StartTime:  time.Now().UTC(),
+		PlanetID:         pl.PlanetID,
+		UserID:           pl.UserID,
+		Tier:             pl.Tier,
+		AlienFleet:       survivors,
+		StartTime:        time.Now().UTC(),
+		CapturedMetal:    lootM,
+		CapturedSilicon:  lootS,
+		CapturedHydrogen: lootH,
 	}
 	if _, err := event.Insert(ctx, tx, event.InsertOpts{
 		UserID:   &pl.UserID,
@@ -362,7 +380,9 @@ func (s *Service) HoldingAIHandler() event.Handler {
 		// что-то делают, остальные 6 — заглушки, поэтому вероятность
 		// 2×(1/8) ≈ 0.25 на каждое, итого ~50/50 между активными.
 		if rand.IntN(2) == 0 {
-			if err := unloadAlienResources(ctx, tx, hp, s.tr); err != nil {
+			// План 72.1.56 B8: передаём указатель — функция декрементирует
+			// CapturedX в hp, чтобы next-tick INSERT увидел обновление.
+			if err := unloadAlienResources(ctx, tx, &hp, s.tr); err != nil {
 				return fmt.Errorf("alien holding_ai: unload: %w", err)
 			}
 		} else {
@@ -391,37 +411,69 @@ func (s *Service) HoldingAIHandler() event.Handler {
 	}
 }
 
-// unloadAlienResources — onUnloadAlienResoursesAI: 7–10% ресурсов планеты
-// добавляется на склад (упрощение — в legacy возвращаются РАНЕЕ
-// захваченные, но эта история в payload не хранится; см. simplifications).
-func unloadAlienResources(ctx context.Context, tx pgx.Tx, hp holdingPayload, tr func(string, string, map[string]string) string) error {
-	var curMetal, curSil, curHydro float64
-	if err := tx.QueryRow(ctx, `
-		SELECT metal, silicon, hydrogen FROM planets
-		WHERE id = $1 AND destroyed_at IS NULL FOR UPDATE
-	`, hp.PlanetID).Scan(&curMetal, &curSil, &curHydro); err != nil {
-		if err == pgx.ErrNoRows {
-			return nil
-		}
-		return fmt.Errorf("read planet: %w", err)
+// unloadAlienResources — onUnloadAlienResoursesAI 1:1 с legacy
+// `AlienAI.class.php:1053-1061` (план 72.1.56 B8):
+//
+//	$data[$res] = ceil(min($parent_event["data"][$res] * 0.7,
+//	                       $parent_event["data"][$res] * 0.1 * $times));
+//	$parent_event["data"][$res] = max(0, $parent_event["data"][$res] - $data[$res]);
+//
+// Возвращаем игроку процент от РАНЕЕ ЗАХВАЧЕННОГО (CapturedX в payload),
+// не от текущих ресурсов планеты. После выгрузки декрементируем
+// captured в hp **и** в payload родительского HOLDING-event'а
+// (чтобы следующие тики видели обновлённое значение, как
+// `parent_event["data"]` в legacy). HoldingAIHandler в caller-е
+// перезапишет hp в next-event INSERT.
+//
+// times = max(1, hp.PaidTimes+1) — у legacy это control_times. В nova
+// PaidTimes растёт от add-payment; используем как proxy для ramp-up.
+func unloadAlienResources(ctx context.Context, tx pgx.Tx, hp *holdingPayload, tr func(string, string, map[string]string) string) error {
+	if hp.CapturedMetal <= 0 && hp.CapturedSilicon <= 0 && hp.CapturedHydrogen <= 0 {
+		return nil
 	}
-	pct := 0.07 + rand.Float64()*0.03
-	giftM := int64(curMetal * pct)
-	giftS := int64(curSil * pct)
-	giftH := int64(curHydro * pct)
+	times := int64(hp.PaidTimes) + 1
+	giftM := unloadFraction(hp.CapturedMetal, times)
+	giftS := unloadFraction(hp.CapturedSilicon, times)
+	giftH := unloadFraction(hp.CapturedHydrogen, times)
 	if giftM == 0 && giftS == 0 && giftH == 0 {
 		return nil
+	}
+	hp.CapturedMetal -= giftM
+	hp.CapturedSilicon -= giftS
+	hp.CapturedHydrogen -= giftH
+	if hp.CapturedMetal < 0 {
+		hp.CapturedMetal = 0
+	}
+	if hp.CapturedSilicon < 0 {
+		hp.CapturedSilicon = 0
+	}
+	if hp.CapturedHydrogen < 0 {
+		hp.CapturedHydrogen = 0
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE planets
 		SET metal = metal + $1, silicon = silicon + $2, hydrogen = hydrogen + $3
-		WHERE id = $4
+		WHERE id = $4 AND destroyed_at IS NULL
 	`, giftM, giftS, giftH, hp.PlanetID); err != nil {
 		return fmt.Errorf("gift: %w", err)
 	}
+	// Перезаписываем payload родительского HOLDING-event'а, чтобы
+	// следующий тик HOLDING_AI видел уменьшенный captured (зеркалит
+	// legacy `$parent_event["data"]`).
+	if hp.HoldingEventID != "" {
+		newHold, err := json.Marshal(hp)
+		if err != nil {
+			return fmt.Errorf("marshal holding: %w", err)
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE events SET payload = $1 WHERE id = $2`,
+			newHold, hp.HoldingEventID); err != nil {
+			return fmt.Errorf("update holding payload: %w", err)
+		}
+	}
 	giftVars := map[string]string{
-		"metal":   fmt.Sprintf("%d", giftM),
-		"silicon": fmt.Sprintf("%d", giftS),
+		"metal":    fmt.Sprintf("%d", giftM),
+		"silicon":  fmt.Sprintf("%d", giftS),
 		"hydrogen": fmt.Sprintf("%d", giftH),
 	}
 	if _, err := tx.Exec(ctx, `
@@ -433,6 +485,27 @@ func unloadAlienResources(ctx context.Context, tx pgx.Tx, hp holdingPayload, tr 
 		return fmt.Errorf("message: %w", err)
 	}
 	return nil
+}
+
+// unloadFraction — pure helper для legacy `AlienAI.class.php:1056`:
+// `ceil(min(captured*0.7, captured*0.1*times))`. Округление вверх
+// чтобы любой ненулевой captured хотя бы в 1 единицу выгрузить.
+func unloadFraction(captured, times int64) int64 {
+	if captured <= 0 || times <= 0 {
+		return 0
+	}
+	cap70 := captured * 7 / 10
+	if captured*7%10 != 0 {
+		cap70++ // ceil
+	}
+	capTimes := captured * times / 10
+	if captured*times%10 != 0 {
+		capTimes++
+	}
+	if capTimes < cap70 {
+		return capTimes
+	}
+	return cap70
 }
 
 // extractAlienShips — onExtractAlientShipsAI (legacy строки 1025–1079):

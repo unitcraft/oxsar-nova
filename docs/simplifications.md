@@ -629,18 +629,22 @@
   подарки (артефакты, оксариты, астероиды) в HOLDING — это отдельная
   фича, не «порт».
 
-### [Alien AI] unloadAlienResources — процент от текущих, не от захваченных
-- **Где**: `internal/alien/holding.go::unloadAlienResources`.
-- **Что**: подарок 7–10% от ТЕКУЩИХ ресурсов планеты. В legacy
-  (`AlienAI.class.php:1053–1061`) возвращается процент от РАНЕЕ
-  захваченных пришельцами ресурсов (`parent_event["data"][$res]`).
-- **Почему**: у нас в payload HALT/HOLDING нет поля `captured_*` —
-  loot забирает AttackHandler на этапе боя и пишет только в res_log.
-  Хранить отдельно «захваченное пришельцами» = доп. поле payload.
-- **Как чинить**: добавить `CapturedMetal/Silicon/Hydrogen` в
-  `holdingPayload`, проставлять в spawnHalt из лоута атаки,
-  использовать тут.
-- **Приоритет**: L — текущая формула даёт похожий по масштабу эффект.
+### [Alien AI] unloadAlienResources — процент от текущих, не от захваченных — ЗАКРЫТО
+- **Статус**: ЗАКРЫТО 2026-05-03 планом 72.1.56 B8 (legacy 1:1).
+- **Где закрыто**: `internal/alien/holding.go`:
+  - `holdingPayload` расширен полями `CapturedMetal/Silicon/Hydrogen`.
+  - `spawnHalt(...)` принимает loot из боя (alien.go передаёт
+    `lootM/S/H` уже считанные при applyLoot).
+  - `unloadAlienResources(*holdingPayload, ...)` 1:1 с legacy
+    `AlienAI.class.php:1053-1061`:
+    `gift = ceil(min(captured*0.7, captured*0.1*times))`,
+    декремент captured, UPDATE родительского HOLDING-event.payload
+    чтобы next-tick HOLDING_AI видел уменьшенное значение
+    (зеркалит `parent_event["data"]` в legacy).
+  - times = max(1, hp.PaidTimes+1) — ramp-up как в legacy.
+  - Pure helper `unloadFraction(captured, times)` для unit-тестов.
+- **Тест**: `TestUnloadFraction` 9 кейсов (cap at 70%, ceil rounding).
+- **Приоритет**: closed.
 
 ### [Tutorial] Тексты шагов хардкод на русском — ЗАКРЫТО
 - Закрыто: ключи `TUTORIAL_STEP_N_TITLE` / `TUTORIAL_STEP_N_DESC` добавлены
