@@ -32,13 +32,20 @@ export function disassembleUnits(
   );
 }
 
+// План 72.1.56 B6: legacy 1:1 partial-repair. Если quantity > 0 — чинит
+// N штук (backend clamp до damaged_count); 0/опущен — чинит всех damaged.
 export function repairUnits(
   planetId: string,
   unitId: number,
+  quantity?: number,
 ): Promise<RepairQueueItem> {
+  const body: { unit_id: number; quantity?: number } = { unit_id: unitId };
+  if (quantity !== undefined && quantity > 0) {
+    body.quantity = quantity;
+  }
   return api.post<RepairQueueItem>(
     `/api/planets/${planetId}/repair/repair`,
-    { unit_id: unitId },
+    body,
     { idempotencyKey: newIdempotencyKey() },
   );
 }

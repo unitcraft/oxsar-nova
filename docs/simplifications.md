@@ -302,15 +302,23 @@
   `EnqueueRepair` поддерживает оба типа (ships и defense, через `stockTable`).
   `ListDamaged` объединяет ships + defense через UNION ALL. `DamagedUnit` получил поле `is_defense`.
 
-### [Repair] Batch-only (чиним всех damaged одним action)
-- **Где**: `internal/repair/service.go::EnqueueRepair`.
-- **Что**: кнопка «Починить» чинит N=damaged_count. Нет «починить k
-  из N».
-- **Почему**: shell_percent на stack один, «частичный ремонт» требует
-  усложнения модели.
-- **Как чинить**: не нужно пока modelчасть stack'а может иметь разный
-  shell_percent.
-- **Приоритет**: —
+### [Repair] Batch-only (чиним всех damaged одним action) — ЗАКРЫТО
+- **Статус**: ЗАКРЫТО 2026-05-03 планом 72.1.56 B6 (legacy 1:1).
+- **Где закрыто**: legacy `ExtRepair.class.php:349,510` — форма с
+  `<input type='text' name='id' value='0' size='3'>` и `$quantity =
+  min($quantity, $row["damaged"])`.
+- **Backend**: `EnqueueRepair(ctx, userID, planetID, unitID, quantity)`
+  с helper `clampRepairQuantity(requested, damaged)`. RepairHandler
+  переписан: `damaged_count := GREATEST(damaged - qCount, 0)`,
+  `shell_percent := 0` если итог=0; различает ships/defense (был баг —
+  всегда обновлялся ships).
+- **Frontend**: RepairScreen на каждом damaged-юните `<input>`
+  number-only с placeholder=damaged; пустое/0 → «всех» (legacy default).
+- **OpenAPI**: `quantity?: int64 minimum=0` в
+  POST /api/planets/{id}/repair/repair.
+- **Тесты**: `TestClampRepairQuantity` 6 кейсов покрывает clamp-
+  правила.
+- **Приоритет**: closed.
 
 ### [Repair] Стоимость считается в момент enqueue — ЗАКРЫТО
 - Закрыто: ресурсы планеты читаются внутри транзакции (`FOR UPDATE`) в шаге 4
