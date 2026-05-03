@@ -193,9 +193,9 @@
       мультипликативно × (1+lvl/10), ballistics/masking — аддитивно к
       Tech (1:1 `Participant.java:520-528`).
     - `attack.go` + `acs_attack.go` читают `pl.BattleLevels` и
-      проставляют в Side. Для ACS — лидерские levels применяются ко
-      всей группе (MVP-упрощение, не per-fleet как в legacy; для
-      полного 1:1 — расширить fleets таблицу).
+      проставляют в Side. Для ACS — `loadACSFleetBattleLevels` читает
+      payload arrive-event'а **каждого** fleet'а группы и применяет
+      per-fleet (1:1 с legacy `ExtEventHandler.class.php:704-724`).
   - **Возврат при cancel** (Ф.5):
     - `Recall` читает `used_be_points` из payload arrive-event'а ДО
       его удаления и UPDATE be_points += refund (1:1
@@ -209,7 +209,6 @@
 - **НЕ сделано** (вне scope, отложено отдельным решением):
   - ADVANCED_BATTLE / Laser/Ion/Plasma техники с отрицательными
     значениями (требует per-universe флаги + 3-channel attack).
-  - Per-fleet battle_levels в ACS (сейчас лидерские для всех).
 - **Приоритет**: closed.
 
 ---
