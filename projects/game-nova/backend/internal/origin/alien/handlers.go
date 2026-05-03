@@ -388,18 +388,16 @@ func (s *Service) spawnAttackFromMission(ctx context.Context, tx pgx.Tx,
 	if tier == 0 {
 		tier = 1
 	}
-	raw, err := json.Marshal(attackPayload{
-		PlanetID: pl.PlanetID, UserID: pl.UserID, Tier: tier,
-		Galaxy: pl.Galaxy, System: pl.System, Position: pl.Position,
-	})
-	if err != nil {
-		return fmt.Errorf("alien spawn attack: marshal: %w", err)
-	}
 	planetID := pl.PlanetID
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO events (id, kind, planet_id, fire_at, payload)
-		VALUES ($1::uuid, $2, $3::uuid, $4, $5)
-	`, ids.New(), event.KindAlienAttack, planetID, nowFn(), raw); err != nil {
+	if _, err := event.Insert(ctx, tx, event.InsertOpts{
+		PlanetID: &planetID,
+		Kind:     event.KindAlienAttack,
+		FireAt:   nowFn(),
+		Payload: attackPayload{
+			PlanetID: pl.PlanetID, UserID: pl.UserID, Tier: tier,
+			Galaxy: pl.Galaxy, System: pl.System, Position: pl.Position,
+		},
+	}); err != nil {
 		return fmt.Errorf("alien spawn attack: insert: %w", err)
 	}
 	slog.InfoContext(ctx, "event_alien_spawn_attack",
@@ -439,24 +437,22 @@ func (s *Service) spawnHaltFromMission(ctx context.Context, tx pgx.Tx,
 	if tier == 0 {
 		tier = 1
 	}
-	raw, err := json.Marshal(haltPayload{
-		PlanetID:   pl.PlanetID,
-		UserID:     pl.UserID,
-		Tier:       tier,
-		AlienFleet: stacks,
-		StartTime:  nowFn(),
-	})
-	if err != nil {
-		return fmt.Errorf("alien spawn halt: marshal: %w", err)
-	}
 	dur := RandRoundRangeDur(s.cfg.HaltingMinTime, s.cfg.HaltingMaxTime, r)
 	planetID := pl.PlanetID
 	userID := pl.UserID
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO events (id, kind, planet_id, user_id, fire_at, payload)
-		VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5, $6)
-	`, ids.New(), event.KindAlienHalt, planetID, userID,
-		nowFn().Add(dur), raw); err != nil {
+	if _, err := event.Insert(ctx, tx, event.InsertOpts{
+		UserID:   &userID,
+		PlanetID: &planetID,
+		Kind:     event.KindAlienHalt,
+		FireAt:   nowFn().Add(dur),
+		Payload: haltPayload{
+			PlanetID:   pl.PlanetID,
+			UserID:     pl.UserID,
+			Tier:       tier,
+			AlienFleet: stacks,
+			StartTime:  nowFn(),
+		},
+	}); err != nil {
 		return fmt.Errorf("alien spawn halt: insert: %w", err)
 	}
 	slog.InfoContext(ctx, "event_alien_spawn_halt",

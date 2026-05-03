@@ -210,17 +210,22 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		}
 
 		// 5. Событие завершения постройки.
-		kind := int(event.KindBuildFleet)
+		kind := event.KindBuildFleet
 		if isDefense {
-			kind = int(event.KindBuildDefense)
+			kind = event.KindBuildDefense
 		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
-			VALUES ($1, $2, $3, $4, 'wait', $5, $6)
-		`, ids.New(), userID, planetID, kind, end,
-			fmt.Sprintf(`{"queue_id":"%s","unit_id":%d,"count":%d,"is_defense":%t}`,
-				id, unitID, count, isDefense),
-		); err != nil {
+		if _, err := event.Insert(ctx, tx, event.InsertOpts{
+			UserID:   &userID,
+			PlanetID: &planetID,
+			Kind:     kind,
+			FireAt:   end,
+			Payload: map[string]any{
+				"queue_id":   id,
+				"unit_id":    unitID,
+				"count":      count,
+				"is_defense": isDefense,
+			},
+		}); err != nil {
 			return fmt.Errorf("insert event: %w", err)
 		}
 

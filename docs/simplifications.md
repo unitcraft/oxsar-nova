@@ -235,13 +235,16 @@
 - **Как чинить**: создать `credit_purchases(user_id, amount, created_at)`, подключить к payment flow.
 - **Приоритет**: M — нужно при монетизации.
 
-### [EXPEDITION] expExtraPlanet — временные планеты не чистятся воркером
-- **Где**: `fleet/expedition.go::expExtraPlanet`, `migrations/0044_planets_expires_at.sql`.
-- **Что**: поле `planets.expires_at` добавлено, значение выставляется, но воркер ещё не удаляет
-  планеты с истёкшим `expires_at`.
-- **Почему**: воркер-задача требует отдельного event-kind или cron-handler.
-- **Как чинить**: добавить `KindExpirePlanet` event или cron-job `DELETE FROM planets WHERE expires_at < now()`.
-- **Приоритет**: M.
+### [EXPEDITION] expExtraPlanet — временные планеты не чистятся воркером — ЗАКРЫТО
+- **Статус**: ЗАКРЫТО (verify-handsweep 2026-05-03 при 72.1.56). Запись
+  была устаревшая — `KindExpirePlanet=65` уже реализован:
+  - `internal/event/expire_planet.go` — handler `HandleExpirePlanet`
+    выполняет `DELETE FROM planets WHERE id=$1 AND expires_at IS NOT NULL
+    AND expires_at <= now()` (идемпотентно).
+  - `cmd/worker/main.go:307` — регистрация `event.KindExpirePlanet`.
+  - `fleet/expedition.go:549-556` — INSERT events kind=65 при создании
+    временной планеты в `expExtraPlanet` с `fire_at=expires_at`.
+- **Приоритет**: closed.
 
 ---
 
@@ -698,19 +701,23 @@
   single CTE из плана 09 секция «SQL для batch-сверки».
 - **Приоритет**: L (пока DAU < 10k).
 
-### [09-Ф2.1] events.trace_id заполняется только в новых INSERT'ах
-- **Где**: 11 мест в backend/internal/*/service.go, event-producers.
-- **Что**: колонка events.trace_id и индекс добавлены (миграция 0058),
-  Event.TraceID читается в worker и прокидывается в context handler'а.
-  Но 11 существующих `INSERT INTO events (...)` не передают trace_id —
-  поле остаётся NULL для этих событий.
-- **Почему**: замена 11 SQL-строк + прокидывание trace.FromContext(ctx)
-  в каждый сервис — это отдельная итерация. Пока trace_id работает
-  end-to-end только для новых INSERT'ов, которые добавим после.
-- **Как чинить**: `event.Insert(ctx, tx, kind, userID, planetID, fireAt, payload)` —
-  один helper + замена 11 raw-INSERT'ов. После этого trace_id
-  гарантированно цепляется от HTTP-запроса до worker-handler'а.
-- **Приоритет**: M.
+### [09-Ф2.1] events.trace_id заполняется только в новых INSERT'ах — ЗАКРЫТО
+- **Статус**: ЗАКРЫТО 2026-05-03 планом 72.1.56 Task A2.
+- **Где**: helper `event.Insert(ctx, db, opts)` в
+  `internal/event/insert.go` принимает `Execer` (pgx.Tx или
+  pgxpool.Pool), читает `trace.FromContext(ctx)` и проставляет
+  `trace_id` автоматически.
+- 16 raw-INSERT'ов заменены на helper в:
+  building/service.go (×2), shipyard/service.go, research/service.go,
+  artefact/{delay.go, service.go} (×3), officer/service.go (×2),
+  fleet/transport.go (×3), fleet/expedition.go, repair/service.go (×2),
+  rocket/service.go, artmarket/service.go, settings/delete.go,
+  alien/{alien.go, holding.go (×4)}, origin/alien/{handlers.go (×2),
+  holding_ai_handler.go}.
+- **Не покрыто** (намеренно): `event/worker.go` (events_dead),
+  `admin/events_dead.go` (admin requeue с custom attempt/created_at),
+  тесты с фикстурами (`worker_test.go`, `*_integration_test.go`).
+- **Приоритет**: closed.
 
 ### [H.1.7] Messages: фаланга-producer отсутствует
 - **Где**: `backend/internal/fleet` — сканы фаланги не реализованы.

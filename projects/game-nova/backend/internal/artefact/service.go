@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"oxsar/game-nova/internal/config"
+	"oxsar/game-nova/internal/event"
 	"oxsar/game-nova/internal/i18n"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/pkg/ids"
@@ -262,11 +263,13 @@ func (s *Service) Activate(ctx context.Context, userID, artefactID string) (Reco
 			`, StateDelayed, now, r.ID); err != nil {
 				return fmt.Errorf("set delayed: %w", err)
 			}
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
-				VALUES ($1, $2, $3, 63, 'wait', $4, $5)
-			`, ids.New(), userID, r.PlanetID, fireAt,
-				fmt.Sprintf(`{"artefact_id":"%s"}`, r.ID)); err != nil {
+			if _, err := event.Insert(ctx, tx, event.InsertOpts{
+				UserID:   &userID,
+				PlanetID: r.PlanetID,
+				Kind:     event.KindArtefactDelay,
+				FireAt:   fireAt,
+				Payload:  map[string]any{"artefact_id": r.ID},
+			}); err != nil {
 				return fmt.Errorf("insert delay event: %w", err)
 			}
 			r.State = StateDelayed
@@ -302,11 +305,13 @@ func (s *Service) Activate(ctx context.Context, userID, artefactID string) (Reco
 		}
 
 		if expire != nil {
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
-				VALUES ($1, $2, $3, 60, 'wait', $4, $5)
-			`, ids.New(), userID, r.PlanetID, *expire,
-				fmt.Sprintf(`{"artefact_id":"%s"}`, r.ID)); err != nil {
+			if _, err := event.Insert(ctx, tx, event.InsertOpts{
+				UserID:   &userID,
+				PlanetID: r.PlanetID,
+				Kind:     event.KindArtefactExpire,
+				FireAt:   *expire,
+				Payload:  map[string]any{"artefact_id": r.ID},
+			}); err != nil {
 				return fmt.Errorf("insert expire event: %w", err)
 			}
 		}

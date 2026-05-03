@@ -12,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"oxsar/game-nova/internal/event"
-	"oxsar/game-nova/pkg/ids"
 	"oxsar/game-nova/pkg/rng"
 )
 
@@ -259,14 +258,13 @@ func (s *Service) HoldingAIHandler() event.Handler {
 			nextAt = parentDeadline
 		}
 
-		nextRaw, err := json.Marshal(pl)
-		if err != nil {
-			return fmt.Errorf("alien holding_ai: marshal next: %w", err)
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, kind, planet_id, user_id, fire_at, payload)
-			VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5, $6)
-		`, ids.New(), event.KindAlienHoldingAI, pl.PlanetID, pl.UserID, nextAt, nextRaw); err != nil {
+		if _, err := event.Insert(ctx, tx, event.InsertOpts{
+			UserID:   &pl.UserID,
+			PlanetID: &pl.PlanetID,
+			Kind:     event.KindAlienHoldingAI,
+			FireAt:   nextAt,
+			Payload:  pl,
+		}); err != nil {
 			return fmt.Errorf("alien holding_ai: insert next: %w", err)
 		}
 		slog.InfoContext(ctx, "event_alien_holding_ai_tick",

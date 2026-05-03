@@ -198,14 +198,13 @@ func (s *Service) spawnHalt(ctx context.Context, tx pgx.Tx, pl alienPayload, sur
 		AlienFleet: survivors,
 		StartTime:  time.Now().UTC(),
 	}
-	data, err := json.Marshal(hp)
-	if err != nil {
-		return fmt.Errorf("alien halt: marshal: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO events (id, kind, planet_id, user_id, fire_at, payload)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, ids.New(), event.KindAlienHalt, pl.PlanetID, pl.UserID, time.Now().Add(dur), data); err != nil {
+	if _, err := event.Insert(ctx, tx, event.InsertOpts{
+		UserID:   &pl.UserID,
+		PlanetID: &pl.PlanetID,
+		Kind:     event.KindAlienHalt,
+		FireAt:   time.Now().Add(dur),
+		Payload:  hp,
+	}); err != nil {
 		return fmt.Errorf("alien halt: insert: %w", err)
 	}
 	return nil
@@ -243,31 +242,27 @@ func (s *Service) HaltHandler() event.Handler {
 		dur := AlienHaltingMinTime + time.Duration(rand.Int64N(int64(AlienHaltingMaxTime-AlienHaltingMinTime)))
 		holdingStart := time.Now().UTC()
 		hp.StartTime = holdingStart
-		data, err := json.Marshal(hp)
+		holdingID, err := event.Insert(ctx, tx, event.InsertOpts{
+			UserID:   &hp.UserID,
+			PlanetID: &hp.PlanetID,
+			Kind:     event.KindAlienHolding,
+			FireAt:   holdingStart.Add(dur),
+			Payload:  hp,
+		})
 		if err != nil {
-			return fmt.Errorf("alien halt: marshal holding: %w", err)
-		}
-		holdingID := ids.New()
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, kind, planet_id, user_id, fire_at, payload)
-			VALUES ($1, $2, $3, $4, $5, $6)
-		`, holdingID, event.KindAlienHolding, hp.PlanetID, hp.UserID,
-			holdingStart.Add(dur), data); err != nil {
 			return fmt.Errorf("alien halt: insert holding: %w", err)
 		}
 
 		// Первый HOLDING_AI-тик через 5–10 сек.
 		hp.HoldingEventID = holdingID
-		aiData, err := json.Marshal(hp)
-		if err != nil {
-			return fmt.Errorf("alien halt: marshal holding_ai: %w", err)
-		}
 		aiDelay := 5*time.Second + time.Duration(rand.Int64N(int64(5*time.Second)))
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, kind, planet_id, user_id, fire_at, payload)
-			VALUES ($1, $2, $3, $4, $5, $6)
-		`, ids.New(), event.KindAlienHoldingAI, hp.PlanetID, hp.UserID,
-			time.Now().Add(aiDelay), aiData); err != nil {
+		if _, err := event.Insert(ctx, tx, event.InsertOpts{
+			UserID:   &hp.UserID,
+			PlanetID: &hp.PlanetID,
+			Kind:     event.KindAlienHoldingAI,
+			FireAt:   time.Now().Add(aiDelay),
+			Payload:  hp,
+		}); err != nil {
 			return fmt.Errorf("alien halt: insert holding_ai: %w", err)
 		}
 
@@ -383,15 +378,13 @@ func (s *Service) HoldingAIHandler() event.Handler {
 		// Планируем следующий тик через 12–24ч (если HOLDING ещё не
 		// истёк — event-worker позже отфильтрует по state).
 		nextDelay := AlienHaltingMinTime + time.Duration(rand.Int64N(int64(AlienHaltingMaxTime-AlienHaltingMinTime)))
-		nextData, err := json.Marshal(hp)
-		if err != nil {
-			return fmt.Errorf("alien holding_ai: marshal next: %w", err)
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, kind, planet_id, user_id, fire_at, payload)
-			VALUES ($1, $2, $3, $4, $5, $6)
-		`, ids.New(), event.KindAlienHoldingAI, hp.PlanetID, hp.UserID,
-			time.Now().Add(nextDelay), nextData); err != nil {
+		if _, err := event.Insert(ctx, tx, event.InsertOpts{
+			UserID:   &hp.UserID,
+			PlanetID: &hp.PlanetID,
+			Kind:     event.KindAlienHoldingAI,
+			FireAt:   time.Now().Add(nextDelay),
+			Payload:  hp,
+		}); err != nil {
 			return fmt.Errorf("alien holding_ai: insert next: %w", err)
 		}
 		return nil

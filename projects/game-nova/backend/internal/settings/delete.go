@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"oxsar/game-nova/internal/auth"
+	"oxsar/game-nova/internal/event"
 	"oxsar/game-nova/internal/httpx"
 )
 
@@ -211,14 +212,12 @@ func (h *Handler) performDeletion(ctx context.Context, uid, code string) error {
 		return fmt.Errorf("schedule delete_at: %w", err)
 	}
 	// Event для физического удаления (kind=90 KindAccountDelete).
-	eventID, err := generateEventID()
-	if err != nil {
-		return fmt.Errorf("gen event id: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO events (id, user_id, kind, state, fire_at, payload)
-		VALUES ($1, $2, 90, 'wait', $3, '{}'::jsonb)
-	`, eventID, uid, deleteAt); err != nil {
+	if _, err := event.Insert(ctx, tx, event.InsertOpts{
+		UserID:  &uid,
+		Kind:    event.KindAccountDelete,
+		FireAt:  deleteAt,
+		Payload: map[string]any{},
+	}); err != nil {
 		return fmt.Errorf("insert delete event: %w", err)
 	}
 	// Удалить код (одноразовый, чтобы повторно нельзя было).
@@ -232,19 +231,6 @@ func (h *Handler) performDeletion(ctx context.Context, uid, code string) error {
 // План 72.1.30: grace-period 7 дней (legacy 604800 сек) перед физическим
 // удалением аккаунта. Юзер может отменить через CancelDeletion endpoint.
 const deletionGracePeriod = 7 * 24 * time.Hour
-
-// generateEventID — UUID для events.id.
-func generateEventID() (string, error) {
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
-	}
-	// RFC 4122 v4 fixed bits.
-	buf[6] = (buf[6] & 0x0f) | 0x40
-	buf[8] = (buf[8] & 0x3f) | 0x80
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-		buf[0:4], buf[4:6], buf[6:8], buf[8:10], buf[10:16]), nil
-}
 
 // CancelDeletion POST /api/me/deletion/cancel — отменяет запланированное
 // удаление в grace-period (legacy `Preferences::updateDeletion` с delete=0).

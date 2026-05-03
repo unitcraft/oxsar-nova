@@ -140,14 +140,15 @@ func (s *Service) Spawn(ctx context.Context) error {
 		dist := alienDistance(alienHomeGalaxy, alienHomeSystem, alienHomePosition, c.galaxy, c.system, c.position)
 		flight := alienFlightDuration(dist)
 		fireAt := time.Now().Add(flight)
-		pl, _ := json.Marshal(alienPayload{
-			PlanetID: c.planetID, UserID: c.userID, Tier: tier,
-			Galaxy: c.galaxy, System: c.system, Position: c.position,
-		})
-		if _, err := s.db.Pool().Exec(ctx, `
-			INSERT INTO events (id, kind, planet_id, fire_at, payload)
-			VALUES ($1, $2, $3, $4, $5)
-		`, ids.New(), event.KindAlienAttack, c.planetID, fireAt, pl); err != nil {
+		if _, err := event.Insert(ctx, s.db.Pool(), event.InsertOpts{
+			PlanetID: &c.planetID,
+			Kind:     event.KindAlienAttack,
+			FireAt:   fireAt,
+			Payload: alienPayload{
+				PlanetID: c.planetID, UserID: c.userID, Tier: tier,
+				Galaxy: c.galaxy, System: c.system, Position: c.position,
+			},
+		}); err != nil {
 			return fmt.Errorf("alien spawn: insert event: %w", err)
 		}
 	}

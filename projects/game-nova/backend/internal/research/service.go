@@ -21,6 +21,7 @@ import (
 
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/economy"
+	"oxsar/game-nova/internal/event"
 	"oxsar/game-nova/internal/planet"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/internal/requirements"
@@ -223,11 +224,17 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		}
 
 		// 7. Событие завершения.
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, user_id, planet_id, kind, state, fire_at, payload)
-			VALUES ($1, $2, $3, 3, 'wait', $4, $5)
-		`, ids.New(), userID, planetID, end,
-			fmt.Sprintf(`{"queue_id":"%s","unit_id":%d,"target_level":%d}`, id, unitID, targetLevel)); err != nil {
+		if _, err := event.Insert(ctx, tx, event.InsertOpts{
+			UserID:   &userID,
+			PlanetID: &planetID,
+			Kind:     event.KindResearch,
+			FireAt:   end,
+			Payload: map[string]any{
+				"queue_id":     id,
+				"unit_id":      unitID,
+				"target_level": targetLevel,
+			},
+		}); err != nil {
 			return fmt.Errorf("insert event: %w", err)
 		}
 

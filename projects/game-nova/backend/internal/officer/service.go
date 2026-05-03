@@ -271,18 +271,19 @@ func (s *Service) Activate(ctx context.Context, userID, key string, autoRenew bo
 		}
 
 		// Event на expire (новый, на newExpires).
-		payload, _ := json.Marshal(map[string]any{
-			"user_id":       userID,
-			"officer_key":   key,
-			"effect":        def.Effect,
-			"cost_credit":   def.CostCredit,
-			"duration_days": def.DurationDays,
-			"auto_renew":    autoRenew,
-		})
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO events (id, user_id, kind, state, fire_at, payload)
-			VALUES ($1, $2, $3, 'wait', $4, $5)
-		`, ids.New(), userID, event.KindOfficerExpire, newExpires, payload); err != nil {
+		if _, err := event.Insert(ctx, tx, event.InsertOpts{
+			UserID: &userID,
+			Kind:   event.KindOfficerExpire,
+			FireAt: newExpires,
+			Payload: map[string]any{
+				"user_id":       userID,
+				"officer_key":   key,
+				"effect":        def.Effect,
+				"cost_credit":   def.CostCredit,
+				"duration_days": def.DurationDays,
+				"auto_renew":    autoRenew,
+			},
+		}); err != nil {
 			return fmt.Errorf("insert event: %w", err)
 		}
 		out = Entry{
@@ -369,18 +370,19 @@ func (s *Service) ExpireHandler() event.Handler {
 				`, pl.UserID, pl.OfficerKey, now, exp); err != nil {
 					return fmt.Errorf("auto_renew insert: %w", err)
 				}
-				newPayload, _ := json.Marshal(map[string]any{
-					"user_id":       pl.UserID,
-					"officer_key":   pl.OfficerKey,
-					"effect":        pl.Effect,
-					"cost_credit":   pl.CostCredit,
-					"duration_days": pl.DurationDays,
-					"auto_renew":    true,
-				})
-				if _, err := tx.Exec(ctx, `
-					INSERT INTO events (id, user_id, kind, state, fire_at, payload)
-					VALUES ($1, $2, $3, 'wait', $4, $5)
-				`, ids.New(), pl.UserID, event.KindOfficerExpire, exp, newPayload); err != nil {
+				if _, err := event.Insert(ctx, tx, event.InsertOpts{
+					UserID: &pl.UserID,
+					Kind:   event.KindOfficerExpire,
+					FireAt: exp,
+					Payload: map[string]any{
+						"user_id":       pl.UserID,
+						"officer_key":   pl.OfficerKey,
+						"effect":        pl.Effect,
+						"cost_credit":   pl.CostCredit,
+						"duration_days": pl.DurationDays,
+						"auto_renew":    true,
+					},
+				}); err != nil {
 					return fmt.Errorf("auto_renew event: %w", err)
 				}
 				// factor не меняется (был активен → остаётся активен).
