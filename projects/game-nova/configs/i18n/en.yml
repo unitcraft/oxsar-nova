@@ -2806,6 +2806,15 @@ mission:
   stargateTitle: "🌀 StarGate (moon-to-moon jump)"
   stargateBtn: "Jump"
   holdingHours: "Hold (hours, 0..99)"
+  # Plan 72.1.57: be_points boosts for combat missions.
+  battleLevelsTitle: "Battle boosts (be_points)"
+  battleLevelsAvailable: "available K={{k}}, total be_points={{points}}"
+  battleLevelsGun: "Attack (Gun)"
+  battleLevelsShield: "Shield"
+  battleLevelsShell: "Hull (Shell)"
+  battleLevelsBallistics: "Ballistics"
+  battleLevelsMasking: "Masking"
+  battleLevelsUsed: "Used {{used}}/{{k}} (cost {{cost}} be_points)"
   # Battle simulator (plan 72.1 ч.20.7)
   simulator: "Battle Simulator"
   attacker: "Attacker"

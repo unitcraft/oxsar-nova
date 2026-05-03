@@ -150,6 +150,21 @@ export interface FleetDispatchInput {
   colony_name?: string;
   // План 72.1.47: HOLDING (mission=17) duration в часах (clamp 0..99).
   holding_hours?: number;
+  // План 72.1.57: be_points-усиления для боя (legacy
+  // `Mission.class.php:1638-1671`). Применимо для combat-миссий
+  // (10 attack, 12 attack_alliance, +destroy_building/moon).
+  battle_levels?: BattleLevels;
+}
+
+// План 72.1.57: 5 базовых боевых техник, усиления через be_points.
+// Каждое значение 0..K где K = min(20, be_points/100), сумма ≤ K.
+// Cost = sum × 100 списывается из users.be_points; возвращается при recall.
+export interface BattleLevels {
+  gun?: number;
+  shield?: number;
+  shell?: number;
+  ballistics?: number;
+  masking?: number;
 }
 
 export interface Fleet {

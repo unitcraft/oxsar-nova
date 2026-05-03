@@ -16503,3 +16503,72 @@ not-a-fix + BA-019 mitigated.
   Tests: go test ./... зелёный, npx vitest run зелёный, tsc чистый.
 
   12 commits 9dc4d3d80b..98b622b4d7 в branch remaster-finalization.
+
+2026-05-03 — план 72.1.57 «be_points use в бою» (legacy 1:1)
+
+  Стартовали как «недельный» план, но Ф.0+Ф.1 (накопление experience
+  в users.be_points/e_points/battles) уже были сделаны планом 72.1.1
+  (battlestats/apply.go + battle/engine.go::computeExperience).
+  Поэтому фактически закрыли за 3-4 часа работы.
+
+  Ф.0+Ф.1 — verified (уже было):
+    battle.Report{AttackerExp,DefenderExp} вычисляется по atan-формуле
+    из Java Assault.java:817-847; ApplyBattleResult пишет в users
+    UPDATE be_points/e_points/battles после боя для каждого участника.
+
+  Ф.3 dispatch validation + списание:
+    - TransportInput +BattleLevels{Gun,Shield,Shell,Ballistics,Masking}.
+    - Pure validateBattleLevels(lvls, bePoints) → cost, error.
+      Правила legacy: ≥0; ≤K=min(20,be_points/100); сумма ≤K.
+    - Constants MaxAddTechLevels=20, PointsPerAddTechLevel=100
+      (legacy consts.php:724-725).
+    - 4 sentinel errors.
+    - В Send: SELECT be_points FOR UPDATE → validate → списание.
+    - В payload: battle_levels + used_be_points (legacy
+      EventHandler.class.php:363 хранит "used_exp_points").
+
+  Ф.4 engine apply:
+    - battle.Side +AddTechGun/Shield/Shell/Ballistics/Masking.
+    - В newBattleState: attack/shield/shell *= (1 + lvl/10) поверх
+      tech-фактора, ballistics/masking += lvl аддитивно к Tech (1:1
+      Java Participant.java:520-528).
+    - attack.go и acs_attack.go читают payload и применяют. ACS:
+      лидерские levels ко всей группе (MVP trade-off, не per-fleet).
+
+  Ф.5 refund:
+    - Recall читает used_be_points из payload arrive-event ДО его
+      DELETE и UPDATE be_points += refund.
+
+  Ф.6 тесты (12 шт):
+    - TestValidateBattleLevels (9): zero, negative, ExceedsCap,
+      Budget, K=10/20 boundary, K=0.
+    - TestBattleLevels_Sum_IsZero.
+    - TestCalculate_AddTechGunDoubles: AddGun=10 удваивает потери.
+    - TestCalculate_AddTechShieldReducesLosses.
+    - TestCalculate_AddTechBallisticsRaisesEffectiveTech: проверка
+      аддитивности через RoundTrace.
+
+  Ф.2 UI:
+    - MissionScreen: collapsible-блок «Усиления в бою (be_points)»
+      для combat-миссий (10 attack / 12 attack_alliance).
+    - 5 number-input'ов с min=0/max=K где K=min(20, accumulated_experience/100).
+    - Live-cost: «Использовано N/K (стоимость N×100 be_points)».
+    - Submit disabled при превышении бюджета (bOver).
+    - meQ через fetchMe для accumulated_experience (be_points).
+
+  Ф.7 i18n + docs:
+    - 8 новых ключей mission.battleLevels* (ru.yml + en.yml).
+    - simplifications.md [M4.be_points] помечена ЗАКРЫТО.
+    - План 72.1.57 обновлён со статусом ✅ + таблицей коммитов.
+
+  Не сделано (отложено):
+    - ADVANCED_BATTLE (Laser/Ion/Plasma с -K..+K) — отдельное решение
+      пользователя «надо подумать».
+    - Per-fleet battle_levels в ACS — для полного 1:1 нужно расширить
+      fleets таблицу столбцом jsonb или читать payload каждого
+      arrive-event'а.
+
+  Tests: go test ./... зелёный, npx vitest run зелёный, tsc чистый,
+  i18n-consistency ok.
+
+  5 commits eb24be84fd..(этот) в branch remaster-finalization.

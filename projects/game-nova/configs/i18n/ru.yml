@@ -2807,6 +2807,15 @@ mission:
   stargateTitle: "🌀 StarGate (прыжок между лунами)"
   stargateBtn: "Прыжок"
   holdingHours: "Удерживать (часов, 0..99)"
+  # План 72.1.57: be_points-усиления для combat-миссий (Mission.class.php:1638).
+  battleLevelsTitle: "Усиления в бою (be_points)"
+  battleLevelsAvailable: "доступно K={{k}}, всего be_points={{points}}"
+  battleLevelsGun: "Атака (Gun)"
+  battleLevelsShield: "Щит (Shield)"
+  battleLevelsShell: "Корпус (Shell)"
+  battleLevelsBallistics: "Баллистика"
+  battleLevelsMasking: "Маскировка"
+  battleLevelsUsed: "Использовано {{used}}/{{k}} (стоимость {{cost}} be_points)"
   # Boevoy симулятор (план 72.1 ч.20.7) — shipName/max ниже в группе
   simulator: "Симулятор боя"
   attacker: "Атакующий"

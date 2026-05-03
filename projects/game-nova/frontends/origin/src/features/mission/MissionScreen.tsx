@@ -16,6 +16,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ApiError } from '@/api/client';
 import { dispatchFleet, stargateJump } from '@/api/fleet';
+import { fetchMe } from '@/api/me';
 import { fetchShipyardInventory } from '@/api/shipyard';
 import { fetchSettings } from '@/api/settings';
 import { QK } from '@/api/query-keys';
@@ -70,6 +71,31 @@ export function MissionScreen() {
   const [acsGroupId, setAcsGroupId] = useState('');
   // План 72.1.47: HOLDING duration (legacy holdingtime, 0..99 часов).
   const [holdingHours, setHoldingHours] = useState('0');
+  // План 72.1.57: be_points-усиления для combat-миссий
+  // (10/12/26/29/25/27). 5 базовых техник, 0..K.
+  const [bGun, setBGun] = useState('0');
+  const [bShield, setBShield] = useState('0');
+  const [bShell, setBShell] = useState('0');
+  const [bBallistics, setBBallistics] = useState('0');
+  const [bMasking, setBMasking] = useState('0');
+  const [bExpand, setBExpand] = useState(false);
+
+  const meQ = useQuery({
+    queryKey: ['me'],
+    queryFn: fetchMe,
+    staleTime: 30_000,
+  });
+  const bePoints = Math.floor(meQ.data?.accumulated_experience ?? 0);
+  const battleK = Math.min(20, Math.floor(bePoints / 100));
+  const isCombatMission = mission === 10 || mission === 12;
+  const bUsed =
+    (Number(bGun) || 0) +
+    (Number(bShield) || 0) +
+    (Number(bShell) || 0) +
+    (Number(bBallistics) || 0) +
+    (Number(bMasking) || 0);
+  const bCost = bUsed * 100;
+  const bOver = bUsed > battleK;
 
   const invQ = useQuery({
     queryKey: planetId ? QK.shipyardInventory(planetId) : ['noop-mission'],
@@ -164,6 +190,17 @@ export function MissionScreen() {
     const cm = Math.max(0, Math.floor(Number(carryMetal) || 0));
     const cs = Math.max(0, Math.floor(Number(carrySilicon) || 0));
     const ch = Math.max(0, Math.floor(Number(carryHydrogen) || 0));
+    // План 72.1.57: battle_levels только для combat-миссий и только если
+    // что-то выбрано (иначе backend будет считать IsZero и ничего не списывает).
+    let bl: FleetDispatchInput['battle_levels'];
+    if (isCombatMission && bUsed > 0 && !bOver) {
+      bl = {};
+      if (Number(bGun) > 0) bl.gun = Number(bGun);
+      if (Number(bShield) > 0) bl.shield = Number(bShield);
+      if (Number(bShell) > 0) bl.shell = Number(bShell);
+      if (Number(bBallistics) > 0) bl.ballistics = Number(bBallistics);
+      if (Number(bMasking) > 0) bl.masking = Number(bMasking);
+    }
     const input: FleetDispatchInput = {
       src_planet_id: planetId,
       dst: { galaxy, system, position },
@@ -180,6 +217,7 @@ export function MissionScreen() {
       ...(mission === 17
         ? { holding_hours: Math.max(0, Math.min(99, Math.floor(Number(holdingHours) || 0))) }
         : {}),
+      ...(bl ? { battle_levels: bl } : {}),
     };
     dispatch.mutate(input);
   }
@@ -378,13 +416,88 @@ export function MissionScreen() {
               </td>
             </tr>
           )}
+          {/* План 72.1.57: be_points-усиления для combat-миссий
+              (legacy `Mission.class.php:1638-1671`). По умолчанию свёрнуто. */}
+          {isCombatMission && (
+            <>
+              <tr>
+                <td colSpan={2}>
+                  <button
+                    type="button"
+                    className="button"
+                    onClick={() => setBExpand((v) => !v)}
+                    aria-expanded={bExpand}
+                  >
+                    {bExpand ? '▼ ' : '▶ '}
+                    {t('mission', 'battleLevelsTitle') || 'Усиления в бою'}
+                    {' — '}
+                    {t('mission', 'battleLevelsAvailable', {
+                      k: String(battleK),
+                      points: String(bePoints),
+                    }) || `доступно K=${battleK} (be_points=${bePoints})`}
+                  </button>
+                </td>
+              </tr>
+              {bExpand && (
+                <>
+                  <tr>
+                    <td>{t('mission', 'battleLevelsGun') || 'Атака (Gun)'}</td>
+                    <td>
+                      <input type="number" min={0} max={battleK} value={bGun}
+                        onChange={(e) => setBGun(e.target.value)} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>{t('mission', 'battleLevelsShield') || 'Щит'}</td>
+                    <td>
+                      <input type="number" min={0} max={battleK} value={bShield}
+                        onChange={(e) => setBShield(e.target.value)} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>{t('mission', 'battleLevelsShell') || 'Корпус'}</td>
+                    <td>
+                      <input type="number" min={0} max={battleK} value={bShell}
+                        onChange={(e) => setBShell(e.target.value)} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>{t('mission', 'battleLevelsBallistics') || 'Баллистика'}</td>
+                    <td>
+                      <input type="number" min={0} max={battleK} value={bBallistics}
+                        onChange={(e) => setBBallistics(e.target.value)} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>{t('mission', 'battleLevelsMasking') || 'Маскировка'}</td>
+                    <td>
+                      <input type="number" min={0} max={battleK} value={bMasking}
+                        onChange={(e) => setBMasking(e.target.value)} />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={2}>
+                      <span className={bOver ? 'false' : 'true'}>
+                        {t('mission', 'battleLevelsUsed', {
+                          used: String(bUsed),
+                          k: String(battleK),
+                          cost: String(bCost),
+                        }) ||
+                          `Использовано ${bUsed}/${battleK} (стоимость ${bCost} be_points)`}
+                      </span>
+                    </td>
+                  </tr>
+                </>
+              )}
+            </>
+          )}
           <tr>
             <td colSpan={2} align="center">
               <button
                 type="button"
                 className="button"
                 onClick={handleSend}
-                disabled={dispatch.isPending}
+                disabled={dispatch.isPending || (isCombatMission && bOver)}
               >
                 {t('fleet', 'sendButton')}
               </button>
