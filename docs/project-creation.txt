@@ -16439,3 +16439,67 @@ not-a-fix + BA-019 mitigated.
   Tests: backend go test ./... зелёный, vitest 133/133, tsc чистый.
 
   Коммит: feat(plan 72.1.55.E): подключены 7 settings effects 1:1.
+
+2026-05-03 — план 72.1.56 «Deep 1:1 cleanup» (12 задач)
+
+  Выполнено в одной итерации:
+  - Группа A (короткие, 4 задачи):
+    A1 [EXPEDITION] expExtraPlanet KindExpirePlanet — verify-handsweep:
+      handler/registration/INSERT уже есть, запись была устаревшая.
+    A2 [09-Ф2.1] events.trace_id helper — расширен event.Insert приёма
+      Execer (pgx.Tx и pgxpool.Pool); 16 raw INSERT INTO events
+      мигрированы; trace_id теперь автоматически из ctx.
+    A3 [P88.2] Officer push name — i18n группа officerName: {ADMIRAL,
+      GEOLOGIST, ENGINEER, MERCHANT}; Service.officerName(key); subject
+      переформулирован «Подписка на офицера продлена: {{name}}».
+    A4 [Alliance 67 Ф.5] perms RanksScreen — заменено owner-only на
+      hasPerm(isOwner, can_manage_ranks, selfPerms).
+
+  - Группа B (средние, 7 задач):
+    B6 [Repair] partial quantity — legacy ExtRepair.class.php:510 1:1.
+      EnqueueRepair(ctx, ..., quantity int64) + clampRepairQuantity
+      pure helper. RepairHandler переписан: GREATEST(damaged-qCount, 0)
+      + sheel_percent reset только если итог=0; различает ships/defense
+      (был баг — всегда обновлял ships). Frontend: <input> per-юнит.
+      OpenAPI расширен. 6 unit-тестов.
+    B9 [65-Ф.1] demolish API — verify-handsweep: planом 72.1.33
+      реализован полный stack (service+handler+route+UI кнопка).
+      Запись была устаревшая.
+    B7 [65-Ф.3] DESTROY_BUILD_RESULT_MIN_OFFS_LEVEL — legacy 1:1.
+      tryDestroyBuilding принимает attackerUserIDs []string; pure
+      helper filterDestroyCandidates исключает здания без attacker'а
+      («unchecked») и где defender.level-1 < attacker.max_level+
+      threshold. Callers attack/acs_attack обновлены. 7 unit-тестов.
+    B8 [Alien AI] unloadAlienResources — legacy AlienAI.class.php:1053
+      1:1. holdingPayload расширен CapturedM/S/H; spawnHalt принимает
+      loot из боя; unload использует ceil(min(captured*0.7, captured*
+      0.1*times)), декрементирует captured, UPDATE родительский
+      HOLDING.payload. 9 unit-тестов.
+    B11 [M4.x] attacker_* поля — config.AttackerOverrides{Front,
+      Attack,Shield,Shell} в ShipSpec/DefenseSpec. ships.yml: Deathstar
+      front=10/attacker=9, AlienScreen front=15/attacker=16 (legacy
+      na_ship_datasheet 1:1). stacksToBattleUnits принимает isAttacker.
+      Регрессия Front=0 устранена (теперь корректно из spec).
+    B10 [M4.1] Shield regen — verify-handsweep: Java
+      Units.java:591-593 finishTurn делает turnShield = startTurnQty
+      * shield (100% regen). Запись была ошибочная — паритет уже есть.
+    B5 [H.1.7] Phalanx — verify-handsweep: planом 20 Ф.4 + 72.1.20
+      реализован: range = round((star_surv²-1)*(1+hyper/10)), GET
+      /api/phalanx, MonitorPlanetScreen. Запись была устаревшая.
+
+  - Группа C (план):
+    C12 be_points use в бою — создан docs/plans/72.1.57 stub-план,
+      6 фаз, ~1 неделя работы.
+
+  - Группа D (косметика):
+    D13 пометил ЗАКРЫТО для M4.4a×2 + M4.2.
+    D14 переклассифицировал [Market] one-planet и [66-Ф.5] alien
+      buyout как «не упрощения» (legacy 1:1 / новая фича).
+
+  Итог по simplifications.md: открытых записей было ~80, после
+  72.1.56 закрыто 11, переклассифицировано 3, остались только
+  L-приоритет UX/тесты/админка-фичи и by-design расхождения.
+
+  Tests: go test ./... зелёный, npx vitest run зелёный, tsc чистый.
+
+  12 commits 9dc4d3d80b..98b622b4d7 в branch remaster-finalization.

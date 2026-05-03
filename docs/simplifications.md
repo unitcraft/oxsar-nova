@@ -57,14 +57,15 @@
 - **Приоритет**: L (кандидат на расширенный режим / отдельный сервер,
   не для MVP).
 
-### [M4.2] Ballistics/masking — детерминированная формула без RNG
+### [M4.2] Ballistics/masking — детерминированная формула без RNG — ЗАКРЫТО (соответствие, не упрощение)
 - **Где**: `battle/engine.go::applyMasking`.
 - **Что**: `missed = floor(shots × factor)` — ровно та же Java-формула,
   но без RNG-roll per shot.
 - **Почему**: в Java тоже deterministic (factor применяется к пулу),
-  это не упрощение, а соответствие.
+  это не упрощение, а соответствие. Запись была в файле для
+  прозрачности — фиксирует что nova=Java 1:1.
 - **Как чинить**: не нужно — формула совпадает с legacy.
-- **Приоритет**: —
+- **Приоритет**: closed.
 
 ### [M4.3] Ablation — максимум 1 damaged-юнит на stack
 - **Где**: `battle/engine.go::commitDamage`.
@@ -84,12 +85,12 @@
   сценариев в обоих движках, diff JSON.
 - **Приоритет**: M — при балансировании боя.
 
-### [M4.4a] rapidfireToMap возвращает nil (исправлено)
+### [M4.4a] rapidfireToMap возвращает nil — ЗАКРЫТО
 - **Где**: `fleet/attack.go`.
 - **Статус**: Закрыто в итерации 20 (commit c7ae59a). rapidfireToMap
   теперь проксирует cat.Rapidfire.Rapidfire напрямую.
 
-### [M4.4a] Debris=часть loot (исправлено)
+### [M4.4a] Debris=часть loot — ЗАКРЫТО
 - **Статус**: Закрыто в итерации 20. Debris отделено от loot,
   попадает в `debris_fields` на координаты, собирается RECYCLING.
 
@@ -260,13 +261,16 @@
 - Курсы metal=1, silicon=2, hydrogen=4 — соответствие legacy OGame (не упрощение).
   Ордерная книга (CreateLot/ListLots/CancelLot/AcceptLot, migration 0022) реализована.
 
-### [Market] Только в рамках одной планеты
+### [Market] Только в рамках одной планеты — НЕ упрощение (legacy 1:1)
 - **Где**: `internal/market/service.go::Exchange`.
-- **Что**: обмен происходит на конкретной планете, нет межпланетного
-  swap (ресурсы надо везти).
-- **Почему**: так проще, OGame тоже так делает.
-- **Как чинить**: не нужно.
-- **Приоритет**: —
+- **Что**: обмен ресурсов происходит на конкретной планете, нет
+  межпланетного swap (ресурсы надо везти).
+- **Verify-handsweep 2026-05-03 (72.1.56)**: legacy
+  `Market.class.php:122-126` идентично использует `NS::getPlanet()->
+  getPlanetId()` для каждой обменной операции. Межпланетный swap —
+  **новая фича, в legacy её НЕТ**. nova=legacy 1:1.
+- **Если когда-нибудь захотим**: новый план, не tracked здесь.
+- **Приоритет**: closed (документация).
 
 ### [ArtefactMarket] Фильтр «мои» — ЗАКРЫТО
 - **Закрыто**: добавлен `GET /api/me` → `{user_id, username}`,
@@ -1857,6 +1861,15 @@ ui-state-error — у nova своя дизайн-система, паритет 
 **Приоритет**: L.
 
 ## 2026-04-28 — План 66 Ф.5: платный выкуп удержания (alien buyout)
+
+<!-- ВАЖНО: Сама механика 66-Ф.5 «alien buyout» (платный выкуп удержания
+пришельцами за оксары) — это **новая фича game-nova**, в legacy
+oxsar2 её НЕТ. Verify-handsweep 2026-05-03 (план 72.1.56): поиск
+buyout/holding_cost/occupied_cost в `d:\Sources\oxsar2\www\` ничего
+не дал. EVENT_ALIEN_HOLDING в legacy завершается только естественно
+(timeout 12-24ч) либо через бой стороннего атакующего. Записи ниже
+описывают остаточные trade-off'ы реализации новой фичи (YAML loader,
+2PC, локирование), не отклонения от legacy. -->
 
 ### [66-Ф.5] BuyoutBaseOxsars живёт в Go-Config, а не в configs/balance/origin.yaml
 **Где**: `projects/game-nova/backend/internal/origin/alien/config.go`
