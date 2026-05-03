@@ -2916,11 +2916,19 @@ goal:
   subject: "Цель: {{title}}"
   body: "Вы завершили цель «{{title}}»."
 officer:
-  renewedSubject: "Officer {{key}} продлён автоматически"
+  renewedSubject: "Подписка на офицера продлена: {{name}}"
   renewedBody: "Подписка продлена. Списано {{credits}} кредитов."
-  expiredSubject: "Officer {{key}} истёк"
+  expiredSubject: "Срок подписки на офицера истёк: {{name}}"
   expiredBody: "Срок подписки закончился. Активируйте снова, если нужно."
   expiredBodyNoCredits: "Срок подписки закончился. Недостаточно кредитов для авто-продления."
+# Имена офицеров (officer_defs.key) для подстановки в push/уведомления.
+# План 72.1.56 A3 (P88.2): резолв OfficerKey→русское имя, чтобы не
+# появлялась английщина «Officer ENGINEER» в subject уведомлений.
+officerName:
+  ADMIRAL:   "Адмирал"
+  GEOLOGIST: "Геолог"
+  ENGINEER:  "Инженер"
+  MERCHANT:  "Торговец"
 prefs:
   activated: Активен
   advancedPreferences: Дополнительно
