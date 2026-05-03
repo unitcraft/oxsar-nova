@@ -167,9 +167,10 @@
   отдельного плана уровня недели работы. В рамках pixel-perfect
   MainScreen достаточно показывать поле «Накопленный опыт» — оно
   должно быть ненулевым после первых боев.
-- **Как чинить**: план 73 «be_points use в бою». См. подробное описание
-  в `docs/plans/72.1-post-remaster-stabilization.md` ч.17 раздел про
-  `be_points`. Источники формул: legacy `Mission.class.php:1230,1659,1675`,
+- **Как чинить**: подробный план — [`72.1.57-be-points-use-in-battle.md`](plans/72.1.57-be-points-use-in-battle.md)
+  (создан 2026-05-03 как stub в рамках 72.1.56 C12). 6 фаз: UI→OpenAPI/
+  dispatch→engine→cancel-refund→tests→i18n+docs.
+  Источники формул: legacy `Mission.class.php:1230,1659,1675`,
   `EventHandler.class.php:363,1156`, oxsar2-java `Participant.java:524-525,963`.
 - **Приоритет**: M (фича не блокирует игру, но баланс боя без use
   отличается от legacy — атакующий не может бустить юниты).
