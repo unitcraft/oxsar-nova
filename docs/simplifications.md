@@ -27,14 +27,20 @@
   наоборот. `ignoreAttack` вычисляется по базовому щиту без tech-масштабирования.
   Для планетарных щитов (id 49/50) `ignoreAttack=0` как в Java. BA-005 ЗАКРЫТ.
 
-### [M4.1] Регенерация щитов — 100% каждый раунд
-- **Где**: `battle/engine.go::regen`.
-- **Что**: `turnShield = quantity × Shield` в начале каждого раунда,
-  не учитываем partial regen (shieldDamageFactor в Java).
-- **Почему**: упрощение для стабильной базы под ablation-тесты.
-- **Как чинить**: добавить поле `turnShieldMax` и считать `regen = delta
-  (max - current)` с затуханием после массового пробития.
-- **Приоритет**: L.
+### [M4.1] Регенерация щитов — 100% каждый раунд — ЗАКРЫТО
+- **Статус**: ЗАКРЫТО (verify-handsweep 2026-05-03 при 72.1.56 B10).
+  Запись была ошибочна — паритет с Java уже есть.
+- **Что выяснилось**: Java
+  `oxsar2-java/assault/src/assault/Units.java:591-593` (`finishTurn`)
+  и `:253,299` (`setupBattle`/`setupArtefactBonus`) одинаково
+  устанавливают `turnShield = startTurnQuantity * shield` — 100%
+  регенерация на каждый раунд. Закомментированный блок «partial
+  regen» (Units.java:499-503) — нерабочая идея автора, не активна.
+  `shieldDamageFactor` используется только ВНУТРИ раунда для расчёта
+  `shieldDestroyFactor` (как глубоко урон проходит к корпусу), но не
+  переносится между раундами.
+- nova `engine.go::regen` 1:1 с Java.
+- **Приоритет**: closed.
 
 ### [M4.1] Multi-channel attack — упрощено до scalar (2026-04-25)
 - **Где**: `battle/engine.go`, `battle/types.go`.
