@@ -9,6 +9,7 @@ import (
 	"oxsar/game-nova/internal/event"
 	"oxsar/game-nova/internal/fleet"
 	"oxsar/game-nova/internal/galaxy"
+	"oxsar/game-nova/internal/profession"
 	"oxsar/game-nova/internal/research"
 )
 
@@ -29,6 +30,8 @@ type executorDeps struct {
 	Research *research.Service
 	// Fleet — для миссий (transport/expedition в Ф.2.1, atk/spy в Ф.2.2).
 	Fleet *fleet.TransportService
+	// Profession — для смены профессии (Ф.3).
+	Profession *profession.Service
 }
 
 // executeRecommendation создаёт игровое событие, соответствующее
@@ -73,6 +76,22 @@ func executeRecommendation(ctx context.Context, deps executorDeps, userID string
 			return "", ErrUnsupportedCategory
 		}
 		return executeMission(ctx, deps.Fleet, userID, rec)
+
+	case "profession":
+		if deps.Profession == nil {
+			return "", ErrUnsupportedCategory
+		}
+		key, _ := rec.Params["profession_key"].(string)
+		if key == "" {
+			return "", fmt.Errorf("autopilot: profession: profession_key missing")
+		}
+		if err := deps.Profession.Change(ctx, userID, key); err != nil {
+			return "", fmt.Errorf("autopilot: profession change: %w", err)
+		}
+		// profession.Change не возвращает event_id (это атомарный UPDATE
+		// users + automsg, без события в очереди). Возвращаем синтетический
+		// «event id» = ключ профессии, чтобы фронт смог показать результат.
+		return "profession:" + key, nil
 
 	default:
 		return "", ErrUnsupportedCategory

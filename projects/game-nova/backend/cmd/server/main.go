@@ -366,7 +366,7 @@ func run() error {
 			ProtectionPeriod: cfg.Game.ProtectionPeriod,
 		},
 		cat,
-		planetSvc, scoreSvc, buildingSvc, researchSvc, transportSvc,
+		planetSvc, scoreSvc, buildingSvc, researchSvc, transportSvc, professionSvc,
 	)
 	autopilotH := aiadvisor.NewAutopilotHandler(autopilotSvc)
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/economy"
@@ -991,6 +992,86 @@ func TestApproxAttackerShipValue(t *testing.T) {
 	v = approxAttackerShipValue(map[int]int64{29: 100, 30: 100})
 	if v != 0 {
 		t.Errorf("transports not counted: got %d, want 0", v)
+	}
+}
+
+func TestProfessionForStrategy(t *testing.T) {
+	t.Parallel()
+	cases := map[Strategy]string{
+		StrategyMilitary:  "attacker",
+		StrategyDefense:   "defender",
+		StrategyEconomy:   "miner",
+		StrategyExpansion: "universal",
+		StrategyAuto:      "", // эвристика выбирает up в detectPhase
+	}
+	for s, want := range cases {
+		got := professionForStrategy(s)
+		if got != want {
+			t.Errorf("strategy=%s: profession = %q, want %q", s, got, want)
+		}
+	}
+}
+
+func TestScoreProfession_NoChangeWhenSame(t *testing.T) {
+	t.Parallel()
+	snap := PlayerSnapshot{
+		Profession: "miner",
+		Credits:    5000,
+	}
+	recs := scoreProfession(snap, StrategyEconomy)
+	if len(recs) != 0 {
+		t.Errorf("same profession (miner+economy): want no recs, got %d", len(recs))
+	}
+}
+
+func TestScoreProfession_NoMoneyToChange(t *testing.T) {
+	t.Parallel()
+	snap := PlayerSnapshot{
+		Profession: "miner",
+		Credits:    500, // < 1000
+	}
+	recs := scoreProfession(snap, StrategyMilitary)
+	if len(recs) != 0 {
+		t.Errorf("not enough credits: want no recs, got %d", len(recs))
+	}
+}
+
+func TestScoreProfession_StillInCooldown(t *testing.T) {
+	t.Parallel()
+	now := time.Now().UTC()
+	changed := now.Add(-7 * 24 * time.Hour) // 7 дней назад, cooldown 14
+	snap := PlayerSnapshot{
+		Now:                 now,
+		Profession:          "miner",
+		ProfessionChangedAt: &changed,
+		Credits:             5000,
+	}
+	recs := scoreProfession(snap, StrategyMilitary)
+	if len(recs) != 0 {
+		t.Errorf("in cooldown: want no recs, got %d", len(recs))
+	}
+}
+
+func TestScoreProfession_HappyPath(t *testing.T) {
+	t.Parallel()
+	now := time.Now().UTC()
+	changed := now.Add(-15 * 24 * time.Hour) // > 14 дней назад
+	snap := PlayerSnapshot{
+		Now:                 now,
+		Profession:          "universal",
+		ProfessionChangedAt: &changed,
+		Credits:             5000,
+	}
+	recs := scoreProfession(snap, StrategyMilitary)
+	if len(recs) != 1 {
+		t.Fatalf("happy path: want 1 rec, got %d", len(recs))
+	}
+	rec := recs[0]
+	if rec.Category != "profession" {
+		t.Errorf("category = %s, want profession", rec.Category)
+	}
+	if rec.Params["profession_key"] != "attacker" {
+		t.Errorf("profession_key = %v, want attacker", rec.Params["profession_key"])
 	}
 }
 

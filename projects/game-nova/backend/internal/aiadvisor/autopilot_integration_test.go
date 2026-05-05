@@ -90,7 +90,7 @@ func newServiceForTest(pool *pgxpool.Pool) *aiadvisor.AutopilotService {
 		db, cfg,
 		aiadvisor.GameTuning{},
 		cat, planetSvc, scoreSvc,
-		nil, nil, nil, // building/research/fleet не нужны при пустом каталоге
+		nil, nil, nil, nil, // building/research/fleet/profession не нужны при пустом каталоге
 	)
 }
 

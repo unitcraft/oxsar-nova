@@ -262,6 +262,7 @@ func run() error {
 		cat,
 		planetSvc, scoreSvc, autopilotBuildingSvc, autopilotResearchSvc,
 		transportSvc, // worker не вызывает Fleet.Send (только Compute), но для единства сигнатуры
+		nil,          // profession.Service не нужен в Compute (профессия читается прямо из users SQL)
 	)
 	autopilotWorkerH := &aiadvisor.AutopilotWorkerHandler{Svc: autopilotSvc}
 	w.Register(event.KindAutopilotAdvise, autopilotWorkerH.Handle)

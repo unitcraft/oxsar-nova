@@ -57,6 +57,7 @@ func scoreCandidates(snap PlayerSnapshot, strategy Strategy, inputs scoringInput
 		recs = append(recs, scoreBuildings(snap, strategy, inputs)...)
 		recs = append(recs, scoreResearch(snap, strategy, inputs)...)
 		recs = append(recs, scoreMissions(snap, strategy, inputs)...)
+		recs = append(recs, scoreProfession(snap, strategy)...)
 	}
 
 	sort.SliceStable(recs, func(i, j int) bool {

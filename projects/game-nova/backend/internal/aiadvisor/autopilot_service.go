@@ -43,6 +43,7 @@ import (
 	"oxsar/game-nova/internal/event"
 	"oxsar/game-nova/internal/fleet"
 	"oxsar/game-nova/internal/planet"
+	"oxsar/game-nova/internal/profession"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/internal/research"
 	"oxsar/game-nova/internal/score"
@@ -82,15 +83,16 @@ type GameTuning struct {
 }
 
 type AutopilotService struct {
-	db          repo.Exec
-	cfg         config.AIAdvisorConfig
-	tuning      GameTuning
-	catalog     *config.Catalog
-	planetSvc   *planet.Service
-	scoreSvc    *score.Service
-	buildSvc    *building.Service
-	researchSvc *research.Service
-	fleetSvc    *fleet.TransportService
+	db             repo.Exec
+	cfg            config.AIAdvisorConfig
+	tuning         GameTuning
+	catalog        *config.Catalog
+	planetSvc      *planet.Service
+	scoreSvc       *score.Service
+	buildSvc       *building.Service
+	researchSvc    *research.Service
+	fleetSvc       *fleet.TransportService
+	professionSvc  *profession.Service
 }
 
 // NewAutopilotService — конструктор. Любая зависимость может быть nil
@@ -106,17 +108,19 @@ func NewAutopilotService(
 	buildSvc *building.Service,
 	researchSvc *research.Service,
 	fleetSvc *fleet.TransportService,
+	professionSvc *profession.Service,
 ) *AutopilotService {
 	return &AutopilotService{
-		db:          db,
-		cfg:         cfg,
-		tuning:      tuning,
-		catalog:     catalog,
-		planetSvc:   planetSvc,
-		scoreSvc:    scoreSvc,
-		buildSvc:    buildSvc,
-		researchSvc: researchSvc,
-		fleetSvc:    fleetSvc,
+		db:             db,
+		cfg:            cfg,
+		tuning:         tuning,
+		catalog:        catalog,
+		planetSvc:      planetSvc,
+		scoreSvc:       scoreSvc,
+		buildSvc:       buildSvc,
+		researchSvc:    researchSvc,
+		fleetSvc:       fleetSvc,
+		professionSvc:  professionSvc,
 	}
 }
 
@@ -373,9 +377,10 @@ func (s *AutopilotService) Execute(ctx context.Context, userID, jobID, recID str
 	// building.Enqueue / research.Enqueue). Они идемпотентны на уровне
 	// своих сервисов.
 	eventID, err := executeRecommendation(ctx, executorDeps{
-		Building: s.buildSvc,
-		Research: s.researchSvc,
-		Fleet:    s.fleetSvc,
+		Building:   s.buildSvc,
+		Research:   s.researchSvc,
+		Fleet:      s.fleetSvc,
+		Profession: s.professionSvc,
 	}, userID, *rec)
 	if err != nil {
 		return ExecuteResult{}, err

@@ -32,6 +32,11 @@ type PlayerSnapshot struct {
 	// Флаги среды.
 	Umode      bool
 	IsObserver bool
+
+	// Профессия (Ф.3): текущий ключ ('universal'|'miner'|'attacker'|...)
+	// и время последней смены — для cooldown 14 дней.
+	Profession          string
+	ProfessionChangedAt *time.Time
 }
 
 // PlanetSnapshot — состояние одной планеты на момент snapshot.
@@ -137,11 +142,18 @@ func buildSnapshot(ctx context.Context, deps SnapshotDeps, userID string) (Playe
 		Research: map[int]int{},
 	}
 
-	// Чтение баланса кредитов и флагов umode/observer одним запросом.
+	// Чтение баланса кредитов, флагов и профессии одним запросом.
 	if err := deps.DB.Pool().QueryRow(ctx, `
-		SELECT COALESCE(credit, 0), COALESCE(umode, false), COALESCE(is_observer, false)
+		SELECT COALESCE(credit, 0),
+		       COALESCE(umode, false),
+		       COALESCE(is_observer, false),
+		       COALESCE(profession, 'none'),
+		       profession_changed_at
 		FROM users WHERE id = $1
-	`, userID).Scan(&snap.Credits, &snap.Umode, &snap.IsObserver); err != nil {
+	`, userID).Scan(
+		&snap.Credits, &snap.Umode, &snap.IsObserver,
+		&snap.Profession, &snap.ProfessionChangedAt,
+	); err != nil {
 		return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: read user: %w", err)
 	}
 

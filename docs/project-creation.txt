@@ -17136,3 +17136,58 @@ not-a-fix + BA-019 mitigated.
     - Inbox-канал «Автопилот» (дублирование рекомендации в почту) —
       требует inbox.Service в AutopilotService; полезно когда игрок
       offline, но в Ф.4 опущено.
+
+## Итерация 06.1.10 — Автопилот: смена профессии Ф.3 (2026-05-06)
+
+  Цель: Автопилот предлагает сменить профессию под текущую стратегию,
+  если кулдаун 14 дней прошёл и есть 1000 кр.
+
+  Реализовано:
+    - aiadvisor/autopilot_snapshot.go: PlayerSnapshot += Profession,
+      ProfessionChangedAt. SQL users расширен полями profession и
+      profession_changed_at.
+    - aiadvisor/autopilot_scoring_profession.go (новый файл):
+        professionForStrategy: Military→attacker, Defense→defender,
+          Economy→miner, Expansion→universal.
+        scoreProfession отсевает: same profession, < 1000 кр,
+          cooldown < 14 дней. Score=50 (фиксированный, чтобы попадал
+          в топ-3 при равной силе других кандидатов).
+    - aiadvisor/autopilot_executor.go: case "profession" → вызывает
+      profession.Service.Change. Возвращает синтетический "event_id" =
+      "profession:<key>" (Change не создаёт event, только UPDATE users).
+    - AutopilotService += professionSvc; server/main.go передаёт
+      реальный, worker — nil (snapshot читает SQL напрямую).
+    - frontends/nova/src/features/advisor/AdvisorScreen.tsx
+      navigateForRec: case 'profession' → '#profession'.
+
+  Tests (унит, 4 новых):
+    - TestProfessionForStrategy — table-driven по 5 стратегиям.
+    - TestScoreProfession_NoChangeWhenSame — Economy + miner = пусто.
+    - TestScoreProfession_NoMoneyToChange — credit=500 < 1000 = пусто.
+    - TestScoreProfession_StillInCooldown — 7 дней cooldown = пусто.
+    - TestScoreProfession_HappyPath — universal+15дней+5000кр+Military
+      → attacker recommendation.
+
+  Прогон с реальной БД (uni03): 51 тест зелёный (41 unit + 10 integration).
+
+  Что НЕ сделано из плана (явно отложено):
+    - ACS (Mission=12). Требует чтения активных боевых event'ов
+      союзников + понимания alliance-топологии. Это самостоятельная
+      ~300-строчная фича; не блокирует core пользу автопилота.
+    - Биржа артефактов. Требует exchange.Service (cap-проверки,
+      escrow, oxsarit pricing). ≥ 200 строк интеграции. Отдельная
+      задача.
+    - Полный battle.Simulator для атаки. Уточнение Ф.2.2.
+    - WS push autopilot_ready (Ф.6). chat.Hub использует фиксированную
+      Message-структуру (Body/Channel/AuthorID); для autopilot нужен
+      отдельный канал, что значит дополнительную WS-инфраструктуру.
+      Polling работает как fallback (200ms refetch при pending).
+    - openapi.yaml для /ai-advisor/* эндпоинтов. До Ф.4 не было
+      даже LLM-эндпоинтов в спецификации — это унаследованный пробел,
+      требует отдельного doc-коммита для всей aiadvisor группы.
+    - Inbox-канал «Автопилот» — дублирование рекомендации в почту
+      нужно когда игрок offline. inbox.Service нужно подключить
+      в AutopilotService.Compute; ~30 строк интеграции, отложено.
+    - History API для виджета — пока показывается активный job
+      из localStorage. Полноценная история требует
+      GET /api/ai-advisor/autopilot/history и UI-таб.

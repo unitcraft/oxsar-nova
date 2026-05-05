@@ -303,6 +303,9 @@ function navigateForRec(rec: Recommendation | undefined) {
     case 'mission':
       window.location.hash = '#fleet';
       break;
+    case 'profession':
+      window.location.hash = '#profession';
+      break;
     default:
       // другие категории — остаёмся на advisor.
   }
