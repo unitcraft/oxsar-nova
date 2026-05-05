@@ -16923,3 +16923,39 @@ not-a-fix + BA-019 mitigated.
       здания» (verfь, лаба) с весами по стратегиям. Сейчас building
       Score для не-Economy = pointsPerSec без буста.
     - Integration-тест Compute end-to-end — Ф.1д.
+
+## Итерация 06.1.5 — Автопилот: integration-тесты Ф.1д (2026-05-05)
+
+  Цель: end-to-end проверка pipeline Enqueue → Compute → Result → Execute
+  на реальной PostgreSQL. Тесты skipped без TEST_DATABASE_URL.
+
+  Tests (8 интеграционных):
+    - TestAutopilot_Enqueue_NotEnoughCredit — credit=1 < cost=2 →
+      ErrNotEnoughCredit (без побочных эффектов).
+    - TestAutopilot_Enqueue_RateLimitReached — после 5 записей в
+      ai_advisor_log за 24h Enqueue возвращает ErrRateLimitReached.
+    - TestAutopilot_Enqueue_InvalidStrategy — Strategy("garbage")
+      → ErrInvalidStrategy.
+    - TestAutopilot_Enqueue_Success — кредиты списались (10→8),
+      log row status='pending' source='autopilot' strategy='economy',
+      events row kind=92 state='wait'.
+    - TestAutopilot_Result_NotFound — фейковый jobID → ErrJobNotFound.
+    - TestAutopilot_Result_Pending — после Enqueue до Compute
+      Result возвращает status='pending' без recs.
+    - TestAutopilot_Result_OtherUser_NotFound — чужой userID к
+      существующему job → ErrJobNotFound (изоляция).
+    - TestAutopilot_Compute_Idempotent — два вызова Compute с
+      одинаковым event подряд: первый пишет ready, второй no-op
+      (status проверяется через FOR UPDATE).
+
+  Helpers:
+    - testPool / createTestUser / cleanupTestUser — реальные UUID
+      и DELETE по user_id.
+    - newServiceForTest — собирает AutopilotService с пустым каталогом
+      (scoreCandidates вернёт [], pipeline всё равно работает).
+
+  Прогнаны против deploy-uni03-db-1 (postgres://oxsar:oxsar@127.0.0.1:5438):
+  все 8 PASS. Юнит-тесты (24) тоже зелёные с этим URL.
+
+  Ф.1 (backend core building+research scoring + integration) закрыт.
+  Дальше: Ф.2 (миссии — атака/шпионаж/транспорт/экспедиция).
