@@ -178,25 +178,25 @@ export function ArtefactInfoScreen() {
           entry.effect.battle_shield || entry.effect.battle_shell) && (
           <tr>
             <th colSpan={2}>
-              {t('artefacts', 'battleEffect') || 'Боевой эффект'}
+              {t('artefacts', 'battleEffect')}
             </th>
           </tr>
         )}
         {entry.effect?.battle_attack && (
           <tr>
-            <td>{t('assaultReport', 'gunPower') || 'Атака'}</td>
+            <td>{t('assaultReport', 'gunPower')}</td>
             <td>×{entry.effect.battle_attack}</td>
           </tr>
         )}
         {entry.effect?.battle_shield && (
           <tr>
-            <td>{t('assaultReport', 'shieldPower') || 'Щит'}</td>
+            <td>{t('assaultReport', 'shieldPower')}</td>
             <td>×{entry.effect.battle_shield}</td>
           </tr>
         )}
         {entry.effect?.battle_shell && (
           <tr>
-            <td>{t('assaultReport', 'armoring') || 'Броня'}</td>
+            <td>{t('assaultReport', 'armoring')}</td>
             <td>×{entry.effect.battle_shell}</td>
           </tr>
         )}
@@ -337,7 +337,7 @@ function CopyRow({
             disabled={pending}
             onClick={onActivate}
           >
-            {t('artefacts', 'activate') || 'Активировать'}
+            {t('artefacts', 'activate')}
           </button>
         )}
         {state === 'active' && (
@@ -347,7 +347,7 @@ function CopyRow({
             disabled={pending}
             onClick={onDeactivate}
           >
-            {t('artefacts', 'deactivate') || 'Отключить'}
+            {t('artefacts', 'deactivate')}
           </button>
         )}
         {(state === 'delayed' || state === 'expired' || state === 'consumed') && (

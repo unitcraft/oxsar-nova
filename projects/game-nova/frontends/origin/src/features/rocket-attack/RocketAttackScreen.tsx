@@ -115,12 +115,12 @@ export function RocketAttackScreen() {
         <tbody>
           <tr>
             <th colSpan={2}>
-              {t('galaxy', 'rocketAttack') || 'Ракетная атака'}: {targetCoords}
+              {t('galaxy', 'rocketAttack')}: {targetCoords}
             </th>
           </tr>
           <tr>
             <td>
-              {t('galaxy', 'quantity') || 'Количество'} ({t('galaxy', 'max') || 'max'} {maxRockets})
+              {t('galaxy', 'quantity')} ({t('galaxy', 'max')} {maxRockets})
             </td>
             <td>
               <input
@@ -134,14 +134,14 @@ export function RocketAttackScreen() {
             </td>
           </tr>
           <tr>
-            <td>{t('galaxy', 'primaryTarget') || 'Основная задача'}</td>
+            <td>{t('galaxy', 'primaryTarget')}</td>
             <td>
               <select
                 name="target"
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
               >
-                <option value="all">{t('galaxy', 'all') || 'Все'}</option>
+                <option value="all">{t('galaxy', 'all')}</option>
                 {defenseUnits
                   .filter(
                     // Legacy строки 135-138: исключаем interceptor (51) и
@@ -164,7 +164,7 @@ export function RocketAttackScreen() {
               <input
                 type="submit"
                 name="start"
-                value={launch.isPending ? '…' : (t('mission', 'attacker') || 'Атаковать')}
+                value={launch.isPending ? '…' : t('galaxy', 'rocketLaunch')}
                 className="button"
                 disabled={launch.isPending || maxRockets === 0}
               />

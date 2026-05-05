@@ -75,13 +75,13 @@ export function AllianceOverviewScreen() {
           <thead>
             <tr>
               <th colSpan={3}>
-                {t('alliance', 'myApplications') || 'Текущие заявки'}
+                {t('alliance', 'myApplications')}
               </th>
             </tr>
             <tr>
-              <th>{t('alliance', 'name') || 'Альянс'}</th>
-              <th>{t('alliance', 'message') || 'Сообщение'}</th>
-              <th>{t('alliance', 'remove') || 'Отозвать'}</th>
+              <th>{t('alliance', 'name')}</th>
+              <th>{t('alliance', 'message')}</th>
+              <th>{t('alliance', 'remove')}</th>
             </tr>
           </thead>
           <tbody>
@@ -100,10 +100,8 @@ export function AllianceOverviewScreen() {
                     disabled={cancelMut.isPending}
                     onClick={async () => {
                       if (await confirm({
-                        title: t('alliance', 'remove') || 'Отозвать',
-                        message:
-                          (t('alliance', 'cancelApplicationConfirm') as string) ||
-                          'Отозвать заявку?',
+                        title: t('alliance', 'remove'),
+                        message: t('alliance', 'cancelApplicationConfirm'),
                         destructive: true,
                       })) {
                         cancelMut.mutate(app.id);
