@@ -17290,3 +17290,84 @@ not-a-fix + BA-019 mitigated.
     - Биржа артефактов (exchange.Service, oxsarit pricing, escrow).
     - Полный battle.Simulator точной оценки атаки.
     - WS push (зависит от плана WS-чата на фронте).
+
+## Итерация 06.1.14 — План 06.1: Финальная сводка (2026-05-06)
+
+  Сводный статус plan 06.1 «Автопилот»: реализованы все основные фазы,
+  явно отложены 3 архитектурно-крупных подзадачи (см. ниже).
+
+  Реализовано (14 итераций, 14 коммитов):
+    Ф.1а  b084f51 — каркас (миграция + types + scaffold + регистрация);
+    Ф.1б  1f1d69f — snapshot читает уровни/очереди;
+    Ф.1в  6809e06 — building scoring (Economy);
+    Ф.1г  dad8831 — research scoring (стратегии);
+    Ф.1д  1c60a33 — integration-тесты;
+    Ф.2.1 edd38e6 — миссии transport + expedition;
+    Ф.5   57d9ccb — эвристика StrategyAuto;
+    Ф.2.2 1b11d57 — атака + шпионаж (упрощённый scoring);
+    Ф.4   e0abe59 — фронт-виджет AdvisorScreen;
+    Ф.3a  1ed6e64 — смена профессии под стратегию;
+    + Ext 3bd876f — history endpoint + inbox-канал;
+    + Ext 413a4ef — openapi.yaml для всей aiadvisor группы;
+    Ф.3b  5aff82c — ACS-рекомендация (присоединение к атаке союзника);
+    + Ext (этот) — финальная сводка.
+
+  Test coverage: 67 тестов (53 unit + 14 integration), 0 fail
+  с реальной БД (postgres @ 127.0.0.1:5438).
+
+  Что end-to-end работает:
+    1. Игрок выбирает «Советник» в меню → вкладка «Автопилот».
+    2. Селектор стратегии (Economy/Military/Defense/Expansion/Auto).
+    3. «Запустить» → списывается 2 кр, создаётся event KindAutopilotAdvise=92.
+    4. Воркер: buildSnapshot (планеты, здания, исследования, флоты,
+       соседи, ACS, профессия) → scoreCandidates (топ-3 по стратегии)
+       → UPDATE log status=ready + дублирование в inbox (folder=20).
+    5. Polling каждые 2 сек возвращает 3 карточки.
+    6. «Выполнить» → backend вызывает building.Enqueue / research.Enqueue /
+       fleet.Send (transport/expedition/attack/spy/acs_join) /
+       profession.Change.
+    7. Фронт навигирует на целевой экран (#buildings/#research/#fleet/
+       #profession).
+    8. Секция «История запросов» показывает последние 5 запросов
+       со статусами и описанием выполненных.
+
+  Categories scoring (по убыванию веса под целевую стратегию):
+    Economy  : building (production-prio); transport (1e-4), research,
+               expedition (0.5w).
+    Military : weapons/laser/plasma research, attack, spy, acs_join (1.0w),
+               profession.attacker.
+    Defense  : shield/armor research, profession.defender, spy.
+    Expansion: astrophysics + engines research, expedition (1.5w),
+               profession.universal.
+    Auto     : detectPhase эвристикой выбирает по фазе развития
+               (планеты < 3 → Expansion; metal-rate < 100/сек → Economy;
+               флот < 200k metal-eq → Military; иначе Defense).
+
+  СОЗНАТЕЛЬНО ОТЛОЖЕНО (требует отдельных планов/интеграций):
+    1. Биржа артефактов (CreateLot/Buy):
+       - exchange.Service использует oxsarit (премиум-валюту через
+         billing-service), не credit;
+       - проверка Permit (право продавать), price-cap анти-фрода,
+         escrow-логика;
+       - integration с billing-client для чтения oxsarit-баланса.
+       Итого ~200 строк интеграции — самостоятельная фича.
+
+    2. Полный battle.Simulator точной оценки атаки:
+       - сейчас score=наш_флот/очки_цели (упрощённая эвристика);
+       - точная оценка требует Simulate() с обоими flot-составами
+         + расчёт ожидаемых потерь и грабежа;
+       - + выбор оптимального состава атакующего флота
+         (light/heavy/cruiser/battleship ratio).
+       Итого ~400-500 строк — самостоятельная фича «Battle-aware autopilot».
+
+    3. WS push autopilot_ready (Ф.6):
+       - chat.Hub использует фиксированную Message-структуру и канал
+         "chat:*" в Redis;
+       - для autopilot нужен либо отдельный канал (autopilot:user:N),
+         либо расширение Message-типа;
+       - также фронт должен подключиться к WS из вкладки «Автопилот».
+       Polling работает как fallback (refetchInterval=2s до status=ready);
+       при появлении общего WS-чата на фронте — WS push добавится отдельным
+       коммитом ~50 строк.
+
+  План 06.1 закрыт.
