@@ -252,7 +252,13 @@ func run() error {
 	autopilotBuildingSvc := building.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed, cfg.Game.BuildMinSeconds)
 	autopilotResearchSvc := research.NewServiceWithFactors(db, planetSvc, cat, reqs, cfg.Game.Speed, cfg.Game.ResearchSpeedFactor)
 	autopilotSvc := aiadvisor.NewAutopilotService(
-		db, cfg.AIAdvisor, cfg.Game.Points, cat,
+		db, cfg.AIAdvisor,
+		aiadvisor.GameTuning{
+			PointsK:       cfg.Game.Points,
+			GameSpeed:     cfg.Game.Speed,
+			ResearchSpeed: cfg.Game.ResearchSpeedFactor,
+		},
+		cat,
 		planetSvc, scoreSvc, autopilotBuildingSvc, autopilotResearchSvc,
 	)
 	autopilotWorkerH := &aiadvisor.AutopilotWorkerHandler{Svc: autopilotSvc}

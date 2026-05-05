@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"oxsar/game-nova/internal/config"
+	"oxsar/game-nova/internal/economy"
 )
 
 // План 06.1 Ф.1а: unit-тесты для каркаса автопилота.
@@ -373,6 +374,187 @@ func TestScoreBuildings_AffordabilityCheck(t *testing.T) {
 	}
 	if hasRobo {
 		t.Error("robotic_factory should NOT fit in 1h forecast")
+	}
+}
+
+// fixtureCatalogWithResearch расширяет каталог технологиями для research-тестов.
+// Включает research_lab (нужен для pickResearchPlanet) и набор технологий.
+func fixtureCatalogWithResearch() *config.Catalog {
+	cat := fixtureCatalog()
+	// research_lab — обязательное здание для research.
+	cat.Buildings.Buildings["research_lab"] = config.BuildingSpec{
+		ID: 31, CostBase: config.ResCost{Metal: 200, Silicon: 400, Hydrogen: 200},
+		CostFactor: 2.0, TimeBaseSeconds: 60, MaxLevel: 40,
+	}
+	cat.Research = config.ResearchCatalog{
+		Research: map[string]config.ResearchSpec{
+			"weapons_tech": {
+				ID: 109, CostBase: config.ResCost{Metal: 800, Silicon: 200},
+				CostFactor: 2.0,
+			},
+			"computer_tech": {
+				ID: 108, CostBase: config.ResCost{Metal: 0, Silicon: 400, Hydrogen: 600},
+				CostFactor: 2.0,
+			},
+			"astrophysics": {
+				ID: 124, CostBase: config.ResCost{Metal: 4000, Silicon: 8000, Hydrogen: 4000},
+				CostFactor: 1.75,
+			},
+		},
+	}
+	return cat
+}
+
+func TestScoreResearch_BusyQueueSkipped(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithResearch()
+	planet := fixturePlanet("p1", "Earth", 5)
+	planet.Buildings = map[int]int{31: 5}
+	planet.ResearchQueueBusy = true // any planet busy → research отсекается
+	snap := PlayerSnapshot{Planets: []PlanetSnapshot{planet}}
+
+	inputs := fixtureScoringInputs(cat, []string{"p1"})
+	inputs.GameSpeed = 1
+	inputs.ResearchSpeed = 1
+
+	for _, st := range []Strategy{StrategyMilitary, StrategyEconomy, StrategyExpansion} {
+		recs := scoreCandidates(snap, st, inputs)
+		for _, r := range recs {
+			if r.Category == "research" {
+				t.Errorf("strategy=%s: research must not appear when queue busy, got %s", st, r.ActionType)
+			}
+		}
+	}
+}
+
+func TestScoreResearch_NoLabSkipped(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithResearch()
+	planet := fixturePlanet("p1", "Earth", 5)
+	planet.Buildings = map[int]int{} // нет research_lab
+	planet.ResourcesIn1h = Resources{Metal: 1e9, Silicon: 1e9, Hydrogen: 1e9}
+	snap := PlayerSnapshot{Planets: []PlanetSnapshot{planet}}
+
+	inputs := fixtureScoringInputs(cat, []string{"p1"})
+	inputs.GameSpeed = 1
+	inputs.ResearchSpeed = 1
+
+	recs := scoreCandidates(snap, StrategyMilitary, inputs)
+	for _, r := range recs {
+		if r.Category == "research" {
+			t.Errorf("research must not appear without lab, got %s", r.ActionType)
+		}
+	}
+}
+
+func TestScoreResearch_MilitaryPicksWeapons(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithResearch()
+	planet := fixturePlanet("p1", "Earth", 5)
+	planet.Buildings = map[int]int{31: 5} // research_lab ур.5
+	planet.ResourcesIn1h = Resources{Metal: 1e9, Silicon: 1e9, Hydrogen: 1e9}
+	snap := PlayerSnapshot{
+		Planets:  []PlanetSnapshot{planet},
+		Research: map[int]int{},
+	}
+
+	inputs := fixtureScoringInputs(cat, []string{"p1"})
+	inputs.GameSpeed = 1
+	inputs.ResearchSpeed = 1
+
+	recs := scoreCandidates(snap, StrategyMilitary, inputs)
+	// Найдём первый research-кандидат.
+	var firstResearch *Recommendation
+	for i := range recs {
+		if recs[i].Category == "research" {
+			firstResearch = &recs[i]
+			break
+		}
+	}
+	if firstResearch == nil {
+		t.Fatal("expected at least one research recommendation in Military top-3")
+	}
+	if firstResearch.UnitID != 109 { // weapons_tech
+		t.Errorf("Military first research = %d, want weapons_tech (109)", firstResearch.UnitID)
+	}
+}
+
+func TestScoreResearch_ExpansionPicksAstrophysics(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithResearch()
+	planet := fixturePlanet("p1", "Earth", 5)
+	planet.Buildings = map[int]int{31: 10}
+	planet.ResourcesIn1h = Resources{Metal: 1e9, Silicon: 1e9, Hydrogen: 1e9}
+	snap := PlayerSnapshot{
+		Planets:  []PlanetSnapshot{planet},
+		Research: map[int]int{},
+	}
+
+	inputs := fixtureScoringInputs(cat, []string{"p1"})
+	inputs.GameSpeed = 1
+	inputs.ResearchSpeed = 1
+
+	recs := scoreCandidates(snap, StrategyExpansion, inputs)
+	var firstResearch *Recommendation
+	for i := range recs {
+		if recs[i].Category == "research" {
+			firstResearch = &recs[i]
+			break
+		}
+	}
+	if firstResearch == nil {
+		t.Fatal("expected research in Expansion top-3")
+	}
+	if firstResearch.UnitID != 124 { // astrophysics
+		t.Errorf("Expansion first research = %d, want astrophysics (124)", firstResearch.UnitID)
+	}
+}
+
+func TestResearchDuration_FormulaMatch(t *testing.T) {
+	t.Parallel()
+	// Проверка что формула совпадает с research.Service:
+	//   t = (m+s) / (1000 * (1 + lab)) сек, /gameSpeed /researchSpeed, floor=1.
+	// cost = 1000 metal + 4000 silicon = 5000; lab=4 → 1000 * 5 = 5000;
+	// 5000 / 5000 = 1 секунда (floor=1).
+	got := researchDuration(economy.Cost{Metal: 1000, Silicon: 4000}, 4, 1, 1)
+	if got != 1 {
+		t.Errorf("researchDuration tiny = %d, want 1 (floor)", got)
+	}
+
+	// Большое исследование: cost = 100k+200k = 300k, lab=2 → 1000*3 = 3000;
+	// 300000/3000 = 100 секунд.
+	got = researchDuration(economy.Cost{Metal: 100000, Silicon: 200000}, 2, 1, 1)
+	if got != 100 {
+		t.Errorf("researchDuration mid = %d, want 100", got)
+	}
+
+	// gameSpeed=2 ускоряет вдвое.
+	got = researchDuration(economy.Cost{Metal: 100000, Silicon: 200000}, 2, 2, 1)
+	if got != 50 {
+		t.Errorf("researchDuration speed=2 = %d, want 50", got)
+	}
+}
+
+func TestResearchWeight_Defaults(t *testing.T) {
+	t.Parallel()
+	// Неизвестная техника → 0.1 для всех (нейтрал).
+	for _, st := range []Strategy{StrategyEconomy, StrategyMilitary, StrategyDefense, StrategyExpansion} {
+		got := researchWeight("unknown_tech", st)
+		if got != 0.1 {
+			t.Errorf("unknown_tech %s: weight = %v, want 0.1", st, got)
+		}
+	}
+	// weapons_tech military = 1.0.
+	if got := researchWeight("weapons_tech", StrategyMilitary); got != 1.0 {
+		t.Errorf("weapons_tech military = %v, want 1.0", got)
+	}
+	// astrophysics expansion = 1.0.
+	if got := researchWeight("astrophysics", StrategyExpansion); got != 1.0 {
+		t.Errorf("astrophysics expansion = %v, want 1.0", got)
+	}
+	// astrophysics для military — почти ноль (нельзя чтобы перевешивало weapons).
+	if got := researchWeight("astrophysics", StrategyMilitary); got > 0.1 {
+		t.Errorf("astrophysics military = %v, must be << 0.1", got)
 	}
 }
 

@@ -70,10 +70,19 @@ var (
 //
 // Hub (chat.Hub) опционален — если nil, WS-пуш не делается, фронт
 // получит результат через polling. Это допустимо в Ф.1.
+// GameTuning — тюнинг-параметры экономики, которые нужны scoring-у
+// (помимо коэффициентов очков). Извлечены из config.GameConfig чтобы
+// AutopilotService не зависел от всей game-конфигурации.
+type GameTuning struct {
+	PointsK       config.PointsCoefficients
+	GameSpeed     float64
+	ResearchSpeed float64
+}
+
 type AutopilotService struct {
 	db          repo.Exec
 	cfg         config.AIAdvisorConfig
-	pointsK     config.PointsCoefficients
+	tuning      GameTuning
 	catalog     *config.Catalog
 	planetSvc   *planet.Service
 	scoreSvc    *score.Service
@@ -87,7 +96,7 @@ type AutopilotService struct {
 func NewAutopilotService(
 	db repo.Exec,
 	cfg config.AIAdvisorConfig,
-	pointsK config.PointsCoefficients,
+	tuning GameTuning,
 	catalog *config.Catalog,
 	planetSvc *planet.Service,
 	scoreSvc *score.Service,
@@ -97,7 +106,7 @@ func NewAutopilotService(
 	return &AutopilotService{
 		db:          db,
 		cfg:         cfg,
-		pointsK:     pointsK,
+		tuning:      tuning,
 		catalog:     catalog,
 		planetSvc:   planetSvc,
 		scoreSvc:    scoreSvc,
@@ -255,8 +264,10 @@ func (s *AutopilotService) Compute(ctx context.Context, tx pgx.Tx, e event.Event
 
 	recs := scoreCandidates(snap, input.Strategy, scoringInputs{
 		Catalog:              s.catalog,
-		PointsK:              s.pointsK,
+		PointsK:              s.tuning.PointsK,
 		BuildSecondsByPlanet: buildSecondsByPlanet,
+		GameSpeed:            s.tuning.GameSpeed,
+		ResearchSpeed:        s.tuning.ResearchSpeed,
 	})
 	for i := range recs {
 		if recs[i].ID == "" {

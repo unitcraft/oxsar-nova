@@ -16870,3 +16870,56 @@ not-a-fix + BA-019 mitigated.
     - Other strategies (Military/Defense/Expansion) полноценно — Ф.1г-Ф.5
       (defense building, lab/shipyard приоритеты).
     - Integration-тест Compute end-to-end через TEST_DATABASE_URL — Ф.1д.
+
+## Итерация 06.1.4 — Автопилот: research scoring Ф.1г (2026-05-05)
+
+  Цель: scoreCandidates учитывает технологии (research) и предлагает их
+  под нужную стратегию: weapons/shield/armor/laser/ion/plasma — Military,
+  shield/armor — Defense, astrophysics/engines — Expansion,
+  computer/igr/spy — нейтральные.
+
+  Backend:
+    - aiadvisor/autopilot_scoring.go: scoreResearch + helpers.
+        Кандидат отсеивается:
+          • ResearchQueueBusy на любой планете (research один на игрока);
+          • curLvl >= 40 (legacy MAX_RESEARCH_LEVEL);
+          • нет планеты с research_lab/moon_lab >= 1 + ResourcesIn1h
+            покрывает cost(nextLvl).
+        pickResearchPlanet выбирает планету с максимальным effectiveLab
+        среди подходящих (без учёта IGR — оценка снизу).
+        researchDuration — формула 1:1 с research.Service.Enqueue:
+          t = (m+s) / (1000*(1+lab)) /gameSpeed /researchSpeed, floor=1.
+        Score = pointsPerSec * researchStrategyWeights[techKey][strategy].
+        Веса калиброваны со шкалой: 1.0 (целевая) / 0.3-0.5 (вторичная) /
+        0.01-0.1 (вне профиля). Большой разрыв ×100 нужен потому что
+        astrophysics дороже weapons на порядок и без сильного веса
+        перетянул бы Military в expansion-research.
+    - aiadvisor/autopilot_service.go: pointsK заменён на GameTuning
+      (PointsK + GameSpeed + ResearchSpeed) — research-формуле нужны
+      все три. Compute прокидывает их в scoringInputs.
+    - cmd/server/main.go, cmd/worker/main.go: NewAutopilotService теперь
+      принимает aiadvisor.GameTuning{PointsK, GameSpeed, ResearchSpeed}.
+
+  Tests (унит):
+    - TestScoreResearch_BusyQueueSkipped — research отсекается во всех
+      стратегиях когда busy.
+    - TestScoreResearch_NoLabSkipped — нет research_lab → нет research-
+      рекомендаций.
+    - TestScoreResearch_MilitaryPicksWeapons — weapons_tech > astrophysics
+      под Military (несмотря на больший абс. score у astrophysics).
+    - TestScoreResearch_ExpansionPicksAstrophysics — astrophysics #1
+      под Expansion.
+    - TestResearchDuration_FormulaMatch — ручная сверка с research.Service.
+    - TestResearchWeight_Defaults — нейтральный 0.1, weapons_military=1.0,
+      astro_expansion=1.0, astro_military<0.1.
+
+  go build/vet/test — green.
+
+  Что НЕ сделано в этом коммите:
+    - shipyard ships / defense buildings — Ф.2 (defense buildings)
+      и Ф.2 (mission-related).
+    - Lab/shipyard приоритеты под Military/Defense building scoring —
+      будет когда building scoring добавит «военно-вспомогательные
+      здания» (verfь, лаба) с весами по стратегиям. Сейчас building
+      Score для не-Economy = pointsPerSec без буста.
+    - Integration-тест Compute end-to-end — Ф.1д.

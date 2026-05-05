@@ -13,6 +13,9 @@ import (
 //
 // PointsK — коэффициенты очков (Building/Research/Unit). Берутся из
 // cfg.Game.Points; нужны для расчёта delta_score кандидата.
+//
+// GameSpeed / ResearchSpeed — множители из конфига вселенной.
+// Используются в формуле длительности research (1:1 с research.Service).
 type scoringInputs struct {
 	Catalog *config.Catalog
 	PointsK config.PointsCoefficients
@@ -22,6 +25,17 @@ type scoringInputs struct {
 	// в Compute через building.Service.BuildSecondsMap, чтобы scoring
 	// оставался pure-функцией без БД.
 	BuildSecondsByPlanet map[string]map[int]int
+
+	// GameSpeed — game-wide speed factor (cfg.Game.Speed).
+	GameSpeed float64
+	// ResearchSpeed — research-specific factor (cfg.Game.ResearchSpeedFactor).
+	ResearchSpeed float64
+
+	// ResearchLabKey / MoonLabKey — ключи зданий-лаборатории.
+	// В стандартной игре "research_lab" / "moon_lab"; вынесены параметрами,
+	// чтобы тесты могли переиспользовать упрощённый каталог.
+	ResearchLabKey string
+	MoonLabKey     string
 }
 
 // scoreCandidates — pure-функция: snapshot + стратегия → отсортированный
@@ -41,6 +55,7 @@ func scoreCandidates(snap PlayerSnapshot, strategy Strategy, inputs scoringInput
 	var recs []Recommendation
 	if inputs.Catalog != nil {
 		recs = append(recs, scoreBuildings(snap, strategy, inputs)...)
+		recs = append(recs, scoreResearch(snap, strategy, inputs)...)
 	}
 
 	sort.SliceStable(recs, func(i, j int) bool {
@@ -150,6 +165,227 @@ func affordable(cost economy.Cost, have Resources) bool {
 	return have.Metal >= float64(cost.Metal) &&
 		have.Silicon >= float64(cost.Silicon) &&
 		have.Hydrogen >= float64(cost.Hydrogen)
+}
+
+// researchStrategyWeights — стратегический вес группы технологий.
+//
+// Веса используют шкалу: 1.0 = «целевая для этой стратегии», 0.1 =
+// «нейтральная», 0.01 = «вне профиля». Большой разрыв (×100) между
+// «целевой» и «вне профиля» нужен потому что научные исследования
+// сильно различаются по стоимости (astrophysics дороже weapons на
+// порядок), а простое умножение pointsPerSec на 0.2 vs 1.0 не компенсирует
+// эту разницу — дорогая технология выиграла бы по абсолютному score.
+//
+// Дефолт (если ключа нет): 0.1 (нейтральный — research даёт очки, но
+// без бонуса под выбранную стратегию).
+var researchStrategyWeights = map[string]map[Strategy]float64{
+	// Боевые: Military профиль, Defense вторичный.
+	"weapons_tech": {StrategyMilitary: 1.0, StrategyDefense: 0.5, StrategyEconomy: 0.01, StrategyExpansion: 0.01},
+	"shield_tech":  {StrategyMilitary: 0.7, StrategyDefense: 1.0, StrategyEconomy: 0.01, StrategyExpansion: 0.01},
+	"armor_tech":   {StrategyMilitary: 0.7, StrategyDefense: 1.0, StrategyEconomy: 0.01, StrategyExpansion: 0.01},
+	// Двигатели — Expansion профиль + Military вторичный.
+	"engine_combust": {StrategyMilitary: 0.4, StrategyExpansion: 0.8, StrategyEconomy: 0.05, StrategyDefense: 0.05},
+	"engine_impulse": {StrategyMilitary: 0.4, StrategyExpansion: 0.8, StrategyEconomy: 0.05, StrategyDefense: 0.05},
+	"engine_hyper":   {StrategyMilitary: 0.5, StrategyExpansion: 0.9, StrategyEconomy: 0.05, StrategyDefense: 0.05},
+	// Энергооружие — Military.
+	"laser_tech":  {StrategyMilitary: 0.6, StrategyDefense: 0.3, StrategyEconomy: 0.01, StrategyExpansion: 0.01},
+	"ion_tech":    {StrategyMilitary: 0.6, StrategyDefense: 0.3, StrategyEconomy: 0.01, StrategyExpansion: 0.01},
+	"plasma_tech": {StrategyMilitary: 0.7, StrategyDefense: 0.3, StrategyEconomy: 0.01, StrategyExpansion: 0.01},
+	// Шпионаж и компьютер — универсальные.
+	"spy_tech":      {StrategyMilitary: 0.3, StrategyDefense: 0.3, StrategyEconomy: 0.2, StrategyExpansion: 0.2},
+	"computer_tech": {StrategyMilitary: 0.3, StrategyDefense: 0.2, StrategyEconomy: 0.2, StrategyExpansion: 0.3},
+	// Экспансия — astrophysics — единственная путь к новым планетам.
+	"astrophysics":                 {StrategyExpansion: 1.0, StrategyMilitary: 0.02, StrategyEconomy: 0.05, StrategyDefense: 0.01},
+	"intergalactic_research_network": {StrategyEconomy: 0.4, StrategyMilitary: 0.1, StrategyDefense: 0.1, StrategyExpansion: 0.1},
+	// Гравитация — Military (Deathstar/RIP).
+	"gravitation_tech": {StrategyMilitary: 0.4, StrategyDefense: 0.1, StrategyEconomy: 0.01, StrategyExpansion: 0.05},
+}
+
+// researchWeight возвращает множитель score для технологии при стратегии.
+// Дефолт 0.1 — нейтральная неизвестная технология.
+func researchWeight(techKey string, strategy Strategy) float64 {
+	if m, ok := researchStrategyWeights[techKey]; ok {
+		if w, ok2 := m[strategy]; ok2 {
+			return w
+		}
+	}
+	return 0.1
+}
+
+// scoreResearch перебирает все технологии и оценивает кандидатов.
+//
+// Кандидат отсеивается если:
+//   - Очередь исследований занята (один research на игрока, флаг
+//     ResearchQueueBusy у любой планеты — общий);
+//   - Текущий уровень >= MaxResearchLevel (40);
+//   - Нет планеты с research_lab >= 1 и достаточными ресурсами на
+//     прогноз 1ч.
+//
+// Для подбора планеты-источника берётся та, у которой:
+//   1. Есть лаб (research_lab или moon_lab если планета-луна);
+//   2. ResourcesIn1h покрывает cost(nextLevel);
+//   3. Из подходящих — с максимальным effectiveLab (=labLevel,
+//      без учёта IGR — оценка снизу).
+//
+// Score = pointsPerSec * researchWeight(techKey, strategy).
+func scoreResearch(snap PlayerSnapshot, strategy Strategy, inputs scoringInputs) []Recommendation {
+	if inputs.Catalog == nil {
+		return nil
+	}
+	// Один research на игрока. Если хоть на одной планете флаг busy — пропускаем.
+	if anyResearchBusy(snap) {
+		return nil
+	}
+
+	gameSpeed := inputs.GameSpeed
+	if gameSpeed <= 0 {
+		gameSpeed = 1
+	}
+	researchSpeed := inputs.ResearchSpeed
+	if researchSpeed <= 0 {
+		researchSpeed = 1
+	}
+	labKey := inputs.ResearchLabKey
+	if labKey == "" {
+		labKey = "research_lab"
+	}
+	moonLabKey := inputs.MoonLabKey
+	if moonLabKey == "" {
+		moonLabKey = "moon_lab"
+	}
+
+	var labSpec, moonLabSpec config.BuildingSpec
+	if s, ok := inputs.Catalog.Buildings.Buildings[labKey]; ok {
+		labSpec = s
+	}
+	if s, ok := inputs.Catalog.Buildings.Buildings[moonLabKey]; ok {
+		moonLabSpec = s
+	}
+
+	var out []Recommendation
+	for techKey, spec := range inputs.Catalog.Research.Research {
+		curLvl := snap.Research[spec.ID]
+		nextLvl := curLvl + 1
+		// Ограничение легаси: MAX_RESEARCH_LEVEL=40.
+		if nextLvl > 40 {
+			continue
+		}
+
+		cost := economy.CostForLevel(economy.Cost{
+			Metal:    spec.CostBase.Metal,
+			Silicon:  spec.CostBase.Silicon,
+			Hydrogen: spec.CostBase.Hydrogen,
+		}, spec.CostFactor, nextLvl)
+
+		planetID, effectiveLab := pickResearchPlanet(snap, cost, labSpec, moonLabSpec)
+		if planetID == "" {
+			continue // нет планеты с лабом + ресурсами
+		}
+
+		// Длительность по 1:1 формуле research.Service.
+		seconds := researchDuration(cost, effectiveLab, gameSpeed, researchSpeed)
+		if seconds <= 0 {
+			continue
+		}
+
+		deltaPoints := inputs.PointsK.Research * float64(cost.Metal+cost.Silicon+cost.Hydrogen)
+		pointsPerSec := deltaPoints / float64(seconds)
+		score := pointsPerSec * researchWeight(techKey, strategy)
+		if score <= 0 {
+			continue
+		}
+
+		planetName := ""
+		for _, ps := range snap.Planets {
+			if ps.ID == planetID {
+				planetName = ps.Name
+				break
+			}
+		}
+
+		out = append(out, Recommendation{
+			ID:         ids.New(),
+			Category:   "research",
+			ActionType: "research_" + techKey,
+			PlanetID:   planetID,
+			UnitID:     spec.ID,
+			Params: map[string]any{
+				"unit_key":     techKey,
+				"target_level": nextLvl,
+			},
+			Score:       score,
+			Description: researchDescription(techKey, planetName, nextLvl),
+			Benefit:     researchBenefit(deltaPoints, seconds),
+		})
+	}
+	return out
+}
+
+// anyResearchBusy — флаг ResearchQueueBusy одинаков на всех планетах
+// snapshot'а (research один на игрока), но проверяем все на случай
+// рассогласования.
+func anyResearchBusy(snap PlayerSnapshot) bool {
+	for _, ps := range snap.Planets {
+		if ps.ResearchQueueBusy {
+			return true
+		}
+	}
+	return false
+}
+
+// pickResearchPlanet выбирает планету-источник для исследования.
+// Возвращает ("", 0) если ни одна не подходит.
+func pickResearchPlanet(snap PlayerSnapshot, cost economy.Cost, labSpec, moonLabSpec config.BuildingSpec) (string, int) {
+	bestID := ""
+	bestLab := 0
+	for _, ps := range snap.Planets {
+		var lvl int
+		if ps.IsMoon {
+			lvl = ps.Buildings[moonLabSpec.ID]
+		} else {
+			lvl = ps.Buildings[labSpec.ID]
+		}
+		if lvl < 1 {
+			continue
+		}
+		if !affordable(cost, ps.ResourcesIn1h) {
+			continue
+		}
+		if lvl > bestLab {
+			bestLab = lvl
+			bestID = ps.ID
+		}
+	}
+	return bestID, bestLab
+}
+
+// researchDuration — формула 1:1 c research.Service.Enqueue:
+//   t = (m+s) / (1000 * (1 + effectiveLab)) сек, /gameSpeed /researchSpeed,
+//   floor=1.
+func researchDuration(cost economy.Cost, effectiveLab int, gameSpeed, researchSpeed float64) int {
+	resSum := float64(cost.Metal + cost.Silicon)
+	raw := resSum / (1000.0 * float64(1+effectiveLab))
+	if gameSpeed > 0 {
+		raw /= gameSpeed
+	}
+	if researchSpeed > 0 {
+		raw /= researchSpeed
+	}
+	if raw < 1 {
+		raw = 1
+	}
+	return int(raw + 0.5)
+}
+
+func researchDescription(key, planetName string, nextLevel int) string {
+	if planetName == "" {
+		return fmt.Sprintf("Исследовать %s ур.%d", key, nextLevel)
+	}
+	return fmt.Sprintf("Исследовать %s ур.%d (с планеты %q)", key, nextLevel, planetName)
+}
+
+func researchBenefit(deltaPoints float64, seconds int) string {
+	return fmt.Sprintf("+%.1f очков, %s", deltaPoints, formatDuration(seconds))
 }
 
 // productionDelta возвращает суммарный прирост добычи в секунду при
