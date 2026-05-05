@@ -3481,6 +3481,8 @@ buildinginfo:
   packBuilding: "📦 Упаковать здание"
   packResearch: "📦 Упаковать исследование"
   packConfirm: "Упаковать в артефакт? Уровень понизится на 1, в инвентаре появится packed-артефакт. Требуется packing-артефакт на этой планете."
+  colProduction: "Производство/ч"
+  colBuildTime: "Время"
 
 common:
   ok: OK

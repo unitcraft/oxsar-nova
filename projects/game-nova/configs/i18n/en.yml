@@ -3464,6 +3464,8 @@ buildinginfo:
   packBuilding: "📦 Pack building"
   packResearch: "📦 Pack research"
   packConfirm: "Pack into artefact? Level drops by 1, you'll receive a packed artefact in inventory. Requires a packing artefact on this planet."
+  colProduction: "Production/hr"
+  colBuildTime: "Time"
 
 common:
   ok: OK

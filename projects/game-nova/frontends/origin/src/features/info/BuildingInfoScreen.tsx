@@ -155,14 +155,14 @@ export function BuildingInfoScreen() {
         <table className="ntable">
           <thead>
             <tr>
-              <th>{t('buildinginfo', 'demolish') || 'Снос здания'}</th>
+              <th>{t('buildinginfo', 'demolish')}</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td className="center">
                 <p>
-                  {t('buildinginfo', 'currentLevel') || 'Текущий уровень'}:{' '}
+                  {t('buildinginfo', 'currentLevel')}:{' '}
                   <b>{curLevel}</b>{' '}
                   →{' '}
                   <b>{curLevel - 1}</b>
@@ -173,9 +173,8 @@ export function BuildingInfoScreen() {
                   disabled={demolishMut.isPending}
                   onClick={async () => {
                     if (await confirm({
-                      title: t('buildinginfo', 'demolishNow') || 'Снос',
-                      message: (t('buildinginfo', 'demolishConfirm') as string) ||
-                        `Снести ${name} до уровня ${curLevel - 1}?`,
+                      title: t('buildinginfo', 'demolishNow'),
+                      message: t('buildinginfo', 'demolishConfirm', { building: name, level: String(curLevel - 1) }),
                       destructive: true,
                     })) {
                       demolishMut.mutate();
@@ -184,7 +183,7 @@ export function BuildingInfoScreen() {
                 >
                   {demolishMut.isPending
                     ? '…'
-                    : t('buildinginfo', 'demolishNow') || 'Снести сейчас'}
+                    : t('buildinginfo', 'demolishNow')}
                 </button>
                 {demolishErr && (
                   <div>
@@ -200,9 +199,8 @@ export function BuildingInfoScreen() {
                     disabled={packBuildingMut.isPending}
                     onClick={async () => {
                       if (await confirm({
-                        title: t('buildinginfo', 'packBuilding') || 'Упаковать',
-                        message: (t('buildinginfo', 'packConfirm') as string) ||
-                          `Упаковать ${name} в артефакт (нужен packing-артефакт на этой планете)?`,
+                        title: t('buildinginfo', 'packBuilding'),
+                        message: t('buildinginfo', 'packConfirm'),
                       })) {
                         packBuildingMut.mutate();
                       }
@@ -210,7 +208,7 @@ export function BuildingInfoScreen() {
                   >
                     {packBuildingMut.isPending
                       ? '…'
-                      : t('buildinginfo', 'packBuilding') || '📦 Упаковать здание'}
+                      : t('buildinginfo', 'packBuilding')}
                   </button>
                   {packErr && (
                     <div>
@@ -229,8 +227,8 @@ export function BuildingInfoScreen() {
           <tr>
             <th>{t('techtree', 'levelAbbr')}</th>
             <th>{t('techtree', 'kindBuildings')}</th>
-            <th>{t('records', 'colRecord')}</th>
-            <th>{t('battlestats', 'colDate')}</th>
+            <th>{t('buildinginfo', 'colProduction')}</th>
+            <th>{t('buildinginfo', 'colBuildTime')}</th>
           </tr>
         </thead>
         <tbody>

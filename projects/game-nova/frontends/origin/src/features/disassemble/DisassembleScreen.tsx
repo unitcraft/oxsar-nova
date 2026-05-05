@@ -18,6 +18,7 @@ import {
 import { QK } from '@/api/query-keys';
 import type { ApiError } from '@/api/client';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import { useAutoInvalidateOnTaskEnd } from '@/features/common/useAutoInvalidateOnTaskEnd';
 import { catalogByGroup } from '@/features/common/catalog';
 import { useTranslation } from '@/i18n/i18n';
 import {
@@ -94,6 +95,9 @@ export function DisassembleScreen() {
     void qc.invalidateQueries({ queryKey: QK.shipyardInventory(planetId) });
     void qc.invalidateQueries({ queryKey: QK.repairQueue(planetId) });
     void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+    // План 72.1.59: ресурсы в TopHeader тикают по списку планет —
+    // их тоже нужно перезапросить, чтобы темп тика сменился.
+    void qc.invalidateQueries({ queryKey: QK.planets() });
     void qc.invalidateQueries({ queryKey: ['me'] });
   }
 
@@ -119,6 +123,10 @@ export function DisassembleScreen() {
     onSuccess: invalidateAll,
     onError: (e) => setErrMsg((e as ApiError).message),
   });
+
+  // План 72.1.59: авто-инвалидация очереди по окончании ближайшей
+  // задачи (общий хук). Учитывает все mode'ы — обе влияют на inventory.
+  useAutoInvalidateOnTaskEnd(queueQ.data ?? [], invalidateAll);
 
   if (!planetId) return <div className="idiv">{t('overview', 'noPlanets')}</div>;
 
@@ -149,7 +157,7 @@ export function DisassembleScreen() {
         <table className="ntable">
           <tbody>
             <tr>
-              <th colSpan={4}>{t('repair', 'disassembleQueue') || 'Очередь утилизации'}</th>
+              <th colSpan={4}>{t('repair', 'disassembleQueue')}</th>
             </tr>
             {disassembleQueue.map((task, idx) => {
               const secLeft = secondsUntil(task.end_at);
@@ -167,7 +175,7 @@ export function DisassembleScreen() {
                       className="button"
                       disabled={cancel.isPending}
                       onClick={() => cancel.mutate(task.id)}
-                      title={t('repair', 'abortBtn') || 'Отменить'}
+                      title={t('repair', 'abortBtn')}
                     >
                       ✕
                     </button>
@@ -177,7 +185,7 @@ export function DisassembleScreen() {
                       className="button"
                       disabled={vip.isPending}
                       onClick={() => vip.mutate(task.id)}
-                      title={t('repair', 'vipBtn', { credits: cost }) || `VIP (${cost} cr)`}
+                      title={t('repair', 'vipBtn', { credits: cost })}
                     >
                       ⚡ {cost}
                     </button>
@@ -193,19 +201,19 @@ export function DisassembleScreen() {
       <table className="ntable">
         <thead>
           <tr>
-            <th colSpan={5}>{t('repair', 'disassembleTitle') || 'Утилизация'}</th>
+            <th colSpan={5}>{t('repair', 'disassembleTitle')}</th>
           </tr>
           <tr>
             <th colSpan={2}>&nbsp;</th>
-            <th className="center">{t('repair', 'colRequired') || 'Стоимость'}</th>
-            <th className="center">{t('repair', 'colEarn') || 'Получите'}</th>
-            <th className="center">{t('repair', 'colCount') || 'Количество'}</th>
+            <th className="center">{t('repair', 'colRequired')}</th>
+            <th className="center">{t('repair', 'colEarn')}</th>
+            <th className="center">{t('repair', 'colCount')}</th>
           </tr>
         </thead>
         <tbody>
           {availableShips.length > 0 && (
             <tr>
-              <th colSpan={5}>{t('shipyard', 'tabFleet') || 'Флот'}</th>
+              <th colSpan={5}>{t('shipyard', 'tabFleet')}</th>
             </tr>
           )}
           {availableShips.map((s) => {
@@ -227,14 +235,14 @@ export function DisassembleScreen() {
                 onSubmit={() => cnt > 0 && disassemble.mutate({ unitId: s.id, count: cnt })}
                 disabled={disassemble.isPending}
                 econ={econ}
-                actionLabel={t('repair', 'disassembleBtn') || 'Утилизировать'}
+                actionLabel={t('repair', 'disassembleBtn')}
               />
             );
           })}
 
           {availableDefense.length > 0 && (
             <tr>
-              <th colSpan={5}>{t('shipyard', 'tabDefense') || 'Оборона'}</th>
+              <th colSpan={5}>{t('shipyard', 'tabDefense')}</th>
             </tr>
           )}
           {availableDefense.map((s) => {
@@ -256,7 +264,7 @@ export function DisassembleScreen() {
                 onSubmit={() => cnt > 0 && disassemble.mutate({ unitId: s.id, count: cnt })}
                 disabled={disassemble.isPending}
                 econ={econ}
-                actionLabel={t('repair', 'disassembleBtn') || 'Утилизировать'}
+                actionLabel={t('repair', 'disassembleBtn')}
               />
             );
           })}
@@ -264,7 +272,7 @@ export function DisassembleScreen() {
           {availableShips.length === 0 && availableDefense.length === 0 && (
             <tr>
               <td colSpan={5} className="center">
-                {t('repair', 'emptyDisassemble') || 'Нет юнитов для утилизации'}
+                {t('repair', 'emptyDisassemble')}
               </td>
             </tr>
           )}
@@ -310,6 +318,7 @@ function UnitRow({
   econ: EconView;
   actionLabel: string;
 }) {
+  const { t } = useTranslation();
   const cnt = Math.min(
     stock,
     Math.max(0, Math.floor(Number(count) || 0)),
@@ -329,18 +338,18 @@ function UnitRow({
       <td className="center">
         {cnt > 0 ? (
           <span>
-            {econ.reqMetal > 0 && <>М: <b>{formatNumber(econ.reqMetal)}</b><br /></>}
-            {econ.reqSilicon > 0 && <>К: <b>{formatNumber(econ.reqSilicon)}</b><br /></>}
-            {econ.reqHydrogen > 0 && <>В: <b>{formatNumber(econ.reqHydrogen)}</b></>}
+            {econ.reqMetal > 0 && <>{t('overview', 'metalAbbr')}: <b>{formatNumber(econ.reqMetal)}</b><br /></>}
+            {econ.reqSilicon > 0 && <>{t('overview', 'siliconAbbr')}: <b>{formatNumber(econ.reqSilicon)}</b><br /></>}
+            {econ.reqHydrogen > 0 && <>{t('overview', 'hydrogenAbbr')}: <b>{formatNumber(econ.reqHydrogen)}</b></>}
           </span>
         ) : '—'}
       </td>
       <td className="center">
         {cnt > 0 ? (
           <span className="true">
-            {econ.earnMetal > 0 && <>+{formatNumber(econ.earnMetal)}М<br /></>}
-            {econ.earnSilicon > 0 && <>+{formatNumber(econ.earnSilicon)}К<br /></>}
-            {econ.earnHydrogen > 0 && <>+{formatNumber(econ.earnHydrogen)}В</>}
+            {econ.earnMetal > 0 && <>+{formatNumber(econ.earnMetal)}{t('overview', 'metalAbbr')}<br /></>}
+            {econ.earnSilicon > 0 && <>+{formatNumber(econ.earnSilicon)}{t('overview', 'siliconAbbr')}<br /></>}
+            {econ.earnHydrogen > 0 && <>+{formatNumber(econ.earnHydrogen)}{t('overview', 'hydrogenAbbr')}</>}
           </span>
         ) : '—'}
       </td>
