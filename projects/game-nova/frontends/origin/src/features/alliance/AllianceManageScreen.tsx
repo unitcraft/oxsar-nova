@@ -187,7 +187,7 @@ export function AllianceManageScreen() {
                   updateTagName.mutate(payload);
                 }}
               >
-                {t('alliance', 'saveBtn') || 'Сохранить'}
+                {t('alliance', 'saveBtn')}
               </button>
             </td>
           </tr>
@@ -251,14 +251,14 @@ export function AllianceManageScreen() {
       <table className="ntable">
         <thead>
           <tr>
-            <th colSpan={2}>{t('alliance', 'preferences') || 'Настройки альянса'}</th>
+            <th colSpan={2}>{t('alliance', 'preferences')}</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>
               <label htmlFor="logo-input">
-                {t('alliance', 'logoUrl') || 'Логотип (URL картинки)'}
+                {t('alliance', 'logoUrl')}
               </label>
             </td>
             <td>
@@ -277,7 +277,7 @@ export function AllianceManageScreen() {
           <tr>
             <td>
               <label htmlFor="homepage-input">
-                {t('alliance', 'homepageUrl') || 'Сайт альянса (URL)'}
+                {t('alliance', 'homepageUrl')}
               </label>
             </td>
             <td>
@@ -299,14 +299,14 @@ export function AllianceManageScreen() {
                 disabled={updatePrefs.isPending}
               />{' '}
               <label htmlFor="show-homepage">
-                {t('alliance', 'showHomepage') || 'Показывать всем'}
+                {t('alliance', 'showHomepage')}
               </label>
             </td>
           </tr>
           <tr>
             <td>
               <label htmlFor="foundername-input">
-                {t('alliance', 'foundername') || 'Title основателя'}
+                {t('alliance', 'foundername')}
               </label>
             </td>
             <td>
@@ -324,7 +324,7 @@ export function AllianceManageScreen() {
           <tr>
             <td>
               <label htmlFor="show-member">
-                {t('alliance', 'showMember') || 'Memberlist виден всем'}
+                {t('alliance', 'showMember')}
               </label>
             </td>
             <td>
@@ -340,7 +340,7 @@ export function AllianceManageScreen() {
           <tr>
             <td>
               <label htmlFor="memberlist-sort">
-                {t('alliance', 'memberlistSort') || 'Сортировка memberlist'}
+                {t('alliance', 'memberlistSort')}
               </label>
             </td>
             <td>
@@ -350,11 +350,11 @@ export function AllianceManageScreen() {
                 onChange={(e) => setMemberlistSortInput(Number(e.target.value))}
                 disabled={updatePrefs.isPending}
               >
-                <option value={0}>{t('alliance', 'sortRank') || 'По рангу'}</option>
-                <option value={1}>{t('alliance', 'sortName') || 'По имени'}</option>
-                <option value={2}>{t('alliance', 'sortPoints') || 'По очкам'}</option>
-                <option value={3}>{t('alliance', 'sortJoined') || 'По дате вступления'}</option>
-                <option value={4}>{t('alliance', 'sortLastSeen') || 'По активности'}</option>
+                <option value={0}>{t('alliance', 'sortRank')}</option>
+                <option value={1}>{t('alliance', 'sortName')}</option>
+                <option value={2}>{t('alliance', 'sortPoints')}</option>
+                <option value={3}>{t('alliance', 'sortJoined')}</option>
+                <option value={4}>{t('alliance', 'sortLastSeen')}</option>
               </select>
             </td>
           </tr>
@@ -375,7 +375,7 @@ export function AllianceManageScreen() {
                   });
                 }}
               >
-                {t('alliance', 'saveBtn') || 'Сохранить'}
+                {t('alliance', 'saveBtn')}
               </button>
             </td>
           </tr>
@@ -403,7 +403,7 @@ export function AllianceManageScreen() {
       <table className="ntable">
         <thead>
           <tr>
-            <th>📨 {t('alliance', 'globalMail') || 'Рассылка'}</th>
+            <th>📨 {t('alliance', 'globalMail')}</th>
           </tr>
         </thead>
         <tbody>
@@ -411,7 +411,7 @@ export function AllianceManageScreen() {
             <td>
               <input
                 type="text"
-                placeholder={t('alliance', 'broadcastTitle') || 'Заголовок'}
+                placeholder={t('alliance', 'broadcastTitle')}
                 value={bcTitle}
                 maxLength={120}
                 onChange={(e) => setBcTitle(e.target.value)}
@@ -419,7 +419,7 @@ export function AllianceManageScreen() {
                 style={{ width: '100%' }}
               />
               <textarea
-                placeholder={t('alliance', 'broadcastBody') || 'Сообщение'}
+                placeholder={t('alliance', 'broadcastBody')}
                 value={bcBody}
                 rows={4}
                 maxLength={2000}
@@ -438,7 +438,7 @@ export function AllianceManageScreen() {
                 >
                   {broadcast.isPending
                     ? '…'
-                    : t('alliance', 'broadcastBtn') || 'Отправить всем'}
+                    : t('alliance', 'broadcastBtn')}
                 </button>
               </div>
             </td>

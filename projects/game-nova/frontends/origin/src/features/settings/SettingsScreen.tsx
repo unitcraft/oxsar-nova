@@ -302,13 +302,13 @@ export function SettingsScreen() {
             <tr>
               <td colSpan={2}>
                 <hr />
-                <b>{t('settings', 'prefsTitle') || 'Игровые настройки'}</b>
+                <b>{t('settings', 'prefsTitle')}</b>
               </td>
             </tr>
             <tr>
               <td>
                 <label htmlFor="show-all-constr">
-                  {t('settings', 'showAllConstructions') || 'Показывать недоступные постройки'}
+                  {t('settings', 'showAllConstructions')}
                 </label>
               </td>
               <td>
@@ -323,7 +323,7 @@ export function SettingsScreen() {
             <tr>
               <td>
                 <label htmlFor="show-all-research">
-                  {t('settings', 'showAllResearch') || 'Показывать недоступные исследования'}
+                  {t('settings', 'showAllResearch')}
                 </label>
               </td>
               <td>
@@ -338,7 +338,7 @@ export function SettingsScreen() {
             <tr>
               <td>
                 <label htmlFor="show-all-shipyard">
-                  {t('settings', 'showAllShipyard') || 'Показывать недоступные корабли'}
+                  {t('settings', 'showAllShipyard')}
                 </label>
               </td>
               <td>
@@ -353,7 +353,7 @@ export function SettingsScreen() {
             <tr>
               <td>
                 <label htmlFor="show-all-defense">
-                  {t('settings', 'showAllDefense') || 'Показывать недоступную оборону'}
+                  {t('settings', 'showAllDefense')}
                 </label>
               </td>
               <td>
@@ -368,7 +368,7 @@ export function SettingsScreen() {
             <tr>
               <td>
                 <label htmlFor="planet-order">
-                  {t('settings', 'planetOrder') || 'Сортировка планет'}
+                  {t('settings', 'planetOrder')}
                 </label>
               </td>
               <td>
@@ -377,16 +377,16 @@ export function SettingsScreen() {
                   value={planetOrder}
                   onChange={(e) => setPlanetOrder(Number(e.target.value))}
                 >
-                  <option value={0}>{t('settings', 'planetOrderDate') || 'По дате колонизации'}</option>
-                  <option value={1}>{t('settings', 'planetOrderName') || 'По имени'}</option>
-                  <option value={2}>{t('settings', 'planetOrderCoords') || 'По координатам'}</option>
+                  <option value={0}>{t('settings', 'planetOrderDate')}</option>
+                  <option value={1}>{t('settings', 'planetOrderName')}</option>
+                  <option value={2}>{t('settings', 'planetOrderCoords')}</option>
                 </select>
               </td>
             </tr>
             <tr>
               <td>
                 <label htmlFor="esps">
-                  {t('settings', 'esps') || 'Шпионских зондов по умолчанию'}
+                  {t('settings', 'esps')}
                 </label>
               </td>
               <td>
@@ -407,7 +407,7 @@ export function SettingsScreen() {
             <tr>
               <td>
                 <label htmlFor="ipcheck">
-                  {t('settings', 'ipcheck') || 'Уведомлять при логине с другого IP'}
+                  {t('settings', 'ipcheck')}
                 </label>
               </td>
               <td>
@@ -590,7 +590,7 @@ export function SettingsScreen() {
           <tr>
             <th colSpan={2}>
               <span className="false">
-                {t('prefs', 'deleteAccount') || 'Удалить аккаунт'}
+                {t('prefs', 'deleteAccount')}
               </span>
             </th>
           </tr>
@@ -601,13 +601,12 @@ export function SettingsScreen() {
             <tr>
               <td colSpan={2} className="center">
                 <p className="false">
-                  {t('settings', 'deletionScheduledTitle') ||
-                    '⚠ Аккаунт будет удалён'}
+                  {t('settings', 'deletionScheduledTitle')}
                 </p>
                 <p>
                   {t('settings', 'deletionScheduledBody', {
                     when: new Date(meQ.data.delete_at).toLocaleString('ru-RU'),
-                  }) || `Удаление запланировано на ${new Date(meQ.data.delete_at).toLocaleString('ru-RU')}.`}
+                  })}
                 </p>
                 <button
                   type="button"
@@ -617,7 +616,7 @@ export function SettingsScreen() {
                 >
                   {cancelDelMut.isPending
                     ? '…'
-                    : t('settings', 'cancelDeletionBtn') || 'Отменить удаление'}
+                    : t('settings', 'cancelDeletionBtn')}
                 </button>
                 {deleteErr && (
                   <div>
@@ -634,7 +633,7 @@ export function SettingsScreen() {
                   className="button"
                   onClick={() => setDangerOpen(true)}
                 >
-                  {t('prefs', 'deleteAccount') || 'Удалить аккаунт'}
+                  {t('prefs', 'deleteAccount')}
                 </button>
               </td>
             </tr>
@@ -642,8 +641,7 @@ export function SettingsScreen() {
             <tr>
               <td colSpan={2} className="center">
                 <p>
-                  {t('settings', 'vacationDesc') ||
-                    'Запросите код по email, затем введите его для подтверждения удаления.'}
+                  {t('settings', 'vacationDesc')}
                 </p>
                 <button
                   type="button"
@@ -660,7 +658,7 @@ export function SettingsScreen() {
                   className="button"
                   onClick={() => setDangerOpen(false)}
                 >
-                  {t('alliance', 'cancelBtn') || 'Отмена'}
+                  {t('alliance', 'cancelBtn')}
                 </button>
                 {deleteErr && (
                   <div>
@@ -714,7 +712,7 @@ export function SettingsScreen() {
                     setDeleteErr(null);
                   }}
                 >
-                  {t('alliance', 'cancelBtn') || 'Отмена'}
+                  {t('alliance', 'cancelBtn')}
                 </button>
                 {deleteErr && (
                   <div>
