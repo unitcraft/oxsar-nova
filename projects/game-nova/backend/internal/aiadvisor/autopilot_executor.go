@@ -93,9 +93,75 @@ func executeMission(ctx context.Context, fleetSvc *fleet.TransportService, userI
 		return executeTransport(ctx, fleetSvc, userID, rec)
 	case "expedition":
 		return executeExpedition(ctx, fleetSvc, userID, rec)
+	case "attack":
+		return executeAttack(ctx, fleetSvc, userID, rec)
+	case "spy":
+		return executeSpy(ctx, fleetSvc, userID, rec)
 	default:
 		return "", fmt.Errorf("%w: mission action %q", ErrUnsupportedCategory, rec.ActionType)
 	}
+}
+
+func executeAttack(ctx context.Context, fleetSvc *fleet.TransportService, userID string, rec Recommendation) (string, error) {
+	src, _ := rec.Params["src_planet_id"].(string)
+	if src == "" {
+		return "", fmt.Errorf("autopilot: attack: src_planet_id missing")
+	}
+	dstG, _ := paramInt(rec.Params, "dst_galaxy")
+	dstS, _ := paramInt(rec.Params, "dst_system")
+	dstP, _ := paramInt(rec.Params, "dst_position")
+	if dstG == 0 && dstS == 0 && dstP == 0 {
+		return "", fmt.Errorf("autopilot: attack: target coords missing")
+	}
+	// Скучная эвристика — отправляем все доступные боевые корабли.
+	// Реальный выбор состава флота требует глубокой battle-симуляции,
+	// что вынесено как отдельная задача (см. dev-log Ф.2.2).
+	// Состав ниже — placeholder, fleet.Send проверит наличие в БД.
+	ships := map[int]int64{unitLightFighter: 10, unitCruiser: 5}
+
+	f, err := fleetSvc.Send(ctx, fleet.TransportInput{
+		UserID:      userID,
+		SrcPlanetID: src,
+		Dst: galaxy.Coords{Galaxy: dstG, System: dstS, Position: dstP},
+		Mission:      int(event.KindAttackSingle),
+		Ships:        ships,
+		SpeedPercent: 100,
+	})
+	if err != nil {
+		return "", fmt.Errorf("autopilot: attack send: %w", err)
+	}
+	return f.ID, nil
+}
+
+func executeSpy(ctx context.Context, fleetSvc *fleet.TransportService, userID string, rec Recommendation) (string, error) {
+	src, _ := rec.Params["src_planet_id"].(string)
+	if src == "" {
+		return "", fmt.Errorf("autopilot: spy: src_planet_id missing")
+	}
+	dstG, _ := paramInt(rec.Params, "dst_galaxy")
+	dstS, _ := paramInt(rec.Params, "dst_system")
+	dstP, _ := paramInt(rec.Params, "dst_position")
+	if dstG == 0 && dstS == 0 && dstP == 0 {
+		return "", fmt.Errorf("autopilot: spy: target coords missing")
+	}
+	probes, _ := paramInt64(rec.Params, "probes")
+	if probes <= 0 {
+		probes = 4
+	}
+	ships := map[int]int64{unitEspionageProbe: probes}
+
+	f, err := fleetSvc.Send(ctx, fleet.TransportInput{
+		UserID:      userID,
+		SrcPlanetID: src,
+		Dst: galaxy.Coords{Galaxy: dstG, System: dstS, Position: dstP},
+		Mission:      int(event.KindSpy),
+		Ships:        ships,
+		SpeedPercent: 100,
+	})
+	if err != nil {
+		return "", fmt.Errorf("autopilot: spy send: %w", err)
+	}
+	return f.ID, nil
 }
 
 func executeTransport(ctx context.Context, fleetSvc *fleet.TransportService, userID string, rec Recommendation) (string, error) {

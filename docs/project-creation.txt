@@ -17036,3 +17036,58 @@ not-a-fix + BA-019 mitigated.
   в TestDetectPhase_Empty (теперь дефолт = Expansion, не Economy).
 
   go build/vet/test — green.
+
+## Итерация 06.1.8 — Автопилот: атака и шпионаж Ф.2.2 (2026-05-06)
+
+  Цель: scoreCandidates умеет предлагать миссии attack и spy на
+  соседей. Без полной battle-симуляции — упрощённая эвристика
+  по очкам (полный battle.Simulator вынесен в отдельную задачу).
+
+  Backend:
+    - aiadvisor/autopilot_snapshot.go: readNeighbors — SELECT users
+      в той же galaxy в радиусе ±2 систем от планет игрока, с пометкой
+      HasProtection (regtime/protected_until_at/is_observer как в
+      fleet/attack.go protectionCheck). SnapshotDeps += ProtectionPeriod.
+    - aiadvisor/autopilot_scoring_missions.go:
+        scoreAttacks: отсев protection/umode/observer/слабых соседей
+          (TotalScore < 1000) и слишком сильных (> 0.5 моих очков).
+          Score = (мои военные/очки цели) * weight (Military=1.0,
+          others=0.2).
+        scoreSpy: требует espionage_tech ≥ 1 и хотя бы 1 espionage_probe
+          на планете. Берёт min(4, доступно) probe per миссия.
+          Score = log10(target_score+10) * weight (Military/Defense=0.6,
+          остальные=0.3).
+        approxAttackerShipValue — суммарная metal-eq боевых кораблей
+          (без транспортов).
+    - aiadvisor/autopilot_executor.go: executeAttack / executeSpy
+      строят TransportInput и вызывают fleet.TransportService.Send
+      с mission=KindAttackSingle / KindSpy. Состав флота —
+      placeholder (light_fighter+cruiser для атаки, espionage_probe
+      для шпионажа); Send проверит наличие.
+    - GameTuning += ProtectionPeriod (из cfg.Game.ProtectionPeriod);
+      server/main.go и worker/main.go обновлены.
+
+  Tests (унит, 7 новых):
+    - TestScoreAttacks_NoFleet — без боевых кораблей нет атаки.
+    - TestScoreAttacks_HappyPath — Military с большим флотом vs слабый
+      сосед = есть рекомендация атаки.
+    - TestScoreAttacks_TargetTooStrong — цель сильнее 50% очков
+      → пропуск.
+    - TestScoreAttacks_ProtectionSkipped — umode/observer/protection
+      → пропуск.
+    - TestScoreSpy_HappyPath — espionage_tech + probe + сосед
+      → есть рек spy.
+    - TestScoreSpy_NoEspionageTech — без техники нет spy.
+    - TestScoreSpy_NoProbes — без probe нет spy.
+    - TestApproxAttackerShipValue — транспорты не учитываются.
+
+  Прогон с реальной БД (postgres @ 127.0.0.1:5438): 47 тестов зелёные
+  (37 unit + 10 integration).
+
+  Что НЕ сделано (явно):
+    - Полная battle.Simulator оценка атаки (точный прогноз потерь
+      и грабежа) — отдельная задача ~500 строк.
+    - Состав флота для атаки/экспедиции — сейчас placeholder.
+      В идеале scoring должен подбирать flight composition по
+      ratio (атакеры/таран/перевозчики). Это улучшение
+      «второго порядка», не блокирует пользу автопилота.

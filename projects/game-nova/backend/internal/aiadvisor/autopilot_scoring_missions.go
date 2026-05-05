@@ -22,9 +22,14 @@ import (
 const (
 	unitSmallTransporter = 29
 	unitLargeTransporter = 30
+	unitLightFighter     = 31
+	unitCruiser          = 33
+	unitBattleship       = 34
+	unitEspionageProbe   = 38
 
 	// research unit ids (для лимитов миссий).
-	unitAstrophysics = 27
+	unitAstrophysics  = 27
+	unitEspionageTech = 13
 )
 
 // Минимальная ценность флота экспедиции (metal-eq), чтобы Compute не
@@ -33,8 +38,8 @@ const (
 const minExpeditionFleetValue = 50_000
 
 // scoreMissions добавляет mission-кандидаты в общий пул scoreCandidates.
-// На уровне Ф.2.1 поддерживаются: transport (между своими планетами)
-// и expedition. Атака и шпионаж — Ф.2.2.
+//   Ф.2.1: transport (между своими планетами), expedition.
+//   Ф.2.2: attack (упрощённая оценка по очкам), spy (шпионаж соседей).
 func scoreMissions(snap PlayerSnapshot, strategy Strategy, inputs scoringInputs) []Recommendation {
 	if inputs.Catalog == nil {
 		return nil
@@ -42,7 +47,182 @@ func scoreMissions(snap PlayerSnapshot, strategy Strategy, inputs scoringInputs)
 	var out []Recommendation
 	out = append(out, scoreTransports(snap, strategy, inputs)...)
 	out = append(out, scoreExpeditions(snap, strategy, inputs)...)
+	out = append(out, scoreAttacks(snap, strategy, inputs)...)
+	out = append(out, scoreSpy(snap, strategy, inputs)...)
 	return out
+}
+
+// scoreAttacks — упрощённая (без battle.Simulator) оценка атаки.
+//
+// Кандидат-цель отсеивается:
+//   - Сосед в umode/observer/protection — нельзя атаковать.
+//   - TotalScore цели > 0.5 × (мои очки) — слишком сильный, риск.
+//   - У меня нет атакующих кораблей (light_fighter/cruiser/battleship).
+//
+// Score = (мои военные очки / очки цели) * weight.
+//   weight: Military=1.0, Defense/Economy/Expansion=0.2.
+//
+// Полный battle-симулятор (с прогнозом потерь и грабежа) вынесен
+// в отдельную задачу — это самостоятельная фича объёмом ~500 строк.
+// На уровне Ф.2.2 атака предлагается как «есть кого ограбить»,
+// без точного количества loot.
+func scoreAttacks(snap PlayerSnapshot, strategy Strategy, _ scoringInputs) []Recommendation {
+	weight := 0.2
+	if strategy == StrategyMilitary {
+		weight = 1.0
+	}
+
+	// Суммарная атакующая сила игрока (proxy: ценность боевых кораблей).
+	var attackerValue int64
+	srcPlanetID, srcPlanetName := "", ""
+	for _, ps := range snap.Planets {
+		val := approxAttackerShipValue(ps.Ships)
+		if val > attackerValue {
+			attackerValue = val
+			srcPlanetID = ps.ID
+			srcPlanetName = ps.Name
+		}
+	}
+	if attackerValue == 0 || srcPlanetID == "" {
+		return nil
+	}
+
+	var out []Recommendation
+	for _, n := range snap.Neighbors {
+		if n.Umode || n.IsObserver || n.HasProtection {
+			continue
+		}
+		// Защита: не атакуем сильнее себя.
+		if snap.Score > 0 && n.TotalScore > 0.5*snap.Score {
+			continue
+		}
+		// Защита: не атакуем тех, кто сильно слабее в bashing-протекшен
+		// (у legacy 1:5 порог защищает «новичка» от старшего). Здесь —
+		// просто пропускаем целей с очень низкими очками (< 1000).
+		if n.TotalScore < 1000 {
+			continue
+		}
+
+		// Score = (моя сила / сила цели) — больше отдача когда цель
+		// много слабее игрока.
+		ratio := float64(attackerValue) / math.Max(n.TotalScore, 1)
+		score := ratio * weight
+		if score <= 0 {
+			continue
+		}
+
+		out = append(out, Recommendation{
+			ID:         ids.New(),
+			Category:   "mission",
+			ActionType: "attack",
+			PlanetID:   srcPlanetID,
+			Params: map[string]any{
+				"src_planet_id":   srcPlanetID,
+				"target_user_id":  n.UserID,
+				"dst_galaxy":      n.Galaxy,
+				"dst_system":      n.System,
+				"dst_position":    n.Position,
+				"target_points":   n.TotalScore,
+				"attacker_value":  attackerValue,
+			},
+			Score: score,
+			Description: fmt.Sprintf("Атака игрока [%d:%d:%d] (очки %.0f) с %q",
+				n.Galaxy, n.System, n.Position, n.TotalScore, srcPlanetName),
+			Benefit: fmt.Sprintf("Грабёж ресурсов цели; ваш флот %d metal-eq vs очки цели %.0f",
+				attackerValue, n.TotalScore),
+		})
+	}
+	return out
+}
+
+// scoreSpy — отправка espionage probes на соседа, чтобы получить
+// отчёт об уровне шпионажа/ресурсах/флоте.
+//
+// Условия:
+//   - Сосед не в protection (шпионаж по защищённым тоже работает в
+//     legacy, но автопилот предпочитает сначала видимых не-защищённых).
+//   - У игрока есть espionage_tech ≥ 1 + хотя бы 1 espionage_probe (id=38).
+//
+// Score = низкий abs (1 + log(target_points)) * weight; в Military
+// и Defense чуть выше, в Economy/Expansion — нейтрально.
+func scoreSpy(snap PlayerSnapshot, strategy Strategy, _ scoringInputs) []Recommendation {
+	if snap.Research[unitEspionageTech] < 1 {
+		return nil
+	}
+	weight := 0.3
+	switch strategy {
+	case StrategyMilitary, StrategyDefense:
+		weight = 0.6
+	}
+
+	srcPlanetID, srcPlanetName := "", ""
+	probesAvail := int64(0)
+	for _, ps := range snap.Planets {
+		if ps.Ships[unitEspionageProbe] > 0 {
+			if ps.Ships[unitEspionageProbe] > probesAvail {
+				probesAvail = ps.Ships[unitEspionageProbe]
+				srcPlanetID = ps.ID
+				srcPlanetName = ps.Name
+			}
+		}
+	}
+	if srcPlanetID == "" || probesAvail < 1 {
+		return nil
+	}
+
+	// Кол-во probe per миссия — обычно 4..8 (хороший баланс точности).
+	probesPerMission := int64(4)
+	if probesAvail < probesPerMission {
+		probesPerMission = probesAvail
+	}
+
+	var out []Recommendation
+	for _, n := range snap.Neighbors {
+		if n.Umode || n.IsObserver || n.HasProtection {
+			continue
+		}
+		if n.TotalScore < 100 {
+			continue // нечего шпионить
+		}
+		score := math.Log10(n.TotalScore+10) * weight
+
+		out = append(out, Recommendation{
+			ID:         ids.New(),
+			Category:   "mission",
+			ActionType: "spy",
+			PlanetID:   srcPlanetID,
+			Params: map[string]any{
+				"src_planet_id":  srcPlanetID,
+				"target_user_id": n.UserID,
+				"dst_galaxy":     n.Galaxy,
+				"dst_system":     n.System,
+				"dst_position":   n.Position,
+				"probes":         probesPerMission,
+			},
+			Score: score,
+			Description: fmt.Sprintf("Шпионаж [%d:%d:%d] (%d probes с %q)",
+				n.Galaxy, n.System, n.Position, probesPerMission, srcPlanetName),
+			Benefit: fmt.Sprintf("Отчёт о флоте и ресурсах цели (%d probes)", probesPerMission),
+		})
+	}
+	return out
+}
+
+// approxAttackerShipValue — суммарная metal-eq стоимость боевых кораблей
+// на планете.
+//
+// Учитываются только бойцы (не транспорты), чтобы score атаки не
+// учитывал транспортный тоннаж как «силу».
+func approxAttackerShipValue(ships map[int]int64) int64 {
+	var v int64
+	v += ships[unitLightFighter] * approxShipValue(unitLightFighter)
+	v += ships[32] * approxShipValue(32) // heavy_fighter
+	v += ships[unitCruiser] * approxShipValue(unitCruiser)
+	v += ships[unitBattleship] * approxShipValue(unitBattleship)
+	v += ships[39] * approxShipValue(39) // bomber
+	v += ships[41] * approxShipValue(41) // destroyer
+	v += ships[42] * approxShipValue(42) // deathstar
+	return v
 }
 
 // scoreTransports — предлагает перемещение ресурсов с планеты-донора

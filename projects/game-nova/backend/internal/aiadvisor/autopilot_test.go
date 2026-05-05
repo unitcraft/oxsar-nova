@@ -832,6 +832,168 @@ func TestMetalEqShipValue(t *testing.T) {
 	}
 }
 
+// fixtureSnapshotWithFleet — игрок с боевыми кораблями + соседи.
+func fixtureSnapshotWithFleet() PlayerSnapshot {
+	planet := fixturePlanet("p1", "Earth", 5)
+	planet.Buildings = map[int]int{}
+	// 50 cruiser × 27000 = 1.35M metal-eq.
+	planet.Ships = map[int]int64{33: 50}
+	planet.Galaxy = 1
+	planet.System = 100
+	return PlayerSnapshot{
+		Planets: []PlanetSnapshot{planet},
+		Score:   100_000,
+		Research: map[int]int{
+			13: 5, // espionage_tech
+		},
+	}
+}
+
+func TestScoreAttacks_NoFleet(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	planet := fixturePlanet("p1", "Earth", 5)
+	planet.Ships = map[int]int64{29: 5} // только транспорты
+	snap := PlayerSnapshot{
+		Planets:   []PlanetSnapshot{planet},
+		Score:     50000,
+		Neighbors: []NeighborSnapshot{{UserID: "n1", Galaxy: 1, System: 100, Position: 5, TotalScore: 5000}},
+	}
+	recs := scoreCandidates(snap, StrategyMilitary, fixtureScoringInputs(cat, []string{"p1"}))
+	for _, r := range recs {
+		if r.ActionType == "attack" {
+			t.Errorf("expected no attack without combat ships, got %v", r)
+		}
+	}
+}
+
+func TestScoreAttacks_HappyPath(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	snap := fixtureSnapshotWithFleet()
+	snap.Neighbors = []NeighborSnapshot{
+		{UserID: "n1", Galaxy: 1, System: 100, Position: 5, TotalScore: 30_000}, // 30% от моих очков
+	}
+	recs := scoreCandidates(snap, StrategyMilitary, fixtureScoringInputs(cat, []string{"p1"}))
+	var attack *Recommendation
+	for i := range recs {
+		if recs[i].ActionType == "attack" {
+			attack = &recs[i]
+			break
+		}
+	}
+	if attack == nil {
+		t.Fatal("expected attack rec, got none")
+	}
+	if attack.Params["target_user_id"] != "n1" {
+		t.Errorf("target_user_id = %v, want n1", attack.Params["target_user_id"])
+	}
+}
+
+func TestScoreAttacks_TargetTooStrong(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	snap := fixtureSnapshotWithFleet()
+	// Сосед сильнее 50% моих очков → пропустить.
+	snap.Neighbors = []NeighborSnapshot{
+		{UserID: "n1", Galaxy: 1, System: 100, Position: 5, TotalScore: 80_000},
+	}
+	recs := scoreCandidates(snap, StrategyMilitary, fixtureScoringInputs(cat, []string{"p1"}))
+	for _, r := range recs {
+		if r.ActionType == "attack" {
+			t.Errorf("expected no attack on strong target, got %v", r)
+		}
+	}
+}
+
+func TestScoreAttacks_ProtectionSkipped(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	snap := fixtureSnapshotWithFleet()
+	snap.Neighbors = []NeighborSnapshot{
+		{UserID: "n_umode", Galaxy: 1, System: 100, Position: 5, TotalScore: 30000, Umode: true},
+		{UserID: "n_obs", Galaxy: 1, System: 100, Position: 6, TotalScore: 30000, IsObserver: true},
+		{UserID: "n_prot", Galaxy: 1, System: 100, Position: 7, TotalScore: 30000, HasProtection: true},
+	}
+	recs := scoreCandidates(snap, StrategyMilitary, fixtureScoringInputs(cat, []string{"p1"}))
+	for _, r := range recs {
+		if r.ActionType == "attack" {
+			t.Errorf("expected no attack on protected/umode/observer, got %v", r)
+		}
+	}
+}
+
+func TestScoreSpy_HappyPath(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	snap := fixtureSnapshotWithFleet()
+	snap.Planets[0].Ships[unitEspionageProbe] = 20
+	snap.Neighbors = []NeighborSnapshot{
+		{UserID: "n1", Galaxy: 1, System: 100, Position: 5, TotalScore: 30000},
+	}
+	recs := scoreCandidates(snap, StrategyMilitary, fixtureScoringInputs(cat, []string{"p1"}))
+	var spy *Recommendation
+	for i := range recs {
+		if recs[i].ActionType == "spy" {
+			spy = &recs[i]
+			break
+		}
+	}
+	if spy == nil {
+		t.Fatal("expected spy rec, got none")
+	}
+	if probes, _ := spy.Params["probes"].(int64); probes < 1 {
+		t.Errorf("probes count = %v, want >= 1", spy.Params["probes"])
+	}
+}
+
+func TestScoreSpy_NoEspionageTech(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	snap := fixtureSnapshotWithFleet()
+	snap.Research = map[int]int{} // нет espionage_tech
+	snap.Planets[0].Ships[unitEspionageProbe] = 20
+	snap.Neighbors = []NeighborSnapshot{
+		{UserID: "n1", Galaxy: 1, System: 100, Position: 5, TotalScore: 30000},
+	}
+	recs := scoreCandidates(snap, StrategyMilitary, fixtureScoringInputs(cat, []string{"p1"}))
+	for _, r := range recs {
+		if r.ActionType == "spy" {
+			t.Errorf("expected no spy without espionage_tech, got %v", r)
+		}
+	}
+}
+
+func TestScoreSpy_NoProbes(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	snap := fixtureSnapshotWithFleet() // probe не выставлен
+	snap.Neighbors = []NeighborSnapshot{
+		{UserID: "n1", Galaxy: 1, System: 100, Position: 5, TotalScore: 30000},
+	}
+	recs := scoreCandidates(snap, StrategyMilitary, fixtureScoringInputs(cat, []string{"p1"}))
+	for _, r := range recs {
+		if r.ActionType == "spy" {
+			t.Errorf("expected no spy without probes, got %v", r)
+		}
+	}
+}
+
+func TestApproxAttackerShipValue(t *testing.T) {
+	t.Parallel()
+	// 10 light_fighter (4000) + 5 cruiser (27000) = 175k.
+	v := approxAttackerShipValue(map[int]int64{31: 10, 33: 5})
+	want := int64(40000 + 135000)
+	if v != want {
+		t.Errorf("approxAttackerShipValue = %d, want %d", v, want)
+	}
+	// Транспорты не учитываются.
+	v = approxAttackerShipValue(map[int]int64{29: 100, 30: 100})
+	if v != 0 {
+		t.Errorf("transports not counted: got %d, want 0", v)
+	}
+}
+
 func TestFormatDuration(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

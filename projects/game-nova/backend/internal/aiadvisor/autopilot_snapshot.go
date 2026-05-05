@@ -103,12 +103,16 @@ type NeighborSnapshot struct {
 // Если nil — Buildings/Research остаются пустыми, флаги очередей false.
 // Это допустимо в тестах, но не в проде: server/main.go и worker/main.go
 // обязаны передать все.
+//
+// ProtectionPeriod — секунды защиты новичка (cfg.Game.ProtectionPeriod).
+// Используется в readNeighbors для пометки HasProtection.
 type SnapshotDeps struct {
-	DB          repo.Exec
-	PlanetSvc   *planet.Service
-	ScoreSvc    *score.Service
-	BuildingSvc *building.Service
-	ResearchSvc *research.Service
+	DB               repo.Exec
+	PlanetSvc        *planet.Service
+	ScoreSvc         *score.Service
+	BuildingSvc      *building.Service
+	ResearchSvc      *research.Service
+	ProtectionPeriod int
 }
 
 // buildSnapshot собирает PlayerSnapshot для пользователя.
@@ -245,7 +249,15 @@ func buildSnapshot(ctx context.Context, deps SnapshotDeps, userID string) (Playe
 	}
 	snap.Fleets = fleets
 
-	// Соседи — Ф.2.2 (нужны для атак/шпионажа).
+	// Соседи (Ф.2.2): берём всех игроков в той же galaxy
+	// в радиусе ±2 систем от любой планеты игрока.
+	if len(snap.Planets) > 0 {
+		neighbors, err := readNeighbors(ctx, deps.DB, userID, snap.Planets, deps.ProtectionPeriod)
+		if err != nil {
+			return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: neighbors: %w", err)
+		}
+		snap.Neighbors = neighbors
+	}
 
 	return snap, nil
 }
@@ -293,6 +305,80 @@ func readShipsAndDefense(ctx context.Context, db repo.Exec, planetID string) (ma
 		defense[id] = c
 	}
 	return ships, defense, rows.Err()
+}
+
+// readNeighbors читает игроков в той же галактике в радиусе ±2 систем
+// от любой планеты пользователя.
+//
+// Поля:
+//   - umode/is_observer/banned — нельзя атаковать;
+//   - protection_until > now() — игрок в защите новичка;
+//   - points (total) — для оценки силы соседа.
+//
+// Не возвращает: deleted_at != NULL (soft-deleted), сам пользователь,
+// игроки без планет в радиусе.
+//
+// Радиус ±2 систем — компромисс: достаточно чтобы покрыть ближайших
+// соседей, но не перегружает scoring сотней целей. Координаты планет
+// берутся в Go (а не одним SQL с UNION), чтобы запрос остался простым.
+func readNeighbors(ctx context.Context, db repo.Exec, userID string, planets []PlanetSnapshot, protectionPeriod int) ([]NeighborSnapshot, error) {
+	if len(planets) == 0 {
+		return nil, nil
+	}
+	const sysRadius = 2
+
+	// Собираем интервалы (galaxy, [system_min, system_max]).
+	galaxies := make([]int, len(planets))
+	sysMin := make([]int, len(planets))
+	sysMax := make([]int, len(planets))
+	for i, p := range planets {
+		galaxies[i] = p.Galaxy
+		sysMin[i] = p.System - sysRadius
+		sysMax[i] = p.System + sysRadius
+	}
+
+	// HasProtection — true если игрок защищён по любому из условий
+	// (legacy fleet/attack.go protectionCheck):
+	//   - регистрация в пределах ProtectionPeriod секунд назад,
+	//   - protected_until_at > now(),
+	//   - is_observer.
+	rows, err := db.Pool().Query(ctx, `
+		WITH ranges AS (
+			SELECT g, smin, smax
+			FROM unnest($2::int[], $3::int[], $4::int[]) AS t(g, smin, smax)
+		)
+		SELECT DISTINCT ON (u.id)
+			u.id, p.galaxy, p.system, p.position,
+			COALESCE(u.points, 0),
+			COALESCE(u.umode, false),
+			COALESCE(u.is_observer, false),
+			(
+				($5 > 0 AND u.created_at > NOW() - ($5 || ' seconds')::interval)
+				OR (u.protected_until_at IS NOT NULL AND u.protected_until_at > NOW())
+				OR u.is_observer
+			) AS has_protection
+		FROM planets p
+		JOIN users u ON u.id = p.user_id AND u.deleted_at IS NULL
+		JOIN ranges r ON r.g = p.galaxy AND p.system BETWEEN r.smin AND r.smax
+		WHERE u.id <> $1
+	`, userID, galaxies, sysMin, sysMax, protectionPeriod)
+	if err != nil {
+		return nil, fmt.Errorf("neighbors query: %w", err)
+	}
+	defer rows.Close()
+
+	var out []NeighborSnapshot
+	for rows.Next() {
+		var n NeighborSnapshot
+		if err := rows.Scan(&n.UserID, &n.Galaxy, &n.System, &n.Position,
+			&n.TotalScore, &n.Umode, &n.IsObserver, &n.HasProtection); err != nil {
+			return nil, err
+		}
+		// MilitaryScore не вычисляем (нужны u_points/b_points): оставляем 0
+		// и используем TotalScore как proxy в scoring.
+		out = append(out, n)
+	}
+	return out, rows.Err()
 }
 
 // readFleets читает все активные флоты пользователя (state IN

@@ -75,9 +75,10 @@ var (
 // (помимо коэффициентов очков). Извлечены из config.GameConfig чтобы
 // AutopilotService не зависел от всей game-конфигурации.
 type GameTuning struct {
-	PointsK       config.PointsCoefficients
-	GameSpeed     float64
-	ResearchSpeed float64
+	PointsK          config.PointsCoefficients
+	GameSpeed        float64
+	ResearchSpeed    float64
+	ProtectionPeriod int // секунды защиты новичка от атак
 }
 
 type AutopilotService struct {
@@ -242,11 +243,12 @@ func (s *AutopilotService) Compute(ctx context.Context, tx pgx.Tx, e event.Event
 	// потому что это длительные операции (дёргают много сервисов).
 	// Транзакция держится только на UPDATE результата.
 	snap, err := buildSnapshot(ctx, SnapshotDeps{
-		DB:          s.db,
-		PlanetSvc:   s.planetSvc,
-		ScoreSvc:    s.scoreSvc,
-		BuildingSvc: s.buildSvc,
-		ResearchSvc: s.researchSvc,
+		DB:               s.db,
+		PlanetSvc:        s.planetSvc,
+		ScoreSvc:         s.scoreSvc,
+		BuildingSvc:      s.buildSvc,
+		ResearchSvc:      s.researchSvc,
+		ProtectionPeriod: s.tuning.ProtectionPeriod,
 	}, input.UserID)
 	if err != nil {
 		return fmt.Errorf("autopilot: compute: snapshot: %w", err)

@@ -254,9 +254,10 @@ func run() error {
 	autopilotSvc := aiadvisor.NewAutopilotService(
 		db, cfg.AIAdvisor,
 		aiadvisor.GameTuning{
-			PointsK:       cfg.Game.Points,
-			GameSpeed:     cfg.Game.Speed,
-			ResearchSpeed: cfg.Game.ResearchSpeedFactor,
+			PointsK:          cfg.Game.Points,
+			GameSpeed:        cfg.Game.Speed,
+			ResearchSpeed:    cfg.Game.ResearchSpeedFactor,
+			ProtectionPeriod: cfg.Game.ProtectionPeriod,
 		},
 		cat,
 		planetSvc, scoreSvc, autopilotBuildingSvc, autopilotResearchSvc,
