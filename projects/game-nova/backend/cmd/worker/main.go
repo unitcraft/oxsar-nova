@@ -26,6 +26,7 @@ import (
 	"oxsar/game-nova/internal/artmarket"
 	"oxsar/game-nova/internal/automsg"
 	"oxsar/game-nova/internal/balance"
+	"oxsar/game-nova/internal/building"
 	billingclient "oxsar/game-nova/internal/billing/client"
 	"oxsar/game-nova/internal/dailyquest"
 	"oxsar/game-nova/internal/config"
@@ -40,6 +41,7 @@ import (
 	"oxsar/game-nova/internal/repair"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/internal/requirements"
+	"oxsar/game-nova/internal/research"
 	"oxsar/game-nova/internal/settings"
 	"oxsar/game-nova/internal/rocket"
 	"oxsar/game-nova/internal/scheduler"
@@ -244,12 +246,14 @@ func run() error {
 	// чтобы воркер видел весь список в одном месте и было проще
 	// отслеживать, что именно обрабатывается.
 	// План 06.1: rule-based автопилот.
-	// Воркеру нужны только snapshot-зависимости (planet, score) — Execute
-	// идёт через HTTP-handler, а не через воркер. Поэтому building/research
-	// здесь nil; снимок не использует их.
+	// Воркеру нужны building/research только для buildSnapshot (чтения
+	// уровней и очередей); Execute идёт через HTTP-handler. Создаём
+	// сервисы локально для воркера.
+	autopilotBuildingSvc := building.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed, cfg.Game.BuildMinSeconds)
+	autopilotResearchSvc := research.NewServiceWithFactors(db, planetSvc, cat, reqs, cfg.Game.Speed, cfg.Game.ResearchSpeedFactor)
 	autopilotSvc := aiadvisor.NewAutopilotService(
 		db, cfg.AIAdvisor, cat,
-		planetSvc, scoreSvc, nil, nil,
+		planetSvc, scoreSvc, autopilotBuildingSvc, autopilotResearchSvc,
 	)
 	autopilotWorkerH := &aiadvisor.AutopilotWorkerHandler{Svc: autopilotSvc}
 	w.Register(event.KindAutopilotAdvise, autopilotWorkerH.Handle)

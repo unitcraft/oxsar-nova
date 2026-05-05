@@ -16781,3 +16781,36 @@ not-a-fix + BA-019 mitigated.
     - i18n текстов рекомендаций (Description/Benefit) — Ф.1в-г.
     - Frontend-виджет — Ф.4.
     - openapi.yaml — обновится в Ф.4 вместе с фронтом.
+
+## Итерация 06.1.2 — Автопилот: snapshot ядро Ф.1б (2026-05-05)
+
+  Цель: buildSnapshot теперь читает уровни зданий, исследований и
+  флаги активных очередей — данные нужны scoring-у в Ф.1в-г, чтобы
+  отсеивать кандидатов с занятой очередью или прокидывать current
+  level в формулу следующего уровня.
+
+  Backend:
+    - aiadvisor/autopilot_snapshot.go: SnapshotDeps += BuildingSvc,
+      ResearchSvc. buildSnapshot:
+        1. ResearchSvc.Levels(userID) → snap.Research[unitID]=lvl.
+        2. ResearchSvc.List(userID) → researchBusy=len>0.
+        3. Для каждой планеты:
+           BuildingSvc.Levels(planetID) → ps.Buildings.
+           BuildingSvc.List(planetID)   → ps.BuildingQueueBusy.
+           ps.ResearchQueueBusy = researchBusy (дублируем для удобства).
+      BuildingSvc/ResearchSvc nil → maps пустые, флаги false (для тестов;
+      прод обязан передавать оба, см. ниже).
+    - aiadvisor/autopilot_service.go Compute: SnapshotDeps пробрасывает
+      s.buildSvc / s.researchSvc.
+    - cmd/worker/main.go: building.NewService и research.NewServiceWithFactors
+      создаются для воркера и передаются в NewAutopilotService (вместо
+      nil из Ф.1а). Импорты building/research добавлены.
+
+  Tests:
+    - autopilot_test.go: TestPlanetSnapshot_DefaultMaps — sanity-check
+      zero-value не паникует. TestBuildSnapshot_NilDeps уточнён комментарием.
+    - go test ./internal/aiadvisor/... — green (10 unit-тестов).
+    - go build ./... — green.
+
+  Что НЕ сделано в этом коммите:
+    - scoreCandidates всё ещё пустой — Ф.1в (building) и Ф.1г (research).

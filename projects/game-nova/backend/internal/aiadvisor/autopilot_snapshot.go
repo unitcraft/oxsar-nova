@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"oxsar/game-nova/internal/building"
 	"oxsar/game-nova/internal/planet"
 	"oxsar/game-nova/internal/repo"
+	"oxsar/game-nova/internal/research"
 	"oxsar/game-nova/internal/score"
 )
 
@@ -94,21 +96,30 @@ type NeighborSnapshot struct {
 }
 
 // SnapshotDeps — зависимости buildSnapshot (DI для тестов).
+//
+// BuildingSvc / ResearchSvc — для чтения уровней и очередей.
+// Если nil — Buildings/Research остаются пустыми, флаги очередей false.
+// Это допустимо в тестах, но не в проде: server/main.go и worker/main.go
+// обязаны передать все.
 type SnapshotDeps struct {
-	DB         repo.Exec
-	PlanetSvc  *planet.Service
-	ScoreSvc   *score.Service
+	DB          repo.Exec
+	PlanetSvc   *planet.Service
+	ScoreSvc    *score.Service
+	BuildingSvc *building.Service
+	ResearchSvc *research.Service
 }
 
 // buildSnapshot собирает PlayerSnapshot для пользователя.
 //
 // Не модифицирует БД (только чтение). Внешняя транзакция не нужна:
 // между чтениями возможны малые гонки с другими handler-ами,
-// но это допустимо — рекомендация всё равно валидируется при Execute.
+// но это допустимо — рекомендация всё равно валидируется при Execute
+// (building.Enqueue и т.п. сами проверяют ресурсы и очередь).
 //
-// Реализация ядра в Ф.1б. Здесь — каркас, заполняющий минимально
-// необходимые поля (планеты + score + кредиты). Расширение под military/
-// neighbors/fleet происходит в последующих фазах.
+// Расширения по фазам:
+//   Ф.1а: планеты + ресурсы + прогноз 1ч + score + кредиты + флаги среды.
+//   Ф.1б: уровни зданий per-planet, уровни исследований, флаги очередей.
+//   Ф.2:  флоты (дом + в полёте) и список соседей в радиусе.
 func buildSnapshot(ctx context.Context, deps SnapshotDeps, userID string) (PlayerSnapshot, error) {
 	if deps.DB == nil || deps.PlanetSvc == nil || deps.ScoreSvc == nil {
 		return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: nil dependency")
@@ -128,12 +139,32 @@ func buildSnapshot(ctx context.Context, deps SnapshotDeps, userID string) (Playe
 		return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: read user: %w", err)
 	}
 
-	// Текущие очки.
+	// Текущие очки. PlayerScore может вернуть ошибку, если пользователь
+	// ещё не в users_score; snapshot всё равно валиден, score=0
+	// не критично для scoring (score дальше используется как ratio,
+	// а не абсолют).
 	if pts, err := deps.ScoreSvc.PlayerScore(ctx, userID, "total"); err == nil {
 		snap.Score = pts
 	}
-	// PlayerScore может вернуть ошибку, если пользователь не в users_score —
-	// snapshot всё равно валиден, score=0 не критично для scoring.
+
+	// Уровни исследований и активная очередь исследования.
+	// Research один на игрока — флаг ResearchQueueBusy глобален и
+	// дублируется в каждый PlanetSnapshot для удобства scoring.
+	researchBusy := false
+	if deps.ResearchSvc != nil {
+		levels, _, err := deps.ResearchSvc.Levels(ctx, userID)
+		if err != nil {
+			return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: research levels: %w", err)
+		}
+		for unitID, lvl := range levels {
+			snap.Research[unitID] = lvl
+		}
+		queue, err := deps.ResearchSvc.List(ctx, userID)
+		if err != nil {
+			return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: research queue: %w", err)
+		}
+		researchBusy = len(queue) > 0
+	}
 
 	// Планеты + ресурсы.
 	planets, err := deps.PlanetSvc.ListByUser(ctx, userID)
@@ -166,7 +197,8 @@ func buildSnapshot(ctx context.Context, deps SnapshotDeps, userID string) (Playe
 				Silicon:  p.SiliconPerSec,
 				Hydrogen: p.HydrogenPerSec,
 			},
-			Buildings: map[int]int{},
+			Buildings:         map[int]int{},
+			ResearchQueueBusy: researchBusy,
 		}
 		// Прогноз через 1 час (cap-aware).
 		ps.ResourcesIn1h = Resources{
@@ -174,10 +206,25 @@ func buildSnapshot(ctx context.Context, deps SnapshotDeps, userID string) (Playe
 			Silicon:  minF(p.Silicon+p.SiliconPerSec*3600, p.SiliconCap),
 			Hydrogen: minF(p.Hydrogen+p.HydrogenPerSec*3600, p.HydrogenCap),
 		}
+
+		if deps.BuildingSvc != nil {
+			levels, err := deps.BuildingSvc.Levels(ctx, p.ID)
+			if err != nil {
+				return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: building levels for %s: %w", p.ID, err)
+			}
+			for unitID, lvl := range levels {
+				ps.Buildings[unitID] = lvl
+			}
+			queue, err := deps.BuildingSvc.List(ctx, p.ID)
+			if err != nil {
+				return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: building queue for %s: %w", p.ID, err)
+			}
+			ps.BuildingQueueBusy = len(queue) > 0
+		}
+
 		snap.Planets = append(snap.Planets, ps)
 	}
 
-	// Уровни зданий и исследований, флаги очередей — реализуются в Ф.1б.
 	// Загрузка флотов и соседей — в Ф.2.
 
 	return snap, nil

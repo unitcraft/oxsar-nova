@@ -224,9 +224,11 @@ func (s *AutopilotService) Compute(ctx context.Context, tx pgx.Tx, e event.Event
 	// потому что это длительные операции (дёргают много сервисов).
 	// Транзакция держится только на UPDATE результата.
 	snap, err := buildSnapshot(ctx, SnapshotDeps{
-		DB:        s.db,
-		PlanetSvc: s.planetSvc,
-		ScoreSvc:  s.scoreSvc,
+		DB:          s.db,
+		PlanetSvc:   s.planetSvc,
+		ScoreSvc:    s.scoreSvc,
+		BuildingSvc: s.buildSvc,
+		ResearchSvc: s.researchSvc,
 	}, input.UserID)
 	if err != nil {
 		return fmt.Errorf("autopilot: compute: snapshot: %w", err)
