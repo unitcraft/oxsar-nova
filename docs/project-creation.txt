@@ -17225,3 +17225,37 @@ not-a-fix + BA-019 mitigated.
     - integration TestAutopilot_History_Empty / _AfterEnqueue —
       проверяют пустоту и сортировку DESC.
     - 53 теста зелёные с реальной БД (43 unit + 10 integration).
+
+## Итерация 06.1.12 — Автопилот: openapi.yaml (2026-05-06)
+
+  Закрыта последняя «отложенная» задача — задокументированы 5 эндпоинтов
+  aiadvisor группы в openapi.yaml.
+
+  api/openapi.yaml:
+    - tags: + advisor.
+    - paths:
+        POST /api/ai-advisor/ask
+        GET  /api/ai-advisor/estimate
+        POST /api/ai-advisor/autopilot/advise
+        GET  /api/ai-advisor/autopilot/result/{jobID}
+        POST /api/ai-advisor/autopilot/execute
+        GET  /api/ai-advisor/autopilot/history
+    - components.schemas:
+        AutopilotRecommendation (id, category, action_type, planet_id,
+          unit_id, params, score, description, benefit).
+        AutopilotResult (job_id, status, strategy, recs).
+        AutopilotHistoryItem (job_id, strategy, status, created_at,
+          credits, executed_description).
+
+  go build ./... — green.
+
+  Остаётся ТОЛЬКО архитектурно-крупное:
+    - ACS (Mission=12) — требует чтения активных боевых event'ов
+      союзников + alliance-топологии. ~300 строк.
+    - Биржа артефактов — exchange.Service, oxsarit pricing, escrow.
+      ~200 строк.
+    - Полный battle.Simulator оценки атаки.
+    - WS push autopilot_ready (Ф.6) — зависит от плана WS-чата
+      (которого ещё нет на фронте).
+
+  Всё остальное по плану 06.1 — закрыто.

@@ -35,6 +35,7 @@ tags:
   - name: payment
   - name: alien
   - name: system
+  - name: advisor
 
 paths:
   /healthz:
@@ -4560,6 +4561,172 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/IdempotencyConflict" }
 
+  # ========== AI-советник (план 06 §F.3 + 06.1) ==========
+
+  /api/ai-advisor/ask:
+    post:
+      tags: [advisor]
+      summary: LLM-ассистент — задать вопрос
+      description: |
+        Свободный вопрос об игре. Backend отвечает через Claude API
+        (Haiku=5кр, Sonnet=20кр, Opus=80кр) или локальный Ollama
+        (бесплатно, если OLLAMA_URL задан).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                model:
+                  type: string
+                  enum: [claude-haiku-4-5-20251001, claude-sonnet-4-6, claude-opus-4-7]
+                  default: claude-haiku-4-5-20251001
+                question:
+                  type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer:       { type: string }
+                  credits_used: { type: number, format: float }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/ai-advisor/estimate:
+    get:
+      tags: [advisor]
+      summary: Оценка стоимости запроса без выполнения
+      parameters:
+        - in: query
+          name: model
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model:        { type: string }
+                  credit_cost:  { type: integer }
+                  daily_used:   { type: integer }
+                  daily_limit:  { type: integer }
+                  has_balance:  { type: boolean }
+
+  /api/ai-advisor/autopilot/advise:
+    post:
+      tags: [advisor]
+      summary: Автопилот — поставить задание в очередь воркера
+      description: |
+        Списывает 2 кр (AUTOPILOT_COST_CREDITS) и создаёт event
+        KindAutopilotAdvise=92. Воркер считает топ-3 рекомендаций
+        по стратегии. Фронт получает результат через polling
+        GET /result/{job_id} (каждые 2 сек) или WebSocket
+        autopilot_ready (план Ф.6 — пока не реализован).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                strategy:
+                  type: string
+                  enum: [economy, military, defense, expansion, auto]
+                  default: auto
+        # Idempotency-Key обязателен (idempotency middleware).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/ai-advisor/autopilot/result/{jobID}:
+    get:
+      tags: [advisor]
+      summary: Polling — текущее состояние задания автопилота
+      description: |
+        Возвращает {status, recs}. Если status='pending' — фронт
+        повторяет запрос через 1-2 сек. После status='ready' —
+        polling останавливается.
+      parameters:
+        - in: path
+          name: jobID
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AutopilotResult" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/ai-advisor/autopilot/execute:
+    post:
+      tags: [advisor]
+      summary: Подтвердить и выполнить рекомендацию
+      description: |
+        Игрок выбрал одну из топ-3. Backend валидирует и вызывает
+        соответствующий сервисный метод (building.Enqueue /
+        research.Enqueue / fleet.Send / profession.Change).
+        Возвращает event_id игрового события.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [job_id, rec_id]
+              properties:
+                job_id: { type: string }
+                rec_id: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  event_id: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/ai-advisor/autopilot/history:
+    get:
+      tags: [advisor]
+      summary: История запросов автопилота
+      description: Последние 20 запросов автопилота, отсортированных по убыванию даты.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AutopilotHistoryItem" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -4622,6 +4789,53 @@ components:
       type: object
       properties:
         status: { type: string }
+
+    # ========== AI-советник / Автопилот (план 06.1) ==========
+    AutopilotRecommendation:
+      type: object
+      description: |
+        Одна карточка из топ-3 рекомендаций автопилота. Поле
+        category определяет, какой сервисный метод вызывает Execute
+        (building/research/mission/profession/...).
+      properties:
+        id:          { type: string }
+        category:
+          type: string
+          enum: [building, research, mission, profession, defense, acs]
+        action_type: { type: string }
+        planet_id:   { type: string }
+        unit_id:     { type: integer }
+        params:      { type: object, additionalProperties: true }
+        score:       { type: number, format: float }
+        description: { type: string }
+        benefit:     { type: string }
+
+    AutopilotResult:
+      type: object
+      description: |
+        Текущее состояние задания автопилота. status='pending' значит
+        воркер ещё не посчитал — фронт повторяет polling.
+      properties:
+        job_id:   { type: string }
+        status:
+          type: string
+          enum: [pending, ready, executed, expired]
+        strategy:
+          type: string
+          enum: [economy, military, defense, expansion, auto]
+        recs:
+          type: array
+          items: { $ref: "#/components/schemas/AutopilotRecommendation" }
+
+    AutopilotHistoryItem:
+      type: object
+      properties:
+        job_id:                { type: string }
+        strategy:              { type: string }
+        status:                { type: string }
+        created_at:            { type: string, format: date-time }
+        credits:               { type: number, format: float }
+        executed_description:  { type: string }
 
     # План 72.1.51 (openapi coverage gap): минимальные market-схемы
     # для документации /market/lots и /market/fleet-lots серий.
