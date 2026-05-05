@@ -80,6 +80,10 @@ export interface ShipyardInventory {
   /** План 72.1.45 §5: damaged_count + shell_percent (только rows с damaged>0). */
   ships_damaged?: Record<string, ShipyardDamaged>;
   defense_damaged?: Record<string, ShipyardDamaged>;
+  /** Порядок вывода кораблей (display_order из configs/ships.yml). */
+  ship_order?: number[];
+  /** Порядок вывода обороны (display_order из configs/defense.yml). */
+  defense_order?: number[];
 }
 
 export interface ResearchOverview {

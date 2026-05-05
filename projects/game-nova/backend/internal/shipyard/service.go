@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -565,4 +566,42 @@ func (s *Service) lookupShipOrDefense(unitID int) (key string, cost config.ResCo
 		}
 	}
 	return "", config.ResCost{}, false, false
+}
+
+func (s *Service) ShipsOrder() []int {
+	type entry struct{ id, order int }
+	entries := make([]entry, 0, len(s.catalog.Ships.Ships))
+	for _, spec := range s.catalog.Ships.Ships {
+		entries = append(entries, entry{id: spec.ID, order: spec.DisplayOrder})
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].order != entries[j].order {
+			return entries[i].order < entries[j].order
+		}
+		return entries[i].id < entries[j].id
+	})
+	ids := make([]int, len(entries))
+	for i, e := range entries {
+		ids[i] = e.id
+	}
+	return ids
+}
+
+func (s *Service) DefenseOrder() []int {
+	type entry struct{ id, order int }
+	entries := make([]entry, 0, len(s.catalog.Defense.Defense))
+	for _, spec := range s.catalog.Defense.Defense {
+		entries = append(entries, entry{id: spec.ID, order: spec.DisplayOrder})
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].order != entries[j].order {
+			return entries[i].order < entries[j].order
+		}
+		return entries[i].id < entries[j].id
+	})
+	ids := make([]int, len(entries))
+	for i, e := range entries {
+		ids[i] = e.id
+	}
+	return ids
 }

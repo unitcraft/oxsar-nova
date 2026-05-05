@@ -2,10 +2,14 @@
 # Значения — placeholder на основе OGame classic. Сверить против
 # oxsar2 ShipDatasheet_YII на этапе M3.
 
+# display_order — порядок вывода (legacy na_construction.display_order, mode=3).
+# Основные корабли: id×10 (290..420). Специальные — после них.
+# Alien-юниты и R0-exception — не строятся игроком, display_order=9000+.
 ships:
   # 27-Q: front 10→6 (логистический юнит, не должен «принимать» обычный огонь).
   small_transporter:
     id: 29
+    display_order: 290
     attack: 5
     shield: 10
     shell: 4000
@@ -18,6 +22,7 @@ ships:
   # 27-Q: front 10→6 (логистика).
   large_transporter:
     id: 30
+    display_order: 300
     attack: 5
     shield: 25
     shell: 12000
@@ -29,6 +34,7 @@ ships:
 
   light_fighter:
     id: 31
+    display_order: 310
     attack: 50
     shield: 10
     shell: 4000
@@ -42,6 +48,7 @@ ships:
   # После изменений: дешёвый anti-LF (RF×3 vs LT, ×6 vs LF в legacy сохраняем).
   strong_fighter:
     id: 32
+    display_order: 320
     attack: 120
     shield: 25
     shell: 10000
@@ -52,6 +59,7 @@ ships:
 
   cruiser:
     id: 33
+    display_order: 330
     attack: 400
     shield: 50
     shell: 27000
@@ -62,6 +70,7 @@ ships:
 
   battle_ship:
     id: 34
+    display_order: 340
     attack: 1000
     shield: 200
     shell: 60000
@@ -72,6 +81,7 @@ ships:
 
   frigate:
     id: 35
+    display_order: 350
     attack: 700
     shield: 400
     shell: 70000
@@ -82,6 +92,7 @@ ships:
 
   colony_ship:
     id: 36
+    display_order: 360
     attack: 50
     shield: 100
     shell: 30000
@@ -93,6 +104,7 @@ ships:
   # 27-Q: front 10→6 (логистика).
   recycler:
     id: 37
+    display_order: 370
     attack: 1
     shield: 10
     shell: 16000
@@ -108,6 +120,7 @@ ships:
   # 27-R: front 10→5 (probe — шпион, не цель для обычного огня).
   espionage_sensor:
     id: 38
+    display_order: 380
     attack: 0
     shield: 0
     shell: 1000
@@ -123,6 +136,7 @@ ships:
   # SSat-эксплойта.
   solar_satellite:
     id: 39
+    display_order: 390
     attack: 0
     shield: 2
     shell: 5000
@@ -135,6 +149,7 @@ ships:
   # за тяжёлым флотом).
   bomber:
     id: 40
+    display_order: 400
     attack: 900
     shield: 550
     shell: 75000
@@ -148,6 +163,7 @@ ships:
   # и Lancer=6).
   star_destroyer:
     id: 41
+    display_order: 410
     attack: 2000
     shield: 500
     shell: 110000
@@ -159,6 +175,7 @@ ships:
 
   death_star:
     id: 42
+    display_order: 420
     attack: 200000
     shield: 50000
     shell: 9000000
@@ -172,20 +189,6 @@ ships:
     attacker:
       front: 9
 
-  # Interplanetary Missile (id=52 в legacy UNIT_INTERPLANETARY_ROCKET).
-  # Не корабль и не участвует в обычном бою (attack=0) — используется
-  # только для kind=16 (rocket attack). Летит прямо, без возврата,
-  # наносит урон defense на цели.
-  interplanetary_missile:
-    id: 52
-    attack: 0
-    shield: 0
-    shell: 1500
-    cargo: 0
-    speed: 12000
-    fuel: 1
-    cost: { metal: 12500, silicon: 2500, hydrogen: 10000 }
-
   # Lancer Ship (id=102). Premium-корабль с RF×3 vs DS.
   # ADR-0004: cost ×10 (закрыло BA-002).
   # ADR-0008 (27-J/W'):
@@ -198,6 +201,7 @@ ships:
   #     в rapidfire.yml). Без game-механики max_per_planet.
   lancer_ship:
     id: 102
+    display_order: 421
     attack: 5000
     shield: 200
     shell: 10000
@@ -219,6 +223,7 @@ ships:
   # 27-P: front 7→5 (усиливает stealth-эффект в смешанной атаке).
   shadow_ship:
     id: 325
+    display_order: 422
     attack: 520
     shield: 30
     shell: 4000
@@ -228,12 +233,28 @@ ships:
     cost: { metal: 3000, silicon: 9000, hydrogen: 3000 }
     front: 5
 
+  # Interplanetary Missile (id=52 в legacy UNIT_INTERPLANETARY_ROCKET).
+  # Не корабль и не участвует в обычном бою (attack=0) — используется
+  # только для kind=16 (rocket attack). Летит прямо, без возврата,
+  # наносит урон defense на цели.
+  interplanetary_missile:
+    id: 52
+    display_order: 520
+    attack: 0
+    shield: 0
+    shell: 1500
+    cargo: 0
+    speed: 12000
+    fuel: 1
+    cost: { metal: 12500, silicon: 2500, hydrogen: 10000 }
+
   # Alien ships (id 200–204). Корабли пришельцев — не строятся игроком,
   # используются в AI-атаках.
   # ADR-0015 (27-U): per-unit ballistics/masking удалены — движок их
   # никогда не читал (использует только Side.Tech). См. план 27 §16.
   unit_a_corvette:
     id: 200
+    display_order: 9200
     attack: 200
     shield: 75
     shell: 25500
@@ -244,6 +265,7 @@ ships:
 
   unit_a_screen:
     id: 201
+    display_order: 9201
     attack: 22
     shield: 5000
     shell: 30000
@@ -259,6 +281,7 @@ ships:
 
   unit_a_paladin:
     id: 202
+    display_order: 9202
     attack: 75
     shield: 50
     shell: 4200
@@ -269,6 +292,7 @@ ships:
 
   unit_a_frigate:
     id: 203
+    display_order: 9203
     attack: 1250
     shield: 150
     shell: 70000
@@ -279,6 +303,7 @@ ships:
 
   unit_a_torpedocarier:
     id: 204
+    display_order: 9204
     attack: 350
     shield: 100
     shell: 11000
@@ -289,6 +314,7 @@ ships:
 
   armored_terran:    # план 64 R0-exception
     id:     358
+    display_order: 9358
     cost:   { metal: 900000000, silicon: 100000000, hydrogen: 50000 }
     attack: 330
     shield: 15000
@@ -300,6 +326,7 @@ ships:
 
   ship_collector:    # план 64 R0-exception
     id:     353
+    display_order: 9353
     cost:   { metal: 2000, silicon: 1200, hydrogen: 500 }
     attack: 0
     shield: 5
@@ -311,6 +338,7 @@ ships:
 
   ship_transplantator:    # план 64 R0-exception
     id:     352
+    display_order: 9352
     cost:   { metal: 1000000, silicon: 500000, hydrogen: 200000 }
     attack: 500
     shield: 20000

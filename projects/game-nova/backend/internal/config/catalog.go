@@ -68,7 +68,8 @@ type ShipCatalog struct {
 }
 
 type ShipSpec struct {
-	ID     int     `yaml:"id"`
+	ID           int `yaml:"id"`
+	DisplayOrder int `yaml:"display_order,omitempty"`
 	Attack int     `yaml:"attack"`
 	Shield int     `yaml:"shield"`
 	Shell  int     `yaml:"shell"`
@@ -104,7 +105,8 @@ type DefenseCatalog struct {
 }
 
 type DefenseSpec struct {
-	ID     int     `yaml:"id"`
+	ID           int `yaml:"id"`
+	DisplayOrder int `yaml:"display_order,omitempty"`
 	Cost   ResCost `yaml:"cost"`
 	Attack int     `yaml:"attack"`
 	Shield int     `yaml:"shield"`

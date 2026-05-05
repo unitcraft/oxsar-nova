@@ -144,7 +144,11 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
     group === 'ship'
       ? inv.ships_damaged ?? {}
       : inv.defense_damaged ?? {};
-  const catalog = catalogByGroup(group);
+  const allUnits = catalogByGroup(group);
+  const apiOrder = group === 'ship' ? inv.ship_order : inv.defense_order;
+  const catalog = apiOrder
+    ? apiOrder.flatMap((id) => { const u = allUnits.find((x) => x.id === id); return u ? [u] : []; })
+    : allUnits;
 
   const available = planet
     ? {

@@ -173,13 +173,15 @@ func (h *Handler) Inventory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
-		"ships":         ships,
-		"defense":       defense,
-		"ship_costs":    shipCosts,
-		"defense_costs": defCosts,
-		"ship_seconds":  shipSecs,
+		"ships":           ships,
+		"defense":         defense,
+		"ship_costs":      shipCosts,
+		"defense_costs":   defCosts,
+		"ship_seconds":    shipSecs,
 		"defense_seconds": defSecs,
 		"ships_damaged":   shipsDmg,
 		"defense_damaged": defenseDmg,
+		"ship_order":      h.svc.ShipsOrder(),
+		"defense_order":   h.svc.DefenseOrder(),
 	})
 }
