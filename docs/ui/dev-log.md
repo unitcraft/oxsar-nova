@@ -1082,3 +1082,65 @@ commit без `--` pathspec». При попытке закоммитить па
 ### Коммит
 Этот dev-log — отдельный коммит через `git commit -m "..." -- docs/ui/dev-log.md`.
 Логика пачки #3 фактически попала в чужой `8abb5b18cd`.
+
+## 2026-05-01 — Редпасс i18n: пачка #4 — autoMessages без экспедиций (план 88)
+
+Большая итерация плана 88. 33 правки в блоке `autoMessages:` (без
+уже сделанных в пачке #1 expedition*). Группировка:
+
+- захват флота / артефакты (fleetGrasped, lostArtefactsMsg);
+- возврат флота / транспорт (fleetReturned, positionReport,
+  transportAccomplished × 4) — в основном косметика пробелов
+  вокруг `<br />`;
+- альянс (memberReceipted, memberRefused);
+- луна / планеты (moonDestroyedMsg/Subject, neutralPlanetDie,
+  neutralPlanetFound, planetColonized, tooManyPlanets) — крупная
+  правка neutralPlanetFound с переводом «инопланетян» → «чужой
+  расы» (sci-fi-регистр);
+- артефакты-события (msgActivate/Capture/Deactivate/Delay/
+  Disapear/DisapearUsed/Expire) — унификация формата, ёфикация,
+  разведение семантики `msgExpireArtefact` (срок) ↔
+  `msgDeactivateArtefact` (выключен);
+- артефакты-кредиты (msgCreditExchange*, msgCreditForMiner,
+  msgCreditMarket) — массово «Вам/Вашей/Вас» → «вам/вашей/вас»;
+- ракетная атака (rocketAttackMsgAttacker/Defender) — опечатка
+  «межпланетыми», согласование «завершилось/завершилась», убран
+  пассив, повтор «атака→атаковал» сглажен;
+- переработчики / удержание (recylcingReport, retreatOther) —
+  единый формат «Вывезено», нарицательное «удержание»;
+- онбординг (welcome.body, starterGuide.body, firstAttackReceived.body,
+  inactivityReminder.body) — английские id `metal_mine`,
+  `silicon_lab`, `solar_plant` заменены на русские имена из wiki;
+  «credit» → «кредиты»; «бонусы к факторам» → «бонусы к
+  производству и бою» (понятнее новичку);
+- системные транзакции (settingsEmailChanged.body,
+  surveillanceDetected.body) — «email-адрес» → «email»,
+  «детектировать» → «засечь».
+
+### Кандидаты на P88.x (обнаружены в процессе)
+
+- **P88.3** — `creditRepairVIP.body` подставляет `{{mode}}` =
+  английский id (`repair` / `disassemble`). Та же типовая задача,
+  что закрытый P88.2 (Officer).
+- **P88.4** — `msgExpireArtefact` и `msgDeactivateArtefact` имели
+  идентичный текст до правки. Возможный bug разработчика на стороне
+  backend (триггерит один ключ в обоих сценариях). После правки
+  тексты разделены по семантике, но логика триггеров не проверена.
+
+### Технический момент: разделение patch'а вручную
+
+Working tree содержал смесь моих 33 правок и 3 хунков соседа в
+других блоках (`buildings:`, `research:`, `info:`). Чтобы коммитить
+**только моё**, использовал `git diff` → разбиение хунков в Python →
+`git checkout --` → `git apply` только моего патча → `git commit -m
+"..." -- pathspec`. Чужие хунки восстановлены через `git apply`
+обратно в working tree после моего коммита. Сосед сможет
+закоммитить их сам.
+
+Это рабочий обходной приём для случая, когда два агента редактируют
+один файл одновременно. Дороже, чем `git commit -- pathspec` для
+непересекающегося файла, но безопасно.
+
+### Коммит
+`feat(i18n): редпасс блока autoMessages (план 88, пачка #4)` —
+коммит `86cf45932e` через `git commit -m "..." -- projects/game-nova/configs/i18n/ru.yml`.
