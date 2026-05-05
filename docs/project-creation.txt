@@ -17016,3 +17016,23 @@ not-a-fix + BA-019 mitigated.
       Сейчас scoring их не задаёт; executor возвращает ошибку
       «target coords missing» если они отсутствуют. В Ф.2.2 scoring
       будет включать random-выбор координат в галактике игрока.
+
+## Итерация 06.1.7 — Автопилот: эвристика StrategyAuto Ф.5 (2026-05-06)
+
+  detectPhase(snap) теперь реальная эвристика фазы развития
+  (вместо stub'а Economy):
+    1. Меньше 3 планет → Expansion (нужно колонизировать).
+    2. Суммарная metal-добыча < 100/сек → Economy (прокачать шахты).
+    3. Ценность флота < 200_000 metal-eq → Military (наращивать армию).
+    4. Иначе → Defense (защита накопленного).
+
+  approxShipValue — proxy-функция от unitID без зависимости от Catalog
+  (detectPhase pure от snapshot). Значения подобраны под configs/ships.yml:
+  small_transporter=4k, large=12k, light_fighter=4k, cruiser=27k,
+  battleship=60k, deathstar=10M.
+
+  Tests: добавлены 5 unit-тестов (Empty/FewPlanets/LowProduction/
+  WeakFleet/StrongFleet). Старый TestDetectPhase_Default переименован
+  в TestDetectPhase_Empty (теперь дефолт = Expansion, не Economy).
+
+  go build/vet/test — green.

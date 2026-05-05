@@ -2,6 +2,7 @@ package aiadvisor
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"oxsar/game-nova/internal/config"
@@ -47,12 +48,69 @@ func TestScoreCandidates_NoCatalog(t *testing.T) {
 	}
 }
 
-func TestDetectPhase_Default(t *testing.T) {
+func TestDetectPhase_Empty(t *testing.T) {
 	t.Parallel()
-	// Ф.5 заменит на эвристику фазы; пока тест фиксирует дефолт.
+	// Без планет — фаза экспансии (нужно строить колонии).
 	got := detectPhase(PlayerSnapshot{})
+	if got != StrategyExpansion {
+		t.Errorf("detectPhase empty = %s, want %s", got, StrategyExpansion)
+	}
+}
+
+func TestDetectPhase_FewPlanets(t *testing.T) {
+	t.Parallel()
+	// 1-2 планеты → Expansion.
+	for n := 1; n <= 2; n++ {
+		var planets []PlanetSnapshot
+		for i := 0; i < n; i++ {
+			planets = append(planets, PlanetSnapshot{ID: fmt.Sprint(i), Rates: Resources{Metal: 1000}})
+		}
+		got := detectPhase(PlayerSnapshot{Planets: planets})
+		if got != StrategyExpansion {
+			t.Errorf("planets=%d: detectPhase = %s, want Expansion", n, got)
+		}
+	}
+}
+
+func TestDetectPhase_LowProduction(t *testing.T) {
+	t.Parallel()
+	// 3 планеты, но малое производство (< 100/sec) → Economy.
+	planets := []PlanetSnapshot{
+		{Rates: Resources{Metal: 10}},
+		{Rates: Resources{Metal: 20}},
+		{Rates: Resources{Metal: 30}},
+	}
+	got := detectPhase(PlayerSnapshot{Planets: planets})
 	if got != StrategyEconomy {
-		t.Errorf("detectPhase default = %s, want %s", got, StrategyEconomy)
+		t.Errorf("low production: detectPhase = %s, want Economy", got)
+	}
+}
+
+func TestDetectPhase_WeakFleet(t *testing.T) {
+	t.Parallel()
+	// 3 планеты, прод выше порога, но флот < 200_000 metal-eq → Military.
+	planets := []PlanetSnapshot{
+		{Rates: Resources{Metal: 50}, Ships: map[int]int64{31: 5}}, // 5×4000=20k
+		{Rates: Resources{Metal: 50}, Ships: map[int]int64{}},
+		{Rates: Resources{Metal: 50}, Ships: map[int]int64{}},
+	}
+	got := detectPhase(PlayerSnapshot{Planets: planets})
+	if got != StrategyMilitary {
+		t.Errorf("weak fleet: detectPhase = %s, want Military", got)
+	}
+}
+
+func TestDetectPhase_StrongFleet(t *testing.T) {
+	t.Parallel()
+	// 3 планеты, прод выше порога, флот >= 200k → Defense.
+	planets := []PlanetSnapshot{
+		{Rates: Resources{Metal: 50}, Ships: map[int]int64{34: 5}}, // battleship 5×60000=300k
+		{Rates: Resources{Metal: 50}, Ships: map[int]int64{}},
+		{Rates: Resources{Metal: 50}, Ships: map[int]int64{}},
+	}
+	got := detectPhase(PlayerSnapshot{Planets: planets})
+	if got != StrategyDefense {
+		t.Errorf("strong fleet: detectPhase = %s, want Defense", got)
 	}
 }
 

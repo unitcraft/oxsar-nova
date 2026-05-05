@@ -474,8 +474,83 @@ func formatDuration(seconds int) string {
 
 // detectPhase — эвристика фазы развития для StrategyAuto.
 //
-// Реализация в Ф.5 — пока возвращает Economy как безопасный дефолт
-// (большинство игроков на ранней стадии экономика-ориентированы).
-func detectPhase(_ PlayerSnapshot) Strategy {
-	return StrategyEconomy
+// Возвращает целевую стратегию исходя из состояния игрока:
+//   1. Меньше 3 планет → Expansion (пока есть куда расти, расти).
+//   2. Слабое производство (< 100 metal/sec суммарно) → Economy.
+//   3. Текущая ценность военного флота < 200_000 metal-eq → Military
+//      (нужно строить флот для защиты/атак).
+//   4. Иначе → Defense (наращивать оборонные установки и щиты).
+//
+// Пороговые значения подобраны на основе типичных F2P-кривых: к 3-й
+// планете игрок уже имеет ~50-100 metal/sec, после неё фокус смещается
+// в сторону армии; defense становится приоритетом, когда флот собран,
+// и нужно защитить ресурсы от соседей.
+func detectPhase(snap PlayerSnapshot) Strategy {
+	if len(snap.Planets) < 3 {
+		return StrategyExpansion
+	}
+
+	var totalMetalRate float64
+	for _, ps := range snap.Planets {
+		totalMetalRate += ps.Rates.Metal
+	}
+	if totalMetalRate < 100 { // 100 metal/sec суммарно ≈ Earth с metal_mine ур.10
+		return StrategyEconomy
+	}
+
+	// Ценность флота на всех планетах в metal-eq (по cost).
+	var fleetValue int64
+	for _, ps := range snap.Planets {
+		// Используем те же "цены" что в metalEqShipValue, но без catalog
+		// (catalog здесь не доступен — detectPhase pure-функция от snapshot).
+		// Считаем по cargo*0.5 как proxy: грубо, но монотонно растёт с флотом.
+		for unitID, count := range ps.Ships {
+			fleetValue += approxShipValue(unitID) * count
+		}
+	}
+	if fleetValue < 200_000 {
+		return StrategyMilitary
+	}
+
+	return StrategyDefense
+}
+
+// approxShipValue — грубая оценка ценности корабля без catalog.
+//
+// Используется только в detectPhase для ranking-эвристики; даёт
+// stable-relative порядок без абсолютной точности. Значения подобраны
+// под configs/ships.yml: small_transporter=4k, large=12k, light_fighter=4k,
+// cruiser=27k, battleship=60k, deathstar=10M и т.д.
+func approxShipValue(unitID int) int64 {
+	switch unitID {
+	case 29: // small_transporter
+		return 4000
+	case 30: // large_transporter
+		return 12000
+	case 31: // light_fighter
+		return 4000
+	case 32: // heavy_fighter
+		return 10000
+	case 33: // cruiser
+		return 27000
+	case 34: // battleship
+		return 60000
+	case 35: // colonizer (legacy 36 в expedition.go)
+		return 10000
+	case 36: // colony ship
+		return 30000
+	case 37: // recycler
+		return 16000
+	case 38: // espionage probe
+		return 1000
+	case 39: // bomber
+		return 75000
+	case 40: // satellite
+		return 2000
+	case 41: // destroyer
+			return 125000
+	case 42: // deathstar
+		return 10_000_000
+	}
+	return 0
 }
