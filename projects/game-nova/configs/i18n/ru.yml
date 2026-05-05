@@ -3448,6 +3448,7 @@ p2pExchange:
   colPrice: "Цена"
   colStatus: "Статус"
   colProfit: "Прибыль"
+  status_active: "Активен"
   status_sold: "Продан"
   status_cancelled: "Отозван"
   status_expired: "Истёк"

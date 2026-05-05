@@ -3432,6 +3432,7 @@ p2pExchange:
   colPrice: "Price"
   colStatus: "Status"
   colProfit: "Profit"
+  status_active: "Active"
   status_sold: "Sold"
   status_cancelled: "Cancelled"
   status_expired: "Expired"

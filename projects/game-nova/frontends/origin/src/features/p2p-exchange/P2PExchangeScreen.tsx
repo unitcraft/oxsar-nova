@@ -58,20 +58,20 @@ export function P2PExchangeScreen() {
       <div className="idiv" style={{ textAlign: 'right' }}>
         {/* План 72.1.45 §9: ссылка на admin-страницу настроек брокера. */}
         <Link to="/p2p-exchange/opts">
-          ⚙ {t('exchangeOpts', 'title') || 'Настройки биржи'}
+          ⚙ {t('exchangeOpts', 'title')}
         </Link>
       </div>
       <table className="ntable">
         <thead>
           <tr>
             <th colSpan={4}>
-              {data?.title || t('p2pExchange', 'title') || 'Биржа: статистика лотов'}
+              {data?.title || t('p2pExchange', 'title')}
             </th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>{t('statistics', 'dateFirst') || 'С'}:</td>
+            <td>{t('statistics', 'dateFirst')}:</td>
             <td>
               <input
                 type="date"
@@ -82,7 +82,7 @@ export function P2PExchangeScreen() {
                 }}
               />
             </td>
-            <td>{t('statistics', 'dateLast') || 'По'}:</td>
+            <td>{t('statistics', 'dateLast')}:</td>
             <td>
               <input
                 type="date"
@@ -95,7 +95,7 @@ export function P2PExchangeScreen() {
             </td>
           </tr>
           <tr>
-            <td>{t('p2pExchange', 'sortField') || 'Сортировка'}:</td>
+            <td>{t('p2pExchange', 'sortField')}:</td>
             <td>
               <select
                 value={sortField}
@@ -104,19 +104,19 @@ export function P2PExchangeScreen() {
                 }
               >
                 <option value="date">
-                  {t('p2pExchange', 'colDate') || 'Дата'}
+                  {t('p2pExchange', 'colDate')}
                 </option>
                 <option value="lot">
-                  {t('p2pExchange', 'colLot') || 'Лот'}
+                  {t('p2pExchange', 'colLot')}
                 </option>
                 <option value="lot_amount">
-                  {t('p2pExchange', 'colAmount') || 'Кол-во'}
+                  {t('p2pExchange', 'colAmount')}
                 </option>
                 <option value="lot_price">
-                  {t('p2pExchange', 'colPrice') || 'Цена'}
+                  {t('p2pExchange', 'colPrice')}
                 </option>
                 <option value="lot_profit">
-                  {t('p2pExchange', 'colProfit') || 'Прибыль'}
+                  {t('p2pExchange', 'colProfit')}
                 </option>
               </select>
             </td>
@@ -128,10 +128,10 @@ export function P2PExchangeScreen() {
                 }
               >
                 <option value="desc">
-                  {t('statistics', 'bsSortDesc') || 'по убыванию'}
+                  {t('statistics', 'bsSortDesc')}
                 </option>
                 <option value="asc">
-                  {t('statistics', 'bsSortAsc') || 'по возрастанию'}
+                  {t('statistics', 'bsSortAsc')}
                 </option>
               </select>
             </td>
@@ -144,28 +144,28 @@ export function P2PExchangeScreen() {
           <thead>
             <tr>
               <th colSpan={4}>
-                {t('p2pExchange', 'summary') || 'Итого за период'}
+                {t('p2pExchange', 'summary')}
               </th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>{t('p2pExchange', 'totalLots') || 'Всего лотов'}:</td>
+              <td>{t('p2pExchange', 'totalLots')}:</td>
               <td>
                 <b>{formatNumber(summary.total)}</b>
               </td>
-              <td>{t('p2pExchange', 'soldLots') || 'Продано'}:</td>
+              <td>{t('p2pExchange', 'soldLots')}:</td>
               <td>
                 <b className="true">{formatNumber(summary.sold)}</b>
               </td>
             </tr>
             <tr>
-              <td>{t('p2pExchange', 'turnover') || 'Оборот'}:</td>
+              <td>{t('p2pExchange', 'turnover')}:</td>
               <td>
                 <b>{formatNumber(summary.turnover)}</b>
               </td>
               <td>
-                {t('p2pExchange', 'profit') || 'Прибыль'} ({fee}%):
+                {t('p2pExchange', 'profit')} ({fee}%):
               </td>
               <td>
                 <b className="true">{formatNumber(Math.round(summary.profit))}</b>
@@ -178,12 +178,12 @@ export function P2PExchangeScreen() {
       <table className="ntable">
         <thead>
           <tr>
-            <th>{t('p2pExchange', 'colDate') || 'Дата'}</th>
-            <th>{t('p2pExchange', 'colLot') || 'Лот'}</th>
-            <th>{t('p2pExchange', 'colAmount') || 'Кол-во'}</th>
-            <th>{t('p2pExchange', 'colPrice') || 'Цена'}</th>
-            <th>{t('p2pExchange', 'colStatus') || 'Статус'}</th>
-            <th>{t('p2pExchange', 'colProfit') || 'Прибыль'}</th>
+            <th>{t('p2pExchange', 'colDate')}</th>
+            <th>{t('p2pExchange', 'colLot')}</th>
+            <th>{t('p2pExchange', 'colAmount')}</th>
+            <th>{t('p2pExchange', 'colPrice')}</th>
+            <th>{t('p2pExchange', 'colStatus')}</th>
+            <th>{t('p2pExchange', 'colProfit')}</th>
           </tr>
         </thead>
         <tbody>
@@ -197,7 +197,7 @@ export function P2PExchangeScreen() {
           {!q.isLoading && rows.length === 0 && (
             <tr>
               <td colSpan={6} className="center">
-                <i>{t('alliance', 'nothing') || 'Нет данных'}</i>
+                <i>{t('alliance', 'nothing')}</i>
               </td>
             </tr>
           )}
@@ -219,7 +219,7 @@ export function P2PExchangeScreen() {
                         : ''
                   }
                 >
-                  {t('p2pExchange', `status_${row.status}`) || row.status}
+                  {t('p2pExchange', `status_${row.status}`)}
                 </span>
               </td>
               <td className="center">
