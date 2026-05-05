@@ -1011,6 +1011,7 @@ research:
   inProgress: In progress
   busy: Busy
   study: Research
+  moonNotAllowed: Research is not available on a moon
 
 shipyard:
   title: "Shipyard — {{planetName}}"
@@ -2542,6 +2543,9 @@ info:
   moonHydrogenLabFullDesc: ""
   moonRoboticFactory: ""
   moonRoboticFactoryFullDesc: ""
+  moonLab: Moon Lab
+  moonLabDesc: Allows conducting research while on a moon.
+  moonLabFullDesc: The Moon Lab allows you to conduct research directly on a moon. The lab level affects research speed.
   nanoFactory: ""
   nanoFactoryFullDesc: ""
   noArtefacts: ""

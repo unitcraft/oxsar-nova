@@ -136,13 +136,16 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 			return err
 		}
 
-		// 3. Research lab должен быть хотя бы 1 уровня (иначе не можем
-		//    исследовать в принципе — это частный случай requirements,
-		//    но полезно явно).
+		// 3. Research lab (или moon_lab на луне) должен быть хотя бы 1 уровня.
+		//    Legacy: is_lab_exist = research_lab || moon_lab.
+		labKey := "research_lab"
+		if p.IsMoon {
+			labKey = "moon_lab"
+		}
 		var labLvl int
 		err := tx.QueryRow(ctx, `
 			SELECT level FROM buildings WHERE planet_id = $1 AND unit_id = $2
-		`, planetID, s.catalog.Buildings.Buildings["research_lab"].ID).Scan(&labLvl)
+		`, planetID, s.catalog.Buildings.Buildings[labKey].ID).Scan(&labLvl)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("lab level: %w", err)
 		}
@@ -150,12 +153,16 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 			return ErrNoResearchLab
 		}
 
-		// План 20 Ф.8: IGR network. При igr_level >= 1 лаба-источник
-		// объединяется с топ-N других лабораторий игрока (N = igr_level).
-		// Формула effective = sum(top (igr+1) lab-levels DESC).
-		effectiveLab, err := s.effectiveLabLevel(ctx, tx, userID, planetID, labLvl)
-		if err != nil {
-			return fmt.Errorf("effective lab: %w", err)
+		// IGR network применяется только для обычных research_lab (не moon_lab).
+		// На луне эффективная лаба = уровень moon_lab на этой луне (legacy 1:1).
+		effectiveLab := labLvl
+		if !p.IsMoon {
+			// План 20 Ф.8: IGR network. При igr_level >= 1 лаба-источник
+			// объединяется с топ-N других лабораторий игрока (N = igr_level).
+			effectiveLab, err = s.effectiveLabLevel(ctx, tx, userID, planetID, labLvl)
+			if err != nil {
+				return fmt.Errorf("effective lab: %w", err)
+			}
 		}
 
 		// 4. Текущий уровень исследования (у игрока, не у планеты).

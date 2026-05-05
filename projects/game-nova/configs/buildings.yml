@@ -252,3 +252,13 @@ buildings:
     max_level: 40
     display_order: 570
     demolish: 2.0
+
+  moon_lab:
+    id: 350
+    moon_only: true
+    cost_base:   { metal: 5000000, silicon: 10000000, hydrogen: 90000000 }
+    cost_factor: 2.0
+    time_base_seconds: 60
+    max_level: 5
+    display_order: 3500
+    demolish: 2.0
