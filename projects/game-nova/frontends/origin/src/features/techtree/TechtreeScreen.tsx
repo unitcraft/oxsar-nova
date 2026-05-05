@@ -99,7 +99,7 @@ function SectionRows({ titleKey, items, routePrefix }: SectionRowsProps) {
     <>
       <tr>
         <th colSpan={2}>{t('techtree', titleKey)}</th>
-        <th>{t('alliance', 'rank') || 'Уровень / Требования'}</th>
+        <th>{t('techtree', 'levelRequirements')}</th>
       </tr>
       {sorted.map((n) => {
         const i18nKey = n.key.replace(/_([a-z])/g, (_, c: string) =>

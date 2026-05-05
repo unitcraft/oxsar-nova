@@ -9,7 +9,7 @@ export function ShipyardScreen() {
   return (
     <BuildPanel
       group="ship"
-      title={t('buildings', 'shipConstruction') ?? 'Верфь'}
+      title={t('buildings', 'shipConstruction')}
     />
   );
 }

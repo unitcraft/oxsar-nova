@@ -25,6 +25,7 @@
 //   <ConfirmDialog open={...} title={...} onConfirm={...} onCancel={...} />
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from '@/i18n/i18n';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -41,6 +42,7 @@ export interface ConfirmDialogProps {
 
 export function ConfirmDialog(props: ConfirmDialogProps): React.ReactElement | null {
   const ref = useRef<HTMLDialogElement | null>(null);
+  const { t } = useTranslation();
 
   // Открытие/закрытие через native API.
   useEffect(() => {
@@ -100,7 +102,7 @@ export function ConfirmDialog(props: ConfirmDialogProps): React.ReactElement | n
                 autoFocus
                 style={{ marginRight: 8 }}
               >
-                {props.cancelLabel ?? 'Отмена'}
+                {props.cancelLabel ?? t('common', 'cancel')}
               </button>
               <button
                 type="button"
@@ -112,7 +114,7 @@ export function ConfirmDialog(props: ConfirmDialogProps): React.ReactElement | n
                     : undefined
                 }
               >
-                {props.confirmLabel ?? 'OK'}
+                {props.confirmLabel ?? t('common', 'ok')}
               </button>
             </td>
           </tr>

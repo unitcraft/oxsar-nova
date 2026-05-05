@@ -104,7 +104,7 @@ export function MessagesScreen() {
         </Link>{' '}
         |{' '}
         <Link to="/msg/inbox" className={folder === 'inbox' && numericFolderId === null ? 'true' : ''}>
-          {t('overview', 'unreadPlural') || 'Входящие'}
+          {t('overview', 'unreadPlural')}
         </Link>{' '}
         |{' '}
         <Link to="/msg/sent" className={folder === 'sent' ? 'true' : ''}>
@@ -271,7 +271,7 @@ export function MessageComposeScreen() {
   const sendMut = useMutation({
     mutationFn: sendMessage,
     onSuccess: () => {
-      setOkMsg(t('message', 'messagesReported') || '✓');
+      setOkMsg(t('message', 'messagesReported'));
       setTo('');
       setSubject('');
       setBody('');
@@ -285,7 +285,7 @@ export function MessageComposeScreen() {
     setOkMsg(null);
     setErrMsg(null);
     if (!to.trim() || !subject.trim()) {
-      setErrMsg(t('search', 'promptEmpty') || 'fill required fields');
+      setErrMsg(t('search', 'promptEmpty'));
       return;
     }
     sendMut.mutate({ to: to.trim(), subject: subject.trim(), body });

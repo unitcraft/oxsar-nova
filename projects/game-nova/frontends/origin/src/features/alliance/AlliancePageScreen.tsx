@@ -111,14 +111,14 @@ export function AlliancePageScreen() {
               если задан (legacy дисплей под именем основателя). */}
           {al.foundername && (
             <tr>
-              <td>{t('alliance', 'foundername') || 'Основатель'}</td>
+              <td>{t('alliance', 'foundername')}</td>
               <td>{al.foundername}</td>
             </tr>
           )}
           {/* План 72.1.54: homepage URL показывается если show_homepage=true. */}
           {al.homepage && al.show_homepage && (
             <tr>
-              <td>{t('alliance', 'homepageUrl') || 'Сайт'}</td>
+              <td>{t('alliance', 'homepageUrl')}</td>
               <td>
                 <a href={al.homepage} target="_blank" rel="noopener noreferrer">
                   {al.homepage}

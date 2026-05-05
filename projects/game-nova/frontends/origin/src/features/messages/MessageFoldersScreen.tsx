@@ -31,13 +31,13 @@ export function MessageFoldersScreen() {
       <table className="ntable">
         <thead>
           <tr>
-            <th colSpan={4}>{t('message', 'folders') || 'Папки'}</th>
+            <th colSpan={4}>{t('message', 'folders')}</th>
           </tr>
           <tr>
             <th></th>
             <th>{t('message', 'folder')}</th>
-            <th className="center">{t('message', 'total') || 'Всего'}</th>
-            <th className="center">{t('message', 'unread') || 'Новые'}</th>
+            <th className="center">{t('message', 'total')}</th>
+            <th className="center">{t('message', 'unread')}</th>
           </tr>
         </thead>
         <tbody>

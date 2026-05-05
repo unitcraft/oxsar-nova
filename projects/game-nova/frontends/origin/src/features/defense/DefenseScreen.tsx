@@ -9,7 +9,7 @@ export function DefenseScreen() {
   return (
     <BuildPanel
       group="defense"
-      title={t('buildings', 'defense') ?? 'Оборона'}
+      title={t('buildings', 'defense')}
     />
   );
 }

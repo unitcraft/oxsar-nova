@@ -781,6 +781,9 @@ buildings:
   vipHint: "Instant start for credits"
   vipConfirm: "Instant start for credits?"
   cancelTask: "Cancel task"
+  # План 72.1.59: capacity indicator on DefenseScreen.
+  shieldFields: "Shield fields"
+  rocketFields: "Rocket fields"
 # TODO: en
 colonize:
   success.title: ""
@@ -1698,6 +1701,7 @@ techtree:
   kindResearch: Research
   kindShips: Fleet
   kindDefense: Defense
+  levelRequirements: Level / Requirements
 
 profession:
   title: Profession
@@ -1707,7 +1711,7 @@ profession:
   available: available
   chooseBtn: Choose
   confirmChoose: "Choose profession «{{name}}»? Change is possible once every {{days}} days."
-  changeCostInfo: "Profession change cost — {{cost}} credits. Free in {{days}} days."
+  changeCostInfo: "Profession change cost — {{cost}} credits. Free in {{days}} days {{time}}."
   changeFreeInfo: "You can change profession for free now. Next free change in {{days}} days, or anytime for {{cost}} credits."
   confirmBtn: Confirm
   cancelBtn: Cancel
@@ -3453,3 +3457,7 @@ buildinginfo:
   packBuilding: "📦 Pack building"
   packResearch: "📦 Pack research"
   packConfirm: "Pack into artefact? Level drops by 1, you'll receive a packed artefact in inventory. Requires a packing artefact on this planet."
+
+common:
+  ok: OK
+  cancel: Cancel

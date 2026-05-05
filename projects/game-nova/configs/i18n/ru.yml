@@ -781,6 +781,9 @@ buildings:
   vipHint: "Мгновенный старт за кредиты"
   vipConfirm: "Мгновенный старт за кредиты?"
   cancelTask: "Отменить задачу"
+  # План 72.1.59: индикатор capacity на DefenseScreen.
+  shieldFields: "Поля щитов"
+  rocketFields: "Поля ракет"
 colonize:
   success.title: "Основана колония {{coords}}"
   success.body: "Новая планета «{{planetName}}» на координатах [{{coords}}]. Стартовые ресурсы: {{metal}} M / {{silicon}} Si / {{hydrogen}} H."
@@ -1696,6 +1699,7 @@ techtree:
   kindResearch: Исследования
   kindShips: Флот
   kindDefense: Оборона
+  levelRequirements: Уровень / Требования
 
 profession:
   title: Профессия
@@ -1708,7 +1712,10 @@ profession:
   chooseBtn: Выбрать
   confirmChoose: "Выбрать профессию «{{name}}»? Смена возможна раз в {{days}} дней."
   # План 72.1.58: legacy PROFESSION_CHANGE_COST_INFO / _NO_COST_INFO 1:1.
-  changeCostInfo: "Стоимость смены профессии — {{cost}} кредитов. Бесплатно — через {{days}} дней."
+  # План 72.1.59: {{days}} теперь содержит готовую countdown-строку
+  # «N дней HH:MM:SS» (frontend тикает каждую секунду до
+  # next_change_allowed).
+  changeCostInfo: "Стоимость смены профессии — {{cost}} кредитов. Бесплатно — через {{days}} дней {{time}}."
   changeFreeInfo: "Сейчас можно изменить профессию бесплатно. В следующий раз изменить можно будет через {{days}} дней или за {{cost}} кредитов в любое время."
   confirmBtn: Подтвердить
   cancelBtn: Отмена
@@ -3467,3 +3474,7 @@ buildinginfo:
   packBuilding: "📦 Упаковать здание"
   packResearch: "📦 Упаковать исследование"
   packConfirm: "Упаковать в артефакт? Уровень понизится на 1, в инвентаре появится packed-артефакт. Требуется packing-артефакт на этой планете."
+
+common:
+  ok: OK
+  cancel: Отмена

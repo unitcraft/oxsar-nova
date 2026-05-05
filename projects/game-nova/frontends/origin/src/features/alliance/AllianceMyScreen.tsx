@@ -141,7 +141,7 @@ export function AllianceMyScreen() {
                   className="button"
                   onClick={async () => {
                     if (await confirm({
-                      title: t('alliance', 'disbandBtn') || 'Распустить',
+                      title: t('alliance', 'disbandBtn'),
                       message: t('alliance', 'disbandConfirm', { name: al.name }),
                       destructive: true,
                     })) {
@@ -245,8 +245,8 @@ function ApplicationsTable({ allianceID }: { allianceID: string }) {
         <tr>
           <th>{t('alliance', 'candidate')}</th>
           {/* План 72.1.45 §3: координаты home-планеты + очки. */}
-          <th>{t('alliance', 'candidateCoords') || 'Координаты'}</th>
-          <th>{t('alliance', 'memberPoints') || 'Очки'}</th>
+          <th>{t('alliance', 'candidateCoords')}</th>
+          <th>{t('alliance', 'memberPoints')}</th>
           <th>{t('alliance', 'applicationContent')}</th>
           <th>{t('alliance', 'applicationTime')}</th>
           <th>{t('alliance', 'operations')}</th>
