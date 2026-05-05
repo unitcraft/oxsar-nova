@@ -89,7 +89,7 @@ alliance:
   homepageUrl: "Сайт альянса (URL)"
   showHomepage: "Показывать всем"
   foundername: "Title основателя"
-  showMember: "Memberlist виден всем"
+  showMember: "Список участников виден всем"
   sortRank: "По рангу"
   sortName: "По имени"
   sortPoints: "По очкам"
@@ -102,9 +102,9 @@ alliance:
   broadcastBody: "Сообщение"
   broadcastBtn: "📨 Отправить всем"
   allianceAlreadyExists: Альянс с таким названием или аббревиатурой уже есть.
-  allianceDiplomacyApplications: Текущие предложения от альнсов
+  allianceDiplomacyApplications: Текущие предложения от альянсов
   allianceDiplomacyRelationships: Дипломатические отношения с другими альянсами
-  allianceFoundBlockedByUserPoints: "Вы не можете сейчас создать альянс, т.к. у Вас слишком мало очков. Необходимо иметь как минимум {@min_points} очков, у Вас сейчас {@user_points} очков."
+  allianceFoundBlockedByUserPoints: "вы не можете сейчас создать альянс: у вас слишком мало очков. Необходимо иметь как минимум {@min_points} очков, у вас сейчас {@user_points}."
   allianceManagement: Управление альянсом
   allianceName: "Название альянса ({config}MIN_CHARS_ALLY_NAME{/config}-{config}MAX_CHARS_ALLY_NAME{/config} символов)"
   allianceNameInvalid: Неверное название альянса.
@@ -132,7 +132,7 @@ alliance:
   candidates: "Претенденты: {{allianceName}}"
   ceasefire: Перемирие
   confederation: Союзник
-  confirmAbandonAlliance: Вы уверены, что хотите РАСПУСТИТЬ АЛЬЯНС?
+  confirmAbandonAlliance: вы уверены, что хотите РАСПУСТИТЬ АЛЬЯНС?
   createNewRank: Создание нового статуса
   determine: Расторгнуть
   diplomacy: Дипломатия
@@ -153,9 +153,9 @@ alliance:
   management: Управление альянсом
   marked: "Действие:"
   member: Члены
-  memberKicked: "Игрок {{username}} исключен из альянса."
-  memberKickedSubject: Участник исключен
-  memberLeft: "Участник {{username}} решил, что покинет альянс."
+  memberKicked: "Игрок {{username}} исключён из альянса."
+  memberKickedSubject: Участник исключён
+  memberLeft: "Участник {{username}} покинул альянс."
   memberLeftSubject: Игрок покидает альянс
   memberList: Список альянса
   memberlistSort: "Сортировать участников по:"
@@ -163,7 +163,7 @@ alliance:
   message: Сообщение
   messageByAlliance: "Сообщение альянса: {@senderAlliance}"
   name: Название
-  newMemberJoined: "В альянсе новый участник. Добро пожаловать {{username}}"
+  newMemberJoined: "В альянсе новый участник. Добро пожаловать, {{username}}!"
   newMemberJoinedSubject: Новый участник
   newbie: Новичок
   nothing: ничего
@@ -192,7 +192,7 @@ alliance:
   welcome: Добро пожаловать в альянс!
   writeGlobalMail: Написать всему альянсу
   joined.title: Вы вступили в альянс
-  joined.body: "Вы стали членом альянса [{{allianceName}}]."
+  joined.body: "вы стали членом альянса [{{allianceName}}]."
   application.title: Заявка на вступление в альянс
   application.body: "Игрок {{username}} подал заявку на вступление в ваш альянс [{{allianceName}}]."
   approved.title: Заявка одобрена
@@ -200,7 +200,7 @@ alliance:
   rejected.title: Заявка отклонена
   rejected.body: "Ваша заявка на вступление в альянс [{{allianceName}}] отклонена."
   title: Альянс
-  noAlliance: Вы не состоите в альянсе
+  noAlliance: вы не состоите в альянсе
   createTitle: Создать альянс
   createNamePlaceholder: Название альянса
   createTagPlaceholder: Тег [3-5 букв]
@@ -238,7 +238,7 @@ alliance:
   colRelation: Отношение
   colActions: Действия
   transferLeadership.codeTitle: Код для передачи лидерства альянса
-  transferLeadership.codeBody: "Код подтверждения передачи лидерства альянса: {{code}}\nДействителен до {{expiresAt}}.\n\nЕсли это запросили не Вы — просто проигнорируйте, лидерство не будет передано."
+  transferLeadership.codeBody: "Код подтверждения передачи лидерства альянса: {{code}}\nДействителен до {{expiresAt}}.\n\nЕсли это запросили не вы — просто проигнорируйте, лидерство не будет передано."
   # План 67 Ф.5: расширения alliance UI.
   descriptions.title: Описания альянса
   descriptions.tabExternal: Внешнее
