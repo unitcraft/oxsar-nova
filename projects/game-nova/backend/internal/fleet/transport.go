@@ -976,18 +976,27 @@ type srcPlanet struct {
 
 func (s *TransportService) readSrcPlanet(ctx context.Context, tx pgx.Tx, planetID string) (srcPlanet, error) {
 	var p srcPlanet
+	// metal/silicon/hydrogen в БД — numeric(20,4) (могут иметь дробную
+	// часть после applyTickInTx). pgx v5 не может scan напрямую в int64,
+	// поэтому читаем во float64 и приводим к int64 (truncation — ок,
+	// дробные доли ресурса не имеют игрового смысла; legacy oxsar2 тоже
+	// округлял вниз при показе и расчётах).
+	var metalF, siliconF, hydrogenF float64
 	err := tx.QueryRow(ctx, `
 		SELECT user_id, galaxy, system, position, metal, silicon, hydrogen
 		FROM planets WHERE id = $1 AND destroyed_at IS NULL
 		FOR UPDATE
 	`, planetID).Scan(&p.userID, &p.galaxy, &p.system, &p.position,
-		&p.metal, &p.silicon, &p.hydrogen)
+		&metalF, &siliconF, &hydrogenF)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return p, ErrPlanetOwnership // «нет источника» ≈ «не твоя»
 		}
 		return p, fmt.Errorf("read src planet: %w", err)
 	}
+	p.metal = int64(metalF)
+	p.silicon = int64(siliconF)
+	p.hydrogen = int64(hydrogenF)
 	return p, nil
 }
 
