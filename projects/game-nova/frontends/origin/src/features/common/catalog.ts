@@ -54,6 +54,7 @@ export const CATALOG: CatalogEntry[] = [
   { id: 103, group: 'research', i18n: 'info.ballisticsTech',    icon: 'ballistics_tech' },    // 172
   { id: 104, group: 'research', i18n: 'info.maskingTech',       icon: 'masking_tech' },       // 174
   { id: 18,  group: 'research', i18n: 'info.energyTech',        icon: 'energy_tech' },        // 180
+  { id: 111, group: 'research', i18n: 'info.artefactsTech',     icon: 'artefacts_tech' },     // 195
   { id: 19,  group: 'research', i18n: 'info.hyperspaceTech',    icon: 'hyperspace_tech' },    // 190
   { id: 20,  group: 'research', i18n: 'info.combustionEngine',  icon: 'combustion_engine' },  // 200
   { id: 21,  group: 'research', i18n: 'info.impulseEngine',     icon: 'impulse_engine' },     // 210

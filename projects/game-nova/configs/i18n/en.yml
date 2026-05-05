@@ -379,6 +379,9 @@ artefactInfo:
   artefactPackedBuildingFullDesc: ""
   artefactPackedResearchDesc: ""
   artefactPackedResearchFullDesc: ""
+  artefactsTech: The study of artifacts
+  artefactsTechDesc: The technology allows you to activate artifacts. The number of simultaneous artifacts on all the planets increases with each level by 1.
+  artefactsTechFullDesc: This technology allows the use of artifacts and keep some of them in operation for some time. The maximum number of activated artifacts on all the planets is limited to the level of the technology.
   artefactPackingBuildingDesc: ""
   artefactPackingBuildingFullDesc: ""
   artefactPackingResearchDesc: ""

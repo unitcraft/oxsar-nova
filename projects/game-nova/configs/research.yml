@@ -55,6 +55,12 @@ research:
     cost_factor: 2.0
     cost_base: { metal: 0, silicon: 800, hydrogen: 400 }
 
+  artefacts_tech:
+    id: 111
+    display_order: 195
+    cost_factor: 2.0
+    cost_base: { metal: 1000, silicon: 1000, hydrogen: 1000 }
+
   hyperspace_tech:
     id: 19
     display_order: 190
