@@ -16572,3 +16572,44 @@ not-a-fix + BA-019 mitigated.
   i18n-consistency ok.
 
   5 commits eb24be84fd..(этот) в branch remaster-finalization.
+
+2026-05-05 — план 72.1.59 «вынос текстов профессий из YAML в i18n»
+
+  Замечание пользователя: в configs/professions.yml лежали label/
+  description (русский UI). Это нарушает архитектурное правило —
+  балансовый YAML должен содержать только числа (как у buildings/
+  research/ships). Кроме того, English-юзер получал русский текст в
+  AutoMsg о смене профессии: Service.labelFor(key, lang) возвращал
+  spec.Label из YAML, игнорируя lang.
+
+  Сделано:
+    - configs/professions.yml: убраны поля label/description у всех
+      5 профессий (universal/miner/attacker/defender/tank). Остались
+      sort_order + bonus + malus.
+    - configs/i18n/{ru,en}.yml: в группу `profession` добавлены
+      ключи <key>Label и <key>Desc — 10 новых строк × 2 локали.
+    - backend/internal/config/catalog.go: ProfessionSpec без полей
+      Label/Description.
+    - backend/internal/profession/service.go: ProfessionDTO без
+      Label/Description; CurrentInfo без Label; Service.List/Get
+      без присвоений; Service.labelFor() теперь идёт через
+      s.bundle.Tr(lang, "profession", key+"Label", nil) → AutoMsg
+      получает корректную локаль (бок-эффект-фикс).
+    - backend/internal/balance/override.go: cloneProfessions без
+      копирования Label.
+    - frontends/origin/src/api/types.ts: Profession и ProfessionInfo
+      без label/description.
+    - ProfessionScreen.tsx: имена/описания читаются через
+      t('profession', `${p.key}Label` / `${p.key}Desc`).
+    - MainScreen.tsx: professionLabel = t('profession',
+      `${profKey}Label`) вместо profQ.data.label.
+
+  API-break: /api/professions и /api/professions/me больше не отдают
+  поля label/description. Origin-фронт правится в этом же коммите;
+  legacy nova-фронт эти эндпоинты не использует (проверено grep).
+
+  Tests: go build ./..., go vet ./..., go test
+  ./internal/{profession,config,balance}/... — все зелёные. tsc
+  --noEmit чистый.
+
+  План: docs/plans/72.1.59-profession-i18n.md.

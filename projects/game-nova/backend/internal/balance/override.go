@@ -498,9 +498,11 @@ func cloneProfessions(src map[string]config.ProfessionSpec) map[string]config.Pr
 			malus[mk] = mv
 		}
 		dst[k] = config.ProfessionSpec{
-			Label: v.Label,
-			Bonus: bonus,
-			Malus: malus,
+			// План 72.1.59: Label/Description вынесены в i18n —
+			// клонируем только числовые поля.
+			SortOrder: v.SortOrder,
+			Bonus:     bonus,
+			Malus:     malus,
 		}
 	}
 	return dst

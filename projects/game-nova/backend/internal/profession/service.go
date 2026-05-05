@@ -76,9 +76,10 @@ func (s *Service) WithBundle(b *i18n.Bundle) *Service {
 // CurrentInfo — текущая профессия и когда следующая смена будет доступна.
 // План 72.1.47: добавлены ChangeCost (0 после cooldown, иначе ChangeCost=1000)
 // и DaysRemain (legacy `getProfessionChangeDaysRemain()`) для UI.
+// План 72.1.59: убрано Label — фронт переводит ключ через i18n
+// (group `profession`, key `<profession>Label`).
 type CurrentInfo struct {
 	Profession        string     `json:"profession"`
-	Label             string     `json:"label"`
 	NextChangeAllowed *time.Time `json:"next_change_allowed,omitempty"`
 	ChangeCost        int64      `json:"change_cost"`
 	DaysRemain        int        `json:"days_remain"`
@@ -91,12 +92,10 @@ func (s *Service) List() []ProfessionDTO {
 	out := make([]ProfessionDTO, 0, len(s.catalog.Professions.Professions))
 	for key, spec := range s.catalog.Professions.Professions {
 		out = append(out, ProfessionDTO{
-			Key:         key,
-			SortOrder:   spec.SortOrder,
-			Label:       spec.Label,
-			Description: spec.Description,
-			Bonus:       spec.Bonus,
-			Malus:       spec.Malus,
+			Key:       key,
+			SortOrder: spec.SortOrder,
+			Bonus:     spec.Bonus,
+			Malus:     spec.Malus,
 		})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
@@ -127,9 +126,6 @@ func (s *Service) Get(ctx context.Context, userID string) (CurrentInfo, error) {
 		displayKey = UniversalKey
 	}
 	info := CurrentInfo{Profession: displayKey}
-	if spec, ok := s.catalog.Professions.Professions[displayKey]; ok {
-		info.Label = spec.Label
-	}
 	if changedAt != nil {
 		next := changedAt.Add(ChangeInterval)
 		info.NextChangeAllowed = &next
@@ -243,13 +239,19 @@ func (s *Service) userLang(ctx context.Context, tx pgx.Tx, userID string) i18n.L
 }
 
 // labelFor возвращает локализованную метку профессии для AutoMsg.
+// План 72.1.59: имя берётся из i18n group `profession` ключ
+// `<key>Label` (раньше был spec.Label из YAML — игнорировал lang).
 // Для NoProfession — i18n-fallback из autoMessages.
+// Если bundle не подключён (graceful degradation) — возвращаем key.
 func (s *Service) labelFor(key string, lang i18n.Lang) string {
+	if s.bundle == nil {
+		return key
+	}
 	if key == NoProfession {
 		return s.bundle.Tr(lang, "autoMessages", "creditProfessionChanged.noneLabel", nil)
 	}
-	if spec, ok := s.catalog.Professions.Professions[key]; ok {
-		return spec.Label
+	if _, ok := s.catalog.Professions.Professions[key]; ok {
+		return s.bundle.Tr(lang, "profession", key+"Label", nil)
 	}
 	return key
 }
@@ -288,12 +290,13 @@ func BonusFromKey(cat *config.Catalog, professionKey string) map[string]int {
 	return out
 }
 
+// ProfessionDTO — балансовый ответ /api/professions. План 72.1.59:
+// label/description отсутствуют — фронт переводит ключ через i18n
+// (group `profession`, key `<key>Label` / `<key>Desc`).
 type ProfessionDTO struct {
-	Key         string         `json:"key"`
+	Key string `json:"key"`
 	// SortOrder — порядок сортировки для UI (план 72.1.58).
-	SortOrder   int            `json:"sort_order,omitempty"`
-	Label       string         `json:"label"`
-	Description string         `json:"description,omitempty"`
-	Bonus       map[string]int `json:"bonus,omitempty"`
-	Malus       map[string]int `json:"malus,omitempty"`
+	SortOrder int            `json:"sort_order,omitempty"`
+	Bonus     map[string]int `json:"bonus,omitempty"`
+	Malus     map[string]int `json:"malus,omitempty"`
 }

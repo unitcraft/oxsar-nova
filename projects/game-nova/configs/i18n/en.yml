@@ -1726,6 +1726,18 @@ profession:
   errNotEnoughCredit: "Not enough credits to change profession (need {{cost}})."
   errUnknownProfession: Unknown profession.
   errGeneric: "Profession change failed: {{msg}}"
+  # Profession names/descriptions, moved from configs/professions.yml
+  # by plan 72.1.59 (balance YAML must not carry localized strings).
+  universalLabel: Universal
+  universalDesc: Universal has no specialization, all buildings and research work in normal mode
+  minerLabel: Miner
+  minerDesc: Miner specializes in resource extraction
+  attackerLabel: Attacker
+  attackerDesc: Specializes in attacks
+  defenderLabel: Defender
+  defenderDesc: Specializes in defense
+  tankLabel: Tank
+  tankDesc: Specializes in penetrating power
 
 admin:
   title: Admin panel

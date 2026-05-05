@@ -109,9 +109,12 @@ export function MainScreen() {
   const username = meQ.data?.username ?? '';
   const me = meQ.data;
 
+  // План 72.1.59: имя профессии переводится фронтом через i18n
+  // (раньше backend возвращал profQ.data.label из YAML).
+  const profKey = profQ.data?.profession;
   const professionLabel =
-    profQ.data?.label && profQ.data.label !== ''
-      ? profQ.data.label
+    profKey && profKey !== 'none'
+      ? t('profession', `${profKey}Label`)
       : t('profession', 'title');
 
   // Большая картинка в центре — луна или планета в зависимости от

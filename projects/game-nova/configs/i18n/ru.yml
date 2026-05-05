@@ -1731,6 +1731,20 @@ profession:
   errNotEnoughCredit: "Недостаточно кредитов для смены профессии (нужно {{cost}})."
   errUnknownProfession: Неизвестная профессия.
   errGeneric: "Не удалось сменить профессию: {{msg}}"
+  # Названия и описания профессий 1:1 с legacy oxsar2 sql/new-for-dm/data.sql
+  # ключи PROFESSION_UNKNOWN/_MINER/_ATTACKER/_DEFENDER/_TANK + _DESC.
+  # План 72.1.59: вынесено из configs/professions.yml — балансовый
+  # YAML не должен содержать языковые строки.
+  universalLabel: Универсал
+  universalDesc: Универсал не имеет специализации, все постройки и исследования работают в нормальном режиме
+  minerLabel: Шахтер
+  minerDesc: Шахтер специализируется на добыче ресурсов
+  attackerLabel: Атакер
+  attackerDesc: Специализируется на атаках
+  defenderLabel: Оборонщик
+  defenderDesc: Специализируется на обороне
+  tankLabel: Танкист
+  tankDesc: Специализируется на пробивной мощи
 
 admin:
   title: Панель администратора

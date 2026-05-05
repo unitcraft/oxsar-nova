@@ -170,14 +170,15 @@ type ProfessionCatalog struct {
 // Ключи bonus/malus совпадают с ключами в buildings.yml / research.yml,
 // плюс специальные: "gun", "shield_weapon", "shell_weapon" (боевые техи),
 // "ballistics", "masking" (fleet техи), "computer_tech".
+//
+// План 72.1.59: label/description вынесены в configs/i18n/{ru,en}.yml
+// в группу `profession` (ключи `<key>Label`, `<key>Desc`).
 type ProfessionSpec struct {
 	// SortOrder — порядок отображения в UI (legacy: Универсал=0,
 	// Шахтёр=1, Атакёр=2, Защитник=3, Танк=4). План 72.1.58.
-	SortOrder   int            `yaml:"sort_order,omitempty"`
-	Label       string         `yaml:"label"`
-	Description string         `yaml:"description,omitempty"`
-	Bonus       map[string]int `yaml:"bonus"`
-	Malus       map[string]int `yaml:"malus"`
+	SortOrder int            `yaml:"sort_order,omitempty"`
+	Bonus     map[string]int `yaml:"bonus"`
+	Malus     map[string]int `yaml:"malus"`
 }
 
 // ArtefactSpec — один артефакт. Содержит идентификатор, эффект и

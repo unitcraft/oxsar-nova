@@ -875,14 +875,14 @@ export interface OfficerActivateRequest {
 }
 
 // S-041 Profession — backend (internal/profession/service.go) DTO:
-// {key, label, bonus, malus} для list + {profession, label,
-// next_change_allowed} для me. Bonus/malus — мапа техн.ключ → дельта
-// уровня (например, metalmine: +5, gun: -3).
+// {key, sort_order, bonus, malus} для list + {profession,
+// next_change_allowed, change_cost, days_remain} для me. Bonus/malus —
+// мапа техн.ключ → дельта уровня (например, metalmine: +5, gun: -3).
+//
+// План 72.1.59: label/description больше не приходят с бекенда —
+// фронт переводит ключ через t('profession', `${key}Label` / `${key}Desc`).
 export interface Profession {
   key: string;
-  label: string;
-  // План 72.1.15: legacy `profession.tpl` показывает «desc» под названием.
-  description?: string;
   bonus?: Record<string, number>;
   malus?: Record<string, number>;
 }
@@ -893,7 +893,6 @@ export interface ProfessionsList {
 
 export interface ProfessionInfo {
   profession: string;
-  label: string;
   next_change_allowed?: string | null;
   // План 72.1.47: legacy `getProfessionChangeCost`. После cooldown
   // change_cost=0 и days_remain=0; в течение cooldown — 1000 + N дней.

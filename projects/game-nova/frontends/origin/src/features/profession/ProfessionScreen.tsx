@@ -212,31 +212,29 @@ export function ProfessionScreen() {
                     onChange={() => setSelected(p.key)}
                   />{' '}
                   <label htmlFor={`profession_${p.key}`}>
-                    <b className={isCurrent ? 'true' : undefined}>{p.label}</b>
-                    {isCurrent && (
-                      <>
-                        {' '}
-                        <span className="true">
-                          ({t('profession', 'active')})
-                        </span>
-                      </>
-                    )}
+                    {/* План 72.1.58: legacy `profession.tpl` показывает
+                        активную профессию ТОЛЬКО зелёным цветом
+                        (<b class="true">), без подписи «(активна)».
+                        План 72.1.59: имя берётся из i18n
+                        (configs/i18n/{ru,en}.yml ключ profession.<key>Label). */}
+                    <b className={isCurrent ? 'true' : undefined}>
+                      {t('profession', `${p.key}Label`)}
+                    </b>
                   </label>
                 </td>
                 <td>
-                  {p.description && (
-                    // legacy: <p/><label for=profession_id>{desc}</label>
-                    <label
-                      htmlFor={`profession_${p.key}`}
-                      style={{
-                        display: 'block',
-                        marginBottom: 6,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {p.description}
-                    </label>
-                  )}
+                  {/* План 72.1.59: описание из i18n profession.<key>Desc
+                      (раньше приходило в DTO p.description из YAML). */}
+                  <label
+                    htmlFor={`profession_${p.key}`}
+                    style={{
+                      display: 'block',
+                      marginBottom: 6,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {t('profession', `${p.key}Desc`)}
+                  </label>
                   {specs.length > 0 && (
                     <table
                       className="table_no_background"
