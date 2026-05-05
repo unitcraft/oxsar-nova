@@ -56,6 +56,7 @@ export function RequiredResTable({
       className="table_no_background"
       cellSpacing={0}
       cellPadding={0}
+      style={{ textAlign: 'left' }}
       title={t('info', 'requires')}
     >
       <tbody>

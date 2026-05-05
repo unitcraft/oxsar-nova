@@ -36,6 +36,8 @@ export interface ConfirmDialogProps {
   // Когда задан — confirm-кнопка стилизуется как «опасная» (красный).
   // Используется для destructive actions (delete, recall, abandon).
   destructive?: boolean;
+  // Когда задан — показывается только кнопка OK (информационный диалог).
+  infoOnly?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -95,19 +97,21 @@ export function ConfirmDialog(props: ConfirmDialogProps): React.ReactElement | n
           </tr>
           <tr>
             <td className="center">
-              <button
-                type="button"
-                className="button"
-                onClick={props.onCancel}
-                autoFocus
-                style={{ marginRight: 8 }}
-              >
-                {props.cancelLabel ?? t('common', 'cancel')}
-              </button>
+              {!props.infoOnly && (
+                <button
+                  type="button"
+                  className="button"
+                  onClick={props.onCancel}
+                  style={{ marginRight: 8 }}
+                >
+                  {props.cancelLabel ?? t('common', 'cancel')}
+                </button>
+              )}
               <button
                 type="button"
                 className="button"
                 onClick={props.onConfirm}
+                autoFocus
                 style={
                   props.destructive
                     ? { color: '#fff', background: '#a33', borderColor: '#a33' }

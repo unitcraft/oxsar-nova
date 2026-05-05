@@ -16,9 +16,11 @@ import { useAutoInvalidateOnTaskEnd } from '@/features/common/useAutoInvalidateO
 import { catalogByGroup } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
+import { VipButton } from '@/features/common/VipButton';
+import { ConstructionProgress } from '@/features/common/ConstructionProgress';
 import { fetchSettings } from '@/api/settings';
 import { useTranslation } from '@/i18n/i18n';
-import { secondsUntil, formatDuration } from '@/lib/format';
+import { formatDuration } from '@/lib/format';
 import type { ApiError } from '@/api/client';
 
 export function ResearchScreen() {
@@ -143,7 +145,9 @@ export function ResearchScreen() {
                   <td colSpan={2}>
                     {name}&nbsp;{task.target_level}
                   </td>
-                  <td width="100px">{formatDuration(secondsUntil(task.end_at))}</td>
+                  <td width="130px">
+                    <ConstructionProgress startAt={task.start_at} endAt={task.end_at} />
+                  </td>
                   {/* План 72.1.39: cancel-кнопка (legacy Research::abort). */}
                   <td width="60px" align="center">
                     <button
@@ -166,22 +170,13 @@ export function ResearchScreen() {
                   </td>
                   {/* План 72.1.44: VIP-instant старт за credits. */}
                   <td width="80px" align="center">
-                    <button
-                      type="button"
-                      className="button"
-                      disabled={vipMut.isPending}
-                      title={t('buildings', 'vipHint')}
-                      onClick={async () => {
-                        if (await confirm({
-                          title: t('buildings', 'vipHint'),
-                          message: t('buildings', 'vipConfirm'),
-                        })) {
-                          vipMut.mutate(task.id);
-                        }
-                      }}
-                    >
-                      ⚡
-                    </button>
+                    <VipButton
+                      taskId={task.id}
+                      endAt={task.end_at}
+                      onVip={(id) => vipMut.mutate(id)}
+                      isPending={vipMut.isPending}
+                      label="⚡"
+                    />
                   </td>
                 </tr>
               );
@@ -202,7 +197,7 @@ export function ResearchScreen() {
             const secs = seconds[String(entry.id)] ?? 0;
             const cost = costs[String(entry.id)] ?? { metal: 0, silicon: 0, hydrogen: 0 };
             const descKey = `${key}Desc`;
-            const desc = t(group, descKey);
+            const desc = t('research', descKey);
             const hasDesc = !desc.startsWith('[');
             const enough = canBuild(entry.id);
             return (
@@ -214,12 +209,12 @@ export function ResearchScreen() {
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   />
                 </td>
-                <td style={{ verticalAlign: 'top' }}>
+                <td style={{ verticalAlign: 'top', textAlign: 'left' }}>
                   <div style={{ width: '100%' }}>
                     <span style={{ float: 'right' }}>
                       {t('research', 'level', { n: String(lvl) })}
                     </span>
-                    {t(group, key)}
+                    <strong>{t(group, key)}</strong>
                   </div>
                   {hasDesc && (
                     <div style={{ clear: 'both', fontSize: 'smaller' }}>{desc}</div>

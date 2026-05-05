@@ -21,9 +21,11 @@ import { useAutoInvalidateOnTaskEnd } from '@/features/common/useAutoInvalidateO
 import { catalogByGroup, type CatalogEntry } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
+import { VipButton } from '@/features/common/VipButton';
+import { ConstructionProgress } from '@/features/common/ConstructionProgress';
 import { fetchSettings } from '@/api/settings';
 import { useTranslation } from '@/i18n/i18n';
-import { formatNumber, formatDuration, secondsUntil } from '@/lib/format';
+import { formatNumber, formatDuration } from '@/lib/format';
 import type { ShipyardInventory } from '@/api/types';
 
 interface BuildPanelProps {
@@ -199,8 +201,8 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
                   <td colSpan={2}>
                     {name}: {formatNumber(task.count)}
                   </td>
-                  <td width="100px">
-                    {formatDuration(secondsUntil(task.end_at))}
+                  <td width="130px">
+                    <ConstructionProgress startAt={task.start_at} endAt={task.end_at} />
                   </td>
                   {/* План 72.1.41: cancel-кнопка (legacy Shipyard::abort). */}
                   <td width="60px" align="center">
@@ -224,22 +226,13 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
                   </td>
                   {/* План 72.1.44: VIP-instant старт за credits. */}
                   <td width="60px" align="center">
-                    <button
-                      type="button"
-                      className="button"
-                      disabled={vip.isPending}
-                      title={t('buildings', 'vipHint')}
-                      onClick={async () => {
-                        if (await confirm({
-                          title: t('buildings', 'vipHint'),
-                          message: t('buildings', 'vipConfirm'),
-                        })) {
-                          vip.mutate(task.id);
-                        }
-                      }}
-                    >
-                      ⚡
-                    </button>
+                    <VipButton
+                      taskId={task.id}
+                      endAt={task.end_at}
+                      onVip={(id) => vip.mutate(id)}
+                      isPending={vip.isPending}
+                      label="⚡"
+                    />
                   </td>
                 </tr>
               );

@@ -17,7 +17,7 @@ export function calcPct(startMs: number, endMs: number, now: number): number {
 export function calcBarPct(startMs: number, endMs: number, now: number): number {
   const totalMs = endMs - startMs;
   if (totalMs <= 0) return 0;
-  const progress = Math.max(0, Math.min(1, (now - startMs) / totalMs));
+  const progress = Math.max(0, Math.min(1, (now - startMs + 1000) / totalMs));
   return Math.max(0, Math.min(100, Math.floor(
     (now - startMs + 2000 * progress) * 100 / totalMs,
   )));

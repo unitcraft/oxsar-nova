@@ -18,6 +18,7 @@ import { catalogByGroup } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { ConstructionProgress } from '@/features/common/ConstructionProgress';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
+import { VipButton } from '@/features/common/VipButton';
 import { fetchSettings } from '@/api/settings';
 import { useTranslation } from '@/i18n/i18n';
 
@@ -25,7 +26,7 @@ export function ConstructionsScreen() {
   const { planetId, planet } = useResolvedPlanet();
   const { t } = useTranslation();
   const qc = useQueryClient();
-  // План 72.1.53 ч.B: in-game confirm-dialog.
+  // План 72.1.53 ч.B: in-game confirm-dialog (demolish).
   const { confirm, dialogProps } = useConfirm();
   // План 72.1.55.E (effects): show_all_constructions preference
   // (legacy `Preferences::updateUserData::show_all_constructions`).
@@ -61,6 +62,7 @@ export function ConstructionsScreen() {
   const enqueue = useMutation({
     mutationFn: (unitId: number) => enqueueBuilding(planetId!, unitId),
     onSuccess: () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       if (planetId) {
         void qc.invalidateQueries({ queryKey: QK.buildingQueue(planetId) });
         void qc.invalidateQueries({ queryKey: QK.buildingsOverview(planetId) });
@@ -76,6 +78,8 @@ export function ConstructionsScreen() {
       if (planetId) {
         void qc.invalidateQueries({ queryKey: QK.buildingQueue(planetId) });
         void qc.invalidateQueries({ queryKey: QK.buildingsOverview(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.planets() });
       }
     },
   });
@@ -98,10 +102,18 @@ export function ConstructionsScreen() {
   const vip = useMutation({
     mutationFn: (taskId: string) => startBuildingVIP(planetId!, taskId),
     onSuccess: () => {
-      if (planetId) {
+      if (!planetId) return;
+      void qc.invalidateQueries({ queryKey: QK.buildingQueue(planetId) });
+      void qc.invalidateQueries({ queryKey: QK.buildingsOverview(planetId) });
+      void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+      void qc.invalidateQueries({ queryKey: QK.planets() });
+      void qc.invalidateQueries({ queryKey: QK.me() });
+      setTimeout(() => {
         void qc.invalidateQueries({ queryKey: QK.buildingQueue(planetId) });
-        void qc.invalidateQueries({ queryKey: QK.me() });
-      }
+        void qc.invalidateQueries({ queryKey: QK.buildingsOverview(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+        void qc.invalidateQueries({ queryKey: QK.planets() });
+      }, 2000);
     },
   });
 
@@ -126,7 +138,7 @@ export function ConstructionsScreen() {
 
   const allBuildings = catalogByGroup('building');
   const buildings = allBuildings.filter((b) =>
-    isMoon ? b.moonOnly === true || b.id < 54 || b.id >= 100 : b.moonOnly !== true,
+    isMoon ? b.moonOnly === true : b.moonOnly !== true,
   );
 
   const levels = overviewQ.data?.levels ?? {};
@@ -194,20 +206,11 @@ export function ConstructionsScreen() {
                   </td>
                   {/* План 72.1.44: VIP-instant старт за credits. */}
                   <td width="80px">
-                    <input
-                      type="button"
-                      className="button"
-                      value={t('buildings', 'vipBtn')}
-                      title={t('buildings', 'vipHint')}
-                      onClick={async () => {
-                        if (await confirm({
-                          title: t('buildings', 'vipBtn'),
-                          message: t('buildings', 'vipConfirm'),
-                        })) {
-                          vip.mutate(task.id);
-                        }
-                      }}
-                      disabled={vip.isPending}
+                    <VipButton
+                      taskId={task.id}
+                      endAt={task.end_at}
+                      onVip={(id) => vip.mutate(id)}
+                      isPending={vip.isPending}
                     />
                   </td>
                 </tr>
@@ -246,7 +249,7 @@ export function ConstructionsScreen() {
             const requirementsUnmet = unmet[String(entry.id)] ?? [];
             const hasRequirements = requirementsUnmet.length > 0;
             const descKey = `${key}Desc`;
-            const desc = t(group, descKey);
+            const desc = t('buildings', descKey);
             const hasDesc = !desc.startsWith('[');
             const enough = canBuild(entry.id);
             const queueBusy = queue.length > 0;
@@ -262,12 +265,12 @@ export function ConstructionsScreen() {
                     }}
                   />
                 </td>
-                <td style={{ verticalAlign: 'top' }}>
+                <td style={{ verticalAlign: 'top', textAlign: 'left' }}>
                   <div style={{ width: '100%' }}>
                     <span style={{ float: 'right' }}>
                       {t('buildings', 'level', { n: level })}
                     </span>
-                    {t(group, key)}
+                    <strong>{t(group, key)}</strong>
                   </div>
                   {hasDesc && (
                     <div style={{ clear: 'both', fontSize: 'smaller' }}>

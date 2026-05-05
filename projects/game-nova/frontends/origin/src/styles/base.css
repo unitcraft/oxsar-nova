@@ -11,6 +11,13 @@
 
 * {
   box-sizing: border-box;
+  cursor: default;
+  user-select: none;
+}
+
+input, textarea {
+  user-select: text;
+  cursor: text;
 }
 
 html, body {

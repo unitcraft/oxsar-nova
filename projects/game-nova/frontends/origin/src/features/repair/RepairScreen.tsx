@@ -22,9 +22,11 @@ import { QK } from '@/api/query-keys';
 import type { ApiError } from '@/api/client';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { useAutoInvalidateOnTaskEnd } from '@/features/common/useAutoInvalidateOnTaskEnd';
+import { VipButton } from '@/features/common/VipButton';
+import { ConstructionProgress } from '@/features/common/ConstructionProgress';
 import { findCatalog } from '@/features/common/catalog';
 import { useTranslation } from '@/i18n/i18n';
-import { formatNumber, formatDuration, secondsUntil } from '@/lib/format';
+import { formatNumber, formatDuration } from '@/lib/format';
 
 export function RepairScreen() {
   const { planetId } = useResolvedPlanet();
@@ -160,7 +162,6 @@ export function RepairScreen() {
           </tr>
           {queue.length > 0 &&
             queue.map((task, idx) => {
-              const secLeft = secondsUntil(task.end_at);
               const cost = vipCreditCost(task.count);
               return (
                 <tr key={task.id}>
@@ -168,8 +169,8 @@ export function RepairScreen() {
                   <td>
                     {unitName(task.unit_id)}: {formatNumber(task.count)}
                   </td>
-                  <td width="120px" className="center">
-                    {secLeft > 0 ? formatDuration(secLeft) : '—'}
+                  <td width="130px">
+                    <ConstructionProgress startAt={task.start_at} endAt={task.end_at} />
                   </td>
                   <td width="160px" className="center">
                     <button
@@ -182,15 +183,15 @@ export function RepairScreen() {
                       ✕
                     </button>
                     {' '}
-                    <button
-                      type="button"
-                      className="button"
-                      disabled={vip.isPending}
-                      onClick={() => vip.mutate(task.id)}
+                    <VipButton
+                      taskId={task.id}
+                      endAt={task.end_at}
+                      onVip={(id) => vip.mutate(id)}
+                      isPending={vip.isPending}
+                      showConfirm={false}
+                      label={<>⚡ {cost}</>}
                       title={t('repair', 'vipBtn', { credits: cost })}
-                    >
-                      ⚡ {cost}
-                    </button>
+                    />
                   </td>
                 </tr>
               );

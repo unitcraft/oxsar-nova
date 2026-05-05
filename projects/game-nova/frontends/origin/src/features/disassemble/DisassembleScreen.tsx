@@ -19,12 +19,13 @@ import { QK } from '@/api/query-keys';
 import type { ApiError } from '@/api/client';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { useAutoInvalidateOnTaskEnd } from '@/features/common/useAutoInvalidateOnTaskEnd';
+import { VipButton } from '@/features/common/VipButton';
+import { ConstructionProgress } from '@/features/common/ConstructionProgress';
 import { catalogByGroup } from '@/features/common/catalog';
 import { useTranslation } from '@/i18n/i18n';
 import {
   formatNumber,
   formatDuration,
-  secondsUntil,
 } from '@/lib/format';
 
 // План 72.1.25: legacy formula `setDisassembleUnitRequirements`:
@@ -160,7 +161,6 @@ export function DisassembleScreen() {
               <th colSpan={4}>{t('repair', 'disassembleQueue')}</th>
             </tr>
             {disassembleQueue.map((task, idx) => {
-              const secLeft = secondsUntil(task.end_at);
               const cost = vipCreditCost(task.count);
               return (
                 <tr key={task.id}>
@@ -168,7 +168,9 @@ export function DisassembleScreen() {
                   <td>
                     #{task.unit_id}&nbsp;{formatNumber(task.count)}
                   </td>
-                  <td>{secLeft > 0 ? formatDuration(secLeft) : '—'}</td>
+                  <td width="130px">
+                    <ConstructionProgress startAt={task.start_at} endAt={task.end_at} />
+                  </td>
                   <td className="center">
                     <button
                       type="button"
@@ -180,15 +182,15 @@ export function DisassembleScreen() {
                       ✕
                     </button>
                     {' '}
-                    <button
-                      type="button"
-                      className="button"
-                      disabled={vip.isPending}
-                      onClick={() => vip.mutate(task.id)}
+                    <VipButton
+                      taskId={task.id}
+                      endAt={task.end_at}
+                      onVip={(id) => vip.mutate(id)}
+                      isPending={vip.isPending}
+                      showConfirm={false}
+                      label={<>⚡ {cost}</>}
                       title={t('repair', 'vipBtn', { credits: cost })}
-                    >
-                      ⚡ {cost}
-                    </button>
+                    />
                   </td>
                 </tr>
               );

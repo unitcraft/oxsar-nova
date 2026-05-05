@@ -3,7 +3,6 @@
 // Pixel-perfect клон layout.tpl #planets + legacy style.css.
 // Луна выводится сразу под своей планетой (совпадает galaxy+system+position).
 
-import { useNavigate } from 'react-router-dom';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { useCurrentPlanetStore } from '@/stores/currentPlanet';
 import { planetImageSmallUrl, moonImageSmallUrl } from '@/lib/planet-image';
@@ -12,7 +11,6 @@ import type { Planet } from '@/api/types';
 export function PlanetsList() {
   const { planets, planetId } = useResolvedPlanet();
   const setCurrent = useCurrentPlanetStore((s) => s.set);
-  const navigate = useNavigate();
 
   // Группируем: каждая планета + её луна сразу после неё.
   const mainPlanets = planets.filter((p) => !p.is_moon);
@@ -44,7 +42,6 @@ export function PlanetsList() {
         className={cls}
         onClick={() => {
           setCurrent(p.id);
-          navigate('/');
         }}
       >
         <img src={imgSrc} alt={p.name} width={imgSize} height={imgSize} />
