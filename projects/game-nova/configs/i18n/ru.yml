@@ -3134,6 +3134,7 @@ resource:
   levelAbbr: "ур."
   # План 72.1.26: legacy блокировка POST update в umode.
   umodeWarning: "⚠ Изменение факторов производства недоступно в режиме отпуска."
+  apply: "Применить"
 statistics:
   alliances: Альянс
   attackerLost: Потери атаки

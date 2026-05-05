@@ -269,10 +269,10 @@ export function BattleStatsScreen() {
           </tr>
           <tr>
             <th>{t('battlestats', 'colDate')}</th>
-            <th>{t('battlestats', 'colOpponent') ?? 'Противник'}</th>
-            <th>{t('battlestats', 'colResult') ?? 'Результат'}</th>
-            <th>{t('battlestats', 'colLoot') ?? 'Трофеи'}</th>
-            <th>{t('mission', 'debris') ?? 'Обломки'}</th>
+            <th>{t('battlestats', 'colOpponent')}</th>
+            <th>{t('battlestats', 'colResult')}</th>
+            <th>{t('battlestats', 'colLoot')}</th>
+            <th>{t('mission', 'debris')}</th>
             <th>&nbsp;</th>
           </tr>
         </thead>
@@ -293,10 +293,10 @@ export function BattleStatsScreen() {
               (!b.is_attacker && b.winner === 'defenders');
             const isDraw = b.winner === 'draw';
             const resultLabel = isDraw
-              ? (t('mission', 'draw') ?? 'Ничья')
+              ? t('mission', 'draw')
               : myWin
-                ? (t('mission', 'attackerWins') ?? 'Победа')
-                : (t('mission', 'defenderWins') ?? 'Поражение');
+                ? t('mission', 'attackerWins')
+                : t('mission', 'defenderWins');
             const resultClass = isDraw ? '' : myWin ? 'true' : 'false';
             return (
               <tr key={b.id}>
@@ -329,20 +329,20 @@ export function BattleStatsScreen() {
                 </td>
                 <td className="center">
                   <small>
-                    М: {formatNumber(b.loot_metal)}<br />
-                    К: {formatNumber(b.loot_silicon)}<br />
-                    В: {formatNumber(b.loot_hydrogen)}
+                    {t('overview', 'metalAbbr')}: {formatNumber(b.loot_metal)}<br />
+                    {t('overview', 'siliconAbbr')}: {formatNumber(b.loot_silicon)}<br />
+                    {t('overview', 'hydrogenAbbr')}: {formatNumber(b.loot_hydrogen)}
                   </small>
                 </td>
                 <td className="center">
                   <small>
-                    М: {formatNumber(b.debris_metal)}<br />
-                    К: {formatNumber(b.debris_silicon)}
+                    {t('overview', 'metalAbbr')}: {formatNumber(b.debris_metal)}<br />
+                    {t('overview', 'siliconAbbr')}: {formatNumber(b.debris_silicon)}
                   </small>
                 </td>
                 <td className="center">
                   <Link to={`/battle-report/${b.id}`} className="button">
-                    {t('alliance', 'detailsBtn') ?? 'Просмотр'}
+                    {t('alliance', 'detailsBtn')}
                   </Link>
                 </td>
               </tr>
@@ -360,7 +360,7 @@ export function BattleStatsScreen() {
                     style={{ marginRight: 8 }}
                     onClick={() => setCursor(undefined)}
                   >
-                    ◀ {t('mission', 'toBegin') ?? 'В начало'}
+                    ◀ {t('mission', 'toBegin')}
                   </button>
                 )}
                 {nextCursor && (
@@ -370,7 +370,7 @@ export function BattleStatsScreen() {
                     onClick={() => setCursor(nextCursor)}
                     disabled={battlesQ.isFetching}
                   >
-                    {t('mission', 'next') ?? 'Дальше'} ▶
+                    {t('mission', 'next')} ▶
                   </button>
                 )}
               </td>

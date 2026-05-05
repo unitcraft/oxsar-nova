@@ -118,17 +118,15 @@ export function ResourceScreen() {
 
   function buildingName(b: ResourceBuilding): string {
     // План 72.1.26 ч.B: virt/halting/solar — отдельные имена из resource.*.
-    if (b.kind === 'fleet') return t('resource', 'fleetConsumption') || 'Флот';
+    if (b.kind === 'fleet') return t('resource', 'fleetConsumption');
     if (b.kind === 'stock_fleet')
-      return t('resource', 'fleetStockConsumption') || 'Лоты биржи';
-    if (b.kind === 'defense') return t('resource', 'defenseConsumption') || 'Оборона';
+      return t('resource', 'fleetStockConsumption');
+    if (b.kind === 'defense') return t('resource', 'defenseConsumption');
     if (b.kind === 'halting') {
-      const tpl =
-        t('resource', 'haltingConsumption', {
-          planet: b.halting_from_coord ?? '',
-          fleet: '',
-        }) || `Удержание с ${b.halting_from_coord ?? '?'}`;
-      return tpl;
+      return t('resource', 'haltingConsumption', {
+        planet: b.halting_from_coord ?? '',
+        fleet: '',
+      });
     }
 
     // snake_case → camelCase: metal_mine→metalmine, silicon_lab→siliconLab
@@ -164,8 +162,7 @@ export function ResourceScreen() {
     >
       {umode && (
         <div className="false" style={{ padding: '0.5em', textAlign: 'center' }}>
-          {t('resource', 'umodeWarning') ||
-            'Изменение факторов производства недоступно в режиме отпуска.'}
+          {t('resource', 'umodeWarning')}
         </div>
       )}
       <table className="ntable">
@@ -175,10 +172,10 @@ export function ResourceScreen() {
           </tr>
           <tr>
             <td></td>
-            <td align="right"><b>Металл</b></td>
-            <td align="right"><b>Кремний</b></td>
-            <td align="right"><b>Водород</b></td>
-            <td align="right"><b>Энергия</b></td>
+            <td align="right"><b>{t('overview', 'metal')}</b></td>
+            <td align="right"><b>{t('overview', 'silicon')}</b></td>
+            <td align="right"><b>{t('overview', 'hydrogen')}</b></td>
+            <td align="right"><b>{t('overview', 'energy')}</b></td>
             <td></td>
           </tr>
 
@@ -279,7 +276,7 @@ export function ResourceScreen() {
                 type="button"
                 className="button"
                 disabled={umode}
-                value={t('resource', 'shutDown') ?? 'Выключить'}
+                value={t('resource', 'shutDown')}
                 onClick={() => {
                   const factors: Record<number, number> = {};
                   for (const b of report.buildings) {
@@ -311,7 +308,7 @@ export function ResourceScreen() {
                 type="button"
                 className="button"
                 disabled={umode}
-                value={t('resource', 'startUp') ?? 'Включить'}
+                value={t('resource', 'startUp')}
                 onClick={() => {
                   const factors: Record<number, number> = {};
                   for (const b of report.buildings) {
@@ -340,7 +337,7 @@ export function ResourceScreen() {
               <input
                 type="submit"
                 name="update"
-                value="Применить"
+                value={t('resource', 'apply')}
                 className="button"
                 disabled={save.isPending || umode}
               />
