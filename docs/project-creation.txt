@@ -16680,4 +16680,45 @@ not-a-fix + BA-019 mitigated.
       не применяется для луны (legacy 1:1).
     - i18n: moonLab / moonLabDesc / moonLabFullDesc (ru+en).
 
+## Итерация 72.1.62 — порядок из бэкенда, added_levels, исправление UI (2026-05-05)
+
+  Задачи:
+  1. Порядок вывода зданий и исследований задаётся бэкендом (display_order).
+  2. Added-уровни исследований (бонус от артефактов/суперкомпьютера).
+  3. Исправление: описания технологий не показывались (неверный i18n-namespace).
+  4. Исправление: user-select ломал выделение текста на всей странице.
+
+  display_order (порядок из бэкенда):
+    - configs/research.yml: добавлено display_order для всех 20 технологий
+      по legacy na_construction.display_order (130..300).
+    - config/catalog.go: ResearchSpec получила поле DisplayOrder int.
+    - research/service.go: ResearchOrder() — сортировка по display_order+id,
+      возвращает []int.
+    - building/service.go: BuildingsOrder() — идентичная структура,
+      источник s.catalog.Buildings.Buildings.
+    - research/handler.go: GET /api/research отдаёт "order": []int.
+    - building/handler.go: GET /api/planets/{id}/buildings отдаёт "order": []int.
+    - ResearchScreen.tsx / ConstructionsScreen.tsx: techs/buildings
+      перестраиваются по apiOrder из API (flatMap + find), fallback на catalog.
+
+  Added-уровни (research.added):
+    - migrations/0099_research_added_level.sql: ALTER TABLE research ADD COLUMN
+      added integer NOT NULL DEFAULT 0.
+    - research/service.go Levels(): сигнатура → (levels, added map[int]int, err);
+      SELECT unit_id, level, added FROM research.
+    - research/handler.go: отдаёт "added_levels": map[int]int.
+    - api/types.ts ResearchOverview: added_levels?: Record<string, number>.
+    - ResearchScreen.tsx: отображение "(+N)" / "(-N)" рядом с уровнем,
+      цвет 'true'/'false' как в legacy.
+
+  Исправление описаний исследований:
+    - Ключи описаний технологий живут в секции 'info:', не 'research:'
+      (entry.i18n = 'info.spyware' → group='info').
+    - ResearchScreen.tsx: desc = t(group, descKey) вместо t('research', descKey).
+
+  Исправление user-select:
+    - base.css: убран * { user-select: none; cursor: default }.
+    - Точечный подход: user-select:none только на button/input/menu/planets;
+      input[text]/textarea получают user-select:text + cursor:text.
+
   Tests: go build ./... чистый.
