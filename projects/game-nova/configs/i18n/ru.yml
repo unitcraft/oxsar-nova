@@ -917,7 +917,7 @@ settings:
   vacationActive: "✈ Отпуск активен с {{date}}"
   leaveVacationBtn: Выйти из отпуска
   startVacationBtn: Включить режим отпуска
-  vacationWarning: "⚠ Вы уверены? Вся активность будет заморожена."
+  vacationWarning: "⚠ вы уверены? Вся активность будет заморожена."
   vacationConfirmBtn: Да, уйти в отпуск
   vacationCancelBtn: Отмена
   sectionPlanetOrder: Порядок планет
@@ -933,7 +933,7 @@ settings:
   confirmDeleteErr: Неверный код
   cancelBtn: Отмена
   deletionScheduledTitle: "⚠ Аккаунт будет удалён"
-  deletionScheduledBody: "Удаление запланировано на {{when}}. Вы можете отменить в течение grace-периода (7 дней)."
+  deletionScheduledBody: "Удаление запланировано на {{when}}. вы можете отменить в течение 7 дней."
   cancelDeletionBtn: Отменить удаление
   deletionCancelled: "✓ Удаление отменено"
   cancelDeletionErr: Не удалось отменить удаление
@@ -1548,7 +1548,7 @@ planetOptions:
   abandonCodeLabel: "Код:"
   abandonBtn: Покинуть
   moonAbandonMsg: "ℹ Луны удаляются автоматически при уничтожении планеты"
-  abandonConfirm: "Вы уверены? Планета \"{{name}}\" будет удалена без возможности восстановления."
+  abandonConfirm: "вы уверены? Планета \"{{name}}\" будет удалена без возможности восстановления."
   abandonConfirmBtn: Удалить
   cancelBtn: Отмена
   toastRenameTitle: Планета переименована
@@ -1987,7 +1987,7 @@ galaxy:
   banned: Забанен
   confederation: Союзник
   debris: Поле обломков
-  deficientCapacity: Недостаточно грузоподъемности
+  deficientCapacity: Недостаточно грузоподъёмности
   deficientConsumption: Недостаточно водорода
   deficientEsps: Нет шпионских зондов
   destroyedPlanet: Разрушенная планета
@@ -2014,12 +2014,12 @@ galaxy:
   showMemberlist: Список членов
   size: Диаметр
   strongPlayer: Сильный игрок
-  sunsystem: Звездная система
+  sunsystem: Звёздная система
   sunsystemOutside: Бесконечные дали
   system: Система
   targetBanned: Цель забанена
   targetInUmode: Цель находится в режиме отпуска.
-  targetTooStrong: Игрок слишком силен.
+  targetTooStrong: Игрок слишком силён.
   targetTooWeak: Игрок слишком слаб.
   temperature: Температура
   tradeUnion: Торговый договор
