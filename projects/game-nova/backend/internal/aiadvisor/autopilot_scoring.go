@@ -56,6 +56,7 @@ func scoreCandidates(snap PlayerSnapshot, strategy Strategy, inputs scoringInput
 	if inputs.Catalog != nil {
 		recs = append(recs, scoreBuildings(snap, strategy, inputs)...)
 		recs = append(recs, scoreResearch(snap, strategy, inputs)...)
+		recs = append(recs, scoreMissions(snap, strategy, inputs)...)
 	}
 
 	sort.SliceStable(recs, func(i, j int) bool {

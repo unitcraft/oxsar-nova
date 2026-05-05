@@ -50,7 +50,9 @@ type PlanetSnapshot struct {
 	Capacity  Resources
 	Rates     Resources // в секунду
 
-	Buildings map[int]int // unitID → level
+	Buildings map[int]int  // unitID → level
+	Ships     map[int]int64 // unitID → количество кораблей на планете
+	Defense   map[int]int64 // unitID → количество defense установок
 
 	// Очередь занята (true → нельзя стартовать новую постройку/ресёрч на этой планете).
 	BuildingQueueBusy bool
@@ -222,12 +224,111 @@ func buildSnapshot(ctx context.Context, deps SnapshotDeps, userID string) (Playe
 			ps.BuildingQueueBusy = len(queue) > 0
 		}
 
+		// Корабли и оборона на планете — простой SQL без shipyard.Service,
+		// чтобы не тащить ещё одну зависимость в autopilot. Чтение
+		// неконкурентно (ровно те же таблицы, что использует shipyard).
+		ships, defense, err := readShipsAndDefense(ctx, deps.DB, p.ID)
+		if err != nil {
+			return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: ships for %s: %w", p.ID, err)
+		}
+		ps.Ships = ships
+		ps.Defense = defense
+
 		snap.Planets = append(snap.Planets, ps)
 	}
 
-	// Загрузка флотов и соседей — в Ф.2.
+	// Флоты в полёте — нужны для отсева занятого тоннажа при выборе
+	// миссий (особенно экспедиция: лимит = computer_tech уровень).
+	fleets, err := readFleets(ctx, deps.DB, userID)
+	if err != nil {
+		return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: fleets: %w", err)
+	}
+	snap.Fleets = fleets
+
+	// Соседи — Ф.2.2 (нужны для атак/шпионажа).
 
 	return snap, nil
+}
+
+// readShipsAndDefense читает inventory планеты (корабли + оборона).
+//
+// Возвращает пустые карты если на планете ничего нет; nil-pgx-rows.Err()
+// тоже не считаем ошибкой.
+func readShipsAndDefense(ctx context.Context, db repo.Exec, planetID string) (map[int]int64, map[int]int64, error) {
+	ships := map[int]int64{}
+	rows, err := db.Pool().Query(ctx,
+		`SELECT unit_id, count FROM ships WHERE planet_id = $1 AND count > 0`,
+		planetID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("ships query: %w", err)
+	}
+	for rows.Next() {
+		var id int
+		var c int64
+		if err := rows.Scan(&id, &c); err != nil {
+			rows.Close()
+			return nil, nil, err
+		}
+		ships[id] = c
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	defense := map[int]int64{}
+	rows, err = db.Pool().Query(ctx,
+		`SELECT unit_id, count FROM defense WHERE planet_id = $1 AND count > 0`,
+		planetID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("defense query: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id int
+		var c int64
+		if err := rows.Scan(&id, &c); err != nil {
+			return nil, nil, err
+		}
+		defense[id] = c
+	}
+	return ships, defense, rows.Err()
+}
+
+// readFleets читает все активные флоты пользователя (state IN
+// ('flying','holding','returning')).
+//
+// Возвращает упрощённую структуру FleetSnapshot — для scoring
+// достаточно знать сколько слотов и какой тоннаж в полёте.
+func readFleets(ctx context.Context, db repo.Exec, userID string) ([]FleetSnapshot, error) {
+	rows, err := db.Pool().Query(ctx, `
+		SELECT id, src_planet_id, mission, state, depart_at, arrive_at, return_at
+		FROM fleets
+		WHERE owner_user_id = $1 AND state IN ('flying','holding','returning')
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []FleetSnapshot
+	for rows.Next() {
+		var (
+			f          FleetSnapshot
+			returnAt   *time.Time
+			state      string
+		)
+		if err := rows.Scan(&f.ID, &f.OriginPlanet, &f.Mission, &state,
+			&f.StartTime, &f.ArrivalTime, &returnAt); err != nil {
+			return nil, err
+		}
+		if returnAt != nil {
+			f.ReturnTime = *returnAt
+		}
+		f.IsReturning = state == "returning"
+		f.IsHome = false // в полёте — не дома
+		out = append(out, f)
+	}
+	return out, rows.Err()
 }
 
 func minF(a, b float64) float64 {

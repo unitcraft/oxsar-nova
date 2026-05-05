@@ -558,6 +558,222 @@ func TestResearchWeight_Defaults(t *testing.T) {
 	}
 }
 
+// fixtureCatalogWithShips добавляет в каталог корабли с реальными
+// ID/cargo/cost (из configs/ships.yml) — нужны для transport/expedition.
+func fixtureCatalogWithShips() *config.Catalog {
+	cat := fixtureCatalogWithResearch()
+	cat.Ships = config.ShipCatalog{
+		Ships: map[string]config.ShipSpec{
+			"small_transporter": {
+				ID: 29, Cost: config.ResCost{Metal: 2000, Silicon: 2000}, Cargo: 5000,
+			},
+			"large_transporter": {
+				ID: 30, Cost: config.ResCost{Metal: 6000, Silicon: 6000}, Cargo: 25000,
+			},
+			"light_fighter": {
+				ID: 31, Cost: config.ResCost{Metal: 3000, Silicon: 1000}, Cargo: 50,
+			},
+		},
+	}
+	// Astrophysics для экспедиции.
+	cat.Research.Research["astrophysics"] = config.ResearchSpec{
+		ID: 27, CostBase: config.ResCost{Metal: 4000, Silicon: 8000, Hydrogen: 4000},
+		CostFactor: 1.75,
+	}
+	return cat
+}
+
+func TestScoreTransports_NoTransporters(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	donor := fixturePlanet("p1", "Donor", 5)
+	donor.Resources = Resources{Metal: 90000, Silicon: 0, Hydrogen: 0}
+	donor.Capacity = Resources{Metal: 100000, Silicon: 100000, Hydrogen: 100000}
+	donor.Ships = map[int]int64{} // нет транспортов
+
+	recipient := fixturePlanet("p2", "Recipient", 5)
+	recipient.Resources = Resources{Metal: 5000, Silicon: 5000, Hydrogen: 5000}
+	recipient.Capacity = Resources{Metal: 100000, Silicon: 100000, Hydrogen: 100000}
+
+	snap := PlayerSnapshot{Planets: []PlanetSnapshot{donor, recipient}}
+	inputs := fixtureScoringInputs(cat, []string{"p1", "p2"})
+
+	recs := scoreCandidates(snap, StrategyEconomy, inputs)
+	for _, r := range recs {
+		if r.ActionType == "transport" {
+			t.Errorf("expected no transport without transporters, got %v", r)
+		}
+	}
+}
+
+func TestScoreTransports_DonorOverflowToRecipient(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	donor := fixturePlanet("p1", "Donor", 5)
+	donor.Resources = Resources{Metal: 95000, Silicon: 5000, Hydrogen: 0}
+	donor.Capacity = Resources{Metal: 100000, Silicon: 100000, Hydrogen: 100000}
+	donor.Ships = map[int]int64{30: 5} // 5×25k = 125k cargo
+
+	recipient := fixturePlanet("p2", "Recipient", 5)
+	recipient.Resources = Resources{Metal: 5000, Silicon: 5000, Hydrogen: 5000}
+	recipient.Capacity = Resources{Metal: 100000, Silicon: 100000, Hydrogen: 100000}
+
+	snap := PlayerSnapshot{Planets: []PlanetSnapshot{donor, recipient}}
+	inputs := fixtureScoringInputs(cat, []string{"p1", "p2"})
+
+	recs := scoreCandidates(snap, StrategyEconomy, inputs)
+	var transport *Recommendation
+	for i := range recs {
+		if recs[i].ActionType == "transport" {
+			transport = &recs[i]
+			break
+		}
+	}
+	if transport == nil {
+		t.Fatal("expected transport rec, got none")
+	}
+	if transport.Params["resource"] != "metal" {
+		t.Errorf("resource = %v, want metal", transport.Params["resource"])
+	}
+	if transport.PlanetID != "p1" {
+		t.Errorf("src planet = %s, want p1", transport.PlanetID)
+	}
+	dst := transport.Params["dst_galaxy"]
+	if dst == nil {
+		t.Errorf("dst_galaxy missing in params")
+	}
+}
+
+func TestScoreExpeditions_NoAstrophysics(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	planet := fixturePlanet("p1", "Earth", 5)
+	planet.Ships = map[int]int64{31: 100} // light_fighter много
+
+	snap := PlayerSnapshot{
+		Planets:  []PlanetSnapshot{planet},
+		Research: map[int]int{}, // astrophysics нет
+	}
+	inputs := fixtureScoringInputs(cat, []string{"p1"})
+
+	recs := scoreCandidates(snap, StrategyExpansion, inputs)
+	for _, r := range recs {
+		if r.ActionType == "expedition" {
+			t.Errorf("expected no expedition without astrophysics, got %v", r)
+		}
+	}
+}
+
+func TestScoreExpeditions_BelowMinFleetValue(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	planet := fixturePlanet("p1", "Earth", 5)
+	planet.Ships = map[int]int64{31: 5} // 5×4000 = 20k metal-eq < 50k порог
+
+	snap := PlayerSnapshot{
+		Planets:  []PlanetSnapshot{planet},
+		Research: map[int]int{27: 4}, // astrophysics ур.4 → 2 слота
+	}
+	inputs := fixtureScoringInputs(cat, []string{"p1"})
+
+	recs := scoreCandidates(snap, StrategyExpansion, inputs)
+	for _, r := range recs {
+		if r.ActionType == "expedition" {
+			t.Errorf("expected no expedition with fleet < 50k, got %v", r)
+		}
+	}
+}
+
+func TestScoreExpeditions_HappyPath(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	planet := fixturePlanet("p1", "Earth", 5)
+	// 20 light_fighter × 4000 metal-eq = 80_000 > min 50_000.
+	planet.Ships = map[int]int64{31: 20}
+
+	snap := PlayerSnapshot{
+		Planets:  []PlanetSnapshot{planet},
+		Research: map[int]int{27: 4}, // sqrt(4) = 2 слота
+	}
+	inputs := fixtureScoringInputs(cat, []string{"p1"})
+
+	recs := scoreCandidates(snap, StrategyExpansion, inputs)
+	var expedition *Recommendation
+	for i := range recs {
+		if recs[i].ActionType == "expedition" {
+			expedition = &recs[i]
+			break
+		}
+	}
+	if expedition == nil {
+		t.Fatal("expected expedition rec, got none")
+	}
+	if expedition.PlanetID != "p1" {
+		t.Errorf("src planet = %s, want p1", expedition.PlanetID)
+	}
+	if v := expedition.Params["fleet_value"]; v == nil {
+		t.Errorf("fleet_value missing in params")
+	}
+}
+
+func TestScoreExpeditions_SlotsFull(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	planet := fixturePlanet("p1", "Earth", 5)
+	planet.Ships = map[int]int64{31: 100}
+
+	// astrophysics ур.4 → 2 слота, оба заняты.
+	snap := PlayerSnapshot{
+		Planets:  []PlanetSnapshot{planet},
+		Research: map[int]int{27: 4},
+		Fleets: []FleetSnapshot{
+			{ID: "f1", Mission: 15}, // KindExpedition
+			{ID: "f2", Mission: 15},
+		},
+	}
+	inputs := fixtureScoringInputs(cat, []string{"p1"})
+
+	recs := scoreCandidates(snap, StrategyExpansion, inputs)
+	for _, r := range recs {
+		if r.ActionType == "expedition" {
+			t.Errorf("expected no expedition with full slots, got %v", r)
+		}
+	}
+}
+
+func TestExpeditionStrategyWeight(t *testing.T) {
+	t.Parallel()
+	if expeditionStrategyWeight(StrategyExpansion) <= expeditionStrategyWeight(StrategyEconomy) {
+		t.Error("Expansion weight must exceed Economy")
+	}
+	if expeditionStrategyWeight(StrategyExpansion) <= expeditionStrategyWeight(StrategyMilitary) {
+		t.Error("Expansion weight must exceed Military")
+	}
+	if expeditionStrategyWeight(StrategyMilitary) >= expeditionStrategyWeight(StrategyEconomy) {
+		t.Error("Military must be <= Economy")
+	}
+}
+
+func TestMetalEqShipValue(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	inputs := scoringInputs{Catalog: cat}
+	// 10 light_fighter (cost=4000) + 5 small_transporter (cost=4000) = 60k.
+	got := metalEqShipValue(map[int]int64{31: 10, 29: 5}, inputs)
+	want := int64(10*4000 + 5*4000)
+	if got != want {
+		t.Errorf("metalEqShipValue = %d, want %d", got, want)
+	}
+	// Пустая карта → 0.
+	if got := metalEqShipValue(map[int]int64{}, inputs); got != 0 {
+		t.Errorf("empty ships = %d, want 0", got)
+	}
+	// nil catalog → 0.
+	if got := metalEqShipValue(map[int]int64{31: 10}, scoringInputs{}); got != 0 {
+		t.Errorf("nil catalog = %d, want 0", got)
+	}
+}
+
 func TestFormatDuration(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

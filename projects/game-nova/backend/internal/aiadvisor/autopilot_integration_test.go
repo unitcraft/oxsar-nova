@@ -90,7 +90,7 @@ func newServiceForTest(pool *pgxpool.Pool) *aiadvisor.AutopilotService {
 		db, cfg,
 		aiadvisor.GameTuning{},
 		cat, planetSvc, scoreSvc,
-		nil, nil, // building/research не нужны при пустом каталоге
+		nil, nil, nil, // building/research/fleet не нужны при пустом каталоге
 	)
 }
 
@@ -320,6 +320,46 @@ func TestAutopilot_Compute_Idempotent(t *testing.T) {
 	}
 	if res2.Status != aiadvisor.AutopilotStatusReady {
 		t.Errorf("status after idempotent Compute = %q, want ready", res2.Status)
+	}
+}
+
+func TestAutopilot_BuildSnapshot_NoPlanets(t *testing.T) {
+	pool := testPool(t)
+	defer pool.Close()
+	ctx := context.Background()
+	uid := createTestUser(t, pool, 100)
+	defer cleanupTestUser(t, pool, uid)
+
+	// У пользователя нет планет, нет флотов, нет research.
+	// buildSnapshot должен вернуть валидный snapshot с пустыми коллекциями.
+	svc := newServiceForTest(pool)
+	enq, err := svc.Enqueue(ctx, uid, aiadvisor.StrategyEconomy)
+	if err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	ev := readAdviseEvent(t, pool, uid)
+
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	if err := svc.Compute(ctx, tx, ev); err != nil {
+		_ = tx.Rollback(ctx)
+		t.Fatalf("Compute on empty user: %v", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+
+	res, err := svc.Result(ctx, uid, enq.JobID)
+	if err != nil {
+		t.Fatalf("Result: %v", err)
+	}
+	if res.Status != aiadvisor.AutopilotStatusReady {
+		t.Errorf("status = %q, want ready", res.Status)
+	}
+	if len(res.Recs) != 0 {
+		t.Errorf("recs for empty user = %d, want 0", len(res.Recs))
 	}
 }
 

@@ -260,6 +260,7 @@ func run() error {
 		},
 		cat,
 		planetSvc, scoreSvc, autopilotBuildingSvc, autopilotResearchSvc,
+		transportSvc, // worker не вызывает Fleet.Send (только Compute), но для единства сигнатуры
 	)
 	autopilotWorkerH := &aiadvisor.AutopilotWorkerHandler{Svc: autopilotSvc}
 	w.Register(event.KindAutopilotAdvise, autopilotWorkerH.Handle)

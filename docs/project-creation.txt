@@ -16959,3 +16959,60 @@ not-a-fix + BA-019 mitigated.
 
   Ф.1 (backend core building+research scoring + integration) закрыт.
   Дальше: Ф.2 (миссии — атака/шпионаж/транспорт/экспедиция).
+
+## Итерация 06.1.6 — Автопилот: миссии Ф.2.1 (transport + expedition) (2026-05-06)
+
+  Цель: scoreCandidates умеет предлагать «отправить флот» для двух
+  простых миссий — transport (между своими планетами) и expedition.
+  Атака и шпионаж требуют соседей и battle.Simulator → Ф.2.2.
+
+  Backend:
+    - aiadvisor/autopilot_snapshot.go: PlanetSnapshot += Ships/Defense
+      (map[unitID]int64). buildSnapshot читает их через прямой SQL
+      (readShipsAndDefense — не тащим shipyard.Service). PlayerSnapshot.
+      Fleets заполняется через readFleets (state IN flying/holding/
+      returning).
+    - aiadvisor/autopilot_scoring_missions.go (новый файл):
+        scoreTransports — выбирает планету-донор (ресурс ≥ 80% cap +
+        transporter ≥ 1) и планету-реципиент (ресурс < 30% cap),
+        формирует TransportInput-параметры. Score = transferAmount * weight.
+        scoreExpeditions — отбирает планеты с astrophysics ≥ 1, проверяет
+        свободные слоты (sqrt(astro)) и порог 50_000 metal-eq фт.
+        Score = (astro+5) * fleet_value/50k * stratWeight.
+    - aiadvisor/autopilot_executor.go:
+        executeMission → executeTransport / executeExpedition.
+        Оба строят fleet.TransportInput и вызывают TransportService.Send;
+        ошибки пробрасываются с обёрткой.
+        chooseTransportShips — минимальный комплект transporter'ов под
+        целевой объём груза (large 25k → small 5k).
+    - aiadvisor/autopilot_service.go: AutopilotService += fleetSvc,
+      Execute прокидывает в executorDeps.
+    - cmd/server/main.go, cmd/worker/main.go: NewAutopilotService теперь
+      принимает transportSvc (worker — для единства сигнатуры, Send из
+      воркера не вызывается).
+
+  Tests (унит, 9 новых):
+    - TestScoreTransports_NoTransporters — нет transporter → нет рекомендации.
+    - TestScoreTransports_DonorOverflowToRecipient — успешный transport
+      metal с переполненной планеты-донора на пустого реципиента.
+    - TestScoreExpeditions_NoAstrophysics — без astro нет рекомендации.
+    - TestScoreExpeditions_BelowMinFleetValue — fleet < 50k → нет рек.
+    - TestScoreExpeditions_HappyPath — astro=4 + 80k metal-eq → есть рек.
+    - TestScoreExpeditions_SlotsFull — все 2 слота заняты → нет рек.
+    - TestExpeditionStrategyWeight — Expansion > Economy > Military.
+    - TestMetalEqShipValue — суммирование метал-эквивалента кораблей.
+
+  go build/vet/test — green. Integration-тесты (24 unit + 9 integration =
+  33 всего) — все зелёные с реальной БД (postgres @ 127.0.0.1:5438).
+
+  Что НЕ сделано:
+    - Атака и шпионаж — Ф.2.2 (требуют чтения соседей в snapshot
+      и battle.Simulator для прогноза боя).
+    - chooseTransportShips: если на планете не хватает кораблей, Send
+      вернёт ошибку — autopilot её прокидывает; идеальное поведение —
+      scoring должен учитывать наличие при выборе. Это улучшение для
+      Ф.2.2 (там тот же подход с атак-флотом).
+    - executeExpedition: нужны точные dst-координаты экспедиции.
+      Сейчас scoring их не задаёт; executor возвращает ошибку
+      «target coords missing» если они отсутствуют. В Ф.2.2 scoring
+      будет включать random-выбор координат в галактике игрока.

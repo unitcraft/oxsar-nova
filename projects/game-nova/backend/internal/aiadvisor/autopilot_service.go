@@ -41,6 +41,7 @@ import (
 	"oxsar/game-nova/internal/building"
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/event"
+	"oxsar/game-nova/internal/fleet"
 	"oxsar/game-nova/internal/planet"
 	"oxsar/game-nova/internal/repo"
 	"oxsar/game-nova/internal/research"
@@ -88,6 +89,7 @@ type AutopilotService struct {
 	scoreSvc    *score.Service
 	buildSvc    *building.Service
 	researchSvc *research.Service
+	fleetSvc    *fleet.TransportService
 }
 
 // NewAutopilotService — конструктор. Любая зависимость может быть nil
@@ -102,6 +104,7 @@ func NewAutopilotService(
 	scoreSvc *score.Service,
 	buildSvc *building.Service,
 	researchSvc *research.Service,
+	fleetSvc *fleet.TransportService,
 ) *AutopilotService {
 	return &AutopilotService{
 		db:          db,
@@ -112,6 +115,7 @@ func NewAutopilotService(
 		scoreSvc:    scoreSvc,
 		buildSvc:    buildSvc,
 		researchSvc: researchSvc,
+		fleetSvc:    fleetSvc,
 	}
 }
 
@@ -369,6 +373,7 @@ func (s *AutopilotService) Execute(ctx context.Context, userID, jobID, recID str
 	eventID, err := executeRecommendation(ctx, executorDeps{
 		Building: s.buildSvc,
 		Research: s.researchSvc,
+		Fleet:    s.fleetSvc,
 	}, userID, *rec)
 	if err != nil {
 		return ExecuteResult{}, err

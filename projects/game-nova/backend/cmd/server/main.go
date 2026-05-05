@@ -365,7 +365,7 @@ func run() error {
 			ResearchSpeed: cfg.Game.ResearchSpeedFactor,
 		},
 		cat,
-		planetSvc, scoreSvc, buildingSvc, researchSvc,
+		planetSvc, scoreSvc, buildingSvc, researchSvc, transportSvc,
 	)
 	autopilotH := aiadvisor.NewAutopilotHandler(autopilotSvc)
 
