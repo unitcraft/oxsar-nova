@@ -16613,3 +16613,28 @@ not-a-fix + BA-019 mitigated.
   --noEmit чистый.
 
   План: docs/plans/72.1.59-profession-i18n.md.
+
+## Итерация 72.1.60 — build_min_seconds + прогресс-бар очереди (2026-05-05)
+
+  Задачи:
+  1. build_min_seconds — configurable floor времени постройки здания.
+  2. ConstructionProgress — правильный прогресс-бар с авто-инвалидацией.
+
+  Изменения:
+
+  build_min_seconds:
+    - economy/formulas.go: BuildDuration принимает minSeconds int вместо
+      хардкода `if raw < 1`.
+    - universe/registry.go: поле BuildMinSeconds с fallback на uni01.
+    - config/config.go: GameConfig.BuildMinSeconds + UniverseParams.
+    - building/service.go: Service.buildMinSec, NewService принимает параметр.
+    - cmd/server/main.go + cmd/worker/main.go: передают cfg.Game.BuildMinSeconds.
+    - universes.yaml: build_min_seconds=1 (uni01, дефолт), uni03=5.
+    - Новый тест TestBuildDuration_MinimumCustom.
+
+  ConstructionProgress:
+    - Формулы вынесены в taskProgress.ts: calcRemainingSec, calcPct, calcBarPct.
+    - pct пересчитывается каждую секунду от Date.now() (как legacy PHP).
+    - barPct для CSS-полоски: +2s*progress компенсирует отставание transition.
+    - useAutoInvalidateOnTaskEnd: invalidate через useRef — таймер не сбрасывается
+      при каждом рендере; ConstructionsScreen refetchInterval=10s как страховка.
