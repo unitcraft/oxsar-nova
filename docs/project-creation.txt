@@ -17091,3 +17091,48 @@ not-a-fix + BA-019 mitigated.
       В идеале scoring должен подбирать flight composition по
       ratio (атакеры/таран/перевозчики). Это улучшение
       «второго порядка», не блокирует пользу автопилота.
+
+## Итерация 06.1.9 — Автопилот: фронт-виджет Ф.4 (2026-05-06)
+
+  Цель: пользовательский интерфейс для AI-советника и автопилота
+  на nova-фронте.
+
+  Frontend:
+    - features/advisor/AdvisorScreen.tsx — новый экран с двумя вкладками:
+        Tab 1 — «AI-ассистент» (LLM):
+          - Выбор модели (Haiku/Sonnet/Opus).
+          - Textarea с вопросом, кнопка «Спросить» → POST /api/ai-advisor/ask.
+          - Ответ в ox-panel с whitespace-pre-wrap.
+        Tab 2 — «Автопилот» (rule-based):
+          - Селектор стратегии (economy/military/defense/expansion/auto)
+            сохраняется в localStorage 'autopilot:strategy'.
+          - Кнопка «Запустить» → POST /api/ai-advisor/autopilot/advise →
+            {job_id} в localStorage 'autopilot:lastJob'.
+          - Polling GET /result/{job_id} каждые 2с пока status='pending';
+            затем останавливается (refetchInterval=false).
+          - Топ-3 карточки с описанием/выгодой/категорией/score и
+            кнопкой «Выполнить» → POST /execute → invalidateQueries
+            + navigateForRec (#buildings/#research/#fleet).
+    - App.tsx: import AdvisorScreen (lazy), Tab 'advisor' добавлен
+      в union/VALID_TABS, render через {tab === 'advisor' && ...},
+      пункт меню «🤖 Советник» рядом с «📋 Задания дня».
+    - i18n/ru.yml + en.yml: новая группа advisor: с 19 ключами
+      (titles/tabs/hints/buttons/strategyXxx/categoryXxx). menuAdvisor
+      добавлен в group=global.
+
+  Tests:
+    - npm run typecheck — мои файлы (App.tsx, AdvisorScreen.tsx)
+      без ошибок (грязь в чужих файлах от соседней сессии не моя).
+    - go test ./internal/i18n/... — мои ключи симметричны ru/en,
+      «advisor» в списке проблем нет.
+    - Backend pipeline тесты по-прежнему 47 зелёных.
+
+  Что НЕ сделано:
+    - История последних N запросов (пока показывается только активный
+      job из localStorage). Для истории нужен отдельный
+      GET /api/ai-advisor/autopilot/history эндпоинт — добавим
+      когда понадобится.
+    - WS-push autopilot_ready — Ф.6 (зависит от плана WS-чата).
+    - Inbox-канал «Автопилот» (дублирование рекомендации в почту) —
+      требует inbox.Service в AutopilotService; полезно когда игрок
+      offline, но в Ф.4 опущено.

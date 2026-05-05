@@ -1565,6 +1565,37 @@ planetOptions:
   toastAbandonBody: "{{name}} has been deleted"
   toastAbandonErr: Deletion error
 
+advisor:
+  title: Advisor
+  tabAI: AI Assistant
+  tabAutopilot: Autopilot
+  aiHint: "Ask anything about the game. Answers cost credits (Haiku 5cr / Sonnet 20cr / Opus 80cr)."
+  aiQuestionPlaceholder: "For example: what should I build next?"
+  aiAsk: Ask
+  aiThinking: Thinking…
+  aiAskOK: Answer received
+  aiAskFail: Error
+  autoHint: "Autopilot suggests top-3 moves based on the selected strategy (2 cr per request)."
+  autoStrategy: Strategy
+  autoStart: Start
+  autoComputing: Computing
+  autoEmpty: No actionable recommendations. Try a different strategy or wait for resources to accumulate.
+  autoExecute: Execute
+  autoExecuted: Executed
+  autoExecuteFail: Execution failed
+  autoFail: Error
+  autoCategory: Category
+  strategyEconomy: Economy
+  strategyMilitary: Military
+  strategyDefense: Defense
+  strategyExpansion: Expansion
+  strategyAuto: Auto
+  categoryBuilding: Building
+  categoryResearch: Research
+  categoryMission: Mission
+  categoryDefense: Defense
+  categoryProfession: Profession
+
 dailyquest:
   title: Daily quests
   hint: "Resets at 00:00 UTC. Complete quests to earn rewards."
@@ -2197,6 +2228,7 @@ global:
   menuAdmin: Admin
   menuChat: Chat
   menuDailyQuests: Daily quests
+  menuAdvisor: Advisor
   menuNotepad: Notepad
   menuOfficers: Officers
   menuPlanetOptions: Planet
@@ -3467,7 +3499,7 @@ simulator:
 # План 72.1.33: BuildingInfo demolish section.
 buildinginfo:
   demolish: "Demolish building"
-  demolishNow: "Demolish now"
+  demolishNow: "Demolish"
   demolishConfirm: "Demolish {{building}} to level {{level}}?"
   currentLevel: "Current level"
   # План 72.1.33 ч.2: pack-артефакты.

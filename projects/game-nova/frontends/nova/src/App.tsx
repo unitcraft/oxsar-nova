@@ -52,13 +52,14 @@ const TechtreeScreen     = lazy(() => import('./features/techtree/TechtreeScreen
 const BattlestatsScreen  = lazy(() => import('./features/battlestats/BattlestatsScreen').then(m => ({ default: m.BattlestatsScreen })));
 const FriendsScreen      = lazy(() => import('./features/friends/FriendsScreen').then(m => ({ default: m.FriendsScreen })));
 const RecordsScreen      = lazy(() => import('./features/records/RecordsScreen').then(m => ({ default: m.RecordsScreen })));
+const AdvisorScreen      = lazy(() => import('./features/advisor/AdvisorScreen').then(m => ({ default: m.AdvisorScreen })));
 
 type Tab =
   | 'overview' | 'buildings' | 'research' | 'shipyard' | 'repair'
   | 'artefacts' | 'galaxy' | 'fleet' | 'market' | 'rockets'
   | 'art-market' | 'exchange' | 'officers' | 'achievements' | 'daily-quests' | 'score'
   | 'messages' | 'alliance' | 'chat' | 'sim' | 'admin' | 'planet-options' | 'resource'
-  | 'credits' | 'unit-info' | 'profession' | 'empire' | 'settings' | 'referral' | 'notepad' | 'techtree' | 'battlestats' | 'friends' | 'records' | 'wiki';
+  | 'credits' | 'unit-info' | 'profession' | 'empire' | 'settings' | 'referral' | 'notepad' | 'techtree' | 'battlestats' | 'friends' | 'records' | 'wiki' | 'advisor';
 
 const VALID_TABS = new Set<string>([
   'overview', 'buildings', 'research', 'shipyard', 'repair',
@@ -67,6 +68,7 @@ const VALID_TABS = new Set<string>([
   'messages', 'alliance', 'chat', 'sim', 'admin', 'planet-options', 'resource',
   'credits', 'unit-info', 'profession', 'empire', 'settings',
   'referral', 'notepad', 'techtree', 'battlestats', 'friends', 'records', 'wiki',
+  'advisor',
 ]);
 
 type InfoUnit = { kind: 'building' | 'research' | 'ship' | 'defense'; id: number; level: number; fromTab: Tab };
@@ -385,6 +387,7 @@ function AuthenticatedApp() {
             {tab === 'officers'   && <OfficersScreen />}
             {tab === 'achievements' && <AchievementsScreen />}
             {tab === 'daily-quests' && <DailyQuestScreen />}
+            {tab === 'advisor' && <AdvisorScreen />}
             {tab === 'wiki'         && <WikiScreen />}
             {tab === 'score'      && <ScoreScreen initialQuery={scoreInitialQuery} onPlanetClick={(g, s) => { setGalaxyInitialCoords({ galaxy: g, system: s }); navigateTo('galaxy'); }} />}
             {tab === 'alliance'   && <AllianceScreen />}
@@ -771,6 +774,7 @@ function MoreSheet({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
     { key: 'score',       icon: '🏆', label: t('global', 'menuHighscore') },
     { key: 'achievements',icon: '🥇', label: t('global', 'menuAchievements') },
     { key: 'daily-quests',icon: '📋', label: t('global', 'menuDailyQuests') },
+    { key: 'advisor',     icon: '🤖', label: t('global', 'menuAdvisor') },
     { key: 'wiki',        icon: '📖', label: t('global', 'menuWiki') },
     { key: 'battlestats', icon: '⚔',  label: t('global', 'menuBattlestats') },
     { key: 'records',     icon: '🏅', label: t('global', 'menuRecords') },
@@ -843,6 +847,7 @@ function buildNavItems(t: (ns: string, key: string) => string, unreadCount: numb
     { key: 'score',      icon: '🏆', label: t('global', 'menuHighscore') },
     { key: 'achievements',icon:'🥇', label: t('global', 'menuAchievements'), badge: newAchCount || undefined },
     { key: 'daily-quests',icon: '📋', label: t('global', 'menuDailyQuests') },
+    { key: 'advisor',     icon: '🤖', label: t('global', 'menuAdvisor') },
     { key: 'wiki',       icon: '📖', label: t('global', 'menuWiki') },
     { key: 'battlestats',icon: '⚔', label: t('global', 'menuBattlestats') },
     { key: 'records',    icon: '🏅', label: t('global', 'menuRecords') },

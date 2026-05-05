@@ -1561,6 +1561,37 @@ planetOptions:
   toastAbandonBody: "{{name}} была удалена"
   toastAbandonErr: Ошибка при удалении
 
+advisor:
+  title: Советник
+  tabAI: AI-ассистент
+  tabAutopilot: Автопилот
+  aiHint: "Задайте вопрос об игре. Ответ — за кредиты (Haiku 5кр / Sonnet 20кр / Opus 80кр)."
+  aiQuestionPlaceholder: "Например: какое здание построить следующим?"
+  aiAsk: Спросить
+  aiThinking: Думаю…
+  aiAskOK: Ответ получен
+  aiAskFail: Ошибка
+  autoHint: "Автопилот предложит топ-3 хода исходя из выбранной стратегии (2 кр за запрос)."
+  autoStrategy: Стратегия
+  autoStart: Запустить
+  autoComputing: Считаю
+  autoEmpty: Нет доступных рекомендаций. Попробуйте другую стратегию или дождитесь накопления ресурсов.
+  autoExecute: Выполнить
+  autoExecuted: Выполнено
+  autoExecuteFail: Ошибка выполнения
+  autoFail: Ошибка
+  autoCategory: Категория
+  strategyEconomy: Экономика
+  strategyMilitary: Военная
+  strategyDefense: Оборона
+  strategyExpansion: Экспансия
+  strategyAuto: Авто
+  categoryBuilding: Строительство
+  categoryResearch: Исследование
+  categoryMission: Миссия
+  categoryDefense: Оборона
+  categoryProfession: Профессия
+
 dailyquest:
   title: Ежедневные задания
   hint: "Сбрасываются в 00:00 UTC. Выполняйте задания для получения наград."
@@ -2206,6 +2237,7 @@ global:
   menuAdmin: Админ
   menuChat: Чат
   menuDailyQuests: Задания дня
+  menuAdvisor: Советник
   menuNotepad: Блокнот
   menuOfficers: Офицеры
   menuPlanetOptions: Планета
@@ -2359,9 +2391,6 @@ info:
   artefactPackedResearch: Запакованное исследование
   artefactPackingBuilding: Конструкторский модуль
   artefactPackingResearch: Исследовательский модуль
-  artefactsTech: Изучение артефактов
-  artefactsTechDesc: Технология позволяет активировать артефакты. Количество одновременно работающих артефактов на всех планетах увеличивается с каждым уровнем на 1.
-  artefactsTechFullDesc: В исследовании инопланетных артефактов работают самые лучшие научные подразделения Вашей империи. Для изучения неизвестных технологий и механизмов работы артефактов используются лучшие эвристические методы анализа и супер компьютерные технологии. Данная технология позволяет использовать артефакты и поддерживать некоторые из них в рабочем состоянии некоторое время. Максимальное количество активированных артефактов на всех планетах ограничено уровнем этой технологии.
   astroTech: Астрофизика
   assaultReportTitle: Отчет о сражении
   assemblyModule3110: Модуль сборки
@@ -3485,7 +3514,7 @@ simulator:
 # План 72.1.33: BuildingInfo demolish секция.
 buildinginfo:
   demolish: "Снос здания"
-  demolishNow: "Снести сейчас"
+  demolishNow: "Снести"
   demolishConfirm: "Снести {{building}} до уровня {{level}}?"
   currentLevel: "Текущий уровень"
   # План 72.1.33 ч.2: pack-артефакты.
