@@ -1214,7 +1214,23 @@ Working tree содержал смесь моих 33 правок и 3 хунк�
 - `nanoFactoryFullDesc`: дефисы → тире, «задания» → «задачи»
 - `repairFactory*Desc`: «поврежденных», «юнитов» → «повреждённых», «кораблей»
 
-### Текущий статус Ф.2
-Охвачены блоки: `autoMessages:` (пачки #1–#4), `assaultReport:` (#5),
-`messages:` (#6), `buildings:` + `fleet:` (#7–#10 частично), unit/tech descriptions.
-Остаток: `alliance:`, `market:`, системные сообщения, achievements (пропущен).
+**Пачки #11–#16 (2026-05-05 продолжение):**
+- #11 `891d3c11d3` — alliance: «альнсов» (опечатка), «Вы/Вас» → «вы/вас», «исключен» → «исключён», «решил, что покинет» → «покинул», showMember → русский текст
+- #12 `8799a77e89` — market + exchange: «Вы получите» → «вы», «oxsarits» → «оксариты», detailYourBalance
+- #13 `5adc090ac1` — settings + galaxy: vacationWarning/abandonConfirm/deletionScheduledBody «Вы» → «вы», «grace-период» убран, Звездная→Звёздная, силен→силён, грузоподъемности→грузоподъёмности
+- #14 `e706ab949c` — error: «еще на» → «ещё не» (double-bug), «нехватает» → «не хватает», «юниты» → «корабли» в 3 строках sim*, bigLot* «У вас» → «у вас», cannotDeletePlanet сокращён
+- #15 `c6ec0ff58d` — финальный проход: 12 UI-строк «Вы/Вас/Ваш» → строчные (joined.title, asteroidImpact, buildingDestroyed*, memberRefused/Receipted, selfRequest, confirmProceeding, confirmDeleteAll, regNoAgreement, wrongLeavePhrase)
+- #16 `5ba79381cf` — «еще» → «ещё» (2 строки), shadowShipFullDesc (дефис, ученых, совершено, Легкого, маневренностью), unitExchSupportRangeFullDesc (дефис, звездных, далекими)
+
+### Итог Ф.2 (план 88)
+Основной редакторский проход завершён. Охвачены все ключевые блоки:
+- `autoMessages:` (пачки #1–#4, включая экспедиции)
+- `assaultReport:` (#5)
+- `messages:` (#6 — баг-фикс плейсхолдера)
+- `buildings:`, `fleet:`, unit/tech descriptions (#7–#10)
+- `alliance:` (#11), `market:` + `exchange:` (#12)
+- `settings:`, `galaxy:` (#13)
+- `error:` (#14)
+- Финальные проходы: «Вы→вы» (#15), «еще/дефисы» (#16)
+
+Пропущены по решению: `achievements:` (пропустить по плану), email-тексты (официальный стиль допустим), маркетинговые landing-строки.
