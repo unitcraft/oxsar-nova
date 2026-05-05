@@ -116,9 +116,40 @@ func executeMission(ctx context.Context, fleetSvc *fleet.TransportService, userI
 		return executeAttack(ctx, fleetSvc, userID, rec)
 	case "spy":
 		return executeSpy(ctx, fleetSvc, userID, rec)
+	case "acs_join":
+		return executeACSJoin(ctx, fleetSvc, userID, rec)
 	default:
 		return "", fmt.Errorf("%w: mission action %q", ErrUnsupportedCategory, rec.ActionType)
 	}
+}
+
+func executeACSJoin(ctx context.Context, fleetSvc *fleet.TransportService, userID string, rec Recommendation) (string, error) {
+	src, _ := rec.Params["src_planet_id"].(string)
+	groupID, _ := rec.Params["acs_group_id"].(string)
+	if src == "" || groupID == "" {
+		return "", fmt.Errorf("autopilot: acs_join: src_planet_id or acs_group_id missing")
+	}
+	dstG, _ := paramInt(rec.Params, "dst_galaxy")
+	dstS, _ := paramInt(rec.Params, "dst_system")
+	dstP, _ := paramInt(rec.Params, "dst_position")
+	dstMoon, _ := rec.Params["dst_is_moon"].(bool)
+	// Состав флота — placeholder (как для атаки). Полная подборка
+	// — отдельная задача.
+	ships := map[int]int64{unitLightFighter: 10, unitCruiser: 5}
+
+	f, err := fleetSvc.Send(ctx, fleet.TransportInput{
+		UserID:      userID,
+		SrcPlanetID: src,
+		Dst: galaxy.Coords{Galaxy: dstG, System: dstS, Position: dstP, IsMoon: dstMoon},
+		Mission:      int(event.KindAttackAlliance),
+		ACSGroupID:   groupID,
+		Ships:        ships,
+		SpeedPercent: 100,
+	})
+	if err != nil {
+		return "", fmt.Errorf("autopilot: acs_join send: %w", err)
+	}
+	return f.ID, nil
 }
 
 func executeAttack(ctx context.Context, fleetSvc *fleet.TransportService, userID string, rec Recommendation) (string, error) {

@@ -995,6 +995,61 @@ func TestApproxAttackerShipValue(t *testing.T) {
 	}
 }
 
+func TestScoreACS_NoGroups(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	snap := fixtureSnapshotWithFleet()
+	// snap.ACSGroups = nil
+	recs := scoreCandidates(snap, StrategyMilitary, fixtureScoringInputs(cat, []string{"p1"}))
+	for _, r := range recs {
+		if r.ActionType == "acs_join" {
+			t.Errorf("expected no acs_join without groups, got %v", r)
+		}
+	}
+}
+
+func TestScoreACS_NoCombatShips(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	planet := fixturePlanet("p1", "Earth", 5)
+	planet.Ships = map[int]int64{29: 5} // только small_transporter
+	snap := PlayerSnapshot{
+		Planets: []PlanetSnapshot{planet},
+		ACSGroups: []ACSGroupSnapshot{
+			{ID: "g1", TargetGalaxy: 1, TargetSystem: 100, TargetPos: 5, LeaderName: "Ally"},
+		},
+	}
+	recs := scoreCandidates(snap, StrategyMilitary, fixtureScoringInputs(cat, []string{"p1"}))
+	for _, r := range recs {
+		if r.ActionType == "acs_join" {
+			t.Errorf("expected no acs_join without combat ships, got %v", r)
+		}
+	}
+}
+
+func TestScoreACS_HappyPath(t *testing.T) {
+	t.Parallel()
+	cat := fixtureCatalogWithShips()
+	snap := fixtureSnapshotWithFleet()
+	snap.ACSGroups = []ACSGroupSnapshot{
+		{ID: "g1", TargetGalaxy: 1, TargetSystem: 100, TargetPos: 5, LeaderName: "Ally"},
+	}
+	recs := scoreCandidates(snap, StrategyMilitary, fixtureScoringInputs(cat, []string{"p1"}))
+	var acs *Recommendation
+	for i := range recs {
+		if recs[i].ActionType == "acs_join" {
+			acs = &recs[i]
+			break
+		}
+	}
+	if acs == nil {
+		t.Fatal("expected acs_join rec, got none")
+	}
+	if acs.Params["acs_group_id"] != "g1" {
+		t.Errorf("acs_group_id = %v, want g1", acs.Params["acs_group_id"])
+	}
+}
+
 func TestProfessionForStrategy(t *testing.T) {
 	t.Parallel()
 	cases := map[Strategy]string{

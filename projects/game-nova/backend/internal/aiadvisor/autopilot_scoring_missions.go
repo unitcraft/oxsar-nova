@@ -40,6 +40,7 @@ const minExpeditionFleetValue = 50_000
 // scoreMissions добавляет mission-кандидаты в общий пул scoreCandidates.
 //   Ф.2.1: transport (между своими планетами), expedition.
 //   Ф.2.2: attack (упрощённая оценка по очкам), spy (шпионаж соседей).
+//   Ф.3:   acs (присоединение к атаке союзника).
 func scoreMissions(snap PlayerSnapshot, strategy Strategy, inputs scoringInputs) []Recommendation {
 	if inputs.Catalog == nil {
 		return nil
@@ -49,6 +50,71 @@ func scoreMissions(snap PlayerSnapshot, strategy Strategy, inputs scoringInputs)
 	out = append(out, scoreExpeditions(snap, strategy, inputs)...)
 	out = append(out, scoreAttacks(snap, strategy, inputs)...)
 	out = append(out, scoreSpy(snap, strategy, inputs)...)
+	out = append(out, scoreACS(snap, strategy)...)
+	return out
+}
+
+// scoreACS — присоединиться к существующей атаке союзника.
+//
+// Условия:
+//   - Игрок в альянсе (AllianceID != nil — обеспечивается buildSnapshot).
+//   - Есть открытые ACS-формации союзников (snap.ACSGroups).
+//   - Есть боевые корабли на хотя бы одной планете.
+//
+// Score: высокий для Military (1.0), низкий для прочих (0.2). ACS даёт
+// разделение лута и потерь — выгодно при совместной атаке сильной цели.
+func scoreACS(snap PlayerSnapshot, strategy Strategy) []Recommendation {
+	if len(snap.ACSGroups) == 0 {
+		return nil
+	}
+	weight := 0.2
+	if strategy == StrategyMilitary {
+		weight = 1.0
+	}
+
+	// Найдём планету с наибольшим боевым флотом.
+	srcPlanetID, srcPlanetName := "", ""
+	var srcValue int64
+	for _, ps := range snap.Planets {
+		v := approxAttackerShipValue(ps.Ships)
+		if v > srcValue {
+			srcValue = v
+			srcPlanetID = ps.ID
+			srcPlanetName = ps.Name
+		}
+	}
+	if srcValue == 0 {
+		return nil
+	}
+
+	var out []Recommendation
+	for _, g := range snap.ACSGroups {
+		// Score базовый = наш флот / 1000 (нормализация). Для ACS не
+		// важна сила цели (атаку планирует лидер); важно лишь что мы
+		// добавляем к пулу свою силу.
+		score := float64(srcValue) / 1000.0 * weight
+		if score <= 0 {
+			continue
+		}
+		out = append(out, Recommendation{
+			ID:         ids.New(),
+			Category:   "mission",
+			ActionType: "acs_join",
+			PlanetID:   srcPlanetID,
+			Params: map[string]any{
+				"src_planet_id": srcPlanetID,
+				"acs_group_id":  g.ID,
+				"dst_galaxy":    g.TargetGalaxy,
+				"dst_system":    g.TargetSystem,
+				"dst_position":  g.TargetPos,
+				"dst_is_moon":   g.TargetIsMoon,
+			},
+			Score: score,
+			Description: fmt.Sprintf("Присоединиться к атаке %q на [%d:%d:%d] с %q",
+				g.LeaderName, g.TargetGalaxy, g.TargetSystem, g.TargetPos, srcPlanetName),
+			Benefit: fmt.Sprintf("ACS-формация: разделить грабёж и потери (флот %d metal-eq)", srcValue),
+		})
+	}
 	return out
 }
 

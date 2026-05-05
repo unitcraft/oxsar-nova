@@ -17259,3 +17259,34 @@ not-a-fix + BA-019 mitigated.
       (которого ещё нет на фронте).
 
   Всё остальное по плану 06.1 — закрыто.
+
+## Итерация 06.1.13 — Автопилот: ACS-recommendation Ф.3 (2026-05-06)
+
+  Закрывает ACS из «отложенных архитектурных»:
+  если в альянсе игрока есть открытая ACS-формация (arrive_at > now()),
+  автопилот предлагает присоединиться.
+
+  Backend:
+    - PlayerSnapshot += AllianceID + ACSGroups []ACSGroupSnapshot.
+      buildSnapshot читает alliance_id из users одним запросом
+      и при наличии — readACSGroups (LIMIT 5, отсев своих и групп
+      где игрок уже).
+    - autopilot_scoring_missions.go scoreACS:
+        отсев нет групп / нет боевых кораблей.
+        Score = combatFleetValue/1000 * weight (Military=1.0, others=0.2).
+    - autopilot_executor.go executeACSJoin: TransportInput с
+      ACSGroupID, mission=KindAttackAlliance.
+
+  Tests (3 unit):
+    - TestScoreACS_NoGroups — нет групп → нет рек.
+    - TestScoreACS_NoCombatShips — есть группы, но только транспорты
+      → нет рек.
+    - TestScoreACS_HappyPath — Military + boевой флот + 1 группа
+      → есть рек с правильным acs_group_id.
+
+  Все тесты зелёные с реальной БД (acs_groups schema есть).
+
+  Остаются ТОЛЬКО:
+    - Биржа артефактов (exchange.Service, oxsarit pricing, escrow).
+    - Полный battle.Simulator точной оценки атаки.
+    - WS push (зависит от плана WS-чата на фронте).

@@ -37,6 +37,27 @@ type PlayerSnapshot struct {
 	// и время последней смены — для cooldown 14 дней.
 	Profession          string
 	ProfessionChangedAt *time.Time
+
+	// AllianceID — uuid альянса игрока (опционально). Используется в
+	// scoreACS для поиска лидеров атак из того же альянса.
+	AllianceID *string
+
+	// ACSGroups — активные ACS-группы союзников по альянсу, к которым
+	// игрок может присоединиться (до arrive_at).
+	ACSGroups []ACSGroupSnapshot
+}
+
+// ACSGroupSnapshot — одна активная ACS-формация союзников. Игрок может
+// присоединить свой флот, передав в TransportInput acs_group_id.
+type ACSGroupSnapshot struct {
+	ID            string
+	TargetGalaxy  int
+	TargetSystem  int
+	TargetPos     int
+	TargetIsMoon  bool
+	ArriveAt      time.Time
+	LeaderUserID  string
+	LeaderName    string
 }
 
 // PlanetSnapshot — состояние одной планеты на момент snapshot.
@@ -142,17 +163,18 @@ func buildSnapshot(ctx context.Context, deps SnapshotDeps, userID string) (Playe
 		Research: map[int]int{},
 	}
 
-	// Чтение баланса кредитов, флагов и профессии одним запросом.
+	// Чтение баланса кредитов, флагов, профессии и альянса одним запросом.
 	if err := deps.DB.Pool().QueryRow(ctx, `
 		SELECT COALESCE(credit, 0),
 		       COALESCE(umode, false),
 		       COALESCE(is_observer, false),
 		       COALESCE(profession, 'none'),
-		       profession_changed_at
+		       profession_changed_at,
+		       alliance_id
 		FROM users WHERE id = $1
 	`, userID).Scan(
 		&snap.Credits, &snap.Umode, &snap.IsObserver,
-		&snap.Profession, &snap.ProfessionChangedAt,
+		&snap.Profession, &snap.ProfessionChangedAt, &snap.AllianceID,
 	); err != nil {
 		return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: read user: %w", err)
 	}
@@ -271,7 +293,56 @@ func buildSnapshot(ctx context.Context, deps SnapshotDeps, userID string) (Playe
 		snap.Neighbors = neighbors
 	}
 
+	// ACS-группы союзников (Ф.3): открытые формации того же альянса,
+	// к которым игрок может присоединить свой флот.
+	if snap.AllianceID != nil {
+		groups, err := readACSGroups(ctx, deps.DB, userID, *snap.AllianceID)
+		if err != nil {
+			return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: acs groups: %w", err)
+		}
+		snap.ACSGroups = groups
+	}
+
 	return snap, nil
+}
+
+// readACSGroups читает активные ACS-формации того же альянса, к которым
+// игрок может присоединиться (arrive_at > now() и игрок ещё не в группе).
+//
+// Если таблица acs_groups отсутствует / схема другая — graceful empty
+// (rows.Err может вернуть ошибку, но это не критично для autopilot).
+func readACSGroups(ctx context.Context, db repo.Exec, userID, allianceID string) ([]ACSGroupSnapshot, error) {
+	rows, err := db.Pool().Query(ctx, `
+		SELECT g.id, g.target_galaxy, g.target_system, g.target_position,
+		       COALESCE(g.target_is_moon, false), g.arrive_at,
+		       g.leader_user_id, COALESCE(u.username::text, '')
+		FROM acs_groups g
+		JOIN users u ON u.id = g.leader_user_id
+		WHERE u.alliance_id = $1
+		  AND g.arrive_at > NOW()
+		  AND g.leader_user_id <> $2
+		  AND NOT EXISTS (
+		    SELECT 1 FROM fleets f
+		    WHERE f.acs_group_id = g.id AND f.owner_user_id = $2
+		  )
+		ORDER BY g.arrive_at
+		LIMIT 5
+	`, allianceID, userID)
+	if err != nil {
+		// Без таблицы / схемы — пустой список (graceful).
+		return nil, nil
+	}
+	defer rows.Close()
+	var out []ACSGroupSnapshot
+	for rows.Next() {
+		var g ACSGroupSnapshot
+		if err := rows.Scan(&g.ID, &g.TargetGalaxy, &g.TargetSystem, &g.TargetPos,
+			&g.TargetIsMoon, &g.ArriveAt, &g.LeaderUserID, &g.LeaderName); err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	return out, rows.Err()
 }
 
 // readShipsAndDefense читает inventory планеты (корабли + оборона).
