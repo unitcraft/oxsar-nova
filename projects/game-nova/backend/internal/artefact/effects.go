@@ -46,6 +46,10 @@ type FactorChange struct {
 	NewValue float64 // только для Op=set
 }
 
+// ErrNoFreeSlot — нет свободных слотов (artefacts_tech level <= used).
+// Legacy: Artefact::hasFreeSlots() = getUsedSlots() < getStorageSlots().
+var ErrNoFreeSlot = errors.New("artefact: no free activation slot (research artefacts_tech)")
+
 // ErrNonStackable — попытка активировать не-stackable артефакт, когда
 // такой уже активен. Соответствует getActiveCount() > 0 в oxsar2.
 var ErrNonStackable = errors.New("artefact: non-stackable already active")

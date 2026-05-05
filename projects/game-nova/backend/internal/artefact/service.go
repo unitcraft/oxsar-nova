@@ -252,6 +252,29 @@ func (s *Service) Activate(ctx context.Context, userID, artefactID string) (Reco
 			}
 		}
 
+		// Legacy Artefact::hasFreeSlots(): usedSlots < storageSots.
+		// storageSots = level исследования UNIT_ARTEFACTS_TECH=111.
+		const unitArtefactsTech = 111
+		var techLevel int
+		_ = tx.QueryRow(ctx,
+			`SELECT COALESCE(level, 0) FROM research WHERE user_id=$1 AND unit_id=$2`,
+			userID, unitArtefactsTech,
+		).Scan(&techLevel)
+		if techLevel > 0 {
+			var usedSlots int
+			if err := tx.QueryRow(ctx,
+				`SELECT COUNT(*) FROM artefacts_user WHERE user_id=$1 AND state='active'`,
+				userID,
+			).Scan(&usedSlots); err != nil {
+				return fmt.Errorf("check slots: %w", err)
+			}
+			if usedSlots >= techLevel {
+				return ErrNoFreeSlot
+			}
+		} else {
+			return ErrNoFreeSlot
+		}
+
 		// Если у артефакта есть delay — переводим в delayed и планируем
 		// событие KindArtefactDelay (63). Сами эффекты применятся позже,
 		// когда delay-событие сработает.
