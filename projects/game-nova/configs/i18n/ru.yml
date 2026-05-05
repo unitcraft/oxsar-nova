@@ -1938,30 +1938,30 @@ auth:
   termsConsentSuffix: "."
 
 error:
-  accountActivation: Аккаунт еще на активирован.
-  accountActivationMail: Аккаунт еще не активирован. Мы послали вам еще одно письмо с ссылкой на активацию.
+  accountActivation: Аккаунт ещё не активирован.
+  accountActivationMail: Аккаунт ещё не активирован. мы отправили вам ещё одно письмо со ссылкой на активацию.
   accountBanned: "Аккаунт заблокирован.<br/>Причина: {@reason}"
   bigLotArtefact: Артефакт уже в полете или на бирже.
-  bigLotCantReserv: У вас недостаточно ресурсов для выставления лота на биржу. Попробуйте выставить лот снова.
-  bigLotComission: У вас недостаточно кредитов для выставления лота на биржу.
-  bigLotFleet: У вас недостаточно кораблей.
+  bigLotCantReserv: у вас недостаточно ресурсов для выставления лота на биржу. Попробуйте снова.
+  bigLotComission: у вас недостаточно кредитов для выставления лота на биржу.
+  bigLotFleet: у вас недостаточно кораблей.
   cannotDeleteHomePlanet: Нельзя покинуть главную планету.
-  cannotDeletePlanet: Колония не может быть удалена. Помните, что для удаления на колонии не должно быть никаких видов деятельности.
+  cannotDeletePlanet: Колония не может быть удалена — на ней не должно быть активных процессов.
   cannotDeleteRelationship: Нет разрешения на прекращение отношений.
   enterFormationName: Введите имя формации.
   errorWithDoplomacyApplication: "Заявка не отправлена: пустое содержание или такая заявка уже подана."
-  homepageInvalid: Домашняя страница не верна.
+  homepageInvalid: Неверный адрес домашней страницы.
   ipaddressInvalid: Недействительный IP
   logoInvalid: Это ошибочный логотип.
   messageTooShort: Сообщение слишком короткое.
   noMatchesAlliance: Альянс не был найден.
-  notEnoughCapacity: Нехватает места в трюмах.
+  notEnoughCapacity: Не хватает места в трюмах.
   planetFullyDeveloped: Планета заполнена.
-  selfMessage: Вы не можете отправить сообщение себе.
+  selfMessage: вы не можете отправить сообщение себе.
   sentSuccessful: Сообщение успешно отправлено.
-  simNoAtterUnits: Введите атакующие юниты.
-  simNoDefenderUnits: Введите обороняющиеся юниты.
-  simNoUnits: Введите атакующие и обороняющиеся юниты.
+  simNoAtterUnits: Введите атакующие корабли.
+  simNoDefenderUnits: Введите обороняющиеся корабли.
+  simNoUnits: Введите атакующие и обороняющиеся корабли.
   subjectTooShort: Введите тему сообщения.
   textInvalid: Текст слишком длинный.
   unableToInviteUser: Пользователь не существует или не может быть приглашен.
