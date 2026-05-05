@@ -17371,3 +17371,27 @@ not-a-fix + BA-019 mitigated.
        коммитом ~50 строк.
 
   План 06.1 закрыт.
+
+## Итерация 06.1.15 — Автопилот: origin-фронт (2026-05-06)
+
+  По запросу: добавлен AdvisorScreen в origin-фронт.
+  Origin — pixel-perfect ремастер legacy oxsar2, у которого советника
+  не было. Это новая фича origin-вселенной (как и сам автопилот).
+
+  Frontend (origin):
+    - api/advisor.ts: типы (Strategy/Recommendation/Result/HistoryItem),
+      функции askAdvisor/startAutopilot/fetchAutopilotResult/
+      executeAutopilot/fetchAutopilotHistory.
+    - features/advisor/AdvisorScreen.tsx: legacy-style table.ntable,
+      две вкладки (AI / Автопилот), селектор стратегии, polling,
+      топ-3 в таблице, история (10 последних). Без эмодзи в кнопках.
+    - router.tsx: route '/advisor' → AdvisorScreen.
+    - layout/LeftMenu.tsx: пункт «Советник» в секции «Коммуникации»
+      рядом с «Блокнот».
+
+  Tests:
+    - npm run typecheck — чисто.
+    - npm run test — 133/133 origin тестов зелёные.
+
+  Backend тот же (план 06 §F.3 + 06.1) — origin использует те же
+  /api/ai-advisor/* эндпоинты что и nova.

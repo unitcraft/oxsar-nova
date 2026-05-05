@@ -73,6 +73,8 @@ export function LeftMenu() {
           <li><Link to="/chat" id="menu_chat">Чат</Link></li>
           <li><Link to="/msg">Сообщения</Link></li>
           <li><Link to="/notepad">Блокнот</Link></li>
+          {/* План 06.1: AI-советник + Автопилот. */}
+          <li><Link to="/advisor">Советник</Link></li>
           <li><Link to="/alliance">Альянс</Link></li>
           <li><Link to="/friends">Друзья</Link></li>
           <li><Link to="/search">Поиск</Link></li>

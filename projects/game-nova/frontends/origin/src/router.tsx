@@ -129,6 +129,7 @@ import { RocketAttackScreen } from './features/rocket-attack/RocketAttackScreen'
 import { MonitorPlanetScreen } from './features/monitor-planet/MonitorPlanetScreen';
 import { SimulatorScreen } from './features/simulator/SimulatorScreen';
 import { BattleReportScreen } from './features/battle-report/BattleReportScreen';
+import { AdvisorScreen } from './features/advisor/AdvisorScreen';
 
 export function AppRouter() {
   return (
@@ -241,6 +242,9 @@ function ProtectedRoutes() {
           <Route path="/chat" element={<ChatGlobalScreen />} />
           <Route path="/chat/ally" element={<ChatAllyScreen />} />
           <Route path="/notepad" element={<NotepadScreen />} />
+          {/* План 06.1: AI-советник + Автопилот (нет в legacy oxsar2 —
+              новая фича origin-вселенной). */}
+          <Route path="/advisor" element={<AdvisorScreen />} />
           <Route path="/search" element={<SearchScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
 
