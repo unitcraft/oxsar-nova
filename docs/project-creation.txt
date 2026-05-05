@@ -16638,3 +16638,46 @@ not-a-fix + BA-019 mitigated.
     - barPct для CSS-полоски: +2s*progress компенсирует отставание transition.
     - useAutoInvalidateOnTaskEnd: invalidate через useRef — таймер не сбрасывается
       при каждом рендере; ConstructionsScreen refetchInterval=10s как страховка.
+
+## Итерация 72.1.61 — VIP-instant, UI-полировка, moon_lab (2026-05-05)
+
+  Задачи:
+  1. VIP-кнопка — мгновенный старт стройки/исследования за кредиты.
+  2. UI-полировка: выравнивание, cursor, планета в сайдбаре.
+  3. Фильтр зданий на луне.
+  4. Moon Lab — исследования на луне (legacy UNIT_MOON_LAB=350).
+
+  VIP-instant (buildings/service.go StartVIP):
+    - Синхронное применение постройки в той же транзакции (без ожидания воркера).
+    - Atomic race-protection: UPDATE events SET state='done' WHERE state='wait'
+      первым; если rowsAffected=0 — воркер уже обработал, пропускаем.
+    - Порог: endAt <= now+2s → ErrVIPAlreadyStarted (backend), ≤5s → info-диалог
+      (frontend, не вызываем mutation).
+    - worker/main.go: WORKER_INTERVAL default 1s (был 10s).
+
+  VipButton.tsx (новый компонент):
+    - Единый компонент для всех 5 экранов с очередью (Constructions, Research,
+      BuildPanel, Repair, Disassemble).
+    - showConfirm=true — confirm-диалог; showConfirm=false — мгновенный клик.
+    - tooLateSec=5 — info-only диалог если времени мало.
+    - ConfirmDialog.infoOnly=true — скрывает Cancel, только OK.
+
+  UI-полировка:
+    - base.css: cursor:default + user-select:none на * (убран мигающий курсор).
+    - RequiredResTable.tsx: textAlign:left.
+    - ConstructionsScreen + ResearchScreen: name <strong>, textAlign:left.
+    - PlanetsList.tsx: убран navigate('/') — клик на планету не переходит на обзор.
+    - cancel-mutation onSuccess: invalidate planet + planets (обновляет ресурсы).
+
+  Фильтр зданий на луне:
+    - ConstructionsScreen: isMoon ? b.moonOnly === true : b.moonOnly !== true.
+    - building/service.go: ErrMoonOnly / ErrPlanetOnly уже были — backend защищён.
+
+  Moon Lab (id=350, legacy UNIT_MOON_LAB):
+    - configs/buildings.yml: moon_lab, moon_only=true, max_level=5,
+      cost_base={metal:5M, silicon:10M, hydrogen:90M}, cost_factor=2.0.
+    - research/service.go: labKey = moon_lab если p.IsMoon; IGR network
+      не применяется для луны (legacy 1:1).
+    - i18n: moonLab / moonLabDesc / moonLabFullDesc (ru+en).
+
+  Tests: go build ./... чистый.
