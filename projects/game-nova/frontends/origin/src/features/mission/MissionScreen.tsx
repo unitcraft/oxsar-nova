@@ -335,45 +335,45 @@ export function MissionScreen() {
           </tr>
           {/* План 72.1.47: resource-carry (legacy missions.tpl fleetMetal/Silicon/Hydrogen). */}
           <tr>
-            <td>{t('overview', 'metal') || 'Металл'}</td>
+            <td>{t('overview', 'metal')}</td>
             <td>
               <input
                 type="number"
                 min={0}
                 value={carryMetal}
                 onChange={(e) => setCarryMetal(e.target.value)}
-                aria-label={t('overview', 'metal') || 'Металл'}
+                aria-label={t('overview', 'metal')}
               />
             </td>
           </tr>
           <tr>
-            <td>{t('overview', 'silicon') || 'Кремний'}</td>
+            <td>{t('overview', 'silicon')}</td>
             <td>
               <input
                 type="number"
                 min={0}
                 value={carrySilicon}
                 onChange={(e) => setCarrySilicon(e.target.value)}
-                aria-label={t('overview', 'silicon') || 'Кремний'}
+                aria-label={t('overview', 'silicon')}
               />
             </td>
           </tr>
           <tr>
-            <td>{t('overview', 'hydrogen') || 'Водород'}</td>
+            <td>{t('overview', 'hydrogen')}</td>
             <td>
               <input
                 type="number"
                 min={0}
                 value={carryHydrogen}
                 onChange={(e) => setCarryHydrogen(e.target.value)}
-                aria-label={t('overview', 'hydrogen') || 'Водород'}
+                aria-label={t('overview', 'hydrogen')}
               />
             </td>
           </tr>
           {/* Mission=8 colonize → colony_name; mission=12 ACS → acs_group_id. */}
           {mission === 8 && (
             <tr>
-              <td>{t('mission', 'colonyName') || 'Имя колонии'}</td>
+              <td>{t('mission', 'colonyName')}</td>
               <td>
                 <input
                   type="text"
@@ -388,13 +388,13 @@ export function MissionScreen() {
           )}
           {mission === 12 && (
             <tr>
-              <td>{t('mission', 'acsGroupId') || 'ACS group ID'}</td>
+              <td>{t('mission', 'acsGroupId')}</td>
               <td>
                 <input
                   type="text"
                   value={acsGroupId}
                   onChange={(e) => setAcsGroupId(e.target.value)}
-                  placeholder={t('mission', 'acsGroupHint') || 'пусто = создать новую'}
+                  placeholder={t('mission', 'acsGroupHint')}
                   aria-label="acs_group_id"
                 />
               </td>
@@ -403,7 +403,7 @@ export function MissionScreen() {
           {/* План 72.1.47: HOLDING — длительность удержания на цели. */}
           {mission === 17 && (
             <tr>
-              <td>{t('mission', 'holdingHours') || 'Удерживать (ч)'}</td>
+              <td>{t('mission', 'holdingHours')}</td>
               <td>
                 <input
                   type="number"
@@ -429,47 +429,47 @@ export function MissionScreen() {
                     aria-expanded={bExpand}
                   >
                     {bExpand ? '▼ ' : '▶ '}
-                    {t('mission', 'battleLevelsTitle') || 'Усиления в бою'}
+                    {t('mission', 'battleLevelsTitle')}
                     {' — '}
                     {t('mission', 'battleLevelsAvailable', {
                       k: String(battleK),
                       points: String(bePoints),
-                    }) || `доступно K=${battleK} (be_points=${bePoints})`}
+                    })}
                   </button>
                 </td>
               </tr>
               {bExpand && (
                 <>
                   <tr>
-                    <td>{t('mission', 'battleLevelsGun') || 'Атака (Gun)'}</td>
+                    <td>{t('mission', 'battleLevelsGun')}</td>
                     <td>
                       <input type="number" min={0} max={battleK} value={bGun}
                         onChange={(e) => setBGun(e.target.value)} />
                     </td>
                   </tr>
                   <tr>
-                    <td>{t('mission', 'battleLevelsShield') || 'Щит'}</td>
+                    <td>{t('mission', 'battleLevelsShield')}</td>
                     <td>
                       <input type="number" min={0} max={battleK} value={bShield}
                         onChange={(e) => setBShield(e.target.value)} />
                     </td>
                   </tr>
                   <tr>
-                    <td>{t('mission', 'battleLevelsShell') || 'Корпус'}</td>
+                    <td>{t('mission', 'battleLevelsShell')}</td>
                     <td>
                       <input type="number" min={0} max={battleK} value={bShell}
                         onChange={(e) => setBShell(e.target.value)} />
                     </td>
                   </tr>
                   <tr>
-                    <td>{t('mission', 'battleLevelsBallistics') || 'Баллистика'}</td>
+                    <td>{t('mission', 'battleLevelsBallistics')}</td>
                     <td>
                       <input type="number" min={0} max={battleK} value={bBallistics}
                         onChange={(e) => setBBallistics(e.target.value)} />
                     </td>
                   </tr>
                   <tr>
-                    <td>{t('mission', 'battleLevelsMasking') || 'Маскировка'}</td>
+                    <td>{t('mission', 'battleLevelsMasking')}</td>
                     <td>
                       <input type="number" min={0} max={battleK} value={bMasking}
                         onChange={(e) => setBMasking(e.target.value)} />
@@ -482,8 +482,7 @@ export function MissionScreen() {
                           used: String(bUsed),
                           k: String(battleK),
                           cost: String(bCost),
-                        }) ||
-                          `Использовано ${bUsed}/${battleK} (стоимость ${bCost} be_points)`}
+                        })}
                       </span>
                     </td>
                   </tr>
@@ -510,7 +509,7 @@ export function MissionScreen() {
           здесь же, у нас вынесен в /fleet-operations). */}
       <div className="idiv">
         <Link to="/fleet-operations">
-          ← {t('mission', 'recallFleetsLink') || 'Активные флоты / отозвать'}
+          ← {t('mission', 'recallFleetsLink')}
         </Link>
       </div>
 
@@ -520,12 +519,12 @@ export function MissionScreen() {
         <table className="ntable">
           <thead>
             <tr>
-              <th colSpan={2}>{t('mission', 'stargateTitle') || '🌀 StarGate jump'}</th>
+              <th colSpan={2}>{t('mission', 'stargateTitle')}</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>{t('fleet', 'destination') || 'Цель'}</td>
+              <td>{t('fleet', 'destination')}</td>
               <td>
                 <select
                   value={stargateDst}
@@ -574,7 +573,7 @@ export function MissionScreen() {
                   onClick={handleStargate}
                   disabled={stargate.isPending || !stargateDst}
                 >
-                  {t('mission', 'stargateBtn') || 'Прыжок'}
+                  {t('mission', 'stargateBtn')}
                 </button>
                 {stargateErr && (
                   <div>

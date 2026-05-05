@@ -133,12 +133,12 @@ export function FleetOperationsScreen() {
       <table className="ntable">
         <thead>
           <tr>
-            <th colSpan={4}>{t('fleet', 'acsInvitationsTitle') || 'Приглашения в ACS'}</th>
+            <th colSpan={4}>{t('fleet', 'acsInvitationsTitle')}</th>
           </tr>
           <tr>
-            <th>{t('fleet', 'acsGroupName') || 'Группа'}</th>
-            <th>{t('fleet', 'acsLeader') || 'Лидер'}</th>
-            <th>{t('fleet', 'acsInvitedAt') || 'Приглашение'}</th>
+            <th>{t('fleet', 'acsGroupName')}</th>
+            <th>{t('fleet', 'acsLeader')}</th>
+            <th>{t('fleet', 'acsInvitedAt')}</th>
             <th>{t('alliance', 'operations')}</th>
           </tr>
         </thead>
@@ -152,7 +152,7 @@ export function FleetOperationsScreen() {
                 <input
                   type="button"
                   className="button"
-                  value={t('fleet', 'acsAccept') || 'Принять'}
+                  value={t('fleet', 'acsAccept')}
                   disabled={accept.isPending}
                   onClick={() => accept.mutate(inv.acs_group_id)}
                 />
@@ -258,7 +258,7 @@ function FleetRow({
       : fleet.state === 'outbound'
       ? t('fleet', 'stateOutbound')
       : isHold
-        ? t('fleet', 'stateHold') || '🛡 На цели'
+        ? t('fleet', 'stateHold')
         : t('fleet', 'stateArrived');
 
   // План 72.1.47: load/unload форма для HOLDING-флота.
@@ -306,13 +306,13 @@ function FleetRow({
           {/* План 72.1.48: badge остатка контролей и H-резерва. */}
           {isHold && fleet.max_control_times != null && fleet.max_control_times > 0 && (
             <div style={{ fontSize: 'smaller', color: '#888' }}>
-              {t('fleet', 'controlsLeft') || 'Контролей'}:{' '}
+              {t('fleet', 'controlsLeft')}:{' '}
               {Math.max(0, (fleet.max_control_times ?? 0) - (fleet.control_times ?? 0))}
               /{fleet.max_control_times}
               {fleet.back_consumption != null && fleet.back_consumption > 0 && (
                 <>
                   {' · '}
-                  {t('fleet', 'returnReserveH') || 'Резерв H'}: {fleet.back_consumption}
+                  {t('fleet', 'returnReserveH')}: {fleet.back_consumption}
                 </>
               )}
             </div>
@@ -340,7 +340,7 @@ function FleetRow({
             <input
               type="button"
               className="button"
-              value={t('fleet', 'controlBtn') || '⚙ Управление'}
+              value={t('fleet', 'controlBtn')}
               disabled={disabled}
               onClick={() => setShowLoadForm((v) => !v)}
             />
@@ -350,7 +350,7 @@ function FleetRow({
             <input
               type="button"
               className="button"
-              value={t('fleet', 'formationBtn') || '📋 Formation'}
+              value={t('fleet', 'formationBtn')}
               disabled={disabled}
               onClick={() => setShowFormationForm((v) => !v)}
               style={{ marginLeft: 4 }}
@@ -365,7 +365,7 @@ function FleetRow({
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
               {canPromote && (
                 <>
-                  <span>{t('fleet', 'formationName') || 'Имя группы'}:</span>
+                  <span>{t('fleet', 'formationName')}:</span>
                   <input
                     type="text"
                     value={formationName}
@@ -376,7 +376,7 @@ function FleetRow({
                   <input
                     type="button"
                     className="button"
-                    value={t('fleet', 'formationCreateBtn') || 'Создать ACS'}
+                    value={t('fleet', 'formationCreateBtn')}
                     disabled={disabled || !formationName.trim()}
                     onClick={() => {
                       onPromote(formationName.trim());
@@ -388,19 +388,19 @@ function FleetRow({
               )}
               {canInvite && fleet.acs_group_id && (
                 <>
-                  <span>{t('fleet', 'invitee') || 'Пригласить'}:</span>
+                  <span>{t('fleet', 'invitee')}:</span>
                   <input
                     type="text"
                     value={inviteUsername}
                     maxLength={64}
                     onChange={(e) => setInviteUsername(e.target.value)}
-                    placeholder={t('fleet', 'usernamePh') || 'username'}
+                    placeholder={t('fleet', 'usernamePh')}
                     style={{ width: 200 }}
                   />
                   <input
                     type="button"
                     className="button"
-                    value={t('fleet', 'inviteBtn') || 'Пригласить'}
+                    value={t('fleet', 'inviteBtn')}
                     disabled={disabled || !inviteUsername.trim() || !fleet.acs_group_id}
                     onClick={() => {
                       onInvite(fleet.acs_group_id!, inviteUsername.trim());
@@ -424,11 +424,11 @@ function FleetRow({
                 value={loadMode}
                 onChange={(e) => setLoadMode(e.target.value as 'load' | 'unload')}
               >
-                <option value="unload">{t('fleet', 'unloadOpt') || 'Выгрузить с флота'}</option>
-                <option value="load">{t('fleet', 'loadOpt') || 'Загрузить с планеты'}</option>
+                <option value="unload">{t('fleet', 'unloadOpt')}</option>
+                <option value="load">{t('fleet', 'loadOpt')}</option>
               </select>
               <span>
-                {t('overview', 'metal') || 'Металл'}:{' '}
+                {t('overview', 'metal')}:{' '}
                 <input
                   type="number"
                   min={0}
@@ -438,7 +438,7 @@ function FleetRow({
                 />
               </span>
               <span>
-                {t('overview', 'silicon') || 'Кремний'}:{' '}
+                {t('overview', 'silicon')}:{' '}
                 <input
                   type="number"
                   min={0}
@@ -448,7 +448,7 @@ function FleetRow({
                 />
               </span>
               <span>
-                {t('overview', 'hydrogen') || 'Водород'}:{' '}
+                {t('overview', 'hydrogen')}:{' '}
                 <input
                   type="number"
                   min={0}
@@ -460,7 +460,7 @@ function FleetRow({
               <input
                 type="button"
                 className="button"
-                value={t('fleet', 'sendButton') || 'OK'}
+                value={t('fleet', 'sendButton')}
                 disabled={disabled}
                 onClick={submit}
               />
