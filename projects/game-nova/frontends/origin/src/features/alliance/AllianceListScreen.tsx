@@ -110,7 +110,7 @@ export function AllianceListScreen() {
         </table>
       ) : (
         <div className="idiv">
-          {list.isLoading ? '…' : t('alliance', 'noMatchesFound') || '—'}
+          {list.isLoading ? '…' : t('alliance', 'noMatchesFound')}
         </div>
       )}
     </>

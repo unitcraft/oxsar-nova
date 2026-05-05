@@ -117,8 +117,8 @@ export function FriendsScreen() {
           </tr>
           <tr>
             <th>{t('friends', 'colPlayer')}</th>
-            <th>{t('overview', 'points') || 'Очки'}</th>
-            <th>{t('alliance', 'alliance') || 'Альянс'}</th>
+            <th>{t('overview', 'points')}</th>
+            <th>{t('alliance', 'alliance')}</th>
             <th>{t('friends', 'colStatus')}</th>
             <th>{t('friends', 'colActions')}</th>
           </tr>
@@ -138,7 +138,7 @@ export function FriendsScreen() {
                 tools={
                   <>
                     <Link to={`/msg/compose?to=${encodeURIComponent(f.username)}`}>
-                      {t('message', 'newMessage') || 'Сообщение'}
+                      {t('message', 'newMessage')}
                     </Link>
                     {' · '}
                     <button
@@ -177,8 +177,8 @@ export function FriendsScreen() {
             </tr>
             <tr>
               <th>{t('friends', 'colPlayer')}</th>
-              <th>{t('overview', 'points') || 'Очки'}</th>
-              <th>{t('alliance', 'alliance') || 'Альянс'}</th>
+              <th>{t('overview', 'points')}</th>
+              <th>{t('alliance', 'alliance')}</th>
               <th>{t('friends', 'colStatus')}</th>
               <th>{t('friends', 'colActions')}</th>
             </tr>
@@ -227,8 +227,8 @@ export function FriendsScreen() {
             </tr>
             <tr>
               <th>{t('friends', 'colPlayer')}</th>
-              <th>{t('overview', 'points') || 'Очки'}</th>
-              <th>{t('alliance', 'alliance') || 'Альянс'}</th>
+              <th>{t('overview', 'points')}</th>
+              <th>{t('alliance', 'alliance')}</th>
               <th>{t('friends', 'colStatus')}</th>
               <th>{t('friends', 'colActions')}</th>
             </tr>

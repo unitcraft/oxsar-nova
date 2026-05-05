@@ -193,7 +193,7 @@ function DescTextarea({
       />
       <br />
       {t('alliance', 'marked')} {value.length} / {MAX_LEN}{' '}
-      {t('alliance', 'characters') || ''}
+      {t('alliance', 'characters')}
     </>
   );
 }

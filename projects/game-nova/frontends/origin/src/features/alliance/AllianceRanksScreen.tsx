@@ -127,7 +127,7 @@ export function AllianceRanksScreen() {
               rank={r}
               onDelete={async () => {
                 if (await confirm({
-                  title: t('alliance', 'remove') || 'Удалить',
+                  title: t('alliance', 'remove'),
                   message: t('alliance', 'ranks.deleteConfirm', { name: r.name }),
                   destructive: true,
                 })) {

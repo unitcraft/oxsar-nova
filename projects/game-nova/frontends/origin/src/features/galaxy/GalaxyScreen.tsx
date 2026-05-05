@@ -263,7 +263,7 @@ export function GalaxyScreen() {
                           <button
                             type="button"
                             className="button"
-                            title={t('galaxy', 'rocketAttack') || 'Rocket attack'}
+                            title={t('galaxy', 'rocketAttack')}
                             onClick={() =>
                               cell.planet_id != null
                                 ? navigate(`/rocket-attack/${cell.planet_id}`)

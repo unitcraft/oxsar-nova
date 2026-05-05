@@ -121,12 +121,12 @@ function ResultsTable({
       <table className="ntable">
         <thead>
           <tr>
-            <th>{t('overview', 'username') || 'Игрок'}</th>
-            <th>{t('overview', 'points') || 'Очки'}</th>
-            <th>{t('alliance', 'alliance') || 'Альянс'}</th>
-            <th>{t('main', 'curHomePlanet') || 'Планета'}</th>
-            <th>{t('mission', 'target') || 'Координаты'}</th>
-            <th>{t('friends', 'colStatus') || 'Активность'}</th>
+            <th>{t('overview', 'username')}</th>
+            <th>{t('overview', 'points')}</th>
+            <th>{t('alliance', 'alliance')}</th>
+            <th>{t('main', 'curHomePlanet')}</th>
+            <th>{t('mission', 'target')}</th>
+            <th>{t('friends', 'colStatus')}</th>
           </tr>
         </thead>
         <tbody>
@@ -175,10 +175,10 @@ function ResultsTable({
       <table className="ntable">
         <thead>
           <tr>
-            <th>{t('alliance', 'tag') || 'Тег'}</th>
-            <th>{t('alliance', 'name') || 'Альянс'}</th>
-            <th>{t('alliance', 'totalMembers') || 'Членов'}</th>
-            <th>{t('overview', 'points') || 'Очки'}</th>
+            <th>{t('alliance', 'tag')}</th>
+            <th>{t('alliance', 'name')}</th>
+            <th>{t('alliance', 'totalMembers')}</th>
+            <th>{t('overview', 'points')}</th>
           </tr>
         </thead>
         <tbody>
@@ -210,9 +210,9 @@ function ResultsTable({
     <table className="ntable">
       <thead>
         <tr>
-          <th>{t('main', 'curHomePlanet') || 'Планета'}</th>
-          <th>{t('mission', 'target') || 'Координаты'}</th>
-          <th>{t('overview', 'username') || 'Владелец'}</th>
+          <th>{t('main', 'curHomePlanet')}</th>
+          <th>{t('mission', 'target')}</th>
+          <th>{t('overview', 'username')}</th>
         </tr>
       </thead>
       <tbody>

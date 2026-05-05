@@ -126,9 +126,7 @@ export function AllianceTransferLeadershipScreen() {
                     value={
                       requestCode.isPending
                         ? '…'
-                        : t('alliance', 'transferLeadership.requestCodeBtn') ||
-                          t('alliance', 'commit') ||
-                          'OK'
+                        : t('alliance', 'transferLeadership.requestCodeBtn')
                     }
                     onClick={() => requestCode.mutate()}
                   />

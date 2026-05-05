@@ -69,8 +69,8 @@ export function AllianceMembersScreen() {
             <td>{t('alliance', 'newbie')}</td>
             <td>{t('alliance', 'rank')}</td>
             <td>{t('alliance', 'joinDate')}</td>
-            <td>{t('alliance', 'memberPoints') || 'Очки'}</td>
-            <td>{t('alliance', 'memberOnline') || 'Активность'}</td>
+            <td>{t('alliance', 'memberPoints')}</td>
+            <td>{t('alliance', 'memberOnline')}</td>
             {canKick && <td />}
           </tr>
         </thead>

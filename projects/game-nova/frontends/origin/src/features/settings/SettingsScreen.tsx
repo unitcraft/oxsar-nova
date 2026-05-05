@@ -700,7 +700,7 @@ export function SettingsScreen() {
                 >
                   {confirmMut.isPending
                     ? '…'
-                    : t('prefs', 'deleteAccount') || 'Удалить'}
+                    : t('prefs', 'deleteAccount')}
                 </button>{' '}
                 <button
                   type="button"
