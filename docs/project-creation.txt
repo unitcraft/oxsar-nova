@@ -16722,3 +16722,62 @@ not-a-fix + BA-019 mitigated.
       input[text]/textarea получают user-select:text + cursor:text.
 
   Tests: go build ./... чистый.
+
+## Итерация 06.1.1 — Автопилот: фундамент Ф.1а (2026-05-05)
+
+  Цель: каркас rule-based автопилота (план docs/plans/06.1-autopilot.md)
+  с компилируемым pipeline и unit-тестами; реализация scoring/snapshot
+  ядра — следующие коммиты Ф.1б-г.
+
+  План разделён на 5 коммитов: Ф.1а фундамент, Ф.1б snapshot, Ф.1в scoring
+  building, Ф.1г research+Compute end-to-end, Ф.1д integration-тесты.
+
+  Backend (фундамент):
+    - migrations/0100_autopilot.sql: ALTER ai_advisor_log
+      ADD source/strategy/action_params/event_id/status. Index по
+      (user_id, status) WHERE source='autopilot'. Down-миграция симметрична.
+    - event/kinds.go: KindAutopilotAdvise = 92.
+    - config/config.go: AIAdvisorConfig.AutopilotCostCredits
+      (ENV AUTOPILOT_COST_CREDITS, default 2 кр).
+    - aiadvisor/autopilot_types.go: Strategy enum (economy/military/
+      defense/expansion/auto), AutopilotStatus константы (pending/ready/
+      executed/expired), Recommendation, AutopilotResult, AdviseInput.
+    - aiadvisor/autopilot_snapshot.go: PlayerSnapshot/PlanetSnapshot/
+      FleetSnapshot/NeighborSnapshot. buildSnapshot читает баланс,
+      umode/observer, очки и список планет (с прогнозом ресурсов на 1ч).
+      Уровни зданий/исследований и соседи — Ф.1б/Ф.2.
+    - aiadvisor/autopilot_scoring.go: scoreCandidates (pure-функция
+      snapshot+strategy → []Recommendation). На уровне Ф.1а возвращает
+      пустой slice — каркас ранжирования. detectPhase для StrategyAuto
+      (дефолт Economy; реальная эвристика — Ф.5).
+    - aiadvisor/autopilot_executor.go: executeRecommendation вызывает
+      building.Service.Enqueue / research.Service.Enqueue по категории.
+      ErrUnsupportedCategory для miss/acs/exchange/profession (Ф.2-Ф.3).
+    - aiadvisor/autopilot_service.go: AutopilotService с методами
+      Enqueue (списывает кредиты + INSERT log + INSERT event в одной tx,
+      разделяя дневной лимит с LLM), Compute (worker handler — читает
+      status под FOR UPDATE для идемпотентности retry, buildSnapshot
+      вне tx, scoring, UPDATE log), Result (polling), Execute (валидирует
+      status='ready' и rec_id, делегирует в executeRecommendation).
+    - aiadvisor/autopilot_handler.go: HTTP-адаптеры Advise/Result/Execute
+      с маппингом доменных ошибок в HTTP-коды.
+    - aiadvisor/autopilot_worker.go: AutopilotWorkerHandler — обёртка
+      Compute в сигнатуру event.Handler.
+    - cmd/server/main.go: NewAutopilotService + 3 роута (advise/result/
+      execute). Idempotency-middleware на advise и execute.
+    - cmd/worker/main.go: регистрация KindAutopilotAdvise.
+      building/research передаются nil (нужны только для Execute из HTTP).
+
+  Tests:
+    - aiadvisor/autopilot_test.go: 9 unit-тестов (Strategy.Validate,
+      scoreCandidates пустой, detectPhase default, executeRecommendation
+      на nil-svc и unknown категориях, sentinel-ошибки, buildSnapshot
+      nil-deps).
+    - go build ./..., go vet ./..., go test ./internal/aiadvisor/... — green.
+
+  Что НЕ сделано в этом коммите:
+    - scoreCandidates пустой — Ф.1в (building) и Ф.1г (research+integration).
+    - WS-пуш autopilot_ready — Ф.6 (зависит от плана WS-чата).
+    - i18n текстов рекомендаций (Description/Benefit) — Ф.1в-г.
+    - Frontend-виджет — Ф.4.
+    - openapi.yaml — обновится в Ф.4 вместе с фронтом.

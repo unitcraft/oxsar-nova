@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"oxsar/game-nova/internal/achievement"
+	"oxsar/game-nova/internal/aiadvisor"
 	"oxsar/game-nova/internal/alien"
 	"oxsar/game-nova/internal/artefact"
 	"oxsar/game-nova/internal/artmarket"
@@ -242,6 +243,17 @@ func run() error {
 	// Один handler на Kind. Domain-пакеты сами не регистрируются —
 	// чтобы воркер видел весь список в одном месте и было проще
 	// отслеживать, что именно обрабатывается.
+	// План 06.1: rule-based автопилот.
+	// Воркеру нужны только snapshot-зависимости (planet, score) — Execute
+	// идёт через HTTP-handler, а не через воркер. Поэтому building/research
+	// здесь nil; снимок не использует их.
+	autopilotSvc := aiadvisor.NewAutopilotService(
+		db, cfg.AIAdvisor, cat,
+		planetSvc, scoreSvc, nil, nil,
+	)
+	autopilotWorkerH := &aiadvisor.AutopilotWorkerHandler{Svc: autopilotSvc}
+	w.Register(event.KindAutopilotAdvise, autopilotWorkerH.Handle)
+
 	w.Register(event.KindBuildConstruction, withDailyQuest("building_done")(withAchievement(withScore(event.HandleBuildConstruction))))
 	// План 65 Ф.1: handler сноса здания. Зеркалит BuildConstruction.
 	// withScore — пересчёт очков после понижения уровня. Daily-quest

@@ -62,6 +62,7 @@ const (
 	KindScoreRecalcAll             Kind = 70 // ежедневный batch-пересчёт очков всех игроков
 	KindAccountDelete              Kind = 90 // план 72.1.30: 7-day grace перед физическим soft-delete
 	KindArtMarketExpire            Kind = 91 // план 72.1.42: TTL артефакт-маркет лот auto-снимается
+	KindAutopilotAdvise            Kind = 92 // план 06.1: rule-based автопилот считает топ-3 рекомендаций
 	KindBatchProcessIntervalSecond      = 10
 )
 

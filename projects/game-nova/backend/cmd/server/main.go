@@ -353,6 +353,16 @@ func run() error {
 	aiAdvisorSvc := aiadvisor.NewService(db, cfg.AIAdvisor)
 	aiAdvisorH := aiadvisor.NewHandler(aiAdvisorSvc)
 
+	// План 06.1: rule-based автопилот. Использует те же сервисы, что и
+	// HTTP-handler-ы (snapshot читает их напрямую, executeRecommendation
+	// вызывает Enqueue). Регистрируется тут только как HTTP-handler;
+	// event-handler регистрируется в worker/main.go.
+	autopilotSvc := aiadvisor.NewAutopilotService(
+		db, cfg.AIAdvisor, cat,
+		planetSvc, scoreSvc, buildingSvc, researchSvc,
+	)
+	autopilotH := aiadvisor.NewAutopilotHandler(autopilotSvc)
+
 	// План 38 Ф.5: payments переехали в billing-service (отдельный микросервис).
 	// internal/payment/ удалён, см. docs/plans/38-billing-service.md.
 
@@ -592,6 +602,13 @@ func run() error {
 
 		pr.Post("/ai-advisor/ask", aiAdvisorH.Ask)
 		pr.Get("/ai-advisor/estimate", aiAdvisorH.Estimate)
+
+		// План 06.1: rule-based автопилот. Списание кредитов и постановка
+		// задания в очередь — внутри Enqueue. WS-пуш результата делается
+		// в Ф.6; до тех пор фронт получает результат через polling Result.
+		pr.With(idemMW.Wrap).Post("/ai-advisor/autopilot/advise", autopilotH.Advise)
+		pr.Get("/ai-advisor/autopilot/result/{jobID}", autopilotH.Result)
+		pr.With(idemMW.Wrap).Post("/ai-advisor/autopilot/execute", autopilotH.Execute)
 
 		// План 38 Ф.5: /payment/order и /payment/history удалены. См. billing-service:
 		//   POST /billing/orders, GET /billing/wallet/history.

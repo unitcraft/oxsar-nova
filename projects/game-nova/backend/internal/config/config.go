@@ -93,6 +93,9 @@ type AIAdvisorConfig struct {
 	OllamaModel string // OLLAMA_MODEL, default "qwen2.5:3b"
 	MaxPerDay   int    // AI_ADVISOR_MAX_PER_DAY, default 20
 	MaxTokens   int    // AI_ADVISOR_MAX_TOKENS, default 1024
+	// План 06.1: rule-based автопилот — стоимость одного запроса в кредитах.
+	// Списывается при Enqueue (до постановки в очередь воркера).
+	AutopilotCostCredits float64 // AUTOPILOT_COST_CREDITS, default 2
 }
 
 // PointsCoefficients — коэффициенты начисления очков.
@@ -150,12 +153,13 @@ func Load() (Config, error) {
 	}
 
 	cfg.AIAdvisor = AIAdvisorConfig{
-		APIKey:      env("ANTHROPIC_API_KEY", ""),
-		ProxyURL:    env("ANTHROPIC_PROXY_URL", ""),
-		OllamaURL:   env("OLLAMA_URL", ""),
-		OllamaModel: env("OLLAMA_MODEL", "qwen2.5:3b"),
-		MaxPerDay:   envInt("AI_ADVISOR_MAX_PER_DAY", 20),
-		MaxTokens:   envInt("AI_ADVISOR_MAX_TOKENS", 1024),
+		APIKey:               env("ANTHROPIC_API_KEY", ""),
+		ProxyURL:             env("ANTHROPIC_PROXY_URL", ""),
+		OllamaURL:            env("OLLAMA_URL", ""),
+		OllamaModel:          env("OLLAMA_MODEL", "qwen2.5:3b"),
+		MaxPerDay:            envInt("AI_ADVISOR_MAX_PER_DAY", 20),
+		MaxTokens:            envInt("AI_ADVISOR_MAX_TOKENS", 1024),
+		AutopilotCostCredits: envFloat("AUTOPILOT_COST_CREDITS", 2),
 	}
 
 	// План 38 Ф.5: PaymentConfig удалён — платежи в billing-service.
