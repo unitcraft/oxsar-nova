@@ -13,6 +13,7 @@ import {
 } from '@/api/buildings';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import { useAutoInvalidateOnTaskEnd } from '@/features/common/useAutoInvalidateOnTaskEnd';
 import { catalogByGroup } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { ConstructionProgress } from '@/features/common/ConstructionProgress';
@@ -40,6 +41,7 @@ export function ConstructionsScreen() {
     queryKey: planetId ? QK.buildingQueue(planetId) : ['noop-bq'],
     queryFn: () => (planetId ? fetchBuildingQueue(planetId) : Promise.resolve([])),
     enabled: planetId !== null,
+    refetchInterval: 10_000,
   });
 
   const overviewQ = useQuery<BuildingsOverview>({
@@ -103,11 +105,23 @@ export function ConstructionsScreen() {
     },
   });
 
+  // План 72.1.59: авто-инвалидация очереди по окончании ближайшей
+  // задачи (общий хук). Без него экран остаётся со старым snapshot'ом
+  // когда прогресс-бар доезжает до 100%.
+  const queueData = queueQ.data ?? [];
+  useAutoInvalidateOnTaskEnd(queueData, () => {
+    if (!planetId) return;
+    void qc.invalidateQueries({ queryKey: QK.buildingQueue(planetId) });
+    void qc.invalidateQueries({ queryKey: QK.buildingsOverview(planetId) });
+    void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+    void qc.invalidateQueries({ queryKey: QK.planets() });
+  });
+
   if (!planetId) {
     return <div className="idiv">{t('overview', 'noPlanets')}</div>;
   }
 
-  const queue = queueQ.data ?? [];
+  const queue = queueData;
   const isMoon = planet?.is_moon === true;
 
   const allBuildings = catalogByGroup('building');
@@ -183,13 +197,12 @@ export function ConstructionsScreen() {
                     <input
                       type="button"
                       className="button"
-                      value={t('buildings', 'vipBtn') || '⚡ VIP'}
-                      title={t('buildings', 'vipHint') || 'Мгновенный старт за кредиты'}
+                      value={t('buildings', 'vipBtn')}
+                      title={t('buildings', 'vipHint')}
                       onClick={async () => {
                         if (await confirm({
-                          title: t('buildings', 'vipBtn') || 'VIP',
-                          message: (t('buildings', 'vipConfirm') as string) ||
-                            'Мгновенный старт стройки за кредиты?',
+                          title: t('buildings', 'vipBtn'),
+                          message: t('buildings', 'vipConfirm'),
                         })) {
                           vip.mutate(task.id);
                         }
@@ -207,7 +220,7 @@ export function ConstructionsScreen() {
       <table className="ntable">
         <tbody>
           <tr>
-            <th colSpan={3}>{t('buildings', 'constructions') ?? 'Постройки'}</th>
+            <th colSpan={3}>{t('buildings', 'constructions')}</th>
           </tr>
 
           {buildings
@@ -252,7 +265,7 @@ export function ConstructionsScreen() {
                 <td style={{ verticalAlign: 'top' }}>
                   <div style={{ width: '100%' }}>
                     <span style={{ float: 'right' }}>
-                      Уровень {level}
+                      {t('buildings', 'level', { n: level })}
                     </span>
                     {t(group, key)}
                   </div>
@@ -264,7 +277,7 @@ export function ConstructionsScreen() {
                   {hasRequirements ? (
                     <div style={{ marginTop: 6 }}>
                       <span className="normal">
-                        {t('buildings', 'requirements') ?? 'Требования'}:
+                        {t('buildings', 'requirements')}:
                       </span>
                       <br />
                       {requirementsUnmet.map((u) => {
@@ -305,7 +318,7 @@ export function ConstructionsScreen() {
                     <span className="false">—</span>
                   ) : queueBusy ? (
                     <span className="false">
-                      {t('buildings', 'buildingAtWork') ?? 'Занято'}
+                      {t('buildings', 'buildingAtWork')}
                     </span>
                   ) : (
                     <>
@@ -315,29 +328,33 @@ export function ConstructionsScreen() {
                         onClick={() => enqueue.mutate(entry.id)}
                         disabled={enqueue.isPending || !enough}
                       >
-                        {t('buildings', 'upgradeToLevel') ?? 'Построить'}<br />
-                        уровень {level + 1}
+                        ⚒ {t('buildings', 'upgradeToLevel')}<br />
+                        {level + 1}
                       </button>
-                      {/* План 72.1.40: legacy demolish action в списке. */}
+                      {/* План 72.1.40: legacy demolish action в списке.
+                          План 72.1.59: красная button-danger + 💥 (взрыв)
+                          подчёркивает деструктивность действия. */}
                       {level > 0 && (
                         <div style={{ marginTop: 4 }}>
                           <button
                             type="button"
-                            className="button"
+                            className="button-danger"
                             disabled={demolish.isPending}
-                            title={t('buildinginfo', 'demolish') || 'Снос здания'}
+                            title={t('buildinginfo', 'demolish')}
                             onClick={async () => {
                               if (await confirm({
-                                title: t('buildinginfo', 'demolish') || 'Снос',
-                                message: (t('buildinginfo', 'demolishConfirm') as string) ||
-                                  'Снести здание на 1 уровень?',
+                                title: t('buildinginfo', 'demolish'),
+                                message: t('buildinginfo', 'demolishConfirm', {
+                                  building: t(group, key),
+                                  level: level - 1,
+                                }),
                                 destructive: true,
                               })) {
                                 demolish.mutate(entry.id);
                               }
                             }}
                           >
-                            ⚒ {t('buildinginfo', 'demolishNow') || 'Снести'}
+                            💥 {t('buildinginfo', 'demolishNow')}
                           </button>
                         </div>
                       )}

@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import { formatDuration } from '@/lib/format';
+import { calcRemainingSec, calcPct, calcBarPct } from './taskProgress';
 
 export interface ConstructionProgressProps {
   startAt: string;
@@ -23,21 +24,18 @@ export function ConstructionProgress({
   endAt,
   label,
 }: ConstructionProgressProps) {
+  const startMs = new Date(startAt).getTime();
+  const endMs = new Date(endAt).getTime();
+
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const startMs = new Date(startAt).getTime();
-  const endMs = new Date(endAt).getTime();
-  const totalMs = endMs - startMs;
-  const elapsedMs = now - startMs;
-  const remainingMs = endMs - now;
-
-  const pct =
-    totalMs > 0 ? Math.max(0, Math.min(100, Math.floor((elapsedMs * 100) / totalMs))) : 0;
-  const remainingSec = Math.max(0, Math.floor(remainingMs / 1000));
+  const remainingSec = calcRemainingSec(endMs, now);
+  const pct = calcPct(startMs, endMs, now);
+  const barPct = calcBarPct(startMs, endMs, now);
 
   return (
     <div
@@ -52,7 +50,7 @@ export function ConstructionProgress({
     >
       <div
         style={{
-          width: `${pct}%`,
+          width: `${barPct}%`,
           height: '100%',
           background: '#3a7',
           transition: 'width 1s linear',
