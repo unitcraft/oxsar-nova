@@ -1330,7 +1330,7 @@ messages:
 
 market:
   title: "Рынок — {{planetName}}"
-  yourRate: "Ваш курс:"
+  yourRate: "ваш курс:"
   tabExchange: ⇄ Обмен
   tabCredit: 💳 Кредиты
   tabLots: 📋 Ордерная книга
@@ -1339,7 +1339,7 @@ market:
   labelFrom: Отдать
   labelTo: Получить
   labelAmount: Количество
-  youWillGet: "Вы получите:"
+  youWillGet: "вы получите:"
   exchangeBtn: Обменять
   lastExchange: "Последний обмен: {{fa}} {{fr}} → {{ta}} {{tr}} (курс {{rate}})"
   # План 72.1.21: legacy `Credit_ex` — покупка ресурсов за кредиты.
@@ -1371,7 +1371,7 @@ market:
   toastDeal: Сделка выполнена
   creditHint: "Покупка ресурсов за кредиты. 1 кредит = {{rate}} единиц металла. Курс учитывает ваш personal rate ({{userRate}})."
   creditResLabel: Ресурс
-  creditYouGet: "Вы получите:"
+  creditYouGet: "вы получите:"
   creditBuy: Купить
   creditToast: "{{amount}} кред. → {{delta}} {{res}}"
   fleetLotTitle: Выставить флот на продажу
@@ -1397,7 +1397,7 @@ stock:
   createArtLabel: Артефакт
   createArtPlaceholder: выберите
   createQtyLabel: Кол-во
-  createPriceLabel: Цена (oxsarits)
+  createPriceLabel: Цена (оксариты)
   createExpiryLabel: Истекает (ч.)
   createSubmit: Выставить
   createSuccess: Лот выставлен
@@ -3363,7 +3363,7 @@ exchange:
   detailExpiresAt: "Истекает"
   detailSoldAt: "Продан"
   detailItemCount: "Артефактов в эскроу"
-  detailYourBalance: "Ваш баланс"
+  detailYourBalance: "ваш баланс"
   confirmBuyTitle: "Подтвердите покупку"
   confirmBuyMessage: "Купить {{qty}} × {{name}} за {{price}} {{unit}}?"
   confirmCancelTitle: "Отозвать лот?"
