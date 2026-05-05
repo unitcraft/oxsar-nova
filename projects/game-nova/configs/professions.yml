@@ -1,66 +1,69 @@
-# Профессии игрока. bonus/malus — виртуальные уровни при расчёте производства и боя.
+# Профессии игрока. effects — виртуальные уровни при расчёте
+# производства и боя (положительные и отрицательные вместе, в порядке
+# legacy `consts.php:$GLOBALS["PROFESSIONS"]` tech_special).
 # Смена профессии: 1000 cr, мин. интервал 14 дней.
 #
-# План 72.1.59: тексты label/description перенесены в
-# configs/i18n/{ru,en}.yml в группу `profession` (ключи `<key>Label` и
-# `<key>Desc`). Балансовый YAML содержит только числовые параметры,
-# как у buildings.yml/research.yml/ships.yml.
-#
-# План 72.1.58: добавлен Универсал (без бонусов) + sort_order для
-# legacy-порядка (Универсал → Шахтер → Атакер → Оборонщик → Танкист).
+# План 72.1.59: тексты label/description вынесены в configs/i18n/
+# {ru,en}.yml (ключи profession.<key>Label / <key>Desc).
+# План 72.1.59 (повторно): bonus/malus → ordered effects, потому что
+# legacy сохраняет порядок per-profession (у Атакера и Оборонщика
+# разный порядок отображения). Go map [string]int random-iteration
+# терял порядок; YAML-список его сохраняет.
 
 professions:
   universal:
     sort_order: 0
-    bonus: {}
-    malus: {}
+    effects: []
 
   miner:
     sort_order: 1
-    bonus:
-      metalmine: 1
-      silicon_lab: 1
-      solar_plant: 2
-    malus:
-      shipyard: -2
-      gun: -2
-      shield_weapon: -2
-      shell_weapon: -2
+    # 1:1 с legacy `consts.php:782-792` PROFESSION_MINER tech_special.
+    effects:
+      - { key: metalmine,      value:  1 }
+      - { key: silicon_lab,    value:  1 }
+      - { key: solar_plant,    value:  2 }
+      - { key: shipyard,       value: -2 }
+      - { key: gun,            value: -2 }
+      - { key: shield_weapon,  value: -2 }
+      - { key: shell_weapon,   value: -2 }
+      - { key: ballistics,     value: -1 }
+      - { key: computer_tech,  value: -1 }
 
   attacker:
     sort_order: 2
-    bonus:
-      gun: 1
-      shield_weapon: 1
-      shell_weapon: 1
-      ballistics: 1
-      shipyard: 1
-    malus:
-      metalmine: -1
-      silicon_lab: -1
-      defense_factory: -3
+    # 1:1 с legacy `consts.php:794-808` PROFESSION_ATTACKER tech_special.
+    effects:
+      - { key: gun,             value:  1 }
+      - { key: shield_weapon,   value:  1 }
+      - { key: shell_weapon,    value:  1 }
+      - { key: ballistics,      value:  1 }
+      - { key: shipyard,        value:  1 }
+      - { key: metalmine,       value: -1 }
+      - { key: silicon_lab,     value: -1 }
+      - { key: ign,             value: -1 }
+      - { key: defense_factory, value: -3 }
 
   defender:
     sort_order: 3
-    bonus:
-      masking: 1
-      shield_weapon: 1
-      shell_weapon: 1
-      defense_factory: 1
-      rocket_station: 1
-    malus:
-      computer_tech: -1
-      gun: -1
-      shipyard: -3
+    # 1:1 с legacy `consts.php:809-820` PROFESSION_DEFENDER tech_special.
+    effects:
+      - { key: masking,         value:  1 }
+      - { key: shield_weapon,   value:  1 }
+      - { key: shell_weapon,    value:  1 }
+      - { key: defense_factory, value:  1 }
+      - { key: rocket_station,  value:  1 }
+      - { key: computer_tech,   value: -1 }
+      - { key: gun,             value: -1 }
+      - { key: shipyard,        value: -3 }
 
   tank:
     sort_order: 4
-    bonus:
-      gun: 2
-      shield_weapon: 2
-      shell_weapon: 2
-    malus:
-      gravi: -2
-      combustion_drive: -2
-      impulse_drive: -2
-      hyperspace_drive: -2
+    # 1:1 с legacy `consts.php:822-833` PROFESSION_TANK tech_special.
+    effects:
+      - { key: gun,                value:  2 }
+      - { key: shield_weapon,      value:  2 }
+      - { key: shell_weapon,       value:  2 }
+      - { key: gravi,              value: -2 }
+      - { key: combustion_drive,   value: -2 }
+      - { key: impulse_drive,      value: -2 }
+      - { key: hyperspace_drive,   value: -2 }

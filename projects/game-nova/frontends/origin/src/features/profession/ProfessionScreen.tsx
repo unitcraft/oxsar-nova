@@ -18,7 +18,7 @@
 // R9 Idempotency-Key — на смене (api/profession.ts).
 // R12 i18n — ключи группы 'profession' существуют в configs/i18n/{ru,en}.yml.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   changeProfession,
@@ -27,6 +27,7 @@ import {
 } from '@/api/profession';
 import { QK } from '@/api/query-keys';
 import { useTranslation } from '@/i18n/i18n';
+import { secondsUntil } from '@/lib/format';
 import type { ApiError } from '@/api/client';
 import type { Profession } from '@/api/types';
 
@@ -51,11 +52,18 @@ const EFFECT_INFO_KEY: Record<string, string> = {
   ballistics: 'ballisticsTech',
   masking: 'maskingTech',
   computer_tech: 'computerTech',
+  // План 72.1.59: legacy UNIT_IGN (id=26) — Межгалактическая
+  // исследовательская сеть. Используется в malus у Атакера.
+  ign: 'ign',
   gravi: 'gravi',
   combustion_drive: 'combustionEngine',
   impulse_drive: 'impulseEngine',
   hyperspace_drive: 'hyperspaceEngine',
 };
+
+// План 72.1.59: порядок эффектов задаётся backend через ordered
+// `effects` массив в DTO (1:1 с legacy `consts.php:$GLOBALS["PROFESSIONS"]`
+// tech_special insertion-order). Frontend рендерит as-is без сортировки.
 
 // Sentinel error codes от backend (план 72.1.58, см.
 // internal/profession/handler.go::errCode*).
@@ -78,7 +86,10 @@ export function ProfessionScreen() {
   const listQ = useQuery({
     queryKey: QK.professions(),
     queryFn: fetchProfessions,
-    staleTime: 5 * 60_000,
+    // План 72.1.59: каталог редко меняется (только при деплое), но
+    // 5 минут staleTime затрудняет fresh-данные после правки YAML.
+    // 30 сек — компромисс.
+    staleTime: 30_000,
   });
 
   const meQ = useQuery({
@@ -87,11 +98,34 @@ export function ProfessionScreen() {
     refetchInterval: 30_000,
   });
 
+  // План 72.1.59: countdown «N дней HH:MM:SS» вместо округлённых дней.
+  // Тикаем каждую секунду пока есть cooldown (next_change_allowed в
+  // будущем). Хук должен быть до early-return — правило React Hooks.
+  const nextChangeAllowed = meQ.data?.next_change_allowed ?? null;
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!nextChangeAllowed) return;
+    const remain = secondsUntil(nextChangeAllowed);
+    if (remain <= 0) return;
+    const id = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [nextChangeAllowed]);
+  // Использование tick для force re-render (React уже знает что state
+  // изменился — countdownText пересчитается автоматически).
+  void tick;
+
   const change = useMutation({
     mutationFn: changeProfession,
     onSuccess: () => {
       setErrMsg(null);
       void qc.invalidateQueries({ queryKey: QK.professionMe() });
+      // План 72.1.59: backend списывает 1000 cr при cooldown. После
+      // успешной смены инвалидируем /api/me — шапка обновит
+      // отображаемый кредит без ручного refresh.
+      void qc.invalidateQueries({ queryKey: QK.me() });
+      // Скролл в начало страницы (legacy `Profession.class.php`
+      // делает doHeaderRedirection — браузер начинает сверху).
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     onError: (err) => {
       // План 72.1.58: backend возвращает sentinel-коды
@@ -138,10 +172,23 @@ export function ProfessionScreen() {
   // ограничении (legacy NS::PROFESSION_CHANGE_MIN_DAYS=14, COST=1000).
   const PROFESSION_CHANGE_MIN_DAYS = 14;
   const PROFESSION_CHANGE_COST = 1000;
+  // План 72.1.59: countdown-строка «D дней HH:MM:SS» вместо
+  // округлённых дней. i18n-шаблон содержит {{days}} и {{time}}
+  // отдельно, чтобы между ними поместить слово «дней» (ru) /
+  // «days» (en). Источник — next_change_allowed (точный момент
+  // конца cooldown'а).
+  const remainSec = nextChangeAllowed ? secondsUntil(nextChangeAllowed) : 0;
+  const remainDays = Math.floor(remainSec / 86400);
+  const remainHours = Math.floor((remainSec % 86400) / 3600);
+  const remainMinutes = Math.floor((remainSec % 3600) / 60);
+  const remainSeconds = remainSec % 60;
+  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+  const countdownTime = `${pad(remainHours)}:${pad(remainMinutes)}:${pad(remainSeconds)}`;
   const changeInfo = daysRemain > 0
     ? t('profession', 'changeCostInfo', {
         cost: String(changeCost),
-        days: String(daysRemain),
+        days: String(remainDays),
+        time: countdownTime,
       })
     : t('profession', 'changeFreeInfo', {
         days: String(PROFESSION_CHANGE_MIN_DAYS),
@@ -190,16 +237,10 @@ export function ProfessionScreen() {
           </tr>
           {professions.map((p) => {
             const isCurrent = p.key === currentKey;
-            const bonusEntries = p.bonus
-              ? Object.entries(p.bonus).filter(([, v]) => v !== 0)
-              : [];
-            const malusEntries = p.malus
-              ? Object.entries(p.malus).filter(([, v]) => v !== 0)
-              : [];
-            const specs: Array<[string, number]> = [
-              ...bonusEntries,
-              ...malusEntries,
-            ];
+            // План 72.1.59: backend отдаёт effects как ordered slice
+            // в legacy-порядке (`consts.php:$GLOBALS["PROFESSIONS"]`).
+            // Рендерим as-is, фильтруем нули.
+            const specs = (p.effects ?? []).filter((e) => e.value !== 0);
             return (
               <tr key={p.key}>
                 <td style={{ whiteSpace: 'nowrap' }}>
@@ -222,19 +263,23 @@ export function ProfessionScreen() {
                     </b>
                   </label>
                 </td>
-                <td>
+                <td className="profession-cell">
                   {/* План 72.1.59: описание из i18n profession.<key>Desc
-                      (раньше приходило в DTO p.description из YAML). */}
-                  <label
-                    htmlFor={`profession_${p.key}`}
-                    style={{
-                      display: 'block',
-                      marginBottom: 6,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {t('profession', `${p.key}Desc`)}
-                  </label>
+                      (раньше приходило в DTO p.description из YAML).
+                      DOM 1:1 с legacy `profession.tpl:22` —
+                      `<p><label for=profession_id>{desc}</label></p>`.
+                      Класс profession-cell даёт text-align: left для
+                      содержимого этой ячейки (в legacy наследуется
+                      от .main_content, в origin родитель #content
+                      центрирован, нужен точечный override). */}
+                  <p>
+                    <label
+                      htmlFor={`profession_${p.key}`}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {t('profession', `${p.key}Desc`)}
+                    </label>
+                  </p>
                   {specs.length > 0 && (
                     <table
                       className="table_no_background"
@@ -252,27 +297,27 @@ export function ProfessionScreen() {
                         </tr>
                       </thead>
                       <tbody>
-                        {specs.map(([k, v]) => {
+                        {specs.map((e) => {
                           // План 72.1.58: имена эффектов 1:1 с legacy —
                           // имя соответствующего здания/исследования
                           // (info.<key>). Fallback на старую группу
                           // profession.bonus*, затем на raw key.
-                          const infoKey = EFFECT_INFO_KEY[k];
+                          const infoKey = EFFECT_INFO_KEY[e.key];
                           let label: string;
                           if (infoKey) {
                             label = t('info', infoKey);
                             if (label.startsWith('[')) {
                               // не нашлось в info — fallback
-                              label = k;
+                              label = e.key;
                             }
                           } else {
-                            label = k;
+                            label = e.key;
                           }
                           return (
-                            <tr key={k}>
+                            <tr key={e.key}>
                               <td>{label}</td>
-                              <td className={v > 0 ? 'true' : 'false'}>
-                                &nbsp;{fmtDelta(v)}
+                              <td className={e.value > 0 ? 'true' : 'false'}>
+                                &nbsp;{fmtDelta(e.value)}
                               </td>
                             </tr>
                           );

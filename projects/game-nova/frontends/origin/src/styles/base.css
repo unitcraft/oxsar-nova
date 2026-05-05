@@ -116,16 +116,20 @@ hr {
 
 /* ------- Состояния ------- */
 
+/* План 72.1.59: !important нужен для семантических state-классов
+   .true / .false — иначе .ntable td (specificity 0,1,1) перебивает
+   их (specificity 0,1,0) и цифры остаются серыми. Legacy CSS
+   `style.css:222,226,230` тоже использует !important. */
 .available, .true {
-  color: var(--c-positive);
+  color: var(--c-positive) !important;
 }
 
 .false, .rep_quantity_diff, .rep_quantity_damage {
-  color: var(--c-negative);
+  color: var(--c-negative) !important;
 }
 
 .odd .false, .odd .rep_quantity_diff, .odd .rep_quantity_damage {
-  color: #ff5555;
+  color: #ff5555 !important;
 }
 
 .rep_quantity_damage_low {
@@ -140,7 +144,11 @@ hr {
   color: var(--c-negative-soft);
 }
 
-/* Pixel-perfect клон legacy: вложенная таблица стоимости в required_res_table.tpl. */
+/* Pixel-perfect клон legacy: вложенная таблица стоимости в
+   required_res_table.tpl и в profession.tpl. Legacy убирает только
+   border/background — paddings наследуются от .ntable td (1px 5px).
+   План 72.1.59: удалены неверные override `padding 0 16px` /
+   `min-width 70px` — они нарушали layout профессий. */
 table.table_no_background,
 table.table_no_background tr,
 table.table_no_background td {
@@ -148,12 +156,14 @@ table.table_no_background td {
   border: 0;
 }
 
-table.table_no_background td {
-  padding: 0 16px 0 0;
-}
-table.table_no_background td:first-child {
-  padding: 0 8px 0 0;
-  min-width: 70px;
+/* План 72.1.59: профессия (S-041) — описание и список эффектов
+   должны быть выровнены по левому краю. В legacy родитель
+   `.main_content { text-align: left }` обеспечивает это для всего
+   контента; в origin родитель `#content` имеет `text-align: center`
+   (другая иерархия), и точечный override нужен здесь.
+   Класс ставится на `<td>` с описанием + таблицей спецификации. */
+.profession-cell {
+  text-align: left;
 }
 
 /* Pixel-perfect клон legacy: кнопка действия в Research/Constructions —
@@ -225,6 +235,25 @@ input:focus, textarea:focus {
 .SignButton:hover, .button:hover {
   border: 2px solid var(--c-input-focus-border);
   cursor: pointer;
+}
+
+/* План 72.1.59: красная «опасная» кнопка для деструктивных действий
+   (снос здания, отмена ACS-формации и т.п.). */
+.button-danger {
+  background-color: var(--c-input-bg);
+  color: var(--c-negative);
+  border: 2px solid var(--c-negative);
+  font-weight: bold;
+  cursor: pointer;
+}
+.button-danger:hover:not(:disabled) {
+  background-color: var(--c-negative);
+  color: #fff;
+  border-color: var(--c-negative);
+}
+.button-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 fieldset {

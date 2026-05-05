@@ -163,22 +163,39 @@ type ProfessionCatalog struct {
 	Professions map[string]ProfessionSpec `yaml:"professions"`
 }
 
-// ProfessionSpec — одна профессия. Bonus/Malus — виртуальные уровни к
-// зданиям/исследованиям/боевым техам. Применяются как смещение при расчёте
-// производства и боя (не записываются в БД).
+// ProfessionSpec — одна профессия. Effects — упорядоченный список
+// виртуальных смещений уровней к зданиям/исследованиям/боевым техам.
+// Применяются как смещение при расчёте производства и боя (не
+// записываются в БД).
 //
-// Ключи bonus/malus совпадают с ключами в buildings.yml / research.yml,
+// Ключи effects совпадают с ключами в buildings.yml / research.yml,
 // плюс специальные: "gun", "shield_weapon", "shell_weapon" (боевые техи),
 // "ballistics", "masking" (fleet техи), "computer_tech".
 //
 // План 72.1.59: label/description вынесены в configs/i18n/{ru,en}.yml
 // в группу `profession` (ключи `<key>Label`, `<key>Desc`).
+//
+// План 72.1.59 (повторно): Bonus/Malus как map[string]int заменены на
+// Effects как ordered slice []EffectEntry, потому что legacy
+// `consts.php:$GLOBALS["PROFESSIONS"]` использует insertion-ordered
+// PHP-array, и порядок отображения в UI зависит от профессии (у Атакера
+// и Оборонщика разный). YAML-список сохраняет порядок (в отличие от
+// Go map random-iteration).
 type ProfessionSpec struct {
 	// SortOrder — порядок отображения в UI (legacy: Универсал=0,
 	// Шахтёр=1, Атакёр=2, Защитник=3, Танк=4). План 72.1.58.
 	SortOrder int            `yaml:"sort_order,omitempty"`
-	Bonus     map[string]int `yaml:"bonus"`
-	Malus     map[string]int `yaml:"malus"`
+	// Effects — упорядоченный список (положительные и отрицательные
+	// смещения вместе, в legacy-порядке). План 72.1.59.
+	Effects   []EffectEntry  `yaml:"effects"`
+}
+
+// EffectEntry — один эффект профессии (ключ + значение). Порядок
+// записи в YAML = порядок отображения в UI (legacy
+// `profession.tpl:27` итерирует tech_special as-is).
+type EffectEntry struct {
+	Key   string `yaml:"key"`
+	Value int    `yaml:"value"`
 }
 
 // ArtefactSpec — один артефакт. Содержит идентификатор, эффект и

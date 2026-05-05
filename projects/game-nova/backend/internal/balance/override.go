@@ -488,21 +488,13 @@ func cloneProfessions(src map[string]config.ProfessionSpec) map[string]config.Pr
 	}
 	dst := make(map[string]config.ProfessionSpec, len(src))
 	for k, v := range src {
-		// Bonus/Malus map'ы — потенциально shared, клонируем для безопасности.
-		bonus := make(map[string]int, len(v.Bonus))
-		for bk, bv := range v.Bonus {
-			bonus[bk] = bv
-		}
-		malus := make(map[string]int, len(v.Malus))
-		for mk, mv := range v.Malus {
-			malus[mk] = mv
-		}
+		// План 72.1.59: ordered Effects вместо bonus/malus map'ов.
+		// Slice — потенциально shared, клонируем для безопасности.
+		effects := make([]config.EffectEntry, len(v.Effects))
+		copy(effects, v.Effects)
 		dst[k] = config.ProfessionSpec{
-			// План 72.1.59: Label/Description вынесены в i18n —
-			// клонируем только числовые поля.
 			SortOrder: v.SortOrder,
-			Bonus:     bonus,
-			Malus:     malus,
+			Effects:   effects,
 		}
 	}
 	return dst

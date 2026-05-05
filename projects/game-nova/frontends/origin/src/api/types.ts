@@ -875,16 +875,26 @@ export interface OfficerActivateRequest {
 }
 
 // S-041 Profession — backend (internal/profession/service.go) DTO:
-// {key, sort_order, bonus, malus} для list + {profession,
-// next_change_allowed, change_cost, days_remain} для me. Bonus/malus —
-// мапа техн.ключ → дельта уровня (например, metalmine: +5, gun: -3).
+// {key, sort_order, effects} для list + {profession,
+// next_change_allowed, change_cost, days_remain} для me.
 //
 // План 72.1.59: label/description больше не приходят с бекенда —
 // фронт переводит ключ через t('profession', `${key}Label` / `${key}Desc`).
+//
+// План 72.1.59 (повторно): bonus/malus map'ы заменены на effects —
+// ordered list, потому что legacy `consts.php:$GLOBALS["PROFESSIONS"]`
+// использует insertion-ordered PHP-array, и у разных профессий
+// порядок отображения разный (Атакер: gun→shield→shell→ballistics→
+// shipyard→...; Оборонщик: masking→shield→...).
+export interface ProfessionEffect {
+  key: string;
+  value: number;
+}
+
 export interface Profession {
   key: string;
-  bonus?: Record<string, number>;
-  malus?: Record<string, number>;
+  sort_order?: number;
+  effects: ProfessionEffect[];
 }
 
 export interface ProfessionsList {

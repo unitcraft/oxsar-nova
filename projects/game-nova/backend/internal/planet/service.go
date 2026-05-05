@@ -420,15 +420,11 @@ func profBonusForUser(ctx context.Context, pool interface {
 	if !ok {
 		return nil
 	}
-	out := make(map[int]int)
-	for k, v := range spec.Bonus {
-		if id, ok := economy.ProfessionKeyToID[k]; ok {
-			out[id] += v
-		}
-	}
-	for k, v := range spec.Malus {
-		if id, ok := economy.ProfessionKeyToID[k]; ok {
-			out[id] += v
+	// План 72.1.59: ordered Effects вместо bonus/malus map'ов.
+	out := make(map[int]int, len(spec.Effects))
+	for _, e := range spec.Effects {
+		if id, ok := economy.ProfessionKeyToID[e.Key]; ok {
+			out[id] += e.Value
 		}
 	}
 	return out

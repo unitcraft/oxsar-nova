@@ -10,6 +10,7 @@
 //   metal >= metal_cap  → class "false" (красный)
 //   иначе               → class "" (без цвета)
 
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
@@ -45,9 +46,49 @@ export function TopHeader() {
   const energyRemaining = planet?.energy_remaining ?? 0;
   const energyProd = planet?.energy_prod ?? 0;
 
-  const metalVal = planet ? Math.floor(planet.metal) : 0;
-  const siliconVal = planet ? Math.floor(planet.silicon) : 0;
-  const hydrogenVal = planet ? Math.floor(planet.hydrogen) : 0;
+  // План 72.1.59: тик ресурсов 1:1 с legacy `Page.class.php:73-93`.
+  // Legacy использует jquery.iterator.js (step=production/3600 в сек):
+  //   - тик активен если storage > current ИЛИ production < 0
+  //   - потолок при росте — storage (cap)
+  //   - при потреблении — нижняя граница 0
+  // Здесь делаем то же на клиенте: linear extrapolation по
+  // `last_res_update` + per_sec, ограниченная cap'ом / нулём.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  function tick(
+    base: number,
+    perSec: number,
+    cap: number,
+    lastUpdateIso: string,
+  ): number {
+    const lastMs = Date.parse(lastUpdateIso);
+    if (Number.isNaN(lastMs)) return Math.floor(base);
+    const dt = Math.max(0, (now - lastMs) / 1000);
+    let val = base + perSec * dt;
+    if (perSec >= 0) {
+      // Растущий ресурс: legacy не показывает тик когда storage <= current,
+      // т.е. cap уже достигнут. Если ещё не достигнут — потолок = cap.
+      if (val > cap) val = cap;
+    } else {
+      // Потребление: legacy ограничивает 0.
+      if (val < 0) val = 0;
+    }
+    return Math.floor(val);
+  }
+
+  const metalVal = planet
+    ? tick(planet.metal, planet.metal_per_sec, planet.metal_cap, planet.last_res_update)
+    : 0;
+  const siliconVal = planet
+    ? tick(planet.silicon, planet.silicon_per_sec, planet.silicon_cap, planet.last_res_update)
+    : 0;
+  const hydrogenVal = planet
+    ? tick(planet.hydrogen, planet.hydrogen_per_sec, planet.hydrogen_cap, planet.last_res_update)
+    : 0;
 
   const metalFull = planet ? atCap(metalVal, planet.metal_cap) : false;
   const siliconFull = planet ? atCap(siliconVal, planet.silicon_cap) : false;

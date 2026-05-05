@@ -85,17 +85,26 @@ type CurrentInfo struct {
 	DaysRemain        int        `json:"days_remain"`
 }
 
-// List возвращает список всех профессий с их бонусами, отсортированный
+// List возвращает список всех профессий с их эффектами, отсортированный
 // по SortOrder из YAML (legacy: Универсал → Шахтёр → Атакёр → Защитник
 // → Танк). План 72.1.58.
+//
+// План 72.1.59: эффекты теперь ordered slice []EffectEntry (а не
+// bonus/malus map'ы), порядок 1:1 с legacy
+// `consts.php:$GLOBALS["PROFESSIONS"]` tech_special. Frontend
+// рендерит as-is без сортировки.
 func (s *Service) List() []ProfessionDTO {
 	out := make([]ProfessionDTO, 0, len(s.catalog.Professions.Professions))
 	for key, spec := range s.catalog.Professions.Professions {
+		// Клонируем slice (immutable view).
+		effects := make([]EffectDTO, 0, len(spec.Effects))
+		for _, e := range spec.Effects {
+			effects = append(effects, EffectDTO{Key: e.Key, Value: e.Value})
+		}
 		out = append(out, ProfessionDTO{
 			Key:       key,
 			SortOrder: spec.SortOrder,
-			Bonus:     spec.Bonus,
-			Malus:     spec.Malus,
+			Effects:   effects,
 		})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
@@ -270,7 +279,10 @@ func (s *Service) BonusForUser(ctx context.Context, userID string) (map[string]i
 	return BonusFromKey(s.catalog, profession), nil
 }
 
-// BonusFromKey вычисляет суммарные смещения (bonus+malus) для данного ключа профессии.
+// BonusFromKey вычисляет суммарные смещения уровней для данного
+// ключа профессии. План 72.1.59: spec теперь содержит ordered
+// []EffectEntry — суммируем в map для использования в расчёте
+// производства/боя (там порядок не важен, важна сумма).
 func BonusFromKey(cat *config.Catalog, professionKey string) map[string]int {
 	// План 72.1.58: universal эквивалентен NoProfession (нет эффектов).
 	if professionKey == NoProfession || professionKey == UniversalKey || professionKey == "" {
@@ -280,12 +292,9 @@ func BonusFromKey(cat *config.Catalog, professionKey string) map[string]int {
 	if !ok {
 		return nil
 	}
-	out := make(map[string]int, len(spec.Bonus)+len(spec.Malus))
-	for k, v := range spec.Bonus {
-		out[k] += v
-	}
-	for k, v := range spec.Malus {
-		out[k] += v
+	out := make(map[string]int, len(spec.Effects))
+	for _, e := range spec.Effects {
+		out[e.Key] += e.Value
 	}
 	return out
 }
@@ -293,10 +302,17 @@ func BonusFromKey(cat *config.Catalog, professionKey string) map[string]int {
 // ProfessionDTO — балансовый ответ /api/professions. План 72.1.59:
 // label/description отсутствуют — фронт переводит ключ через i18n
 // (group `profession`, key `<key>Label` / `<key>Desc`).
+// Effects — ordered list (порядок 1:1 с legacy
+// `consts.php:$GLOBALS["PROFESSIONS"]` tech_special).
 type ProfessionDTO struct {
 	Key string `json:"key"`
 	// SortOrder — порядок сортировки для UI (план 72.1.58).
-	SortOrder int            `json:"sort_order,omitempty"`
-	Bonus     map[string]int `json:"bonus,omitempty"`
-	Malus     map[string]int `json:"malus,omitempty"`
+	SortOrder int         `json:"sort_order,omitempty"`
+	Effects   []EffectDTO `json:"effects"`
+}
+
+// EffectDTO — один эффект профессии в API-ответе.
+type EffectDTO struct {
+	Key   string `json:"key"`
+	Value int    `json:"value"`
 }

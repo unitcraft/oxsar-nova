@@ -77,19 +77,15 @@ func readUserTech(ctx context.Context, tx pgx.Tx, userID string, cat *config.Cat
 		return battle.Tech{}, err
 	}
 
-	// Применить бонусы профессии.
+	// Применить бонусы профессии (план 72.1.59: ordered Effects вместо
+	// разделённых bonus/malus map'ов).
 	var prof string
 	_ = tx.QueryRow(ctx, `SELECT profession FROM users WHERE id=$1`, userID).Scan(&prof)
 	if prof != "" && prof != "none" {
 		if spec, ok := cat.Professions.Professions[prof]; ok {
-			for k, v := range spec.Bonus {
-				if id, ok2 := economy.ProfessionKeyToID[k]; ok2 {
-					levels[id] += v
-				}
-			}
-			for k, v := range spec.Malus {
-				if id, ok2 := economy.ProfessionKeyToID[k]; ok2 {
-					levels[id] += v
+			for _, e := range spec.Effects {
+				if id, ok2 := economy.ProfessionKeyToID[e.Key]; ok2 {
+					levels[id] += e.Value
 				}
 			}
 		}
