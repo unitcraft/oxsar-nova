@@ -85,12 +85,11 @@ export interface ShipyardInventory {
 export interface ResearchOverview {
   queue: QueueItem[];
   levels: Record<string, number>;
-  /** Время следующего уровня каждой технологии (секунды).
-   *  Ключ — unit_id как строка. */
+  /** Бонусные уровни от артефактов/суперкомпьютера (legacy NS::getAddedResearch). */
+  added_levels?: Record<string, number>;
   research_seconds?: Record<string, number>;
-  /** Стоимость следующего уровня каждой технологии (метал/кремний/водород).
-   *  Ключ — unit_id как строка. */
   research_costs?: Record<string, { metal: number; silicon: number; hydrogen: number }>;
+  order?: number[];
 }
 
 export interface GalaxyCell {

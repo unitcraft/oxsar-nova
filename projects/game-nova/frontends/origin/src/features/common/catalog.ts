@@ -45,26 +45,27 @@ export const CATALOG: CatalogEntry[] = [
   { id: 57, group: 'building', i18n: 'info.moonHydrogenLab',   icon: 'moon_hydrogen_lab',   moonOnly: true },
 
   // ────────── Research (configs/research.yml) ──────────
-  { id: 13, group: 'research', i18n: 'info.spyware',           icon: 'spyware' },
-  { id: 14, group: 'research', i18n: 'info.computerTech',      icon: 'computer_tech' },
-  { id: 15, group: 'research', i18n: 'info.gunTech',           icon: 'gun_tech' },
-  { id: 16, group: 'research', i18n: 'info.shieldTech',        icon: 'shield_tech' },
-  { id: 17, group: 'research', i18n: 'info.shellTech',         icon: 'shell_tech' },
-  { id: 18, group: 'research', i18n: 'info.energyTech',        icon: 'energy_tech' },
-  { id: 19, group: 'research', i18n: 'info.hyperspaceTech',    icon: 'hyperspace_tech' },
-  { id: 20, group: 'research', i18n: 'info.combustionEngine',  icon: 'combustion_engine' },
-  { id: 21, group: 'research', i18n: 'info.impulseEngine',     icon: 'impulse_engine' },
-  { id: 22, group: 'research', i18n: 'info.hyperspaceEngine',  icon: 'hyperspace_engine' },
-  { id: 23, group: 'research', i18n: 'info.laserTech',         icon: 'laser_tech' },
-  { id: 24, group: 'research', i18n: 'info.ionTech',           icon: 'ion_tech' },
-  { id: 25, group: 'research', i18n: 'info.plasmaTech',        icon: 'plasma_tech' },
-  { id: 26, group: 'research', i18n: 'info.ign',               icon: 'ign' },
-  { id: 27, group: 'research', i18n: 'info.expoTech',          icon: 'expo_tech' },
-  { id: 28, group: 'research', i18n: 'info.gravi',             icon: 'gravi' },
-  { id: 103,group: 'research', i18n: 'info.ballisticsTech',    icon: 'ballistics_tech' },
-  { id: 104,group: 'research', i18n: 'info.maskingTech',       icon: 'masking_tech' },
-  { id: 112,group: 'research', i18n: 'info.astroTech',         icon: 'astro_tech' },
-  { id: 113,group: 'research', i18n: 'info.igrTech',           icon: 'igr_tech' },
+  // Порядок по legacy display_order (na_construction WHERE mode=2 ORDER BY display_order).
+  { id: 13,  group: 'research', i18n: 'info.spyware',           icon: 'spyware' },           // 130
+  { id: 14,  group: 'research', i18n: 'info.computerTech',      icon: 'computer_tech' },      // 140
+  { id: 15,  group: 'research', i18n: 'info.gunTech',           icon: 'gun_tech' },           // 150
+  { id: 16,  group: 'research', i18n: 'info.shieldTech',        icon: 'shield_tech' },        // 160
+  { id: 17,  group: 'research', i18n: 'info.shellTech',         icon: 'shell_tech' },         // 170
+  { id: 103, group: 'research', i18n: 'info.ballisticsTech',    icon: 'ballistics_tech' },    // 172
+  { id: 104, group: 'research', i18n: 'info.maskingTech',       icon: 'masking_tech' },       // 174
+  { id: 18,  group: 'research', i18n: 'info.energyTech',        icon: 'energy_tech' },        // 180
+  { id: 19,  group: 'research', i18n: 'info.hyperspaceTech',    icon: 'hyperspace_tech' },    // 190
+  { id: 20,  group: 'research', i18n: 'info.combustionEngine',  icon: 'combustion_engine' },  // 200
+  { id: 21,  group: 'research', i18n: 'info.impulseEngine',     icon: 'impulse_engine' },     // 210
+  { id: 22,  group: 'research', i18n: 'info.hyperspaceEngine',  icon: 'hyperspace_engine' },  // 220
+  { id: 23,  group: 'research', i18n: 'info.laserTech',         icon: 'laser_tech' },         // 230
+  { id: 24,  group: 'research', i18n: 'info.ionTech',           icon: 'ion_tech' },           // 240
+  { id: 25,  group: 'research', i18n: 'info.plasmaTech',        icon: 'plasma_tech' },        // 250
+  { id: 26,  group: 'research', i18n: 'info.ign',               icon: 'ign' },                // 260
+  { id: 27,  group: 'research', i18n: 'info.expoTech',          icon: 'expo_tech' },          // 270
+  { id: 28,  group: 'research', i18n: 'info.gravi',             icon: 'gravi' },              // 280
+  { id: 112, group: 'research', i18n: 'info.astroTech',         icon: 'expo_tech' },          // наша, после gravi
+  { id: 113, group: 'research', i18n: 'info.igrTech',           icon: 'ign' },                // наша
 
   // ────────── Ships (configs/ships.yml — реальные ID game-nova) ──────────
   { id: 29,  group: 'ship', i18n: 'info.smallTransporter',     icon: 'small_transporter' },

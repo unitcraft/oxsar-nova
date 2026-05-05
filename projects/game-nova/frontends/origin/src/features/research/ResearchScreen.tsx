@@ -90,9 +90,14 @@ export function ResearchScreen() {
   }
 
   const levels = overviewQ.data?.levels ?? {};
+  const addedLevels = overviewQ.data?.added_levels ?? {};
   const seconds = overviewQ.data?.research_seconds ?? {};
   const costs = overviewQ.data?.research_costs ?? {};
-  const techs = catalogByGroup('research');
+  const allTechs = catalogByGroup('research');
+  const apiOrder = overviewQ.data?.order;
+  const techs = apiOrder
+    ? apiOrder.flatMap((id) => { const t = allTechs.find((x) => x.id === id); return t ? [t] : []; })
+    : allTechs;
   // План 72.1.55.E (effects): show_all_research preference.
   const settingsQ = useQuery({
     queryKey: QK.settings(),
@@ -194,10 +199,11 @@ export function ResearchScreen() {
           {visibleTechs.map((entry) => {
             const [group, key] = entry.i18n.split('.') as [string, string];
             const lvl = levels[String(entry.id)] ?? 0;
+            const added = addedLevels[String(entry.id)] ?? 0;
             const secs = seconds[String(entry.id)] ?? 0;
             const cost = costs[String(entry.id)] ?? { metal: 0, silicon: 0, hydrogen: 0 };
             const descKey = `${key}Desc`;
-            const desc = t('research', descKey);
+            const desc = t(group, descKey);
             const hasDesc = !desc.startsWith('[');
             const enough = canBuild(entry.id);
             return (
@@ -213,8 +219,13 @@ export function ResearchScreen() {
                   <div style={{ width: '100%' }}>
                     <span style={{ float: 'right' }}>
                       {t('research', 'level', { n: String(lvl) })}
+                      {added !== 0 && (
+                        <span className={added > 0 ? 'true' : 'false'}>
+                          {' '}({added > 0 ? '+' : ''}{added})
+                        </span>
+                      )}
                     </span>
-                    <strong>{t(group, key)}</strong>
+                    <strong className={added < 0 ? 'false' : undefined}>{t(group, key)}</strong>
                   </div>
                   {hasDesc && (
                     <div style={{ clear: 'both', fontSize: 'smaller' }}>{desc}</div>

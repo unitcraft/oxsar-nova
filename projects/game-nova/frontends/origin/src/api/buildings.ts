@@ -27,6 +27,7 @@ export interface BuildingsOverview {
   build_seconds: Record<string, number>;
   build_costs: Record<string, BuildingCost>;
   requirements_unmet: Record<string, RequirementUnmet[]>;
+  order?: number[];
 }
 
 export function fetchBuildingsOverview(planetId: string): Promise<BuildingsOverview> {

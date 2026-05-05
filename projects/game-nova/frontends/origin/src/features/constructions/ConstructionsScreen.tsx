@@ -137,7 +137,11 @@ export function ConstructionsScreen() {
   const isMoon = planet?.is_moon === true;
 
   const allBuildings = catalogByGroup('building');
-  const buildings = allBuildings.filter((b) =>
+  const apiOrder = overviewQ.data?.order;
+  const orderedBuildings = apiOrder
+    ? apiOrder.flatMap((id) => { const b = allBuildings.find((x) => x.id === id); return b ? [b] : []; })
+    : allBuildings;
+  const buildings = orderedBuildings.filter((b) =>
     isMoon ? b.moonOnly === true : b.moonOnly !== true,
   );
 
