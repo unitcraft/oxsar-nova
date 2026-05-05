@@ -245,6 +245,11 @@ func run() error {
 	// Один handler на Kind. Domain-пакеты сами не регистрируются —
 	// чтобы воркер видел весь список в одном месте и было проще
 	// отслеживать, что именно обрабатывается.
+	// automsg для autopilot inbox-канала. Полная инициализация
+	// (с inactivity-reminders) ниже — там же присваивается
+	// в переменную для использования другими хэндлерами.
+	autopilotAutoMsgSvc := automsg.NewService(db).WithBundle(i18nBundle)
+
 	// План 06.1: rule-based автопилот.
 	// Воркеру нужны building/research только для buildSnapshot (чтения
 	// уровней и очередей); Execute идёт через HTTP-handler. Создаём
@@ -263,7 +268,7 @@ func run() error {
 		planetSvc, scoreSvc, autopilotBuildingSvc, autopilotResearchSvc,
 		transportSvc, // worker не вызывает Fleet.Send (только Compute), но для единства сигнатуры
 		nil,          // profession.Service не нужен в Compute (профессия читается прямо из users SQL)
-	)
+	).WithAutoMsg(autopilotAutoMsgSvc)
 	autopilotWorkerH := &aiadvisor.AutopilotWorkerHandler{Svc: autopilotSvc}
 	w.Register(event.KindAutopilotAdvise, autopilotWorkerH.Handle)
 

@@ -1591,6 +1591,11 @@ advisor:
   categoryMission: Миссия
   categoryDefense: Оборона
   categoryProfession: Профессия
+  historyTitle: История запросов
+  historyStatusPending: ожидает
+  historyStatusReady: готово
+  historyStatusExecuted: выполнено
+  historyStatusExpired: истекло
 
 dailyquest:
   title: Ежедневные задания

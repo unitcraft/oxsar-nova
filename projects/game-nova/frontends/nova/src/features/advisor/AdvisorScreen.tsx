@@ -47,6 +47,15 @@ type AutopilotResult = {
   recs: Recommendation[];
 };
 
+type HistoryItem = {
+  job_id: string;
+  strategy: string;
+  status: string;
+  created_at: string;
+  credits: number;
+  executed_description?: string;
+};
+
 const STORAGE_KEY = 'autopilot:strategy';
 const STORAGE_JOB = 'autopilot:lastJob';
 
@@ -203,6 +212,7 @@ function AutopilotTab() {
       const rec = result.data?.recs.find((r) => r.id === recID);
       toast.show('success', t('autoExecuted'), rec?.description ?? '');
       void qc.invalidateQueries(); // полностью обновляем — событие могло затронуть всё
+      void qc.invalidateQueries({ queryKey: ['autopilot-history'] });
       // Навигация на целевой экран — по категории.
       navigateForRec(rec);
       // Сбросим job (он stale после executed).
@@ -217,6 +227,12 @@ function AutopilotTab() {
   });
 
   const data = result.data;
+
+  const history = useQuery({
+    queryKey: ['autopilot-history'],
+    queryFn: () => api.get<{ items: HistoryItem[] }>('/api/ai-advisor/autopilot/history'),
+    refetchInterval: 30000,
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -278,6 +294,35 @@ function AutopilotTab() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {(history.data?.items?.length ?? 0) > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <h3 style={{ margin: '8px 0', fontSize: 14 }}>{t('historyTitle')}</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {history.data!.items.slice(0, 5).map((it) => (
+              <div
+                key={it.job_id}
+                className="ox-panel"
+                style={{ padding: 8, fontSize: 12, color: 'var(--ox-fg-muted)' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                  <span>
+                    {new Date(it.created_at).toLocaleString()}
+                    {' • '}
+                    {t(`strategy${capitalize(it.strategy)}`)}
+                    {' • '}
+                    {t(`historyStatus${capitalize(it.status)}`)}
+                  </span>
+                  <span>−{it.credits} cr</span>
+                </div>
+                {it.executed_description && (
+                  <div style={{ marginTop: 4, color: 'var(--ox-fg)' }}>{it.executed_description}</div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

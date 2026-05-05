@@ -17191,3 +17191,37 @@ not-a-fix + BA-019 mitigated.
     - History API для виджета — пока показывается активный job
       из localStorage. Полноценная история требует
       GET /api/ai-advisor/autopilot/history и UI-таб.
+
+## Итерация 06.1.11 — Автопилот: history + inbox-канал (2026-05-06)
+
+  Закрытие двух из ранее «отложенных» подзадач:
+
+  History API:
+    - aiadvisor/autopilot_service.go: метод History(ctx, userID)
+      → []HistoryItem (job_id, strategy, status, created_at, credits,
+      executed_description). LIMIT 20, ORDER BY created_at DESC.
+    - autopilot_handler.go: GET /api/ai-advisor/autopilot/history
+      → {"items": [...]}
+    - cmd/server/main.go: pr.Get(...) зарегистрирован.
+    - frontends/nova/src/features/advisor/AdvisorScreen.tsx:
+      useQuery('autopilot-history', refetchInterval=30s); секция
+      «История запросов» под топ-3 (5 последних, статус + credits +
+      executed_description). После Execute invalidateQuery.
+    - i18n ru/en: historyTitle + historyStatusXxx (Pending/Ready/
+      Executed/Expired).
+
+  Inbox-канал:
+    - AutopilotService.WithAutoMsg(automsg.Service) — DI builder.
+    - Compute после UPDATE log дополнительно делает SendDirect
+      (folder=20 «Системные») с топ-3 рекомендациями plain-text.
+      Письмо приходит в почту игрока — полезно если он offline.
+      Ошибка inbox не критична (ai_advisor_log уже обновлён).
+    - cmd/server/main.go и cmd/worker/main.go: WithAutoMsg(automsgSvc)
+      подключён. В worker создаётся свой инстанс automsg
+      (autopilotAutoMsgSvc) до основного — для соблюдения порядка
+      объявлений.
+
+  Tests:
+    - integration TestAutopilot_History_Empty / _AfterEnqueue —
+      проверяют пустоту и сортировку DESC.
+    - 53 теста зелёные с реальной БД (43 unit + 10 integration).

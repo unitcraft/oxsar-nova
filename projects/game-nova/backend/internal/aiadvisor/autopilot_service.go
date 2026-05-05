@@ -38,6 +38,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"oxsar/game-nova/internal/automsg"
 	"oxsar/game-nova/internal/building"
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/event"
@@ -93,6 +94,15 @@ type AutopilotService struct {
 	researchSvc    *research.Service
 	fleetSvc       *fleet.TransportService
 	professionSvc  *profession.Service
+	automsg        *automsg.Service
+}
+
+// WithAutoMsg подключает сервис системных сообщений. Если задан,
+// Compute дополнительно сохраняет рекомендации в inbox пользователя
+// (folder=20 «Системные») — полезно когда игрок offline.
+func (s *AutopilotService) WithAutoMsg(am *automsg.Service) *AutopilotService {
+	s.automsg = am
+	return s
 }
 
 // NewAutopilotService — конструктор. Любая зависимость может быть nil
@@ -304,9 +314,85 @@ func (s *AutopilotService) Compute(ctx context.Context, tx pgx.Tx, e event.Event
 		return fmt.Errorf("autopilot: compute: update log: %w", err)
 	}
 
+	// Inbox-message: дублируем рекомендации в почту пользователя,
+	// чтобы игрок-офлайн увидел их при следующем входе. Кнопка «Выполнить»
+	// в письме делается фронтом по deep-link на advisor с pre-loaded job.
+	// Ошибка inbox не критична — ai_advisor_log уже обновлён.
+	if s.automsg != nil && len(recs) > 0 {
+		title := "Автопилот: новые рекомендации"
+		body := buildInboxBody(input.Strategy, recs, input.LogID)
+		// folder=20 — системные сообщения (legacy consts.php
+		// MESSAGE_FOLDER_FROM_AI = пока не выделен, используем 20).
+		_ = s.automsg.SendDirect(ctx, tx, input.UserID, 20, title, body)
+	}
+
 	// WS-пуш — Ф.6. До тех пор фронт получает результат через polling.
 
 	return nil
+}
+
+// buildInboxBody — текст inbox-сообщения с топ-3 рекомендациями.
+// Plain text, без HTML — формат legacy messages.body.
+func buildInboxBody(strategy Strategy, recs []Recommendation, jobID string) string {
+	body := "Стратегия: " + string(strategy) + "\n\n"
+	for i, rec := range recs {
+		body += fmt.Sprintf("%d. %s\n   %s\n\n", i+1, rec.Description, rec.Benefit)
+	}
+	body += "Откройте экран «Советник», чтобы выполнить выбранное действие.\n"
+	body += "Job: " + jobID
+	return body
+}
+
+// HistoryItem — элемент истории запросов автопилота.
+type HistoryItem struct {
+	JobID     string  `json:"job_id"`
+	Strategy  string  `json:"strategy"`
+	Status    string  `json:"status"`
+	CreatedAt string  `json:"created_at"` // ISO-8601
+	Credits   float64 `json:"credits"`
+	// Если status='executed' — описание выполненной рекомендации.
+	ExecutedDescription string `json:"executed_description,omitempty"`
+}
+
+// History возвращает последние N запросов автопилота для пользователя.
+// N жёстко 20 — этого достаточно для UI-вкладки «История».
+// Сортировка: created_at DESC.
+func (s *AutopilotService) History(ctx context.Context, userID string) ([]HistoryItem, error) {
+	rows, err := s.db.Pool().Query(ctx, `
+		SELECT id, COALESCE(strategy, ''), status, created_at, credits, action_params
+		FROM ai_advisor_log
+		WHERE user_id = $1 AND source = $2
+		ORDER BY created_at DESC
+		LIMIT 20
+	`, userID, AutopilotSource)
+	if err != nil {
+		return nil, fmt.Errorf("autopilot: history: %w", err)
+	}
+	defer rows.Close()
+
+	var out []HistoryItem
+	for rows.Next() {
+		var (
+			h         HistoryItem
+			createdAt time.Time
+			ap        []byte
+		)
+		if err := rows.Scan(&h.JobID, &h.Strategy, &h.Status, &createdAt, &h.Credits, &ap); err != nil {
+			return nil, err
+		}
+		h.CreatedAt = createdAt.Format(time.RFC3339)
+		// Если есть action_params — попытаемся достать описание выполненной рекомендации
+		// (для status='executed' она помечена через UPDATE в Execute? — нет, мы только
+		// меняем status. Извлекаем первую recs[0].description как proxy.)
+		if len(ap) > 0 && h.Status == AutopilotStatusExecuted {
+			var stored AutopilotResult
+			if err := json.Unmarshal(ap, &stored); err == nil && len(stored.Recs) > 0 {
+				h.ExecutedDescription = stored.Recs[0].Description
+			}
+		}
+		out = append(out, h)
+	}
+	return out, rows.Err()
 }
 
 // Result — polling-эндпоинт. Возвращает текущее состояние job'а.

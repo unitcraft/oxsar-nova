@@ -96,6 +96,26 @@ func (h *AutopilotHandler) Result(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, r, http.StatusOK, res)
 }
 
+// History GET /api/ai-advisor/autopilot/history
+//
+// Возвращает последние 20 запросов автопилота пользователя (DESC).
+func (h *AutopilotHandler) History(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserID(r.Context())
+	if !ok {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrForbidden, "unauthorized"))
+		return
+	}
+	items, err := h.svc.History(r.Context(), uid)
+	if err != nil {
+		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
+		return
+	}
+	if items == nil {
+		items = []HistoryItem{} // не отдаём null
+	}
+	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{"items": items})
+}
+
 type executeRequest struct {
 	JobID string `json:"job_id"`
 	RecID string `json:"rec_id"`

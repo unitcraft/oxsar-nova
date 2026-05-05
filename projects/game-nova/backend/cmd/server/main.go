@@ -367,7 +367,7 @@ func run() error {
 		},
 		cat,
 		planetSvc, scoreSvc, buildingSvc, researchSvc, transportSvc, professionSvc,
-	)
+	).WithAutoMsg(automsgSvc)
 	autopilotH := aiadvisor.NewAutopilotHandler(autopilotSvc)
 
 	// План 38 Ф.5: payments переехали в billing-service (отдельный микросервис).
@@ -616,6 +616,7 @@ func run() error {
 		pr.With(idemMW.Wrap).Post("/ai-advisor/autopilot/advise", autopilotH.Advise)
 		pr.Get("/ai-advisor/autopilot/result/{jobID}", autopilotH.Result)
 		pr.With(idemMW.Wrap).Post("/ai-advisor/autopilot/execute", autopilotH.Execute)
+		pr.Get("/ai-advisor/autopilot/history", autopilotH.History)
 
 		// План 38 Ф.5: /payment/order и /payment/history удалены. См. billing-service:
 		//   POST /billing/orders, GET /billing/wallet/history.

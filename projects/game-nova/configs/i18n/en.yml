@@ -1595,6 +1595,11 @@ advisor:
   categoryMission: Mission
   categoryDefense: Defense
   categoryProfession: Profession
+  historyTitle: Request history
+  historyStatusPending: pending
+  historyStatusReady: ready
+  historyStatusExecuted: executed
+  historyStatusExpired: expired
 
 dailyquest:
   title: Daily quests

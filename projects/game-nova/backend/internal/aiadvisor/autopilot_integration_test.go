@@ -323,6 +323,53 @@ func TestAutopilot_Compute_Idempotent(t *testing.T) {
 	}
 }
 
+func TestAutopilot_History_Empty(t *testing.T) {
+	pool := testPool(t)
+	defer pool.Close()
+	ctx := context.Background()
+	uid := createTestUser(t, pool, 100)
+	defer cleanupTestUser(t, pool, uid)
+
+	svc := newServiceForTest(pool)
+	items, err := svc.History(ctx, uid)
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	if len(items) != 0 {
+		t.Errorf("empty user: items = %d, want 0", len(items))
+	}
+}
+
+func TestAutopilot_History_AfterEnqueue(t *testing.T) {
+	pool := testPool(t)
+	defer pool.Close()
+	ctx := context.Background()
+	uid := createTestUser(t, pool, 100)
+	defer cleanupTestUser(t, pool, uid)
+
+	svc := newServiceForTest(pool)
+	if _, err := svc.Enqueue(ctx, uid, aiadvisor.StrategyEconomy); err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	if _, err := svc.Enqueue(ctx, uid, aiadvisor.StrategyMilitary); err != nil {
+		t.Fatalf("Enqueue 2: %v", err)
+	}
+	items, err := svc.History(ctx, uid)
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("items = %d, want 2", len(items))
+	}
+	// DESC по created_at — Military (последний) первый.
+	if items[0].Strategy != string(aiadvisor.StrategyMilitary) {
+		t.Errorf("first strategy = %q, want military", items[0].Strategy)
+	}
+	if items[1].Strategy != string(aiadvisor.StrategyEconomy) {
+		t.Errorf("second strategy = %q, want economy", items[1].Strategy)
+	}
+}
+
 func TestAutopilot_BuildSnapshot_NoPlanets(t *testing.T) {
 	pool := testPool(t)
 	defer pool.Close()
