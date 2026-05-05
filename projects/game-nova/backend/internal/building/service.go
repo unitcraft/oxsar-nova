@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -720,4 +721,27 @@ func buildingLevelsTx(ctx context.Context, tx pgx.Tx, planetID string) (map[int]
 		out[uid] = lvl
 	}
 	return out, rows.Err()
+}
+
+// BuildingsOrder возвращает unit_id зданий, отсортированных по display_order.
+func (s *Service) BuildingsOrder() []int {
+	type entry struct {
+		id    int
+		order int
+	}
+	entries := make([]entry, 0, len(s.catalog.Buildings.Buildings))
+	for _, spec := range s.catalog.Buildings.Buildings {
+		entries = append(entries, entry{id: spec.ID, order: spec.DisplayOrder})
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].order != entries[j].order {
+			return entries[i].order < entries[j].order
+		}
+		return entries[i].id < entries[j].id
+	})
+	ids := make([]int, len(entries))
+	for i, e := range entries {
+		ids[i] = e.id
+	}
+	return ids
 }

@@ -122,7 +122,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
 	}
-	levels, err := h.svc.Levels(r.Context(), uid)
+	levels, addedLevels, err := h.svc.Levels(r.Context(), uid)
 	if err != nil {
 		httpx.WriteError(w, r, httpx.Wrap(httpx.ErrInternal, err.Error()))
 		return
@@ -133,10 +133,13 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resCosts := h.svc.ResearchCostsMap(levels)
+	resOrder := h.svc.ResearchOrder()
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
 		"queue":            queue,
 		"levels":           levels,
+		"added_levels":     addedLevels,
 		"research_seconds": resSecs,
 		"research_costs":   resCosts,
+		"order":            resOrder,
 	})
 }

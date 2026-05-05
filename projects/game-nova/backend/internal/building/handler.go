@@ -87,11 +87,13 @@ func (h *Handler) Levels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	buildCosts := h.svc.BuildCostsMap(levels)
+	order := h.svc.BuildingsOrder()
 	httpx.WriteJSON(w, r, http.StatusOK, map[string]any{
 		"levels":             levels,
 		"build_seconds":      buildSecs,
 		"build_costs":        buildCosts,
 		"requirements_unmet": unmet,
+		"order":              order,
 	})
 }
 

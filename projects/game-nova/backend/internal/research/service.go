@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -430,24 +431,28 @@ func (s *Service) Cancel(ctx context.Context, userID, queueID string) error {
 	})
 }
 
-// Levels возвращает текущие уровни всех исследований пользователя.
-// Пригодится для UI Research-экрана.
-func (s *Service) Levels(ctx context.Context, userID string) (map[int]int, error) {
+// Levels возвращает текущие уровни всех исследований пользователя,
+// а также бонусные уровни (added — от артефактов/суперкомпьютера, legacy NS::getAddedResearch).
+func (s *Service) Levels(ctx context.Context, userID string) (levels map[int]int, added map[int]int, err error) {
 	rows, err := s.db.Pool().Query(ctx,
-		`SELECT unit_id, level FROM research WHERE user_id = $1`, userID)
+		`SELECT unit_id, level, added FROM research WHERE user_id = $1`, userID)
 	if err != nil {
-		return nil, fmt.Errorf("levels: %w", err)
+		return nil, nil, fmt.Errorf("levels: %w", err)
 	}
 	defer rows.Close()
-	out := map[int]int{}
+	levels = map[int]int{}
+	added = map[int]int{}
 	for rows.Next() {
-		var id, lvl int
-		if err := rows.Scan(&id, &lvl); err != nil {
-			return nil, err
+		var id, lvl, add int
+		if err := rows.Scan(&id, &lvl, &add); err != nil {
+			return nil, nil, err
 		}
-		out[id] = lvl
+		levels[id] = lvl
+		if add != 0 {
+			added[id] = add
+		}
 	}
-	return out, rows.Err()
+	return levels, added, rows.Err()
 }
 
 // ResearchSecondsMap возвращает время исследования следующего уровня каждой технологии
@@ -525,6 +530,30 @@ func (s *Service) ResearchCostsMap(levels map[int]int) map[int]ResearchCost {
 		}
 	}
 	return out
+}
+
+// ResearchOrder возвращает unit_id технологий, отсортированных по display_order.
+// Фронтенд использует этот список для правильного порядка вывода.
+func (s *Service) ResearchOrder() []int {
+	type entry struct {
+		id    int
+		order int
+	}
+	entries := make([]entry, 0, len(s.catalog.Research.Research))
+	for _, spec := range s.catalog.Research.Research {
+		entries = append(entries, entry{id: spec.ID, order: spec.DisplayOrder})
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].order != entries[j].order {
+			return entries[i].order < entries[j].order
+		}
+		return entries[i].id < entries[j].id
+	})
+	ids := make([]int, len(entries))
+	for i, e := range entries {
+		ids[i] = e.id
+	}
+	return ids
 }
 
 func (s *Service) lookupResearch(unitID int) (string, config.ResearchSpec, bool) {

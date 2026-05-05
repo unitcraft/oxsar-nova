@@ -131,9 +131,10 @@ type ResearchCatalog struct {
 }
 
 type ResearchSpec struct {
-	ID         int     `yaml:"id"`
-	CostBase   ResCost `yaml:"cost_base"`
-	CostFactor float64 `yaml:"cost_factor"`
+	ID           int     `yaml:"id"`
+	CostBase     ResCost `yaml:"cost_base"`
+	CostFactor   float64 `yaml:"cost_factor"`
+	DisplayOrder int     `yaml:"display_order"`
 }
 
 // RequirementsCatalog — зависимости юнитов. key — ключ цели (например,
