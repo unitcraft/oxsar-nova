@@ -25,6 +25,7 @@ universes:
     teleport_cost_oxsars: 50000
     teleport_cooldown_hours: 24
     teleport_duration_minutes: 0
+    build_min_seconds: 1
     launched_at: "2026-01-01T00:00:00Z"
 
   - id: uni02
@@ -57,4 +58,5 @@ universes:
     protection_period: 86400
     num_galaxies: 8
     num_systems: 600
+    build_min_seconds: 5
     launched_at: "2026-04-29T00:00:00Z"

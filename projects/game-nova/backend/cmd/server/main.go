@@ -140,6 +140,7 @@ func run() error {
 		TeleportCostOxsars:     curUni.TeleportCostOxsars,
 		TeleportCooldownHours:  curUni.TeleportCooldownHours,
 		TeleportDurationMin:    curUni.TeleportDurationMin,
+		BuildMinSeconds:        curUni.BuildMinSeconds,
 	})
 
 	// Per-universe balance (план 64). Для modern-вселенных (uni01, uni02
@@ -256,7 +257,7 @@ func run() error {
 
 	reqs := requirements.New(cat)
 
-	buildingSvc := building.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed)
+	buildingSvc := building.NewService(db, planetSvc, cat, reqs, cfg.Game.Speed, cfg.Game.BuildMinSeconds)
 	buildingH := building.NewHandler(buildingSvc)
 
 	researchSvc := research.NewServiceWithFactors(db, planetSvc, cat, reqs, cfg.Game.Speed, cfg.Game.ResearchSpeedFactor)

@@ -278,7 +278,7 @@ func (s *Service) EnqueueDisassemble(ctx context.Context, userID, planetID strin
 				Silicon:  int64(math.Round(float64(baseCost.Silicon) * 0.1)),
 				Hydrogen: 0,
 			},
-			repairLvl, 0, s.gameSpd)
+			repairLvl, 0, s.gameSpd, 1)
 		perUnitSec := int(math.Max(1, math.Round(perUnit.Seconds())))
 		totalDur := time.Duration(perUnitSec) * time.Duration(count) * time.Second
 		start := time.Now().UTC()
@@ -460,7 +460,7 @@ func (s *Service) EnqueueRepair(ctx context.Context, userID, planetID string, un
 				Silicon:  int64(math.Round(float64(baseCost.Silicon) * 0.1)),
 				Hydrogen: 0,
 			},
-			repairLvl, 0, s.gameSpd)
+			repairLvl, 0, s.gameSpd, 1)
 		perUnitSec := int(math.Max(1, math.Round(perUnit.Seconds())))
 		totalDur := time.Duration(perUnitSec) * time.Duration(repairCount) * time.Second
 		start := time.Now().UTC()

@@ -44,18 +44,22 @@ var (
 )
 
 type Service struct {
-	db      repo.Exec
-	planets *planet.Service
-	catalog *config.Catalog
-	reqs    *requirements.Checker
-	gameSpd float64
+	db         repo.Exec
+	planets    *planet.Service
+	catalog    *config.Catalog
+	reqs       *requirements.Checker
+	gameSpd    float64
+	buildMinSec int
 }
 
-func NewService(db repo.Exec, planets *planet.Service, cat *config.Catalog, reqs *requirements.Checker, gameSpeed float64) *Service {
+func NewService(db repo.Exec, planets *planet.Service, cat *config.Catalog, reqs *requirements.Checker, gameSpeed float64, buildMinSeconds int) *Service {
 	if gameSpeed <= 0 {
 		gameSpeed = 1
 	}
-	return &Service{db: db, planets: planets, catalog: cat, reqs: reqs, gameSpd: gameSpeed}
+	if buildMinSeconds <= 0 {
+		buildMinSeconds = 1
+	}
+	return &Service{db: db, planets: planets, catalog: cat, reqs: reqs, gameSpd: gameSpeed, buildMinSec: buildMinSeconds}
 }
 
 // QueueItem — задача в очереди строительства.
@@ -187,7 +191,7 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		}
 
 		start := time.Now().UTC()
-		dur := economy.BuildDuration(spec.TimeBaseSeconds, cost, robo, nano, s.gameSpd)
+		dur := economy.BuildDuration(spec.TimeBaseSeconds, cost, robo, nano, s.gameSpd, s.buildMinSec)
 		end := start.Add(dur)
 
 		id := ids.New()
@@ -425,7 +429,7 @@ func (s *Service) EnqueueDemolish(ctx context.Context, userID, planetID string, 
 			nano, _ = currentLevel(ctx, tx, p.ID, nanoSpec.ID)
 		}
 		start := time.Now().UTC()
-		buildDur := economy.BuildDuration(spec.TimeBaseSeconds, demoCost, robo, nano, s.gameSpd)
+		buildDur := economy.BuildDuration(spec.TimeBaseSeconds, demoCost, robo, nano, s.gameSpd, s.buildMinSec)
 		dur := buildDur / 2
 		end := start.Add(dur)
 
@@ -593,7 +597,7 @@ func (s *Service) BuildSecondsMap(ctx context.Context, planetID string, levels m
 			Metal:   spec.CostBase.Metal,
 			Silicon: spec.CostBase.Silicon,
 		}, spec.CostFactor, nextLvl)
-		dur := economy.BuildDuration(spec.TimeBaseSeconds, cost, roboLevel, nanoLevel, s.gameSpd)
+		dur := economy.BuildDuration(spec.TimeBaseSeconds, cost, roboLevel, nanoLevel, s.gameSpd, s.buildMinSec)
 		out[spec.ID] = int(dur.Seconds())
 	}
 	return out, nil

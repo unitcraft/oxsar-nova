@@ -66,6 +66,7 @@ type GameConfig struct {
 	BashingPeriod          int     // seconds, 0 = disabled
 	BashingMaxAttacks      int     // max attacks per BashingPeriod
 	ProtectionPeriod       int     // seconds new player is protected from attacks
+	BuildMinSeconds        int     // минимальное время постройки здания (default 1)
 
 	// План 65 Ф.6: премиум-телепорт планеты на новые координаты, оплата
 	// оксарами через billing-service. Артефактный гейтинг легаси
@@ -195,6 +196,7 @@ type UniverseParams struct {
 	TeleportCostOxsars     int64
 	TeleportCooldownHours  int
 	TeleportDurationMin    int
+	BuildMinSeconds        int
 }
 
 // ApplyUniverse заполняет cfg.Game.* параметрами из universes.yaml
@@ -218,6 +220,7 @@ func (c *Config) ApplyUniverse(p UniverseParams) {
 	c.Game.TeleportCostOxsars = p.TeleportCostOxsars
 	c.Game.TeleportCooldownHours = p.TeleportCooldownHours
 	c.Game.TeleportDurationMinutes = p.TeleportDurationMin
+	c.Game.BuildMinSeconds = p.BuildMinSeconds
 }
 
 func env(key, def string) string {

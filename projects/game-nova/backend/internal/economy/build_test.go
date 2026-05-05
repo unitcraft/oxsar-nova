@@ -8,8 +8,8 @@ import (
 func TestBuildDuration_Decreases_WithRobotics(t *testing.T) {
 	t.Parallel()
 	cost := Cost{Metal: 100_000, Silicon: 50_000}
-	t0 := BuildDuration(60, cost, 0, 0, 1)
-	t1 := BuildDuration(60, cost, 5, 0, 1)
+	t0 := BuildDuration(60, cost, 0, 0, 1, 1)
+	t1 := BuildDuration(60, cost, 5, 0, 1, 1)
 	if t1 >= t0 {
 		t.Fatalf("roboLevel=5 should be faster than 0: %v >= %v", t1, t0)
 	}
@@ -18,8 +18,8 @@ func TestBuildDuration_Decreases_WithRobotics(t *testing.T) {
 func TestBuildDuration_Decreases_WithNano(t *testing.T) {
 	t.Parallel()
 	cost := Cost{Metal: 100_000, Silicon: 50_000}
-	t0 := BuildDuration(60, cost, 0, 0, 1)
-	t1 := BuildDuration(60, cost, 0, 1, 1)
+	t0 := BuildDuration(60, cost, 0, 0, 1, 1)
+	t1 := BuildDuration(60, cost, 0, 1, 1, 1)
 	if t1 >= t0 {
 		t.Fatalf("nanoLevel=1 should halve duration: %v >= %v", t1, t0)
 	}
@@ -28,8 +28,8 @@ func TestBuildDuration_Decreases_WithNano(t *testing.T) {
 func TestBuildDuration_GameSpeed(t *testing.T) {
 	t.Parallel()
 	cost := Cost{Metal: 100_000, Silicon: 50_000}
-	t1 := BuildDuration(60, cost, 0, 0, 1)
-	t2 := BuildDuration(60, cost, 0, 0, 2)
+	t1 := BuildDuration(60, cost, 0, 0, 1, 1)
+	t2 := BuildDuration(60, cost, 0, 0, 2, 1)
 	if t2 >= t1 {
 		t.Fatalf("gameSpeed=2 should be faster: %v >= %v", t2, t1)
 	}
@@ -39,9 +39,19 @@ func TestBuildDuration_MinimumOneSecond(t *testing.T) {
 	t.Parallel()
 	// Очень маленькая стоимость → не должна быть < 1s.
 	cost := Cost{Metal: 1, Silicon: 1}
-	dur := BuildDuration(60, cost, 30, 10, 100)
+	dur := BuildDuration(60, cost, 30, 10, 100, 1)
 	if dur < time.Second {
 		t.Fatalf("build duration must be >= 1s, got %v", dur)
+	}
+}
+
+func TestBuildDuration_MinimumCustom(t *testing.T) {
+	t.Parallel()
+	// minSeconds=30 → даже дешёвое здание займёт не меньше 30с.
+	cost := Cost{Metal: 1, Silicon: 1}
+	dur := BuildDuration(60, cost, 30, 10, 100, 30)
+	if dur < 30*time.Second {
+		t.Fatalf("build duration must be >= 30s with minSeconds=30, got %v", dur)
 	}
 }
 
@@ -49,7 +59,7 @@ func TestBuildDuration_ZeroBaseSeconds(t *testing.T) {
 	t.Parallel()
 	cost := Cost{Metal: 10_000, Silicon: 5_000}
 	// baseSeconds=0 должен подставить 60.
-	dur := BuildDuration(0, cost, 0, 0, 1)
+	dur := BuildDuration(0, cost, 0, 0, 1, 1)
 	if dur < time.Second {
 		t.Fatalf("got %v, want >= 1s", dur)
 	}

@@ -127,7 +127,7 @@ func buildBuildingPreview(spec config.BuildingSpec) []BuildingPreviewRow {
 		}
 		c := economy.CostForLevelFloor(baseCost, spec.CostFactor, lvl)
 		// build_seconds для baseline: robotic=0, nano=0, gameSpeed=1.
-		dur := economy.BuildDuration(spec.TimeBaseSeconds, c, 0, 0, 1)
+		dur := economy.BuildDuration(spec.TimeBaseSeconds, c, 0, 0, 1, 1)
 		row := BuildingPreviewRow{
 			Level:        lvl,
 			Cost:         ResCost{Metal: c.Metal, Silicon: c.Silicon, Hydrogen: c.Hydrogen},

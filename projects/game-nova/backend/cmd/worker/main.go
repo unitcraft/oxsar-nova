@@ -105,6 +105,7 @@ func run() error {
 		TeleportCostOxsars:     curUni.TeleportCostOxsars,
 		TeleportCooldownHours:  curUni.TeleportCooldownHours,
 		TeleportDurationMin:    curUni.TeleportDurationMin,
+		BuildMinSeconds:        curUni.BuildMinSeconds,
 	})
 
 	// Per-universe balance (план 64). Тот же loader, что и в server,

@@ -194,7 +194,7 @@ func (s *Service) Enqueue(ctx context.Context, userID, planetID string, unitID i
 		//    но учитываем только shipyard (и nano, когда он появится).
 		perUnit := economy.BuildDuration(1, economy.Cost{
 			Metal: costPerUnit.Metal, Silicon: costPerUnit.Silicon, Hydrogen: costPerUnit.Hydrogen,
-		}, shipyardLvl, 0, s.gameSpd)
+		}, shipyardLvl, 0, s.gameSpd, 1)
 		perUnitSec := int(math.Max(1, math.Round(perUnit.Seconds())))
 		totalDur := time.Duration(perUnitSec) * time.Duration(count) * time.Second
 		start := time.Now().UTC()
@@ -538,7 +538,7 @@ func (s *Service) SecondsMap(ctx context.Context, planetID string) (ships, defen
 	for _, spec := range s.catalog.Ships.Ships {
 		dur := economy.BuildDuration(1, economy.Cost{
 			Metal: spec.Cost.Metal, Silicon: spec.Cost.Silicon, Hydrogen: spec.Cost.Hydrogen,
-		}, shipyardLvl, nanoLvl, s.gameSpd)
+		}, shipyardLvl, nanoLvl, s.gameSpd, 1)
 		secs := int(math.Max(1, math.Round(dur.Seconds())))
 		ships[spec.ID] = secs
 	}
@@ -546,7 +546,7 @@ func (s *Service) SecondsMap(ctx context.Context, planetID string) (ships, defen
 	for _, spec := range s.catalog.Defense.Defense {
 		dur := economy.BuildDuration(1, economy.Cost{
 			Metal: spec.Cost.Metal, Silicon: spec.Cost.Silicon, Hydrogen: spec.Cost.Hydrogen,
-		}, shipyardLvl, nanoLvl, s.gameSpd)
+		}, shipyardLvl, nanoLvl, s.gameSpd, 1)
 		secs := int(math.Max(1, math.Round(dur.Seconds())))
 		defense[spec.ID] = secs
 	}

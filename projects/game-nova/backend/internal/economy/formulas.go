@@ -34,9 +34,13 @@ func CostForLevel(base Cost, factor float64, targetLevel int) Cost {
 
 // BuildDuration возвращает время постройки с учётом Robotic/Nano фабрик
 // и множителя скорости вселенной (GAMESPEED > 1 ускоряет).
-func BuildDuration(baseSeconds int, cost Cost, roboticLevel, nanoLevel int, gameSpeed float64) time.Duration {
+// minSeconds — минимальный floor (обычно 1); для зданий берётся из конфига вселенной.
+func BuildDuration(baseSeconds int, cost Cost, roboticLevel, nanoLevel int, gameSpeed float64, minSeconds int) time.Duration {
 	if baseSeconds <= 0 {
 		baseSeconds = 60
+	}
+	if minSeconds <= 0 {
+		minSeconds = 1
 	}
 	resSum := float64(cost.Metal + cost.Silicon)
 	// Базовая формула похожа на OGame: t = (m+s) / (2500 * (1+robo) * 2^nano) секунд * baseScale
@@ -46,8 +50,8 @@ func BuildDuration(baseSeconds int, cost Cost, roboticLevel, nanoLevel int, game
 	if gameSpeed > 0 {
 		raw /= gameSpeed
 	}
-	if raw < 1 {
-		raw = 1
+	if raw < float64(minSeconds) {
+		raw = float64(minSeconds)
 	}
 	return time.Duration(raw * float64(time.Second))
 }

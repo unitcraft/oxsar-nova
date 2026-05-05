@@ -46,6 +46,7 @@ type Universe struct {
 	TeleportCostOxsars     int64   `yaml:"teleport_cost_oxsars"      json:"-"`
 	TeleportCooldownHours  int     `yaml:"teleport_cooldown_hours"   json:"-"`
 	TeleportDurationMin    int     `yaml:"teleport_duration_minutes" json:"-"`
+	BuildMinSeconds        int     `yaml:"build_min_seconds"         json:"-"`
 
 	LaunchedAt time.Time `yaml:"launched_at"  json:"launched_at"`
 
@@ -80,6 +81,7 @@ type universeRaw struct {
 	TeleportCostOxsars     *int64   `yaml:"teleport_cost_oxsars"`
 	TeleportCooldownHours  *int     `yaml:"teleport_cooldown_hours"`
 	TeleportDurationMin    *int     `yaml:"teleport_duration_minutes"`
+	BuildMinSeconds        *int     `yaml:"build_min_seconds"`
 
 	LaunchedAt time.Time `yaml:"launched_at"`
 }
@@ -203,6 +205,13 @@ func buildUniverse(r universeRaw, fallback *universeRaw) (Universe, error) {
 	if err != nil {
 		return Universe{}, err
 	}
+	buildMinSec, err := requireIntFallback(r.BuildMinSeconds, fallback.BuildMinSeconds, "build_min_seconds", r.ID == "uni01")
+	if err != nil {
+		return Universe{}, err
+	}
+	if buildMinSec <= 0 {
+		buildMinSec = 1
+	}
 
 	return Universe{
 		ID:                     r.ID,
@@ -225,6 +234,7 @@ func buildUniverse(r universeRaw, fallback *universeRaw) (Universe, error) {
 		TeleportCostOxsars:     teleCost,
 		TeleportCooldownHours:  teleCooldown,
 		TeleportDurationMin:    teleDur,
+		BuildMinSeconds:        buildMinSec,
 		LaunchedAt:             r.LaunchedAt,
 	}, nil
 }
