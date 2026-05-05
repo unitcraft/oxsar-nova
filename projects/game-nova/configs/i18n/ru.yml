@@ -1346,6 +1346,7 @@ market:
   creditLastExchange: "Куплено: {{amount}} {{res}} за {{credits}} кредитов"
   # План 72.1.28: multi-resource Credit_ex.
   creditTotalLabel: "Итого:"
+  creditAbbr: кр
   creditLastExchangeMulti: "Куплено: {{metal}} М, {{silicon}} К, {{hydrogen}} В за {{credits}} кр"
   resLabelMetal: 🟠 Металл
   resLabelSilicon: 💎 Кремний

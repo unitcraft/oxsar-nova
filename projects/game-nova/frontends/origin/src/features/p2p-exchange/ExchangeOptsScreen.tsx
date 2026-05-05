@@ -44,7 +44,7 @@ export function ExchangeOptsScreen() {
   const mut = useMutation({
     mutationFn: updateOpts,
     onSuccess: () => {
-      setOkMsg(t('exchangeOpts', 'saved') || 'Сохранено');
+      setOkMsg(t('exchangeOpts', 'saved'));
       setErrMsg(null);
       void qc.invalidateQueries({ queryKey: ['exchange-opts'] });
       void qc.invalidateQueries({ queryKey: ['broker-stats'] });
@@ -61,7 +61,7 @@ export function ExchangeOptsScreen() {
     e.preventDefault();
     const fee = Number(feePercent);
     if (Number.isNaN(fee) || fee < 0 || fee > 50) {
-      setErrMsg(t('exchangeOpts', 'feeOutOfRange') || 'Комиссия должна быть в диапазоне 0..50');
+      setErrMsg(t('exchangeOpts', 'feeOutOfRange'));
       return;
     }
     mut.mutate({ title: title.trim() || 'My exchange', fee_percent: fee });
@@ -70,18 +70,18 @@ export function ExchangeOptsScreen() {
   return (
     <>
       <div className="idiv">
-        <Link to="/p2p-exchange">← {t('p2pExchange', 'title') || 'Биржа'}</Link>
+        <Link to="/p2p-exchange">← {t('p2pExchange', 'title')}</Link>
       </div>
       <form onSubmit={onSubmit}>
         <table className="ntable">
           <thead>
             <tr>
-              <th colSpan={2}>{t('exchangeOpts', 'title') || 'Настройки биржи'}</th>
+              <th colSpan={2}>{t('exchangeOpts', 'title')}</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>{t('exchangeOpts', 'titleLabel') || 'Название'}</td>
+              <td>{t('exchangeOpts', 'titleLabel')}</td>
               <td>
                 <input
                   type="text"
@@ -94,7 +94,7 @@ export function ExchangeOptsScreen() {
               </td>
             </tr>
             <tr>
-              <td>{t('exchangeOpts', 'feeLabel') || 'Комиссия (%)'}</td>
+              <td>{t('exchangeOpts', 'feeLabel')}</td>
               <td>
                 <input
                   type="number"
@@ -107,7 +107,7 @@ export function ExchangeOptsScreen() {
                   style={{ width: '100%' }}
                 />
                 <div style={{ fontSize: 'smaller', color: '#888' }}>
-                  {t('exchangeOpts', 'feeHint') || '0..50%, влияет на расчёт прибыли'}
+                  {t('exchangeOpts', 'feeHint')}
                 </div>
               </td>
             </tr>
@@ -116,7 +116,7 @@ export function ExchangeOptsScreen() {
                 <input
                   type="submit"
                   className="button"
-                  value={t('exchangeOpts', 'saveBtn') || 'Сохранить'}
+                  value={t('exchangeOpts', 'saveBtn')}
                   disabled={mut.isPending}
                 />
               </td>

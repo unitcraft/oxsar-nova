@@ -15,7 +15,7 @@
 //
 // Замечание про CREDIT: legacy показывает 4-й столбец «кредиты», но в
 // nova-API exchange-endpoint поддерживает только {metal,silicon,hydrogen}
-// (см. ResourceKind). Покупка ресурсов за кредиты — отдельный механизм
+// (см. ResourceKind). Покупка ресурсов за {t('market', 'creditAbbr')}едиты — отдельный механизм
 // (биллинг плана 36 + market.fleet_lots), не входит в S-020.
 
 import { useState } from 'react';
@@ -242,7 +242,7 @@ export function ResourceMarketScreen() {
     </form>
 
     {/* План 72.1.28: legacy `Credit_ex(metal, silicon, hydrogen)` —
-        multi-resource покупка за кредиты. Все три за раз; commission=0
+        multi-resource покупка за {t('market', 'creditAbbr')}едиты. Все три за раз; commission=0
         и storage=UNLIMIT (legacy override в Credit_ex). */}
     <form
       method="post"
@@ -255,14 +255,14 @@ export function ResourceMarketScreen() {
         <thead>
           <tr>
             <th colSpan={4}>
-              {t('market', 'tabCredit') || 'Купить за кредиты'}
+              {t('market', 'tabCredit')}
             </th>
           </tr>
           <tr>
             <th>{t('market', 'resLabelMetal')}</th>
             <th>{t('market', 'resLabelSilicon')}</th>
             <th>{t('market', 'resLabelHydrogen')}</th>
-            <th className="center">{t('market', 'creditExchangeBtn') || 'Купить'}</th>
+            <th className="center">{t('market', 'creditExchangeBtn')}</th>
           </tr>
         </thead>
         <tbody>
@@ -278,7 +278,7 @@ export function ResourceMarketScreen() {
               />
               {cMetal > 0 && (
                 <div style={{ fontSize: 'smaller' }}>
-                  {Math.ceil(cMetal / 100)} кр
+                  {Math.ceil(cMetal / 100)} {t('market', 'creditAbbr')}
                 </div>
               )}
             </td>
@@ -293,7 +293,7 @@ export function ResourceMarketScreen() {
               />
               {cSilicon > 0 && (
                 <div style={{ fontSize: 'smaller' }}>
-                  {Math.ceil(cSilicon / 50)} кр
+                  {Math.ceil(cSilicon / 50)} {t('market', 'creditAbbr')}
                 </div>
               )}
             </td>
@@ -308,14 +308,14 @@ export function ResourceMarketScreen() {
               />
               {cHydrogen > 0 && (
                 <div style={{ fontSize: 'smaller' }}>
-                  {Math.ceil(cHydrogen / 25)} кр
+                  {Math.ceil(cHydrogen / 25)} {t('market', 'creditAbbr')}
                 </div>
               )}
             </td>
             <td className="center">
               <div>
-                {t('market', 'creditTotalLabel') || 'Итого:'}{' '}
-                <b>{formatNumber(totalCreditCost)}</b> кр
+                {t('market', 'creditTotalLabel')}{' '}
+                <b>{formatNumber(totalCreditCost)}</b> {t('market', 'creditAbbr')}
               </div>
               <input
                 type="submit"
@@ -324,7 +324,7 @@ export function ResourceMarketScreen() {
                 value={
                   creditExchange.isPending
                     ? '…'
-                    : t('market', 'creditExchangeBtn') || 'Купить'
+                    : t('market', 'creditExchangeBtn')
                 }
                 disabled={!hasCreditAmount || creditExchange.isPending}
               />

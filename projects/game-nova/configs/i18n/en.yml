@@ -1348,6 +1348,7 @@ market:
   creditLastExchange: "Bought: {{amount}} {{res}} for {{credits}} credits"
   # Plan 72.1.28: multi-resource Credit_ex.
   creditTotalLabel: "Total:"
+  creditAbbr: cr
   creditLastExchangeMulti: "Bought: {{metal}} M, {{silicon}} S, {{hydrogen}} H for {{credits}} cr"
   resLabelMetal: 🟠 Metal
   resLabelSilicon: 💎 Silicon

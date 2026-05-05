@@ -56,12 +56,12 @@ export function RequiredResTable({
       className="table_no_background"
       cellSpacing={0}
       cellPadding={0}
-      title={t('info', 'requires') || 'Требуется'}
+      title={t('info', 'requires')}
     >
       <tbody>
         {metal > 0 && (
           <tr>
-            <td>{t('overview', 'metal') || 'Металл'}</td>
+            <td>{t('overview', 'metal')}</td>
             <td className={metalLack > 0 ? 'notavailable' : 'true'}>
               {formatNumber(metal)}
             </td>
@@ -70,7 +70,7 @@ export function RequiredResTable({
         )}
         {silicon > 0 && (
           <tr>
-            <td>{t('overview', 'silicon') || 'Кремний'}</td>
+            <td>{t('overview', 'silicon')}</td>
             <td className={siliconLack > 0 ? 'notavailable' : 'true'}>
               {formatNumber(silicon)}
             </td>
@@ -79,7 +79,7 @@ export function RequiredResTable({
         )}
         {hydrogen > 0 && (
           <tr>
-            <td>{t('overview', 'hydrogen') || 'Водород'}</td>
+            <td>{t('overview', 'hydrogen')}</td>
             <td className={hydrogenLack > 0 ? 'notavailable' : 'true'}>
               {formatNumber(hydrogen)}
             </td>
@@ -88,7 +88,7 @@ export function RequiredResTable({
         )}
         {energy > 0 && (
           <tr>
-            <td>{t('overview', 'energy') || 'Энергия'}</td>
+            <td>{t('overview', 'energy')}</td>
             <td className={energyLack > 0 ? 'notavailable' : 'true'}>
               {formatNumber(energy)}
             </td>
@@ -97,7 +97,7 @@ export function RequiredResTable({
         )}
         {credit > 0 && (
           <tr>
-            <td>{t('overview', 'credits') || 'Кредиты'}</td>
+            <td>{t('overview', 'credits')}</td>
             <td className={creditLack > 0 ? 'notavailable' : 'true'}>
               {formatNumber(credit)}
             </td>
@@ -106,7 +106,7 @@ export function RequiredResTable({
         )}
         {points > 0 && (
           <tr>
-            <td>{t('overview', 'points') || 'Очки'}</td>
+            <td>{t('overview', 'points')}</td>
             <td className={pointsLack > 0 ? 'notavailable' : 'true'}>
               {formatNumber(points)}
             </td>
@@ -114,7 +114,7 @@ export function RequiredResTable({
           </tr>
         )}
         <tr>
-          <td>{t('info', 'requireTime') || 'Время'}</td>
+          <td>{t('info', 'requireTime')}</td>
           <td colSpan={2}>{formatDuration(seconds)}</td>
         </tr>
       </tbody>
