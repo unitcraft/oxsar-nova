@@ -143,7 +143,7 @@ func run() error {
 
 	db := repo.New(pool)
 	w := event.NewWorker(db, log).WithConfig(event.Config{
-		Interval:    parseDurEnv("WORKER_INTERVAL", 10*time.Second),
+		Interval:    parseDurEnv("WORKER_INTERVAL", 1*time.Second),
 		Batch:       parseIntEnv("WORKER_BATCH", 100),
 		MaxBatch:    parseIntEnv("WORKER_MAX_BATCH", 1000),
 		MaxAttempts: parseIntEnv("WORKER_MAX_ATTEMPTS", 3),

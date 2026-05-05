@@ -269,9 +269,10 @@ func (s *Service) StartVIP(ctx context.Context, userID, queueID string) (QueueIt
 		if ownerID != userID {
 			return ErrPlanetOwnership
 		}
-		// VIP применяется только к ещё не стартовавшим заданиям
-		// (legacy: `start > time()+5`).
-		if !startAt.After(time.Now().UTC().Add(5 * time.Second)) {
+		// Задача должна заканчиваться более чем через 5 секунд —
+		// иначе пусть достраивается штатно (игрок мог зависнуть на диалоге).
+		now := time.Now().UTC()
+		if !endAt.After(now.Add(5 * time.Second)) {
 			return ErrVIPAlreadyStarted
 		}
 
@@ -287,33 +288,70 @@ func (s *Service) StartVIP(ctx context.Context, userID, queueID string) (QueueIt
 			return ErrNotEnoughCredit
 		}
 
-		now := time.Now().UTC()
-		duration := endAt.Sub(startAt)
-		newEnd := now.Add(duration)
-
+		// VIP: списываем кредиты.
 		if _, err := tx.Exec(ctx,
 			`UPDATE users SET credit = credit - $1 WHERE id = $2`,
 			cost, userID,
 		); err != nil {
 			return fmt.Errorf("debit credit: %w", err)
 		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE construction_queue SET start_at=$1, end_at=$2, status='running'
-			WHERE id=$3
-		`, now, newEnd, queueID); err != nil {
-			return fmt.Errorf("update queue: %w", err)
+
+		var unitID int
+		if err := tx.QueryRow(ctx,
+			`SELECT unit_id FROM construction_queue WHERE id=$1`, queueID,
+		).Scan(&unitID); err != nil {
+			return fmt.Errorf("select unit_id: %w", err)
 		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE events SET fire_at=$1
-			WHERE kind=1 AND state='wait' AND user_id=$2
-			  AND payload @> jsonb_build_object('queue_id', $3::text)
-		`, newEnd, userID, queueID); err != nil {
-			return fmt.Errorf("update event: %w", err)
+
+		// Атомарно захватываем event: если воркер уже выполнил его,
+		// rowsAffected=0 — постройка применена им, пропускаем.
+		tag, err := tx.Exec(ctx, `
+			UPDATE events SET state='done'
+			WHERE kind=1 AND state='wait' AND user_id=$1
+			  AND payload @> jsonb_build_object('queue_id', $2::text)
+		`, userID, queueID)
+		if err != nil {
+			return fmt.Errorf("claim event: %w", err)
+		}
+
+		if tag.RowsAffected() > 0 {
+			// Мы первые — применяем постройку синхронно.
+			var cur int
+			if err := tx.QueryRow(ctx,
+				`SELECT COALESCE((SELECT level FROM buildings WHERE planet_id=$1 AND unit_id=$2), 0)`,
+				planetID, unitID,
+			).Scan(&cur); err != nil {
+				return fmt.Errorf("select cur level: %w", err)
+			}
+			if cur < targetLevel {
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO buildings (planet_id, unit_id, level)
+					VALUES ($1, $2, $3)
+					ON CONFLICT (planet_id, unit_id) DO UPDATE SET level = EXCLUDED.level
+				`, planetID, unitID, targetLevel); err != nil {
+					return fmt.Errorf("upsert building: %w", err)
+				}
+				if cur == 0 && targetLevel == 1 {
+					if _, err := tx.Exec(ctx,
+						`UPDATE planets SET used_fields = used_fields + 1 WHERE id=$1`, planetID,
+					); err != nil {
+						return fmt.Errorf("inc used_fields: %w", err)
+					}
+				}
+			}
+		}
+		// Если rowsAffected=0 — воркер уже применил постройку, ничего делать не нужно.
+
+		if _, err := tx.Exec(ctx,
+			`UPDATE construction_queue SET status='done', end_at=$1 WHERE id=$2`,
+			now, queueID,
+		); err != nil {
+			return fmt.Errorf("close queue: %w", err)
 		}
 
 		out = QueueItem{
-			ID: queueID, PlanetID: planetID, UnitID: 0, TargetLevel: targetLevel,
-			StartAt: now, EndAt: newEnd, Status: "running",
+			ID: queueID, PlanetID: planetID, UnitID: unitID, TargetLevel: targetLevel,
+			StartAt: startAt, EndAt: now, Status: "done",
 		}
 		return nil
 	})
