@@ -982,8 +982,11 @@ overview:
   resHydrogenLabel: Hydrogen
   # План 72.1.45 §4: used by RequiredResTable (legacy required_res_table.tpl).
   metal: Metal
+  metalAbbr: M
   silicon: Silicon
+  siliconAbbr: Si
   hydrogen: Hydrogen
+  hydrogenAbbr: H
   energy: Energy
   credits: Credits
   points: Points
@@ -1203,6 +1206,8 @@ repair:
   errDockOverflow: "Repair hangar capacity exceeded."
   errNotEnoughCredit: "Not enough credit for VIP start."
   fuelPer: /unit
+  factoryLevel: "Level {{level}}"
+  integrity: Integrity
   toastRepairTitle: Repair
   toastRepaired: "{{name}} sent for repair"
   toastDisassTitle: Disassemble
@@ -2695,6 +2700,7 @@ main:
   battleExperience: Battle experience
   # План 72.1.36: account state banners.
   battles: Battles
+  currentPlanet: Planet
   vacationActive: "✈ Vacation mode active"
   observerMode: "👁 Observer mode — ranking and activity disabled."
   bannedAccount: "🚫 Account banned"

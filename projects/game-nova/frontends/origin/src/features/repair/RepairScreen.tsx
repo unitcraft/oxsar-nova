@@ -21,6 +21,7 @@ import { fetchResourceReport } from '@/api/resource';
 import { QK } from '@/api/query-keys';
 import type { ApiError } from '@/api/client';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import { useAutoInvalidateOnTaskEnd } from '@/features/common/useAutoInvalidateOnTaskEnd';
 import { findCatalog } from '@/features/common/catalog';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber, formatDuration, secondsUntil } from '@/lib/format';
@@ -65,6 +66,9 @@ export function RepairScreen() {
     void qc.invalidateQueries({ queryKey: QK.repairQueue(planetId) });
     void qc.invalidateQueries({ queryKey: QK.shipyardInventory(planetId) });
     void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+    // План 72.1.59: ресурсы в TopHeader тикают по списку планет —
+    // их тоже нужно перезапросить, чтобы темп тика сменился.
+    void qc.invalidateQueries({ queryKey: QK.planets() });
     void qc.invalidateQueries({ queryKey: ['me'] });
   }
 
@@ -98,6 +102,11 @@ export function RepairScreen() {
     onError: (e) => setErrMsg((e as ApiError).message),
   });
 
+  // План 72.1.59: авто-инвалидация очереди по окончании ближайшей
+  // задачи (общий хук). Учитывает все mode'ы (repair/disassemble) —
+  // обе влияют на planet/inventory.
+  useAutoInvalidateOnTaskEnd(queueQ.data ?? [], invalidateAll);
+
   if (!planetId) {
     return <div className="idiv">{t('overview', 'noPlanets')}</div>;
   }
@@ -128,9 +137,9 @@ export function RepairScreen() {
           <tr>
             <th colSpan={4}>
               <span style={{ float: 'right' }}>
-                Уровень {repairFactoryLvl}
+                {t('repair', 'factoryLevel', { level: String(repairFactoryLvl) })}
               </span>
-              {t('info', 'repairFactory') ?? 'Ремонтный ангар'}
+              {t('info', 'repairFactory')}
             </th>
           </tr>
           <tr>
@@ -138,15 +147,14 @@ export function RepairScreen() {
               <div style={{ float: 'left', paddingRight: 5 }}>
                 <img
                   src="/assets/origin/images/units/repair_factory.gif"
-                  alt={t('info', 'repairFactory') ?? ''}
+                  alt={t('info', 'repairFactory')}
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
               </div>
               <div style={{ display: 'table' }}>
-                {t('info', 'repairFactoryDesc') ??
-                  'Ремонтный ангар позволяет восстанавливать повреждённые юниты.'}
+                {t('info', 'repairFactoryDesc')}
               </div>
             </td>
           </tr>
@@ -169,7 +177,7 @@ export function RepairScreen() {
                       className="button"
                       disabled={cancel.isPending}
                       onClick={() => cancel.mutate(task.id)}
-                      title={t('repair', 'abortBtn') || 'Отменить'}
+                      title={t('repair', 'abortBtn')}
                     >
                       ✕
                     </button>
@@ -179,7 +187,7 @@ export function RepairScreen() {
                       className="button"
                       disabled={vip.isPending}
                       onClick={() => vip.mutate(task.id)}
-                      title={t('repair', 'vipBtn', { credits: cost }) || `VIP (${cost} cr)`}
+                      title={t('repair', 'vipBtn', { credits: cost })}
                     >
                       ⚡ {cost}
                     </button>
@@ -194,13 +202,13 @@ export function RepairScreen() {
       <table className="ntable">
         <tbody>
           <tr>
-            <th colSpan={3}>{t('buildings', 'repairNeededUnits') ?? 'Повреждённые юниты'}</th>
+            <th colSpan={3}>{t('buildings', 'repairNeededUnits')}</th>
           </tr>
 
           {damaged.length === 0 && (
             <tr>
               <td colSpan={3} align="center">
-                {t('buildings', 'repairZeroQuantities') ?? 'Нет повреждённых юнитов'}
+                {t('repair', 'noDamaged')}
               </td>
             </tr>
           )}
@@ -223,14 +231,14 @@ export function RepairScreen() {
                 <td valign="top">
                   <div style={{ width: '100%' }}>
                     <span style={{ float: 'right' }}>
-                      {t('buildings', 'repairNeededUnits') ?? 'Повреждено'}: {formatNumber(u.damaged)}
+                      {t('repair', 'damaged')} {formatNumber(u.damaged)}
                     </span>
                     {unitName(u.unit_id)}
                   </div>
                   <div style={{ clear: 'both', fontSize: 'smaller' }}>
                     {t('buildings', 'shipsExist', { arg1: formatNumber(u.count) })}
                     {' · '}
-                    Целостность: {Math.floor(u.shell_percent)}%
+                    {t('repair', 'integrity')}: {Math.floor(u.shell_percent)}%
                   </div>
                 </td>
                 <td width="120px" align="center" valign="top">
@@ -250,7 +258,7 @@ export function RepairScreen() {
                     <input
                       type="button"
                       className="button"
-                      value={t('buildings', 'repair') ?? 'Ремонтировать'}
+                      value={t('buildings', 'repair')}
                       onClick={() => {
                         const raw = quantities[u.unit_id];
                         const q = raw ? parseInt(raw, 10) : 0;

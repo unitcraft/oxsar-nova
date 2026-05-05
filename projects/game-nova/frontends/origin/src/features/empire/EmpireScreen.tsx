@@ -53,7 +53,7 @@ export function EmpireScreen() {
                   }}
                   onClick={() => setTab(key)}
                 >
-                  {t('empire', `tab_${key}`) || key}
+                  {t('empire', `tab_${key}`)}
                 </td>
               ),
             )}
@@ -94,7 +94,7 @@ export function EmpireScreen() {
         <table className="ntable">
           <thead>
             <tr>
-              <th colSpan={4}>{t('empire', 'tab_moon') || 'Луны'}</th>
+              <th colSpan={4}>{t('empire', 'tab_moon')}</th>
             </tr>
           </thead>
           <tbody>
@@ -145,7 +145,7 @@ function OverviewTable({
           <th>{t('empire', 'rowFields')}</th>
           <th>{t('empire', 'rowTemp')}</th>
           {/* План 72.1.45: УМИ (research_virt_lab). */}
-          <th>{t('empire', 'umi') || 'УМИ'}</th>
+          <th>{t('empire', 'umi')}</th>
           <th colSpan={2}>{t('empire', 'groupResources')}</th>
         </tr>
       </thead>
@@ -184,7 +184,7 @@ function OverviewTable({
             </td>
             <td align="right">{formatNumber(p.umi)}</td>
             <td>
-              М <br />К <br />В
+              {t('overview', 'metalAbbr')} <br />{t('overview', 'siliconAbbr')} <br />{t('overview', 'hydrogenAbbr')}
             </td>
             <td align="right">
               {formatNumber(p.metal)}
@@ -216,7 +216,7 @@ function UnitTable({
     <table className="ntable">
       <thead>
         <tr>
-          <th>{t('empire', `tab_${group}`) || group}</th>
+          <th>{t('empire', `tab_${group}`)}</th>
           {planets.map((p) => (
             <th key={p.id}>
               {p.name}
@@ -260,8 +260,8 @@ function ResearchBlock({
     <table className="ntable">
       <thead>
         <tr>
-          <th>{t('empire', 'tab_research') || 'Исследования'}</th>
-          <th>{t('techtree', 'levelAbbr') || 'Ур.'}</th>
+          <th>{t('empire', 'tab_research')}</th>
+          <th>{t('techtree', 'levelAbbr')}</th>
         </tr>
       </thead>
       <tbody>

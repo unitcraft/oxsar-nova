@@ -146,7 +146,7 @@ export function MainScreen() {
   const partnerLabel = partner
     ? partner.is_moon
       ? t('global', 'moon')
-      : t('main', 'currentPlanet') || 'Планета'
+      : t('main', 'currentPlanet')
     : '';
 
   return (
@@ -155,25 +155,22 @@ export function MainScreen() {
           vacation/observer/banned/pending-deletion в шапке. */}
       {me?.vacation_since && (
         <div className="false" style={{ padding: '0.5em', textAlign: 'center', marginBottom: 4 }}>
-          ✈ {t('main', 'vacationActive') ||
-            `Режим отпуска с ${new Date(me.vacation_since).toLocaleString('ru-RU')}`}
+          {t('main', 'vacationActive')}
         </div>
       )}
       {me?.is_observer && (
         <div className="false" style={{ padding: '0.5em', textAlign: 'center', marginBottom: 4 }}>
-          👁 {t('main', 'observerMode') || 'Режим наблюдателя — рейтинг и активность недоступны.'}
+          {t('main', 'observerMode')}
         </div>
       )}
       {me?.banned_at && (
         <div className="false" style={{ padding: '0.5em', textAlign: 'center', marginBottom: 4 }}>
-          🚫 {t('main', 'bannedAccount') ||
-            `Аккаунт заблокирован (${new Date(me.banned_at).toLocaleString('ru-RU')})`}
+          {t('main', 'bannedAccount')}
         </div>
       )}
       {me?.delete_at && (
         <div className="false" style={{ padding: '0.5em', textAlign: 'center', marginBottom: 4 }}>
-          ⚠ {t('main', 'pendingDeletion') ||
-            `Удаление запланировано на ${new Date(me.delete_at).toLocaleString('ru-RU')}`}
+          {t('main', 'pendingDeletion')}
         </div>
       )}
     <table className="ntable">
@@ -422,7 +419,7 @@ export function MainScreen() {
                 рядом с боевым опытом. */}
             {me.battles > 0 && (
               <tr>
-                <td>{t('main', 'battles') || 'Битв'}</td>
+                <td>{t('main', 'battles')}</td>
                 <td colSpan={2}>{formatNumber(me.battles)}</td>
               </tr>
             )}

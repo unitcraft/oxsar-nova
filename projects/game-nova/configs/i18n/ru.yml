@@ -980,8 +980,11 @@ overview:
   resHydrogenLabel: Водород
   # План 72.1.45 §4: использует RequiredResTable (legacy required_res_table.tpl).
   metal: Металл
+  metalAbbr: М
   silicon: Кремний
+  siliconAbbr: К
   hydrogen: Водород
+  hydrogenAbbr: В
   energy: Энергия
   credits: Кредиты
   points: Очки
@@ -1201,6 +1204,8 @@ repair:
   errDockOverflow: "Превышена вместимость ремонтного ангара."
   errNotEnoughCredit: "Недостаточно кредитов для VIP-старта."
   fuelPer: /ед.
+  factoryLevel: "Уровень {{level}}"
+  integrity: Целостность
   toastRepairTitle: Ремонт
   toastRepaired: "{{name}} отправлен на ремонт"
   toastDisassTitle: Разбор
@@ -2708,6 +2713,7 @@ main:
   battleExperience: Военный опыт
   # План 72.1.36: баннеры состояний аккаунта (vacation/observer/banned/pending-deletion).
   battles: Битв
+  currentPlanet: Планета
   vacationActive: "✈ Режим отпуска активен"
   observerMode: "👁 Режим наблюдателя — рейтинг и активность недоступны."
   bannedAccount: "🚫 Аккаунт заблокирован"
