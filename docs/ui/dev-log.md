@@ -1144,3 +1144,77 @@ Working tree содержал смесь моих 33 правок и 3 хунк�
 ### Коммит
 `feat(i18n): редпасс блока autoMessages (план 88, пачка #4)` —
 коммит `86cf45932e` через `git commit -m "..." -- projects/game-nova/configs/i18n/ru.yml`.
+
+---
+
+## 2026-05-05 — Редпасс i18n: пачки #5–#10 (план 88 продолжение)
+
+### Охват
+Продолжение редакторского прохода по [ru.yml](../../projects/game-nova/configs/i18n/ru.yml)
+после компактации контекста.
+
+**Пачка #5 — `assaultReport:` (коммит `6378f174a6`)**
+Боевые отчёты. 13 правок:
+- Опечатки: `встрелись` → `встретились`, `Сметри` → `Смерти` (2 раза),
+  `люшнюю` → `лишнюю` (3 раза), двойной пробел в `bmatDefenderUnitDamagePercent`
+- Стиль: `закончилось в ничью` → `завершилось вничью`, дефисы в нарративных
+  текстах (`targetMoonDestroyed`) → тире, запятая перед деепричастием
+  в `targetMoonNotDestroyed`
+- `Захваченные юниты` → `Захваченные корабли`
+- `moonArtefactChance`: `напряженность` → `напряжённость`,
+  `пространственно временного` → `пространственно-временного`
+
+**Пачка #6 — `messages:` (коммит `708ce6689d`)**
+Экран входящих сообщений. 3 правки:
+- Баг-фикс: `messages.unread: ({count} новых)` → `({{count}} новых)` —
+  одинарные фигурные скобки не интерполировались
+- `roundsTrace: Раунды по раундам` → `Ход боя по раундам` (тавтология)
+- `expedPirates: Столкновение с пиратами` → `Пираты` (лейбл таблицы)
+
+**Пачка #7 — `buildings:` + `fleet:` (коммит `b7bba8f09d`)**
+7 правок:
+- `repairNeededUnits: Поврежденные юниты` → `Повреждённые корабли`
+- `nanoFactoryDesc`: дефисы → тире, «в состоянии» → «способны»,
+  «задания» → «задачи»
+- `moonHydrogenLabDesc`: «изо льда с кратеров» → «из льда кратеров»,
+  «темные» → «тёмные», «могут дать» → «дают»
+- `fleet.slotsHint`: `computer_tech` → понятная русская фраза
+- `fleet.formationBtn`: `Formation` → `Формирование ACS`
+- `fleet.usernamePh`: `username` → `ник игрока`
+
+**Пачка #8 — building descriptions (коммит `17cc98a906`)**
+11 правок описаний зданий:
+- `hydrogenLabDesc`: «незначительную долю» → «расщепляет воду»
+- `hydrogenPlantDesc`: точная физика термоядерного синтеза (дейтерий → гелий)
+- Сокращены `hydrogenStorageDesc`, `metalStorageDesc`, `metalmineDesc`,
+  `siliconLabDesc` без потери смысла
+- `solarPlantDesc`: «солнечных лучей» → «излучение», добавлен контекст важности
+- `roboticFactory*Desc`: «простую рабочую силу» → «автоматизированную»
+- `shipyardDesc` / `defenseFactoryDesc`: канцелярит → прямой язык
+
+**Пачка #9 — unit/tech descriptions часть 1 (коммит `90dcd1c7f0`)**
+10 правок:
+- `combustionEngineDesc`: опечатки «комсических», «растояния»
+- `espionageSensorDesc/FullDesc`: дефисы → тире, переработан стиль
+- `graviDesc/FullDesc`: «Гравитон - это» → «Гравитон —», стиль
+- `homePlanetRequired`: «Ваши» → «ваши», «Вы пока» → «Пока»
+- `hyperspaceTechDesc/FullDesc`: «ученные» → «учёные», «искривленное» → «искривлённое»
+- `impulseEngineDesc`: обрезанная запятая без продолжения → точка
+- `colonyShipFullDesc`: дефис → тире, «нового света» → прямой язык
+
+**Пачка #10 — unit/ship descriptions часть 2 (коммит `90e415221f`)**
+22 правки:
+- Ёфикация имён: `Легкий истребитель` → `Лёгкий`, `Тяжелый` → `Тяжёлый`
+  (истребитель и лазер — всего 4 записи)
+- Дефисы → тире во всех кратких описаниях кораблей: `lightFighter*`,
+  `rocketLauncher*`, `smallTransporterDesc`, `starDestroyer*`, `starGate*`
+- `regAgreement`: «Ознакомтесь» → «Ознакомьтесь»
+- `moonHydrogenLabFullDesc`: «изо льда с кратеров», «темные», «Ученные» → исправлены
+- `moonRoboticFactoryFullDesc` + `roboticFactoryFullDesc`: «простую» → «автоматизированную»
+- `nanoFactoryFullDesc`: дефисы → тире, «задания» → «задачи»
+- `repairFactory*Desc`: «поврежденных», «юнитов» → «повреждённых», «кораблей»
+
+### Текущий статус Ф.2
+Охвачены блоки: `autoMessages:` (пачки #1–#4), `assaultReport:` (#5),
+`messages:` (#6), `buildings:` + `fleet:` (#7–#10 частично), unit/tech descriptions.
+Остаток: `alliance:`, `market:`, системные сообщения, achievements (пропущен).
