@@ -17,6 +17,7 @@ import {
 } from '@/api/shipyard';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import { useAutoInvalidateOnTaskEnd } from '@/features/common/useAutoInvalidateOnTaskEnd';
 import { catalogByGroup, type CatalogEntry } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
@@ -115,11 +116,22 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
     enabled: planetId !== null && group === 'defense',
   });
 
+  // План 72.1.59: авто-инвалидация очереди по окончании ближайшей
+  // задачи (общий хук).
+  const queueData = queueQ.data ?? [];
+  useAutoInvalidateOnTaskEnd(queueData, () => {
+    if (!planetId) return;
+    void qc.invalidateQueries({ queryKey: QK.shipyardQueue(planetId) });
+    void qc.invalidateQueries({ queryKey: QK.shipyardInventory(planetId) });
+    void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+    void qc.invalidateQueries({ queryKey: QK.planets() });
+  });
+
   if (!planetId) {
     return <div className="idiv">{t('overview', 'noPlanets')}</div>;
   }
 
-  const queue = queueQ.data ?? [];
+  const queue = queueData;
   const inv = invQ.data ?? { ships: {}, defense: {} };
   const stockMap: Record<string, number> =
     group === 'ship' ? inv.ships ?? {} : inv.defense ?? {};
@@ -196,12 +208,11 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
                       type="button"
                       className="button"
                       disabled={cancel.isPending}
-                      title={t('buildings', 'cancelTask') || 'Отменить'}
+                      title={t('buildings', 'cancelTask')}
                       onClick={async () => {
                         if (await confirm({
-                          title: t('buildings', 'cancelTask') || 'Отменить',
-                          message: (t('buildings', 'cancelConfirm') as string) ||
-                            'Отменить задачу? Возврат ресурсов в зависимости от прогресса.',
+                          title: t('buildings', 'cancelTask'),
+                          message: t('buildings', 'cancelConfirm'),
                           destructive: true,
                         })) {
                           cancel.mutate(task.id);
@@ -217,12 +228,11 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
                       type="button"
                       className="button"
                       disabled={vip.isPending}
-                      title={t('buildings', 'vipHint') || 'Мгновенный старт за кредиты'}
+                      title={t('buildings', 'vipHint')}
                       onClick={async () => {
                         if (await confirm({
-                          title: t('buildings', 'vipHint') || 'VIP старт',
-                          message: (t('buildings', 'vipConfirm') as string) ||
-                            'Мгновенный старт за кредиты?',
+                          title: t('buildings', 'vipHint'),
+                          message: t('buildings', 'vipConfirm'),
                         })) {
                           vip.mutate(task.id);
                         }
@@ -244,12 +254,12 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
           <tbody>
             <tr>
               <td className="center">
-                🛡 {t('buildings', 'shieldFields') || 'Поля щитов'}:{' '}
+                🛡 {t('buildings', 'shieldFields')}:{' '}
                 <b className={capQ.data.free_shield_fields === 0 ? 'false' : 'true'}>
                   {capQ.data.free_shield_fields} / {capQ.data.max_shield_fields}
                 </b>
                 {' · '}
-                🚀 {t('buildings', 'rocketFields') || 'Поля ракет'}:{' '}
+                🚀 {t('buildings', 'rocketFields')}:{' '}
                 <b className={capQ.data.free_rocket_fields === 0 ? 'false' : 'true'}>
                   {capQ.data.free_rocket_fields} / {capQ.data.max_rocket_fields}
                 </b>
@@ -268,7 +278,7 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
             <tr>
               <th colSpan={2}>&nbsp;</th>
               <th style={{ textAlign: 'center' }}>
-                {t('buildings', 'quantity') ?? 'Количество'}
+                {t('buildings', 'quantity')}
               </th>
             </tr>
 
@@ -344,7 +354,7 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
                               fontSize: 'smaller',
                               color: '#c44',
                             }}
-                            title={t('shipyard', 'damagedTooltip') || 'Повреждено'}
+                            title={t('shipyard', 'damagedTooltip')}
                           >
                             🔧 {formatNumber(damagedMap[String(entry.id)]!.damaged_count)}
                             {' · '}
@@ -380,7 +390,7 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
                 <input
                   type="submit"
                   name="sendmission"
-                  value={t('buildings', 'build') ?? 'Построить'}
+                  value={t('buildings', 'build')}
                   className="button"
                   disabled={build.isPending}
                 />

@@ -2871,6 +2871,7 @@ mission:
   resetDefense: "Reset defense"
   setDefense: "Set defense"
   toBegin: "To beginning"
+  unitsLost: "Units lost"
 
   allResources: ""
   allShips: ""

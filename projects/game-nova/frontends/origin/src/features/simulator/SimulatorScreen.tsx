@@ -323,9 +323,9 @@ export function SimulatorScreen() {
                     <td>{t('assaultReport', 'gunPower')}</td>
                     <td>{t('assaultReport', 'shieldPower')}</td>
                     <td>{t('assaultReport', 'armoring')}</td>
-                    <td>{t('info', 'laserTech') || 'Laser'}</td>
-                    <td>{t('info', 'ionTech') || 'Ion'}</td>
-                    <td>{t('info', 'plasmaTech') || 'Plasma'}</td>
+                    <td>{t('info', 'laserTech')}</td>
+                    <td>{t('info', 'ionTech')}</td>
+                    <td>{t('info', 'plasmaTech')}</td>
                     <td>{t('assaultReport', 'ballisticsPower')}</td>
                     <td>{t('assaultReport', 'maskingPower')}</td>
                     <td>{t('assaultReport', 'shipyardPower')}</td>
@@ -378,7 +378,7 @@ export function SimulatorScreen() {
                   {/* План 72.1.34 ч.B: target-building селект + level. */}
                   <tr>
                     <td style={{ paddingTop: '0.6em' }}>
-                      {t('simulator', 'targetBuilding') || 'Цель: здание'}
+                      {t('simulator', 'targetBuilding')}
                     </td>
                   </tr>
                   <tr>
@@ -404,7 +404,7 @@ export function SimulatorScreen() {
                         maxLength={3}
                         value={targetBuildingLevel}
                         onChange={(e) => setTargetBuildingLevel(e.target.value)}
-                        title={t('simulator', 'targetBuildingLevel') || 'Уровень'}
+                        title={t('simulator', 'targetBuildingLevel')}
                       />
                     </td>
                   </tr>
@@ -539,11 +539,11 @@ export function SimulatorScreen() {
         <thead>
           <tr>
             <th colSpan={3}>
-              {t('simulator', 'battleArtefacts') || 'Боевые артефакты'}
+              {t('simulator', 'battleArtefacts')}
             </th>
           </tr>
           <tr>
-            <th>{t('simulator', 'artefactName') || 'Артефакт'}</th>
+            <th>{t('simulator', 'artefactName')}</th>
             <th>{t('mission', 'attacker')}</th>
             <th>{t('mission', 'defender')}</th>
           </tr>
@@ -777,7 +777,7 @@ function SimResultsView({
           resp.report.building_destroy_chance > 0 && (
             <tr>
               <th>
-                {t('simulator', 'buildingDestroyChance') || 'Шанс разрушения'}
+                {t('simulator', 'buildingDestroyChance')}
               </th>
               <td colSpan={2}>
                 {fmt(resp.report.building_destroy_chance, 1)}%
@@ -815,14 +815,14 @@ function SimResultsView({
             строки 198-205 показывает каждой стороной отдельно). */}
         {(s.attacker_lost_points != null || s.defender_lost_points != null) && (
           <tr>
-            <th>{t('score', 'colPoints') || 'Очки'}</th>
+            <th>{t('score', 'colPoints')}</th>
             <td>−{fmt(s.attacker_lost_points ?? 0, 0)}</td>
             <td>−{fmt(s.defender_lost_points ?? 0, 0)}</td>
           </tr>
         )}
         {(s.attacker_lost_units != null || s.defender_lost_units != null) && (
           <tr>
-            <th>{t('mission', 'unitsLost') || 'Юнитов потеряно'}</th>
+            <th>{t('mission', 'unitsLost')}</th>
             <td>{fmt(s.attacker_lost_units ?? 0, 0)}</td>
             <td>{fmt(s.defender_lost_units ?? 0, 0)}</td>
           </tr>
@@ -842,14 +842,14 @@ function SimResultsView({
         {(s.debris_metal > 0 || s.debris_silicon > 0) && (
           <>
             <tr>
-              <th>{t('simulator', 'recyclersNeeded') || 'Нужно рециклеров'}</th>
+              <th>{t('simulator', 'recyclersNeeded')}</th>
               <td colSpan={2}>
                 {fmt(Math.ceil((s.debris_metal + s.debris_silicon) / 20_000), 0)}
               </td>
             </tr>
             <tr>
               <th>
-                {t('simulator', 'transplantersNeeded') || 'Нужно трансплантёров'}
+                {t('simulator', 'transplantersNeeded')}
               </th>
               <td colSpan={2}>
                 {fmt(Math.ceil((s.debris_metal + s.debris_silicon) / 2_000_000), 0)}

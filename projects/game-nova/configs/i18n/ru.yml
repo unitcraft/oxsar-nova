@@ -2884,6 +2884,7 @@ mission:
   resetDefense: "Обнулить оборону"
   setDefense: "Установить оборону"
   toBegin: "В начало"
+  unitsLost: "Юнитов потеряно"
 
   allResources: Все ресурсы
   allShips: Все корабли

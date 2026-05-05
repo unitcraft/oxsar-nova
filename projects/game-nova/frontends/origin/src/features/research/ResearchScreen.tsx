@@ -12,6 +12,7 @@ import {
 import { packResearch } from '@/api/buildings';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
+import { useAutoInvalidateOnTaskEnd } from '@/features/common/useAutoInvalidateOnTaskEnd';
 import { catalogByGroup } from '@/features/common/catalog';
 import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
@@ -70,11 +71,22 @@ export function ResearchScreen() {
     onError: (e) => setPackErr((e as ApiError).message),
   });
 
+  // План 72.1.59: авто-инвалидация очереди по окончании ближайшей
+  // задачи (общий хук). Без него экран остаётся со старым snapshot'ом
+  // когда прогресс-бар доезжает до 100%. QK.planets() инвалидируем
+  // тоже — research может изменить production/storage (через
+  // research-эффекты), и тик ресурсов в TopHeader должен сменить темп.
+  const queue = overviewQ.data?.queue ?? [];
+  useAutoInvalidateOnTaskEnd(queue, () => {
+    void qc.invalidateQueries({ queryKey: QK.research() });
+    void qc.invalidateQueries({ queryKey: QK.planets() });
+    if (planetId) void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
+  });
+
   if (!planetId) {
     return <div className="idiv">{t('overview', 'noPlanets')}</div>;
   }
 
-  const queue = overviewQ.data?.queue ?? [];
   const levels = overviewQ.data?.levels ?? {};
   const seconds = overviewQ.data?.research_seconds ?? {};
   const costs = overviewQ.data?.research_costs ?? {};
@@ -138,12 +150,11 @@ export function ResearchScreen() {
                       type="button"
                       className="button"
                       disabled={cancelMut.isPending}
-                      title={t('buildings', 'cancelTask') || 'Отменить'}
+                      title={t('buildings', 'cancelTask')}
                       onClick={async () => {
                         if (await confirm({
-                          title: t('buildings', 'cancelTask') || 'Отменить',
-                          message: (t('buildings', 'cancelConfirm') as string) ||
-                            'Отменить исследование? Возврат 95% ресурсов (100% если <15 сек).',
+                          title: t('buildings', 'cancelTask'),
+                          message: t('buildings', 'cancelConfirm'),
                           destructive: true,
                         })) {
                           cancelMut.mutate(task.id);
@@ -159,12 +170,11 @@ export function ResearchScreen() {
                       type="button"
                       className="button"
                       disabled={vipMut.isPending}
-                      title={t('buildings', 'vipHint') || 'Мгновенный старт за кредиты'}
+                      title={t('buildings', 'vipHint')}
                       onClick={async () => {
                         if (await confirm({
-                          title: t('buildings', 'vipHint') || 'VIP старт',
-                          message: (t('buildings', 'vipConfirm') as string) ||
-                            'Мгновенный старт исследования за кредиты?',
+                          title: t('buildings', 'vipHint'),
+                          message: t('buildings', 'vipConfirm'),
                         })) {
                           vipMut.mutate(task.id);
                         }
@@ -183,7 +193,7 @@ export function ResearchScreen() {
       <table className="ntable">
         <tbody>
           <tr>
-            <th colSpan={3}>{t('buildings', 'research') ?? 'Исследования'}</th>
+            <th colSpan={3}>{t('buildings', 'research')}</th>
           </tr>
 
           {visibleTechs.map((entry) => {
@@ -207,7 +217,7 @@ export function ResearchScreen() {
                 <td style={{ verticalAlign: 'top' }}>
                   <div style={{ width: '100%' }}>
                     <span style={{ float: 'right' }}>
-                      Уровень {lvl}
+                      {t('research', 'level', { n: String(lvl) })}
                     </span>
                     {t(group, key)}
                   </div>
@@ -227,7 +237,7 @@ export function ResearchScreen() {
                 <td width="100px" align="center" style={{ verticalAlign: 'middle' }}>
                   {queue.length > 0 ? (
                     <span className="false">
-                      {t('buildings', 'buildingAtWork') ?? 'Занято'}
+                      {t('buildings', 'buildingAtWork')}
                     </span>
                   ) : (
                     <button
@@ -236,8 +246,8 @@ export function ResearchScreen() {
                       onClick={() => start.mutate(entry.id)}
                       disabled={start.isPending || !enough}
                     >
-                      {t('buildings', 'researchOfLevel') ?? 'Исследовать'}<br />
-                      {t('buildings', 'levelAbbr') === 'Ур.' ? 'уровень' : 'уровень'} {lvl + 1}
+                      {t('buildings', 'researchOfLevel')}<br />
+                      {t('research', 'level', { n: String(lvl + 1) })}
                     </button>
                   )}
                   {/* План 72.1.33 ч.2: pack research если уровень>0. */}
@@ -247,12 +257,11 @@ export function ResearchScreen() {
                         type="button"
                         className="button"
                         disabled={packMut.isPending}
-                        title={t('buildinginfo', 'packResearch') || 'Упаковать в артефакт'}
+                        title={t('buildinginfo', 'packResearch')}
                         onClick={async () => {
                           if (await confirm({
-                            title: t('buildinginfo', 'packResearch') || 'Упаковать',
-                            message: (t('buildinginfo', 'packConfirm') as string) ||
-                              'Упаковать?',
+                            title: t('buildinginfo', 'packResearch'),
+                            message: t('buildinginfo', 'packConfirm'),
                           })) {
                             packMut.mutate(entry.id);
                           }
