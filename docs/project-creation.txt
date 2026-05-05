@@ -16814,3 +16814,59 @@ not-a-fix + BA-019 mitigated.
 
   Что НЕ сделано в этом коммите:
     - scoreCandidates всё ещё пустой — Ф.1в (building) и Ф.1г (research).
+
+## Итерация 06.1.3 — Автопилот: building scoring Ф.1в (2026-05-05)
+
+  Цель: scoreCandidates теперь предлагает топ-3 ходов «построить здание»
+  для стратегии Economy на основе формул экономики игры.
+
+  Backend:
+    - aiadvisor/autopilot_scoring.go (полная переработка):
+        scoreCandidates → scoreBuildings (отдельная функция).
+        Кандидат отсеивается:
+          • очередь планеты занята (BuildingQueueBusy);
+          • спец moon-only без планеты-луны (или наоборот);
+          • UsedFields >= MaxFields;
+          • curLvl >= MaxLevel;
+          • ResourcesIn1h < cost(nextLvl).
+        Score (Economy):
+          • deltaProductionPerSec — прирост добычи (для metal_mine /
+            silicon_lab / hydrogen_synth);
+          • + deltaPoints/buildSec * 0.1 — score-tiebreaker для
+            не-производственных зданий.
+        Score (Military/Defense/Expansion): только pointsPerSec —
+          ресурсные шахты получают низкий ранг; в Ф.1г-Ф.5 они получат
+          собственные веса (lab/shipyard/defense).
+        Description/Benefit формируются по шаблону на сервере (i18n
+        переведёт в Ф.4).
+    - aiadvisor/autopilot_service.go: AutopilotService.pointsK добавлен;
+      Compute собирает BuildSecondsByPlanet через
+      building.Service.BuildSecondsMap (учитывает robotic/nano factory
+      на планете и game speed) и передаёт в scoreCandidates.
+    - cmd/server/main.go, cmd/worker/main.go: NewAutopilotService теперь
+      принимает cfg.Game.Points (config.PointsCoefficients).
+    - economy.CostForLevel и economy.ProductionPerHour использованы напрямую
+      (формулы 1:1 совпадают с building.Service).
+
+  Tests (унит, табличные):
+    - TestScoreBuildings_EconomyPicksProducer — metal_mine побеждает
+      robotic_factory при Economy.
+    - TestScoreBuildings_BusyQueueSkipped — очередь занята → пусто.
+    - TestScoreBuildings_MoonOnlyOnPlanetSkipped — moon_base не
+      предлагается на планете.
+    - TestScoreBuildings_NoFreeFieldsSkipped — UsedFields=MaxFields
+      → пусто.
+    - TestScoreBuildings_MaxLevelSkipped — metal_mine ур.40 не входит.
+    - TestScoreBuildings_Top3Limit — 5 кандидатов → ровно 3, по убыванию.
+    - TestScoreBuildings_AffordabilityCheck — robotic_factory отсеян
+      по cost > forecast 1h, metal_mine остался.
+    - TestFormatDuration — table-driven для всех веток
+      (с/мин/ч/ч+мин).
+
+  go build ./..., go vet ./..., go test ./internal/aiadvisor/... — green.
+
+  Что НЕ сделано в этом коммите:
+    - research scoring — Ф.1г.
+    - Other strategies (Military/Defense/Expansion) полноценно — Ф.1г-Ф.5
+      (defense building, lab/shipyard приоритеты).
+    - Integration-тест Compute end-to-end через TEST_DATABASE_URL — Ф.1д.

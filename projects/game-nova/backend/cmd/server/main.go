@@ -358,7 +358,7 @@ func run() error {
 	// вызывает Enqueue). Регистрируется тут только как HTTP-handler;
 	// event-handler регистрируется в worker/main.go.
 	autopilotSvc := aiadvisor.NewAutopilotService(
-		db, cfg.AIAdvisor, cat,
+		db, cfg.AIAdvisor, cfg.Game.Points, cat,
 		planetSvc, scoreSvc, buildingSvc, researchSvc,
 	)
 	autopilotH := aiadvisor.NewAutopilotHandler(autopilotSvc)

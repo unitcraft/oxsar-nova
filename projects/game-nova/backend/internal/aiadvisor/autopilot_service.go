@@ -64,17 +64,20 @@ var (
 // Зависимости разделены по ролям:
 //   - DB / Catalog — для прямых SQL и доступа к каталогу юнитов;
 //   - PlanetSvc / ScoreSvc — чтение состояния (snapshot);
-//   - BuildingSvc / ResearchSvc — выполнение рекомендаций.
+//   - BuildingSvc / ResearchSvc — выполнение рекомендаций и time/cost
+//     калькуляции при scoring;
+//   - PointsK — коэффициенты очков, нужны scoring-у для оценки выгоды.
 //
 // Hub (chat.Hub) опционален — если nil, WS-пуш не делается, фронт
 // получит результат через polling. Это допустимо в Ф.1.
 type AutopilotService struct {
-	db         repo.Exec
-	cfg        config.AIAdvisorConfig
-	catalog    *config.Catalog
-	planetSvc  *planet.Service
-	scoreSvc   *score.Service
-	buildSvc   *building.Service
+	db          repo.Exec
+	cfg         config.AIAdvisorConfig
+	pointsK     config.PointsCoefficients
+	catalog     *config.Catalog
+	planetSvc   *planet.Service
+	scoreSvc    *score.Service
+	buildSvc    *building.Service
 	researchSvc *research.Service
 }
 
@@ -84,6 +87,7 @@ type AutopilotService struct {
 func NewAutopilotService(
 	db repo.Exec,
 	cfg config.AIAdvisorConfig,
+	pointsK config.PointsCoefficients,
 	catalog *config.Catalog,
 	planetSvc *planet.Service,
 	scoreSvc *score.Service,
@@ -93,6 +97,7 @@ func NewAutopilotService(
 	return &AutopilotService{
 		db:          db,
 		cfg:         cfg,
+		pointsK:     pointsK,
 		catalog:     catalog,
 		planetSvc:   planetSvc,
 		scoreSvc:    scoreSvc,
@@ -234,7 +239,25 @@ func (s *AutopilotService) Compute(ctx context.Context, tx pgx.Tx, e event.Event
 		return fmt.Errorf("autopilot: compute: snapshot: %w", err)
 	}
 
-	recs := scoreCandidates(snap, input.Strategy, scoringInputs{Catalog: s.catalog})
+	// Время постройки следующего уровня для каждого здания — учитывает
+	// robotic_factory / nano_factory на планете и game speed. Без этой
+	// карты scoring не может ранжировать кандидатов по delta/время.
+	buildSecondsByPlanet := make(map[string]map[int]int, len(snap.Planets))
+	if s.buildSvc != nil {
+		for _, ps := range snap.Planets {
+			seconds, err := s.buildSvc.BuildSecondsMap(ctx, ps.ID, ps.Buildings)
+			if err != nil {
+				return fmt.Errorf("autopilot: compute: build seconds for %s: %w", ps.ID, err)
+			}
+			buildSecondsByPlanet[ps.ID] = seconds
+		}
+	}
+
+	recs := scoreCandidates(snap, input.Strategy, scoringInputs{
+		Catalog:              s.catalog,
+		PointsK:              s.pointsK,
+		BuildSecondsByPlanet: buildSecondsByPlanet,
+	})
 	for i := range recs {
 		if recs[i].ID == "" {
 			recs[i].ID = ids.New()
