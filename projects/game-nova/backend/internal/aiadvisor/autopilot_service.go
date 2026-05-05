@@ -317,13 +317,20 @@ func (s *AutopilotService) Compute(ctx context.Context, tx pgx.Tx, e event.Event
 	// Inbox-message: дублируем рекомендации в почту пользователя,
 	// чтобы игрок-офлайн увидел их при следующем входе. Кнопка «Выполнить»
 	// в письме делается фронтом по deep-link на advisor с pre-loaded job.
-	// Ошибка inbox не критична — ai_advisor_log уже обновлён.
+	//
+	// Используем FolderSystem (12) — расширение oxsar-nova для welcome/
+	// inactivity/system. message_folders FK гарантирует что только
+	// существующие folder_id пишутся; folder=20 (изначально) ломал FK
+	// и затем всю tx воркера.
+	//
+	// Делаем через s.db.Pool() (не tx воркера): сообщение — побочный
+	// эффект, его сбой не должен ронять основной UPDATE ai_advisor_log.
+	// При ошибке INSERT в messages — лог уже обновлён, tx воркера
+	// останется чистой.
 	if s.automsg != nil && len(recs) > 0 {
 		title := "Автопилот: новые рекомендации"
 		body := buildInboxBody(input.Strategy, recs, input.LogID)
-		// folder=20 — системные сообщения (legacy consts.php
-		// MESSAGE_FOLDER_FROM_AI = пока не выделен, используем 20).
-		_ = s.automsg.SendDirect(ctx, tx, input.UserID, 20, title, body)
+		_ = s.automsg.SendDirect(ctx, nil, input.UserID, automsg.FolderSystem, title, body)
 	}
 
 	// WS-пуш — Ф.6. До тех пор фронт получает результат через polling.
