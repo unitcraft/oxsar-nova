@@ -42,8 +42,7 @@ export function MonitorPlanetScreen() {
   if (!planetId) {
     return (
       <div className="idiv">
-        {t('monitorPlanet', 'noPlanetSelected') ||
-          'Не выбрана планета. Откройте /monitor-planet?id=<planet_id>.'}
+        {t('monitorPlanet', 'noPlanetSelected')}
       </div>
     );
   }
@@ -53,7 +52,7 @@ export function MonitorPlanetScreen() {
       <table className="ntable">
         <thead>
           <tr>
-            <th colSpan={2}>{t('monitorPlanet', 'title') || 'Мониторинг'}</th>
+            <th colSpan={2}>{t('monitorPlanet', 'title')}</th>
           </tr>
         </thead>
         <tbody>
@@ -69,11 +68,8 @@ export function MonitorPlanetScreen() {
                   // списывается безусловно при каждом нажатии).
                   // Стилизованный in-game dialog заменил window.confirm.
                   const ok = await confirm({
-                    title: (t('monitorPlanet', 'scanBtn') as string) ||
-                      'Сканировать',
-                    message:
-                      (t('monitorPlanet', 'scanConfirm') as string) ||
-                      'Сканирование стоит 5000H. Продолжить?',
+                    title: t('monitorPlanet', 'scanBtn'),
+                    message: t('monitorPlanet', 'scanConfirm'),
                     confirmLabel: 'OK',
                   });
                   if (!ok) return;
@@ -82,7 +78,7 @@ export function MonitorPlanetScreen() {
               >
                 {scanMut.isPending
                   ? '…'
-                  : t('monitorPlanet', 'scanBtn') || 'Сканировать (5000H)'}
+                  : t('monitorPlanet', 'scanBtn')}
               </button>
               {errMsg && (
                 <>
@@ -111,7 +107,7 @@ export function MonitorPlanetScreen() {
             </thead>
             <tbody>
               <tr>
-                <td>{t('monitorPlanet', 'scannerLabel') || 'Источник'}</td>
+                <td>{t('monitorPlanet', 'scannerLabel')}</td>
                 <td>
                   {data.scanner.name} [{data.scanner.galaxy}:
                   {data.scanner.system}:{data.scanner.position}]
@@ -120,8 +116,7 @@ export function MonitorPlanetScreen() {
               {data.detected && (
                 <tr>
                   <td colSpan={2} className="false2">
-                    {t('monitorPlanet', 'detectedNote') ||
-                      'Цель обнаружила сканирование (отправлено уведомление).'}
+                    {t('monitorPlanet', 'detectedNote')}
                   </td>
                 </tr>
               )}
@@ -132,7 +127,7 @@ export function MonitorPlanetScreen() {
             <thead>
               <tr>
                 <th colSpan={2}>
-                  {t('monitorPlanet', 'eventsTitle') || 'События флота'}
+                  {t('monitorPlanet', 'eventsTitle')}
                 </th>
               </tr>
             </thead>
@@ -140,7 +135,7 @@ export function MonitorPlanetScreen() {
               {data.events.length === 0 ? (
                 <tr>
                   <td colSpan={2} className="center">
-                    {t('mission', 'noMatchesFound') || 'Нет событий'}
+                    {t('mission', 'noMatchesFound')}
                   </td>
                 </tr>
               ) : (

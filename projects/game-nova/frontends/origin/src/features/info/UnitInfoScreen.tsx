@@ -89,39 +89,39 @@ export function UnitInfoScreen() {
                 <th colSpan={3}>{t('battlestats', 'title')}</th>
               </tr>
               <tr>
-                <td>{t('battlestats', 'colResult') || 'Атака'}</td>
+                <td>{t('info', 'statAttack')}</td>
                 <td colSpan={2}>{formatNumber(entry.attack)}</td>
               </tr>
               <tr>
-                <td>{t('battlestats', 'colLoot') || 'Щит'}</td>
+                <td>{t('info', 'statShield')}</td>
                 <td colSpan={2}>{formatNumber(entry.shield ?? 0)}</td>
               </tr>
               <tr>
-                <td>{t('battlestats', 'colDate') || 'Броня'}</td>
+                <td>{t('info', 'statShell')}</td>
                 <td colSpan={2}>{formatNumber(entry.shell ?? 0)}</td>
               </tr>
               {entry.speed !== null && entry.speed !== undefined && (
                 <tr>
-                  <td>{t('records', 'colRecord') || 'Скорость'}</td>
+                  <td>{t('info', 'statSpeed')}</td>
                   <td colSpan={2}>{formatNumber(entry.speed)}</td>
                 </tr>
               )}
               {entry.cargo !== null && entry.cargo !== undefined && (
                 <tr>
-                  <td>{t('records', 'colHolder') || 'Груз'}</td>
+                  <td>{t('info', 'statCargo')}</td>
                   <td colSpan={2}>{formatNumber(entry.cargo)}</td>
                 </tr>
               )}
               {entry.fuel !== null && entry.fuel !== undefined && (
                 <tr>
-                  <td>{t('repair', 'fuelPer') || 'Топливо'}</td>
+                  <td>{t('info', 'statFuel')}</td>
                   <td colSpan={2}>{formatNumber(entry.fuel)}</td>
                 </tr>
               )}
             </>
           )}
           <tr>
-            <th colSpan={3}>{t('records', 'colMine') || 'Стоимость'}</th>
+            <th colSpan={3}>{t('info', 'cost')}</th>
           </tr>
           <tr>
             <td>{t('score', 'colMetal')}</td>
@@ -163,7 +163,7 @@ export function UnitInfoScreen() {
         <table className="ntable">
           <thead>
             <tr>
-              <th colSpan={2}>Rapidfire</th>
+              <th colSpan={2}>{t('info', 'rapidfire')}</th>
             </tr>
           </thead>
           <tbody>

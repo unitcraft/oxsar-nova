@@ -85,7 +85,7 @@ export function BBCodeToolbar({
   function insertUrl() {
     const ta = textareaRef.current;
     if (!ta) return;
-    const url = window.prompt(t('chat', 'urlPrompt') || 'URL:', 'https://');
+    const url = window.prompt(t('chat', 'urlPrompt'), 'https://');
     if (!url) return;
     // Если есть selection — сделать [url=..]label[/url]; иначе [url]url[/url].
     const inside = ta.value.slice(ta.selectionStart, ta.selectionEnd);
@@ -99,7 +99,7 @@ export function BBCodeToolbar({
   function insertImg() {
     const ta = textareaRef.current;
     if (!ta) return;
-    const url = window.prompt(t('chat', 'imgPrompt') || 'Image URL:', 'https://');
+    const url = window.prompt(t('chat', 'imgPrompt'), 'https://');
     if (!url) return;
     onChange(insertAtCursor(ta, `[img]${url}[/img]`));
   }
@@ -107,7 +107,7 @@ export function BBCodeToolbar({
   function insertColor() {
     const ta = textareaRef.current;
     if (!ta) return;
-    const color = window.prompt(t('chat', 'colorPrompt') || 'Color (red, #f0a, #ff00aa):', 'red');
+    const color = window.prompt(t('chat', 'colorPrompt'), 'red');
     if (!color) return;
     onChange(wrapSelection(ta, `[color=${color}]`, '[/color]'));
   }
@@ -126,7 +126,7 @@ export function BBCodeToolbar({
         type="button"
         className="button"
         disabled={disabled}
-        title={t('chat', 'bbBold') || 'Жирный'}
+        title={t('chat', 'bbBold')}
         onClick={() => wrap('[b]', '[/b]')}
         style={{ fontWeight: 'bold' }}
       >
@@ -136,7 +136,7 @@ export function BBCodeToolbar({
         type="button"
         className="button"
         disabled={disabled}
-        title={t('chat', 'bbItalic') || 'Курсив'}
+        title={t('chat', 'bbItalic')}
         onClick={() => wrap('[i]', '[/i]')}
         style={{ fontStyle: 'italic' }}
       >
@@ -146,7 +146,7 @@ export function BBCodeToolbar({
         type="button"
         className="button"
         disabled={disabled}
-        title={t('chat', 'bbUnderline') || 'Подчёркнутый'}
+        title={t('chat', 'bbUnderline')}
         onClick={() => wrap('[u]', '[/u]')}
         style={{ textDecoration: 'underline' }}
       >
@@ -156,7 +156,7 @@ export function BBCodeToolbar({
         type="button"
         className="button"
         disabled={disabled}
-        title={t('chat', 'bbStrike') || 'Зачёркнутый'}
+        title={t('chat', 'bbStrike')}
         onClick={() => wrap('[s]', '[/s]')}
         style={{ textDecoration: 'line-through' }}
       >
@@ -166,7 +166,7 @@ export function BBCodeToolbar({
         type="button"
         className="button"
         disabled={disabled}
-        title={t('chat', 'bbColor') || 'Цвет'}
+        title={t('chat', 'bbColor')}
         onClick={insertColor}
       >
         🎨
@@ -175,7 +175,7 @@ export function BBCodeToolbar({
         type="button"
         className="button"
         disabled={disabled}
-        title={t('chat', 'bbUrl') || 'Ссылка'}
+        title={t('chat', 'bbUrl')}
         onClick={insertUrl}
       >
         🔗
@@ -184,7 +184,7 @@ export function BBCodeToolbar({
         type="button"
         className="button"
         disabled={disabled}
-        title={t('chat', 'bbImg') || 'Изображение'}
+        title={t('chat', 'bbImg')}
         onClick={insertImg}
       >
         🖼
