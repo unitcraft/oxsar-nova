@@ -471,9 +471,13 @@ func scoreExpeditions(snap PlayerSnapshot, strategy Strategy, inputs scoringInpu
 	}
 
 	// Выбираем планету-донор: максимум metal-eq value среди ships.
+	// Запоминаем координаты — для expedition target = (galaxy, system,
+	// position=15 — позиция за обычными 1..14, в которую летит флот
+	// в неисследованную зону, согласно legacy oxsar2).
 	bestPlanetID := ""
 	bestPlanetName := ""
 	var bestValue int64
+	var srcGalaxy, srcSystem int
 	for _, ps := range snap.Planets {
 		if ps.IsMoon {
 			continue // экспедиции отправляются с планет, не с лун
@@ -483,6 +487,8 @@ func scoreExpeditions(snap PlayerSnapshot, strategy Strategy, inputs scoringInpu
 			bestValue = v
 			bestPlanetID = ps.ID
 			bestPlanetName = ps.Name
+			srcGalaxy = ps.Galaxy
+			srcSystem = ps.System
 		}
 	}
 	if bestPlanetID == "" || bestValue < minExpeditionFleetValue {
@@ -491,6 +497,11 @@ func scoreExpeditions(snap PlayerSnapshot, strategy Strategy, inputs scoringInpu
 
 	rawScore := float64(astroLvl+5) * float64(bestValue) / float64(minExpeditionFleetValue)
 	score := rawScore * weight
+
+	// Координаты экспедиции — позиция 15 в системе планеты-источника.
+	// fleet.Send для KindExpedition не проверяет существование цели
+	// (см. transport.go:349-355), так что произвольная позиция работает.
+	const expeditionPosition = 15
 
 	return []Recommendation{{
 		ID:         ids.New(),
@@ -501,9 +512,13 @@ func scoreExpeditions(snap PlayerSnapshot, strategy Strategy, inputs scoringInpu
 			"src_planet_id":    bestPlanetID,
 			"astrophysics_lvl": astroLvl,
 			"fleet_value":      bestValue,
+			"dst_galaxy":       srcGalaxy,
+			"dst_system":       srcSystem,
+			"dst_position":     expeditionPosition,
 		},
 		Score:       score,
-		Description: fmt.Sprintf("Отправить экспедицию с планеты %q (астрофизика ур.%d)", bestPlanetName, astroLvl),
+		Description: fmt.Sprintf("Отправить экспедицию с планеты %q [%d:%d:%d] (астрофизика ур.%d)",
+			bestPlanetName, srcGalaxy, srcSystem, expeditionPosition, astroLvl),
 		Benefit: fmt.Sprintf("Шанс на ресурсы/артефакты/планету; флот ценой %d metal-eq",
 			bestValue),
 	}}

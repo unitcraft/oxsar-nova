@@ -289,29 +289,24 @@ func executeExpedition(ctx context.Context, fleetSvc *fleet.TransportService, us
 	if src == "" {
 		return "", fmt.Errorf("autopilot: expedition: src_planet_id missing")
 	}
-	// Для экспедиции легаси выбирает целью неисследованную координату.
-	// Автопилот шлёт на текущую планету+1 system (упрощение; мы могли бы
-	// читать coords донора из snapshot, но это сделает executor зависимым
-	// от planet.Service. Send всё равно проверит валидность координат.)
-	// Берём 1 large_transporter — хватит для minFleetValue экспедиции
-	// (≥50k metal-eq в самих кораблях; transporter cost=12k).
 	dstG, _ := paramInt(rec.Params, "dst_galaxy")
 	dstS, _ := paramInt(rec.Params, "dst_system")
 	dstP, _ := paramInt(rec.Params, "dst_position")
 	if dstG == 0 && dstS == 0 && dstP == 0 {
-		// Координаты не передали — на этом уровне executor не может
-		// выбрать координаты экспедиции (нужен галактический контекст).
-		// Возвращаем понятную ошибку — фронт перепросит у игрока.
+		// scoring обязан задавать координаты (см. scoreExpeditions:
+		// dst = system планеты-источника, position=15). Если по какой-то
+		// причине их нет — это баг scoring; вернём понятную ошибку.
 		return "", fmt.Errorf("autopilot: expedition: target coords missing")
 	}
 
-	// Корабли — берём light_fighter, минимально 13 шт. (13×4000=52000 ≥ 50k порог).
-	// Уточнение: executor использует то, что передал scoring; пока shoring
-	// не определяет состав флота, шлём 1 large_transporter (12k cost — мало,
-	// Send вернёт ErrFleetTooSmall, и UI покажет ошибку «нужно больше флота»).
-	// Корректный выбор экспедиционного флота — задача Ф.2.2 (когда добавим
-	// fleet-shape selection в scoring).
-	ships := map[int]int64{unitLargeTransporter: 5} // 5×12k = 60k, проходит порог.
+	// Корабли — 13 light_fighter (13×4000=52000 metal-eq, проходит порог
+	// minExpeditionFleetValue=50_000) + 2 small_transporter для ёмкости
+	// (10k cargo на ресурсы-награды). Корректный выбор состава флота —
+	// будущее улучшение (выбор по target-зоне, vis-à-vis pirates-исхода).
+	ships := map[int]int64{
+		unitLightFighter:     13,
+		unitSmallTransporter: 2,
+	}
 
 	f, err := fleetSvc.Send(ctx, fleet.TransportInput{
 		UserID:      userID,
