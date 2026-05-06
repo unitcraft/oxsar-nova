@@ -522,6 +522,10 @@ func detectPhase(snap PlayerSnapshot) Strategy {
 // stable-relative порядок без абсолютной точности. Значения подобраны
 // под configs/ships.yml: small_transporter=4k, large=12k, light_fighter=4k,
 // cruiser=27k, battleship=60k, deathstar=10M и т.д.
+// Источник: configs/ships.yml. Значения — суммарная metal-eq cost
+// корабля. Исправлено 2026-05-06: были неправильные ID (39 был
+// помечен bomber, реально это solar_satellite; 35 был colonizer,
+// реально frigate). См. configs/ships.yml для актуальной правды.
 func approxShipValue(unitID int) int64 {
 	switch unitID {
 	case 29: // small_transporter
@@ -530,27 +534,27 @@ func approxShipValue(unitID int) int64 {
 		return 12000
 	case 31: // light_fighter
 		return 4000
-	case 32: // heavy_fighter
+	case 32: // strong_fighter
 		return 10000
 	case 33: // cruiser
 		return 27000
-	case 34: // battleship
+	case 34: // battle_ship
 		return 60000
-	case 35: // colonizer (legacy 36 в expedition.go)
-		return 10000
-	case 36: // colony ship
+	case 35: // frigate
+		return 50000
+	case 36: // colony_ship
 		return 30000
 	case 37: // recycler
 		return 16000
-	case 38: // espionage probe
+	case 38: // espionage_sensor (probe)
 		return 1000
-	case 39: // bomber
-		return 75000
-	case 40: // satellite
+	case 39: // solar_satellite
 		return 2000
-	case 41: // destroyer
-			return 125000
-	case 42: // deathstar
+	case 40: // bomber
+		return 75000
+	case 41: // star_destroyer
+		return 125000
+	case 42: // death_star
 		return 10_000_000
 	}
 	return 0

@@ -218,14 +218,19 @@ func scoreAttacks(snap PlayerSnapshot, strategy Strategy, _ scoringInputs) []Rec
 func pickAttackerShips(ships map[int]int64) (map[int]int64, int64) {
 	out := map[int]int64{}
 	var total int64
+	// Source: configs/ships.yml.
+	//   31 light_fighter, 32 strong_fighter, 33 cruiser, 34 battle_ship,
+	//   35 frigate, 40 bomber, 41 star_destroyer, 42 death_star.
+	// 35 frigate тоже боевой; 36 colony_ship, 37 recycler — non-combat.
 	combatIDs := []int{
 		unitLightFighter, // 31
-		32,               // heavy_fighter
+		32,               // strong_fighter
 		unitCruiser,      // 33
-		unitBattleship,   // 34
-		39,               // bomber
-		41,               // destroyer
-		42,               // deathstar
+		unitBattleship,   // 34 battle_ship
+		35,               // frigate
+		40,               // bomber
+		41,               // star_destroyer
+		42,               // death_star
 	}
 	for _, id := range combatIDs {
 		count, ok := ships[id]
@@ -617,14 +622,15 @@ func scoreExpeditions(snap PlayerSnapshot, strategy Strategy, inputs scoringInpu
 }
 
 // pickExpeditionShips выбирает реально доступные корабли с планеты для
-// экспедиции. Берёт ВСЕ боевые/транспортные/recycler корабли (не considered:
-// solar_satellite=51, defense unit_id=4xx — только корабли).
+// экспедиции. Берёт ТОЛЬКО летающие корабли (transporter, fighter,
+// cruiser, BS, frigate, colony, recycler, probe, bomber, destroyer,
+// deathstar, lancer, shadow). Не входят:
+//   - solar_satellite (39) — стационарный, не летает,
+//   - interplanetary_missile (52) — ракета через rocket-attack,
+//   - alien-юниты (200+) — нельзя строить,
+//   - все defense (rocket_launcher / lasers / planetary_shield).
 //
-// Возвращает (subsetShips, totalMetalEq). Если на планете нет ничего
-// летающего — value=0.
-//
-// Состав не оптимизирован, просто все доступные летающие unit-id; правка
-// «оптимальный экспедиционный mix» — отдельная задача.
+// Возвращает (subsetShips, totalMetalEq).
 func pickExpeditionShips(ships map[int]int64, inputs scoringInputs) (map[int]int64, int64) {
 	if inputs.Catalog == nil {
 		return nil, 0
@@ -632,18 +638,37 @@ func pickExpeditionShips(ships map[int]int64, inputs scoringInputs) (map[int]int
 	out := map[int]int64{}
 	var total int64
 	for _, spec := range inputs.Catalog.Ships.Ships {
-		count, ok := ships[spec.ID]
-		if !ok || count <= 0 {
+		if !isFlyingShip(spec.ID) {
 			continue
 		}
-		// Solar satellite (51) — не летает. Всё остальное — корабль.
-		if spec.ID == 51 {
+		count, ok := ships[spec.ID]
+		if !ok || count <= 0 {
 			continue
 		}
 		out[spec.ID] = count
 		total += (spec.Cost.Metal + spec.Cost.Silicon + spec.Cost.Hydrogen) * count
 	}
 	return out, total
+}
+
+// isFlyingShip возвращает true для unit-ID, который реально летает
+// в составе флота (используется fleet.Send'ом). Источник: ships.yml.
+//
+// Whitelist подход: если запросят новый юнит — добавим явно. Это
+// безопаснее blacklist'а (legacy ships.yml содержит alien-юниты,
+// которые игроку нельзя строить, и спец-rocket-юниты, которые
+// летают только через KindRocketAttack).
+func isFlyingShip(unitID int) bool {
+	switch unitID {
+	case 29, 30, // transporters
+		31, 32, // fighters
+		33, 34, 35, // cruiser, battle_ship, frigate
+		36, 37, 38, // colony_ship, recycler, espionage_sensor
+		40, 41, 42, // bomber, star_destroyer, death_star
+		102, 325: // lancer_ship, shadow_ship
+		return true
+	}
+	return false
 }
 
 // shipsToJSON конвертирует map[int]int64 в map[string]any (JSON-совместимый
