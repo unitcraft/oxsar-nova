@@ -17395,3 +17395,56 @@ not-a-fix + BA-019 mitigated.
 
   Backend тот же (план 06 §F.3 + 06.1) — origin использует те же
   /api/ai-advisor/* эндпоинты что и nova.
+
+## Итерация 06.1.16 — Автопилот: production fixes на uni03 (2026-05-06)
+
+  После деплоя uni03 нашлось 4 production-бага. Все исправлены.
+
+  Bug 1 (14eaad6449) — folder=20 → tx aborted:
+    folder=20 не существовал в message_folders (доступны 1..12).
+    INSERT INTO messages с FK violation ломал tx воркера, причём ошибка
+    глоталась через `_ = SendDirect`, но tx становилась aborted.
+    Затем `mark ok` фейлился, event крутился вечно.
+  Fix:
+    - automsg.FolderSystem (=12) — корректная папка.
+    - SendDirect через Pool (tx=nil) — побочный inbox не должен ломать
+      основной UPDATE ai_advisor_log.
+
+  Bug 2 (f965b8da2c) — expedition без dst-координат:
+    executeExpedition требовал dst, но scoring не передавал.
+    Это было известным TODO из dev-log Ф.2.1 — теперь закрыто.
+  Fix:
+    - scoreExpeditions сохраняет dst=(galaxy_донора, system_донора,
+      position=15) — позиция 15 разрешена coords_range CHECK,
+      KindExpedition не требует существующей цели.
+
+  Bug 3 (44afc9b063) — pgx scan numeric → int64:
+    fleet/transport.go:readSrcPlanet пытался scan
+    metal/silicon/hydrogen (numeric(20,4)) в int64. pgx v5 не может
+    конвертировать дробное numeric в int64 — ошибка
+    «cannot convert &{N exp false finite true} to integer».
+    Триггер: автопилот вызывает Send сразу после applyTickInTx,
+    после которого ресурсы дробные.
+  Fix:
+    - readSrcPlanet читает во float64, потом приводит к int64
+      (truncation — дробные доли не имеют игрового смысла).
+    - Существующий баг, проявлялся редко в обычных миссиях.
+
+  Bug 4 (c86d1e17a0) — executor шёл с хардкодом ships:
+    Send отбивал «not enough ships on source planet» если у игрока
+    нет конкретных юнитов из placeholder (light_fighter/cruiser).
+  Fix:
+    - scoring (pickExpeditionShips, pickAttackerShips,
+      pickTransporterShips) выбирает РЕАЛЬНЫЕ корабли с планеты.
+    - shipsToJSON / paramShips — round-trip map[int]int64 через
+      JSONB Params.
+    - Применяется для всех 5 типов миссий.
+
+  Production verification (uni03 db @ 23:55):
+    - 5 ai_advisor_log записей source='autopilot':
+      3 status='ready' (worker успешно посчитал топ-3),
+      2 status='executed' (игрок выбрал и выполнил рекомендацию).
+    - Worker без tx_failed warnings.
+    - Backend healthy.
+
+  План 06.1 закрыт И верифицирован end-to-end на проде.
