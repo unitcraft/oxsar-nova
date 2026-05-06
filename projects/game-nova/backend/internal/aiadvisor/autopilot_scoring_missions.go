@@ -72,15 +72,17 @@ func scoreACS(snap PlayerSnapshot, strategy Strategy) []Recommendation {
 		weight = 1.0
 	}
 
-	// Найдём планету с наибольшим боевым флотом.
+	// Найдём планету с наибольшим боевым флотом и реальный состав.
 	srcPlanetID, srcPlanetName := "", ""
 	var srcValue int64
+	var srcShips map[int]int64
 	for _, ps := range snap.Planets {
-		v := approxAttackerShipValue(ps.Ships)
+		ships, v := pickAttackerShips(ps.Ships)
 		if v > srcValue {
 			srcValue = v
 			srcPlanetID = ps.ID
 			srcPlanetName = ps.Name
+			srcShips = ships
 		}
 	}
 	if srcValue == 0 {
@@ -108,6 +110,7 @@ func scoreACS(snap PlayerSnapshot, strategy Strategy) []Recommendation {
 				"dst_system":    g.TargetSystem,
 				"dst_position":  g.TargetPos,
 				"dst_is_moon":   g.TargetIsMoon,
+				"ships":         shipsToJSON(srcShips),
 			},
 			Score: score,
 			Description: fmt.Sprintf("Присоединиться к атаке %q на [%d:%d:%d] с %q",
@@ -139,14 +142,18 @@ func scoreAttacks(snap PlayerSnapshot, strategy Strategy, _ scoringInputs) []Rec
 	}
 
 	// Суммарная атакующая сила игрока (proxy: ценность боевых кораблей).
+	// Запоминаем реальный состав флота с лучшей планеты — Send проверит
+	// наличие в БД при Execute.
 	var attackerValue int64
 	srcPlanetID, srcPlanetName := "", ""
+	var attackShips map[int]int64
 	for _, ps := range snap.Planets {
-		val := approxAttackerShipValue(ps.Ships)
+		ships, val := pickAttackerShips(ps.Ships)
 		if val > attackerValue {
 			attackerValue = val
 			srcPlanetID = ps.ID
 			srcPlanetName = ps.Name
+			attackShips = ships
 		}
 	}
 	if attackerValue == 0 || srcPlanetID == "" {
@@ -190,6 +197,7 @@ func scoreAttacks(snap PlayerSnapshot, strategy Strategy, _ scoringInputs) []Rec
 				"dst_position":    n.Position,
 				"target_points":   n.TotalScore,
 				"attacker_value":  attackerValue,
+				"ships":           shipsToJSON(attackShips),
 			},
 			Score: score,
 			Description: fmt.Sprintf("Атака игрока [%d:%d:%d] (очки %.0f) с %q",
@@ -199,6 +207,35 @@ func scoreAttacks(snap PlayerSnapshot, strategy Strategy, _ scoringInputs) []Rec
 		})
 	}
 	return out
+}
+
+// pickAttackerShips — возвращает реальные боевые корабли с планеты для
+// атаки. Берёт light/heavy fighter, cruiser, battleship, bomber,
+// destroyer, deathstar.
+//
+// Транспорты (29, 30) не включены — они возят грабёж, но добавлять надо
+// после оценки cargo (улучшение «второго порядка», см. dev-log Ф.2.2).
+func pickAttackerShips(ships map[int]int64) (map[int]int64, int64) {
+	out := map[int]int64{}
+	var total int64
+	combatIDs := []int{
+		unitLightFighter, // 31
+		32,               // heavy_fighter
+		unitCruiser,      // 33
+		unitBattleship,   // 34
+		39,               // bomber
+		41,               // destroyer
+		42,               // deathstar
+	}
+	for _, id := range combatIDs {
+		count, ok := ships[id]
+		if !ok || count <= 0 {
+			continue
+		}
+		out[id] = count
+		total += approxShipValue(id) * count
+	}
+	return out, total
 }
 
 // scoreSpy — отправка espionage probes на соседа, чтобы получить
@@ -328,12 +365,65 @@ func scoreTransports(snap PlayerSnapshot, strategy Strategy, _ scoringInputs) []
 			if rec == nil {
 				continue
 			}
+			// Подбираем транспорты под нужный объём, учитывая что есть
+			// на планете-доноре. Минимизируем количество, предпочитая
+			// large_transporter (25k) → small_transporter (5k).
+			amount, _ := rec.Params["amount"].(int64)
+			ships := pickTransporterShips(donor.Ships, amount)
+			if len(ships) == 0 {
+				continue // не должно случаться (cargo >0 проверен), но safe
+			}
+			rec.Params["ships"] = shipsToJSON(ships)
 			rec.Score *= weight
 			if rec.Score <= 0 {
 				continue
 			}
 			out = append(out, *rec)
 		}
+	}
+	return out
+}
+
+// pickTransporterShips подбирает реально доступные транспорты под нужный
+// объём груза. Возвращает подмножество donorShips: large/small transporter
+// в количестве, достаточном для transferAmount, но не превышающем
+// доступное на планете.
+func pickTransporterShips(donorShips map[int]int64, transferAmount int64) map[int]int64 {
+	if transferAmount <= 0 {
+		return nil
+	}
+	const largeCargo = 25000
+	const smallCargo = 5000
+
+	out := map[int]int64{}
+	remaining := transferAmount
+
+	// Сначала large_transporter — он эффективнее.
+	if avail := donorShips[unitLargeTransporter]; avail > 0 && remaining > 0 {
+		needed := (remaining + largeCargo - 1) / largeCargo
+		if needed > avail {
+			needed = avail
+		}
+		out[unitLargeTransporter] = needed
+		remaining -= needed * largeCargo
+	}
+
+	// Добиваем small_transporter.
+	if avail := donorShips[unitSmallTransporter]; avail > 0 && remaining > 0 {
+		needed := (remaining + smallCargo - 1) / smallCargo
+		if needed > avail {
+			needed = avail
+		}
+		out[unitSmallTransporter] = needed
+		remaining -= needed * smallCargo
+	}
+
+	if len(out) == 0 || remaining > 0 {
+		// Не хватает грузоподъёмности. fleet.Send всё равно проверит,
+		// поэтому возвращаем то что собрали — игрок увидит частичный
+		// transfer или ошибку «не хватает cargo».
+		// Если ничего не собрали — это означает что cargo>0 был неточен;
+		// в этом случае возвращаем nil.
 	}
 	return out
 }
@@ -470,25 +560,26 @@ func scoreExpeditions(snap PlayerSnapshot, strategy Strategy, inputs scoringInpu
 		return nil
 	}
 
-	// Выбираем планету-донор: максимум metal-eq value среди ships.
-	// Запоминаем координаты — для expedition target = (galaxy, system,
-	// position=15 — позиция за обычными 1..14, в которую летит флот
-	// в неисследованную зону, согласно legacy oxsar2).
+	// Выбираем планету-донор и реальный состав флота.
+	// pickExpeditionShips возвращает реально доступные корабли которые
+	// дают ≥ minExpeditionFleetValue metal-eq (анти-фарм-порог BA-003).
 	bestPlanetID := ""
 	bestPlanetName := ""
 	var bestValue int64
 	var srcGalaxy, srcSystem int
+	var bestShips map[int]int64
 	for _, ps := range snap.Planets {
 		if ps.IsMoon {
 			continue // экспедиции отправляются с планет, не с лун
 		}
-		v := metalEqShipValue(ps.Ships, inputs)
-		if v > bestValue {
-			bestValue = v
+		ships, value := pickExpeditionShips(ps.Ships, inputs)
+		if value > bestValue {
+			bestValue = value
 			bestPlanetID = ps.ID
 			bestPlanetName = ps.Name
 			srcGalaxy = ps.Galaxy
 			srcSystem = ps.System
+			bestShips = ships
 		}
 	}
 	if bestPlanetID == "" || bestValue < minExpeditionFleetValue {
@@ -515,6 +606,7 @@ func scoreExpeditions(snap PlayerSnapshot, strategy Strategy, inputs scoringInpu
 			"dst_galaxy":       srcGalaxy,
 			"dst_system":       srcSystem,
 			"dst_position":     expeditionPosition,
+			"ships":            shipsToJSON(bestShips),
 		},
 		Score:       score,
 		Description: fmt.Sprintf("Отправить экспедицию с планеты %q [%d:%d:%d] (астрофизика ур.%d)",
@@ -522,6 +614,47 @@ func scoreExpeditions(snap PlayerSnapshot, strategy Strategy, inputs scoringInpu
 		Benefit: fmt.Sprintf("Шанс на ресурсы/артефакты/планету; флот ценой %d metal-eq",
 			bestValue),
 	}}
+}
+
+// pickExpeditionShips выбирает реально доступные корабли с планеты для
+// экспедиции. Берёт ВСЕ боевые/транспортные/recycler корабли (не considered:
+// solar_satellite=51, defense unit_id=4xx — только корабли).
+//
+// Возвращает (subsetShips, totalMetalEq). Если на планете нет ничего
+// летающего — value=0.
+//
+// Состав не оптимизирован, просто все доступные летающие unit-id; правка
+// «оптимальный экспедиционный mix» — отдельная задача.
+func pickExpeditionShips(ships map[int]int64, inputs scoringInputs) (map[int]int64, int64) {
+	if inputs.Catalog == nil {
+		return nil, 0
+	}
+	out := map[int]int64{}
+	var total int64
+	for _, spec := range inputs.Catalog.Ships.Ships {
+		count, ok := ships[spec.ID]
+		if !ok || count <= 0 {
+			continue
+		}
+		// Solar satellite (51) — не летает. Всё остальное — корабль.
+		if spec.ID == 51 {
+			continue
+		}
+		out[spec.ID] = count
+		total += (spec.Cost.Metal + spec.Cost.Silicon + spec.Cost.Hydrogen) * count
+	}
+	return out, total
+}
+
+// shipsToJSON конвертирует map[int]int64 в map[string]any (JSON-совместимый
+// для events.payload). Ключи — string (PostgreSQL JSONB не любит int-ключи),
+// значения — float64-friendly.
+func shipsToJSON(ships map[int]int64) map[string]any {
+	out := make(map[string]any, len(ships))
+	for k, v := range ships {
+		out[fmt.Sprintf("%d", k)] = v
+	}
+	return out
 }
 
 // expeditionStrategyWeight — стратегический вес экспедиции.

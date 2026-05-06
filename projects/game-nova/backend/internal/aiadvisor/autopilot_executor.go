@@ -133,9 +133,11 @@ func executeACSJoin(ctx context.Context, fleetSvc *fleet.TransportService, userI
 	dstS, _ := paramInt(rec.Params, "dst_system")
 	dstP, _ := paramInt(rec.Params, "dst_position")
 	dstMoon, _ := rec.Params["dst_is_moon"].(bool)
-	// Состав флота — placeholder (как для атаки). Полная подборка
-	// — отдельная задача.
-	ships := map[int]int64{unitLightFighter: 10, unitCruiser: 5}
+	// Состав флота из scoring (pickAttackerShips).
+	ships := paramShips(rec.Params)
+	if len(ships) == 0 {
+		return "", fmt.Errorf("autopilot: acs_join: ships missing in params")
+	}
 
 	f, err := fleetSvc.Send(ctx, fleet.TransportInput{
 		UserID:      userID,
@@ -163,11 +165,13 @@ func executeAttack(ctx context.Context, fleetSvc *fleet.TransportService, userID
 	if dstG == 0 && dstS == 0 && dstP == 0 {
 		return "", fmt.Errorf("autopilot: attack: target coords missing")
 	}
-	// Скучная эвристика — отправляем все доступные боевые корабли.
-	// Реальный выбор состава флота требует глубокой battle-симуляции,
-	// что вынесено как отдельная задача (см. dev-log Ф.2.2).
-	// Состав ниже — placeholder, fleet.Send проверит наличие в БД.
-	ships := map[int]int64{unitLightFighter: 10, unitCruiser: 5}
+	// Состав флота определяется scoring (pickAttackerShips) на основе
+	// реального наличия. Полный battle-aware выбор — отдельная задача
+	// (см. dev-log Ф.2.2).
+	ships := paramShips(rec.Params)
+	if len(ships) == 0 {
+		return "", fmt.Errorf("autopilot: attack: ships missing in params")
+	}
 
 	f, err := fleetSvc.Send(ctx, fleet.TransportInput{
 		UserID:      userID,
@@ -227,11 +231,14 @@ func executeTransport(ctx context.Context, fleetSvc *fleet.TransportService, use
 	carryS, _ := paramInt64(rec.Params, "carry_silicon")
 	carryH, _ := paramInt64(rec.Params, "carry_hydrogen")
 
-	// Минимальный комплект transporter'ов считаем на стороне Send;
-	// здесь шлём 1 large_transporter — Send проверит хватит ли cargo.
-	// Если cargo не хватает — Send вернёт ошибку, autopilot её прокинет
-	// игроку как «состояние изменилось, попробуйте ещё».
-	ships := chooseTransportShips(carryM + carryS + carryH)
+	// Состав транспортов из scoring (pickTransporterShips) — реально
+	// доступные large/small transporter с планеты-донора.
+	ships := paramShips(rec.Params)
+	if len(ships) == 0 {
+		// Fallback: если по какой-то причине scoring не передал ships,
+		// считаем по cargo (Send проверит наличие).
+		ships = chooseTransportShips(carryM + carryS + carryH)
+	}
 
 	f, err := fleetSvc.Send(ctx, fleet.TransportInput{
 		UserID:      userID,
@@ -299,13 +306,12 @@ func executeExpedition(ctx context.Context, fleetSvc *fleet.TransportService, us
 		return "", fmt.Errorf("autopilot: expedition: target coords missing")
 	}
 
-	// Корабли — 13 light_fighter (13×4000=52000 metal-eq, проходит порог
-	// minExpeditionFleetValue=50_000) + 2 small_transporter для ёмкости
-	// (10k cargo на ресурсы-награды). Корректный выбор состава флота —
-	// будущее улучшение (выбор по target-зоне, vis-à-vis pirates-исхода).
-	ships := map[int]int64{
-		unitLightFighter:     13,
-		unitSmallTransporter: 2,
+	// Корабли определяются scoring-ом (pickExpeditionShips) на основе
+	// реального наличия на планете. Если ships отсутствуют в Params —
+	// это баг scoring; вернём понятную ошибку.
+	ships := paramShips(rec.Params)
+	if len(ships) == 0 {
+		return "", fmt.Errorf("autopilot: expedition: ships missing in params")
 	}
 
 	f, err := fleetSvc.Send(ctx, fleet.TransportInput{
@@ -355,4 +361,41 @@ func paramInt64(p map[string]any, key string) (int64, bool) {
 		return int64(v), true
 	}
 	return 0, false
+}
+
+// paramShips извлекает map ship_id → count из Params["ships"].
+//
+// scoring записывает map[string]any (JSON-friendly: ключи string, значения
+// int64). После сериализации/десериализации через JSONB значения становятся
+// float64. Парсим обратно в map[int]int64.
+func paramShips(p map[string]any) map[int]int64 {
+	if p == nil {
+		return nil
+	}
+	raw, ok := p["ships"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	out := make(map[int]int64, len(raw))
+	for k, v := range raw {
+		var id int
+		if _, err := fmt.Sscanf(k, "%d", &id); err != nil {
+			continue
+		}
+		switch n := v.(type) {
+		case int:
+			if n > 0 {
+				out[id] = int64(n)
+			}
+		case int64:
+			if n > 0 {
+				out[id] = n
+			}
+		case float64:
+			if n > 0 {
+				out[id] = int64(n)
+			}
+		}
+	}
+	return out
 }
