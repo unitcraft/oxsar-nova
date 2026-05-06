@@ -2,6 +2,7 @@ package aiadvisor
 
 import (
 	"fmt"
+	"math"
 	"sort"
 
 	"oxsar/game-nova/internal/config"
@@ -169,6 +170,40 @@ func affordable(cost economy.Cost, have Resources) bool {
 		have.Hydrogen >= float64(cost.Hydrogen)
 }
 
+// scoreTimeExponent — степень в формуле Score = delta_points / time^exp.
+//
+// 1.0 (linear) переоценивает быстрые мелочи; 0.5 (sqrt) недо-оценивает
+// quick wins. Промежуточные значения — компромисс.
+//
+// Per-категория (см. discussion 2026-05-06):
+//   - building: 0.7 — здания дают compound (+10%/уровень добычи),
+//     стоит ценить структурные long-term апгрейды; но не sqrt чтобы
+//     metal_mine ур.2 (instant, +1.1× добычи) всё ещё попадал в топ.
+//   - research: 0.6 — research-цены растут геометрически, длинные
+//     апгрейды (hyperspace_tech ур.10+) дают мощные unlock'и,
+//     наказывать за 30 секунд глупо.
+//   - mission (атака/spy/expedition): 1.0 — миссии короткосрочны,
+//     быстрая ARR важнее долгосрочной выгоды; точное время рассчитать
+//     для миссии трудно, поэтому фактически time не учитываем
+//     (вес = 1 при time=1сек, что совпадает с прошлым поведением).
+const (
+	scoreTimeExpBuilding = 0.7
+	scoreTimeExpResearch = 0.6
+	scoreTimeExpMission  = 1.0
+)
+
+// timeDiscounted возвращает delta_points / time^exp с защитой от
+// деления на 0 (при time<=0 возвращает 0 — кандидат отсеивается).
+func timeDiscounted(deltaPoints, seconds, exp float64) float64 {
+	if seconds <= 0 {
+		return 0
+	}
+	if exp == 1.0 {
+		return deltaPoints / seconds // быстрый путь без math.Pow
+	}
+	return deltaPoints / math.Pow(seconds, exp)
+}
+
 // researchStrategyWeights — стратегический вес группы технологий.
 //
 // Веса используют шкалу: 1.0 = «целевая для этой стратегии», 0.1 =
@@ -291,8 +326,12 @@ func scoreResearch(snap PlayerSnapshot, strategy Strategy, inputs scoringInputs)
 		}
 
 		deltaPoints := inputs.PointsK.Research * float64(cost.Metal+cost.Silicon+cost.Hydrogen)
-		pointsPerSec := deltaPoints / float64(seconds)
-		score := pointsPerSec * researchWeight(techKey, strategy)
+		// scoreTimeExpResearch=0.6: research-цены растут геометрически,
+		// длинные апгрейды (hyperspace_tech ур.10+) дают мощные unlock'и.
+		// Менее агрессивная экспонента чем у building (0.6 < 0.7) —
+		// research более «инвестиционный» в природе.
+		pointsDiscounted := timeDiscounted(deltaPoints, float64(seconds), scoreTimeExpResearch)
+		score := pointsDiscounted * researchWeight(techKey, strategy)
 		if score <= 0 {
 			continue
 		}
@@ -425,16 +464,21 @@ func buildingScore(strategy Strategy, deltaPoints, deltaProductionPerSec, buildS
 	if buildSeconds <= 0 {
 		return 0
 	}
-	pointsPerSec := deltaPoints / buildSeconds
+	// scoreTimeExpBuilding=0.7: умеренное сглаживание времени —
+	// длинные апгрейды (Solar Plant ур.20) не теряются под мелочами,
+	// но instant-апгрейды (robotic_factory ур.1) всё ещё в топе.
+	// Прежняя формула pointsPerSec (linear, exp=1.0) слишком сильно
+	// штрафовала структурные ходы.
+	pointsDiscounted := timeDiscounted(deltaPoints, buildSeconds, scoreTimeExpBuilding)
 	switch strategy {
 	case StrategyEconomy:
-		// Production доминирует; pointsPerSec — добавка ~10% веса.
-		return deltaProductionPerSec + pointsPerSec*0.1
+		// Production доминирует; pointsDiscounted — добавка ~10% веса.
+		return deltaProductionPerSec + pointsDiscounted*0.1
 	default:
 		// Для Military/Defense/Expansion ресурсное здание не приоритетно;
-		// возвращаем чисто очки в секунду — это даст плохой ранг по
+		// возвращаем чисто discounted-очки — это даст плохой ранг по
 		// сравнению с shipyard/lab/defense, которые войдут в Ф.1г-Ф.5.
-		return pointsPerSec
+		return pointsDiscounted
 	}
 }
 

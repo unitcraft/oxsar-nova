@@ -1130,6 +1130,51 @@ func TestScoreProfession_HappyPath(t *testing.T) {
 	}
 }
 
+func TestTimeDiscounted(t *testing.T) {
+	t.Parallel()
+	// exp=1.0 — linear, как старая формула.
+	if got := timeDiscounted(100, 10, 1.0); got != 10 {
+		t.Errorf("linear 100/10 = %v, want 10", got)
+	}
+	// exp=0.5 — sqrt: 100 / sqrt(100) = 100/10 = 10.
+	if got := timeDiscounted(100, 100, 0.5); got != 10 {
+		t.Errorf("sqrt 100/sqrt(100) = %v, want 10", got)
+	}
+	// exp=0 — без штрафа времени: всегда возвращает delta.
+	if got := timeDiscounted(100, 1000, 0); got != 100 {
+		t.Errorf("exp=0 100/1000^0 = %v, want 100", got)
+	}
+	// time<=0 — защита: 0.
+	if got := timeDiscounted(100, 0, 0.7); got != 0 {
+		t.Errorf("time=0 = %v, want 0", got)
+	}
+	if got := timeDiscounted(100, -5, 0.7); got != 0 {
+		t.Errorf("time<0 = %v, want 0", got)
+	}
+}
+
+// Сравнение score короткого/длинного research-апгрейдов под новой
+// формулой. Это закрепляет ожидаемое поведение: с exp=0.6 длинные
+// «инвестиционные» исследования получают большой score, чем при
+// linear (exp=1.0).
+func TestTimeDiscounted_ResearchInvestmentBias(t *testing.T) {
+	t.Parallel()
+	// 64 очка за 3 сек vs 384 очка за 31 сек.
+	short := timeDiscounted(64, 3, scoreTimeExpResearch)
+	long := timeDiscounted(384, 31, scoreTimeExpResearch)
+	// При exp=0.6 длинный должен выигрывать (в реальном кейсе с скриншота).
+	if long <= short {
+		t.Errorf("research investment bias: long=%.2f should beat short=%.2f under exp=0.6",
+			long, short)
+	}
+	// Под linear (exp=1.0) короткий выигрывал — sanity-check.
+	shortLin := timeDiscounted(64, 3, 1.0)
+	longLin := timeDiscounted(384, 31, 1.0)
+	if longLin >= shortLin {
+		t.Errorf("linear: long=%.2f should LOSE to short=%.2f under exp=1.0", longLin, shortLin)
+	}
+}
+
 func TestFormatDuration(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
