@@ -38,6 +38,10 @@ type PlayerSnapshot struct {
 	Profession          string
 	ProfessionChangedAt *time.Time
 
+	// Language — язык интерфейса игрока ('ru'|'en'); используется для
+	// перевода названий зданий/исследований в Description рекомендаций.
+	Language string
+
 	// AllianceID — uuid альянса игрока (опционально). Используется в
 	// scoreACS для поиска лидеров атак из того же альянса.
 	AllianceID *string
@@ -163,18 +167,21 @@ func buildSnapshot(ctx context.Context, deps SnapshotDeps, userID string) (Playe
 		Research: map[int]int{},
 	}
 
-	// Чтение баланса кредитов, флагов, профессии и альянса одним запросом.
+	// Чтение баланса кредитов, флагов, профессии, альянса и языка
+	// одним запросом.
 	if err := deps.DB.Pool().QueryRow(ctx, `
 		SELECT COALESCE(credit, 0),
 		       COALESCE(umode, false),
 		       COALESCE(is_observer, false),
 		       COALESCE(profession, 'none'),
 		       profession_changed_at,
-		       alliance_id
+		       alliance_id,
+		       COALESCE(language, 'ru')
 		FROM users WHERE id = $1
 	`, userID).Scan(
 		&snap.Credits, &snap.Umode, &snap.IsObserver,
 		&snap.Profession, &snap.ProfessionChangedAt, &snap.AllianceID,
+		&snap.Language,
 	); err != nil {
 		return PlayerSnapshot{}, fmt.Errorf("autopilot: buildSnapshot: read user: %w", err)
 	}

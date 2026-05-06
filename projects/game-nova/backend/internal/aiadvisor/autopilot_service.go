@@ -43,6 +43,7 @@ import (
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/event"
 	"oxsar/game-nova/internal/fleet"
+	"oxsar/game-nova/internal/i18n"
 	"oxsar/game-nova/internal/planet"
 	"oxsar/game-nova/internal/profession"
 	"oxsar/game-nova/internal/repo"
@@ -95,6 +96,15 @@ type AutopilotService struct {
 	fleetSvc       *fleet.TransportService
 	professionSvc  *profession.Service
 	automsg        *automsg.Service
+	bundle         *i18n.Bundle
+}
+
+// WithBundle подключает i18n-бандл для перевода названий зданий/
+// исследований в Description рекомендаций. Если nil — fallback на raw-key
+// (то поведение, что было в Ф.1а-Ф.5).
+func (s *AutopilotService) WithBundle(b *i18n.Bundle) *AutopilotService {
+	s.bundle = b
+	return s
 }
 
 // WithAutoMsg подключает сервис системных сообщений. Если задан,
@@ -288,6 +298,8 @@ func (s *AutopilotService) Compute(ctx context.Context, tx pgx.Tx, e event.Event
 		BuildSecondsByPlanet: buildSecondsByPlanet,
 		GameSpeed:            s.tuning.GameSpeed,
 		ResearchSpeed:        s.tuning.ResearchSpeed,
+		Bundle:               s.bundle,
+		Language:             snap.Language,
 	})
 	for i := range recs {
 		if recs[i].ID == "" {

@@ -367,7 +367,7 @@ func run() error {
 		},
 		cat,
 		planetSvc, scoreSvc, buildingSvc, researchSvc, transportSvc, professionSvc,
-	).WithAutoMsg(automsgSvc)
+	).WithAutoMsg(automsgSvc).WithBundle(i18nBundle)
 	autopilotH := aiadvisor.NewAutopilotHandler(autopilotSvc)
 
 	// План 38 Ф.5: payments переехали в billing-service (отдельный микросервис).

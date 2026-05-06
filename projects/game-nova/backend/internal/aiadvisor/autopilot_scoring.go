@@ -7,6 +7,7 @@ import (
 
 	"oxsar/game-nova/internal/config"
 	"oxsar/game-nova/internal/economy"
+	"oxsar/game-nova/internal/i18n"
 	"oxsar/game-nova/pkg/ids"
 )
 
@@ -37,6 +38,12 @@ type scoringInputs struct {
 	// чтобы тесты могли переиспользовать упрощённый каталог.
 	ResearchLabKey string
 	MoonLabKey     string
+
+	// Bundle — i18n для перевода названий зданий/исследований в
+	// Description рекомендаций. Если nil — fallback на raw-key.
+	Bundle *i18n.Bundle
+	// Language — язык игрока ('ru'|'en'); выбирается из users.language.
+	Language string
 }
 
 // scoreCandidates — pure-функция: snapshot + стратегия → отсортированный
@@ -117,6 +124,13 @@ func scoreBuildings(snap PlayerSnapshot, strategy Strategy, inputs scoringInputs
 				continue
 			}
 
+			// Prereq: building requires (research lab levels, technologies).
+			// Без этой проверки советник предлагал ходы, которые
+			// fleet/building.Enqueue потом отбивал «requirement not met».
+			if !meetsRequirements(key, ps.Buildings, snap.Research, cat) {
+				continue
+			}
+
 			// Стоимость следующего уровня (формула совпадает с
 			// building.Service.BuildCostsMap).
 			cost := economy.CostForLevel(economy.Cost{
@@ -155,7 +169,7 @@ func scoreBuildings(snap PlayerSnapshot, strategy Strategy, inputs scoringInputs
 					"target_level": nextLvl,
 				},
 				Score:       score,
-				Description: buildingDescription(key, ps.Name, nextLvl),
+				Description: buildingDescription(key, ps.Name, nextLvl, inputs),
 				Benefit:     buildingBenefit(deltaPoints, deltaProduction, seconds),
 			})
 		}
@@ -168,6 +182,60 @@ func affordable(cost economy.Cost, have Resources) bool {
 	return have.Metal >= float64(cost.Metal) &&
 		have.Silicon >= float64(cost.Silicon) &&
 		have.Hydrogen >= float64(cost.Hydrogen)
+}
+
+// meetsRequirements проверяет что у игрока выполнены ВСЕ предусловия
+// для строительства/исследования юнита targetKey на конкретной планете.
+//
+// Источник правды: configs/requirements.yml (Catalog.Requirements).
+// Семантика 1:1 с requirements.Checker.Check (см. internal/requirements/):
+//   - kind="building": уровень здания на planetBuildings >= req.Level.
+//   - kind="research": уровень исследования у игрока >= req.Level.
+//
+// Если planetBuildings == nil — building-требования НЕ проверяются
+// (используется в research-scoring, где building-prereq проверяется
+// per-planet отдельно через pickResearchPlanet — там нужна планета
+// с research_lab нужного уровня).
+//
+// Если в каталоге для targetKey нет записи — требований нет (true).
+// Если каталог nil — true (тесты могут не передавать requirements).
+func meetsRequirements(
+	targetKey string,
+	planetBuildings map[int]int,
+	research map[int]int,
+	catalog *config.Catalog,
+) bool {
+	if catalog == nil {
+		return true
+	}
+	reqs, ok := catalog.Requirements.Requirements[targetKey]
+	if !ok || len(reqs) == 0 {
+		return true
+	}
+	for _, r := range reqs {
+		switch r.Kind {
+		case "building":
+			if planetBuildings == nil {
+				continue // building-prereq не проверяется на этом уровне
+			}
+			spec, ok := catalog.Buildings.Buildings[r.Key]
+			if !ok {
+				continue // неизвестное здание — не блокируем
+			}
+			if planetBuildings[spec.ID] < r.Level {
+				return false
+			}
+		case "research":
+			spec, ok := catalog.Research.Research[r.Key]
+			if !ok {
+				continue
+			}
+			if research[spec.ID] < r.Level {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // scoreTimeExponent — степень в формуле Score = delta_points / time^exp.
@@ -308,6 +376,14 @@ func scoreResearch(snap PlayerSnapshot, strategy Strategy, inputs scoringInputs)
 			continue
 		}
 
+		// Prereq: research-prerequisites (laser_tech, energy_tech, ...)
+		// и building-prerequisites (research_lab уровень).
+		// Building-prereq проверяется per-planet в pickResearchPlanet ниже,
+		// но research-prereq глобальный — отсекаем сразу.
+		if !meetsRequirements(techKey, nil, snap.Research, inputs.Catalog) {
+			continue
+		}
+
 		cost := economy.CostForLevel(economy.Cost{
 			Metal:    spec.CostBase.Metal,
 			Silicon:  spec.CostBase.Silicon,
@@ -355,7 +431,7 @@ func scoreResearch(snap PlayerSnapshot, strategy Strategy, inputs scoringInputs)
 				"target_level": nextLvl,
 			},
 			Score:       score,
-			Description: researchDescription(techKey, planetName, nextLvl),
+			Description: researchDescription(techKey, planetName, nextLvl, inputs),
 			Benefit:     researchBenefit(deltaPoints, seconds),
 		})
 	}
@@ -418,11 +494,12 @@ func researchDuration(cost economy.Cost, effectiveLab int, gameSpeed, researchSp
 	return int(raw + 0.5)
 }
 
-func researchDescription(key, planetName string, nextLevel int) string {
+func researchDescription(key, planetName string, nextLevel int, inputs scoringInputs) string {
+	label := translateUnitKey(inputs, key)
 	if planetName == "" {
-		return fmt.Sprintf("Исследовать %s ур.%d", key, nextLevel)
+		return fmt.Sprintf("Исследовать %s ур.%d", label, nextLevel)
 	}
-	return fmt.Sprintf("Исследовать %s ур.%d (с планеты %q)", key, nextLevel, planetName)
+	return fmt.Sprintf("Исследовать %s ур.%d (с планеты %q)", label, nextLevel, planetName)
 }
 
 func researchBenefit(deltaPoints float64, seconds int) string {
@@ -484,10 +561,57 @@ func buildingScore(strategy Strategy, deltaPoints, deltaProductionPerSec, buildS
 
 // buildingDescription — человекочитаемое описание для UI (Description).
 //
-// Берётся ключ юнита и подставляется в шаблон. i18n будет добавлен в
-// Ф.4 (фронт переведёт по ActionType + Params).
-func buildingDescription(key, planetName string, nextLevel int) string {
-	return fmt.Sprintf("Построить %s ур.%d на %q", key, nextLevel, planetName)
+// Если bundle задан — переводит ключ юнита через i18n (info.<camelKey>);
+// иначе fallback на raw-key (поведение Ф.1в без i18n).
+func buildingDescription(key, planetName string, nextLevel int, inputs scoringInputs) string {
+	label := translateUnitKey(inputs, key)
+	return fmt.Sprintf("Построить %s ур.%d на %q", label, nextLevel, planetName)
+}
+
+// translateUnitKey ищет локализованное название юнита (здания или
+// исследования) по ключу. Используется группа i18n "info" — там лежат
+// названия (info.<camelKey>) и описания (info.<camelKey>Desc, ...Full).
+//
+// Если bundle nil или ключ не найден — возвращает raw-key (читабельно
+// в логах и при дев-сборках без i18n).
+func translateUnitKey(inputs scoringInputs, snakeKey string) string {
+	if inputs.Bundle == nil {
+		return snakeKey
+	}
+	camel := snakeToCamel(snakeKey)
+	lang := i18n.Lang(inputs.Language)
+	if lang == "" {
+		lang = i18n.LangRu
+	}
+	if inputs.Bundle.Has(lang, "info", camel) {
+		return inputs.Bundle.Tr(lang, "info", camel, nil)
+	}
+	return snakeKey
+}
+
+// snakeToCamel конвертирует snake_case → camelCase для i18n-ключей.
+//   metal_mine → metalMine
+//   hyperspace_tech → hyperspaceTech
+//   solar_plant → solarPlant
+func snakeToCamel(s string) string {
+	if s == "" {
+		return s
+	}
+	out := make([]byte, 0, len(s))
+	upperNext := false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c == '_' {
+			upperNext = true
+			continue
+		}
+		if upperNext && c >= 'a' && c <= 'z' {
+			c -= 'a' - 'A'
+		}
+		upperNext = false
+		out = append(out, c)
+	}
+	return string(out)
 }
 
 // buildingBenefit — строка с ожидаемой выгодой, для UI.
