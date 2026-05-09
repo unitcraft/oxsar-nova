@@ -6,6 +6,7 @@
 // Внизу таблицы — общая кнопка submit на multiple-build (как legacy form).
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   buildShipyard,
@@ -23,7 +24,7 @@ import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { VipButton } from '@/features/common/VipButton';
 import { ConstructionProgress } from '@/features/common/ConstructionProgress';
-import { fetchSettings } from '@/api/settings';
+import { fetchSettings, updateSettings } from '@/api/settings';
 import { useTranslation } from '@/i18n/i18n';
 import { formatNumber, formatDuration } from '@/lib/format';
 import type { ShipyardInventory } from '@/api/types';
@@ -38,6 +39,10 @@ interface BuildPanelProps {
 export function BuildPanel({ group, title }: BuildPanelProps) {
   // План 72.1.53 ч.B: in-game confirm-dialog (заменяет window.confirm).
   const { confirm, dialogProps } = useConfirm();
+  const { planetId, planet } = useResolvedPlanet();
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const [counts, setCounts] = useState<Record<number, string>>({});
   // План 72.1.55.E (effects): show_all_shipyard / show_all_defense
   // (legacy preferences). Используется только для proxy-фильтра ниже.
   const settingsQ = useQuery({
@@ -48,10 +53,15 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
   const showAll = group === 'ship'
     ? settingsQ.data?.show_all_shipyard ?? true
     : settingsQ.data?.show_all_defense ?? true;
-  const { planetId, planet } = useResolvedPlanet();
-  const { t } = useTranslation();
-  const qc = useQueryClient();
-  const [counts, setCounts] = useState<Record<number, string>>({});
+  const toggleShowAll = useMutation({
+    mutationFn: (next: boolean) =>
+      updateSettings(
+        group === 'ship' ? { show_all_shipyard: next } : { show_all_defense: next },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: QK.settings() });
+    },
+  });
 
   const queueQ = useQuery({
     queryKey: planetId ? QK.shipyardQueue(planetId) : ['noop-sq'],
@@ -273,7 +283,18 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
               <th colSpan={3}>{title}</th>
             </tr>
             <tr>
-              <th colSpan={2}>&nbsp;</th>
+              <th colSpan={2} style={{ textAlign: 'right' }}>
+                <label htmlFor={`show_all_${group}_cb`}>
+                  <strong>{t('global', 'showUnavailable')}</strong>
+                </label>{' '}
+                <input
+                  type="checkbox"
+                  id={`show_all_${group}_cb`}
+                  checked={showAll}
+                  disabled={toggleShowAll.isPending}
+                  onChange={(e) => toggleShowAll.mutate(e.target.checked)}
+                />
+              </th>
               <th style={{ textAlign: 'center' }}>
                 {t('buildings', 'quantity')}
               </th>
@@ -310,16 +331,22 @@ export function BuildPanel({ group, title }: BuildPanelProps) {
               return (
                 <tr key={entry.id}>
                   <td width="1px" style={{ verticalAlign: 'top' }}>
-                    <img
-                      src={`/assets/origin/images/units/${entry.icon}.gif`}
-                      alt={entryName(entry)}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
+                    <Link to={`/unit/${entry.id}`}>
+                      <img
+                        src={`/assets/origin/images/units/${entry.icon}.gif`}
+                        alt={entryName(entry)}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </Link>
                   </td>
-                  <td style={{ verticalAlign: 'top' }}>
-                    <div style={{ width: '100%' }}>{entryName(entry)}</div>
+                  <td style={{ verticalAlign: 'top', textAlign: 'left' }}>
+                    <div style={{ width: '100%' }}>
+                      <strong>
+                        <Link to={`/unit/${entry.id}`}>{entryName(entry)}</Link>
+                      </strong>
+                    </div>
                     {hasDesc && (
                       <div style={{ clear: 'both', fontSize: 'smaller' }}>
                         {desc}

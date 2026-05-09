@@ -1,7 +1,7 @@
 // S-003 Research — исследования (план 72.1 ч.20).
 // Pixel-perfect клон legacy research.tpl + required_res_table.tpl.
 
-import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchResearch,
@@ -9,7 +9,6 @@ import {
   cancelResearch,
   startResearchVIP,
 } from '@/api/research';
-import { packResearch } from '@/api/buildings';
 import { QK } from '@/api/query-keys';
 import { useResolvedPlanet } from '@/features/common/useResolvedPlanet';
 import { useAutoInvalidateOnTaskEnd } from '@/features/common/useAutoInvalidateOnTaskEnd';
@@ -18,10 +17,9 @@ import { RequiredResTable } from '@/features/common/RequiredResTable';
 import { ConfirmDialog, useConfirm } from '@/features/common/ConfirmDialog';
 import { VipButton } from '@/features/common/VipButton';
 import { ConstructionProgress } from '@/features/common/ConstructionProgress';
-import { fetchSettings } from '@/api/settings';
+import { fetchSettings, updateSettings } from '@/api/settings';
 import { useTranslation } from '@/i18n/i18n';
 import { formatDuration } from '@/lib/format';
-import type { ApiError } from '@/api/client';
 
 export function ResearchScreen() {
   const { planetId, planet } = useResolvedPlanet();
@@ -61,17 +59,9 @@ export function ResearchScreen() {
     },
   });
 
-  // План 72.1.33 ч.2: pack research через packing-research артефакт.
-  const [packErr, setPackErr] = useState<string | null>(null);
-  const packMut = useMutation({
-    mutationFn: (unitId: number) => packResearch(planetId!, unitId),
-    onSuccess: () => {
-      setPackErr(null);
-      void qc.invalidateQueries({ queryKey: QK.research() });
-      void qc.invalidateQueries({ queryKey: QK.artefacts() });
-    },
-    onError: (e) => setPackErr((e as ApiError).message),
-  });
+  // Pack-research реализуется только на info-странице (UnitInfoScreen)
+  // — 1:1 с legacy `constructions.tpl`, где `{var}ext_pack_research{/var}`
+  // показывается только при `info_id > 0`.
 
   // План 72.1.59: авто-инвалидация очереди по окончании ближайшей
   // задачи (общий хук). Без него экран остаётся со старым snapshot'ом
@@ -105,6 +95,12 @@ export function ResearchScreen() {
     staleTime: 60_000,
   });
   const showAll = settingsQ.data?.show_all_research ?? true;
+  const toggleShowAll = useMutation({
+    mutationFn: (next: boolean) => updateSettings({ show_all_research: next }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: QK.settings() });
+    },
+  });
   // Filter: если выкл и tech 0-level + cost == 0 (= unmet/max),
   // скрываем. Backend research/handler не возвращает unmet явно;
   // cost=0 — proxy для «недоступно».
@@ -129,11 +125,6 @@ export function ResearchScreen() {
 
   return (
     <>
-      {packErr && (
-        <div className="false" style={{ padding: 4, marginBottom: 4 }}>
-          {packErr}
-        </div>
-      )}
       {queue.length > 0 && (
         <table className="ntable">
           <tbody>
@@ -195,6 +186,21 @@ export function ResearchScreen() {
           <tr>
             <th colSpan={3}>{t('buildings', 'research')}</th>
           </tr>
+          <tr>
+            <th colSpan={2} style={{ textAlign: 'right' }}>
+              <label htmlFor="show_all_research_cb">
+                <strong>{t('global', 'showUnavailable')}</strong>
+              </label>{' '}
+              <input
+                type="checkbox"
+                id="show_all_research_cb"
+                checked={showAll}
+                disabled={toggleShowAll.isPending}
+                onChange={(e) => toggleShowAll.mutate(e.target.checked)}
+              />
+            </th>
+            <th>&nbsp;</th>
+          </tr>
 
           {visibleTechs.map((entry) => {
             const [group, key] = entry.i18n.split('.') as [string, string];
@@ -209,11 +215,13 @@ export function ResearchScreen() {
             return (
               <tr key={entry.id}>
                 <td width="1px" style={{ verticalAlign: 'top' }}>
-                  <img
-                    src={`/assets/origin/images/units/${entry.icon}.gif`}
-                    alt={t(group, key)}
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
+                  <Link to={`/unit/${entry.id}`}>
+                    <img
+                      src={`/assets/origin/images/units/${entry.icon}.gif`}
+                      alt={t(group, key)}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  </Link>
                 </td>
                 <td style={{ verticalAlign: 'top', textAlign: 'left' }}>
                   <div style={{ width: '100%' }}>
@@ -225,7 +233,9 @@ export function ResearchScreen() {
                         </span>
                       )}
                     </span>
-                    <strong className={added < 0 ? 'false' : undefined}>{t(group, key)}</strong>
+                    <strong>
+                      <Link to={`/unit/${entry.id}`}>{t(group, key)}</Link>
+                    </strong>
                   </div>
                   {hasDesc && (
                     <div style={{ clear: 'both', fontSize: 'smaller' }}>{desc}</div>
@@ -252,30 +262,8 @@ export function ResearchScreen() {
                       onClick={() => start.mutate(entry.id)}
                       disabled={start.isPending || !enough}
                     >
-                      {t('buildings', 'researchOfLevel')}<br />
-                      {t('research', 'level', { n: String(lvl + 1) })}
+                      {t('buildings', 'researchOfLevel')} {lvl + 1}
                     </button>
-                  )}
-                  {/* План 72.1.33 ч.2: pack research если уровень>0. */}
-                  {lvl > 0 && (
-                    <div style={{ marginTop: 4 }}>
-                      <button
-                        type="button"
-                        className="button"
-                        disabled={packMut.isPending}
-                        title={t('buildinginfo', 'packResearch')}
-                        onClick={async () => {
-                          if (await confirm({
-                            title: t('buildinginfo', 'packResearch'),
-                            message: t('buildinginfo', 'packConfirm'),
-                          })) {
-                            packMut.mutate(entry.id);
-                          }
-                        }}
-                      >
-                        📦
-                      </button>
-                    </div>
                   )}
                 </td>
               </tr>

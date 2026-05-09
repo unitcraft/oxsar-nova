@@ -2,9 +2,9 @@
 // Pixel-perfect клон legacy constructions.tpl + required_res_table.tpl.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import {
   cancelBuildingTask,
-  demolishBuilding,
   enqueueBuilding,
   fetchBuildingQueue,
   fetchBuildingsOverview,
@@ -84,19 +84,9 @@ export function ConstructionsScreen() {
     },
   });
 
-  // План 72.1.40: legacy `Constructions` имеет ссылку «снести здание»
-  // (DemolishConstruction). Раньше demolish был только в /building/:type
-  // (BuildingInfoScreen), но в legacy он доступен и в списке зданий.
-  const demolish = useMutation({
-    mutationFn: (unitId: number) => demolishBuilding(planetId!, unitId),
-    onSuccess: () => {
-      if (planetId) {
-        void qc.invalidateQueries({ queryKey: QK.buildingQueue(planetId) });
-        void qc.invalidateQueries({ queryKey: QK.buildingsOverview(planetId) });
-        void qc.invalidateQueries({ queryKey: QK.planet(planetId) });
-      }
-    },
-  });
+  // Demolish реализован только на info-странице здания (legacy 1:1):
+  // в `Constructions.tpl` блок `{var}ext_demolish{/var}` показывается
+  // лишь когда `info_id > 0` — см. BuildingInfoScreen.
 
   // План 72.1.44: VIP-instant старт стройки за credits.
   const vip = useMutation({
@@ -261,20 +251,24 @@ export function ConstructionsScreen() {
             return (
               <tr key={entry.id}>
                 <td width="1px" style={{ verticalAlign: 'top' }}>
-                  <img
-                    src={`/assets/origin/images/units/${entry.icon}.gif`}
-                    alt={t(group, key)}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
+                  <Link to={`/building/${entry.id}`}>
+                    <img
+                      src={`/assets/origin/images/units/${entry.icon}.gif`}
+                      alt={t(group, key)}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </Link>
                 </td>
                 <td style={{ verticalAlign: 'top', textAlign: 'left' }}>
                   <div style={{ width: '100%' }}>
                     <span style={{ float: 'right' }}>
                       {t('buildings', 'level', { n: level })}
                     </span>
-                    <strong>{t(group, key)}</strong>
+                    <strong>
+                      <Link to={`/building/${entry.id}`}>{t(group, key)}</Link>
+                    </strong>
                   </div>
                   {hasDesc && (
                     <div style={{ clear: 'both', fontSize: 'smaller' }}>
@@ -335,36 +329,8 @@ export function ConstructionsScreen() {
                         onClick={() => enqueue.mutate(entry.id)}
                         disabled={enqueue.isPending || !enough}
                       >
-                        ⚒ {t('buildings', 'upgradeToLevel')}<br />
-                        {level + 1}
+                        {t('buildings', 'upgradeToLevel')} {level + 1}
                       </button>
-                      {/* План 72.1.40: legacy demolish action в списке.
-                          План 72.1.59: красная button-danger + 💥 (взрыв)
-                          подчёркивает деструктивность действия. */}
-                      {level > 0 && (
-                        <div style={{ marginTop: 4 }}>
-                          <button
-                            type="button"
-                            className="button-danger"
-                            disabled={demolish.isPending}
-                            title={t('buildinginfo', 'demolish')}
-                            onClick={async () => {
-                              if (await confirm({
-                                title: t('buildinginfo', 'demolish'),
-                                message: t('buildinginfo', 'demolishConfirm', {
-                                  building: t(group, key),
-                                  level: level - 1,
-                                }),
-                                destructive: true,
-                              })) {
-                                demolish.mutate(entry.id);
-                              }
-                            }}
-                          >
-                            💥 {t('buildinginfo', 'demolishNow')}
-                          </button>
-                        </div>
-                      )}
                     </>
                   )}
                 </td>
