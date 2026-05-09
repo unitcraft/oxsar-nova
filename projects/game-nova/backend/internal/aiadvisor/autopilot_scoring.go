@@ -272,6 +272,7 @@ func timeDiscounted(deltaPoints, seconds, exp float64) float64 {
 	return deltaPoints / math.Pow(seconds, exp)
 }
 
+
 // researchStrategyWeights — стратегический вес группы технологий.
 //
 // Веса используют шкалу: 1.0 = «целевая для этой стратегии», 0.1 =
