@@ -48,16 +48,37 @@ class Request
      * только NS::loadPage(), но и потомков (Construction.class.php,
      * Stock.class.php и пр.), которые сами дёргают `getGET("go")`.
      *
+     * План 37.5f: второй сегмент PATH_INFO (`/game.php/ConstructionInfo/1`)
+     * — это action-id. Page::addGetArg("constructionInfo", "id") ждёт
+     * GET-параметр с именем lcfirst($go). Для совместимости кладём
+     * id в оба варианта: lcfirst($go) и сам $go.
+     *
      * Sanitization: только `[A-Za-z0-9_]+` — без слэшей/двоеточий
      * (sub-параметры формата `Galaxy/galaxy:7/system:100` отдельная
      * задача, не входит в 37.5e).
      */
     private function __construct()
     {
-        if (empty($_GET['go'])) {
-            $pi = isset($_SERVER['PATH_INFO']) ? (string)$_SERVER['PATH_INFO'] : '';
-            if ($pi !== '' && preg_match('~^/([A-Za-z0-9_]+)~', $pi, $m)) {
-                $_GET['go'] = $m[1];
+        $pi = isset($_SERVER['PATH_INFO']) ? (string)$_SERVER['PATH_INFO'] : '';
+        if ($pi === '') {
+            return;
+        }
+        if (empty($_GET['go']) && preg_match('~^/([A-Za-z0-9_]+)~', $pi, $m)) {
+            $_GET['go'] = $m[1];
+        }
+        $go = isset($_GET['go']) ? (string)$_GET['go'] : '';
+        if ($go !== '' && preg_match('~^/[A-Za-z0-9_]+/([A-Za-z0-9_]+)~', $pi, $m2)) {
+            $val = $m2[1];
+            // Page::addGetArg() обычно указывает имя GET-параметра как `id`
+            // (Constructions/Research: ConstructionInfo/<id>, DemolishConstruction/<id>).
+            // Также кладём в lcfirst($go) для совместимости с механикой Link::get,
+            // где встречаются URL вида `?<lcfirst-go>=<id>`.
+            if (!isset($_GET['id'])) {
+                $_GET['id'] = $val;
+            }
+            $argKey = lcfirst($go);
+            if ($argKey !== '' && !isset($_GET[$argKey])) {
+                $_GET[$argKey] = $val;
             }
         }
     }

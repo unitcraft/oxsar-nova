@@ -65,7 +65,7 @@ class MemCacheHandler
 		return false;
 	}
 
-	public function set($name, &$value, $expire = 3600)
+	public function set($name, $value, $expire = 3600)
 	{
 		if(isset($this->memcache))
 		{
@@ -83,7 +83,7 @@ class MemCacheHandler
 		}
 	}
 
-	public function add($name, &$value, $expire = 3600)
+	public function add($name, $value, $expire = 3600)
 	{
 		if(isset($this->memcache))
 		{
