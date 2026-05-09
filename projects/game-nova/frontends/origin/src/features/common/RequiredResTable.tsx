@@ -39,9 +39,12 @@ export function RequiredResTable({
   seconds,
 }: RequiredResProps) {
   const { t } = useTranslation();
+  // legacy required_res_table: при нехватке `metal_notavailable = available - required`
+  // (отрицательное число), отображается как `(-409.600)` со знаком минус.
   function diff(req: number, have: number | undefined): number {
     if (have === undefined) return 0;
-    return Math.max(0, req - have);
+    if (have >= req) return 0;
+    return have - req;
   }
 
   const metalLack = diff(metal, available?.metal);
@@ -63,55 +66,55 @@ export function RequiredResTable({
         {metal > 0 && (
           <tr>
             <td>{t('overview', 'metal')}</td>
-            <td className={metalLack > 0 ? 'notavailable' : 'true'}>
+            <td className={metalLack < 0 ? 'notavailable' : 'true'}>
               {formatNumber(metal)}
             </td>
-            <td>{metalLack > 0 && <>({formatNumber(metalLack)})</>}</td>
+            <td>{metalLack < 0 && <>({formatNumber(metalLack)})</>}</td>
           </tr>
         )}
         {silicon > 0 && (
           <tr>
             <td>{t('overview', 'silicon')}</td>
-            <td className={siliconLack > 0 ? 'notavailable' : 'true'}>
+            <td className={siliconLack < 0 ? 'notavailable' : 'true'}>
               {formatNumber(silicon)}
             </td>
-            <td>{siliconLack > 0 && <>({formatNumber(siliconLack)})</>}</td>
+            <td>{siliconLack < 0 && <>({formatNumber(siliconLack)})</>}</td>
           </tr>
         )}
         {hydrogen > 0 && (
           <tr>
             <td>{t('overview', 'hydrogen')}</td>
-            <td className={hydrogenLack > 0 ? 'notavailable' : 'true'}>
+            <td className={hydrogenLack < 0 ? 'notavailable' : 'true'}>
               {formatNumber(hydrogen)}
             </td>
-            <td>{hydrogenLack > 0 && <>({formatNumber(hydrogenLack)})</>}</td>
+            <td>{hydrogenLack < 0 && <>({formatNumber(hydrogenLack)})</>}</td>
           </tr>
         )}
         {energy > 0 && (
           <tr>
             <td>{t('overview', 'energy')}</td>
-            <td className={energyLack > 0 ? 'notavailable' : 'true'}>
+            <td className={energyLack < 0 ? 'notavailable' : 'true'}>
               {formatNumber(energy)}
             </td>
-            <td>{energyLack > 0 && <>({formatNumber(energyLack)})</>}</td>
+            <td>{energyLack < 0 && <>({formatNumber(energyLack)})</>}</td>
           </tr>
         )}
         {credit > 0 && (
           <tr>
             <td>{t('overview', 'credits')}</td>
-            <td className={creditLack > 0 ? 'notavailable' : 'true'}>
+            <td className={creditLack < 0 ? 'notavailable' : 'true'}>
               {formatNumber(credit)}
             </td>
-            <td>{creditLack > 0 && <>({formatNumber(creditLack)})</>}</td>
+            <td>{creditLack < 0 && <>({formatNumber(creditLack)})</>}</td>
           </tr>
         )}
         {points > 0 && (
           <tr>
             <td>{t('overview', 'points')}</td>
-            <td className={pointsLack > 0 ? 'notavailable' : 'true'}>
+            <td className={pointsLack < 0 ? 'notavailable' : 'true'}>
               {formatNumber(points)}
             </td>
-            <td>{pointsLack > 0 && <>({formatNumber(pointsLack)})</>}</td>
+            <td>{pointsLack < 0 && <>({formatNumber(pointsLack)})</>}</td>
           </tr>
         )}
         <tr>
