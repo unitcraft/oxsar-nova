@@ -19,6 +19,21 @@ import { QK } from '@/api/query-keys';
 import { formatNumber, formatCoords } from '@/lib/format';
 import { useTranslation } from '@/i18n/i18n';
 
+// TickValue — отрисовка ресурса с короткой мягкой подсветкой при
+// изменении значения. Реализация: `key={value}` пересоздаёт <span>,
+// CSS-анимация .res-tick-flash проигрывается заново на каждом тике.
+// extraClass — опциональный модификатор (например, 'false' при cap).
+function TickValue({ value, extraClass }: { value: string; extraClass?: string | undefined }) {
+  return (
+    <span
+      key={value}
+      className={`res-tick-flash${extraClass ? ' ' + extraClass : ''}`}
+    >
+      {value}
+    </span>
+  );
+}
+
 function fmtCap(cap: number): string {
   if (cap >= 1000) {
     const k = Math.floor(cap / 1000);
@@ -120,9 +135,11 @@ export function TopHeader() {
               <br />
               <span className="ressource">{t('overview', 'resMetalLabel')}</span>
               <br />
-              <span id="header_layout_metal" className={metalFull ? 'false' : ''}>
-                {planet ? formatNumber(metalVal) : '—'}
-              </span>
+              {planet ? (
+                <TickValue value={formatNumber(metalVal)} extraClass={metalFull ? 'false' : undefined} />
+              ) : (
+                <span id="header_layout_metal">—</span>
+              )}
               <br />
               <span className={metalFull ? 'false' : ''}>
                 {planet ? fmtCap(planet.metal_cap) : ''}
@@ -135,9 +152,11 @@ export function TopHeader() {
               <br />
               <span className="ressource">{t('overview', 'resSiliconLabel')}</span>
               <br />
-              <span id="header_layout_silicon" className={siliconFull ? 'false' : ''}>
-                {planet ? formatNumber(siliconVal) : '—'}
-              </span>
+              {planet ? (
+                <TickValue value={formatNumber(siliconVal)} extraClass={siliconFull ? 'false' : undefined} />
+              ) : (
+                <span id="header_layout_silicon">—</span>
+              )}
               <br />
               <span className={siliconFull ? 'false' : ''}>
                 {planet ? fmtCap(planet.silicon_cap) : ''}
@@ -150,9 +169,11 @@ export function TopHeader() {
               <br />
               <span className="ressource">{t('overview', 'resHydrogenLabel')}</span>
               <br />
-              <span id="header_layout_hydrogen" className={hydrogenFull ? 'false' : ''}>
-                {planet ? formatNumber(hydrogenVal) : '—'}
-              </span>
+              {planet ? (
+                <TickValue value={formatNumber(hydrogenVal)} extraClass={hydrogenFull ? 'false' : undefined} />
+              ) : (
+                <span id="header_layout_hydrogen">—</span>
+              )}
               <br />
               <span className={hydrogenFull ? 'false' : ''}>
                 {planet ? fmtCap(planet.hydrogen_cap) : ''}
@@ -165,11 +186,14 @@ export function TopHeader() {
               <br />
               <span className="ressource">{t('global', 'energy')}</span>
               <br />
-              <span id="header_layout_energy" className={energyRemaining < 0 ? 'false' : ''}>
-                {planet
-                  ? `${formatNumber(Math.floor(energyRemaining))} (${formatNumber(Math.floor(energyProd))})`
-                  : '—'}
-              </span>
+              {planet ? (
+                <TickValue
+                  value={`${formatNumber(Math.floor(energyRemaining))} (${formatNumber(Math.floor(energyProd))})`}
+                  extraClass={energyRemaining < 0 ? 'false' : undefined}
+                />
+              ) : (
+                <span id="header_layout_energy">—</span>
+              )}
             </td>
 
             {/* Кредиты */}
@@ -178,9 +202,7 @@ export function TopHeader() {
               <br />
               <span className="ressource">{t('global', 'credits')}</span>
               <br />
-              <span id="header_layout_credit">
-                {formatNumber(Math.floor(credit))}
-              </span>
+              <TickValue value={formatNumber(Math.floor(credit))} />
               <br />
               <Link to="/payment">{t('global', 'creditPay')}</Link>
             </td>
