@@ -1,0 +1,25 @@
+#!/bin/sh
+# Strips automatic AI-attribution trailers from commit messages.
+#
+# Policy: oxsar-nova commit messages do not carry AI/vendor
+# attribution trailers. Real human Co-Authored-By trailers are
+# preserved.
+#
+# Activation (one-time, per developer):
+#   git config core.hooksPath scripts/git-hooks
+#
+# Verification: `git log -1 --format=%B` should not contain any of
+# the patterns this hook strips.
+
+MSG_FILE="$1"
+
+# Strip standalone AI-attribution trailers.
+sed -i.bak \
+    -e '/^Co-Authored-By: Claude .*$/d' \
+    -e '/^Generated-with: Claude Code\s*$/Id' \
+    "$MSG_FILE"
+rm -f "${MSG_FILE}.bak"
+
+# Collapse trailing blank lines that the stripping may leave behind.
+sed -i.bak -e :a -e '/^$/{$d;N;ba' -e '}' "$MSG_FILE"
+rm -f "${MSG_FILE}.bak"
